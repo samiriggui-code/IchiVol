@@ -4,6 +4,7 @@ import { AgentChat } from '../components/AgentChat'
 import { NotificationBell } from '../components/NotificationBell'
 import {
   IconBacktests,
+  IconChat,
   IconChevronLeft,
   IconDecisions,
   IconGlobe,
@@ -31,6 +32,7 @@ const NAV_ITEMS = [
   { to: '/app/watchlist', label: 'Watchlist', Icon: IconWatchlist },
   { to: '/app/paper', label: 'Paper', Icon: IconPaper },
   { to: '/app/backtests', label: 'Backtests', Icon: IconBacktests },
+  { to: '/app/agent', label: 'Copilot', Icon: IconChat },
   { to: '/app/settings', label: 'Settings', Icon: IconSettings },
 ]
 

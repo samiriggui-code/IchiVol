@@ -47,7 +47,8 @@ def test_agent_tools_lists_the_full_v1_allowlist():
     names = {t["name"] for t in resp.json()["tools"]}
     assert names == {
         "scan_market", "get_symbol_context", "detect_signal", "compare_timeframes",
-        "run_backtest", "get_correlations", "calculate_ichimoku", "calculate_rvol", "list_tools",
+        "run_backtest", "get_correlations", "calculate_ichimoku", "calculate_rvol",
+        "get_news", "get_calendar", "list_tools",
     }
     assert all(t["read_only"] for t in resp.json()["tools"])
 
@@ -179,6 +180,95 @@ def test_agent_command_get_correlations(monkeypatch):
     )
     body = resp.json()["data"]
     assert set(body["symbols"]) == {"BTCUSDT", "ETHUSDT"}
+
+
+def test_agent_command_get_news(monkeypatch):
+    import httpx
+
+    from app.context import news as news_module
+
+    xml = (
+        '<?xml version="1.0"?><rss><channel>'
+        "<item><title>T</title><link>https://x.example/1</link>"
+        "<pubDate>Wed, 16 Sep 2026 12:00:00 GMT</pubDate></item>"
+        "</channel></rss>"
+    )
+
+    class FakeResp:
+        text = xml
+
+        def raise_for_status(self) -> None:
+            return None
+
+    monkeypatch.setattr(news_module.httpx, "get", lambda *a, **k: FakeResp())
+    news_module._cache.clear()
+
+    resp = client.post(
+        "/api/engine/agent/command", json={"cmd": "get_news", "args": {"sources": ["coindesk"]}}
+    )
+    body = resp.json()["data"]
+    assert body["items"][0]["title"] == "T"
+    news_module._cache.clear()
+
+
+def test_agent_command_get_calendar(monkeypatch):
+    from app.context import calendar as calendar_module
+
+    class FakeResp:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self):
+            return [{"title": "CPI", "country": "USD", "date": "2026-09-17", "impact": "High"}]
+
+    monkeypatch.setattr(calendar_module.httpx, "get", lambda *a, **k: FakeResp())
+    calendar_module._cache = None
+
+    resp = client.post("/api/engine/agent/command", json={"cmd": "get_calendar", "args": {}})
+    body = resp.json()["data"]
+    assert body["events"][0]["title"] == "CPI"
+    calendar_module._cache = None
+
+
+def test_context_news_route(monkeypatch):
+    from app.context import news as news_module
+
+    class FakeResp:
+        text = (
+            '<?xml version="1.0"?><rss><channel>'
+            "<item><title>Headline</title><link>https://x.example/2</link></item>"
+            "</channel></rss>"
+        )
+
+        def raise_for_status(self) -> None:
+            return None
+
+    monkeypatch.setattr(news_module.httpx, "get", lambda *a, **k: FakeResp())
+    news_module._cache.clear()
+
+    resp = client.get("/api/engine/context/news")
+    assert resp.status_code == 200
+    assert resp.json()["items"][0]["title"] == "Headline"
+    news_module._cache.clear()
+
+
+def test_context_calendar_route(monkeypatch):
+    from app.context import calendar as calendar_module
+
+    class FakeResp:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self):
+            return []
+
+    monkeypatch.setattr(calendar_module.httpx, "get", lambda *a, **k: FakeResp())
+    calendar_module._cache = None
+
+    resp = client.get("/api/engine/context/calendar")
+    assert resp.status_code == 200
+    assert resp.json() == {"events": []}
+    calendar_module._cache = None
 
 
 def test_agent_batch_is_order_stable_and_isolates_failures(monkeypatch):

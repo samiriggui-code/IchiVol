@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ContextPage } from './pages/ContextPage'
 import { DashboardShell } from './layouts/DashboardShell'
 import { initTheme } from './lib/theme'
+import { AgentPage } from './pages/AgentPage'
 import { BacktestsPage } from './pages/BacktestsPage'
 import { DecisionsPage } from './pages/DecisionsPage'
 import { JournalPage } from './pages/JournalPage'
@@ -37,6 +38,7 @@ export function Root() {
             <Route path="watchlist" element={<WatchlistPage />} />
             <Route path="paper" element={<PaperPage />} />
             <Route path="backtests" element={<BacktestsPage />} />
+            <Route path="agent" element={<AgentPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Route>

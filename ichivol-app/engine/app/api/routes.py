@@ -17,6 +17,8 @@ from app.agent_channel.registry import TOOLS, dispatch_command, list_tool_specs
 from app.api.serializers import backtest_dict, detail_dict, metrics_dict, summary_dict
 from app.backtest import experiments
 from app.config import settings
+from app.context.calendar import fetch_calendar_events
+from app.context.news import fetch_news
 from app.correlation.engine import compute_correlation_matrix
 from app.db.session import SessionLocal
 from app.indicators.atr import AtrParams
@@ -424,6 +426,41 @@ def get_correlations(
         "sample_size": result.sample_size,
         "matrix": result.matrix,
         "skipped": [{"symbol": s.symbol, "reason": s.reason} for s in result.skipped],
+    }
+
+
+@router.get("/context/news")
+def get_context_news(limit: int = 20, sources: str | None = None) -> dict:
+    """Read-only crypto news headlines (CDC "adapters context", V3, opt-in)
+    -- free/keyless RSS, never wired into the decision pipeline (see
+    app/context/news.py). `sources` (comma-separated) restricts to a subset
+    of `news.FEEDS`; omit for all of them. One feed failing never empties
+    the others -- worst case this returns `[]`, never a 502."""
+    source_list = [s.strip() for s in sources.split(",") if s.strip()] if sources else None
+    items = fetch_news(limit=limit, sources=source_list)
+    return {
+        "items": [
+            {"title": i.title, "url": i.url, "source": i.source, "published_at": i.published_at}
+            for i in items
+        ]
+    }
+
+
+@router.get("/context/calendar")
+def get_context_calendar(limit: int | None = None) -> dict:
+    """Read-only macro economic calendar, this week (CDC "adapters context",
+    V3, opt-in) -- free/keyless community feed, never wired into the
+    decision pipeline (see app/context/calendar.py). Degrades to an empty
+    list on any upstream failure, never a 502."""
+    events = fetch_calendar_events(limit=limit)
+    return {
+        "events": [
+            {
+                "title": e.title, "country": e.country, "date": e.date,
+                "impact": e.impact, "forecast": e.forecast, "previous": e.previous,
+            }
+            for e in events
+        ]
     }
 
 

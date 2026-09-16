@@ -1,8 +1,7 @@
 import { displaySymbol } from '../lib/markets'
-import { labelDecision } from '../lib/decisionLabels'
-import type { DecisionLabel } from '../lib/decisions'
 import { signalLabel } from '../lib/signals'
 import type { ScreenerRow } from '../lib/types'
+import { VerdictBadge } from './VerdictBadge'
 
 interface Props {
   rows: ScreenerRow[]

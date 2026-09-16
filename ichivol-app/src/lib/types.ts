@@ -1,3 +1,5 @@
+import type { DecisionPipelinePayload } from './decisions'
+
 export type Interval = '15m' | '1h' | '4h' | '1d'
 
 export interface Candle {
@@ -75,6 +77,8 @@ export interface ScreenerRow {
   /** Badge moteur (si screener engine dispo pour ce symbole). */
   engineDecision?: string
   engineConfidence?: number
+  /** Verdict portes (Option B) — même contrat que ScreenerDecisionRow.pipeline. */
+  enginePipeline?: DecisionPipelinePayload
 }
 
 export const DEFAULT_ICHI: IchimokuParams = {

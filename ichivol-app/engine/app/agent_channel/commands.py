@@ -25,6 +25,8 @@ from typing import Callable
 
 from app.api.serializers import backtest_dict, detail_dict, metrics_dict, risk_dict, summary_dict
 from app.backtest import experiments
+from app.context.calendar import fetch_calendar_events
+from app.context.news import fetch_news
 from app.correlation.engine import compute_correlation_matrix
 from app.db.session import SessionLocal
 from app.indicators.atr import AtrParams
@@ -271,6 +273,40 @@ def cmd_calculate_rvol(args: dict) -> dict:
 
     state = compute_rvol(candles)[-1]
     return {"symbol": symbol, "timeframe": timeframe, "provider": provider.id, **_state_to_dict(state)}
+
+
+def cmd_get_news(args: dict) -> dict:
+    """Same payload as `GET /context/news` -- read-only, opt-in context,
+    never touches the decision pipeline."""
+    limit = int(args.get("limit", 20))
+    sources = args.get("sources")
+    if isinstance(sources, str):
+        sources = [s.strip() for s in sources.split(",") if s.strip()]
+    elif not isinstance(sources, list):
+        sources = None
+    items = fetch_news(limit=limit, sources=sources)
+    return {
+        "items": [
+            {"title": i.title, "url": i.url, "source": i.source, "published_at": i.published_at}
+            for i in items
+        ]
+    }
+
+
+def cmd_get_calendar(args: dict) -> dict:
+    """Same payload as `GET /context/calendar` -- read-only, opt-in context,
+    never touches the decision pipeline."""
+    limit = args.get("limit")
+    events = fetch_calendar_events(limit=int(limit) if limit is not None else None)
+    return {
+        "events": [
+            {
+                "title": e.title, "country": e.country, "date": e.date,
+                "impact": e.impact, "forecast": e.forecast, "previous": e.previous,
+            }
+            for e in events
+        ]
+    }
 
 
 def cmd_list_tools(_args: dict) -> dict:

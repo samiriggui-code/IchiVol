@@ -13,18 +13,12 @@ function summarizeContext(data: unknown): BriefLine[] {
   const d = data as Record<string, unknown>
   const pipeline = (d.pipeline ?? {}) as Record<string, unknown>
   const lines: BriefLine[] = [
-    {
-      label: 'combiner',
-      value: typeof d.decision === 'string' ? d.decision : '—',
-    },
+    { label: 'combiner', value: typeof d.decision === 'string' ? d.decision : '—' },
     {
       label: 'portes',
       value: typeof pipeline.decision === 'string' ? String(pipeline.decision) : '—',
     },
-    {
-      label: 'direction',
-      value: typeof d.direction === 'string' ? d.direction : '—',
-    },
+    { label: 'direction', value: typeof d.direction === 'string' ? d.direction : '—' },
   ]
   if (typeof d.rvol === 'number') {
     lines.push({ label: 'RVOL', value: d.rvol.toFixed(2) })
@@ -56,16 +50,15 @@ interface Props {
 }
 
 /**
- * Découverte des tools engine + brief déterministe (sans LLM).
- * Le moteur calcule ; cette bande affiche le résultat brut.
+ * Panneau moteur pour la page /app/agent — pas pour la bulle chat.
+ * Lecture seule : batch / commandes déterministes.
  */
-export function AgentEngineStrip({ symbol, timeframe }: Props) {
+export function AgentEnginePanel({ symbol, timeframe }: Props) {
   const [tools, setTools] = useState<AgentToolSpec[] | null>(null)
   const [toolsError, setToolsError] = useState<string | null>(null)
-  const [briefBusy, setBriefBusy] = useState(false)
-  const [briefError, setBriefError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [briefLines, setBriefLines] = useState<BriefLine[] | null>(null)
-  const [showTools, setShowTools] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -88,16 +81,16 @@ export function AgentEngineStrip({ symbol, timeframe }: Props) {
   async function onBrief() {
     const sym = (symbol ?? '').trim().toUpperCase()
     if (!sym) {
-      setBriefError('Choisis un symbole (Décisions / Marché).')
+      setError('Ouvre une décision ou la page Marché pour un symbole.')
       return
     }
-    setBriefBusy(true)
-    setBriefError(null)
+    setBusy(true)
+    setError(null)
     setBriefLines(null)
     try {
       const batch = await symbolBriefPlaybook(sym, ['15m', '1h', '4h'])
       if (!batch.ok) {
-        setBriefError(batch.error)
+        setError(batch.error)
         return
       }
       const lines: BriefLine[] = [{ label: 'symbole', value: sym }]
@@ -106,35 +99,32 @@ export function AgentEngineStrip({ symbol, timeframe }: Props) {
           lines.push({ label: row.cmd, value: `erreur: ${row.error}` })
           continue
         }
-        if (row.cmd === 'get_symbol_context') {
-          lines.push(...summarizeContext(row.data))
-        } else if (row.cmd === 'compare_timeframes') {
-          lines.push(...summarizeCompare(row.data))
-        }
+        if (row.cmd === 'get_symbol_context') lines.push(...summarizeContext(row.data))
+        else if (row.cmd === 'compare_timeframes') lines.push(...summarizeCompare(row.data))
       }
       setBriefLines(lines)
     } catch (e) {
-      setBriefError(e instanceof Error ? e.message : 'brief impossible')
+      setError(e instanceof Error ? e.message : 'brief impossible')
     } finally {
-      setBriefBusy(false)
+      setBusy(false)
     }
   }
 
   async function onDetect() {
     const sym = (symbol ?? '').trim().toUpperCase()
     if (!sym) {
-      setBriefError('Choisis un symbole (Décisions / Marché).')
+      setError('Ouvre une décision ou la page Marché pour un symbole.')
       return
     }
-    setBriefBusy(true)
-    setBriefError(null)
+    setBusy(true)
+    setError(null)
     try {
       const res = await runAgentCommand({
         cmd: 'detect_signal',
         args: { symbol: sym, timeframe: timeframe ?? '1h' },
       })
       if (!res.ok) {
-        setBriefError(res.error)
+        setError(res.error)
         return
       }
       const d = res.data as Record<string, unknown>
@@ -142,79 +132,83 @@ export function AgentEngineStrip({ symbol, timeframe }: Props) {
         { label: 'symbole', value: sym },
         { label: 'portes', value: typeof d.decision === 'string' ? d.decision : '—' },
         { label: 'direction', value: typeof d.direction === 'string' ? d.direction : '—' },
-        {
-          label: 'source',
-          value: 'detect_signal (engine, pas LLM)',
-        },
       ])
     } catch (e) {
-      setBriefError(e instanceof Error ? e.message : 'detect impossible')
+      setError(e instanceof Error ? e.message : 'detect impossible')
     } finally {
-      setBriefBusy(false)
+      setBusy(false)
     }
   }
 
-  const toolCount = tools?.length ?? 0
-
   return (
-    <div className="agent-engine-strip">
-      <div className="agent-engine-strip-bar">
-        <button
-          type="button"
-          className="ghost agent-engine-chip"
-          disabled={!tools && !toolsError}
-          onClick={() => setShowTools((v) => !v)}
-          title={toolsError ?? 'Tools du moteur Python'}
-        >
-          Engine {toolsError ? 'offline' : `${toolCount} tools`}
-        </button>
-        <button
-          type="button"
-          className="ghost agent-engine-chip"
-          disabled={briefBusy || !symbol}
-          onClick={() => void onBrief()}
-          title="get_symbol_context + compare_timeframes (batch)"
-        >
-          {briefBusy ? '…' : 'Brief symbole'}
-        </button>
-        <button
-          type="button"
-          className="ghost agent-engine-chip"
-          disabled={briefBusy || !symbol}
-          onClick={() => void onDetect()}
-          title="detect_signal — verdict portes condensé"
-        >
-          Portes
-        </button>
+    <aside className="agent-engine-panel panel">
+      <header className="panel-head">
+        <h2>Moteur</h2>
+        <span className="muted agent-engine-panel-meta">
+          {toolsError ? 'offline' : tools ? `${tools.length} tools` : '…'}
+        </span>
+      </header>
+
+      <div className="agent-engine-panel-body">
+        <p className="muted agent-engine-panel-lead">
+          Chiffres déterministes. Le chat à gauche explique — il ne recalcule pas.
+        </p>
+
+        <div className="agent-engine-panel-actions">
+          <button
+            type="button"
+            className="ghost"
+            disabled={busy || !symbol}
+            onClick={() => void onBrief()}
+          >
+            {busy ? '…' : 'Brief symbole'}
+          </button>
+          <button
+            type="button"
+            className="ghost"
+            disabled={busy || !symbol}
+            onClick={() => void onDetect()}
+          >
+            Verdict portes
+          </button>
+        </div>
+
+        {symbol ? (
+          <p className="agent-engine-panel-sym">
+            {symbol}
+            {timeframe ? ` · ${timeframe}` : ''}
+          </p>
+        ) : (
+          <p className="muted">Aucun symbole en session.</p>
+        )}
+
+        {error && <div className="banner error">{error}</div>}
+
+        {briefLines && briefLines.length > 0 && (
+          <dl className="agent-engine-brief">
+            {briefLines.map((line, i) => (
+              <div key={`${line.label}-${i}`}>
+                <dt>{line.label}</dt>
+                <dd>{line.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+
+        {tools && tools.length > 0 && (
+          <div className="agent-engine-panel-tools">
+            <h3>Allowlist engine</h3>
+            <ul>
+              {tools.map((t) => (
+                <li key={t.name} title={t.description}>
+                  <code>{t.name}</code>
+                  <span>{t.description}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
-
-      {showTools && tools && (
-        <ul className="agent-engine-tools">
-          {tools.map((t) => (
-            <li key={t.name} title={t.description}>
-              {t.name}
-            </li>
-          ))}
-        </ul>
-      )}
-      {showTools && toolsError && (
-        <p className="muted agent-engine-hint">Canal engine : {toolsError}</p>
-      )}
-
-      {briefError && <div className="banner error agent-engine-brief-err">{briefError}</div>}
-      {briefLines && briefLines.length > 0 && (
-        <dl className="agent-engine-brief">
-          {briefLines.map((line, i) => (
-            <div key={`${line.label}-${i}`}>
-              <dt>{line.label}</dt>
-              <dd>{line.value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-      <p className="muted agent-engine-hint">
-        Chiffres = moteur Python. Le chat LLM explique, ne recalcule pas.
-      </p>
-    </div>
+    </aside>
   )
 }

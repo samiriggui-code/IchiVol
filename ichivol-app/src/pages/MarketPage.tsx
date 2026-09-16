@@ -176,6 +176,7 @@ export function MarketPage() {
             lastSignal: null,
             engineDecision: eng?.decision,
             engineConfidence: eng?.confidence,
+            enginePipeline: eng?.pipeline,
           }
         })
         scanned.sort((a, b) => (b.engineConfidence ?? 0) - (a.engineConfidence ?? 0))
