@@ -1,0 +1,115 @@
+import { appendEngineThresholds, loadEngineThresholds } from './engineThresholds'
+
+export type DecisionLabel = 'STRONG_BUY' | 'BUY' | 'WATCH' | 'WAIT' | 'SELL' | 'STRONG_SELL'
+export type AgentDirection = 'LONG' | 'SHORT' | 'NEUTRAL'
+
+/** Verdict portes north star (pipeline.decision) — parallèle au DecisionLabel legacy. */
+export type PipelineGateLabel = 'BUY' | 'SELL' | 'WATCH' | 'NO_TRADE'
+
+/** Miroir du contrat pipeline (détail dans decisionPipeline.ts). Évite import circulaire. */
+export interface DecisionPipelinePayload {
+  decision?: PipelineGateLabel | string
+  direction?: AgentDirection
+  strategy_version?: string
+  stages: Array<{
+    id: 'direction' | 'participation' | 'structure' | 'location' | 'regime'
+    status: 'pass' | 'fail' | 'watch' | 'pending' | 'skip'
+    summary: string
+    codes?: string[]
+  }>
+}
+
+export interface ScreenerDecisionRow {
+  symbol: string
+  timeframe: string
+  price: number
+  decision: DecisionLabel
+  direction: AgentDirection
+  confidence: number
+  probability: number
+  ichimoku_score: number | null
+  rvol: number | null
+  /** Présent sur chaque ligne screener (même contrat que le détail). */
+  pipeline?: DecisionPipelinePayload
+}
+
+export interface AgentDetail {
+  direction: AgentDirection
+  confidence: number
+  probability?: number
+  reasons: string[]
+  metadata: Record<string, unknown>
+}
+
+export interface DecisionDetail extends ScreenerDecisionRow {
+  reasons: string[]
+  risks: string[]
+  invalidation: string[]
+  agreement: number
+  weights_used: Record<string, unknown>
+  strategy_version: string
+  timestamp: number
+  ichimoku: AgentDetail
+  rvol_detail: AgentDetail
+  /** Présent quand le moteur expose le pipeline à portes (V1+). */
+  pipeline?: DecisionPipelinePayload
+}
+
+async function parseError(res: Response): Promise<string> {
+  const body = (await res.json().catch(() => null)) as
+    | { detail?: string; message?: string; error?: string }
+    | null
+  return body?.detail ?? body?.message ?? body?.error ?? `Erreur ${res.status}`
+}
+
+export interface ScreenerResponse {
+  timeframe: string
+  computed_at: number
+  cache_age_seconds: number
+  rows: ScreenerDecisionRow[]
+}
+
+export async function getScreener(timeframe = '1h', force = false): Promise<ScreenerResponse> {
+  const params = new URLSearchParams({ timeframe })
+  if (force) params.set('force', 'true')
+  appendEngineThresholds(params, await loadEngineThresholds())
+  const res = await fetch(`/api/engine/screener?${params}`, { credentials: 'include' })
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json() as Promise<ScreenerResponse>
+}
+
+export async function getScreenerDecisions(
+  timeframe = '1h',
+  force = false,
+): Promise<ScreenerDecisionRow[]> {
+  return (await getScreener(timeframe, force)).rows
+}
+
+export async function getDecisionDetail(
+  symbol: string,
+  timeframe = '1h',
+  persist = true,
+  includeCandles = false,
+): Promise<DecisionDetail & { candles?: EngineCandle[]; provider?: string }> {
+  const params = new URLSearchParams({
+    timeframe,
+    persist: persist ? 'true' : 'false',
+  })
+  if (includeCandles) params.set('include_candles', 'true')
+  appendEngineThresholds(params, await loadEngineThresholds())
+  const res = await fetch(
+    `/api/engine/decisions/${encodeURIComponent(symbol)}?${params}`,
+    { credentials: 'include' },
+  )
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json() as Promise<DecisionDetail & { candles?: EngineCandle[]; provider?: string }>
+}
+
+interface EngineCandle {
+  time: number
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}

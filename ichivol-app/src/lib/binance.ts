@@ -1,5 +1,6 @@
 import type { Candle, Interval } from './types'
 
+/** Proxy Vite → https://data-api.binance.vision (Market Data Only, sans auth). */
 const PROXY = '/binance'
 
 export const INTERVALS: { id: Interval; label: string }[] = [

@@ -1,0 +1,117 @@
+"""Backtest performance metrics.
+
+Deliberately does NOT hardcode an annualization factor the way
+_research/backtestbot's Sharpe calculation does (`sqrt(252)` regardless of
+whether the strategy trades 4h or 1d bars, a bug flagged in that repo's
+analysis) -- `PERIODS_PER_YEAR` is looked up from the actual timeframe of
+the backtest.
+"""
+
+from __future__ import annotations
+
+import math
+import statistics
+from dataclasses import dataclass
+
+from app.agents.types import Direction
+from app.backtest.engine import BacktestResult
+
+PERIODS_PER_YEAR: dict[str, int] = {
+    "15m": 4 * 24 * 365,
+    "1h": 24 * 365,
+    "4h": 6 * 365,
+    "1d": 365,
+}
+
+
+@dataclass(frozen=True)
+class Metrics:
+    n_bars: int
+    total_return: float
+    cagr: float | None
+    sharpe: float | None
+    sortino: float | None
+    max_drawdown: float
+    num_trades: int
+    win_rate: float | None
+    profit_factor: float | None
+    expectancy: float | None
+    exposure: float
+
+
+def _max_drawdown(bar_returns: list[float]) -> float:
+    equity = 1.0
+    peak = 1.0
+    max_dd = 0.0
+    for r in bar_returns:
+        equity *= math.exp(r)
+        peak = max(peak, equity)
+        if peak > 0:
+            max_dd = max(max_dd, (peak - equity) / peak)
+    return max_dd
+
+
+def compute_metrics(result: BacktestResult) -> Metrics:
+    bar_returns = result.bar_returns
+    n = len(bar_returns)
+
+    if n == 0:
+        return Metrics(0, 0.0, None, None, None, 0.0, 0, None, None, None, 0.0)
+
+    total_log_return = sum(bar_returns)
+    total_return = math.exp(total_log_return) - 1
+
+    periods_per_year = PERIODS_PER_YEAR.get(result.timeframe)
+    cagr = None
+    sharpe = None
+    sortino = None
+    if periods_per_year is not None:
+        cagr = (1 + total_return) ** (periods_per_year / n) - 1
+
+        mean_r = statistics.mean(bar_returns)
+        if n >= 2:
+            std_r = statistics.stdev(bar_returns)
+            if std_r > 0:
+                sharpe = (mean_r / std_r) * math.sqrt(periods_per_year)
+
+        downside = [r for r in bar_returns if r < 0]
+        if len(downside) >= 2:
+            downside_std = statistics.stdev(downside)
+            if downside_std > 0:
+                sortino = (mean_r / downside_std) * math.sqrt(periods_per_year)
+        elif len(downside) == 1 and downside[0] != 0:
+            sortino = (mean_r / abs(downside[0])) * math.sqrt(periods_per_year)
+
+    max_dd = _max_drawdown(bar_returns)
+
+    trade_pnls = [math.exp(t.log_return) - 1 for t in result.trades]
+    num_trades = len(trade_pnls)
+    win_rate = None
+    profit_factor = None
+    expectancy = None
+    if num_trades > 0:
+        wins = [p for p in trade_pnls if p > 0]
+        losses = [p for p in trade_pnls if p <= 0]
+        win_rate = len(wins) / num_trades
+        expectancy = statistics.mean(trade_pnls)
+        gross_profit = sum(wins)
+        gross_loss = abs(sum(losses))
+        profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (
+            math.inf if gross_profit > 0 else None
+        )
+
+    exposure = sum(1 for p in result.posn if p != Direction.NEUTRAL) / n
+
+    return Metrics(
+        n_bars=n,
+        total_return=total_return,
+        cagr=cagr,
+        sharpe=sharpe,
+        sortino=sortino,
+        max_drawdown=max_dd,
+        num_trades=num_trades,
+        win_rate=win_rate,
+        profit_factor=profit_factor,
+        expectancy=expectancy,
+        exposure=exposure,
+    )

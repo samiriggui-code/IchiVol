@@ -1,6 +1,6 @@
+import { readChartColors } from './chartColors'
 import { computeIchimoku } from './ichimoku'
 import {
-  COLORS,
   type Candle,
   type IchimokuParams,
   type Signal,
@@ -18,6 +18,7 @@ export function computeVolumePulse(
   const { rvolLen, rvolConfirm, spikeMult } = volParams
   const volumes: VolumePoint[] = []
   const signals: Signal[] = []
+  const colors = readChartColors()
 
   for (let i = 0; i < candles.length; i++) {
     const c = candles[i]
@@ -33,11 +34,11 @@ export function computeVolumePulse(
     const confirmed = rvol >= rvolConfirm
     const spike = rvol >= spikeMult
 
-    let color: string = COLORS.weak
+    let color: string = colors.weak
     if (c.volume >= volAvg) {
-      if (ip.aboveCloud) color = spike ? COLORS.bull : `${COLORS.bull}99`
-      else if (ip.belowCloud) color = spike ? COLORS.bear : `${COLORS.bear}99`
-      else color = spike ? COLORS.neutral : `${COLORS.neutral}99`
+      if (ip.aboveCloud) color = spike ? colors.bull : `${colors.bull}99`
+      else if (ip.belowCloud) color = spike ? colors.bear : `${colors.bear}99`
+      else color = spike ? colors.neutral : `${colors.neutral}99`
     }
 
     volumes.push({

@@ -1,0 +1,9 @@
+# Prefer root docker-compose.yml (Hostinger GitHub + local).
+# This file mirrors production when the repo is cloned to /opt/ichivol
+# and you run compose from deploy/vps with adjusted contexts — use the root file.
+#
+#   cd /opt/ichivol && docker compose --env-file deploy/vps/.env up -d --build
+#
+# Kept for parity with other GSMS VPS layouts (grace, qatrial, …).
+include:
+  - path: ../../docker-compose.yml

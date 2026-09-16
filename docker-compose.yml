@@ -1,0 +1,95 @@
+# IchiVol — production stack (Hostinger VPS + Traefik)
+# FQDN: https://ichivol.global-it-ss.com
+# Smoke: http://187.77.166.124:3060
+name: ichivol
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ichivol-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ichivol}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-ichivol}
+    volumes:
+      - ichivol_pg:/var/lib/postgresql/data
+      - ./deploy/vps/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - ichivol
+
+  engine:
+    build:
+      context: ./ichivol-app/engine
+      dockerfile: Dockerfile
+    container_name: ichivol-engine
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ichivol}:${POSTGRES_PASSWORD}@postgres:5432/ichivol_engine
+      ENGINE_API_PREFIX: /api/engine
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TWELVE_DATA_API_KEY: ${TWELVE_DATA_API_KEY:-}
+    networks:
+      - ichivol
+
+  server:
+    build:
+      context: ./ichivol-app/server
+      dockerfile: Dockerfile
+    container_name: ichivol-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      engine:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      PORT: '8787'
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ichivol}:${POSTGRES_PASSWORD}@postgres:5432/ichivol?schema=public
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      SETTINGS_SECRET: ${SETTINGS_SECRET:-}
+      ENGINE_URL: http://engine:8000
+      LLM_PROVIDER: ${LLM_PROVIDER:-openrouter}
+      LLM_MODEL: ${LLM_MODEL:-openai/gpt-4o-mini}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    networks:
+      - ichivol
+
+  web:
+    build:
+      context: ./ichivol-app
+      dockerfile: Dockerfile
+    container_name: ichivol-web
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - '3060:80'
+    networks:
+      - ichivol
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.ichivol.entrypoints=websecure
+      - traefik.http.routers.ichivol.rule=Host(`ichivol.global-it-ss.com`)
+      - traefik.http.routers.ichivol.tls.certresolver=letsencrypt
+      - traefik.http.services.ichivol.loadbalancer.server.port=80
+
+volumes:
+  ichivol_pg:
+
+networks:
+  ichivol:
+    name: ichivol

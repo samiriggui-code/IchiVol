@@ -1,0 +1,178 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         String   @default("admin")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  setting       Setting?
+  decisions     Decision[]
+  notifications Notification[]
+  agentThreads  AgentThread[]
+  agentActions  AgentAction[]
+  auditLogs     AuditLog[]
+  watchlist     WatchlistItem[]
+
+  @@map("users")
+}
+
+model Setting {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeSources   Json     @default("[\"binance\"]")
+  ichimokuParams  Json     @default("{\"tenkan\":9,\"kijun\":26,\"senkouB\":52,\"displacement\":26}")
+  volumeParams    Json     @default("{\"rvolLen\":20,\"rvolConfirm\":1.5,\"spikeMult\":2}")
+  theme           String   @default("dark")
+  llmProvider     String   @default("openrouter")
+  llmModel        String   @default("openai/gpt-4o-mini")
+  llmApiKeyEnc    String?
+  twelveDataApiKeyEnc String?
+  updatedAt       DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model Decision {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  symbol         String
+  interval       String
+  /// Direction agent (LONG|SHORT|NEUTRAL)
+  bias           String
+  rvol           Float
+  /// Combiner legacy (STRONG_BUY|BUY|…)
+  signalKind     String?
+  /// Verdict portes (BUY|SELL|WATCH|NO_TRADE) si pipeline natif
+  gateDecision   String?
+  confidence     Float?
+  note           String?
+  /// confirmed | dismissed | archived
+  status         String   @default("confirmed")
+  /// Empreinte pipeline pour le watch (gate + stages) — null = pas encore pollé
+  watchFingerprint String?
+  /// Dernier passage du watch job (rotation fair)
+  watchCheckedAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId, symbol])
+  @@index([userId, createdAt])
+  @@index([userId, status])
+  @@map("decisions")
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// journal_confirm | pipeline_change
+  kind      String
+  title     String
+  body      String
+  payload   Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+/// Conversation Copilot persistée (E4 / audit P3).
+model AgentThread {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String?
+  /// Slots fpa-like
+  assumedSymbol    String?
+  assumedTimeframe String?
+  pendingIntent    String?
+  lastMode         String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  messages         AgentMessage[]
+
+  @@index([userId, updatedAt])
+  @@map("agent_threads")
+}
+
+model AgentMessage {
+  id        String   @id @default(uuid())
+  threadId  String
+  thread    AgentThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  /// user | assistant
+  role      String
+  content   String
+  mode      String?
+  intent    String?
+  citations Json?
+  createdAt DateTime @default(now())
+
+  @@index([threadId, createdAt])
+  @@map("agent_messages")
+}
+
+/// Action orchestrée allowlist (E5 / audit P5).
+model AgentAction {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// save_decision | pin_symbol
+  kind      String
+  /// proposed | confirmed | rejected | failed
+  status    String   @default("proposed")
+  symbol    String?
+  timeframe String?
+  threadId  String?
+  payload   Json?
+  result    Json?
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([userId, status])
+  @@map("agent_actions")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// agent.action.confirm | agent.action.reject | …
+  action    String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
+
+/// Watchlist user (pin_symbol).
+model WatchlistItem {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  symbol    String
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, symbol])
+  @@index([userId, updatedAt])
+  @@map("watchlist_items")
+}

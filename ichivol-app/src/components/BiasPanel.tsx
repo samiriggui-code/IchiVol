@@ -1,3 +1,8 @@
+import { Link } from 'react-router-dom'
+import { DecisionPipelinePanel } from './DecisionPipelinePanel'
+import { labelDecision } from '../lib/decisionLabels'
+import type { DecisionDetail, DecisionLabel } from '../lib/decisions'
+import type { DecisionPipelineView } from '../lib/decisionPipeline'
 import { signalLabel } from '../lib/signals'
 import type { Signal } from '../lib/types'
 
@@ -7,23 +12,47 @@ interface Props {
   bias: 'bull' | 'bear' | 'neutral'
   rvol: number
   price: number | null
+  /** Décision moteur Python (crypto USDT) — null si hors périmètre / erreur. */
+  engineDetail: DecisionDetail | null
+  enginePipeline: DecisionPipelineView | null
+  engineLoading: boolean
+  engineError: string | null
+  engineAvailable: boolean
 }
 
-export function BiasPanel({ symbol, signals, bias, rvol, price }: Props) {
-  const recent = [...signals].reverse().slice(0, 8)
+function decisionTone(decision: DecisionLabel): 'bull' | 'bear' | 'neutral' {
+  if (decision === 'STRONG_BUY' || decision === 'BUY') return 'bull'
+  if (decision === 'STRONG_SELL' || decision === 'SELL') return 'bear'
+  return 'neutral'
+}
+
+export function BiasPanel({
+  symbol,
+  signals,
+  bias,
+  rvol,
+  price,
+  engineDetail,
+  enginePipeline,
+  engineLoading,
+  engineError,
+  engineAvailable,
+}: Props) {
+  const recent = [...signals].reverse().slice(0, 6)
   return (
     <section className="panel bias-panel">
       <header className="panel-head">
         <h2>Lecture</h2>
         <span className="panel-meta">{symbol}</span>
       </header>
+
       <div className="bias-grid">
         <div>
-          <span className="label">Biais cloud</span>
+          <span className="label">Biais chart</span>
           <strong className={`bias bias-${bias}`}>{bias}</strong>
         </div>
         <div>
-          <span className="label">RVOL live</span>
+          <span className="label">RVOL chart</span>
           <strong className="mono">{rvol.toFixed(2)}×</strong>
         </div>
         <div>
@@ -35,7 +64,64 @@ export function BiasPanel({ symbol, signals, bias, rvol, price }: Props) {
           </strong>
         </div>
       </div>
-      <h3 className="subhead">Signaux confirmés</h3>
+      <p className="bias-chart-note muted">
+        Chart = OHLCV source (calcul local). Le moteur IchiVol ci-dessous est la même lecture que
+        Décisions.
+      </p>
+
+      <div className="bias-engine">
+        <div className="bias-engine-head">
+          <h3 className="subhead">Moteur IchiVol</h3>
+          {engineAvailable && engineDetail && (
+            <Link
+              to="/app/decisions"
+              className="ghost bias-engine-link"
+              title="Ouvrir la page Décisions"
+            >
+              Décisions →
+            </Link>
+          )}
+        </div>
+
+        {!engineAvailable && (
+          <p className="muted bias-engine-msg">
+            Le moteur décisionnel (pipeline) est branché sur les paires crypto USDT. Change de
+            classe / timeframe supporté pour l’activer.
+          </p>
+        )}
+
+        {engineAvailable && engineLoading && !engineDetail && (
+          <p className="muted bias-engine-msg">Chargement moteur…</p>
+        )}
+
+        {engineAvailable && engineError && (
+          <p className="bias-engine-msg error-text" role="alert">
+            {engineError.includes('engine_unreachable') || engineError.includes('502')
+              ? 'Moteur Python injoignable (port 8000).'
+              : engineError}
+          </p>
+        )}
+
+        {engineDetail && (
+          <>
+            <div className="bias-engine-badges">
+              <span
+                className={`bias bias-${decisionTone(engineDetail.decision)}`}
+                title={engineDetail.decision}
+              >
+                {labelDecision(engineDetail.decision)}
+              </span>
+              <span className="muted mono">
+                conf {(engineDetail.confidence * 100).toFixed(0)}% · {engineDetail.timeframe}
+                {enginePipeline?.native ? ' · natif' : ''}
+              </span>
+            </div>
+            {enginePipeline && <DecisionPipelinePanel view={enginePipeline} />}
+          </>
+        )}
+      </div>
+
+      <h3 className="subhead">Signaux chart (RVOL local)</h3>
       <ul className="signal-list">
         {recent.map((s) => (
           <li key={`${s.time}-${s.kind}`}>
@@ -45,7 +131,7 @@ export function BiasPanel({ symbol, signals, bias, rvol, price }: Props) {
           </li>
         ))}
         {recent.length === 0 && (
-          <li className="muted">Pas de signal volume-confirmé sur la fenêtre</li>
+          <li className="muted">Pas de signal volume-confirmé sur la fenêtre chart</li>
         )}
       </ul>
     </section>

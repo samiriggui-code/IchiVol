@@ -1,3 +1,6 @@
+import { displaySymbol } from '../lib/markets'
+import { labelDecision } from '../lib/decisionLabels'
+import type { DecisionLabel } from '../lib/decisions'
 import { signalLabel } from '../lib/signals'
 import type { ScreenerRow } from '../lib/types'
 
@@ -6,6 +9,8 @@ interface Props {
   loading: boolean
   selected: string
   onSelect: (symbol: string) => void
+  title?: string
+  showEngine?: boolean
 }
 
 function fmtVol(n: number): string {
@@ -15,11 +20,25 @@ function fmtVol(n: number): string {
   return n.toFixed(0)
 }
 
-export function Screener({ rows, loading, selected, onSelect }: Props) {
+function decisionTone(decision: string): 'bull' | 'bear' | 'neutral' {
+  if (decision === 'STRONG_BUY' || decision === 'BUY') return 'bull'
+  if (decision === 'STRONG_SELL' || decision === 'SELL') return 'bear'
+  return 'neutral'
+}
+
+export function Screener({
+  rows,
+  loading,
+  selected,
+  onSelect,
+  title = 'Screener',
+  showEngine = false,
+}: Props) {
+  const cols = showEngine ? 6 : 5
   return (
     <section className="panel screener">
       <header className="panel-head">
-        <h2>Screener</h2>
+        <h2>{title}</h2>
         <span className="panel-meta">{loading ? 'scan…' : `${rows.length} paires`}</span>
       </header>
       <div className="table-wrap">
@@ -29,6 +48,7 @@ export function Screener({ rows, loading, selected, onSelect }: Props) {
               <th>Symbole</th>
               <th>Biais</th>
               <th>RVOL</th>
+              {showEngine && <th>Moteur</th>}
               <th>24h</th>
               <th>Signal</th>
             </tr>
@@ -42,14 +62,34 @@ export function Screener({ rows, loading, selected, onSelect }: Props) {
               >
                 <td>
                   <div className="sym">
-                    <strong>{r.symbol.replace('USDT', '')}</strong>
-                    <small>{fmtVol(r.quoteVolume)}</small>
+                    <strong>{displaySymbol(r.symbol)}</strong>
+                    <small>
+                      {r.symbol} · {fmtVol(r.quoteVolume)}
+                    </small>
                   </div>
                 </td>
                 <td>
                   <span className={`bias bias-${r.bias}`}>{r.bias}</span>
                 </td>
                 <td className="mono">{r.rvol.toFixed(2)}×</td>
+                {showEngine && (
+                  <td>
+                    {r.engineDecision ? (
+                      <span
+                        className={`bias bias-${decisionTone(r.engineDecision)}`}
+                        title={
+                          r.engineConfidence != null
+                            ? `${r.engineDecision} · ${(r.engineConfidence * 100).toFixed(0)}%`
+                            : r.engineDecision
+                        }
+                      >
+                        {labelDecision(r.engineDecision as DecisionLabel)}
+                      </span>
+                    ) : (
+                      <span className="muted">—</span>
+                    )}
+                  </td>
+                )}
                 <td className={r.change24h >= 0 ? 'up' : 'down'}>
                   {r.change24h.toFixed(1)}%
                 </td>
@@ -64,8 +104,8 @@ export function Screener({ rows, loading, selected, onSelect }: Props) {
             ))}
             {!loading && rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="muted center">
-                  Aucun signal confirmé sur ce timeframe
+                <td colSpan={cols} className="muted center">
+                  Aucun symbole sur ce timeframe
                 </td>
               </tr>
             )}

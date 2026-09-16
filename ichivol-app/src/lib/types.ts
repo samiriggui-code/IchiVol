@@ -20,6 +20,14 @@ export interface VolumeParams {
   rvolLen: number
   rvolConfirm: number
   spikeMult: number
+  /** Seuils moteur (pipeline / screener / backtest) — voir engine README. */
+  rvolLow: number
+  rvolSignificant: number
+  rvolStrong: number
+  rvolAnomaly: number
+  atrDeadPercentile: number
+  atrExtremePercentile: number
+  atrStopMultiplier: number
 }
 
 export interface IchimokuPoint {
@@ -64,6 +72,9 @@ export interface ScreenerRow {
   rvol: number
   signals: Signal[]
   lastSignal: Signal | null
+  /** Badge moteur (si screener engine dispo pour ce symbole). */
+  engineDecision?: string
+  engineConfidence?: number
 }
 
 export const DEFAULT_ICHI: IchimokuParams = {
@@ -77,20 +88,11 @@ export const DEFAULT_VOL: VolumeParams = {
   rvolLen: 20,
   rvolConfirm: 1.5,
   spikeMult: 2,
+  rvolLow: 0.7,
+  rvolSignificant: 1.5,
+  rvolStrong: 2.0,
+  rvolAnomaly: 3.0,
+  atrDeadPercentile: 0.15,
+  atrExtremePercentile: 0.9,
+  atrStopMultiplier: 1.5,
 }
-
-export const COLORS = {
-  bull: '#2DD4BF',
-  bear: '#F07167',
-  neutral: '#E8B86D',
-  weak: '#5B6B73',
-  ink: '#0B1215',
-  panel: '#121A1E',
-  line: '#1E2A30',
-  text: '#E7EEF0',
-  muted: '#8AA0A8',
-  tenkan: '#F4A261',
-  kijun: '#7EB8DA',
-  spanA: '#2DD4BF',
-  spanB: '#F07167',
-} as const

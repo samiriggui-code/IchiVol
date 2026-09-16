@@ -15,12 +15,14 @@ App web **screener + chart** : un signal Ichimoku ne compte que s’il est **con
 ## Lancer
 
 ```bash
-cd scripts/trading/ichivol-app
+cd ichivol-app
 npm install
 npm run dev
 ```
 
-→ http://localhost:5173  
+→ http://localhost:5173/ — landing GSMS CRM style (dark/light)  
+→ `/login` — admin unique MVP (`admin` / `ichivol`)  
+→ `/app` — cockpit (auth session requise)
 
 Proxy Vite : `/binance` → `https://data-api.binance.vision` (plus accessible que `api.binance.com` selon la région).
 
@@ -36,3 +38,22 @@ npm run build
 4. Screener ~20 paires USDT liquides  
 
 Companion Pine Script : [`../ichimoku-volume/`](../ichimoku-volume/).
+
+## Agent IA (explicateur de signaux)
+
+Panneau `AgentPanel` (3 modes : expliquer un signal, recherche théorique, idée de marché sur le screener), branché sur un petit backend séparé dans [`server/`](server/). L'agent est bridé pour ne jamais inventer une valeur de marché — voir [`server/README.md`](server/README.md) pour le détail du référentiel anti-hallucination.
+
+Lancement (deux process) :
+
+```bash
+# terminal 1 — backend agent
+cd server
+npm install
+cp .env.example .env   # renseigner ANTHROPIC_API_KEY, OPENAI_API_KEY ou OPENROUTER_API_KEY
+npm run dev             # http://localhost:8787
+
+# terminal 2 — app
+npm run dev              # http://localhost:5173, proxy /api -> :8787
+```
+
+⚠️ `dotenv` ne surcharge pas une variable déjà présente dans l'environnement système : si `ANTHROPIC_API_KEY` (ou autre) est déjà définie globalement sur la machine, le serveur l'utilisera même si `server/.env` est vide.
