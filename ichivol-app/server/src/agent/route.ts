@@ -179,8 +179,9 @@ export async function handleAgentChat(req: Request, res: Response): Promise<void
       : toolRun.decisionFromTool
 
   if (effectiveMode === 'explain_decision' && !decisionPayload) {
+    const failedDetail = toolRun.results.find((r) => r.tool === 'get_decision_detail' && !r.ok)
     const err =
-      toolRun.results.find((r) => r.tool === 'get_decision_detail' && !r.ok)?.error ??
+      (failedDetail && !failedDetail.ok ? failedDetail.error : undefined) ??
       (symbol
         ? 'Impossible de charger la décision moteur'
         : 'Symbole requis pour expliquer une décision (ex. NEARUSDT)')
