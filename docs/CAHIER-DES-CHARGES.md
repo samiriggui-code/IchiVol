@@ -12,6 +12,7 @@ Les décisions **verrouillées** vivent dans les docs listées ci-dessous. Ce CD
 | [`MARKET-DATA-STRATEGY.md`](./MARKET-DATA-STRATEGY.md) | Feeds gratuits, adapters |
 | [`APP-ARBORESCENCE-V2.md`](./APP-ARBORESCENCE-V2.md) | Pages front + rôles LLM |
 | [`HANDOFF-AGENT-CONCEPT.md`](./HANDOFF-AGENT-CONCEPT.md) | StrategyAgents ≠ Copilot |
+| [`OPTIONS-ABC.md`](./OPTIONS-ABC.md) | Glossaire Option A/B/C (combiner vs portes) — **lire avant tout handoff « Option C »** |
 | [`HANDOFF-CURSOR-SESSION-2026-09-16.md`](./HANDOFF-CURSOR-SESSION-2026-09-16.md) | État front session (seuils, multi-classe, journal) |
 | [`HANDOFF-CURSOR-SESSION-2026-09-16-SOIR.md`](./HANDOFF-CURSOR-SESSION-2026-09-16-SOIR.md) | Soir : Matrice, watch+cloche, explain_decision, LLM table |
 | [`HANDOFF-CLAUDE-CDC-CAP-2026-09-16.md`](./HANDOFF-CLAUDE-CDC-CAP-2026-09-16.md) | Alerte Claude — échelle V1→V3, agents, watch Journal |
