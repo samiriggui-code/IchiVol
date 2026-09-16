@@ -10,6 +10,7 @@ import {
 import { useAgentSession } from '../lib/agentSession'
 import type { MarketSnapshot } from '../lib/marketSnapshot'
 import { signalLabel } from '../lib/signals'
+import { AgentEngineStrip } from './AgentEngineStrip'
 
 interface Props {
   snapshot: MarketSnapshot | null
@@ -189,6 +190,11 @@ export function AgentPanel({ snapshot, decisionPayload, decisionRequestId }: Pro
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only on new decision request
   }, [decisionPayload, decisionRequestId])
 
+  const stripSymbol =
+    decisionPayload?.symbol ?? snapshot?.symbol ?? null
+  const stripTf =
+    decisionPayload?.timeframe ?? snapshot?.interval ?? '1h'
+
   return (
     <div className="agent-panel-body">
       <div className="agent-modes" role="group" aria-label="Mode agent">
@@ -215,6 +221,8 @@ export function AgentPanel({ snapshot, decisionPayload, decisionRequestId }: Pro
           )
         })}
       </div>
+
+      <AgentEngineStrip symbol={stripSymbol} timeframe={stripTf} />
 
       <div className="agent-history">
         {history.length === 0 && !loading && (
