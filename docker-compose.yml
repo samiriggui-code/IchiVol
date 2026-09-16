@@ -1,7 +1,8 @@
 # IchiVol — production stack (Hostinger VPS + Traefik)
+# Deploy: clone repo to /opt/ichivol then:
+#   docker compose --env-file deploy/vps/.env up -d --build
 # FQDN: https://ichivol.global-it-ss.com
 # Smoke: http://187.77.166.124:3060
-# Builds from GitHub so Hostinger Docker Manager (compose-only) can build images.
 name: ichivol
 
 services:
@@ -44,8 +45,9 @@ services:
 
   engine:
     build:
-      context: https://github.com/samiriggui-code/IchiVol.git#main:ichivol-app/engine
+      context: ./ichivol-app/engine
       dockerfile: Dockerfile
+    image: ichivol-engine:latest
     container_name: ichivol-engine
     restart: unless-stopped
     depends_on:
@@ -63,8 +65,9 @@ services:
 
   server:
     build:
-      context: https://github.com/samiriggui-code/IchiVol.git#main:ichivol-app/server
+      context: ./ichivol-app/server
       dockerfile: Dockerfile
+    image: ichivol-server:latest
     container_name: ichivol-server
     restart: unless-stopped
     depends_on:
@@ -93,8 +96,9 @@ services:
 
   web:
     build:
-      context: https://github.com/samiriggui-code/IchiVol.git#main:ichivol-app
+      context: ./ichivol-app
       dockerfile: Dockerfile
+    image: ichivol-web:latest
     container_name: ichivol-web
     restart: unless-stopped
     depends_on:
