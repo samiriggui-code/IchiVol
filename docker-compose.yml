@@ -1,6 +1,7 @@
 # IchiVol — production stack (Hostinger VPS + Traefik)
 # FQDN: https://ichivol.global-it-ss.com
 # Smoke: http://187.77.166.124:3060
+# Builds from GitHub so Hostinger Docker Manager (compose-only) can build images.
 name: ichivol
 
 services:
@@ -14,7 +15,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-ichivol}
     volumes:
       - ichivol_pg:/var/lib/postgresql/data
-      - ./deploy/vps/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 5s
@@ -23,15 +23,36 @@ services:
     networks:
       - ichivol
 
+  postgres-init:
+    image: postgres:16-alpine
+    container_name: ichivol-postgres-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER:-ichivol}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        psql -h postgres -U "$$POSTGRES_USER" -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='ichivol_engine'" | grep -q 1 \
+          || psql -h postgres -U "$$POSTGRES_USER" -d postgres -c "CREATE DATABASE ichivol_engine;"
+    restart: 'no'
+    networks:
+      - ichivol
+
   engine:
     build:
-      context: ./ichivol-app/engine
+      context: https://github.com/samiriggui-code/IchiVol.git#main:ichivol-app/engine
       dockerfile: Dockerfile
     container_name: ichivol-engine
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
+      postgres-init:
+        condition: service_completed_successfully
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ichivol}:${POSTGRES_PASSWORD}@postgres:5432/ichivol_engine
       ENGINE_API_PREFIX: /api/engine
@@ -42,13 +63,15 @@ services:
 
   server:
     build:
-      context: ./ichivol-app/server
+      context: https://github.com/samiriggui-code/IchiVol.git#main:ichivol-app/server
       dockerfile: Dockerfile
     container_name: ichivol-server
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
+      postgres-init:
+        condition: service_completed_successfully
       engine:
         condition: service_started
     environment:
@@ -70,7 +93,7 @@ services:
 
   web:
     build:
-      context: ./ichivol-app
+      context: https://github.com/samiriggui-code/IchiVol.git#main:ichivol-app
       dockerfile: Dockerfile
     container_name: ichivol-web
     restart: unless-stopped
