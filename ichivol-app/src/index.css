@@ -1437,6 +1437,15 @@ button, select { font: inherit; color: inherit; }
   );
 }
 .corr-loading { display: flex; flex-direction: column; gap: 0.4rem; }
+.corr-empty {
+  margin-top: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px dashed var(--border);
+  border-radius: 0.45rem;
+  font-size: 0.78rem;
+}
+.corr-empty p { margin: 0 0 0.35rem; }
+.corr-empty p:last-child { margin-bottom: 0; }
 .corr-skeleton {
   height: 2.5rem;
   border-radius: 0.4rem;

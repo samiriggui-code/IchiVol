@@ -4,6 +4,10 @@ import {
   type CorrelationMatrix,
   type CorrelationMethod,
 } from '../lib/correlations'
+import { getEngineUniverse } from '../lib/universe'
+
+/** Cap matrice lisible + fetch raisonnable (engine aligne TOUS les timestamps). */
+const MAX_CORR_SYMBOLS = 12
 
 function cellColor(v: number | null): string {
   if (v == null || Number.isNaN(v)) return 'transparent'
@@ -30,7 +34,7 @@ function peerBarWidth(corr: number | null): string {
   return `${Math.round(Math.abs(corr) * 100)}%`
 }
 
-/** Heatmap Contexte — co-mouvements watchlist, jamais un vote. */
+/** Heatmap Contexte — co-mouvements crypto, jamais un vote. */
 export function CorrelationHeatmap() {
   const [data, setData] = useState<CorrelationMatrix | null>(null)
   const [loading, setLoading] = useState(true)
@@ -38,12 +42,50 @@ export function CorrelationHeatmap() {
   const [method, setMethod] = useState<CorrelationMethod>('log_returns')
   const [timeframe, setTimeframe] = useState('1h')
   const [focus, setFocus] = useState<string | null>(null)
+  const [universeSymbols, setUniverseSymbols] = useState<string[] | null>(null)
 
   useEffect(() => {
     let cancelled = false
+    getEngineUniverse()
+      .then((u) => {
+        if (cancelled) return
+        const crypto = u.instruments
+          .filter((i) => i.wired && i.enabled && i.asset_class === 'crypto')
+          .map((i) => i.id)
+          .slice(0, MAX_CORR_SYMBOLS)
+        setUniverseSymbols(crypto)
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : 'Erreur univers')
+          setLoading(false)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!universeSymbols) return
+    if (universeSymbols.length < 2) {
+      setData({
+        timeframe,
+        method,
+        symbols: universeSymbols,
+        sample_size: 0,
+        matrix: [],
+        skipped: [],
+      })
+      setLoading(false)
+      setError(null)
+      return
+    }
+
+    let cancelled = false
     setLoading(true)
     setError(null)
-    fetchCorrelations({ timeframe, method })
+    fetchCorrelations({ timeframe, method, symbols: universeSymbols })
       .then((m) => {
         if (cancelled) return
         setData(m)
@@ -58,7 +100,7 @@ export function CorrelationHeatmap() {
     return () => {
       cancelled = true
     }
-  }, [timeframe, method])
+  }, [timeframe, method, universeSymbols])
 
   const focusPeers = useMemo(() => {
     if (!data || !focus) return []
@@ -76,16 +118,18 @@ export function CorrelationHeatmap() {
 
   const n = data?.symbols.length ?? 0
   const showFullGrid = n > 0 && n <= 16
+  const emptyMatrix = Boolean(data && !loading && n === 0)
 
   return (
     <div className="corr-panel">
       <header className="corr-head">
         <div className="corr-head-copy">
-          <p className="corr-kicker">Watchlist · lecture seule</p>
+          <p className="corr-kicker">Crypto · lecture seule</p>
           <h3>Qui bouge avec qui</h3>
           <p className="muted corr-lede">
-            Corrélation de Pearson sur les rendements (ou prix). Sert à lire le
-            co-mouvement — pas à voter LONG/SHORT.
+            Corrélation de Pearson entre cryptos (même horloge Binance). Sert à
+            lire le co-mouvement — pas à voter LONG/SHORT. FX / indices exclus :
+            horaires différents → overlap trop faible.
           </p>
         </div>
         <div className="corr-controls" role="group" aria-label="Paramètres corrélation">
@@ -123,7 +167,9 @@ export function CorrelationHeatmap() {
         <div className="corr-loading" aria-live="polite">
           <div className="corr-skeleton" />
           <div className="corr-skeleton corr-skeleton-short" />
-          <p className="muted">Alignement des barres communes…</p>
+          <p className="muted">
+            Calcul Pearson sur ~{universeSymbols?.length ?? '…'} cryptos ({timeframe})…
+          </p>
         </div>
       )}
       {error && (
@@ -132,7 +178,31 @@ export function CorrelationHeatmap() {
         </div>
       )}
 
-      {data && !loading && (
+      {emptyMatrix && (
+        <div className="corr-empty">
+          <p>
+            Pas assez de barres communes pour une matrice honnête
+            {data && data.skipped.length > 0 ? ` (${data.skipped.length} ignorés)` : ''}.
+          </p>
+          <p className="muted">
+            Réessaie en 1h / log returns, ou vérifie que le moteur a des klines crypto.
+          </p>
+          {data && data.skipped.length > 0 && (
+            <details className="corr-skipped">
+              <summary>Détail ignorés</summary>
+              <ul>
+                {data.skipped.map((s) => (
+                  <li key={s.symbol}>
+                    <span className="mono">{s.symbol}</span> — {s.reason}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
+      )}
+
+      {data && !loading && n > 0 && (
         <>
           <p className="corr-meta">
             <span>{data.symbols.length} symboles</span>

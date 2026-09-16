@@ -129,7 +129,7 @@ Il n’existe **pas** de jalon nommé « V2+ » dans ce CDC. L’ordre est stric
 
 - [x] Paper trading UI — `/app/paper` + `lib/paper.ts` ; confirm Décisions → journal + `POST paper/positions` (crypto) ; proxy Express POST `/api/engine/*`  
 - [x] Performance affichée sur Paper (`GET /paper/performance`) — calibration seuils = plus tard ; redémarrer le moteur si 404  
-- [x] Graphe corrélations (voir §6.2) — moteur livré (2026-09-16) : `GET /api/engine/correlations` (`app/correlation/engine.py`), Pearson sur rendements log par défaut, symboles alignés sur timestamps communs, jamais branché au pipeline. UI Cursor reste à faire (Contexte ou sous-vue Marché).  
+- [x] Graphe corrélations (voir §6.2) — moteur + UI (2026-09-16) : `GET /api/engine/correlations` + `CorrelationHeatmap` sur `/app/context` (crypto Binance, Focus + matrice Pearson, lecture seule, hors pipeline).  
 - [x] **Journal watch + notifications header** (voir §6.3) — table Prisma + cloche + job poll 5 min  
 - [x] Copilot enrichi : skill « Expliquer cette décision » (`explain_decision` + boutons Décisions/Journal)  
 - [x] Multi-marchés V2 : paper sur forex·métaux·actions — garde crypto-only levé dans `POST /api/engine/paper/positions` (2026-09-16, voir `ichivol-app/engine/README.md` §Paper multi-classe) ; `auto_watchlist` couvrait déjà biquote (forex/métal/index/énergie) sans qu'on l'ait noté. Contexte multi-actifs (page dédiée) reste backlog ultérieur, pas bloquant.
@@ -176,7 +176,7 @@ RSI, MACD, Stochastic, CCI, salade d’indicateurs, broker Binance hardcodé, mu
 | **Où** | Contexte ou sous-vue Marché |
 | **Dépend de** | Historique OHLCV en DB + calcul Python |
 | **Pas** | Topologie d’actifs non-marché |
-| **Statut** | Moteur livré (2026-09-16) : `GET /api/engine/correlations`, voir `ichivol-app/engine/README.md` §Corrélations. UI front pas commencée. |
+| **Statut** | Moteur + UI livrés (2026-09-16) : `GET /api/engine/correlations` + `CorrelationHeatmap` sur Contexte (crypto only — overlap horaires FX/indices trop faible pour une matrice globale). |
 
 ### 6.3 Journal watch + notifications header (V2 — intent 2026-09-16)
 

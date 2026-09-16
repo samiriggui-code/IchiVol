@@ -263,7 +263,7 @@ export function ContextPanel({ variant = 'full' }: { variant?: ContextVariant })
       ) : (
         <p className="context-note">
           Haut de page : climat crypto. Puis news / calendrier (adapters gratuits) et
-          co-mouvements watchlist. Aucun de ces blocs ne vote LONG/SHORT — la méthode
+          co-mouvements crypto. Aucun de ces blocs ne vote LONG/SHORT — la méthode
           reste sur Marché et Décisions.
         </p>
       )}

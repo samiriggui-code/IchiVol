@@ -59,7 +59,7 @@ services:
       SETTINGS_SECRET: ${SETTINGS_SECRET:-}
       ENGINE_URL: http://engine:8000
       LLM_PROVIDER: ${LLM_PROVIDER:-openrouter}
-      LLM_MODEL: ${LLM_MODEL:-openai/gpt-4o-mini}
+      LLM_MODEL: ${LLM_MODEL:-anthropic/claude-sonnet-4.5}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
