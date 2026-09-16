@@ -10,8 +10,8 @@ export function ContextPage() {
       <header className="page-head">
         <h1>Contexte</h1>
         <p className="muted">
-          Zoom macro : capitalisation, dominance, Fear &amp; Greed, top marchés, corrélations.
-          Complète l’Overview — n’écrase pas la méthode Ichimoku × volume.
+          Zoom macro : climat, news, calendrier, corrélations watchlist.
+          Complète l’Overview — n’écrase pas Ichimoku × RVOL.
         </p>
       </header>
       <ContextPanel variant="full" />

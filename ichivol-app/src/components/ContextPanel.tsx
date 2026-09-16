@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CorrelationHeatmap } from './CorrelationHeatmap'
+import { ContextFeedsPanel } from './ContextFeedsPanel'
 import {
   fetchFearGreed,
   fetchFearGreedHistory,
@@ -111,7 +112,7 @@ export function ContextPanel({ variant = 'full' }: { variant?: ContextVariant })
           )}
         </div>
         <span className="panel-meta">
-          {loading ? 'chargement…' : compact ? 'résumé' : 'CoinGecko · Alternative.me'}
+          {loading ? 'chargement…' : compact ? 'résumé' : 'CoinGecko · F&G · news · calendrier'}
         </span>
       </header>
 
@@ -238,6 +239,12 @@ export function ContextPanel({ variant = 'full' }: { variant?: ContextVariant })
       )}
 
       {!compact && (
+        <section className="context-feeds-wrap" aria-label="News et calendrier">
+          <ContextFeedsPanel />
+        </section>
+      )}
+
+      {!compact && (
         <section className="context-corr" aria-label="Corrélations">
           <CorrelationHeatmap />
         </section>
@@ -246,7 +253,7 @@ export function ContextPanel({ variant = 'full' }: { variant?: ContextVariant })
       {compact ? (
         <div className="context-compact-footer">
           <p className="context-note">
-            Aperçu macro uniquement. Le détail (plus de marchés, historique sentiment) est sur la page
+            Aperçu macro uniquement. Le détail (news, calendrier, corrélations) est sur la page
             Contexte.
           </p>
           <Link to="/app/context" className="ghost">
@@ -255,9 +262,9 @@ export function ContextPanel({ variant = 'full' }: { variant?: ContextVariant })
         </div>
       ) : (
         <p className="context-note">
-          Ces données décrivent le <em>climat</em> du marché crypto. Les signaux Ichimoku × RVOL (et le
-          pipeline Structure / ATR) restent calculés sur les klines de ta source — voir Marché et
-          Décisions.
+          Haut de page : climat crypto. Puis news / calendrier (adapters gratuits) et
+          co-mouvements watchlist. Aucun de ces blocs ne vote LONG/SHORT — la méthode
+          reste sur Marché et Décisions.
         </p>
       )}
     </section>

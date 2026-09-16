@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { DecisionPipelinePanel } from './DecisionPipelinePanel'
-import { labelDecision } from '../lib/decisionLabels'
-import type { DecisionDetail, DecisionLabel } from '../lib/decisions'
+import { VerdictBadge } from './VerdictBadge'
+import type { DecisionDetail } from '../lib/decisions'
 import type { DecisionPipelineView } from '../lib/decisionPipeline'
 import { signalLabel } from '../lib/signals'
 import type { Signal } from '../lib/types'
@@ -18,12 +18,6 @@ interface Props {
   engineLoading: boolean
   engineError: string | null
   engineAvailable: boolean
-}
-
-function decisionTone(decision: DecisionLabel): 'bull' | 'bear' | 'neutral' {
-  if (decision === 'STRONG_BUY' || decision === 'BUY') return 'bull'
-  if (decision === 'STRONG_SELL' || decision === 'SELL') return 'bear'
-  return 'neutral'
 }
 
 export function BiasPanel({
@@ -105,12 +99,7 @@ export function BiasPanel({
         {engineDetail && (
           <>
             <div className="bias-engine-badges">
-              <span
-                className={`bias bias-${decisionTone(engineDetail.decision)}`}
-                title={engineDetail.decision}
-              >
-                {labelDecision(engineDetail.decision)}
-              </span>
+              <VerdictBadge decision={engineDetail.decision} pipeline={engineDetail.pipeline} />
               <span className="muted mono">
                 conf {(engineDetail.confidence * 100).toFixed(0)}% · {engineDetail.timeframe}
                 {enginePipeline?.native ? ' · natif' : ''}

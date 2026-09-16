@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ContextPanel } from '../components/ContextPanel'
-import { labelDecision } from '../lib/decisionLabels'
+import { VerdictBadge } from '../components/VerdictBadge'
 import {
   getScreener,
   type DecisionLabel,
   type ScreenerDecisionRow,
 } from '../lib/decisions'
+import { asGate } from '../lib/verdict'
 
 const QUICK_LINKS = [
   {
@@ -57,10 +58,23 @@ function isWatch(d: DecisionLabel): boolean {
   return d === 'WATCH' || d === 'WAIT'
 }
 
-function decisionTone(decision: DecisionLabel): 'bull' | 'bear' | 'neutral' {
-  if (isBuy(decision)) return 'bull'
-  if (isSell(decision)) return 'bear'
-  return 'neutral'
+/**
+ * Bucket Option B (docs/OPTIONS-ABC.md) : la porte fait foi quand elle est
+ * dispo (NO_TRADE ne compte dans aucun seau) ; sinon on retombe sur le
+ * combiner legacy pour ne pas vider les stats quand le pipeline est absent.
+ */
+function verdictBucket(r: ScreenerDecisionRow): 'buy' | 'sell' | 'watch' | 'none' {
+  const gate = asGate(r.pipeline?.decision as string | undefined)
+  if (gate) {
+    if (gate === 'BUY') return 'buy'
+    if (gate === 'SELL') return 'sell'
+    if (gate === 'WATCH') return 'watch'
+    return 'none'
+  }
+  if (isBuy(r.decision)) return 'buy'
+  if (isSell(r.decision)) return 'sell'
+  if (isWatch(r.decision)) return 'watch'
+  return 'none'
 }
 
 function summarize(rows: ScreenerDecisionRow[]) {
@@ -68,9 +82,10 @@ function summarize(rows: ScreenerDecisionRow[]) {
   let sell = 0
   let watch = 0
   for (const r of rows) {
-    if (isBuy(r.decision)) buy += 1
-    else if (isSell(r.decision)) sell += 1
-    else if (isWatch(r.decision)) watch += 1
+    const bucket = verdictBucket(r)
+    if (bucket === 'buy') buy += 1
+    else if (bucket === 'sell') sell += 1
+    else if (bucket === 'watch') watch += 1
   }
   const top = [...rows]
     .sort((a, b) => b.confidence - a.confidence)
@@ -156,17 +171,17 @@ export function OverviewPage() {
         <div className="panel overview-stat overview-stat--bull">
           <span className="overview-stat-label muted">Achats</span>
           <strong className="mono">{stats.buy}</strong>
-          <span className="overview-stat-meta muted">BUY / STRONG_BUY</span>
+          <span className="overview-stat-meta muted">Portes BUY (fallback combiner)</span>
         </div>
         <div className="panel overview-stat overview-stat--bear">
           <span className="overview-stat-label muted">Ventes</span>
           <strong className="mono">{stats.sell}</strong>
-          <span className="overview-stat-meta muted">SELL / STRONG_SELL</span>
+          <span className="overview-stat-meta muted">Portes SELL (fallback combiner)</span>
         </div>
         <div className="panel overview-stat">
           <span className="overview-stat-label muted">Surveillance</span>
           <strong className="mono">{stats.watch}</strong>
-          <span className="overview-stat-meta muted">WATCH / WAIT</span>
+          <span className="overview-stat-meta muted">Portes WATCH (fallback combiner)</span>
         </div>
       </section>
 
@@ -201,9 +216,7 @@ export function OverviewPage() {
                       </Link>
                     </td>
                     <td>
-                      <span className={`bias bias-${decisionTone(r.decision)}`}>
-                        {labelDecision(r.decision)}
-                      </span>
+                      <VerdictBadge decision={r.decision} pipeline={r.pipeline} />
                     </td>
                     <td className="mono">{(r.confidence * 100).toFixed(0)}%</td>
                     <td className="mono">{r.rvol != null ? `${r.rvol.toFixed(2)}×` : '—'}</td>

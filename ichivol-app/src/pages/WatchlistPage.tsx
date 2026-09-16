@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getDecisionDetail } from '../lib/decisions'
 import { decisionPayloadFromDetail } from '../lib/agent'
-import { useAgentSession } from '../lib/agentSession'
+import { useCopilotNav } from '../lib/useCopilotNav'
 import { listWatchlist, removeWatchlistSymbol, type WatchlistRow } from '../lib/watchlist'
 
 /**
@@ -15,7 +15,7 @@ export function WatchlistPage() {
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
-  const { openWithDecision } = useAgentSession()
+  const { explainDecision } = useCopilotNav()
 
   const load = useCallback(() => {
     setLoading(true)
@@ -38,8 +38,8 @@ export function WatchlistPage() {
     setInfo(null)
     try {
       const detail = await getDecisionDetail(row.symbol, '1h', false)
-      openWithDecision(decisionPayloadFromDetail(detail))
-      setInfo(`${row.symbol} — Copilot ouvert`)
+      explainDecision(decisionPayloadFromDetail(detail))
+      setInfo(`${row.symbol} — ouverture Copilot…`)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Échec chargement décision')
     } finally {

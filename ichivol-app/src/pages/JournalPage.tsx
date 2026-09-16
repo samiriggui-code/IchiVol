@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { labelDecision, labelDirection, labelPipelineGate } from '../lib/decisionLabels'
 import { getDecisionDetail, type DecisionLabel } from '../lib/decisions'
 import { decisionPayloadFromDetail } from '../lib/agent'
-import { useAgentSession } from '../lib/agentSession'
+import { useCopilotNav } from '../lib/useCopilotNav'
 import { getEngineUniverse, type EngineInstrument } from '../lib/universe'
 import {
   confirmUserDecision,
@@ -26,7 +26,7 @@ export function JournalPage() {
   const [info, setInfo] = useState<string | null>(null)
   const [showArchived, setShowArchived] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
-  const { openWithDecision } = useAgentSession()
+  const { explainDecision } = useCopilotNav()
 
   const byId = useMemo(() => {
     const m = new Map<string, EngineInstrument>()
@@ -56,8 +56,8 @@ export function JournalPage() {
     setInfo(null)
     try {
       const detail = await getDecisionDetail(row.symbol, row.interval, false)
-      openWithDecision(decisionPayloadFromDetail(detail))
-      setInfo(`${row.symbol} — Copilot ouvert`)
+      explainDecision(decisionPayloadFromDetail(detail))
+      setInfo(`${row.symbol} — ouverture Copilot…`)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Échec chargement décision')
     } finally {

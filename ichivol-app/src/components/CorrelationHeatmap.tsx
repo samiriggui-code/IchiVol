@@ -9,10 +9,10 @@ function cellColor(v: number | null): string {
   if (v == null || Number.isNaN(v)) return 'transparent'
   const clamped = Math.max(-1, Math.min(1, v))
   if (clamped >= 0) {
-    const a = 0.08 + clamped * 0.55
+    const a = 0.1 + clamped * 0.62
     return `color-mix(in srgb, var(--bull) ${Math.round(a * 100)}%, transparent)`
   }
-  const a = 0.08 + Math.abs(clamped) * 0.55
+  const a = 0.1 + Math.abs(clamped) * 0.62
   return `color-mix(in srgb, var(--bear) ${Math.round(a * 100)}%, transparent)`
 }
 
@@ -25,7 +25,12 @@ function shortSym(symbol: string): string {
   return symbol.replace(/USDT$/i, '').replace(/USD$/i, '')
 }
 
-/** Heatmap dense — « qu’est-ce qui bouge avec X ? » (pas un vote). */
+function peerBarWidth(corr: number | null): string {
+  if (corr == null) return '0%'
+  return `${Math.round(Math.abs(corr) * 100)}%`
+}
+
+/** Heatmap Contexte — co-mouvements watchlist, jamais un vote. */
 export function CorrelationHeatmap() {
   const [data, setData] = useState<CorrelationMatrix | null>(null)
   const [loading, setLoading] = useState(true)
@@ -74,16 +79,18 @@ export function CorrelationHeatmap() {
 
   return (
     <div className="corr-panel">
-      <header className="panel-head corr-head">
-        <div>
-          <h3>Corrélations</h3>
+      <header className="corr-head">
+        <div className="corr-head-copy">
+          <p className="corr-kicker">Watchlist · lecture seule</p>
+          <h3>Qui bouge avec qui</h3>
           <p className="muted corr-lede">
-            Lecture seule — « qui bouge avec qui » sur les rendements. Ne vote pas LONG/SHORT.
+            Corrélation de Pearson sur les rendements (ou prix). Sert à lire le
+            co-mouvement — pas à voter LONG/SHORT.
           </p>
         </div>
-        <div className="corr-controls">
+        <div className="corr-controls" role="group" aria-label="Paramètres corrélation">
           <label className="corr-control">
-            <span className="muted">TF</span>
+            <span>TF</span>
             <select value={timeframe} onChange={(e) => setTimeframe(e.target.value)}>
               <option value="15m">15m</option>
               <option value="1h">1h</option>
@@ -92,7 +99,7 @@ export function CorrelationHeatmap() {
             </select>
           </label>
           <label className="corr-control">
-            <span className="muted">Méthode</span>
+            <span>Méthode</span>
             <select
               value={method}
               onChange={(e) => setMethod(e.target.value as CorrelationMethod)}
@@ -104,7 +111,21 @@ export function CorrelationHeatmap() {
         </div>
       </header>
 
-      {loading && <p className="muted">Calcul corrélations…</p>}
+      <div className="corr-legend" aria-hidden>
+        <span>−1</span>
+        <div className="corr-legend-bar" />
+        <span>0</span>
+        <div className="corr-legend-bar is-pos" />
+        <span>+1</span>
+      </div>
+
+      {loading && (
+        <div className="corr-loading" aria-live="polite">
+          <div className="corr-skeleton" />
+          <div className="corr-skeleton corr-skeleton-short" />
+          <p className="muted">Alignement des barres communes…</p>
+        </div>
+      )}
       {error && (
         <div className="banner error" role="alert">
           {error}
@@ -113,37 +134,67 @@ export function CorrelationHeatmap() {
 
       {data && !loading && (
         <>
-          <p className="corr-meta muted">
-            {data.symbols.length} symboles · n={data.sample_size} barres · {data.method} ·{' '}
-            {data.timeframe}
-            {data.skipped.length > 0 && ` · ${data.skipped.length} skip`}
+          <p className="corr-meta">
+            <span>{data.symbols.length} symboles</span>
+            <span className="corr-meta-sep" aria-hidden>
+              ·
+            </span>
+            <span>n={data.sample_size}</span>
+            <span className="corr-meta-sep" aria-hidden>
+              ·
+            </span>
+            <span>{data.method === 'log_returns' ? 'log returns' : 'prix'}</span>
+            <span className="corr-meta-sep" aria-hidden>
+              ·
+            </span>
+            <span>{data.timeframe}</span>
+            {data.skipped.length > 0 && (
+              <>
+                <span className="corr-meta-sep" aria-hidden>
+                  ·
+                </span>
+                <span>{data.skipped.length} ignorés</span>
+              </>
+            )}
           </p>
 
-          <div className="corr-focus">
-            <label className="corr-control">
-              <span className="muted">Focus</span>
-              <select value={focus ?? ''} onChange={(e) => setFocus(e.target.value || null)}>
-                {data.symbols.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </label>
+          <div className="corr-focus-block">
+            <div className="corr-focus-bar">
+              <label className="corr-control">
+                <span>Focus</span>
+                <select value={focus ?? ''} onChange={(e) => setFocus(e.target.value || null)}>
+                  {data.symbols.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {focus && (
+                <p className="muted corr-focus-hint">
+                  Top co-mouvements avec <strong>{shortSym(focus)}</strong>
+                </p>
+              )}
+            </div>
+
             {focus && focusPeers.length > 0 && (
-              <ul className="corr-peers">
-                {focusPeers.map((p) => (
+              <ul className="corr-rank">
+                {focusPeers.map((p, idx) => (
                   <li key={p.symbol}>
                     <button
                       type="button"
-                      className="ghost corr-peer-btn"
+                      className="corr-rank-row"
                       onClick={() => setFocus(p.symbol)}
                     >
-                      <span>{p.symbol}</span>
-                      <span
-                        className={`mono ${(p.corr ?? 0) >= 0 ? 'up' : 'down'}`}
-                        title="corrélation"
-                      >
+                      <span className="corr-rank-idx">{idx + 1}</span>
+                      <span className="corr-rank-sym">{p.symbol}</span>
+                      <span className="corr-rank-track" aria-hidden>
+                        <span
+                          className={`corr-rank-fill ${(p.corr ?? 0) >= 0 ? 'is-pos' : 'is-neg'}`}
+                          style={{ width: peerBarWidth(p.corr) }}
+                        />
+                      </span>
+                      <span className={`mono corr-rank-val ${(p.corr ?? 0) >= 0 ? 'up' : 'down'}`}>
                         {fmtCorr(p.corr)}
                       </span>
                     </button>
@@ -170,7 +221,11 @@ export function CorrelationHeatmap() {
                   {data.symbols.map((rowSym, i) => (
                     <tr key={rowSym} className={rowSym === focus ? 'is-focus' : undefined}>
                       <th scope="row" title={rowSym}>
-                        <button type="button" className="ghost corr-row-btn" onClick={() => setFocus(rowSym)}>
+                        <button
+                          type="button"
+                          className="ghost corr-row-btn"
+                          onClick={() => setFocus(rowSym)}
+                        >
                           {shortSym(rowSym)}
                         </button>
                       </th>
@@ -193,13 +248,13 @@ export function CorrelationHeatmap() {
             </div>
           ) : (
             <p className="muted corr-grid-hint">
-              Matrice complète masquée ({n} symboles) — utilise le focus + top corrélés ci-dessus.
+              Matrice dense masquée ({n} symboles) — le classement Focus ci-dessus suffit.
             </p>
           )}
 
           {data.skipped.length > 0 && (
             <details className="corr-skipped">
-              <summary className="muted">Symboles ignorés ({data.skipped.length})</summary>
+              <summary>Symboles ignorés ({data.skipped.length})</summary>
               <ul>
                 {data.skipped.map((s) => (
                   <li key={s.symbol}>

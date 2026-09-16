@@ -79,17 +79,52 @@ def test_agent_command_reports_a_missing_required_arg_as_a_clean_error():
 
 
 def test_agent_command_scan_market(monkeypatch):
-    candles = _uptrend_with_spike(160)
-    monkeypatch.setattr(binance, "fetch_klines", lambda symbol, tf, limit: candles)
-    monkeypatch.setattr(cache_module, "persist_scan", lambda session, row: None)
-    cache_module.screener_cache._entry = None
+    # scan_market serves whatever is in the cache -- pre-populate it directly
+    # instead of forcing a real cold refresh (which would fan out to every
+    # provider in the default watchlist, including biquote/twelve_data, and
+    # cost real network timeouts for anything not mocked here).
+    import time
+
+    from app.agents.types import Direction, StrategyAgentOutput
+    from app.decision.combiner import DecisionResult
+    from app.decision.pipeline import PipelineResult
+    from app.indicators.atr import AtrState, VolatilityRegime
+    from app.screener.cache import CacheEntry
+    from app.screener.service import ScreenerRow
+
+    fake_atr = AtrState(
+        time=0, true_range=1.0, atr=1.0, percentile=0.5,
+        regime=VolatilityRegime.NORMAL, suggested_stop_distance=1.5,
+    )
+    fake_ichimoku = StrategyAgentOutput(
+        agent="ICHIMOKU_AGENT", direction=Direction.LONG, probability=0.6, confidence=0.5,
+        expected_value=0.0, reasons=[], invalidation=[], metadata={"score": 10.0},
+    )
+    fake_rvol = StrategyAgentOutput(
+        agent="RVOL_AGENT", direction=Direction.NEUTRAL, probability=0.5, confidence=0.5,
+        expected_value=0.0, reasons=[], invalidation=[], metadata={"rvol": 1.0},
+    )
+    fake_decision = DecisionResult(
+        strategy_version="test", decision="WATCH", direction=Direction.LONG,
+        probability=0.6, confidence=0.5, agreement=0.5,
+    )
+    fake_row = ScreenerRow(
+        symbol="BTCUSDT", exchange="binance", timeframe="1h", price=100.0,
+        candles=[], ichimoku=fake_ichimoku, rvol=fake_rvol, decision=fake_decision,
+        pipeline=PipelineResult(decision="WATCH", direction=Direction.LONG, stages=[]),
+        atr=fake_atr,
+    )
+    cache_module.screener_cache._entry = CacheEntry(rows=[fake_row], computed_at=time.time(), timeframe="1h")
 
     resp = client.post("/api/engine/agent/command", json={"cmd": "scan_market", "args": {}})
     body = resp.json()
     assert body["ok"] is True
     assert body["cmd"] == "scan_market"
-    assert len(body["data"]["rows"]) > 0
+    assert len(body["data"]["rows"]) == 1
+    assert body["data"]["rows"][0]["symbol"] == "BTCUSDT"
     assert "risk" in body["data"]["rows"][0]
+
+    cache_module.screener_cache._entry = None
 
 
 def test_agent_command_get_symbol_context(monkeypatch):

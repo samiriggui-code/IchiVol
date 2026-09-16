@@ -194,6 +194,8 @@ GET  /api/engine/agent/tools
 GET  /api/engine/agent/capabilities
 POST /api/engine/agent/command
 POST /api/engine/agent/batch
+GET  /api/engine/context/news?limit=20&sources=
+GET  /api/engine/context/calendar?limit=20
 ```
 
 `/universe` liste tout le catalogue (`classes` + `instruments`, avec `wired`/`provider` par instrument) — c'est la source de vérité pour ce que le produit couvre, pas seulement ce qui a une donnée réelle branchée aujourd'hui.
@@ -263,7 +265,18 @@ Un `cmd` inconnu, un arg manquant/invalide, ou une erreur métier (historique in
 
 **WRITE (paper trading) explicitement hors scope de ce lot** (`write_tier_enabled: false` dans `/agent/capabilities`) -- ouvrir/fermer une position papier reste uniquement `POST /paper/positions` (app/paper/engine.py), jamais via ce canal, tant qu'une allowlist WRITE n'est pas explicitement demandée. Pas de front, pas de Copilot ici : Cursor branche son propre client sur ce contrat en parallèle.
 
-Les helpers de sérialisation (`pipeline_dict`/`risk_dict`/`summary_dict`/`detail_dict`/`metrics_dict`/`backtest_dict`) ont été extraits de `app/api/routes.py` vers `app/api/serializers.py` pendant ce chantier, pour que les routes HTTP et le canal de commandes construisent des payloads identiques sans que l'un importe l'autre -- pas un changement de comportement, juste où vivent ces fonctions. 14 tests dédiés (`tests/api/test_agent_channel_routes.py`), suite complète toujours verte (330 tests).
+Les helpers de sérialisation (`pipeline_dict`/`risk_dict`/`summary_dict`/`detail_dict`/`metrics_dict`/`backtest_dict`) ont été extraits de `app/api/routes.py` vers `app/api/serializers.py` pendant ce chantier, pour que les routes HTTP et le canal de commandes construisent des payloads identiques sans que l'un importe l'autre -- pas un changement de comportement, juste où vivent ces fonctions.
+
+## Adapters contexte (V3, opt-in, livré 2026-09-16)
+
+`app/context/` -- item CDC "Claude : adapters context (news / calendrier) opt-in, sans toucher Ichimoku×RVOL". Deux sources, toutes les deux gratuites/sans clé (même logique que biquote/CoinGecko, `docs/MARKET-DATA-STRATEGY.md`), toutes les deux **best-effort et jamais bloquantes** : une panne réseau ou un flux qui change de format dégrade vers une liste vide, jamais une exception ou un 502.
+
+- `app/context/news.py` -- titres crypto via RSS (CoinDesk + CoinTelegraph par défaut, `news.FEEDS`), fusionnés et triés par date décroissante. Un flux en échec n'empêche pas l'autre de répondre.
+- `app/context/calendar.py` -- calendrier macro de la semaine via le flux JSON communautaire ForexFactory (pas d'API officielle/clé -- accepté comme compromis pour une source de contexte opt-in, non critique).
+
+Routes : `GET /context/news?limit=20&sources=coindesk,cointelegraph`, `GET /context/calendar?limit=20`. Commandes agent équivalentes : `get_news`, `get_calendar` (mêmes payloads, `app/agent_channel/`). **`app/decision/pipeline.py` n'importe ni l'un ni l'autre** -- aucun stage, aucun code, aucune décision n'en dépend ; c'est du contexte à lire, pas un signal à voter.
+
+Vérifié en live (2026-09-16) contre les vrais flux : `/context/news` a renvoyé de vrais titres CoinTelegraph, `/context/calendar` de vrais événements macro (BRICS Summit, indicateurs NZD) de la semaine en cours. 11 tests dédiés (`tests/context/`).
 
 L'hypothèse centrale de la mission ("RVOL confirme et améliore") **n'est toujours pas validée par les données sur cet échantillon** : aucune variante RVOL (continue, entry-gate, ou pipeline à portes) ne bat Ichimoku seul en Sharpe/return sur ces 3 runs. Ajouter Location a nettement réduit l'exposition de `PIPELINE` (11-14% contre 33-36% avant Location, 74-78% pour Ichimoku seul) et le max drawdown dans 2 cas sur 3 (18.5%→11.6% et 27.5%→19.1%) — la porte Location fait bien ce qu'elle est censée faire, réduire l'exposition aux mauvais emplacements — mais le Sharpe reste pire qu'Ichimoku seul partout, et pire qu'avant Location sur BTCUSDT 4h (-2.29 → -4.73). **Conclusion pour la migration "Combiner → portes" (docs/CAHIER-DES-CHARGES.md §4) : toujours pas justifiée par ces données** — l'architecture réduit le risque mais pas encore au prix d'un edge positif net.
 

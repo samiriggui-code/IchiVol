@@ -5,31 +5,31 @@ import { ThemeToggle } from '../components/ThemeToggle'
 const FEATURES = [
   {
     icon: 'kanban',
-    title: 'Pipeline à portes',
-    body: 'Direction → Participation → Structure → Location → Régime. Le moteur décide BUY / SELL / WATCH / NO_TRADE — pas le LLM.',
+    title: 'Matrice de portes',
+    body: 'Direction → Participation → Structure → Location → Régime. Portes = verdict d’action ; badge combiner = diagnostic. Le LLM ne décide pas.',
   },
   {
     icon: 'message-text-2',
-    title: 'Copilot « Expliquer »',
-    body: 'Sur Décisions ou Journal : ouvre l’agent avec le pack DECISION_DATA. Il explique le verdict en langage pro, sans re-voter LONG/SHORT.',
+    title: 'Copilot atelier',
+    body: 'Depuis Décisions / Journal / Watchlist : tu arrives sur /app/agent avec un prompt déjà prêt. Chat à gauche, outils moteur à droite.',
   },
   {
-    icon: 'notepad',
-    title: 'Journal & Watchlist',
-    body: 'Confirme une lecture au journal, épingle une paire en watchlist. Le Copilot propose ; tu confirmes avant toute écriture.',
+    icon: 'chart-pie-4',
+    title: 'Contexte & corrélations',
+    body: 'Climat crypto, news RSS, calendrier macro, heatmap « qui bouge avec qui ». Lecture seule — jamais un vote LONG/SHORT.',
   },
   {
-    icon: 'chart-line',
-    title: 'Screener + chart',
-    body: 'Scanner les paires liquides, ouvrir le graphique Ichimoku, lire RVOL et les stages — données marché réelles.',
+    icon: 'notification-bing',
+    title: 'Journal watch + cloche',
+    body: 'Confirme une lecture ; le watch poll le pipeline et te notifie si les portes changent. Paper multi-classe quand tu veux tester.',
   },
 ]
 
 const TRUST = [
-  'Moteur déterministe (Python) + Copilot explain-only',
-  'Signaux filtrés par participation (RVOL)',
-  'Actions mute avec confirmation (journal / watchlist)',
-  'Théorie ancrée Binance Academy — pas de mocks',
+  'Moteur Python = vérité mathématique · Copilot = explication',
+  'Canal agent : tools déterministes (batch), pas de recalcul LLM',
+  'Portes visibles + prompts préremplis vers l’atelier Copilot',
+  'Corrélations & macro observent — ils ne tradent pas',
 ]
 
 const STEPS = [
@@ -37,40 +37,40 @@ const STEPS = [
     n: '01',
     icon: 'filter-search',
     title: 'Scanner',
-    body: 'Screener multi-paires : biais Ichimoku, RVOL, verdict combiner + portes.',
+    body: 'Screener multi-classes : crypto, forex, métaux… biais, RVOL, portes.',
   },
   {
     n: '02',
     icon: 'verify',
-    title: 'Décider',
-    body: 'Ouvre le détail : stages pass / watch / fail, invalidation, confiance.',
+    title: 'Lire les portes',
+    body: 'Matrice ou sheet : pass / watch / fail, risque ATR, écart éventuel avec le badge.',
   },
   {
     n: '03',
     icon: 'message-programming',
     title: 'Expliquer & agir',
-    body: 'Copilot explique le verdict. Confirme au journal ou épingle en watchlist.',
+    body: 'Un clic → Copilot avec la question déjà formulée. Journal, watchlist ou paper sous confirmation.',
   },
 ]
 
 const COMPARE = {
   without: [
     'Un croisement Tenkan/Kijun sur trois est un faux départ',
-    'Aucune lecture structurée des freins (volume, structure, location)',
+    'Deux « vérités » mélangées sans hiérarchie (badge vs portes)',
     'Un chat IA invente un BUY sans s’appuyer sur le moteur',
   ],
   with: [
     'Un signal ne compte que si la participation confirme',
-    'Pipeline à portes visible : tu vois pourquoi c’est WATCH ou BUY',
-    'Le Copilot explique DECISION_DATA — il ne corrige pas le moteur',
+    'Portes = action ; combiner = diagnostic — et le Copilot l’explique',
+    'Prompts deep-link : tu n’atterris jamais sur un chat vide',
   ],
 }
 
 const STATS = [
   { value: '5', label: 'Portes du Decision Engine' },
-  { value: '≥ 1.5×', label: 'Seuil RVOL de confirmation' },
-  { value: '4', label: 'Modes Copilot (décision, signal, recherche, idée)' },
-  { value: '2', label: 'Actions confirmées (journal, watchlist)' },
+  { value: '9', label: 'Tools engine (canal agent READ)' },
+  { value: '1', label: 'Atelier Copilot plein écran' },
+  { value: '0', label: 'Votes LONG/SHORT par le LLM' },
 ]
 
 const FAQ = [
@@ -84,11 +84,15 @@ const FAQ = [
   },
   {
     q: 'L’agent peut-il changer le verdict du moteur ?',
-    a: 'Non. En mode Décision, il cite uniquement DECISION_DATA / TOOL_RESULTS. Il n’invente pas de chiffres et ne propose pas un LONG/SHORT contraire.',
+    a: 'Non. Il interroge le moteur (get_symbol_context, batch…) et explique DECISION_DATA. Il n’invente pas de chiffres et ne propose pas un LONG/SHORT contraire.',
+  },
+  {
+    q: 'À quoi servent les corrélations sur Contexte ?',
+    a: 'À voir qui bouge avec qui sur la watchlist (Pearson / log returns). C’est du climat de marché, pas un signal d’entrée.',
   },
   {
     q: 'Que fait « Confirmer » dans le chat ?',
-    a: 'Uniquement des actions allowlistées : enregistrer au journal ou épingler en watchlist. Aucun ordre broker. Tu valides ou tu annules.',
+    a: 'Uniquement des actions allowlistées : journal ou watchlist. Aucun ordre broker. Tu valides ou tu annules.',
   },
 ]
 
@@ -208,8 +212,9 @@ export function LandingPage() {
                 Voir le signal. <em>Confirmer</em> par le volume. Décider.
               </h1>
               <p className="camap-hero-lede">
-                Cockpit Ichimoku × RVOL : le moteur tranche, le Copilot explique —
-                journal et watchlist sous ton contrôle.
+                Cockpit Ichimoku × RVOL : le moteur tranche, le Copilot explique
+                avec un prompt déjà prêt — journal, watchlist et paper sous ton
+                contrôle.
               </p>
               <div className="camap-hero-cta">
                 <Link to="/login" className="camap-btn camap-btn-primary camap-btn-lg">
@@ -256,7 +261,7 @@ export function LandingPage() {
         <section id="methode" className="camap-section">
           <h2 className="camap-section-title">Ce que l’app traite</h2>
           <p className="camap-section-lede">
-            Données live → pipeline à portes → lecture Copilot → journal / watchlist.
+            Données live → portes → Copilot deep-link → journal / watch / paper.
           </p>
           <ol className="camap-steps camap-steps-numbered">
             {STEPS.map((step) => (
@@ -347,7 +352,7 @@ export function LandingPage() {
 
         <section className="camap-closing">
           <h2>Prêt à entrer dans le cockpit</h2>
-          <p>Décisions, Journal, Watchlist, Copilot — session sécurisée.</p>
+          <p>Décisions, Copilot atelier, Contexte, Paper — session sécurisée.</p>
           <Link to="/login" className="camap-btn camap-btn-primary camap-btn-lg">
             Se connecter
           </Link>
@@ -361,9 +366,9 @@ export function LandingPage() {
               <span className="camap-mark">IV</span>
               <span className="camap-word">IchiVol</span>
             </Link>
-            <p>
-              Cockpit Ichimoku × RVOL : le moteur tranche, le Copilot explique —
-              journal et watchlist sous ton contrôle.
+          <p>
+              Cockpit Ichimoku × RVOL : portes visibles, Copilot atelier,
+              corrélations en lecture seule — toi confirmes.
             </p>
           </div>
 
@@ -381,6 +386,8 @@ export function LandingPage() {
               <Link to="/login">Journal</Link>
               <Link to="/login">Watchlist</Link>
               <Link to="/login">Copilot</Link>
+              <Link to="/login">Contexte</Link>
+              <Link to="/login">Paper</Link>
             </div>
             <div className="camap-footer-col">
               <h3>Compte</h3>

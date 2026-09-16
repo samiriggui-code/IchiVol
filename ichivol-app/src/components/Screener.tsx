@@ -19,12 +19,6 @@ function fmtVol(n: number): string {
   return n.toFixed(0)
 }
 
-function decisionTone(decision: string): 'bull' | 'bear' | 'neutral' {
-  if (decision === 'STRONG_BUY' || decision === 'BUY') return 'bull'
-  if (decision === 'STRONG_SELL' || decision === 'SELL') return 'bear'
-  return 'neutral'
-}
-
 export function Screener({
   rows,
   loading,
@@ -74,16 +68,7 @@ export function Screener({
                 {showEngine && (
                   <td>
                     {r.engineDecision ? (
-                      <span
-                        className={`bias bias-${decisionTone(r.engineDecision)}`}
-                        title={
-                          r.engineConfidence != null
-                            ? `${r.engineDecision} · ${(r.engineConfidence * 100).toFixed(0)}%`
-                            : r.engineDecision
-                        }
-                      >
-                        {labelDecision(r.engineDecision as DecisionLabel)}
-                      </span>
+                      <VerdictBadge decision={r.engineDecision} pipeline={r.enginePipeline} />
                     ) : (
                       <span className="muted">—</span>
                     )}

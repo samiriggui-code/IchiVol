@@ -5,48 +5,80 @@ import { useAgentSession } from '../lib/agentSession'
 import { useMarketSnapshot } from '../lib/marketSnapshot'
 
 /**
- * Atelier Copilot plein écran — chat + panneau moteur ventilé.
- * La bulle flottante reste pour les explications rapides (Décisions / Journal).
+ * Atelier Copilot — conversation LLM + lecture moteur déterministe.
  */
 export function AgentPage() {
   const { snapshot } = useMarketSnapshot()
-  const { decisionPayload, decisionRequestId, assumedSymbol, assumedTimeframe } =
-    useAgentSession()
+  const { decisionPayload, assumedSymbol, assumedTimeframe, launch } = useAgentSession()
 
   const symbol =
-    assumedSymbol ?? decisionPayload?.symbol ?? snapshot?.symbol ?? null
+    launch?.decision?.symbol ??
+    launch?.live?.symbol ??
+    assumedSymbol ??
+    decisionPayload?.symbol ??
+    snapshot?.symbol ??
+    null
   const timeframe =
-    assumedTimeframe ?? decisionPayload?.timeframe ?? snapshot?.interval ?? '1h'
+    launch?.decision?.timeframe ??
+    launch?.live?.interval ??
+    assumedTimeframe ??
+    decisionPayload?.timeframe ??
+    snapshot?.interval ??
+    '1h'
+
+  const hasSession = Boolean(symbol)
 
   return (
     <div className="page agent-atelier">
-      <header className="page-head">
-        <div>
+      <header className="agent-atelier-hero">
+        <div className="agent-atelier-hero-copy">
+          <p className="agent-atelier-kicker">Atelier d’analyse</p>
           <h1>Copilot</h1>
-          <p className="muted">
-            Chat à gauche · outils moteur à droite. Les chiffres viennent du
-            Python, pas du LLM.
+          <p className="agent-atelier-lede">
+            Le <strong>moteur Python</strong> calcule. Le <strong>chat</strong> explique.
+            Depuis Décisions ou Journal, un clic « Expliquer » t’amène ici avec la
+            question déjà prête.
           </p>
+          <div className="agent-atelier-roles" aria-label="Rôles">
+            <span className="agent-role-pill is-engine">Moteur = chiffres</span>
+            <span className="agent-role-pill is-llm">LLM = explication</span>
+            <span className="agent-role-pill is-you">Toi = confirmation</span>
+          </div>
         </div>
-        <Link to="/app/decisions" className="ghost">
-          ← Décisions
-        </Link>
+
+        <div className="agent-atelier-hero-aside">
+          <div className={`agent-session-chip ${hasSession ? 'is-live' : ''}`}>
+            <span className="agent-session-label">Session</span>
+            {hasSession ? (
+              <span className="agent-session-value">
+                {symbol}
+                <span className="muted"> · {timeframe}</span>
+              </span>
+            ) : (
+              <span className="agent-session-value muted">Aucun symbole — lance depuis Décisions</span>
+            )}
+          </div>
+          <nav className="agent-atelier-jump" aria-label="Raccourcis">
+            <Link to="/app/decisions">Décisions</Link>
+            <Link to="/app/journal">Journal</Link>
+            <Link to="/app/context">Contexte</Link>
+            <Link to="/app/market">Marché</Link>
+          </nav>
+        </div>
       </header>
 
       <div className="agent-atelier-grid">
         <section className="agent-atelier-chat panel">
-          <header className="panel-head">
-            <h2>
-              Conversation
-              {symbol ? ` · ${symbol}` : ''}
-              {timeframe ? ` · ${timeframe}` : ''}
-            </h2>
+          <header className="agent-atelier-panel-head">
+            <div>
+              <h2>Conversation</h2>
+              <p className="muted">
+                Modes : expliquer une décision, un signal, rechercher, ou une idée —
+                toujours ancré sur les données injectées.
+              </p>
+            </div>
           </header>
-          <AgentPanel
-            snapshot={snapshot}
-            decisionPayload={decisionPayload}
-            decisionRequestId={decisionRequestId}
-          />
+          <AgentPanel snapshot={snapshot} />
         </section>
 
         <AgentEnginePanel symbol={symbol} timeframe={timeframe} />

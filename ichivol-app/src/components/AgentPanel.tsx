@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import {
   askAgent,
   confirmAgentAction,
-  type AgentCitation,
   type AgentChatResponse,
   type AgentDecisionPayload,
+  type AgentLivePayload,
   type AgentMode,
 } from '../lib/agent'
 import { useAgentSession } from '../lib/agentSession'
@@ -13,17 +14,6 @@ import { signalLabel } from '../lib/signals'
 
 interface Props {
   snapshot: MarketSnapshot | null
-  decisionPayload: AgentDecisionPayload | null
-  /** Change à chaque openWithDecision → déclenche un envoi auto. */
-  decisionRequestId: number
-}
-
-interface ChatEntry {
-  role: 'user' | 'assistant'
-  content: string
-  citations?: AgentCitation[]
-  disclaimer?: string
-  pendingAction?: AgentChatResponse['pendingAction']
 }
 
 const MODES: {
@@ -38,21 +28,50 @@ const MODES: {
   { id: 'trade_idea', label: 'Idée', needsSnapshot: true },
 ]
 
-export function AgentPanel({ snapshot, decisionPayload, decisionRequestId }: Props) {
-  const { threadId, setThreadId, setAssumedSlots } = useAgentSession()
-  const [mode, setMode] = useState<AgentMode>(() => {
-    if (decisionPayload) return 'explain_decision'
-    if (snapshot) return 'explain_signal'
-    return 'research'
-  })
-  const [input, setInput] = useState('')
-  const [history, setHistory] = useState<ChatEntry[]>([])
-  const [loading, setLoading] = useState(false)
-  const [actionBusy, setActionBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const lastAutoId = useRef(0)
+export function AgentPanel({ snapshot }: Props) {
+  const {
+    threadId,
+    setThreadId,
+    setAssumedSlots,
+    decisionPayload,
+    launch,
+    clearLaunch,
+    takeLaunch,
+    mode,
+    setMode,
+    input,
+    setInput,
+    history,
+    setHistory,
+    loading,
+    setLoading,
+    bumpChatGeneration,
+    getChatGeneration,
+    actionBusy,
+    setActionBusy,
+    error,
+    setError,
+  } = useAgentSession()
 
   const lastSignal = snapshot?.signals.length ? snapshot.signals[snapshot.signals.length - 1] : null
+
+  const liveFromSnapshot: AgentLivePayload | null = snapshot
+    ? {
+        symbol: snapshot.symbol,
+        interval: snapshot.interval,
+        price: snapshot.live.price,
+        bias: snapshot.live.bias,
+        rvol: snapshot.live.rvol,
+        lastSignal: lastSignal
+          ? {
+              kind: lastSignal.kind,
+              price: lastSignal.price,
+              rvol: lastSignal.rvol,
+              time: lastSignal.time,
+            }
+          : null,
+      }
+    : null
 
   async function onConfirmAction(
     pending: NonNullable<AgentChatResponse['pendingAction']>,
@@ -93,58 +112,46 @@ export function AgentPanel({ snapshot, decisionPayload, decisionRequestId }: Pro
     forceMode?: AgentMode
     forceQuestion?: string
     forceDecision?: AgentDecisionPayload | null
+    forceLive?: AgentLivePayload | null
   }) {
     const activeMode = opts?.forceMode ?? mode
     const question = (opts?.forceQuestion ?? input).trim()
     const decision = opts?.forceDecision !== undefined ? opts.forceDecision : decisionPayload
+    const live = opts?.forceLive !== undefined ? opts.forceLive : liveFromSnapshot
 
     if (activeMode === 'research' && !question) return
     if (activeMode === 'explain_decision' && !decision && !threadId) return
-    if (activeMode === 'explain_signal' && !snapshot) return
+    if (activeMode === 'explain_signal' && !live) return
     if (activeMode === 'trade_idea' && !snapshot) return
 
     setLoading(true)
     setError(null)
     if (!opts?.forceQuestion) setInput('')
 
+    const gen = bumpChatGeneration()
     const defaultQ =
       activeMode === 'explain_decision'
         ? `Explique la décision sur ${decision?.symbol ?? ''}`
-        : `Explique le signal sur ${snapshot?.symbol ?? ''}`
+        : `Explique le signal sur ${live?.symbol ?? snapshot?.symbol ?? ''}`
 
-    const userEntry: ChatEntry = {
-      role: 'user',
-      content: question || defaultQ,
-    }
-    setHistory((h) => [...h, userEntry])
+    setHistory((h) => [
+      ...h,
+      {
+        role: 'user',
+        content: question || defaultQ,
+      },
+    ])
 
     try {
       const res = await askAgent({
         mode: activeMode,
-        question,
+        question: question || defaultQ,
         threadId: threadId ?? undefined,
-        symbol: decision?.symbol ?? snapshot?.symbol,
-        timeframe: decision?.timeframe ?? snapshot?.interval,
+        symbol: decision?.symbol ?? live?.symbol ?? snapshot?.symbol,
+        timeframe: decision?.timeframe ?? live?.interval ?? snapshot?.interval,
         history: undefined,
         decision: activeMode === 'explain_decision' && decision ? decision : undefined,
-        live:
-          activeMode === 'explain_signal' && snapshot
-            ? {
-                symbol: snapshot.symbol,
-                interval: snapshot.interval,
-                price: snapshot.live.price,
-                bias: snapshot.live.bias,
-                rvol: snapshot.live.rvol,
-                lastSignal: lastSignal
-                  ? {
-                      kind: lastSignal.kind,
-                      price: lastSignal.price,
-                      rvol: lastSignal.rvol,
-                      time: lastSignal.time,
-                    }
-                  : null,
-              }
-            : undefined,
+        live: activeMode === 'explain_signal' && live ? live : undefined,
         screenerRows:
           activeMode === 'trade_idea' && snapshot
             ? snapshot.rows.map((r) => ({
@@ -156,6 +163,7 @@ export function AgentPanel({ snapshot, decisionPayload, decisionRequestId }: Pro
               }))
             : undefined,
       })
+      if (gen !== getChatGeneration()) return
       if (res.threadId) setThreadId(res.threadId)
       setAssumedSlots(res.assumedSymbol ?? null, res.assumedTimeframe ?? null)
       setHistory((h) => [
@@ -169,32 +177,42 @@ export function AgentPanel({ snapshot, decisionPayload, decisionRequestId }: Pro
         },
       ])
     } catch (e) {
+      if (gen !== getChatGeneration()) return
       setError(e instanceof Error ? e.message : 'Erreur agent')
     } finally {
-      setLoading(false)
+      if (gen === getChatGeneration()) setLoading(false)
     }
   }
 
   useEffect(() => {
-    if (!decisionPayload || decisionRequestId === 0) return
-    if (decisionRequestId === lastAutoId.current) return
-    lastAutoId.current = decisionRequestId
-    setMode('explain_decision')
-    setHistory([])
-    void send({
-      forceMode: 'explain_decision',
-      forceQuestion: '',
-      forceDecision: decisionPayload,
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on new decision request
-  }, [decisionPayload, decisionRequestId])
+    if (!launch || !takeLaunch(launch.requestId)) return
+    setMode(launch.mode)
+    if (launch.autoSend) {
+      setInput('')
+      void send({
+        forceMode: launch.mode,
+        forceQuestion: launch.prompt,
+        forceDecision: launch.decision,
+        forceLive: launch.live,
+      }).finally(() => clearLaunch())
+    } else {
+      setInput(launch.prompt)
+      clearLaunch()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- launch.requestId only
+  }, [launch])
+
+  const hasDecision = Boolean(decisionPayload || launch?.decision)
+  const hasLive = Boolean(snapshot || launch?.live)
 
   return (
     <div className="agent-panel-body">
       <div className="agent-modes" role="group" aria-label="Mode agent">
         {MODES.map((m) => {
           const disabled =
-            (m.needsSnapshot && !snapshot) || (m.needsDecision && !decisionPayload)
+            (m.needsSnapshot && !hasLive && m.id === 'explain_signal') ||
+            (m.needsSnapshot && !snapshot && m.id === 'trade_idea') ||
+            (m.needsDecision && !hasDecision)
           return (
             <button
               key={m.id}
@@ -204,8 +222,8 @@ export function AgentPanel({ snapshot, decisionPayload, decisionRequestId }: Pro
               title={
                 disabled
                   ? m.needsDecision
-                    ? 'Ouvre via Expliquer sur Décisions / Journal'
-                    : 'Disponible sur la page Marché'
+                    ? 'Lance depuis Décisions / Journal / Watchlist'
+                    : 'Disponible depuis Marché'
                   : undefined
               }
               onClick={() => setMode(m.id)}
@@ -218,7 +236,24 @@ export function AgentPanel({ snapshot, decisionPayload, decisionRequestId }: Pro
 
       <div className="agent-history">
         {history.length === 0 && !loading && (
-          <p className="muted">Aucune conversation pour l&apos;instant.</p>
+          <div className="agent-empty">
+            <p className="agent-empty-title">Prêt à expliquer une décision</p>
+            <p className="muted">
+              Tu n’es pas censé inventer la question. Lance depuis une page métier —
+              le prompt arrive déjà rempli. Quitter la page ne perd plus la conversation.
+            </p>
+            <div className="agent-empty-actions">
+              <Link to="/app/decisions" className="ghost">
+                Ouvrir Décisions
+              </Link>
+              <Link to="/app/journal" className="ghost">
+                Ouvrir Journal
+              </Link>
+              <Link to="/app/watchlist" className="ghost">
+                Watchlist
+              </Link>
+            </div>
+          </div>
         )}
         {history.map((entry, i) => (
           <div key={i} className={`agent-msg agent-msg-${entry.role}`}>
@@ -262,16 +297,21 @@ export function AgentPanel({ snapshot, decisionPayload, decisionRequestId }: Pro
       </div>
 
       <div className="agent-input">
-        <input
-          type="text"
+        <textarea
           value={input}
+          rows={mode === 'research' || input.length > 80 ? 3 : 2}
           placeholder={
             mode === 'research'
               ? 'Pose une question sur Ichimoku, RVOL…'
-              : 'Question (optionnel)…'
+              : 'Affiner la question (optionnel)…'
           }
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && void send()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              void send()
+            }
+          }}
         />
         <button type="button" className="ghost" disabled={loading} onClick={() => void send()}>
           {loading ? '…' : 'Envoyer'}

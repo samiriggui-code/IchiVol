@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
 import { GateMatrix } from '../components/GateMatrix'
-import { buildDecisionSummary, labelDecision, labelDirection, labelPipelineGate, labelReason } from '../lib/decisionLabels'
+import { VerdictBadge } from '../components/VerdictBadge'
+import { buildDecisionSummary, labelDecision, labelDirection, labelReason } from '../lib/decisionLabels'
 import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
 import {
   getDecisionDetail,
@@ -10,7 +11,6 @@ import {
   type AgentDetail,
   type DecisionDetail,
   type DecisionLabel,
-  type PipelineGateLabel,
   type ScreenerDecisionRow,
 } from '../lib/decisions'
 import {
@@ -23,7 +23,7 @@ import {
 import { confirmUserDecision } from '../lib/userDecisions'
 import { openPaperPosition } from '../lib/paper'
 import { decisionPayloadFromDetail } from '../lib/agent'
-import { useAgentSession } from '../lib/agentSession'
+import { useCopilotNav } from '../lib/useCopilotNav'
 
 type SortKey = 'symbol' | 'decision' | 'confidence' | 'ichimoku_score' | 'rvol' | 'price'
 type SortDir = 'asc' | 'desc'
@@ -76,23 +76,6 @@ function fmtCacheAge(seconds: number): string {
   if (seconds < 5) return 'à l’instant'
   if (seconds < 60) return `il y a ${Math.floor(seconds)}s`
   return `il y a ${Math.floor(seconds / 60)}min`
-}
-
-function decisionTone(decision: DecisionLabel): 'bull' | 'bear' | 'neutral' {
-  if (decision === 'STRONG_BUY' || decision === 'BUY') return 'bull'
-  if (decision === 'STRONG_SELL' || decision === 'SELL') return 'bear'
-  return 'neutral'
-}
-
-function gateTone(gate: PipelineGateLabel): 'bull' | 'bear' | 'neutral' {
-  if (gate === 'BUY') return 'bull'
-  if (gate === 'SELL') return 'bear'
-  return 'neutral'
-}
-
-function asGate(raw: string | undefined | null): PipelineGateLabel | null {
-  if (raw === 'BUY' || raw === 'SELL' || raw === 'WATCH' || raw === 'NO_TRADE') return raw
-  return null
 }
 
 function ReasonChips({ codes, risk }: { codes: string[]; risk?: boolean }) {
@@ -179,7 +162,7 @@ export function DecisionsPage() {
   const [listView, setListView] = useState<ListView>('liste')
   const [paperBusySymbol, setPaperBusySymbol] = useState<string | null>(null)
   const [paperMsg, setPaperMsg] = useState<string | null>(null)
-  const { openWithDecision } = useAgentSession()
+  const { explainDecision, compareGates } = useCopilotNav()
 
   const byId = useMemo(() => {
     const m = new Map<string, EngineInstrument>()
@@ -610,37 +593,7 @@ export function DecisionsPage() {
                         <strong title={r.symbol}>{instrumentLabel(r.symbol)}</strong>
                       </td>
                       <td>
-                        {(() => {
-                          const gate = asGate(
-                            typeof r.pipeline?.decision === 'string' ? r.pipeline.decision : null,
-                          )
-                          if (gate) {
-                            return (
-                              <span className="decision-cell-stack">
-                                <span
-                                  className={`bias bias-${gateTone(gate)}`}
-                                  title={`Portes · ${gate}`}
-                                >
-                                  {labelPipelineGate(gate)}
-                                </span>
-                                <span
-                                  className="decision-cell-diag muted"
-                                  title={`Brut Ichi+RVOL · ${r.decision}`}
-                                >
-                                  brut {labelDecision(r.decision)}
-                                </span>
-                              </span>
-                            )
-                          }
-                          return (
-                            <span
-                              className={`bias bias-${decisionTone(r.decision)}`}
-                              title={`Combiner (pas de pipeline) · ${r.decision}`}
-                            >
-                              {labelDecision(r.decision)}
-                            </span>
-                          )
-                        })()}
+                        <VerdictBadge decision={r.decision} pipeline={r.pipeline} />
                       </td>
                       {!sheetOpen && <td className="mono">{(r.confidence * 100).toFixed(0)}%</td>}
                       {!sheetOpen && (
@@ -724,35 +677,7 @@ export function DecisionsPage() {
                   </div>
 
                   <div className="decision-detail-row">
-                    {(() => {
-                      const gate = asGate(detail.pipeline?.decision ?? null)
-                      if (gate) {
-                        return (
-                          <>
-                            <span
-                              className={`bias bias-${gateTone(gate)}`}
-                              title={`Portes · ${gate}`}
-                            >
-                              {labelPipelineGate(gate)}
-                            </span>
-                            <span
-                              className="decision-detail-diag muted"
-                              title={`Signal brut avant Structure/Location/Régime · ${detail.decision}`}
-                            >
-                              Brut Ichi+RVOL · {labelDecision(detail.decision)}
-                            </span>
-                          </>
-                        )
-                      }
-                      return (
-                        <span
-                          className={`bias bias-${decisionTone(detail.decision)}`}
-                          title={detail.decision}
-                        >
-                          {labelDecision(detail.decision)}
-                        </span>
-                      )
-                    })()}
+                    <VerdictBadge decision={detail.decision} pipeline={detail.pipeline} variant="detail" />
                     <span className="muted">
                       confiance {(detail.confidence * 100).toFixed(0)}% · accord{' '}
                       {(detail.agreement * 100).toFixed(0)}% · prix {detail.price.toFixed(2)}
@@ -771,10 +696,18 @@ export function DecisionsPage() {
                     <button
                       type="button"
                       className="ghost"
-                      onClick={() => openWithDecision(decisionPayloadFromDetail(detail))}
-                      title="Ouvre le Copilot pour expliquer cette décision (sans voter)"
+                      onClick={() => explainDecision(decisionPayloadFromDetail(detail))}
+                      title="Ouvre le Copilot avec un prompt déjà prêt"
                     >
                       Expliquer
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={() => compareGates(decisionPayloadFromDetail(detail))}
+                      title="Écart badge combiner vs verdict portes"
+                    >
+                      Écart portes
                     </button>
                     <span className="muted">
                       Snapshot local — pas un ordre broker.

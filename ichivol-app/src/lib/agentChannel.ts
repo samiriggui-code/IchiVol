@@ -12,6 +12,8 @@ export type AgentCommandName =
   | 'compare_timeframes'
   | 'run_backtest'
   | 'get_correlations'
+  | 'get_news'
+  | 'get_calendar'
   | 'calculate_ichimoku'
   | 'calculate_rvol'
   | 'list_tools'
@@ -31,7 +33,7 @@ export interface AgentCommandRequest {
 
 export type AgentCommandResult =
   | { ok: true; cmd: string; data: unknown }
-  | { ok: false; cmd?: string; error: string }
+  | { ok: false; cmd: string; error: string }
 
 export interface AgentBatchResponse {
   results: AgentCommandResult[]
