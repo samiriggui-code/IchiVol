@@ -8,6 +8,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json tsconfig.json ./
 COPY prisma ./prisma
+COPY scripts ./scripts
 COPY src ./src
 RUN npx prisma generate && npm run build
 

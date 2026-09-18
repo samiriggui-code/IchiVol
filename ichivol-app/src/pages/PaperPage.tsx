@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import {
   closePaperPosition,
   getPaperPerformance,
+  getPaperPortfolio,
   listPaperPositions,
   type PaperPerformance,
+  type PaperPortfolioSummary,
   type PaperPosition,
   type PaperSource,
 } from '../lib/paper'
@@ -28,6 +30,57 @@ function sourceLabel(s: string): string {
   if (s === 'auto_watchlist') return 'Auto screener'
   if (s === 'user_confirmed') return 'Mes confirms'
   return s
+}
+
+function BrokerCards({ summary }: { summary: PaperPortfolioSummary | null }) {
+  if (!summary) {
+    return (
+      <p className="muted">
+        PaperBroker pas encore initialisé (migration / redémarrage moteur).
+      </p>
+    )
+  }
+  const { portfolio, performance: perf } = summary
+  return (
+    <div className="paper-perf-block">
+      <h3 className="subhead">PaperBroker · {portfolio.code}</h3>
+      <div className="paper-perf-grid">
+        <div className="context-card">
+          <span className="context-label">Capital initial</span>
+          <strong className="context-value">{fmtNum(portfolio.initial_cash, 0)} €</strong>
+        </div>
+        <div className="context-card">
+          <span className="context-label">Cash</span>
+          <strong className="context-value">{fmtNum(portfolio.cash, 2)} €</strong>
+        </div>
+        <div className="context-card">
+          <span className="context-label">Equity</span>
+          <strong className={`context-value ${tone(perf.equity != null && portfolio.initial_cash ? perf.equity - portfolio.initial_cash : null)}`}>
+            {fmtNum(perf.equity ?? null, 2)} €
+          </strong>
+        </div>
+        <div className="context-card">
+          <span className="context-label">PnL réalisé</span>
+          <strong className={`context-value ${tone(portfolio.realized_pnl)}`}>
+            {fmtNum(portfolio.realized_pnl, 2)} €
+          </strong>
+        </div>
+        <div className="context-card">
+          <span className="context-label">Max drawdown</span>
+          <strong className="context-value">{fmtPct(perf.max_drawdown ?? null)}</strong>
+        </div>
+        <div className="context-card">
+          <span className="context-label">Expectancy €</span>
+          <strong className={`context-value ${tone(perf.expectancy_eur ?? null)}`}>
+            {fmtNum(perf.expectancy_eur ?? null, 2)} €
+          </strong>
+        </div>
+      </div>
+      <p className="muted paper-perf-note">
+        Risk 1% / TP 2R / max 5 positions · valuation {portfolio.valuation_mode} · jamais d’ordre réel.
+      </p>
+    </div>
+  )
 }
 
 function PerfCards({ perf, title }: { perf: PaperPerformance | null; title: string }) {
@@ -94,6 +147,8 @@ function PositionsTable({
             <th>Statut</th>
             <th>Entrée</th>
             <th>Prix</th>
+            <th>Stop</th>
+            <th>TP</th>
             <th>Sortie</th>
             <th>PnL</th>
             <th>Raison</th>
@@ -118,6 +173,12 @@ function PositionsTable({
                 })}
               </td>
               <td className="mono">{p.entry_price.toPrecision(6)}</td>
+              <td className="mono muted">
+                {p.stop_price != null ? p.stop_price.toPrecision(6) : '—'}
+              </td>
+              <td className="mono muted">
+                {p.take_profit_price != null ? p.take_profit_price.toPrecision(6) : '—'}
+              </td>
               <td className="mono">{p.exit_price != null ? p.exit_price.toPrecision(6) : '—'}</td>
               <td className={`mono ${tone(p.pnl_pct)}`}>{fmtPct(p.pnl_pct, 2)}</td>
               <td className="muted">{p.exit_reason ?? p.entry_decision}</td>
@@ -137,7 +198,7 @@ function PositionsTable({
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={9} className="muted center">
+              <td colSpan={11} className="muted center">
                 Aucune position.
               </td>
             </tr>
@@ -154,6 +215,7 @@ export function PaperPage() {
   const [autoCache, setAutoCache] = useState<PaperPosition[]>([])
   const [perfMine, setPerfMine] = useState<PaperPerformance | null>(null)
   const [perfAuto, setPerfAuto] = useState<PaperPerformance | null>(null)
+  const [broker, setBroker] = useState<PaperPortfolioSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [closingId, setClosingId] = useState<string | null>(null)
@@ -168,12 +230,14 @@ export function PaperPage() {
       ])
       setMineCache(mine)
       setAutoCache(auto)
-      const [pMine, pAuto] = await Promise.all([
+      const [pMine, pAuto, port] = await Promise.all([
         getPaperPerformance({ source: 'user_confirmed' }).catch(() => null),
         getPaperPerformance({ source: 'auto_watchlist' }).catch(() => null),
+        getPaperPortfolio('ICHIVOL_BASELINE_V1').catch(() => null),
       ])
       setPerfMine(pMine)
       setPerfAuto(pAuto)
+      setBroker(port)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erreur paper')
     } finally {
@@ -204,9 +268,9 @@ export function PaperPage() {
       <header className="page-head">
         <h1>Paper</h1>
         <p className="muted">
-          Positions <strong>virtuelles</strong> — pas d’ordre broker. Ouvertes par le screener
-          (auto) ou quand tu confirmes une décision (tout actif du catalogue). Fermeture auto si
-          le pipeline downgrade / flippe.
+          Positions <strong>virtuelles</strong> — PaperBroker 5 000 € (risk 1%, TP 2R). Ouvertes par
+          le screener (auto) ou quand tu confirmes. Stop/TP + MFE/MAE quand l’ATR est dispo. Jamais
+          d’ordre réel.
         </p>
       </header>
 
@@ -218,10 +282,17 @@ export function PaperPage() {
 
       <section className="panel">
         <header className="panel-head">
-          <h2>Performance</h2>
+          <h2>PaperBroker</h2>
           <button type="button" className="ghost" onClick={() => void reload()} disabled={loading}>
             {loading ? '…' : 'Actualiser'}
           </button>
+        </header>
+        <BrokerCards summary={broker} />
+      </section>
+
+      <section className="panel">
+        <header className="panel-head">
+          <h2>Performance (% trades)</h2>
         </header>
         <div className="paper-perf-columns">
           <PerfCards perf={perfMine} title="Mes confirms" />

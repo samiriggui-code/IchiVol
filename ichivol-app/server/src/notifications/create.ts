@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client'
 import { db } from '../db.js'
 
-export type NotificationKind = 'journal_confirm' | 'pipeline_change'
+export type NotificationKind = 'journal_confirm' | 'pipeline_change' | 'system_alert' | 'system_digest'
 
 export async function createNotification(input: {
   userId: string

@@ -48,6 +48,71 @@ Deux règles importantes, testées (`tests/market_data/test_accumulator.py`) :
 
 binance/twelve_data ne passent pas par cette accumulation (`needs_accumulation()` renvoie `False`) : ils servent déjà toute la profondeur demandée en un appel, l'ajouter serait un aller-retour DB inutile sur un chemin déjà sollicité (le screener scanne 20+ symboles toutes les 5 minutes).
 
+## Strategy Lab — Event Study (Phase 1)
+
+Couche recherche **au-dessus** du pipeline existant — pas un remplacement.
+
+- Module : `app/strategy_lab/event_study.py`
+- HTTP : `GET /api/engine/event-study/{symbol}?variant=PIPELINE&horizons=1,3,5,10&r_multiple=1`
+- Agent channel : `run_event_study`
+- UI : section sur `/app/backtests` (lancée avec le comparatif)
+
+Pour chaque entrée d’une variante (`ICHIMOKU_ONLY` … `PIPELINE`), mesure les retours ATR-normalisés à +N bougies, MFE/MAE, et le % touchant +R avant −R. **Pas** de capital, fees, ni sizing. Convention d’entrée alignée sur le backtest (open de la barre suivante).
+
+`experiments.prepare_variants()` factorise le fetch OHLCV + séries de positions pour backtest et event study.
+
+### Rules Engine (Phase 2)
+
+- Schema : `app/strategy_lab/ruleset.py` (conditions AND, clés allowlistées)
+- Features causales : `features.py` (Ichimoku / RVOL / structure / ATR / CMF / RSI)
+- Évaluateur rising-edge : `evaluator.py`
+- Catalog built-in : `catalog.py` (`IV_ICHIMOKU_RVOL_LONG_001`, ablation Ichimoku seul, +BOS, kumo breakout)
+- Run : `run_ruleset.py` → Event Study **+** ATR SL/TP backtest (`ruleset_backtest.py`)
+- HTTP : `GET /rulesets`, `GET /ruleset/{id}/event-study?symbol=…`, `POST /ruleset/event-study`
+- Agent : `list_rulesets`, `run_ruleset_event_study`
+
+Backtest ruleset (Phase 3) : entrée next open, stop/target en multiples d’ATR, une position à la fois, stop prioritaire si les deux niveaux sont touchés dans la même barre. Réutilise `compute_metrics`.
+
+### Performance DB (Phase 4)
+
+- Table : `strategy_lab_experiments` (migration `b2c3d4e5f6a7`)
+- Module : `app/strategy_lab/perf_db.py`
+- Persist : `?persist=true` sur `/ruleset/.../event-study` ou `POST` body `persist`
+- List / get / compare : `GET /strategy-lab/experiments`, `.../{id}`, `/strategy-lab/compare?ruleset_ids=A,B`
+
+### Ablation (Phase 5)
+
+- Module : `app/strategy_lab/ablation.py`
+- Escalier défaut : A Ichimoku → B +RVOL → C +BOS → D +ATR expansion → E +CMF
+- Modes : `cumulative` | `leave_one_out`
+- HTTP : `GET/POST /strategy-lab/ablation`
+- Deltas entre étapes : expectancy / PF / signaux — un filtre doit prouver son utilité
+
+### Market Regime slices (Phase 6)
+
+- Classifier : `regime.py` (ADX → TRENDING/RANGING, ATR → HI/LO/NORMAL VOL, +DI/−DI → BULL/BEAR/SIDEWAYS)
+- Run : `regime_slices.py` — GLOBAL + slices orthogonales sur les mêmes signaux
+- HTTP : `GET/POST /strategy-lab/regime-slices`
+- Persist : `market_regime` dans Performance DB
+
+### Walk-forward (Phase 7)
+
+- Module : `walk_forward.py` — folds rolling | expanding sur un **ruleset fixe** (pas d'optimizer — Phase 8)
+- Features calculées une fois (causales) ; signaux filtrés par plage d'indices IS/OOS
+- Résumé OOS : mean expectancy / PF / Sharpe, % folds PF>1, total trades OOS
+- HTTP : `GET/POST /strategy-lab/walk-forward`
+- Agent : `run_walk_forward`
+- Persist optionnel : tags `walk_forward` + `fold` / `split` (IS|OOS) dans Performance DB
+
+### Optimization (Phase 8)
+
+- Module : `optimization.py` — grid-search sur knobs numériques du ruleset (`rvol_min`, `tk_cross_age_max`, `stop_atr`, `target_atr`…)
+- Cap : 96 combinaisons max ; knobs absents du ruleset de base ignorés
+- Objectifs : `expectancy` | `profit_factor` | `sharpe` (min_trades gate)
+- `GET/POST /strategy-lab/optimize` — fenêtre unique (IS only, diagnostic)
+- `GET/POST /strategy-lab/walk-forward-opt` — **chemin principal** : best params sur IS → mesure OOS par fold + `param_stability`
+- Agent : `run_optimize` · `run_walk_forward_opt`
+
 ## Pipeline à étages (north star, docs/HANDOFF-CLAUDE-REALIGN-NORTHSTAR.md)
 
 `confidence = ichimoku × rvol` (`app/decision/combiner.py`) est un **raccourci MVP**, pas la règle produit verrouillée — voir docs/TRADING_ARCHITECTURE_V2.md. La cible : `app/decision/pipeline.py`, un pipeline à 5 portes qui ne fait jamais dire l'inverse à une étape suivante (elle ne peut que rétrograder vers WATCH/NO_TRADE, jamais inverser LONG↔SHORT) :
@@ -277,6 +342,20 @@ Les helpers de sérialisation (`pipeline_dict`/`risk_dict`/`summary_dict`/`detai
 Routes : `GET /context/news?limit=20&sources=coindesk,cointelegraph`, `GET /context/calendar?limit=20`. Commandes agent équivalentes : `get_news`, `get_calendar` (mêmes payloads, `app/agent_channel/`). **`app/decision/pipeline.py` n'importe ni l'un ni l'autre** -- aucun stage, aucun code, aucune décision n'en dépend ; c'est du contexte à lire, pas un signal à voter.
 
 Vérifié en live (2026-09-16) contre les vrais flux : `/context/news` a renvoyé de vrais titres CoinTelegraph, `/context/calendar` de vrais événements macro (BRICS Summit, indicateurs NZD) de la semaine en cours. 11 tests dédiés (`tests/context/`).
+
+## Collecte automatique de preuve backtest (gate broker live, 2026-09-17)
+
+`app/backtest/evidence.py` -- job d'arrière-plan qui répond à la "condition 1" du gate broker live (`docs/CAHIER-DES-CHARGES.md` §5 V3 : "un vrai edge de rendement prouvé"). Il ne fait rien de nouveau côté calcul : il relance `experiments.compare()` (déjà utilisé par `/backtest/{symbol}` et la page Backtests) sur tout l'univers crypto × [1h, 4h], et persiste chaque métrique dans une nouvelle table `backtest_snapshots` -- pour qu'une tendance devienne visible dans le temps sans que quelqu'un relance un script à la main, exactement comme chaque chiffre des tableaux ADX/Donchian/Wyckoff de ce README a été produit manuellement ce soir.
+
+**Ce module ne décide jamais rien** : il logue, un humain (ou moi) lit et juge si "preuve" veut dire preuve -- même principe que la promotion d'ADX/Donchian, jamais un seuil automatique qui basculerait Option C tout seul.
+
+- Tourne dans le process FastAPI (même pattern `start()`/`stop()`/thread que `ScreenerCache`), pas de conteneur cron séparé. Intervalle par défaut 24h (`BACKTEST_EVIDENCE_INTERVAL_S`), activable/désactivable via `ENABLE_BACKTEST_EVIDENCE` (`.env`) -- **désactive-le en dev local si les reloads `--reload` répétés te gênent** : chaque redémarrage relance immédiatement un cycle complet (confirmé en live ce soir : plusieurs reloads consécutifs ont produit 865+ lignes en moins d'une heure).
+- `GET /api/engine/backtest/evidence` -- rollup pour la tuile Overview "Preuve edge (C1)" : `total_rows`, `first_run_at`/`last_run_at`, `distinct_days` (durée écoulée, pas juste jours avec donnée), `latest_pairs`, et `pipeline_beats_ichimoku_sharpe: {beats, compared} | null` calculé sur le cycle le plus récent (fenêtre de 2h) uniquement. Déclarée **avant** `/backtest/{symbol}` dans le router pour que `evidence` ne soit jamais interprété comme un symbole.
+- Vérifié en live : `{"total_rows": 865, "latest_pairs": 40, "pipeline_beats_ichimoku_sharpe": {"beats": 20, "compared": 40}}` -- encore une fois ~50%, cohérent avec tout ce qui a été trouvé ce soir (Donchian, Wyckoff, sweep élargi) : pas d'edge de rendement, juste une réduction de risque.
+- La logique de comparaison (`_score_pipeline_vs_ichimoku`) est une fonction pure testée isolément de la DB partagée -- nécessaire car le job tourne réellement contre `ichivol_engine_dev`, donc un test qui inférerait le "cycle le plus récent" depuis une requête live serait fragile par construction (confirmé : un vrai cycle a écrit des lignes pendant l'écriture des tests eux-mêmes).
+- Migration `3cae25ba04d6_add_backtest_snapshots_table`. 9 tests dédiés (`tests/backtest/test_evidence.py` + `tests/api/test_backtest_evidence_route.py`).
+
+Construit en collaboration avec Cursor : le contrat JSON exact (`BacktestEvidenceSummary`) et la tuile Overview "Preuve edge (C1)" existaient déjà côté front avant que l'endpoint engine ne soit fini -- les deux implémentations sont arrivées presque identiques indépendamment, reconciliées en une seule (logique dans `evidence.py`, route fine dans `routes.py`).
 
 L'hypothèse centrale de la mission ("RVOL confirme et améliore") **n'est toujours pas validée par les données sur cet échantillon** : aucune variante RVOL (continue, entry-gate, ou pipeline à portes) ne bat Ichimoku seul en Sharpe/return sur ces 3 runs. Ajouter Location a nettement réduit l'exposition de `PIPELINE` (11-14% contre 33-36% avant Location, 74-78% pour Ichimoku seul) et le max drawdown dans 2 cas sur 3 (18.5%→11.6% et 27.5%→19.1%) — la porte Location fait bien ce qu'elle est censée faire, réduire l'exposition aux mauvais emplacements — mais le Sharpe reste pire qu'Ichimoku seul partout, et pire qu'avant Location sur BTCUSDT 4h (-2.29 → -4.73). **Conclusion pour la migration "Combiner → portes" (docs/CAHIER-DES-CHARGES.md §4) : toujours pas justifiée par ces données** — l'architecture réduit le risque mais pas encore au prix d'un edge positif net.
 

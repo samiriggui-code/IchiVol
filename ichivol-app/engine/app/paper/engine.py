@@ -1,41 +1,25 @@
-"""Paper trading -- virtual positions only, opened/closed purely by reading
-`pipeline.decision` over time (CDC V2, docs/CAHIER-DES-CHARGES.md §4,
-approved 2026-09-16). Never a real order, never a broker, never real money
--- the mission's own "paper avant live" rule (§7). Asset-class agnostic:
-`PaperPosition` has no exchange/provider column, only `symbol`/`timeframe`,
-so a position opens identically whether the underlying pipeline decision
-came from Binance, biquote (forex/métal/index/énergie), or Twelve Data
-(equity) -- see app/api/routes.py::open_paper_position, whose crypto-only
-guard was lifted 2026-09-16 once crypto paper proved stable ("paper
-multi-classe", docs/CAHIER-DES-CHARGES.md §5 V2). Two independent tracks,
-same open/close rules, different trigger:
+"""Paper trading -- virtual positions only.
 
-- "auto_watchlist": app/screener/cache.py's background refresh calls
-  `sync_auto_watchlist` after every scan, reusing the rows it already
-  computed -- no extra fetch. One open position per (symbol, timeframe) at
-  a time, `user_id` is always None ("what if I'd just followed the engine
-  everywhere").
-- "user_confirmed": opened on demand (app/api/routes.py, called by the
-  server when a user hits "Confirmer" in the Journal) for that one
-  (symbol, timeframe, user_id) -- "how did MY picks do".
-
-Exit rule matches the pipeline's own "never flips, only downgrades" logic
-(docs/TRADING_ARCHITECTURE_V2.md §7): a position closes the moment its
-symbol's live decision no longer supports it -- either downgraded
-(WATCH/NO_TRADE) or the pipeline's direction genuinely flipped. Either way
-this closes the position; it is never auto-reversed into the new side.
+Phase 1 PaperBroker: ATR sizing against portfolio capital.
+Phase 2: multi-portfolio sync + optional Market Structure gates on
+experimental profiles only. ICHIVOL_BASELINE_V1 never gains structure filters.
+Never a real order.
 """
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Sequence
+from typing import Any, Sequence
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import PaperPosition
+from app.db.models import PaperJournalEvent, PaperPortfolio, PaperPosition
 from app.decision.pipeline import PipelineResult
+from app.context.gate import apply_context_gate
+from app.paper import broker as paper_broker
+from app.paper.portfolio import ensure_baseline_portfolio, ensure_syncable_portfolios
+from app.structure.gate import apply_structure_gate
 
 
 def _direction_for(decision: str) -> str | None:
@@ -46,21 +30,47 @@ def _direction_for(decision: str) -> str | None:
     return None
 
 
+def _signal_payload(pipeline: PipelineResult, extra: dict[str, Any] | None = None) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "decision": pipeline.decision,
+        "direction": getattr(pipeline.direction, "value", str(pipeline.direction)),
+        "stages": [
+            {
+                "id": getattr(getattr(s, "id", None), "value", getattr(s, "id", None)),
+                "status": getattr(getattr(s, "status", None), "value", str(getattr(s, "status", ""))),
+                "summary": getattr(s, "summary", None),
+                "codes": getattr(s, "codes", None),
+            }
+            for s in (pipeline.stages or [])
+        ],
+    }
+    if extra:
+        payload.update(extra)
+    return payload
+
+
 def _get_open_position(
-    session: Session, *, symbol: str, timeframe: str, source: str, user_id: str | None
+    session: Session,
+    *,
+    symbol: str,
+    timeframe: str,
+    source: str,
+    user_id: str | None,
+    portfolio_id: str | None = None,
 ) -> PaperPosition | None:
-    return session.execute(
-        select(PaperPosition).where(
-            PaperPosition.symbol == symbol,
-            PaperPosition.timeframe == timeframe,
-            PaperPosition.source == source,
-            PaperPosition.user_id == user_id,
-            PaperPosition.status == "OPEN",
-        )
-    ).scalar_one_or_none()
+    stmt = select(PaperPosition).where(
+        PaperPosition.symbol == symbol,
+        PaperPosition.timeframe == timeframe,
+        PaperPosition.source == source,
+        PaperPosition.user_id == user_id,
+        PaperPosition.status == "OPEN",
+    )
+    if portfolio_id is not None:
+        stmt = stmt.where(PaperPosition.portfolio_id == portfolio_id)
+    return session.execute(stmt).scalar_one_or_none()
 
 
-def _close(position: PaperPosition, *, price: float, reason: str) -> None:
+def _close_legacy(position: PaperPosition, *, price: float, reason: str) -> None:
     position.status = "CLOSED"
     position.exit_time = datetime.now(timezone.utc)
     position.exit_price = price
@@ -72,7 +82,7 @@ def _close(position: PaperPosition, *, price: float, reason: str) -> None:
     )
 
 
-def _open(
+def _open_legacy(
     session: Session,
     *,
     symbol: str,
@@ -82,8 +92,10 @@ def _open(
     direction: str,
     price: float,
     decision: str,
+    portfolio_id: str | None = None,
 ) -> PaperPosition:
     position = PaperPosition(
+        portfolio_id=portfolio_id,
         symbol=symbol,
         timeframe=timeframe,
         source=source,
@@ -98,6 +110,38 @@ def _open(
     return position
 
 
+def _journal_shadow(
+    session: Session,
+    *,
+    portfolio: PaperPortfolio,
+    symbol: str,
+    timeframe: str,
+    raw_decision: str,
+    reason: str | None,
+    structure_payload: dict[str, Any] | None = None,
+    context_payload: dict[str, Any] | None = None,
+    block_source: str = "structure",
+) -> None:
+    session.add(
+        PaperJournalEvent(
+            portfolio_id=portfolio.id,
+            position_id=None,
+            event_type="SHADOW_BLOCKED",
+            payload={
+                "symbol": symbol,
+                "timeframe": timeframe,
+                "raw_decision": raw_decision,
+                "shadow_direction": "LONG" if raw_decision == "BUY" else "SHORT",
+                "reason": reason,
+                "block_source": block_source,
+                "market_structure": structure_payload,
+                "context": context_payload,
+            },
+            created_at=datetime.now(timezone.utc),
+        )
+    )
+
+
 def sync_position(
     session: Session,
     *,
@@ -107,57 +151,231 @@ def sync_position(
     user_id: str | None,
     price: float,
     pipeline: PipelineResult,
+    stop_distance: float | None = None,
+    signal_extra: dict[str, Any] | None = None,
+    portfolio: PaperPortfolio | None = None,
 ) -> PaperPosition | None:
-    """One symbol's worth of open/hold/close logic given its just-computed
-    live pipeline result. Returns the position touched (opened or closed),
-    or None if nothing changed this cycle (still flat, or held unchanged)."""
+    """One symbol open/hold/close for one portfolio. Capital sizing when stop set."""
+    if portfolio is None:
+        try:
+            portfolio = ensure_baseline_portfolio(session)
+        except Exception:
+            portfolio = None
+
+    portfolio_id = portfolio.id if portfolio is not None else None
     existing = _get_open_position(
-        session, symbol=symbol, timeframe=timeframe, source=source, user_id=user_id
+        session,
+        symbol=symbol,
+        timeframe=timeframe,
+        source=source,
+        user_id=user_id,
+        portfolio_id=portfolio_id,
     )
     direction = _direction_for(pipeline.decision)
+    signal = _signal_payload(pipeline, signal_extra)
 
-    if existing is None:
-        if direction is None:
+    if existing is not None:
+        paper_broker.update_excursions(existing, price)
+        stop_reason = paper_broker.check_stop_or_tp(existing, price)
+        if stop_reason is not None:
+            if existing.qty:
+                paper_broker.close_capital_position(
+                    session, existing, price=price, reason=stop_reason, signal=signal
+                )
+            else:
+                _close_legacy(existing, price=price, reason=stop_reason)
+            session.flush()
+            return existing
+
+        if direction == existing.direction:
             return None
-        position = _open(
-            session, symbol=symbol, timeframe=timeframe, source=source, user_id=user_id,
-            direction=direction, price=price, decision=pipeline.decision,
-        )
+
+        reason = "pipeline_flipped" if direction is not None else "pipeline_downgraded"
+        if existing.qty:
+            paper_broker.close_capital_position(
+                session, existing, price=price, reason=reason, signal=signal
+            )
+        else:
+            _close_legacy(existing, price=price, reason=reason)
         session.flush()
-        return position
+        return existing
 
-    if direction == existing.direction:
-        return None  # still open, still supported -- nothing to do
+    if direction is None:
+        return None
 
-    reason = "pipeline_flipped" if direction is not None else "pipeline_downgraded"
-    _close(existing, price=price, reason=reason)
+    if portfolio is not None and stop_distance and stop_distance > 0:
+        require_atr = bool((portfolio.strategy_profile or {}).get("require_atr_stop", True))
+        position = paper_broker.open_capital_position(
+            session,
+            portfolio=portfolio,
+            symbol=symbol,
+            timeframe=timeframe,
+            source=source,
+            user_id=user_id,
+            direction=direction,
+            price=price,
+            decision=pipeline.decision,
+            stop_distance=stop_distance,
+            signal=signal,
+        )
+        if position is not None:
+            session.flush()
+            return position
+        if require_atr:
+            return None
+
+    position = _open_legacy(
+        session,
+        symbol=symbol,
+        timeframe=timeframe,
+        source=source,
+        user_id=user_id,
+        direction=direction,
+        price=price,
+        decision=pipeline.decision,
+        portfolio_id=portfolio_id,
+    )
     session.flush()
-    return existing
+    return position
 
 
 def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]:
-    """`rows` is the same `list[ScreenerRow]` the screener cache just
-    computed (app/screener/service.py::scan_watchlist) -- reused as-is."""
-    touched = [
-        result
-        for row in rows
-        if (
-            result := sync_position(
-                session, symbol=row.symbol, timeframe=row.timeframe, source="auto_watchlist",
-                user_id=None, price=row.price, pipeline=row.pipeline,
+    """Reuse screener rows; size when ATR stop is present; sync all syncable portfolios."""
+    try:
+        portfolios = ensure_syncable_portfolios(session)
+    except Exception:
+        portfolios = []
+        try:
+            portfolios = [ensure_baseline_portfolio(session)]
+        except Exception:
+            portfolios = []
+
+    marks: dict[str, float] = {}
+    touched: list[PaperPosition] = []
+    # Cache structure gate by (symbol,tf, detectors key) within this cycle
+    gate_cache: dict[tuple[str, str, str], Any] = {}
+
+    for row in rows:
+        stop = None
+        if getattr(row, "atr", None) is not None:
+            stop = getattr(row.atr, "suggested_stop_distance", None)
+        rvol_val = None
+        rvol_out = getattr(row, "rvol", None)
+        if rvol_out is not None:
+            meta = getattr(rvol_out, "metadata", None) or {}
+            rvol_val = meta.get("rvol")
+            if rvol_val is None:
+                rvol_val = getattr(rvol_out, "value", None)
+        candles = getattr(row, "candles", None) or []
+
+        if not portfolios:
+            result = sync_position(
+                session,
+                symbol=row.symbol,
+                timeframe=row.timeframe,
+                source="auto_watchlist",
+                user_id=None,
+                price=row.price,
+                pipeline=row.pipeline,
+                stop_distance=stop,
+                signal_extra={"rvol": rvol_val, "atr_stop": stop},
             )
-        )
-        is not None
-    ]
+            marks[f"{row.symbol}:{row.timeframe}"] = row.price
+            if result is not None:
+                touched.append(result)
+            continue
+
+        for portfolio in portfolios:
+            profile = portfolio.strategy_profile or {}
+            det_key = (
+                ",".join(profile.get("structure_detectors") or []),
+                str(profile.get("structure_filter")),
+                str(profile.get("structure_include_pytrendline")),
+            )
+            cache_key = (row.symbol, row.timeframe, "|".join(det_key))
+            if profile.get("structure_filter") and cache_key in gate_cache:
+                struct_gate = gate_cache[cache_key]
+            else:
+                struct_gate = apply_structure_gate(
+                    row.pipeline,
+                    candles,
+                    profile,
+                    rvol=rvol_val if isinstance(rvol_val, (int, float)) else None,
+                )
+                if profile.get("structure_filter"):
+                    gate_cache[cache_key] = struct_gate
+
+            # Context gate runs on (possibly structure-gated) pipeline
+            ctx_gate = apply_context_gate(struct_gate.pipeline, candles, profile)
+
+            blocked = struct_gate.blocked or ctx_gate.blocked
+            final_pipeline = ctx_gate.pipeline
+            raw_decision = struct_gate.raw_decision
+            block_reason = ctx_gate.reason if ctx_gate.blocked else struct_gate.reason
+            block_source = "context" if ctx_gate.blocked else ("structure" if struct_gate.blocked else None)
+
+            if blocked and profile.get("shadow_on_block"):
+                _journal_shadow(
+                    session,
+                    portfolio=portfolio,
+                    symbol=row.symbol,
+                    timeframe=row.timeframe,
+                    raw_decision=raw_decision,
+                    reason=block_reason,
+                    structure_payload=struct_gate.structure_payload,
+                    context_payload=ctx_gate.context_payload,
+                    block_source=block_source or "unknown",
+                )
+
+            extra: dict[str, Any] = {
+                "rvol": rvol_val,
+                "atr_stop": stop,
+                "portfolio_code": portfolio.code,
+            }
+            if struct_gate.structure_payload is not None:
+                extra["market_structure"] = struct_gate.structure_payload
+            if ctx_gate.context_payload is not None:
+                extra["context"] = ctx_gate.context_payload
+            if blocked:
+                extra["structure_blocked"] = struct_gate.blocked
+                extra["context_blocked"] = ctx_gate.blocked
+                extra["block_source"] = block_source
+                extra["block_reason"] = block_reason
+                extra["raw_decision"] = raw_decision
+
+            result = sync_position(
+                session,
+                symbol=row.symbol,
+                timeframe=row.timeframe,
+                source="auto_watchlist",
+                user_id=None,
+                price=row.price,
+                pipeline=final_pipeline,
+                stop_distance=stop,
+                signal_extra=extra,
+                portfolio=portfolio,
+            )
+            if result is not None:
+                touched.append(result)
+
+        marks[f"{row.symbol}:{row.timeframe}"] = row.price
+
+    for portfolio in portfolios:
+        paper_broker.snapshot_equity(session, portfolio, marks=marks)
     session.commit()
     return touched
 
 
 def open_user_confirmed(
-    session: Session, *, symbol: str, timeframe: str, user_id: str, price: float, pipeline: PipelineResult
+    session: Session,
+    *,
+    symbol: str,
+    timeframe: str,
+    user_id: str,
+    price: float,
+    pipeline: PipelineResult,
+    stop_distance: float | None = None,
 ) -> PaperPosition | None:
-    """Idempotent: returns the user's existing open position unchanged
-    rather than duplicating it if one is already open for this symbol."""
     existing = _get_open_position(
         session, symbol=symbol, timeframe=timeframe, source="user_confirmed", user_id=user_id
     )
@@ -168,9 +386,15 @@ def open_user_confirmed(
     if direction is None:
         return None
 
-    position = _open(
-        session, symbol=symbol, timeframe=timeframe, source="user_confirmed", user_id=user_id,
-        direction=direction, price=price, decision=pipeline.decision,
+    position = sync_position(
+        session,
+        symbol=symbol,
+        timeframe=timeframe,
+        source="user_confirmed",
+        user_id=user_id,
+        price=price,
+        pipeline=pipeline,
+        stop_distance=stop_distance,
     )
     session.commit()
     return position
@@ -180,7 +404,12 @@ def close_manually(session: Session, position_id: str, *, price: float) -> Paper
     position = session.get(PaperPosition, position_id)
     if position is None or position.status != "OPEN":
         return None
-    _close(position, price=price, reason="manual_close")
+    if position.qty:
+        paper_broker.close_capital_position(
+            session, position, price=price, reason="manual_close", signal=None
+        )
+    else:
+        _close_legacy(position, price=price, reason="manual_close")
     session.commit()
     return position
 
@@ -195,6 +424,7 @@ def list_positions(
     source: str | None = None,
     user_id: str | None = None,
     status: str | None = None,
+    portfolio_id: str | None = None,
 ) -> list[PaperPosition]:
     stmt = select(PaperPosition).order_by(PaperPosition.entry_time.desc())
     if source is not None:
@@ -203,4 +433,6 @@ def list_positions(
         stmt = stmt.where(PaperPosition.user_id == user_id)
     if status is not None:
         stmt = stmt.where(PaperPosition.status == status)
+    if portfolio_id is not None:
+        stmt = stmt.where(PaperPosition.portfolio_id == portfolio_id)
     return list(session.execute(stmt).scalars().all())

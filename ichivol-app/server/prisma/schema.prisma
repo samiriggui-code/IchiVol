@@ -77,7 +77,7 @@ model Notification {
   id        String    @id @default(uuid())
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /// journal_confirm | pipeline_change
+  /// journal_confirm | pipeline_change | system_alert | system_digest
   kind      String
   title     String
   body      String

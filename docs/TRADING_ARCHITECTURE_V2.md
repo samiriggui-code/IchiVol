@@ -5,6 +5,8 @@ Ce document **remplace** l’ancienne proposition « multi-strategy × consensus
 Toute session engine / front / agents doit s’aligner ici avant d’ajouter une couche.
 
 Docs liées :
+- [`ARCHITECTURE-CONSOLIDEE-V2.md`](./ARCHITECTURE-CONSOLIDEE-V2.md) — lab quant (Paper / Shadow / Market Structure / MCP viz)
+- [`PLAN-PAPER-BROKER-MULTI-PORTFOLIO.md`](./PLAN-PAPER-BROKER-MULTI-PORTFOLIO.md) — Phase 1 PaperBroker
 - [`CAHIER-DES-CHARGES.md`](./CAHIER-DES-CHARGES.md) — backlog maître (dont Graph/Matrix réinterprété)
 - [`METHODS-ROADMAP.md`](./METHODS-ROADMAP.md) — méthodes, 5 questions, V1→V3
 - [`MARKET-DATA-STRATEGY.md`](./MARKET-DATA-STRATEGY.md) — data gratuite ≠ execution
@@ -159,6 +161,8 @@ Wyckoff · Donchian · ADX (garder ou jeter)
 
 Data levels N1 OHLCV → N2 trades → N3 derivatives : [`MARKET-DATA-STRATEGY.md`](./MARKET-DATA-STRATEGY.md).
 
+Détail PaperBroker / ShadowBroker / Structure consensus / multi-portfolio : [`ARCHITECTURE-CONSOLIDEE-V2.md`](./ARCHITECTURE-CONSOLIDEE-V2.md).
+
 ---
 
 ## 5. StrategyAgents vs Copilot LLM
@@ -194,4 +198,6 @@ Détail UI : [`APP-ARBORESCENCE-V2.md`](./APP-ARBORESCENCE-V2.md).
 6. Consensus multi-agents après preuve, pas avant.  
 7. StrategyAgent ≠ Copilot.  
 8. Paper avant live.  
-9. **Market data ≠ execution** ; indicateurs = Python sur brut ; zéro abonnement pour le cœur crypto.
+9. **Market data ≠ execution** ; indicateurs = Python sur brut ; zéro abonnement pour le cœur crypto.  
+10. **MCP TradingView / charts** = interaction & visualisation uniquement — **pas** un indicateur ni un vote dans le Decision Engine.  
+11. **MCP MT5 / exécution réelle** = post-validation (après backtest + Paper + Shadow) — jamais avant preuve.

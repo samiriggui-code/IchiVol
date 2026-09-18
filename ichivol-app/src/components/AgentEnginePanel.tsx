@@ -31,6 +31,18 @@ const TOOL_UX: Record<string, { title: string; blurb: string }> = {
     title: 'Backtest',
     blurb: 'Comparer Ichimoku / RVOL / pipeline sur l’historique.',
   },
+  run_event_study: {
+    title: 'Event Study',
+    blurb: 'Après chaque signal : +N bougies, MFE/MAE ATR — sans capital.',
+  },
+  list_rulesets: {
+    title: 'Rulesets',
+    blurb: 'Hypothèses IV_* déclaratives (Strategy Lab).',
+  },
+  run_ruleset_event_study: {
+    title: 'Ruleset Study',
+    blurb: 'Évalue un ruleset puis mesure le forward path.',
+  },
   get_correlations: {
     title: 'Corrélations',
     blurb: 'Qui bouge avec qui (lecture seule).',
@@ -137,6 +149,7 @@ export function AgentEnginePanel({ symbol, timeframe }: Props) {
       'get_news',
       'get_calendar',
       'run_backtest',
+      'run_event_study',
     ]
     const byName = new Map(tools.map((t) => [t.name, t]))
     return order

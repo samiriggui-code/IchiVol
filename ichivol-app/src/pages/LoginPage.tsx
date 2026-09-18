@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { BrandMark } from '../components/BrandMark'
 import { IchimokuMockChart } from '../components/IchimokuMockChart'
 import { KeenIcon } from '../components/KeenIcon'
 import { ThemeToggle } from '../components/ThemeToggle'
@@ -49,7 +50,7 @@ export function LoginPage() {
         <div className="camap-login-form-wrap">
           <div className="camap-login-top">
             <Link to="/" className="camap-brand camap-login-form-mark">
-              <span className="camap-mark">IV</span>
+              <BrandMark className="camap-mark" />
               <span className="camap-word">IchiVol</span>
             </Link>
             <ThemeToggle />
@@ -117,7 +118,7 @@ export function LoginPage() {
           <div className="camap-login-brand-glow" aria-hidden />
 
           <Link to="/" className="camap-brand camap-login-brand-mark">
-            <span className="camap-mark">IV</span>
+            <BrandMark className="camap-mark" />
             <span className="camap-word">IchiVol</span>
           </Link>
 

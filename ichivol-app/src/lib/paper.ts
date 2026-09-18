@@ -6,6 +6,7 @@ export type PaperDirection = 'LONG' | 'SHORT'
 
 export interface PaperPosition {
   id: string
+  portfolio_id?: string | null
   symbol: string
   timeframe: string
   source: PaperSource | string
@@ -19,6 +20,15 @@ export interface PaperPosition {
   exit_price: number | null
   exit_reason: string | null
   pnl_pct: number | null
+  qty?: number | null
+  notional?: number | null
+  stop_price?: number | null
+  take_profit_price?: number | null
+  risk_pct?: number | null
+  risk_amount?: number | null
+  realized_pnl?: number | null
+  mfe_pct?: number | null
+  mae_pct?: number | null
 }
 
 export interface PaperPerformance {
@@ -31,6 +41,28 @@ export interface PaperPerformance {
   avg_holding_hours: number | null
   best_trade_pct: number | null
   worst_trade_pct: number | null
+  initial_cash?: number | null
+  cash?: number | null
+  equity?: number | null
+  realized_pnl?: number | null
+  unrealized_pnl?: number | null
+  max_drawdown?: number | null
+  expectancy_eur?: number | null
+  valuation_mode?: string | null
+}
+
+export interface PaperPortfolioSummary {
+  portfolio: {
+    id: string
+    code: string
+    label: string
+    currency: string
+    valuation_mode: string
+    initial_cash: number
+    cash: number
+    realized_pnl: number
+  }
+  performance: PaperPerformance
 }
 
 async function parseError(res: Response): Promise<string> {
@@ -93,4 +125,12 @@ export async function closePaperPosition(id: string): Promise<PaperPosition> {
   })
   if (!res.ok) throw new Error(await parseError(res))
   return res.json() as Promise<PaperPosition>
+}
+
+export async function getPaperPortfolio(code = 'ICHIVOL_BASELINE_V1'): Promise<PaperPortfolioSummary> {
+  const res = await fetch(`/api/engine/paper/portfolios/${encodeURIComponent(code)}`, {
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json() as Promise<PaperPortfolioSummary>
 }

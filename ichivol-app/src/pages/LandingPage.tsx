@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { BrandMark } from '../components/BrandMark'
 import { KeenIcon } from '../components/KeenIcon'
 import { ThemeToggle } from '../components/ThemeToggle'
 
@@ -184,7 +185,7 @@ export function LandingPage() {
       <header className="camap-nav-wrap">
         <nav className="camap-nav" aria-label="Navigation principale">
           <Link to="/" className="camap-brand" aria-label="IchiVol — accueil">
-            <span className="camap-mark">IV</span>
+            <BrandMark className="camap-mark" />
             <span className="camap-word">IchiVol</span>
           </Link>
           <div className="camap-nav-links">
@@ -363,7 +364,7 @@ export function LandingPage() {
         <div className="camap-footer-inner">
           <div className="camap-footer-brand">
             <Link to="/" className="camap-brand" aria-label="IchiVol — accueil">
-              <span className="camap-mark">IV</span>
+              <BrandMark className="camap-mark" />
               <span className="camap-word">IchiVol</span>
             </Link>
           <p>

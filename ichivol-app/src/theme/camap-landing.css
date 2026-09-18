@@ -56,14 +56,10 @@
 .camap-mark {
   width: 1.85rem;
   height: 1.85rem;
-  display: grid;
-  place-items: center;
-  border-radius: 0.55rem;
-  background: color-mix(in srgb, var(--primary) 18%, transparent);
-  color: var(--primary);
-  font-size: 0.75rem;
-  font-weight: 800;
-  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
+  display: block;
+  border-radius: 0.5rem;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .camap-word {

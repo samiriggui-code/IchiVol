@@ -1,4 +1,4 @@
-export type NotificationKind = 'journal_confirm' | 'pipeline_change'
+export type NotificationKind = 'journal_confirm' | 'pipeline_change' | 'system_alert' | 'system_digest'
 
 export interface AppNotification {
   id: string

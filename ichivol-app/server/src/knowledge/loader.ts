@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { KnowledgeChunk } from './types.js'
@@ -50,6 +50,11 @@ function splitIntoChunks(body: string): string[] {
 }
 
 export function loadKnowledgeBase(): KnowledgeChunk[] {
+  if (!existsSync(DOCS_DIR)) {
+    console.warn(`[knowledge] docs manquants: ${DOCS_DIR} — RAG désactivé`)
+    return []
+  }
+
   const files = readdirSync(DOCS_DIR).filter((f) => f.endsWith('.md'))
   const chunks: KnowledgeChunk[] = []
 

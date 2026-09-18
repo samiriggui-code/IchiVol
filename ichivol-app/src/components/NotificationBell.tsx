@@ -23,13 +23,17 @@ function fmtWhen(iso: string): string {
 function kindMeta(kind: NotificationKind | string): {
   icon: string
   label: string
-  tone: 'journal' | 'pipeline' | 'default'
+  tone: 'journal' | 'pipeline' | 'system' | 'default'
 } {
   switch (kind) {
     case 'journal_confirm':
       return { icon: 'notepad', label: 'Journal', tone: 'journal' }
     case 'pipeline_change':
       return { icon: 'pulse', label: 'Pipeline', tone: 'pipeline' }
+    case 'system_alert':
+      return { icon: 'shield-cross', label: 'Système', tone: 'system' }
+    case 'system_digest':
+      return { icon: 'chart-line', label: 'Résumé', tone: 'system' }
     default:
       return { icon: 'notification-bing', label: 'Info', tone: 'default' }
   }

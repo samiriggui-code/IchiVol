@@ -20,6 +20,8 @@ import {
   handleReadAllNotifications,
   handleReadNotification,
 } from './notifications/route.js'
+import { startDigestJob } from './notifications/digest.js'
+import { startSystemWatchdog } from './notifications/systemWatchdog.js'
 import { startJournalWatchJob } from './notifications/watch.js'
 import { handleHealth } from './routes/health.js'
 import { handleGetSettings, handleLlmTest, handlePatchSettings } from './settings/route.js'
@@ -68,4 +70,6 @@ app.post('/api/engine/*', requireAuth, proxyToEngine)
 app.listen(config.port, () => {
   console.log(`IchiVol agent server on http://localhost:${config.port} (provider: ${config.llmProvider})`)
   startJournalWatchJob()
+  startSystemWatchdog()
+  startDigestJob()
 })

@@ -24,9 +24,10 @@ items, not part of this mission):
   change shape if a real pluggable Consensus Engine replaces the combiner
   later.
 - Deliberately NOT modeled yet: `MarketSnapshot`, `EdgeCalculation`,
-  `RiskCalculation`, `StrategyPerformance`, `StrategyCalibration`,
-  `Backtest` — those belong to the Consensus/Edge/Risk/Polymarket layer,
-  which is a separate, not-yet-approved mandate.
+  `RiskCalculation`, `StrategyCalibration`, full Consensus layer — those
+  belong to a separate mandate. `StrategyLabExperiment` (Phase 4 Performance
+  DB) is the research-store exception: persisted ruleset studies, not a live
+  gate voter.
 - `PaperPosition` (added for the CDC V2 "Paper trading" item, approved
   2026-09-16) is a deliberately narrow exception to that boundary: virtual
   positions only, no order routing, no broker, no real money -- exactly
@@ -41,7 +42,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, String, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -216,26 +217,45 @@ class Decision(Base):
     signal: Mapped[StrategySignal] = relationship(back_populates="decisions")
 
 
-class PaperPosition(Base):
-    """A simulated (never real) position, opened and closed purely by
-    reading `pipeline.decision` over time -- app/paper/engine.py owns the
-    open/close rules. Two origins, tracked side by side via `source`:
+class PaperPortfolio(Base):
+    """Virtual broker account (never real money). Phase 1 seeds
+    ICHIVOL_BASELINE_V1 at 5000 EUR; later A–F portfolios share this table."""
 
-    - "auto_watchlist": the background screener cycle opens/closes these
-      for every symbol in the default watchlist automatically (crypto +
-      biquote-backed forex/métal/index/énergie; Twelve Data equities are
-      excluded from the default watchlist to protect its free-tier budget,
-      see app/universe/catalog.py::default_watchlist), no user involved --
-      "what if I'd just followed the engine everywhere". `user_id` is null.
-    - "user_confirmed": opened on request (server calls this engine when a
-      user hits "Confirmer" in the Journal) for that one symbol -- "how did
-      MY picks do". `user_id` is whatever id the server's own User table
-      uses; this engine only stores and filters by it, never validates it.
-    """
+    __tablename__ = "paper_portfolios"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    code: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    label: Mapped[str] = mapped_column(String(128))
+    currency: Mapped[str] = mapped_column(String(8), default="EUR")
+    valuation_mode: Mapped[str] = mapped_column(String(32), default="USDT_AS_EUR_PROXY")
+    initial_cash: Mapped[float] = mapped_column(Float, default=5000.0)
+    cash: Mapped[float] = mapped_column(Float, default=5000.0)
+    realized_pnl: Mapped[float] = mapped_column(Float, default=0.0)
+    strategy_profile: Mapped[dict] = mapped_column(JSON, default=dict)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
+class PaperPosition(Base):
+    """A simulated (never real) position. Phase 1 PaperBroker fields
+    (qty, stop, fees, MFE/MAE, …) are nullable so legacy rows remain valid."""
 
     __tablename__ = "paper_positions"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    portfolio_id: Mapped[str | None] = mapped_column(
+        ForeignKey("paper_portfolios.id"), nullable=True, index=True
+    )
     symbol: Mapped[str] = mapped_column(String(32), index=True)
     timeframe: Mapped[str] = mapped_column(String(8))
     source: Mapped[str] = mapped_column(String(16), index=True)  # auto_watchlist | user_confirmed
@@ -246,12 +266,28 @@ class PaperPosition(Base):
 
     entry_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     entry_price: Mapped[float] = mapped_column(Float)
-    entry_decision: Mapped[str] = mapped_column(String(16))  # pipeline.decision snapshot at entry
+    entry_decision: Mapped[str] = mapped_column(String(16))
+    entry_signal: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     exit_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     exit_price: Mapped[float | None] = mapped_column(Float, nullable=True)
     exit_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    exit_signal: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     pnl_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    qty: Mapped[float | None] = mapped_column(Float, nullable=True)
+    notional: Mapped[float | None] = mapped_column(Float, nullable=True)
+    stop_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    take_profit_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    risk_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    risk_amount: Mapped[float | None] = mapped_column(Float, nullable=True)
+    entry_fee: Mapped[float | None] = mapped_column(Float, nullable=True)
+    exit_fee: Mapped[float | None] = mapped_column(Float, nullable=True)
+    realized_pnl: Mapped[float | None] = mapped_column(Float, nullable=True)
+    mfe_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    mae_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    highest_price_seen: Mapped[float | None] = mapped_column(Float, nullable=True)
+    lowest_price_seen: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
@@ -260,4 +296,164 @@ class PaperPosition(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
+class PaperOrder(Base):
+    """Virtual fill log for the paper broker (never sent to a real venue)."""
+
+    __tablename__ = "paper_orders"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    portfolio_id: Mapped[str] = mapped_column(ForeignKey("paper_portfolios.id"), index=True)
+    position_id: Mapped[str | None] = mapped_column(
+        ForeignKey("paper_positions.id"), nullable=True, index=True
+    )
+    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    timeframe: Mapped[str] = mapped_column(String(8))
+    side: Mapped[str] = mapped_column(String(8))  # BUY | SELL
+    order_type: Mapped[str] = mapped_column(String(16), default="MARKET")
+    requested_price: Mapped[float] = mapped_column(Float)
+    filled_price: Mapped[float] = mapped_column(Float)
+    qty: Mapped[float] = mapped_column(Float)
+    notional: Mapped[float] = mapped_column(Float)
+    fee: Mapped[float] = mapped_column(Float, default=0.0)
+    spread_bps: Mapped[float] = mapped_column(Float, default=0.0)
+    slippage_bps: Mapped[float] = mapped_column(Float, default=0.0)
+    status: Mapped[str] = mapped_column(String(16), default="FILLED")
+    reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+    )
+
+
+class PaperEquitySnapshot(Base):
+    """Periodic mark of portfolio equity — needed for honest max drawdown."""
+
+    __tablename__ = "paper_equity_snapshots"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    portfolio_id: Mapped[str] = mapped_column(ForeignKey("paper_portfolios.id"), index=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+    )
+    cash: Mapped[float] = mapped_column(Float)
+    positions_value: Mapped[float] = mapped_column(Float, default=0.0)
+    equity: Mapped[float] = mapped_column(Float)
+    realized_pnl: Mapped[float] = mapped_column(Float, default=0.0)
+    unrealized_pnl: Mapped[float] = mapped_column(Float, default=0.0)
+    drawdown_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
+class PaperJournalEvent(Base):
+    """Append-only explainability trail for paper broker events."""
+
+    __tablename__ = "paper_journal_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    portfolio_id: Mapped[str] = mapped_column(ForeignKey("paper_portfolios.id"), index=True)
+    position_id: Mapped[str | None] = mapped_column(
+        ForeignKey("paper_positions.id"), nullable=True, index=True
+    )
+    event_type: Mapped[str] = mapped_column(String(32), index=True)
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+    )
+
+
+class BacktestSnapshot(Base):
+    """One experiment's metrics from one automated evidence-collection run
+    (CDC "condition 1" for the live broker gate, docs/CAHIER-DES-CHARGES.md
+    §5 V3: "un vrai edge de rendement prouvé"). Written only by
+    `app/backtest/evidence.py`'s scheduled job -- it logs `experiments.compare()`
+    results over time so a trend becomes visible without anyone re-running
+    scripts by hand. This table is purely observational: nothing reads it to
+    make a decision, nothing here ever flips a pipeline gate on its own --
+    promoting a gate stays a reviewed call, same as ADX/Donchian/Wyckoff.
+    """
+
+    __tablename__ = "backtest_snapshots"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    timeframe: Mapped[str] = mapped_column(String(8), index=True)
+    experiment: Mapped[str] = mapped_column(String(32), index=True)  # ICHIMOKU_ONLY | PIPELINE | ...
+    strategy_version: Mapped[str] = mapped_column(String(64))
+
+    n_bars: Mapped[int] = mapped_column(Integer)
+    num_trades: Mapped[int] = mapped_column(Integer)
+    total_return: Mapped[float | None] = mapped_column(Float, nullable=True)
+    cagr: Mapped[float | None] = mapped_column(Float, nullable=True)
+    sharpe: Mapped[float | None] = mapped_column(Float, nullable=True)
+    sortino: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_drawdown: Mapped[float | None] = mapped_column(Float, nullable=True)
+    exposure: Mapped[float | None] = mapped_column(Float, nullable=True)
+    win_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    profit_factor: Mapped[float | None] = mapped_column(Float, nullable=True)
+    expectancy: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+    )
+
+
+class StrategyLabExperiment(Base):
+    """Persisted Strategy Lab run (Phase 4 Performance DB).
+
+    Stores a ruleset hypothesis + event-study + ATR backtest metrics so
+    experiments are not recomputed forever. Observational research store —
+    nothing here auto-promotes a live pipeline gate.
+    """
+
+    __tablename__ = "strategy_lab_experiments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+
+    ruleset_id: Mapped[str] = mapped_column(String(128), index=True)
+    ruleset_version: Mapped[str] = mapped_column(String(32))
+    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    timeframe: Mapped[str] = mapped_column(String(8), index=True)
+    market_regime: Mapped[str] = mapped_column(String(32), default="GLOBAL", index=True)
+
+    date_range_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    date_range_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    rules_json: Mapped[dict] = mapped_column(JSON)
+    entry_rule: Mapped[str] = mapped_column(String(64))
+    exit_rule: Mapped[str] = mapped_column(String(64))
+    stop_rule: Mapped[str] = mapped_column(String(64))
+    target_rule: Mapped[str] = mapped_column(String(64))
+
+    n_bars: Mapped[int] = mapped_column(Integer)
+    n_signals: Mapped[int] = mapped_column(Integer)
+    n_matching_bars: Mapped[int] = mapped_column(Integer)
+    number_of_trades: Mapped[int] = mapped_column(Integer, default=0)
+
+    win_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    profit_factor: Mapped[float | None] = mapped_column(Float, nullable=True)
+    expectancy: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_drawdown: Mapped[float | None] = mapped_column(Float, nullable=True)
+    sharpe: Mapped[float | None] = mapped_column(Float, nullable=True)
+    sortino: Mapped[float | None] = mapped_column(Float, nullable=True)
+    total_return: Mapped[float | None] = mapped_column(Float, nullable=True)
+    cagr: Mapped[float | None] = mapped_column(Float, nullable=True)
+    exposure: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    mean_mfe_atr: Mapped[float | None] = mapped_column(Float, nullable=True)
+    mean_mae_atr: Mapped[float | None] = mapped_column(Float, nullable=True)
+    median_mfe_atr: Mapped[float | None] = mapped_column(Float, nullable=True)
+    median_mae_atr: Mapped[float | None] = mapped_column(Float, nullable=True)
+    pct_hit_plus_r_before_minus_r: Mapped[float | None] = mapped_column(Float, nullable=True)
+    n_resolved_r: Mapped[int] = mapped_column(Integer, default=0)
+
+    exit_reasons_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    event_study_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    parameters_json: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    dataset_version: Mapped[str] = mapped_column(String(128))
+    engine_version: Mapped[str] = mapped_column(String(64), index=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
     )

@@ -105,6 +105,16 @@ export function MarketPage() {
   }, [instruments])
 
   useEffect(() => {
+    const mq = window.matchMedia('(max-width: 980px)')
+    const apply = () => {
+      if (mq.matches) setSideOpen(true)
+    }
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
+
+  useEffect(() => {
     let cancelled = false
     getEngineUniverse()
       .then((u) => {
@@ -352,7 +362,7 @@ export function MarketPage() {
             </select>
           </label>
 
-          <div className="tf-group" role="group" aria-label="Timeframe">
+          <div className="tf-group tf-group--toolbar" role="group" aria-label="Timeframe">
             {INTERVALS.map((tf) => (
               <button
                 key={tf.id}
@@ -414,6 +424,18 @@ export function MarketPage() {
             </div>
           </header>
           <PriceChart candles={candles} onSignals={setSignals} />
+          <div className="tf-group tf-group--chart" role="group" aria-label="Timeframe">
+            {INTERVALS.map((tf) => (
+              <button
+                key={tf.id}
+                type="button"
+                className={tf.id === interval ? 'is-active' : undefined}
+                onClick={() => setInterval(tf.id)}
+              >
+                {tf.label}
+              </button>
+            ))}
+          </div>
         </section>
         <aside id="side-panel" className="side" hidden={!sideOpen} aria-hidden={!sideOpen}>
           <BiasPanel

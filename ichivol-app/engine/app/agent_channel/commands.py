@@ -36,6 +36,10 @@ from app.market_data.resolve import resolve_and_fetch
 from app.screener.cache import screener_cache
 from app.screener.persistence import persist_scan
 from app.screener.service import scan_symbol
+from app.strategy_lab.catalog import get_builtin_ruleset, list_builtin_rulesets
+from app.strategy_lab.event_study import event_study_dict, run_event_study
+from app.strategy_lab.ruleset import parse_ruleset
+from app.strategy_lab.run_ruleset import ruleset_study_dict, run_ruleset_event_study
 from app.universe.catalog import default_watchlist
 
 
@@ -201,6 +205,207 @@ def cmd_run_backtest(args: dict) -> dict:
             for name, exp in results.items()
         },
     }
+
+
+def cmd_run_event_study(args: dict) -> dict:
+    """Same payload as `GET /event-study/{symbol}` (Strategy Lab Phase 1)."""
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = str(args.get("timeframe", "1h"))
+    limit = int(args.get("limit", 1000))
+    variant = str(args.get("variant", experiments.PIPELINE))
+    horizons_arg = args.get("horizons", [1, 3, 5, 10])
+    if isinstance(horizons_arg, str):
+        horizons = tuple(int(x.strip()) for x in horizons_arg.split(",") if x.strip())
+    else:
+        horizons = tuple(int(x) for x in horizons_arg)
+    r_multiple = float(args.get("r_multiple", 1.0))
+    include_events = bool(args.get("include_events", False))
+    try:
+        result = run_event_study(
+            symbol,
+            timeframe=timeframe,
+            limit=limit,
+            variant=variant,
+            horizons=horizons,
+            r_multiple=r_multiple,
+        )
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+    return event_study_dict(result, include_events=include_events)
+
+
+def cmd_list_rulesets(_args: dict) -> dict:
+    return {"rulesets": [r.to_dict() for r in list_builtin_rulesets()]}
+
+
+def cmd_run_ruleset_event_study(args: dict) -> dict:
+    """Same as `POST /ruleset/event-study` / `GET /ruleset/{id}/event-study`."""
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = str(args.get("timeframe", "1h"))
+    limit = int(args.get("limit", 1000))
+    horizons_arg = args.get("horizons", [1, 3, 5, 10])
+    if isinstance(horizons_arg, str):
+        horizons = tuple(int(x.strip()) for x in horizons_arg.split(",") if x.strip())
+    else:
+        horizons = tuple(int(x) for x in horizons_arg)
+    include_events = bool(args.get("include_events", False))
+    with_backtest = bool(args.get("with_backtest", True))
+    persist = bool(args.get("persist", False))
+    try:
+        if args.get("ruleset") is not None:
+            ruleset = parse_ruleset(args["ruleset"])
+        else:
+            ruleset = get_builtin_ruleset(_require_str(args, "ruleset_id"))
+        result = run_ruleset_event_study(
+            ruleset,
+            symbol,
+            timeframe=timeframe,
+            limit=limit,
+            horizons=horizons,
+            with_backtest=with_backtest,
+        )
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+    payload = ruleset_study_dict(result, include_events=include_events)
+    if persist:
+        from app.strategy_lab.perf_db import persist_study_result
+
+        payload["experiment"] = persist_study_result(
+            result,
+            parameters={"limit": limit, "horizons": list(horizons), "source": "agent"},
+        )
+    return payload
+
+
+def cmd_list_strategy_lab_experiments(args: dict) -> dict:
+    from app.db.session import SessionLocal
+    from app.strategy_lab.perf_db import experiment_dict, list_experiments
+
+    session = SessionLocal()
+    try:
+        rows = list_experiments(
+            session,
+            symbol=args.get("symbol"),
+            timeframe=args.get("timeframe"),
+            ruleset_id=args.get("ruleset_id"),
+            limit=int(args.get("limit", 50)),
+        )
+        return {"experiments": [experiment_dict(r) for r in rows], "count": len(rows)}
+    finally:
+        session.close()
+
+
+def cmd_run_ablation(args: dict) -> dict:
+    from app.strategy_lab.ablation import ablation_dict, run_ablation
+
+    symbol = _require_str(args, "symbol").upper()
+    try:
+        result = run_ablation(
+            symbol,
+            timeframe=str(args.get("timeframe", "1h")),
+            limit=int(args.get("limit", 1000)),
+            mode=str(args.get("mode", "cumulative")),
+            layers=args.get("layers"),
+            direction=str(args.get("direction", "LONG")),
+            stop_atr=float(args.get("stop_atr", 1.0)),
+            target_atr=float(args.get("target_atr", 2.0)),
+            persist=bool(args.get("persist", False)),
+        )
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+    return ablation_dict(result)
+
+
+def cmd_run_regime_slices(args: dict) -> dict:
+    from app.strategy_lab.regime_slices import regime_slices_dict, run_regime_slices
+
+    symbol = _require_str(args, "symbol").upper()
+    try:
+        report = run_regime_slices(
+            symbol,
+            timeframe=str(args.get("timeframe", "1h")),
+            limit=int(args.get("limit", 1000)),
+            ruleset_id=args.get("ruleset_id"),
+            ruleset=args.get("ruleset"),
+            persist=bool(args.get("persist", False)),
+        )
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+    return regime_slices_dict(report)
+
+
+def cmd_run_walk_forward(args: dict) -> dict:
+    from app.strategy_lab.walk_forward import run_walk_forward, walk_forward_dict
+
+    symbol = _require_str(args, "symbol").upper()
+    step = args.get("step_bars")
+    try:
+        report = run_walk_forward(
+            symbol,
+            timeframe=str(args.get("timeframe", "1h")),
+            limit=int(args.get("limit", 1000)),
+            ruleset_id=args.get("ruleset_id"),
+            ruleset=args.get("ruleset"),
+            mode=str(args.get("mode", "rolling")),
+            train_bars=int(args.get("train_bars", 400)),
+            test_bars=int(args.get("test_bars", 100)),
+            step_bars=int(step) if step is not None else None,
+            warmup_bars=int(args.get("warmup_bars", 52)),
+            include_train=bool(args.get("include_train", True)),
+            persist=bool(args.get("persist", False)),
+        )
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+    return walk_forward_dict(report)
+
+
+def cmd_run_optimize(args: dict) -> dict:
+    from app.strategy_lab.optimization import optimize_dict, run_optimize
+
+    symbol = _require_str(args, "symbol").upper()
+    try:
+        report = run_optimize(
+            symbol,
+            timeframe=str(args.get("timeframe", "1h")),
+            limit=int(args.get("limit", 1000)),
+            ruleset_id=args.get("ruleset_id"),
+            ruleset=args.get("ruleset"),
+            grid=args.get("grid"),
+            objective=str(args.get("objective", "expectancy")),
+            min_trades=int(args.get("min_trades", 5)),
+            warmup_bars=int(args.get("warmup_bars", 52)),
+            persist_best=bool(args.get("persist_best", False)),
+        )
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+    return optimize_dict(report)
+
+
+def cmd_run_walk_forward_opt(args: dict) -> dict:
+    from app.strategy_lab.optimization import run_walk_forward_opt, walk_forward_opt_dict
+
+    symbol = _require_str(args, "symbol").upper()
+    step = args.get("step_bars")
+    try:
+        report = run_walk_forward_opt(
+            symbol,
+            timeframe=str(args.get("timeframe", "1h")),
+            limit=int(args.get("limit", 1000)),
+            ruleset_id=args.get("ruleset_id"),
+            ruleset=args.get("ruleset"),
+            mode=str(args.get("mode", "rolling")),
+            train_bars=int(args.get("train_bars", 400)),
+            test_bars=int(args.get("test_bars", 100)),
+            step_bars=int(step) if step is not None else None,
+            warmup_bars=int(args.get("warmup_bars", 52)),
+            grid=args.get("grid"),
+            objective=str(args.get("objective", "expectancy")),
+            min_trades=int(args.get("min_trades", 5)),
+            persist=bool(args.get("persist", False)),
+        )
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+    return walk_forward_opt_dict(report)
 
 
 _MAX_CORRELATION_SYMBOLS = 40

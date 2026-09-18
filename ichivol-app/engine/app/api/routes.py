@@ -16,19 +16,54 @@ from pydantic import BaseModel, Field
 from app.agent_channel.registry import TOOLS, dispatch_command, list_tool_specs
 from app.api.serializers import backtest_dict, detail_dict, metrics_dict, summary_dict
 from app.backtest import experiments
+from app.backtest.evidence import compute_evidence_summary
 from app.config import settings
 from app.context.calendar import fetch_calendar_events
 from app.context.news import fetch_news
 from app.correlation.engine import compute_correlation_matrix
 from app.db.session import SessionLocal
-from app.indicators.atr import AtrParams
+from app.indicators.atr import AtrParams, compute_atr
+from app.indicators.cmf import compute_cmf
+from app.indicators.obv import compute_obv
+from app.indicators.rsi import compute_rsi
 from app.indicators.rvol import RvolParams
 from app.market_data import twelve_data
 from app.paper import engine as paper_engine
-from app.paper.performance import compute_performance
+from app.paper.performance import compute_performance, compute_portfolio_performance
+from app.paper.portfolio import (
+    ensure_baseline_portfolio,
+    ensure_portfolio,
+    ensure_syncable_portfolios,
+    get_portfolio_by_code,
+    list_portfolios,
+)
+from app.paper.strategy_profiles import ALL_PROFILES, BASELINE_CODE
 from app.screener.cache import screener_cache
 from app.screener.persistence import persist_scan
 from app.screener.service import scan_symbol, scan_watchlist
+from app.strategy_lab.ablation import ablation_dict, run_ablation
+from app.strategy_lab.catalog import get_builtin_ruleset, list_builtin_rulesets
+from app.strategy_lab.event_study import event_study_dict, run_event_study
+from app.strategy_lab.optimization import (
+    optimize_dict,
+    run_optimize,
+    run_walk_forward_opt,
+    walk_forward_opt_dict,
+)
+from app.strategy_lab.perf_db import (
+    compare_rulesets,
+    experiment_dict,
+    get_experiment,
+    list_experiments,
+    persist_study_result,
+)
+from app.strategy_lab.regime_slices import regime_slices_dict, run_regime_slices
+from app.strategy_lab.ruleset import CONDITION_SCHEMA, parse_ruleset
+from app.strategy_lab.run_ruleset import ruleset_study_dict, run_ruleset_event_study
+from app.strategy_lab.walk_forward import run_walk_forward, walk_forward_dict
+from app.structure.params import StructureEngineParams
+from app.structure.service import detect_market_structure
+from app.structure.types import PriceZone, TrendlineSegment
 from app.universe.catalog import UNIVERSE, default_watchlist
 from app.universe.types import AssetClass
 
@@ -146,6 +181,147 @@ def get_ohlcv(
             }
             for c in candles
         ],
+    }
+
+
+def _zone_dict(z: PriceZone) -> dict:
+    return {
+        "side": z.side.value,
+        "low": z.low,
+        "high": z.high,
+        "mid": z.mid,
+        "score": z.score,
+        "touch_count": z.touch_count,
+        "sources": [s.value for s in z.sources],
+        "atr_width": z.atr_width,
+    }
+
+
+def _line_dict(line: TrendlineSegment) -> dict:
+    return {
+        "side": line.side.value,
+        "slope": line.slope,
+        "intercept": line.intercept,
+        "start_bar": line.start_bar,
+        "end_bar": line.end_bar,
+        "touch_count": line.touch_count,
+        "score": line.score,
+        "source": line.source.value,
+        "pivot_bars": list(line.pivot_bars),
+    }
+
+
+@router.get("/structure/{symbol}")
+def get_structure(
+    symbol: str,
+    timeframe: str = "1h",
+    limit: int = 300,
+    include_pytrendline: bool = False,
+    x_twelve_data_key: str | None = Header(default=None, alias="X-Twelve-Data-Key"),
+) -> dict:
+    """Market Structure Phase 2: MVPP + trendln consensus zones.
+
+    ``include_pytrendline=true`` runs the capped offline detector (not for
+    hot-path screener loops). No real orders — analysis only.
+    """
+    from app.market_data.resolve import ProviderNotWiredError, resolve_and_fetch
+
+    twelve_data.set_api_key_override(x_twelve_data_key)
+    try:
+        provider, provider_symbol, candles = resolve_and_fetch(
+            symbol.upper(), timeframe, min(limit, 500)
+        )
+    except ProviderNotWiredError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    params = StructureEngineParams(window_bars=min(limit, 500))
+    snap = detect_market_structure(
+        candles, params, include_pytrendline=include_pytrendline
+    )
+    consensus = snap.consensus
+    return {
+        "symbol": symbol.upper(),
+        "timeframe": timeframe,
+        "provider": provider.id,
+        "provider_symbol": provider_symbol,
+        "atr": snap.atr,
+        "last_close": snap.last_close,
+        "distance_to_support": snap.distance_to_support,
+        "distance_to_resistance": snap.distance_to_resistance,
+        "consensus": {
+            "structure_score": consensus.structure_score,
+            "support_zones": [_zone_dict(z) for z in consensus.support_zones],
+            "resistance_zones": [_zone_dict(z) for z in consensus.resistance_zones],
+            "meta": consensus.meta,
+        },
+        "detectors": {
+            name: {
+                "structure_score": ms.structure_score,
+                "support_zones": [_zone_dict(z) for z in ms.support_zones],
+                "resistance_zones": [_zone_dict(z) for z in ms.resistance_zones],
+                "support_trendlines": [_line_dict(t) for t in ms.support_trendlines],
+                "resistance_trendlines": [_line_dict(t) for t in ms.resistance_trendlines],
+                "pivot_count": len(ms.pivots),
+                "meta": ms.meta,
+            }
+            for name, ms in snap.by_detector.items()
+        },
+        "breakout_candidates": [
+            {
+                "side": b.side.value,
+                "confirmed": b.confirmed,
+                "close": b.close,
+                "distance_atr": b.distance_atr,
+                "body_ratio": b.body_ratio,
+                "rvol": b.rvol,
+                "reason": b.reason,
+                "zone": _zone_dict(b.zone),
+            }
+            for b in snap.breakout_candidates
+        ],
+    }
+
+
+@router.get("/context/{symbol}")
+def get_context_indicators(
+    symbol: str,
+    timeframe: str = "1h",
+    limit: int = 300,
+    x_twelve_data_key: str | None = Header(default=None, alias="X-Twelve-Data-Key"),
+) -> dict:
+    """Phase 3 context snapshot: RSI + CMF + OBV + ATR regime (analysis only)."""
+    from app.market_data.resolve import ProviderNotWiredError, resolve_and_fetch
+
+    twelve_data.set_api_key_override(x_twelve_data_key)
+    try:
+        provider, provider_symbol, candles = resolve_and_fetch(
+            symbol.upper(), timeframe, min(limit, 500)
+        )
+    except ProviderNotWiredError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    rsi = compute_rsi(candles)[-1]
+    cmf = compute_cmf(candles)[-1]
+    obv = compute_obv(candles)[-1]
+    atr = compute_atr(candles)[-1]
+    return {
+        "symbol": symbol.upper(),
+        "timeframe": timeframe,
+        "provider": provider.id,
+        "provider_symbol": provider_symbol,
+        "last_close": candles[-1].close,
+        "rsi": {"value": rsi.rsi, "bias": rsi.bias.value},
+        "cmf": {"value": cmf.cmf, "bias": cmf.bias.value},
+        "obv": {"value": obv.obv, "bias": obv.bias.value, "slope": obv.slope},
+        "atr": {
+            "value": atr.atr,
+            "regime": atr.regime.value,
+            "suggested_stop_distance": atr.suggested_stop_distance,
+        },
     }
 
 
@@ -326,6 +502,608 @@ def get_decisions_batch(payload: BatchDecisionsRequest) -> dict:
     return {"results": results}
 
 
+@router.get("/backtest/evidence")
+def get_backtest_evidence() -> dict:
+    """Rollup for the Overview "Preuve edge (C1)" tile -- how much automated
+    backtest evidence has been collected (app/backtest/evidence.py's
+    scheduled job) and how often PIPELINE's Sharpe beat plain Ichimoku in
+    the most recent cycle. Purely descriptive, never a verdict: Option C
+    stays a reviewed call, this just makes the raw material visible.
+    Declared before `/backtest/{symbol}` so `evidence` is never parsed as a
+    symbol path param."""
+    session = SessionLocal()
+    try:
+        return compute_evidence_summary(session)
+    finally:
+        session.close()
+
+
+@router.get("/event-study/{symbol}")
+def get_event_study(
+    symbol: str,
+    timeframe: str = "1h",
+    limit: int = 1000,
+    variant: str = experiments.PIPELINE,
+    horizons: str = "1,3,5,10",
+    r_multiple: float = 1.0,
+    include_events: bool = False,
+) -> dict:
+    """Strategy Lab Phase 1 — Event Study.
+
+    For each entry signal of the named backtest variant, measure forward
+    ATR-normalized returns at +N candles, MFE/MAE, and % hitting +R before -R.
+    No capital, fees, or sizing. Complements `/backtest/{symbol}` (full
+    simulator) without replacing it.
+    """
+    try:
+        horizon_list = tuple(
+            int(x.strip()) for x in horizons.split(",") if x.strip()
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422, detail="horizons must be comma-separated integers"
+        ) from exc
+    if not horizon_list or any(h < 1 for h in horizon_list):
+        raise HTTPException(status_code=422, detail="horizons must be positive integers")
+    if r_multiple <= 0:
+        raise HTTPException(status_code=422, detail="r_multiple must be > 0")
+    if limit < 50 or limit > 5000:
+        raise HTTPException(status_code=422, detail="limit must be between 50 and 5000")
+
+    try:
+        result = run_event_study(
+            symbol.upper(),
+            timeframe=timeframe,
+            limit=limit,
+            variant=variant,
+            horizons=horizon_list,
+            r_multiple=r_multiple,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    return event_study_dict(result, include_events=include_events)
+
+
+@router.get("/rulesets")
+def get_rulesets() -> dict:
+    """Strategy Lab Phase 2 — list built-in declarative rulesets + condition schema."""
+    return {
+        "rulesets": [r.to_dict() for r in list_builtin_rulesets()],
+        "condition_keys": sorted(CONDITION_SCHEMA.keys()),
+    }
+
+
+class RulesetStudyBody(BaseModel):
+    symbol: str
+    timeframe: str = "1h"
+    limit: int = 1000
+    horizons: str = "1,3,5,10"
+    include_events: bool = False
+    with_backtest: bool = True
+    persist: bool = False
+    """If true, save results to strategy_lab_experiments (Performance DB)."""
+    ruleset_id: str | None = None
+    """Built-in id; ignored if `ruleset` body is provided."""
+    ruleset: dict | None = None
+    """Inline ruleset JSON (takes precedence over ruleset_id)."""
+
+
+@router.post("/ruleset/event-study")
+def post_ruleset_event_study(body: RulesetStudyBody) -> dict:
+    """Strategy Lab Phase 2 — evaluate a ruleset then run Event Study on rising-edge hits."""
+    try:
+        horizon_list = tuple(
+            int(x.strip()) for x in body.horizons.split(",") if x.strip()
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422, detail="horizons must be comma-separated integers"
+        ) from exc
+    if not horizon_list or any(h < 1 for h in horizon_list):
+        raise HTTPException(status_code=422, detail="horizons must be positive integers")
+    if body.limit < 50 or body.limit > 5000:
+        raise HTTPException(status_code=422, detail="limit must be between 50 and 5000")
+
+    try:
+        if body.ruleset is not None:
+            ruleset = parse_ruleset(body.ruleset)
+        elif body.ruleset_id:
+            ruleset = get_builtin_ruleset(body.ruleset_id)
+        else:
+            raise HTTPException(
+                status_code=422, detail="provide ruleset_id or ruleset object"
+            )
+        result = run_ruleset_event_study(
+            ruleset,
+            body.symbol.upper(),
+            timeframe=body.timeframe,
+            limit=body.limit,
+            horizons=horizon_list,
+            with_backtest=body.with_backtest,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    payload = ruleset_study_dict(result, include_events=body.include_events)
+    if body.persist:
+        try:
+            saved = persist_study_result(
+                result,
+                parameters={
+                    "limit": body.limit,
+                    "horizons": list(horizon_list),
+                    "with_backtest": body.with_backtest,
+                },
+            )
+            payload["experiment"] = saved
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"persist_failed: {exc}") from exc
+    return payload
+
+
+@router.get("/ruleset/{ruleset_id}/event-study")
+def get_ruleset_event_study(
+    ruleset_id: str,
+    symbol: str,
+    timeframe: str = "1h",
+    limit: int = 1000,
+    horizons: str = "1,3,5,10",
+    include_events: bool = False,
+    with_backtest: bool = True,
+    persist: bool = False,
+) -> dict:
+    """Run a built-in ruleset Event Study (+ ATR backtest by default)."""
+    try:
+        horizon_list = tuple(
+            int(x.strip()) for x in horizons.split(",") if x.strip()
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422, detail="horizons must be comma-separated integers"
+        ) from exc
+    if not horizon_list or any(h < 1 for h in horizon_list):
+        raise HTTPException(status_code=422, detail="horizons must be positive integers")
+    if limit < 50 or limit > 5000:
+        raise HTTPException(status_code=422, detail="limit must be between 50 and 5000")
+
+    try:
+        ruleset = get_builtin_ruleset(ruleset_id)
+        result = run_ruleset_event_study(
+            ruleset,
+            symbol.upper(),
+            timeframe=timeframe,
+            limit=limit,
+            horizons=horizon_list,
+            with_backtest=with_backtest,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    payload = ruleset_study_dict(result, include_events=include_events)
+    if persist:
+        try:
+            saved = persist_study_result(
+                result,
+                parameters={
+                    "limit": limit,
+                    "horizons": list(horizon_list),
+                    "with_backtest": with_backtest,
+                },
+            )
+            payload["experiment"] = saved
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"persist_failed: {exc}") from exc
+    return payload
+
+
+@router.get("/strategy-lab/experiments")
+def get_strategy_lab_experiments(
+    symbol: str | None = None,
+    timeframe: str | None = None,
+    ruleset_id: str | None = None,
+    market_regime: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> dict:
+    """Performance DB — list persisted Strategy Lab experiments."""
+    session = SessionLocal()
+    try:
+        rows = list_experiments(
+            session,
+            symbol=symbol,
+            timeframe=timeframe,
+            ruleset_id=ruleset_id,
+            market_regime=market_regime,
+            limit=limit,
+            offset=offset,
+        )
+        return {
+            "experiments": [experiment_dict(r) for r in rows],
+            "count": len(rows),
+        }
+    finally:
+        session.close()
+
+
+@router.get("/strategy-lab/experiments/{experiment_id}")
+def get_strategy_lab_experiment(experiment_id: str) -> dict:
+    session = SessionLocal()
+    try:
+        row = get_experiment(session, experiment_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="experiment_not_found")
+        return experiment_dict(row)
+    finally:
+        session.close()
+
+
+@router.get("/strategy-lab/compare")
+def get_strategy_lab_compare(
+    symbol: str,
+    timeframe: str = "1h",
+    ruleset_ids: str = "",
+    market_regime: str = "GLOBAL",
+) -> dict:
+    """Latest saved run per ruleset_id for symbol/timeframe (ablation helper)."""
+    ids = [x.strip() for x in ruleset_ids.split(",") if x.strip()]
+    if not ids:
+        raise HTTPException(status_code=422, detail="ruleset_ids required (comma-separated)")
+    session = SessionLocal()
+    try:
+        rows = compare_rulesets(
+            session,
+            symbol=symbol.upper(),
+            timeframe=timeframe,
+            ruleset_ids=ids,
+            market_regime=market_regime,
+        )
+        return {
+            "symbol": symbol.upper(),
+            "timeframe": timeframe,
+            "market_regime": market_regime,
+            "experiments": [experiment_dict(r) for r in rows],
+        }
+    finally:
+        session.close()
+
+
+class AblationBody(BaseModel):
+    symbol: str
+    timeframe: str = "1h"
+    limit: int = 1000
+    mode: str = "cumulative"
+    """cumulative | leave_one_out"""
+    direction: str = "LONG"
+    stop_atr: float = 1.0
+    target_atr: float = 2.0
+    persist: bool = False
+    layers: list[dict] | None = None
+    """Optional [{label, conditions}] — default A→E ladder if omitted (cumulative)."""
+
+
+@router.post("/strategy-lab/ablation")
+def post_strategy_lab_ablation(body: AblationBody) -> dict:
+    """Strategy Lab Phase 5 — run ablation matrix on one shared OHLCV window."""
+    if body.limit < 50 or body.limit > 5000:
+        raise HTTPException(status_code=422, detail="limit must be between 50 and 5000")
+    if body.stop_atr <= 0 or body.target_atr <= 0:
+        raise HTTPException(status_code=422, detail="stop_atr/target_atr must be > 0")
+    try:
+        result = run_ablation(
+            body.symbol.upper(),
+            timeframe=body.timeframe,
+            limit=body.limit,
+            mode=body.mode,
+            layers=body.layers,
+            direction=body.direction,
+            stop_atr=body.stop_atr,
+            target_atr=body.target_atr,
+            persist=body.persist,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return ablation_dict(result)
+
+
+@router.get("/strategy-lab/ablation")
+def get_strategy_lab_ablation(
+    symbol: str,
+    timeframe: str = "1h",
+    limit: int = 1000,
+    mode: str = "cumulative",
+    direction: str = "LONG",
+    persist: bool = False,
+) -> dict:
+    """Convenience GET — default A→E cumulative ladder (Ichimoku→RVOL→BOS→ATR→CMF)."""
+    if limit < 50 or limit > 5000:
+        raise HTTPException(status_code=422, detail="limit must be between 50 and 5000")
+    try:
+        result = run_ablation(
+            symbol.upper(),
+            timeframe=timeframe,
+            limit=limit,
+            mode=mode,
+            direction=direction,
+            persist=persist,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return ablation_dict(result)
+
+
+class RegimeSlicesBody(BaseModel):
+    symbol: str
+    timeframe: str = "1h"
+    limit: int = 1000
+    persist: bool = False
+    ruleset_id: str | None = "IV_ICHIMOKU_RVOL_LONG_001"
+    ruleset: dict | None = None
+
+
+@router.post("/strategy-lab/regime-slices")
+def post_strategy_lab_regime_slices(body: RegimeSlicesBody) -> dict:
+    """Strategy Lab Phase 6 — segment ruleset performance by market regime."""
+    if body.limit < 50 or body.limit > 5000:
+        raise HTTPException(status_code=422, detail="limit must be between 50 and 5000")
+    try:
+        report = run_regime_slices(
+            body.symbol.upper(),
+            timeframe=body.timeframe,
+            limit=body.limit,
+            ruleset_id=body.ruleset_id,
+            ruleset=body.ruleset,
+            persist=body.persist,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return regime_slices_dict(report)
+
+
+@router.get("/strategy-lab/regime-slices")
+def get_strategy_lab_regime_slices(
+    symbol: str,
+    timeframe: str = "1h",
+    limit: int = 1000,
+    ruleset_id: str = "IV_ICHIMOKU_RVOL_LONG_001",
+    persist: bool = False,
+) -> dict:
+    if limit < 50 or limit > 5000:
+        raise HTTPException(status_code=422, detail="limit must be between 50 and 5000")
+    try:
+        report = run_regime_slices(
+            symbol.upper(),
+            timeframe=timeframe,
+            limit=limit,
+            ruleset_id=ruleset_id,
+            persist=persist,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return regime_slices_dict(report)
+
+
+class WalkForwardBody(BaseModel):
+    symbol: str
+    timeframe: str = "1h"
+    limit: int = 1000
+    mode: str = "rolling"
+    train_bars: int = 400
+    test_bars: int = 100
+    step_bars: int | None = None
+    warmup_bars: int = 52
+    include_train: bool = True
+    persist: bool = False
+    ruleset_id: str | None = "IV_ICHIMOKU_RVOL_LONG_001"
+    ruleset: dict | None = None
+
+
+@router.post("/strategy-lab/walk-forward")
+def post_strategy_lab_walk_forward(body: WalkForwardBody) -> dict:
+    """Strategy Lab Phase 7 — walk-forward IS/OOS on a fixed ruleset (no optimizer)."""
+    if body.limit < 100 or body.limit > 5000:
+        raise HTTPException(status_code=422, detail="limit must be between 100 and 5000")
+    try:
+        report = run_walk_forward(
+            body.symbol.upper(),
+            timeframe=body.timeframe,
+            limit=body.limit,
+            ruleset_id=body.ruleset_id,
+            ruleset=body.ruleset,
+            mode=body.mode,
+            train_bars=body.train_bars,
+            test_bars=body.test_bars,
+            step_bars=body.step_bars,
+            warmup_bars=body.warmup_bars,
+            include_train=body.include_train,
+            persist=body.persist,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return walk_forward_dict(report)
+
+
+@router.get("/strategy-lab/walk-forward")
+def get_strategy_lab_walk_forward(
+    symbol: str,
+    timeframe: str = "1h",
+    limit: int = 1000,
+    mode: str = "rolling",
+    train_bars: int = 400,
+    test_bars: int = 100,
+    step_bars: int | None = None,
+    warmup_bars: int = 52,
+    include_train: bool = True,
+    persist: bool = False,
+    ruleset_id: str = "IV_ICHIMOKU_RVOL_LONG_001",
+) -> dict:
+    if limit < 100 or limit > 5000:
+        raise HTTPException(status_code=422, detail="limit must be between 100 and 5000")
+    try:
+        report = run_walk_forward(
+            symbol.upper(),
+            timeframe=timeframe,
+            limit=limit,
+            ruleset_id=ruleset_id,
+            mode=mode,
+            train_bars=train_bars,
+            test_bars=test_bars,
+            step_bars=step_bars,
+            warmup_bars=warmup_bars,
+            include_train=include_train,
+            persist=persist,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return walk_forward_dict(report)
+
+
+class OptimizeBody(BaseModel):
+    symbol: str
+    timeframe: str = "1h"
+    limit: int = 1000
+    objective: str = "expectancy"
+    min_trades: int = 5
+    warmup_bars: int = 52
+    persist_best: bool = False
+    grid: dict[str, list] | None = None
+    ruleset_id: str | None = "IV_ICHIMOKU_RVOL_LONG_001"
+    ruleset: dict | None = None
+
+
+@router.post("/strategy-lab/optimize")
+def post_strategy_lab_optimize(body: OptimizeBody) -> dict:
+    """Strategy Lab Phase 8 — single-window grid search (IS only; prefer WF-opt)."""
+    if body.limit < 100 or body.limit > 5000:
+        raise HTTPException(status_code=422, detail="limit must be between 100 and 5000")
+    try:
+        report = run_optimize(
+            body.symbol.upper(),
+            timeframe=body.timeframe,
+            limit=body.limit,
+            ruleset_id=body.ruleset_id,
+            ruleset=body.ruleset,
+            grid=body.grid,
+            objective=body.objective,
+            min_trades=body.min_trades,
+            warmup_bars=body.warmup_bars,
+            persist_best=body.persist_best,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return optimize_dict(report)
+
+
+@router.get("/strategy-lab/optimize")
+def get_strategy_lab_optimize(
+    symbol: str,
+    timeframe: str = "1h",
+    limit: int = 1000,
+    objective: str = "expectancy",
+    min_trades: int = 5,
+    warmup_bars: int = 52,
+    persist_best: bool = False,
+    ruleset_id: str = "IV_ICHIMOKU_RVOL_LONG_001",
+) -> dict:
+    if limit < 100 or limit > 5000:
+        raise HTTPException(status_code=422, detail="limit must be between 100 and 5000")
+    try:
+        report = run_optimize(
+            symbol.upper(),
+            timeframe=timeframe,
+            limit=limit,
+            ruleset_id=ruleset_id,
+            objective=objective,
+            min_trades=min_trades,
+            warmup_bars=warmup_bars,
+            persist_best=persist_best,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return optimize_dict(report)
+
+
+class WalkForwardOptBody(BaseModel):
+    symbol: str
+    timeframe: str = "1h"
+    limit: int = 1000
+    mode: str = "rolling"
+    train_bars: int = 400
+    test_bars: int = 100
+    step_bars: int | None = None
+    warmup_bars: int = 52
+    objective: str = "expectancy"
+    min_trades: int = 5
+    persist: bool = False
+    grid: dict[str, list] | None = None
+    ruleset_id: str | None = "IV_ICHIMOKU_RVOL_LONG_001"
+    ruleset: dict | None = None
+
+
+@router.post("/strategy-lab/walk-forward-opt")
+def post_strategy_lab_walk_forward_opt(body: WalkForwardOptBody) -> dict:
+    """Strategy Lab Phase 8 — optimize on IS per fold, measure on OOS."""
+    if body.limit < 100 or body.limit > 5000:
+        raise HTTPException(status_code=422, detail="limit must be between 100 and 5000")
+    try:
+        report = run_walk_forward_opt(
+            body.symbol.upper(),
+            timeframe=body.timeframe,
+            limit=body.limit,
+            ruleset_id=body.ruleset_id,
+            ruleset=body.ruleset,
+            mode=body.mode,
+            train_bars=body.train_bars,
+            test_bars=body.test_bars,
+            step_bars=body.step_bars,
+            warmup_bars=body.warmup_bars,
+            grid=body.grid,
+            objective=body.objective,
+            min_trades=body.min_trades,
+            persist=body.persist,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return walk_forward_opt_dict(report)
+
+
+@router.get("/strategy-lab/walk-forward-opt")
+def get_strategy_lab_walk_forward_opt(
+    symbol: str,
+    timeframe: str = "1h",
+    limit: int = 1000,
+    mode: str = "rolling",
+    train_bars: int = 400,
+    test_bars: int = 100,
+    step_bars: int | None = None,
+    warmup_bars: int = 52,
+    objective: str = "expectancy",
+    min_trades: int = 5,
+    persist: bool = False,
+    ruleset_id: str = "IV_ICHIMOKU_RVOL_LONG_001",
+) -> dict:
+    if limit < 100 or limit > 5000:
+        raise HTTPException(status_code=422, detail="limit must be between 100 and 5000")
+    try:
+        report = run_walk_forward_opt(
+            symbol.upper(),
+            timeframe=timeframe,
+            limit=limit,
+            ruleset_id=ruleset_id,
+            mode=mode,
+            train_bars=train_bars,
+            test_bars=test_bars,
+            step_bars=step_bars,
+            warmup_bars=warmup_bars,
+            objective=objective,
+            min_trades=min_trades,
+            persist=persist,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return walk_forward_opt_dict(report)
+
+
 @router.get("/backtest/{symbol}")
 def get_backtest(
     symbol: str,
@@ -467,6 +1245,7 @@ def get_context_calendar(limit: int | None = None) -> dict:
 def _paper_position_dict(p) -> dict:
     return {
         "id": p.id,
+        "portfolio_id": p.portfolio_id,
         "symbol": p.symbol,
         "timeframe": p.timeframe,
         "source": p.source,
@@ -480,6 +1259,53 @@ def _paper_position_dict(p) -> dict:
         "exit_price": p.exit_price,
         "exit_reason": p.exit_reason,
         "pnl_pct": p.pnl_pct,
+        "qty": p.qty,
+        "notional": p.notional,
+        "stop_price": p.stop_price,
+        "take_profit_price": p.take_profit_price,
+        "risk_pct": p.risk_pct,
+        "risk_amount": p.risk_amount,
+        "realized_pnl": p.realized_pnl,
+        "mfe_pct": p.mfe_pct,
+        "mae_pct": p.mae_pct,
+    }
+
+
+def _paper_perf_dict(perf) -> dict:
+    return {
+        "num_closed_trades": perf.num_closed_trades,
+        "num_open_positions": perf.num_open_positions,
+        "total_return": perf.total_return,
+        "win_rate": perf.win_rate,
+        "profit_factor": perf.profit_factor if perf.profit_factor != float("inf") else None,
+        "expectancy": perf.expectancy,
+        "avg_holding_hours": perf.avg_holding_hours,
+        "best_trade_pct": perf.best_trade_pct,
+        "worst_trade_pct": perf.worst_trade_pct,
+        "initial_cash": getattr(perf, "initial_cash", None),
+        "cash": getattr(perf, "cash", None),
+        "equity": getattr(perf, "equity", None),
+        "realized_pnl": getattr(perf, "realized_pnl", None),
+        "unrealized_pnl": getattr(perf, "unrealized_pnl", None),
+        "max_drawdown": getattr(perf, "max_drawdown", None),
+        "expectancy_eur": getattr(perf, "expectancy_eur", None),
+        "valuation_mode": getattr(perf, "valuation_mode", None),
+    }
+
+
+def _portfolio_dict(p) -> dict:
+    return {
+        "id": p.id,
+        "code": p.code,
+        "label": p.label,
+        "currency": p.currency,
+        "valuation_mode": p.valuation_mode,
+        "initial_cash": p.initial_cash,
+        "cash": p.cash,
+        "realized_pnl": p.realized_pnl,
+        "is_active": p.is_active,
+        "started_at": p.started_at.isoformat(),
+        "strategy_profile": p.strategy_profile,
     }
 
 
@@ -501,29 +1327,51 @@ def list_paper_positions(
 
 @router.get("/paper/performance")
 def get_paper_performance(source: str | None = None, user_id: str | None = None) -> dict:
-    """Trade-level performance (CDC V2 "Performance/calibration") over
-    whatever (source, user_id) scope is asked for -- app/paper/performance.py
-    for exactly what is and isn't computed and why (no Sharpe/Sortino/
-    drawdown here, those need a continuous equity curve this data doesn't
-    have yet)."""
+    """Trade-level + capital performance when baseline portfolio exists."""
     session = SessionLocal()
     try:
         positions = paper_engine.list_positions(session, source=source, user_id=user_id)
-        perf = compute_performance(positions)
+        portfolio = ensure_baseline_portfolio(session)
+        session.commit()
+        if source in (None, "auto_watchlist") and user_id is None:
+            perf = compute_portfolio_performance(session, portfolio, positions)
+        else:
+            perf = compute_performance(positions)
+        return _paper_perf_dict(perf)
     finally:
         session.close()
 
-    return {
-        "num_closed_trades": perf.num_closed_trades,
-        "num_open_positions": perf.num_open_positions,
-        "total_return": perf.total_return,
-        "win_rate": perf.win_rate,
-        "profit_factor": perf.profit_factor if perf.profit_factor != float("inf") else None,
-        "expectancy": perf.expectancy,
-        "avg_holding_hours": perf.avg_holding_hours,
-        "best_trade_pct": perf.best_trade_pct,
-        "worst_trade_pct": perf.worst_trade_pct,
-    }
+
+@router.get("/paper/portfolios")
+def get_paper_portfolios() -> dict:
+    session = SessionLocal()
+    try:
+        ensure_syncable_portfolios(session)
+        session.commit()
+        return {"portfolios": [_portfolio_dict(p) for p in list_portfolios(session)]}
+    finally:
+        session.close()
+
+
+@router.get("/paper/portfolios/{code}")
+def get_paper_portfolio(code: str) -> dict:
+    session = SessionLocal()
+    try:
+        if code in ALL_PROFILES:
+            ensure_portfolio(session, code)
+            session.commit()
+        portfolio = get_portfolio_by_code(session, code)
+        if portfolio is None:
+            raise HTTPException(status_code=404, detail="portfolio_not_found")
+        positions = paper_engine.list_positions(session, portfolio_id=portfolio.id)
+        perf = compute_portfolio_performance(session, portfolio, positions)
+        return {
+            "portfolio": _portfolio_dict(portfolio),
+            "performance": _paper_perf_dict(perf),
+            "positions": [_paper_position_dict(p) for p in positions[:100]],
+        }
+    finally:
+        session.close()
 
 
 @router.post("/paper/positions")
@@ -558,20 +1406,23 @@ def open_paper_position(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+    stop = row.atr.suggested_stop_distance if row.atr is not None else None
     session = SessionLocal()
     try:
         position = paper_engine.open_user_confirmed(
-            session, symbol=row.symbol, timeframe=timeframe, user_id=user_id,
-            price=row.price, pipeline=row.pipeline,
+            session,
+            symbol=row.symbol,
+            timeframe=timeframe,
+            user_id=user_id,
+            price=row.price,
+            pipeline=row.pipeline,
+            stop_distance=stop,
         )
         if position is None:
             raise HTTPException(
                 status_code=422,
                 detail="not_actionable: pipeline.decision is WATCH/NO_TRADE, nothing to open",
             )
-        # Serialize while the session is still open: `commit()` inside
-        # open_user_confirmed() expires the instance's attributes, and
-        # reading them after session.close() raises DetachedInstanceError.
         return _paper_position_dict(position)
     finally:
         session.close()

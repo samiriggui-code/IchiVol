@@ -3,10 +3,15 @@ import { Link } from 'react-router-dom'
 import { ContextPanel } from '../components/ContextPanel'
 import { VerdictBadge } from '../components/VerdictBadge'
 import {
+  getBacktestEvidence,
+  type BacktestEvidenceSummary,
+} from '../lib/backtest'
+import {
   getScreener,
   type DecisionLabel,
   type ScreenerDecisionRow,
 } from '../lib/decisions'
+import { getPaperPerformance, type PaperPerformance } from '../lib/paper'
 import { asGate } from '../lib/verdict'
 
 const QUICK_LINKS = [
@@ -19,6 +24,11 @@ const QUICK_LINKS = [
     to: '/app/decisions',
     title: 'Décisions',
     body: 'Pipeline Direction → Participation → Structure → Location → Régime.',
+  },
+  {
+    to: '/app/paper',
+    title: 'Paper',
+    body: 'Positions virtuelles auto_watchlist + confirmées.',
   },
   {
     to: '/app/backtests',
@@ -93,11 +103,29 @@ function summarize(rows: ScreenerDecisionRow[]) {
   return { buy, sell, watch, top, total: rows.length }
 }
 
+function fmtPct(v: number | null | undefined): string {
+  if (v == null || Number.isNaN(v)) return '—'
+  const sign = v > 0 ? '+' : ''
+  return `${sign}${(v * 100).toFixed(1)}%`
+}
+
+function fmtWhen(iso: string | null): string {
+  if (!iso) return 'jamais'
+  const t = Date.parse(iso)
+  if (Number.isNaN(t)) return '—'
+  const ageSec = (Date.now() - t) / 1000
+  if (ageSec < 3600) return `il y a ${Math.max(1, Math.floor(ageSec / 60))} min`
+  if (ageSec < 86400) return `il y a ${Math.floor(ageSec / 3600)} h`
+  return `il y a ${Math.floor(ageSec / 86400)} j`
+}
+
 export function OverviewPage() {
   const [rows, setRows] = useState<ScreenerDecisionRow[]>([])
   const [cacheAge, setCacheAge] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [paper, setPaper] = useState<PaperPerformance | null>(null)
+  const [evidence, setEvidence] = useState<BacktestEvidenceSummary | null>(null)
 
   function load(force = false) {
     setLoading(true)
@@ -118,6 +146,14 @@ export function OverviewPage() {
         setCacheAge(null)
       })
       .finally(() => setLoading(false))
+
+    getPaperPerformance({ source: 'auto_watchlist' })
+      .then(setPaper)
+      .catch(() => setPaper(null))
+
+    getBacktestEvidence()
+      .then(setEvidence)
+      .catch(() => setEvidence(null))
   }
 
   useEffect(() => {
@@ -125,6 +161,13 @@ export function OverviewPage() {
   }, [])
 
   const stats = useMemo(() => summarize(rows), [rows])
+
+  const edgeHint = evidence?.pipeline_beats_ichimoku_sharpe
+  const edgeLabel = edgeHint
+    ? `${edgeHint.beats}/${edgeHint.compared} paires`
+    : evidence?.total_rows
+      ? 'en cours'
+      : 'pas encore'
 
   return (
     <div className="overview-page">
@@ -182,6 +225,39 @@ export function OverviewPage() {
           <span className="overview-stat-label muted">Surveillance</span>
           <strong className="mono">{stats.watch}</strong>
           <span className="overview-stat-meta muted">Portes WATCH (fallback combiner)</span>
+        </div>
+      </section>
+
+      <section className="overview-collect" aria-label="Collectes automatiques">
+        <div className="panel overview-stat">
+          <span className="overview-stat-label muted">Paper auto</span>
+          <strong className="mono">
+            {paper ? paper.num_open_positions : '—'}
+          </strong>
+          <span className="overview-stat-meta muted">
+            ouvertes · {paper ? `${paper.num_closed_trades} clôturées` : 'auto_watchlist'}
+            {paper?.total_return != null ? ` · ${fmtPct(paper.total_return)}` : ''}
+          </span>
+          <Link to="/app/paper" className="overview-stat-link">
+            Voir paper →
+          </Link>
+        </div>
+        <div className="panel overview-stat">
+          <span className="overview-stat-label muted">Preuve edge (C1)</span>
+          <strong className="mono">{edgeLabel}</strong>
+          <span className="overview-stat-meta muted">
+            {evidence?.enabled === false
+              ? 'job off'
+              : evidence?.note
+                ? evidence.note
+                : `PIPELINE > Ichimoku (Sharpe) · dernier ${fmtWhen(evidence?.last_run_at ?? null)}`}
+            {evidence && evidence.distinct_days > 0
+              ? ` · ${evidence.distinct_days} j d’historique`
+              : ''}
+          </span>
+          <Link to="/app/backtests" className="overview-stat-link">
+            Backtests manuels →
+          </Link>
         </div>
       </section>
 

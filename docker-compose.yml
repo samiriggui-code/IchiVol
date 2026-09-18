@@ -60,6 +60,8 @@ services:
       ENGINE_API_PREFIX: /api/engine
       LOG_LEVEL: ${LOG_LEVEL:-info}
       TWELVE_DATA_API_KEY: ${TWELVE_DATA_API_KEY:-}
+      ENABLE_BACKTEST_EVIDENCE: ${ENABLE_BACKTEST_EVIDENCE:-true}
+      BACKTEST_EVIDENCE_INTERVAL_S: ${BACKTEST_EVIDENCE_INTERVAL_S:-86400}
     networks:
       - ichivol
 
@@ -91,6 +93,13 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-}
     networks:
       - ichivol
 

@@ -78,6 +78,17 @@ class ExperimentResult:
     metrics: Metrics
 
 
+@dataclass(frozen=True)
+class PreparedVariants:
+    """Shared OHLCV + per-variant desired positions for backtest / event study."""
+
+    symbol: str
+    timeframe: str
+    candles: list[Candle]
+    atr_states: list[AtrState]
+    positions: dict[str, list[Direction]]
+
+
 def ichimoku_only_positions(ichi_outputs: Sequence[StrategyAgentOutput]) -> list[Direction]:
     return [o.direction for o in ichi_outputs]
 
@@ -233,7 +244,7 @@ def pipeline_wyckoff_filter_positions(
     return out
 
 
-def compare(
+def prepare_variants(
     symbol: str,
     timeframe: str = "1h",
     limit: int = 1000,
@@ -246,7 +257,9 @@ def compare(
     adx_params: AdxParams = AdxParams(),
     donchian_params: DonchianParams = DonchianParams(),
     wyckoff_params: WyckoffParams = WyckoffParams(),
-) -> dict[str, ExperimentResult]:
+) -> PreparedVariants:
+    """Fetch candles and build all named desired-position series (shared by
+    backtest compare and Strategy Lab event study)."""
     provider, provider_symbol, candles = resolve_and_fetch(
         symbol, timeframe, limit, default_provider=exchange
     )
@@ -289,16 +302,56 @@ def compare(
         location_states, cvd_states, adx_states, donchian_states,
     )
 
-    experiments = {
+    positions = {
         ICHIMOKU_ONLY: ichimoku_only_positions(ichi_outputs),
         ICHIMOKU_RVOL: ichimoku_rvol_positions(ichi_outputs, rvol_outputs),
         ICHIMOKU_RVOL_ENTRY_GATE: ichimoku_rvol_entry_gate_positions(ichi_outputs, rvol_outputs),
         PIPELINE: pipeline_series,
         PIPELINE_WYCKOFF_FILTER: pipeline_wyckoff_filter_positions(pipeline_series, wyckoff_states),
     }
+    return PreparedVariants(
+        symbol=symbol,
+        timeframe=timeframe,
+        candles=list(candles),
+        atr_states=atr_states,
+        positions=positions,
+    )
 
+
+def compare(
+    symbol: str,
+    timeframe: str = "1h",
+    limit: int = 1000,
+    exchange: str = "binance",
+    ichi_params: IchimokuParams = IchimokuParams(),
+    rvol_params: RvolParams = RvolParams(),
+    structure_params: StructureParams = StructureParams(),
+    atr_params: AtrParams = AtrParams(),
+    location_params: LocationParams = LocationParams(),
+    adx_params: AdxParams = AdxParams(),
+    donchian_params: DonchianParams = DonchianParams(),
+    wyckoff_params: WyckoffParams = WyckoffParams(),
+) -> dict[str, ExperimentResult]:
+    prepared = prepare_variants(
+        symbol,
+        timeframe=timeframe,
+        limit=limit,
+        exchange=exchange,
+        ichi_params=ichi_params,
+        rvol_params=rvol_params,
+        structure_params=structure_params,
+        atr_params=atr_params,
+        location_params=location_params,
+        adx_params=adx_params,
+        donchian_params=donchian_params,
+        wyckoff_params=wyckoff_params,
+    )
     results: dict[str, ExperimentResult] = {}
-    for name, desired in experiments.items():
-        backtest = run_backtest(candles, desired, symbol=symbol, timeframe=timeframe)
-        results[name] = ExperimentResult(name=name, backtest=backtest, metrics=compute_metrics(backtest))
+    for name, desired in prepared.positions.items():
+        backtest = run_backtest(
+            prepared.candles, desired, symbol=symbol, timeframe=timeframe
+        )
+        results[name] = ExperimentResult(
+            name=name, backtest=backtest, metrics=compute_metrics(backtest)
+        )
     return results

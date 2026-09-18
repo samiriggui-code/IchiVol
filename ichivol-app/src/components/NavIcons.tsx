@@ -49,3 +49,11 @@ export function IconBell({ className }: IconProps) {
 export function IconChat({ className }: IconProps) {
   return <KeenIcon icon="message-text-2" className={className} />
 }
+
+export function IconMenu({ className }: IconProps) {
+  return <KeenIcon icon="burger-menu-2" className={className} />
+}
+
+export function IconClose({ className }: IconProps) {
+  return <KeenIcon icon="cross" className={className} />
+}
