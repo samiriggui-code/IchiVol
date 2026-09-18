@@ -330,7 +330,7 @@ Interdit : payer TradingView / APIs d’indicateurs tout faits pour le **cœur**
 | **2** | Market Structure · adapters · consensus · breakout/retest · **profils STRUCTURE_*** + gate paper multi-portfolio — **wire livré 2026-09-18** (baseline intact) |
 | **3** | Context : ATR (déjà), Regime hard, RSI, CMF/OBV — **profils `ICHIVOL_CTX_*` / `ICHIVOL_MS_REGIME` livrés 2026-09-18** |
 | **4** | FibonacciContext · profil `ICHIVOL_MS_FIB` · gate `require_confluence` — **wire livré 2026-09-18** (baseline intact) |
-| **5** | ShadowBroker · counterfactuels · walk-forward / OOS |
+| **5** | ShadowBroker · counterfactuels `shadow_positions` · stats filtre — **wire livré 2026-09-19** (hors cash) |
 | *∥* | **Strategy Lab Phase 1 — Event Study** (`app/strategy_lab/`, `GET /event-study/{symbol}`) — forward returns / MFE-MAE ATR **sans capital** ; livré 2026-09-18 |
 | *∥* | **Strategy Lab Phase 2 — Rules Engine** (`ruleset` + `POST /ruleset/event-study`) — hypothèse `IV_*` déclarative → occurrences → Event Study ; livré 2026-09-18 |
 | *∥* | **Strategy Lab Phase 3 — Ruleset Backtest** (`ruleset_backtest.py`) — SL/TP ATR sur rising-edge ; métriques WR/PF/DD ; livré 2026-09-18 |

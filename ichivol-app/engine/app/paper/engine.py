@@ -14,12 +14,13 @@ from typing import Any, Sequence
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import PaperJournalEvent, PaperPortfolio, PaperPosition
+from app.db.models import PaperPortfolio, PaperPosition
 from app.decision.pipeline import PipelineResult
 from app.context.gate import apply_context_gate
 from app.fibonacci.gate import apply_fibonacci_gate
 from app.paper import broker as paper_broker
 from app.paper.portfolio import ensure_baseline_portfolio, ensure_syncable_portfolios
+from app.shadow import broker as shadow_broker
 from app.structure.gate import apply_structure_gate
 
 
@@ -109,40 +110,6 @@ def _open_legacy(
     )
     session.add(position)
     return position
-
-
-def _journal_shadow(
-    session: Session,
-    *,
-    portfolio: PaperPortfolio,
-    symbol: str,
-    timeframe: str,
-    raw_decision: str,
-    reason: str | None,
-    structure_payload: dict[str, Any] | None = None,
-    context_payload: dict[str, Any] | None = None,
-    fibonacci_payload: dict[str, Any] | None = None,
-    block_source: str = "structure",
-) -> None:
-    session.add(
-        PaperJournalEvent(
-            portfolio_id=portfolio.id,
-            position_id=None,
-            event_type="SHADOW_BLOCKED",
-            payload={
-                "symbol": symbol,
-                "timeframe": timeframe,
-                "raw_decision": raw_decision,
-                "shadow_direction": "LONG" if raw_decision == "BUY" else "SHORT",
-                "reason": reason,
-                "block_source": block_source,
-                "market_structure": structure_payload,
-                "context": context_payload,
-                "fibonacci": fibonacci_payload,
-            },
-            created_at=datetime.now(timezone.utc),
-        )
-    )
 
 
 def sync_position(
@@ -325,17 +292,21 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
                 block_reason, block_source = None, None
 
             if blocked and profile.get("shadow_on_block"):
-                _journal_shadow(
+                shadow_broker.open_shadow(
                     session,
                     portfolio=portfolio,
                     symbol=row.symbol,
                     timeframe=row.timeframe,
                     raw_decision=raw_decision,
-                    reason=block_reason,
-                    structure_payload=struct_gate.structure_payload,
-                    context_payload=ctx_gate.context_payload,
-                    fibonacci_payload=fib_gate.fibonacci_payload,
+                    price=row.price,
+                    stop_distance=stop if isinstance(stop, (int, float)) else None,
                     block_source=block_source or "unknown",
+                    block_reason=block_reason,
+                    meta={
+                        "market_structure": struct_gate.structure_payload,
+                        "fibonacci": fib_gate.fibonacci_payload,
+                        "context": ctx_gate.context_payload,
+                    },
                 )
 
             extra: dict[str, Any] = {
@@ -373,6 +344,8 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
                 touched.append(result)
 
         marks[f"{row.symbol}:{row.timeframe}"] = row.price
+
+    shadow_broker.mark_shadows(session, marks=marks)
 
     for portfolio in portfolios:
         paper_broker.snapshot_equity(session, portfolio, marks=marks)

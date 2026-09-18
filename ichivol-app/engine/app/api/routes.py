@@ -61,6 +61,7 @@ from app.strategy_lab.regime_slices import regime_slices_dict, run_regime_slices
 from app.strategy_lab.ruleset import CONDITION_SCHEMA, parse_ruleset
 from app.strategy_lab.run_ruleset import ruleset_study_dict, run_ruleset_event_study
 from app.strategy_lab.walk_forward import run_walk_forward, walk_forward_dict
+from app.shadow.broker import list_shadows, shadow_stats, shadow_to_dict
 from app.structure.params import StructureEngineParams
 from app.structure.service import detect_market_structure
 from app.structure.types import PriceZone, TrendlineSegment
@@ -1370,6 +1371,50 @@ def get_paper_portfolio(code: str) -> dict:
             "performance": _paper_perf_dict(perf),
             "positions": [_paper_position_dict(p) for p in positions[:100]],
         }
+    finally:
+        session.close()
+
+
+@router.get("/shadow/stats")
+def get_shadow_stats(portfolio_code: str | None = None) -> dict:
+    """ShadowBroker counterfactual summary — hors cash."""
+    session = SessionLocal()
+    try:
+        portfolio_id = None
+        if portfolio_code:
+            if portfolio_code in ALL_PROFILES:
+                ensure_portfolio(session, portfolio_code)
+                session.commit()
+            p = get_portfolio_by_code(session, portfolio_code)
+            if p is None:
+                raise HTTPException(status_code=404, detail="portfolio_not_found")
+            portfolio_id = p.id
+        return shadow_stats(session, portfolio_id=portfolio_id)
+    finally:
+        session.close()
+
+
+@router.get("/shadow/positions")
+def get_shadow_positions(
+    portfolio_code: str | None = None,
+    status: str | None = None,
+    limit: int = 50,
+) -> dict:
+    session = SessionLocal()
+    try:
+        portfolio_id = None
+        if portfolio_code:
+            p = get_portfolio_by_code(session, portfolio_code)
+            if p is None:
+                raise HTTPException(status_code=404, detail="portfolio_not_found")
+            portfolio_id = p.id
+        rows = list_shadows(
+            session,
+            portfolio_id=portfolio_id,
+            status=status,
+            limit=min(limit, 200),
+        )
+        return {"positions": [shadow_to_dict(r) for r in rows]}
     finally:
         session.close()
 

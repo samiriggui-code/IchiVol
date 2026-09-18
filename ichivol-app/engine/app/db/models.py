@@ -362,6 +362,54 @@ class PaperJournalEvent(Base):
     )
 
 
+class ShadowPosition(Base):
+    """Counterfactual trade — opened when a filter blocks a raw BUY/SELL.
+
+    Never touches portfolio cash. Used to measure whether Structure / Fib /
+    Context filters avoid more losses than gains (docs ARCHITECTURE §9).
+    """
+
+    __tablename__ = "shadow_positions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    portfolio_id: Mapped[str] = mapped_column(
+        ForeignKey("paper_portfolios.id"), index=True
+    )
+    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    timeframe: Mapped[str] = mapped_column(String(8))
+    direction: Mapped[str] = mapped_column(String(8))  # LONG | SHORT
+    status: Mapped[str] = mapped_column(String(8), default="OPEN", index=True)
+
+    entry_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    entry_price: Mapped[float] = mapped_column(Float)
+    stop_price: Mapped[float] = mapped_column(Float)
+    take_profit_price: Mapped[float] = mapped_column(Float)
+    stop_distance: Mapped[float] = mapped_column(Float)
+    risk_pct: Mapped[float] = mapped_column(Float, default=0.01)
+
+    exit_time: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    exit_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    exit_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    pnl_r: Mapped[float | None] = mapped_column(Float, nullable=True)
+    pnl_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    block_source: Mapped[str] = mapped_column(String(32))
+    block_reason: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    raw_decision: Mapped[str] = mapped_column(String(16))
+    meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
 class BacktestSnapshot(Base):
     """One experiment's metrics from one automated evidence-collection run
     (CDC "condition 1" for the live broker gate, docs/CAHIER-DES-CHARGES.md

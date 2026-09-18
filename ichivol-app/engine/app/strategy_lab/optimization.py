@@ -529,7 +529,7 @@ def run_optimize(
     persist_best: bool = False,
 ) -> OptimizeReport:
     base = _resolve_base(ruleset_id, ruleset)
-    candles = resolve_and_fetch(symbol, timeframe=timeframe, limit=limit)
+    _p, _s, candles = resolve_and_fetch(symbol, timeframe=timeframe, limit=limit)
     return run_optimize_on_candles(
         candles,
         base,
@@ -560,7 +560,7 @@ def run_walk_forward_opt(
     persist: bool = False,
 ) -> WalkForwardOptReport:
     base = _resolve_base(ruleset_id, ruleset)
-    candles = resolve_and_fetch(symbol, timeframe=timeframe, limit=limit)
+    _p, _s, candles = resolve_and_fetch(symbol, timeframe=timeframe, limit=limit)
     return run_walk_forward_opt_on_candles(
         candles,
         base,

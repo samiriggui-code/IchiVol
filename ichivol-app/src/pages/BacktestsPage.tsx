@@ -197,7 +197,7 @@ export function BacktestsPage() {
     setRegimeSlices(null)
     setWalkForward(null)
     setWalkForwardOpt(null)
-    Promise.all([
+    Promise.allSettled([
       getBacktestComparison(sym, timeframe, limit),
       getEventStudy(sym, timeframe, limit, 'PIPELINE'),
       getRulesetEventStudy(rulesetId, sym, timeframe, limit),
@@ -206,21 +206,33 @@ export function BacktestsPage() {
       getWalkForward(sym, timeframe, limit, rulesetId, { persist: false }),
       getWalkForwardOpt(sym, timeframe, limit, rulesetId, { persist: false }),
     ])
-      .then(([bt, es, rs, ab, rg, wf, wfo]) => {
-        setResult(bt)
-        setEventStudy(es)
-        setRulesetStudy(rs)
-        setAblation(ab)
-        setRegimeSlices(rg)
-        setWalkForward(wf)
-        setWalkForwardOpt(wfo)
-        listStoredExperiments({ symbol: sym, timeframe, limit: 10 })
-          .then((hist) => setStored(hist.experiments))
-          .catch(() => setStored([]))
+      .then((results) => {
+        const [bt, es, rs, ab, rg, wf, wfo] = results
+        const errors: string[] = []
+        if (bt.status === 'fulfilled') setResult(bt.value)
+        else errors.push(bt.reason instanceof Error ? bt.reason.message : String(bt.reason))
+        if (es.status === 'fulfilled') setEventStudy(es.value)
+        else errors.push(es.reason instanceof Error ? es.reason.message : String(es.reason))
+        if (rs.status === 'fulfilled') setRulesetStudy(rs.value)
+        else errors.push(rs.reason instanceof Error ? rs.reason.message : String(rs.reason))
+        if (ab.status === 'fulfilled') setAblation(ab.value)
+        if (rg.status === 'fulfilled') setRegimeSlices(rg.value)
+        if (wf.status === 'fulfilled') setWalkForward(wf.value)
+        else errors.push(wf.reason instanceof Error ? wf.reason.message : String(wf.reason))
+        if (wfo.status === 'fulfilled') setWalkForwardOpt(wfo.value)
+        else errors.push(wfo.reason instanceof Error ? wfo.reason.message : String(wfo.reason))
+
+        if (bt.status === 'fulfilled') {
+          listStoredExperiments({ symbol: sym, timeframe, limit: 10 })
+            .then((hist) => setStored(hist.experiments))
+            .catch(() => setStored([]))
+        }
+        if (errors.length && bt.status !== 'fulfilled') {
+          setError(friendlyBacktestError(errors[0]))
+        } else if (errors.length) {
+          setError(friendlyBacktestError(`Partiel : ${errors[0]}`))
+        }
       })
-      .catch((err: unknown) =>
-        setError(friendlyBacktestError(err instanceof Error ? err.message : 'Erreur de chargement')),
-      )
       .finally(() => setLoading(false))
   }
 

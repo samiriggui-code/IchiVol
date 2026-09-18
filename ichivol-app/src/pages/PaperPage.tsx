@@ -4,11 +4,13 @@ import {
   closePaperPosition,
   getPaperPerformance,
   getPaperPortfolio,
+  getShadowStats,
   listPaperPositions,
   type PaperPerformance,
   type PaperPortfolioSummary,
   type PaperPosition,
   type PaperSource,
+  type ShadowStats,
 } from '../lib/paper'
 
 function fmtPct(v: number | null, digits = 1): string {
@@ -30,6 +32,52 @@ function sourceLabel(s: string): string {
   if (s === 'auto_watchlist') return 'Auto screener'
   if (s === 'user_confirmed') return 'Mes confirms'
   return s
+}
+
+function ShadowCards({ stats }: { stats: ShadowStats | null }) {
+  if (!stats) {
+    return <p className="muted">ShadowBroker pas encore peuplé (filtres Structure/Fib/Ctx).</p>
+  }
+  const verdictLabel =
+    stats.filter_verdict === 'filter_too_aggressive'
+      ? 'Filtre trop agressif'
+      : stats.filter_verdict === 'filter_helpful'
+        ? 'Filtre utile'
+        : stats.filter_verdict === 'inconclusive'
+          ? 'Inconclusif'
+          : 'Pas assez de closes (≥5)'
+  return (
+    <div className="paper-perf-block">
+      <h3 className="subhead">ShadowBroker · counterfactuels</h3>
+      <div className="paper-perf-grid">
+        <div className="context-card">
+          <span className="context-label">Ouvertes</span>
+          <strong className="context-value">{stats.n_open}</strong>
+        </div>
+        <div className="context-card">
+          <span className="context-label">Fermées</span>
+          <strong className="context-value">{stats.n_closed}</strong>
+        </div>
+        <div className="context-card">
+          <span className="context-label">Win rate shadow</span>
+          <strong className="context-value">{fmtPct(stats.win_rate)}</strong>
+        </div>
+        <div className="context-card">
+          <span className="context-label">Mean R (bloqués)</span>
+          <strong className={`context-value ${tone(stats.mean_pnl_r)}`}>
+            {fmtNum(stats.mean_pnl_r, 2)} R
+          </strong>
+        </div>
+        <div className="context-card">
+          <span className="context-label">Verdict filtre</span>
+          <strong className="context-value">{verdictLabel}</strong>
+        </div>
+      </div>
+      <p className="muted paper-perf-note">
+        Hors cash. Si mean R &gt; 0 sur trades bloqués, le filtre a écarté des winners.
+      </p>
+    </div>
+  )
 }
 
 function BrokerCards({ summary }: { summary: PaperPortfolioSummary | null }) {
@@ -216,6 +264,7 @@ export function PaperPage() {
   const [perfMine, setPerfMine] = useState<PaperPerformance | null>(null)
   const [perfAuto, setPerfAuto] = useState<PaperPerformance | null>(null)
   const [broker, setBroker] = useState<PaperPortfolioSummary | null>(null)
+  const [shadow, setShadow] = useState<ShadowStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [closingId, setClosingId] = useState<string | null>(null)
@@ -230,14 +279,16 @@ export function PaperPage() {
       ])
       setMineCache(mine)
       setAutoCache(auto)
-      const [pMine, pAuto, port] = await Promise.all([
+      const [pMine, pAuto, port, sh] = await Promise.all([
         getPaperPerformance({ source: 'user_confirmed' }).catch(() => null),
         getPaperPerformance({ source: 'auto_watchlist' }).catch(() => null),
         getPaperPortfolio('ICHIVOL_BASELINE_V1').catch(() => null),
+        getShadowStats().catch(() => null),
       ])
       setPerfMine(pMine)
       setPerfAuto(pAuto)
       setBroker(port)
+      setShadow(sh)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erreur paper')
     } finally {
@@ -288,6 +339,7 @@ export function PaperPage() {
           </button>
         </header>
         <BrokerCards summary={broker} />
+        <ShadowCards stats={shadow} />
       </section>
 
       <section className="panel">

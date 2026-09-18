@@ -134,3 +134,23 @@ export async function getPaperPortfolio(code = 'ICHIVOL_BASELINE_V1'): Promise<P
   if (!res.ok) throw new Error(await parseError(res))
   return res.json() as Promise<PaperPortfolioSummary>
 }
+
+export interface ShadowStats {
+  n_total: number
+  n_open: number
+  n_closed: number
+  n_wins: number
+  n_losses: number
+  win_rate: number | null
+  mean_pnl_r: number | null
+  filter_verdict: string | null
+  by_block_source: Record<string, { n: number; mean_pnl_r: number; wins: number; win_rate?: number }>
+  note: string
+}
+
+export async function getShadowStats(portfolioCode?: string): Promise<ShadowStats> {
+  const q = portfolioCode ? `?portfolio_code=${encodeURIComponent(portfolioCode)}` : ''
+  const res = await fetch(`/api/engine/shadow/stats${q}`, { credentials: 'include' })
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json() as Promise<ShadowStats>
+}
