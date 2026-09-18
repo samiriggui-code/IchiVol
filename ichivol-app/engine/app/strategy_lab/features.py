@@ -1,7 +1,8 @@
-"""Causal per-bar feature snapshot for ruleset evaluation.
+﻿"""Causal per-bar feature snapshot for ruleset evaluation.
 
 Every field at index i is derived only from candles[0..i] via existing
-Grand V2 indicators (Ichimoku, RVOL, structure, ATR, CMF, RSI).
+Grand V2 indicators (Ichimoku, RVOL, structure, ATR, CMF, RSI) plus
+Ichimoku Analytics (Kijun / Kumo research layer — not live votes).
 """
 
 from __future__ import annotations
@@ -19,6 +20,14 @@ from app.indicators.ichimoku import (
     compute_ichimoku,
 )
 from app.indicators.ichimoku import Candle
+from app.indicators.ichimoku_analytics import (
+    BreakState,
+    IchimokuAnalyticsParams,
+    IchimokuAnalyticsState,
+    KumoOrientation,
+    SlopeState,
+    compute_ichimoku_analytics,
+)
 from app.indicators.rsi import RsiParams, RsiState, compute_rsi
 from app.indicators.rvol import RvolParams, RvolState, compute_rvol
 from app.indicators.structure import (
@@ -56,6 +65,21 @@ class FeatureBar:
     """True when ATR is known and strictly greater than previous bar's ATR."""
     cmf: float | None
     rsi: float | None
+    # --- Ichimoku Analytics (research) ---
+    kijun_slope_state: str
+    kijun_slope_atr_normalized: float | None
+    price_kijun_distance_atr: float | None
+    kijun_break_bullish: bool
+    kijun_break_bearish: bool
+    kijun_retest_bullish: bool
+    kijun_retest_bearish: bool
+    kijun_bounce_bullish: bool
+    kijun_bounce_bearish: bool
+    kumo_orientation: str
+    kumo_twist: bool
+    bars_since_kumo_twist: int | None
+    kumo_thickness_atr: float | None
+    kumo_thickness_pct: float | None
 
 
 @dataclass(frozen=True)
@@ -63,6 +87,7 @@ class FeatureSeries:
     candles: list[Candle]
     bars: list[FeatureBar]
     ichimoku: list[IchimokuState]
+    analytics: list[IchimokuAnalyticsState]
     rvol: list[RvolState]
     structure: list[StructureState]
     atr: list[AtrState]
@@ -70,25 +95,11 @@ class FeatureSeries:
     rsi: list[RsiState]
 
 
-def _tk_ages(ichi: Sequence[IchimokuState]) -> tuple[list[int | None], list[int | None]]:
-    age_bull: list[int | None] = []
-    age_bear: list[int | None] = []
-    last_bull: int | None = None
-    last_bear: int | None = None
-    for i, s in enumerate(ichi):
-        if s.tk_cross == CrossState.BULLISH:
-            last_bull = i
-        if s.tk_cross == CrossState.BEARISH:
-            last_bear = i
-        age_bull.append(None if last_bull is None else i - last_bull)
-        age_bear.append(None if last_bear is None else i - last_bear)
-    return age_bull, age_bear
-
-
 def build_feature_series(
     candles: Sequence[Candle],
     *,
     ichi_params: IchimokuParams = IchimokuParams(),
+    analytics_params: IchimokuAnalyticsParams = IchimokuAnalyticsParams(),
     rvol_params: RvolParams = RvolParams(),
     structure_params: StructureParams = StructureParams(),
     atr_params: AtrParams = AtrParams(),
@@ -101,11 +112,18 @@ def build_feature_series(
     atr = compute_atr(candles, atr_params)
     cmf = compute_cmf(candles, cmf_params)
     rsi = compute_rsi(candles, rsi_params)
-    age_bull, age_bear = _tk_ages(ichi)
+    analytics = compute_ichimoku_analytics(
+        candles,
+        ichi=ichi,
+        atr=atr,
+        ichi_params=ichi_params,
+        params=analytics_params,
+    )
 
     bars: list[FeatureBar] = []
     for i, c in enumerate(candles):
         s = ichi[i]
+        a = analytics[i]
         tenkan_above = (
             s.tenkan is not None and s.kijun is not None and s.tenkan > s.kijun
         )
@@ -127,8 +145,8 @@ def build_feature_series(
                 tenkan_below_kijun=tenkan_below,
                 tk_cross_bullish=s.tk_cross == CrossState.BULLISH,
                 tk_cross_bearish=s.tk_cross == CrossState.BEARISH,
-                tk_cross_age_bullish=age_bull[i],
-                tk_cross_age_bearish=age_bear[i],
+                tk_cross_age_bullish=a.tk_cross_age_bullish,
+                tk_cross_age_bearish=a.tk_cross_age_bearish,
                 kumo_breakout_bullish=s.kumo_breakout == CrossState.BULLISH,
                 kumo_breakout_bearish=s.kumo_breakout == CrossState.BEARISH,
                 rvol=rvol[i].rvol,
@@ -141,6 +159,20 @@ def build_feature_series(
                 atr_expansion=expansion,
                 cmf=cmf[i].cmf,
                 rsi=rsi[i].rsi,
+                kijun_slope_state=a.kijun_slope_state.value,
+                kijun_slope_atr_normalized=a.kijun_slope_atr_normalized,
+                price_kijun_distance_atr=a.price_kijun_distance_atr,
+                kijun_break_bullish=a.kijun_break == BreakState.BULLISH,
+                kijun_break_bearish=a.kijun_break == BreakState.BEARISH,
+                kijun_retest_bullish=a.kijun_retest_bullish,
+                kijun_retest_bearish=a.kijun_retest_bearish,
+                kijun_bounce_bullish=a.kijun_bounce_bullish,
+                kijun_bounce_bearish=a.kijun_bounce_bearish,
+                kumo_orientation=a.kumo_orientation.value,
+                kumo_twist=a.kumo_twist,
+                bars_since_kumo_twist=a.bars_since_kumo_twist,
+                kumo_thickness_atr=a.kumo_thickness_atr,
+                kumo_thickness_pct=a.kumo_thickness_pct,
             )
         )
 
@@ -148,9 +180,21 @@ def build_feature_series(
         candles=list(candles),
         bars=bars,
         ichimoku=ichi,
+        analytics=analytics,
         rvol=rvol,
         structure=structure,
         atr=atr,
         cmf=cmf,
         rsi=rsi,
     )
+
+
+# Re-export enums for Lab consumers
+__all__ = [
+    "FeatureBar",
+    "FeatureSeries",
+    "build_feature_series",
+    "SlopeState",
+    "KumoOrientation",
+    "BreakState",
+]

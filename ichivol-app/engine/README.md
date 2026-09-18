@@ -113,6 +113,13 @@ Backtest ruleset (Phase 3) : entrée next open, stop/target en multiples d’ATR
 - `GET/POST /strategy-lab/walk-forward-opt` — **chemin principal** : best params sur IS → mesure OOS par fold + `param_stability`
 - Agent : `run_optimize` · `run_walk_forward_opt`
 
+### Ichimoku Analytics (research layer)
+
+- Module : `app/indicators/ichimoku_analytics.py` — Kijun slope/distance/break/retest/bounce, Kumo orientation/twist/thickness ATR
+- **Pas branché au pipeline live** — exposé via `strategy_lab/features.py` + `CONDITION_SCHEMA`
+- TK cross age centralisé (`tk_cross_ages`) partagé Lab ↔ analytics
+- Expériences catalogue : `IV_EXP_A_*` … `IV_EXP_G_*` ; ablation `KIJUN_ABLATION_LAYERS`
+
 ## Pipeline à étages (north star, docs/HANDOFF-CLAUDE-REALIGN-NORTHSTAR.md)
 
 `confidence = ichimoku × rvol` (`app/decision/combiner.py`) est un **raccourci MVP**, pas la règle produit verrouillée — voir docs/TRADING_ARCHITECTURE_V2.md. La cible : `app/decision/pipeline.py`, un pipeline à 5 portes qui ne fait jamais dire l'inverse à une étape suivante (elle ne peut que rétrograder vers WATCH/NO_TRADE, jamais inverser LONG↔SHORT) :

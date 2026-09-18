@@ -119,8 +119,8 @@ def resolve_param_grid(
         if key_s not in base.conditions:
             continue  # skip knobs not present on this hypothesis
         expected = CONDITION_SCHEMA[key_s]
-        if expected is bool:
-            raise ValueError(f"cannot grid-search boolean condition {key_s!r}")
+        if expected is bool or expected is str:
+            raise ValueError(f"cannot grid-search non-numeric condition {key_s!r}")
         casted = [expected(v) for v in vals]
         resolved[key_s] = casted
     if not resolved:
@@ -648,4 +648,6 @@ def walk_forward_opt_dict(report: WalkForwardOptReport) -> dict:
             "OOS summary is the anti-overfitting check; param_stability shows drift."
         ),
     }
+
+
 

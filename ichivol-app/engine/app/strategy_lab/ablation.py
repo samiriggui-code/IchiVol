@@ -1,8 +1,8 @@
-"""Ablation testing — Strategy Lab Phase 5.
+﻿"""Ablation testing â€” Strategy Lab Phase 5.
 
 Build cumulative (or leave-one-out) ruleset variants and run them on the
 *same* OHLCV window so each added filter can be judged by whether it
-actually improves expectancy / PF / drawdown — not by stacking indicators
+actually improves expectancy / PF / drawdown â€” not by stacking indicators
 for their own sake.
 """
 
@@ -22,7 +22,7 @@ from app.strategy_lab.run_ruleset import (
 )
 
 # Default ladder matching the audit brief (LONG bias).
-DEFAULT_ABLATION_LAYERS: tuple[tuple[str, dict[str, bool | int | float]], ...] = (
+DEFAULT_ABLATION_LAYERS: tuple[tuple[str, dict[str, bool | int | float | str]], ...] = (
     (
         "A_ICHIMOKU",
         {
@@ -35,6 +35,16 @@ DEFAULT_ABLATION_LAYERS: tuple[tuple[str, dict[str, bool | int | float]], ...] =
     ("C_BOS", {"bos_bullish": True}),
     ("D_ATR", {"atr_expansion": True}),
     ("E_CMF", {"cmf_min": 0.0}),
+)
+
+# Kumo -> RVOL -> Kijun analytics ladder (research).
+# Retest is a parallel hypothesis (catalog IV_EXP_E_*), not cumulative on BO bar.
+KIJUN_ABLATION_LAYERS: tuple[tuple[str, dict[str, bool | int | float | str]], ...] = (
+    ("A_KUMO_BO", {"kumo_breakout_bullish": True}),
+    ("B_RVOL", {"rvol_min": 1.5}),
+    ("C_KIJUN_SLOPE", {"kijun_slope": "RISING"}),
+    ("D_KIJUN_DIST", {"price_kijun_distance_atr_max": 2.0}),
+    ("E_KUMO_ORIENT", {"kumo_orientation": "BULLISH"}),
 )
 
 
@@ -76,7 +86,7 @@ class AblationResult:
 
 
 def build_cumulative_rulesets(
-    layers: Sequence[tuple[str, Mapping[str, bool | int | float]]],
+    layers: Sequence[tuple[str, Mapping[str, bool | int | float | str]]],
     *,
     base_id: str = "IV_ABLATION",
     direction: Direction = Direction.LONG,
@@ -84,10 +94,10 @@ def build_cumulative_rulesets(
     target_atr: float = 2.0,
     version: str = "1",
 ) -> list[Ruleset]:
-    """A, A+B, A+B+C… — each step adds one layer's conditions."""
+    """A, A+B, A+B+Câ€¦ â€” each step adds one layer's conditions."""
     if not layers:
         raise ValueError("ablation layers must be non-empty")
-    accumulated: dict[str, bool | int | float] = {}
+    accumulated: dict[str, bool | int | float | str] = {}
     out: list[Ruleset] = []
     for label, conds in layers:
         accumulated.update(dict(conds))
@@ -110,7 +120,7 @@ def build_cumulative_rulesets(
 
 
 def build_leave_one_out_rulesets(
-    full_conditions: Mapping[str, bool | int | float],
+    full_conditions: Mapping[str, bool | int | float | str],
     *,
     base_id: str = "IV_ABLATION",
     direction: Direction = Direction.LONG,
@@ -194,19 +204,19 @@ def _metric_pair(
 
     note_parts: list[str] = []
     if improves_exp is True:
-        note_parts.append("expectancy↑")
+        note_parts.append("expectancyâ†‘")
     elif improves_exp is False:
-        note_parts.append("expectancy↓")
+        note_parts.append("expectancyâ†“")
     if improves_pf is True:
-        note_parts.append("PF↑")
+        note_parts.append("PFâ†‘")
     elif improves_pf is False:
-        note_parts.append("PF↓")
+        note_parts.append("PFâ†“")
     if curr.n_signals < prev.n_signals:
-        note_parts.append(f"signals {prev.n_signals}→{curr.n_signals}")
+        note_parts.append(f"signals {prev.n_signals}â†’{curr.n_signals}")
     if dd_d is not None and dd_d < 0:
-        note_parts.append("DD↓")
+        note_parts.append("DDâ†“")
     elif dd_d is not None and dd_d > 0:
-        note_parts.append("DD↑")
+        note_parts.append("DDâ†‘")
 
     return AblationDelta(
         from_label=prev_label,
@@ -227,11 +237,11 @@ def _metric_pair(
     )
 
 
-def parse_layers(raw: Sequence[Mapping[str, Any]] | None) -> list[tuple[str, dict[str, bool | int | float]]]:
-    """Parse [{label, conditions}, ...] from API body; None → default ladder."""
+def parse_layers(raw: Sequence[Mapping[str, Any]] | None) -> list[tuple[str, dict[str, bool | int | float | str]]]:
+    """Parse [{label, conditions}, ...] from API body; None â†’ default ladder."""
     if raw is None:
         return [(lab, dict(conds)) for lab, conds in DEFAULT_ABLATION_LAYERS]
-    out: list[tuple[str, dict[str, bool | int | float]]] = []
+    out: list[tuple[str, dict[str, bool | int | float | str]]] = []
     for i, item in enumerate(raw):
         label = str(item.get("label") or f"L{i}").strip()
         conds = item.get("conditions")
@@ -250,8 +260,8 @@ def run_ablation_on_candles(
     symbol: str,
     timeframe: str,
     mode: str = "cumulative",
-    layers: Sequence[tuple[str, Mapping[str, bool | int | float]]] | None = None,
-    full_conditions: Mapping[str, bool | int | float] | None = None,
+    layers: Sequence[tuple[str, Mapping[str, bool | int | float | str]]] | None = None,
+    full_conditions: Mapping[str, bool | int | float | str] | None = None,
     direction: Direction = Direction.LONG,
     stop_atr: float = 1.0,
     target_atr: float = 2.0,
@@ -274,7 +284,7 @@ def run_ablation_on_candles(
     elif mode_l in ("leave_one_out", "loo"):
         if full_conditions is None:
             # Default: merge default ladder into full set
-            full: dict[str, bool | int | float] = {}
+            full: dict[str, bool | int | float | str] = {}
             for _, c in DEFAULT_ABLATION_LAYERS:
                 full.update(c)
             full_conditions = full
@@ -416,3 +426,6 @@ def ablation_dict(result: AblationResult) -> dict:
             "A filter must improve expectancy and/or PF to justify keeping it."
         ),
     }
+
+
+

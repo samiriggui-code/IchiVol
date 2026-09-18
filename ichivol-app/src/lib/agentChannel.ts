@@ -14,6 +14,12 @@ export type AgentCommandName =
   | 'run_event_study'
   | 'list_rulesets'
   | 'run_ruleset_event_study'
+  | 'list_strategy_lab_experiments'
+  | 'run_ablation'
+  | 'run_regime_slices'
+  | 'run_walk_forward'
+  | 'run_optimize'
+  | 'run_walk_forward_opt'
   | 'get_correlations'
   | 'get_news'
   | 'get_calendar'
@@ -144,8 +150,50 @@ export async function symbolBriefPlaybook(
   return runAgentBatch([
     {
       cmd: 'get_symbol_context',
-      args: { symbol, timeframe: timeframes.includes('1h') ? '1h' : timeframes[0], persist: false },
+      args: {
+        symbol,
+        timeframe: timeframes.includes('1h') ? '1h' : timeframes[0],
+        persist: false,
+      },
     },
     { cmd: 'compare_timeframes', args: { symbol, timeframes } },
+  ])
+}
+
+/** Brief Strategy Lab : ruleset study + ablation + regime (batch). */
+export async function strategyLabBriefPlaybook(
+  symbol: string,
+  opts?: {
+    timeframe?: string
+    limit?: number
+    rulesetId?: string
+  },
+): Promise<
+  | { ok: true; results: AgentCommandResult[] }
+  | { ok: false; error: string }
+> {
+  const timeframe = opts?.timeframe ?? '1h'
+  const limit = opts?.limit ?? 500
+  const rulesetId = opts?.rulesetId ?? 'IV_ICHIMOKU_RVOL_LONG_001'
+  return runAgentBatch([
+    {
+      cmd: 'run_ruleset_event_study',
+      args: {
+        symbol,
+        ruleset_id: rulesetId,
+        timeframe,
+        limit,
+        persist: false,
+        with_backtest: true,
+      },
+    },
+    {
+      cmd: 'run_ablation',
+      args: { symbol, timeframe, limit, mode: 'cumulative', persist: false },
+    },
+    {
+      cmd: 'run_regime_slices',
+      args: { symbol, ruleset_id: rulesetId, timeframe, limit, persist: false },
+    },
   ])
 }

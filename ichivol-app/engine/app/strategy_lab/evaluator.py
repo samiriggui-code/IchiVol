@@ -1,4 +1,4 @@
-"""Evaluate a Ruleset against a causal FeatureSeries.
+﻿"""Evaluate a Ruleset against a causal FeatureSeries.
 
 Rising-edge only: a signal fires when all conditions become true on bar i
 after being false (or incomplete) on bar i-1. This avoids counting the same
@@ -9,10 +9,15 @@ from __future__ import annotations
 
 from app.agents.types import Direction
 from app.strategy_lab.features import FeatureBar, FeatureSeries
-from app.strategy_lab.ruleset import Ruleset
+from app.strategy_lab.ruleset import ConditionValue, Ruleset
 
 
-def _condition_holds(bar: FeatureBar, key: str, expected: bool | int | float, direction: Direction) -> bool:
+def _condition_holds(
+    bar: FeatureBar,
+    key: str,
+    expected: ConditionValue,
+    direction: Direction,
+) -> bool:
     if key == "price_above_kumo":
         return bar.price_above_kumo == expected
     if key == "price_below_kumo":
@@ -62,6 +67,54 @@ def _condition_holds(bar: FeatureBar, key: str, expected: bool | int | float, di
         return bar.rsi is not None and bar.rsi >= float(expected)
     if key == "rsi_max":
         return bar.rsi is not None and bar.rsi <= float(expected)
+    # --- Ichimoku Analytics ---
+    if key == "kijun_slope":
+        return bar.kijun_slope_state == str(expected)
+    if key == "price_kijun_distance_atr_min":
+        return (
+            bar.price_kijun_distance_atr is not None
+            and bar.price_kijun_distance_atr >= float(expected)
+        )
+    if key == "price_kijun_distance_atr_max":
+        return (
+            bar.price_kijun_distance_atr is not None
+            and bar.price_kijun_distance_atr <= float(expected)
+        )
+    if key == "kijun_break_bullish":
+        return bar.kijun_break_bullish == expected
+    if key == "kijun_break_bearish":
+        return bar.kijun_break_bearish == expected
+    if key == "kijun_retest":
+        hit = (
+            bar.kijun_retest_bullish
+            if direction == Direction.LONG
+            else bar.kijun_retest_bearish
+        )
+        return hit == bool(expected)
+    if key == "kijun_bounce":
+        hit = (
+            bar.kijun_bounce_bullish
+            if direction == Direction.LONG
+            else bar.kijun_bounce_bearish
+        )
+        return hit == bool(expected)
+    if key == "kumo_orientation":
+        return bar.kumo_orientation == str(expected)
+    if key == "kumo_twist_age_max":
+        return (
+            bar.bars_since_kumo_twist is not None
+            and bar.bars_since_kumo_twist <= int(expected)
+        )
+    if key == "kumo_thickness_atr_min":
+        return (
+            bar.kumo_thickness_atr is not None
+            and bar.kumo_thickness_atr >= float(expected)
+        )
+    if key == "kumo_thickness_atr_max":
+        return (
+            bar.kumo_thickness_atr is not None
+            and bar.kumo_thickness_atr <= float(expected)
+        )
     return False
 
 

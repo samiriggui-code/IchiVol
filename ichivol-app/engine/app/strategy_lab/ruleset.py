@@ -1,22 +1,6 @@
-"""Declarative strategy ruleset (Strategy Lab Phase 2).
+﻿"""Declarative strategy ruleset (Strategy Lab Phase 2).
 
 A ruleset is a versioned, testable hypothesis — not a live BUY score.
-
-Example::
-
-    {
-      "id": "IV_DEMO_LONG_001",
-      "direction": "LONG",
-      "conditions": {
-        "price_above_kumo": true,
-        "tenkan_above_kijun": true,
-        "tk_cross_age_max": 3,
-        "rvol_min": 1.5
-      },
-      "entry": "next_open",
-      "stop_atr": 1.0,
-      "target_atr": 2.0
-    }
 
 Conditions are AND-combined. Unknown keys raise at parse time so typos
 cannot silently widen a study. Evaluation is causal: bar i only sees
@@ -30,7 +14,7 @@ from typing import Any, Mapping
 
 from app.agents.types import Direction
 
-# Known condition keys → expected Python type (bool / int / float).
+# Known condition keys → expected Python type (bool / int / float / str).
 CONDITION_SCHEMA: dict[str, type] = {
     "price_above_kumo": bool,
     "price_below_kumo": bool,
@@ -54,16 +38,35 @@ CONDITION_SCHEMA: dict[str, type] = {
     "cmf_max": float,
     "rsi_min": float,
     "rsi_max": float,
+    # Ichimoku Analytics (research — Lab only)
+    "kijun_slope": str,  # RISING | FLAT | FALLING
+    "price_kijun_distance_atr_min": float,
+    "price_kijun_distance_atr_max": float,
+    "kijun_break_bullish": bool,
+    "kijun_break_bearish": bool,
+    "kijun_retest": bool,
+    "kijun_bounce": bool,
+    "kumo_orientation": str,  # BULLISH | BEARISH
+    "kumo_twist_age_max": int,
+    "kumo_thickness_atr_min": float,
+    "kumo_thickness_atr_max": float,
+}
+
+CONDITION_ENUMS: dict[str, frozenset[str]] = {
+    "kijun_slope": frozenset({"RISING", "FLAT", "FALLING"}),
+    "kumo_orientation": frozenset({"BULLISH", "BEARISH"}),
 }
 
 _ENTRY_MODES = frozenset({"next_open", "close_confirmation"})
+
+ConditionValue = bool | int | float | str
 
 
 @dataclass(frozen=True)
 class Ruleset:
     id: str
     direction: Direction
-    conditions: Mapping[str, bool | int | float]
+    conditions: Mapping[str, ConditionValue]
     entry: str = "next_open"
     stop_atr: float = 1.0
     target_atr: float = 2.0
@@ -109,7 +112,7 @@ def parse_ruleset(raw: Mapping[str, Any]) -> Ruleset:
     if not isinstance(conditions_raw, Mapping) or not conditions_raw:
         raise ValueError("ruleset.conditions must be a non-empty object")
 
-    conditions: dict[str, bool | int | float] = {}
+    conditions: dict[str, ConditionValue] = {}
     for key, value in conditions_raw.items():
         key_s = str(key)
         if key_s not in CONDITION_SCHEMA:
@@ -126,6 +129,16 @@ def parse_ruleset(raw: Mapping[str, Any]) -> Ruleset:
             if value < 0:
                 raise ValueError(f"condition {key_s} must be >= 0")
             conditions[key_s] = value
+        elif expected is str:
+            if not isinstance(value, str):
+                raise ValueError(f"condition {key_s} must be str")
+            allowed = CONDITION_ENUMS.get(key_s)
+            upper = value.strip().upper()
+            if allowed is not None and upper not in allowed:
+                raise ValueError(
+                    f"condition {key_s} must be one of {sorted(allowed)}"
+                )
+            conditions[key_s] = upper
         else:  # float
             if isinstance(value, bool) or not isinstance(value, (int, float)):
                 raise ValueError(f"condition {key_s} must be number")
