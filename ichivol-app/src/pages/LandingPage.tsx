@@ -10,7 +10,7 @@ const FEATURES = [
     body: 'Direction → Participation → Structure → Location → Régime. Portes = action ; badge combiner = diagnostic. Le LLM ne décide pas.',
   },
   {
-    icon: 'chart-line-up',
+    icon: 'chart-simple',
     title: 'Strategy Lab',
     body: 'Event study, rulesets IV_EXP A–G, ablation Kijun, walk-forward et optimisation IS→OOS — sans promotion auto vers le live.',
   },
@@ -20,7 +20,7 @@ const FEATURES = [
     body: 'Zones MVPP / trendln / consensus, puis Fib 23.6–78.6 sur les swings. Portfolio ICHIVOL_MS_FIB : confluence requise, baseline intact.',
   },
   {
-    icon: 'wallet',
+    icon: 'dollar',
     title: 'PaperBroker multi-portfolio',
     body: '5 000 € / profil, SL/TP ATR, fees. Expériences STRUCTURE_*, CTX_*, MS_FIB en parallèle — jamais d’écrasement du baseline.',
   },
