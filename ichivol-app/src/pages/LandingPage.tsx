@@ -6,31 +6,50 @@ import { ThemeToggle } from '../components/ThemeToggle'
 const FEATURES = [
   {
     icon: 'kanban',
-    title: 'Matrice de portes',
-    body: 'Direction → Participation → Structure → Location → Régime. Portes = verdict d’action ; badge combiner = diagnostic. Le LLM ne décide pas.',
+    title: 'Decision Engine · 5 portes',
+    body: 'Direction → Participation → Structure → Location → Régime. Portes = action ; badge combiner = diagnostic. Le LLM ne décide pas.',
+  },
+  {
+    icon: 'chart-line-up',
+    title: 'Strategy Lab',
+    body: 'Event study, rulesets IV_EXP A–G, ablation Kijun, walk-forward et optimisation IS→OOS — sans promotion auto vers le live.',
+  },
+  {
+    icon: 'abstract-26',
+    title: 'Market Structure + Fibonacci',
+    body: 'Zones MVPP / trendln / consensus, puis Fib 23.6–78.6 sur les swings. Portfolio ICHIVOL_MS_FIB : confluence requise, baseline intact.',
+  },
+  {
+    icon: 'wallet',
+    title: 'PaperBroker multi-portfolio',
+    body: '5 000 € / profil, SL/TP ATR, fees. Expériences STRUCTURE_*, CTX_*, MS_FIB en parallèle — jamais d’écrasement du baseline.',
   },
   {
     icon: 'message-text-2',
-    title: 'Copilot atelier',
-    body: 'Depuis Décisions / Journal / Watchlist : tu arrives sur /app/agent avec un prompt déjà prêt. Chat à gauche, outils moteur à droite.',
+    title: 'Copilot atelier + canal agent',
+    body: 'Tools déterministes (scan, Lab, walk-forward…). Chat à gauche, outils moteur à droite — explication ancrée, pas d’invention de BUY.',
   },
   {
     icon: 'chart-pie-4',
     title: 'Contexte & corrélations',
-    body: 'Climat crypto, news RSS, calendrier macro, heatmap « qui bouge avec qui ». Lecture seule — jamais un vote LONG/SHORT.',
+    body: 'RSI / CMF / OBV / régime ATR en filtres optionnels. Climat crypto, news, heatmap — lecture seule, jamais un vote LONG/SHORT.',
   },
-  {
-    icon: 'notification-bing',
-    title: 'Journal watch + cloche',
-    body: 'Confirme une lecture ; le watch poll le pipeline et te notifie si les portes changent. Paper multi-classe quand tu veux tester.',
-  },
+]
+
+const ENGINE_STACK = [
+  { code: 'CORE', label: 'Ichimoku × RVOL + Analytics Kijun/Kumo' },
+  { code: 'MS', label: 'Market Structure (MVPP · trendln · consensus)' },
+  { code: 'FIB', label: 'FibonacciContext — Phase 4 confluence' },
+  { code: 'CTX', label: 'Context gates RSI · CMF/OBV · régime' },
+  { code: 'PAPER', label: 'PaperBroker A/B — 12 profils syncables' },
+  { code: 'LAB', label: 'Strategy Lab — recherche hors capital' },
 ]
 
 const TRUST = [
   'Moteur Python = vérité mathématique · Copilot = explication',
-  'Canal agent : tools déterministes (batch), pas de recalcul LLM',
-  'Portes visibles + prompts préremplis vers l’atelier Copilot',
-  'Corrélations & macro observent — ils ne tradent pas',
+  'Strategy Lab avant live — pas de promotion automatique',
+  'Baseline ICHIVOL_BASELINE_V1 gelé · expériences en parallèle',
+  'Fibonacci hors géométrie Structure — retracement sur swings',
 ]
 
 const STEPS = [
@@ -38,39 +57,39 @@ const STEPS = [
     n: '01',
     icon: 'filter-search',
     title: 'Scanner',
-    body: 'Screener multi-classes : crypto, forex, métaux… biais, RVOL, portes.',
+    body: 'Screener multi-classes : biais Ichimoku, RVOL, portes Decision Engine.',
   },
   {
     n: '02',
     icon: 'verify',
-    title: 'Lire les portes',
-    body: 'Matrice ou sheet : pass / watch / fail, risque ATR, écart éventuel avec le badge.',
+    title: 'Filtrer',
+    body: 'Structure, Fib confluence, contexte — downgrade only. Shadow journal si blocage.',
   },
   {
     n: '03',
-    icon: 'message-programming',
-    title: 'Expliquer & agir',
-    body: 'Un clic → Copilot avec la question déjà formulée. Journal, watchlist ou paper sous confirmation.',
+    icon: 'flask',
+    title: 'Mesurer',
+    body: 'Lab (event study / WF / ablation) + Paper multi-portfolio. Les données décident.',
   },
 ]
 
 const COMPARE = {
   without: [
-    'Un croisement Tenkan/Kijun sur trois est un faux départ',
-    'Deux « vérités » mélangées sans hiérarchie (badge vs portes)',
-    'Un chat IA invente un BUY sans s’appuyer sur le moteur',
+    'Un croisement Tenkan/Kijun sans volume = faux départ',
+    'Un filtre Structure / Fib « au feeling » sans A/B capitalisé',
+    'Un chat IA invente un BUY hors du moteur',
   ],
   with: [
-    'Un signal ne compte que si la participation confirme',
-    'Portes = action ; combiner = diagnostic — et le Copilot l’explique',
-    'Prompts deep-link : tu n’atterris jamais sur un chat vide',
+    'Signal + participation + structure + Fib mesurés hors échantillon',
+    'Paper 5 000 € / profil · Lab walk-forward avant toute promo live',
+    'Copilot ancré sur DECISION_DATA et tools allowlistés',
   ],
 }
 
 const STATS = [
-  { value: '5', label: 'Portes du Decision Engine' },
-  { value: '9', label: 'Tools engine (canal agent READ)' },
-  { value: '1', label: 'Atelier Copilot plein écran' },
+  { value: '5', label: 'Portes Decision Engine' },
+  { value: '12', label: 'Profils Paper syncables' },
+  { value: '8', label: 'Phases Strategy Lab' },
   { value: '0', label: 'Votes LONG/SHORT par le LLM' },
 ]
 
@@ -80,20 +99,20 @@ const FAQ = [
     a: 'Non. Le moteur produit une lecture structurée ; le Copilot l’explique. La décision de trade reste la vôtre.',
   },
   {
-    q: 'Pourquoi filtrer par volume relatif et pas juste par Ichimoku ?',
-    a: 'Un croisement ou un breakout sans participation réelle est souvent un faux signal. Le RVOL (porte Participation) confirme avant de monter en conviction.',
+    q: 'Qu’est-ce que le Strategy Lab ?',
+    a: 'Un banc de recherche sur le moteur : event study, rulesets Ichimoku Analytics (EXP A–G), ablation, régimes, walk-forward et optimisation. Aucune promotion automatique vers le trading live.',
+  },
+  {
+    q: 'Fibonacci est-il dans le Market Structure ?',
+    a: 'Non. La Structure trouve les swings ; FibonacciContext mesure le retracement (23.6–78.6) à l’intérieur. Le profil ICHIVOL_MS_FIB exige la confluence — le baseline ne l’utilise pas.',
+  },
+  {
+    q: 'À quoi servent les multi-portfolios Paper ?',
+    a: 'Comparer en parallèle Ichimoku×RVOL (baseline), Structure, Context, Fib… avec le même capital fictif 5 000 €, mêmes frais et risque. Les données disent quelle brique aide vraiment.',
   },
   {
     q: 'L’agent peut-il changer le verdict du moteur ?',
-    a: 'Non. Il interroge le moteur (get_symbol_context, batch…) et explique DECISION_DATA. Il n’invente pas de chiffres et ne propose pas un LONG/SHORT contraire.',
-  },
-  {
-    q: 'À quoi servent les corrélations sur Contexte ?',
-    a: 'À voir qui bouge avec qui sur la watchlist (Pearson / log returns). C’est du climat de marché, pas un signal d’entrée.',
-  },
-  {
-    q: 'Que fait « Confirmer » dans le chat ?',
-    a: 'Uniquement des actions allowlistées : journal ou watchlist. Aucun ordre broker. Tu valides ou tu annules.',
+    a: 'Non. Il interroge le moteur (scan, Lab, context…) et explique. Il n’invente pas de chiffres et ne propose pas un LONG/SHORT contraire.',
   },
 ]
 
@@ -149,6 +168,20 @@ function MockChart() {
         strokeOpacity="0.32"
         strokeWidth="1.4"
       />
+      {/* Fib 61.8 schematic line */}
+      <line
+        x1="40"
+        x2="300"
+        y1="72"
+        y2="72"
+        stroke="var(--primary)"
+        strokeOpacity="0.35"
+        strokeWidth="1"
+        strokeDasharray="4 3"
+      />
+      <text x="42" y="68" fill="var(--primary)" fillOpacity="0.55" fontSize="8" fontFamily="var(--font-mono)">
+        Fib 61.8
+      </text>
       {CANDLES.map((c, i) => {
         const x = step * (i + 1)
         const color = c.bull ? 'var(--primary)' : 'var(--destructive)'
@@ -189,6 +222,7 @@ export function LandingPage() {
             <span className="camap-word">IchiVol</span>
           </Link>
           <div className="camap-nav-links">
+            <a href="#moteur">Moteur</a>
             <a href="#methode">Méthode</a>
             <a href="#capacites">Capacités</a>
             <a href="#comparatif">Comparatif</a>
@@ -210,19 +244,19 @@ export function LandingPage() {
             <div className="camap-hero-copy camap-reveal">
               <p className="camap-brand-lockup">IchiVol</p>
               <h1 className="camap-hero-title">
-                Voir le signal. <em>Confirmer</em> par le volume. Décider.
+                Voir le signal. <em>Mesurer</em> chaque brique. Décider.
               </h1>
               <p className="camap-hero-lede">
-                Cockpit Ichimoku × RVOL : le moteur tranche, le Copilot explique
-                avec un prompt déjà prêt — journal, watchlist et paper sous ton
-                contrôle.
+                Laboratoire Ichimoku × RVOL : Structure, Fibonacci, Context et
+                Paper multi-portfolio — le moteur tranche, le Lab prouve, le
+                Copilot explique.
               </p>
               <div className="camap-hero-cta">
                 <Link to="/login" className="camap-btn camap-btn-primary camap-btn-lg">
                   Entrer dans le cockpit
                 </Link>
-                <a href="#methode" className="camap-btn camap-btn-outline camap-btn-lg">
-                  Voir la méthode
+                <a href="#moteur" className="camap-btn camap-btn-outline camap-btn-lg">
+                  Voir le moteur V2
                 </a>
               </div>
             </div>
@@ -231,17 +265,18 @@ export function LandingPage() {
               <div className="camap-hero-visual">
                 <span className="camap-hero-visual-badge">
                   <span className="camap-dot camap-dot-live" aria-hidden />
-                  Pipeline · BUY
+                  Pipeline · BUY · Fib OK
                 </span>
                 <MockChart />
                 <div className="camap-hero-visual-footer">
-                  <span>NEARUSDT · 1h</span>
-                  <span className="camap-chip camap-chip-bull">RVOL 1.4×</span>
+                  <span>BTCUSDT · 1h</span>
+                  <span className="camap-chip camap-chip-bull">RVOL 1.8×</span>
                 </div>
                 <div className="camap-hero-gates" aria-hidden>
                   <span className="is-pass">Direction</span>
-                  <span className="is-watch">Participation</span>
-                  <span className="is-pass">Location</span>
+                  <span className="is-pass">Participation</span>
+                  <span className="is-pass">Structure</span>
+                  <span className="is-watch">Fib 61.8</span>
                 </div>
               </div>
             </div>
@@ -259,10 +294,26 @@ export function LandingPage() {
           </ul>
         </section>
 
+        <section id="moteur" className="camap-section">
+          <h2 className="camap-section-title">Stack moteur Grand V2</h2>
+          <p className="camap-section-lede">
+            Chaque brique est optionnelle, mesurée hors échantillon. Phase 4 :
+            FibonacciContext sur swings Structure — baseline inchangé.
+          </p>
+          <ol className="camap-engine-stack">
+            {ENGINE_STACK.map((row) => (
+              <li key={row.code}>
+                <span className="camap-engine-code">{row.code}</span>
+                <span>{row.label}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+
         <section id="methode" className="camap-section">
           <h2 className="camap-section-title">Ce que l’app traite</h2>
           <p className="camap-section-lede">
-            Données live → portes → Copilot deep-link → journal / watch / paper.
+            Live → portes → filtres expérimentaux → Lab / Paper → Copilot.
           </p>
           <ol className="camap-steps camap-steps-numbered">
             {STEPS.map((step) => (
@@ -279,15 +330,18 @@ export function LandingPage() {
             ))}
           </ol>
           <blockquote className="camap-inline-quote">
-            <p>« Un signal Ichimoku ne compte que s’il est confirmé par le volume relatif. »</p>
-            <cite>Principe IchiVol</cite>
+            <p>
+              « Ne demande pas si Fibonacci est bon — demande aux données s’il
+              améliore l’expectancy hors échantillon. »
+            </p>
+            <cite>Principe IchiVol Grand V2</cite>
           </blockquote>
         </section>
 
         <section id="capacites" className="camap-section">
           <h2 className="camap-section-title">Capacités</h2>
           <p className="camap-section-lede">
-            Ce qui est en place aujourd’hui dans le cockpit — pas une roadmap fantôme.
+            Livré dans le cockpit — Lab, Paper A/B, Structure, Fib Phase 4.
           </p>
           <div className="camap-bento">
             {FEATURES.map((f) => (
@@ -305,7 +359,7 @@ export function LandingPage() {
         <section id="comparatif" className="camap-section">
           <h2 className="camap-section-title">Ce que ça change</h2>
           <p className="camap-section-lede">
-            Même Ichimoku. La différence : portes visibles + Copilot ancré sur le moteur.
+            Même Ichimoku. La différence : briques mesurées + Lab avant live.
           </p>
           <div className="camap-compare">
             <div className="camap-compare-col">
@@ -317,7 +371,7 @@ export function LandingPage() {
               </ul>
             </div>
             <div className="camap-compare-col camap-compare-col-highlight">
-              <span className="camap-compare-label">Avec IchiVol</span>
+              <span className="camap-compare-label">Avec IchiVol V2</span>
               <ul>
                 {COMPARE.with.map((item) => (
                   <li key={item}>
@@ -353,7 +407,7 @@ export function LandingPage() {
 
         <section className="camap-closing">
           <h2>Prêt à entrer dans le cockpit</h2>
-          <p>Décisions, Copilot atelier, Contexte, Paper — session sécurisée.</p>
+          <p>Décisions, Strategy Lab, Paper multi-portfolio, Copilot — session sécurisée.</p>
           <Link to="/login" className="camap-btn camap-btn-primary camap-btn-lg">
             Se connecter
           </Link>
@@ -367,15 +421,16 @@ export function LandingPage() {
               <BrandMark className="camap-mark" />
               <span className="camap-word">IchiVol</span>
             </Link>
-          <p>
-              Cockpit Ichimoku × RVOL : portes visibles, Copilot atelier,
-              corrélations en lecture seule — toi confirmes.
+            <p>
+              Cockpit Ichimoku × RVOL Grand V2 : Structure, Fib, Lab, Paper A/B —
+              le moteur tranche, toi confirmes.
             </p>
           </div>
 
           <div className="camap-footer-cols">
             <div className="camap-footer-col">
               <h3>Produit</h3>
+              <a href="#moteur">Moteur</a>
               <a href="#methode">Méthode</a>
               <a href="#capacites">Capacités</a>
               <a href="#comparatif">Comparatif</a>
@@ -384,11 +439,10 @@ export function LandingPage() {
             <div className="camap-footer-col">
               <h3>Cockpit</h3>
               <Link to="/login">Décisions</Link>
-              <Link to="/login">Journal</Link>
-              <Link to="/login">Watchlist</Link>
+              <Link to="/login">Backtests / Lab</Link>
+              <Link to="/login">Paper</Link>
               <Link to="/login">Copilot</Link>
               <Link to="/login">Contexte</Link>
-              <Link to="/login">Paper</Link>
             </div>
             <div className="camap-footer-col">
               <h3>Compte</h3>
@@ -403,7 +457,7 @@ export function LandingPage() {
             © {new Date().getFullYear()} IchiVol — lecture structurée, pas un conseil financier.
           </span>
           <span className="camap-footer-muted">
-            Moteur décide · Copilot explique · toi confirmes
+            Lab mesure · Paper compare · toi confirmes
           </span>
         </div>
       </footer>
