@@ -42,6 +42,11 @@ BASELINE_PROFILE: dict[str, Any] = {
     "rsi_overbought": 70.0,
     "rsi_oversold": 30.0,
     "rsi_mid": 50.0,
+    # Phase 4 — baseline ignores Fibonacci
+    "fibonacci_filter": None,
+    "fibonacci_confluence_atr_mult": 0.5,
+    "fibonacci_require_key_level": True,
+    "fibonacci_require_impulse_align": True,
     "sync_auto": True,
 }
 
@@ -140,6 +145,18 @@ ICHIVOL_CTX_FULL = _with(
     shadow_on_block=True,
 )
 
+# --- Phase 4 Fibonacci (Portfolio F) ---
+ICHIVOL_MS_FIB = _with(
+    code="ICHIVOL_MS_FIB",
+    label="IchiVol + Market Structure + Fibonacci confluence",
+    structure_filter="block_near_opposing",
+    structure_detectors=["mvpp", "trendln"],
+    fibonacci_filter="require_confluence",
+    fibonacci_require_key_level=True,
+    fibonacci_require_impulse_align=True,
+    shadow_on_block=True,
+)
+
 EXPERIMENTAL_PROFILES: dict[str, dict[str, Any]] = {
     STRUCTURE_MVPP["code"]: STRUCTURE_MVPP,
     STRUCTURE_TRENDLN["code"]: STRUCTURE_TRENDLN,
@@ -151,6 +168,7 @@ EXPERIMENTAL_PROFILES: dict[str, dict[str, Any]] = {
     ICHIVOL_CTX_REGIME["code"]: ICHIVOL_CTX_REGIME,
     ICHIVOL_MS_REGIME["code"]: ICHIVOL_MS_REGIME,
     ICHIVOL_CTX_FULL["code"]: ICHIVOL_CTX_FULL,
+    ICHIVOL_MS_FIB["code"]: ICHIVOL_MS_FIB,
 }
 
 ALL_PROFILES: dict[str, dict[str, Any]] = {

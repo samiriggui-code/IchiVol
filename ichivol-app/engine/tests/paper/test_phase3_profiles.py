@@ -25,3 +25,10 @@ def test_baseline_context_flags_false():
     assert b["context_cmf"] is False
     assert b["context_obv"] is False
     assert b["context_regime_hard"] is False
+    assert b["fibonacci_filter"] is None
+
+
+def test_phase4_fib_profile_present():
+    codes = syncable_profile_codes()
+    assert "ICHIVOL_MS_FIB" in codes
+    assert ALL_PROFILES["ICHIVOL_MS_FIB"]["fibonacci_filter"] == "require_confluence"

@@ -329,7 +329,7 @@ Interdit : payer TradingView / APIs d’indicateurs tout faits pour le **cœur**
 | **1** | PaperBroker 5 000 € · Risk · SL/TP · fees · journal · metrics capital · freeze `ICHIVOL_BASELINE_V1` — **DÉPLOYÉ VPS 2026-09-18** |
 | **2** | Market Structure · adapters · consensus · breakout/retest · **profils STRUCTURE_*** + gate paper multi-portfolio — **wire livré 2026-09-18** (baseline intact) |
 | **3** | Context : ATR (déjà), Regime hard, RSI, CMF/OBV — **profils `ICHIVOL_CTX_*` / `ICHIVOL_MS_REGIME` livrés 2026-09-18** |
-| **4** | FibonacciContext · multi-portfolio A–G · expériences `STRUCTURE_*` |
+| **4** | FibonacciContext · profil `ICHIVOL_MS_FIB` · gate `require_confluence` — **wire livré 2026-09-18** (baseline intact) |
 | **5** | ShadowBroker · counterfactuels · walk-forward / OOS |
 | *∥* | **Strategy Lab Phase 1 — Event Study** (`app/strategy_lab/`, `GET /event-study/{symbol}`) — forward returns / MFE-MAE ATR **sans capital** ; livré 2026-09-18 |
 | *∥* | **Strategy Lab Phase 2 — Rules Engine** (`ruleset` + `POST /ruleset/event-study`) — hypothèse `IV_*` déclarative → occurrences → Event Study ; livré 2026-09-18 |

@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.db.models import PaperJournalEvent, PaperPortfolio, PaperPosition
 from app.decision.pipeline import PipelineResult
 from app.context.gate import apply_context_gate
+from app.fibonacci.gate import apply_fibonacci_gate
 from app.paper import broker as paper_broker
 from app.paper.portfolio import ensure_baseline_portfolio, ensure_syncable_portfolios
 from app.structure.gate import apply_structure_gate
@@ -120,6 +121,7 @@ def _journal_shadow(
     reason: str | None,
     structure_payload: dict[str, Any] | None = None,
     context_payload: dict[str, Any] | None = None,
+    fibonacci_payload: dict[str, Any] | None = None,
     block_source: str = "structure",
 ) -> None:
     session.add(
@@ -136,6 +138,7 @@ def _journal_shadow(
                 "block_source": block_source,
                 "market_structure": structure_payload,
                 "context": context_payload,
+                "fibonacci": fibonacci_payload,
             },
             created_at=datetime.now(timezone.utc),
         )
@@ -305,14 +308,21 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
                 if profile.get("structure_filter"):
                     gate_cache[cache_key] = struct_gate
 
-            # Context gate runs on (possibly structure-gated) pipeline
-            ctx_gate = apply_context_gate(struct_gate.pipeline, candles, profile)
+            # Fibonacci runs after structure (swings), then context
+            fib_gate = apply_fibonacci_gate(struct_gate.pipeline, candles, profile)
+            ctx_gate = apply_context_gate(fib_gate.pipeline, candles, profile)
 
-            blocked = struct_gate.blocked or ctx_gate.blocked
+            blocked = struct_gate.blocked or fib_gate.blocked or ctx_gate.blocked
             final_pipeline = ctx_gate.pipeline
             raw_decision = struct_gate.raw_decision
-            block_reason = ctx_gate.reason if ctx_gate.blocked else struct_gate.reason
-            block_source = "context" if ctx_gate.blocked else ("structure" if struct_gate.blocked else None)
+            if ctx_gate.blocked:
+                block_reason, block_source = ctx_gate.reason, "context"
+            elif fib_gate.blocked:
+                block_reason, block_source = fib_gate.reason, "fibonacci"
+            elif struct_gate.blocked:
+                block_reason, block_source = struct_gate.reason, "structure"
+            else:
+                block_reason, block_source = None, None
 
             if blocked and profile.get("shadow_on_block"):
                 _journal_shadow(
@@ -324,6 +334,7 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
                     reason=block_reason,
                     structure_payload=struct_gate.structure_payload,
                     context_payload=ctx_gate.context_payload,
+                    fibonacci_payload=fib_gate.fibonacci_payload,
                     block_source=block_source or "unknown",
                 )
 
@@ -334,10 +345,13 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
             }
             if struct_gate.structure_payload is not None:
                 extra["market_structure"] = struct_gate.structure_payload
+            if fib_gate.fibonacci_payload is not None:
+                extra["fibonacci"] = fib_gate.fibonacci_payload
             if ctx_gate.context_payload is not None:
                 extra["context"] = ctx_gate.context_payload
             if blocked:
                 extra["structure_blocked"] = struct_gate.blocked
+                extra["fibonacci_blocked"] = fib_gate.blocked
                 extra["context_blocked"] = ctx_gate.blocked
                 extra["block_source"] = block_source
                 extra["block_reason"] = block_reason
