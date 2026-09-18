@@ -143,6 +143,11 @@ def test_short_position_pnl_is_positive_when_price_falls(_session):
 
 
 def test_sync_auto_watchlist_processes_multiple_rows_and_commits(_session):
+    """BUY opens across every syncable portfolio; WATCH opens none.
+
+    Multi-portfolio seeding (STRUCTURE_*, CTX_*, …) means one BUY row can
+    touch many PaperPosition rows — assert by symbol, not by count==1.
+    """
     class _FakeRow:
         def __init__(self, symbol, price, decision):
             self.symbol = symbol
@@ -150,13 +155,17 @@ def test_sync_auto_watchlist_processes_multiple_rows_and_commits(_session):
             self.price = price
             self.pipeline = _pipeline(decision)
 
-    rows = [_FakeRow(SYMBOL, 100.0, "BUY"), _FakeRow(f"{SYMBOL}2", 50.0, "WATCH")]
+    watch_sym = f"{SYMBOL}2"
+    rows = [_FakeRow(SYMBOL, 100.0, "BUY"), _FakeRow(watch_sym, 50.0, "WATCH")]
     try:
         touched = paper.sync_auto_watchlist(_session, rows)
-        assert len(touched) == 1
-        assert touched[0].symbol == SYMBOL
+        assert touched, "BUY should open at least on baseline"
+        assert all(p.symbol == SYMBOL for p in touched)
+        assert not any(p.symbol == watch_sym for p in touched)
     finally:
-        _session.query(PaperPosition).filter_by(symbol=f"{SYMBOL}2").delete()
+        _session.query(PaperPosition).filter(
+            PaperPosition.symbol.in_([SYMBOL, watch_sym])
+        ).delete(synchronize_session=False)
         _session.commit()
 
 
