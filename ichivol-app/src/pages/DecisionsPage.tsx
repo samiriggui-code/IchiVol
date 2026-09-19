@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
 import { GateMatrix } from '../components/GateMatrix'
+import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
 import { VerdictBadge } from '../components/VerdictBadge'
-import { buildDecisionSummary, labelDecision, labelDirection, labelReason } from '../lib/decisionLabels'
+import { labelDecision, labelDirection, labelReason } from '../lib/decisionLabels'
 import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
 import {
   getDecisionDetail,
@@ -671,18 +672,7 @@ export function DecisionsPage() {
 
               {detail && (
                 <div className="decision-detail-body">
-                  <div className="decision-summary">
-                    <span className="subhead">Résumé</span>
-                    <p>{buildDecisionSummary(detail)}</p>
-                  </div>
-
-                  <div className="decision-detail-row">
-                    <VerdictBadge decision={detail.decision} pipeline={detail.pipeline} variant="detail" />
-                    <span className="muted">
-                      confiance {(detail.confidence * 100).toFixed(0)}% · accord{' '}
-                      {(detail.agreement * 100).toFixed(0)}% · prix {detail.price.toFixed(2)}
-                    </span>
-                  </div>
+                  <SignalEvidenceCard detail={detail} />
 
                   <div className="decision-confirm-row">
                     <button
@@ -725,18 +715,6 @@ export function DecisionsPage() {
                   </div>
 
                   {pipelineView && <DecisionPipelinePanel view={pipelineView} />}
-
-                  <div>
-                    <span className="subhead">Pourquoi</span>
-                    <ReasonChips codes={detail.reasons} />
-                  </div>
-
-                  {detail.invalidation.length > 0 && (
-                    <div>
-                      <span className="subhead">Ce qui invaliderait le signal</span>
-                      <ReasonChips codes={detail.invalidation} />
-                    </div>
-                  )}
 
                   <details className="decision-agents-details">
                     <summary className="subhead">Agents bruts (Ichimoku / RVOL)</summary>

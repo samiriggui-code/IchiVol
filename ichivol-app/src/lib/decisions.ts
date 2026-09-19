@@ -41,18 +41,60 @@ export interface AgentDetail {
   metadata: Record<string, unknown>
 }
 
+export interface EvidenceHistorical {
+  sample_size: number
+  sample_quality: string
+  status: string
+  horizon: number
+  mean_return_pct: number | null
+  median_return_pct: number | null
+  favorable_rate: number | null
+  mean_mfe_pct: number | null
+  mean_mae_pct: number | null
+}
+
+export interface EvidenceAblationRow {
+  label: string
+  sample_size: number
+  favorable_rate: number | null
+  mean_return_pct: number | null
+  median_return_pct: number | null
+}
+
+export interface EvidencePack {
+  evidence_engine_version?: string
+  rules_version?: string
+  feature_version?: string
+  strategy_version?: string
+  calibration_note?: string
+  historical?: EvidenceHistorical
+  ablation?: EvidenceAblationRow[]
+  positive_evidence?: string[]
+  contradictions?: string[]
+  invalidation?: string[]
+  why_not_long?: string[]
+  why_not_short?: string[]
+  context?: Record<string, unknown>
+}
+
 export interface DecisionDetail extends ScreenerDecisionRow {
   reasons: string[]
   risks: string[]
   invalidation: string[]
+  positive_evidence?: string[]
+  contradictions?: string[]
+  why_not?: string[]
   agreement: number
   weights_used: Record<string, unknown>
   strategy_version: string
   timestamp: number
+  volume_type?: string
   ichimoku: AgentDetail
-  rvol_detail: AgentDetail
+  rvol_detail: AgentDetail & { volume_type?: string }
   /** Présent quand le moteur expose le pipeline à portes (V1+). */
   pipeline?: DecisionPipelinePayload
+  evidence?: EvidencePack
+  context?: Record<string, unknown>
 }
 
 async function parseError(res: Response): Promise<string> {
