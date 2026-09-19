@@ -117,9 +117,10 @@ class IchimokuIndicator(Base):
 
 
 class RvolIndicator(Base):
-    """Stub — the RVOL engine itself is not built yet; this table shape is
-    reserved so IchimokuIndicator's sibling can land without another
-    migration once app/indicators/rvol.py exists."""
+    """Relative volume state persisted alongside Ichimoku for audit/replay.
+    Computed by app/indicators/rvol.py; volume_type lives on the Candle /
+    SignalEvidenceRecord, not here, because RVOL is a transform of volume
+    whose semantics are provider-level."""
 
     __tablename__ = "indicator_rvol"
 
@@ -288,6 +289,10 @@ class PaperPosition(Base):
     mae_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
     highest_price_seen: Mapped[float | None] = mapped_column(Float, nullable=True)
     lowest_price_seen: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Link back to engine Decision / SignalEvidence for Evidence Card replay.
+    decision_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    evidence_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
@@ -504,4 +509,44 @@ class StrategyLabExperiment(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+    )
+
+
+class SignalEvidenceRecord(Base):
+    """Per-signal Evidence DB row: context at t0, decision, evidence pack,
+    and optional realized outcome after N bars. Enables
+    SIGNAL → PREDICTION → OBSERVATION → RESULT audit trails."""
+
+    __tablename__ = "signal_evidence"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    timeframe: Mapped[str] = mapped_column(String(8), index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    provider: Mapped[str] = mapped_column(String(32))
+    volume_type: Mapped[str] = mapped_column(String(32), default="NONE")
+    asset_class: Mapped[str] = mapped_column(String(16), index=True)
+
+    decision: Mapped[str] = mapped_column(String(16), index=True)
+    decision_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    paper_position_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+
+    context_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    evidence_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    market_snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
+    outcome_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    strategy_version: Mapped[str] = mapped_column(String(64), index=True)
+    feature_version: Mapped[str] = mapped_column(String(64))
+    rules_version: Mapped[str] = mapped_column(String(64))
+    evidence_engine_version: Mapped[str] = mapped_column(String(64))
+
+    sample_size: Mapped[int] = mapped_column(Integer, default=0)
+    sample_quality: Mapped[str] = mapped_column(String(32), default="NO_DATA")
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+    )
+    outcome_recorded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
