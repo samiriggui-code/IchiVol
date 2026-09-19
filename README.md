@@ -37,6 +37,7 @@ cd ichivol-app && npm run build
 **Méthodes V1→V3 :** [`docs/METHODS-ROADMAP.md`](docs/METHODS-ROADMAP.md).  
 **Arborescence V2 (pages + LLM) :** [`docs/APP-ARBORESCENCE-V2.md`](docs/APP-ARBORESCENCE-V2.md).  
 **Données :** [`docs/MARKET-DATA-STRATEGY.md`](docs/MARKET-DATA-STRATEGY.md) — feeds gratuits ≠ lieu d’exécution ; indicateurs en local.  
+**Evidence Engine :** [`docs/EVIDENCE-ARCHITECTURE.md`](docs/EVIDENCE-ARCHITECTURE.md) — SIGNAL → PREUVES → DÉCISION → RÉSULTAT.
 **Claude (engine) — realign :** [`docs/HANDOFF-CLAUDE-REALIGN-NORTHSTAR.md`](docs/HANDOFF-CLAUDE-REALIGN-NORTHSTAR.md).
 
 Voir [`ichivol-app/SPEC.md`](ichivol-app/SPEC.md) pour la décision de stack.
