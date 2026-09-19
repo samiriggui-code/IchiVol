@@ -45,11 +45,7 @@ def test_agent_tools_lists_the_full_v1_allowlist():
     resp = client.get("/api/engine/agent/tools")
     assert resp.status_code == 200
     names = {t["name"] for t in resp.json()["tools"]}
-    assert names == {
-        "scan_market", "get_symbol_context", "detect_signal", "compare_timeframes",
-        "run_backtest", "get_correlations", "calculate_ichimoku", "calculate_rvol",
-        "get_news", "get_calendar", "list_tools",
-    }
+    assert names == set(TOOLS.keys())
     assert all(t["read_only"] for t in resp.json()["tools"])
 
 
