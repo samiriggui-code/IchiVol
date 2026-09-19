@@ -27,6 +27,8 @@ ichivol-app/server/tmp-*
 
 # research / scratch (heavy, not product)
 _research/
+ichivol-app/research/*
+!ichivol-app/research/README.md
 
 # OS / IDE
 .DS_Store

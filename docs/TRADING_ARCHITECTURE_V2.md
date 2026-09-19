@@ -5,6 +5,7 @@ Ce document **remplace** l’ancienne proposition « multi-strategy × consensus
 Toute session engine / front / agents doit s’aligner ici avant d’ajouter une couche.
 
 Docs liées :
+- [`ICHIVOL-GPTHEIST-ARCHITECTURE-LAB.md`](./ICHIVOL-GPTHEIST-ARCHITECTURE-LAB.md) — audit GPTHEIST + AnalysisStage lab (multi-agent déterministe, ablation)
 - [`ARCHITECTURE-CONSOLIDEE-V2.md`](./ARCHITECTURE-CONSOLIDEE-V2.md) — lab quant (Paper / Shadow / Market Structure / MCP viz)
 - [`PLAN-PAPER-BROKER-MULTI-PORTFOLIO.md`](./PLAN-PAPER-BROKER-MULTI-PORTFOLIO.md) — Phase 1 PaperBroker
 - [`CAHIER-DES-CHARGES.md`](./CAHIER-DES-CHARGES.md) — backlog maître (dont Graph/Matrix réinterprété)
