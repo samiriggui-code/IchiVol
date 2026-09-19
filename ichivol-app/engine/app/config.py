@@ -21,5 +21,16 @@ class Settings(BaseSettings):
     paper_take_profit_r: float = 2.0
     paper_max_open_positions: int = 5
 
+    # MT5 bridge (Phase 2, READ ONLY) -- unregistered unless explicitly
+    # turned on (docs/TRADING_ARCHITECTURE_V2.md §11 rule: MT5 is a data
+    # source/lab, never a dependency the engine needs to boot). The bridge
+    # itself is a separate service (ichivol-app/mt5-bridge/) since the
+    # MetaTrader5 python package only runs under Windows/Wine, never in
+    # this engine's own Linux container.
+    mt5_enabled: bool = False
+    mt5_mode: str = "READ_ONLY"  # READ_ONLY | PAPER | DEMO -- LIVE never wired here
+    mt5_bridge_url: str = "http://mt5-bridge:8000"
+    mt5_timeout_s: float = 10.0
+
 
 settings = Settings()

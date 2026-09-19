@@ -62,8 +62,14 @@ services:
       TWELVE_DATA_API_KEY: ${TWELVE_DATA_API_KEY:-}
       ENABLE_BACKTEST_EVIDENCE: ${ENABLE_BACKTEST_EVIDENCE:-true}
       BACKTEST_EVIDENCE_INTERVAL_S: ${BACKTEST_EVIDENCE_INTERVAL_S:-86400}
+      # MT5 stays unregistered (provider not wired) unless MT5_ENABLED=true
+      # AND the mt5-bridge profile is actually running -- see mt5-bridge/README.md.
+      MT5_ENABLED: ${MT5_ENABLED:-false}
+      MT5_MODE: ${MT5_MODE:-READ_ONLY}
+      MT5_BRIDGE_URL: ${MT5_BRIDGE_URL:-http://mt5-bridge:8000}
     networks:
       - ichivol
+      - mt5_bridge
 
   server:
     build:
@@ -123,9 +129,46 @@ services:
       - traefik.http.routers.ichivol.tls.certresolver=letsencrypt
       - traefik.http.services.ichivol.loadbalancer.server.port=80
 
+  # MT5 bridge (Phase 2, READ ONLY) -- Wine + MetaTrader5 terminal + a thin
+  # FastAPI wrapper (ichivol-app/mt5-bridge/README.md). NOT started by
+  # `docker compose up -d` on its own: requires `--profile mt5` explicitly,
+  # so a normal deploy of this stack never touches it. Hard resource caps
+  # below are non-negotiable -- this VPS also runs other clients' services
+  # (gsms-crm, pizzeria, qatrial, grace, ...); a Wine/GUI process misbehaving
+  # must never be able to starve them.
+  mt5-bridge:
+    profiles: ['mt5']
+    build:
+      context: ./ichivol-app/mt5-bridge
+      dockerfile: Dockerfile
+    image: ichivol-mt5-bridge:latest
+    container_name: ichivol-mt5-bridge
+    restart: unless-stopped
+    mem_limit: 3g
+    memswap_limit: 3g
+    cpus: 1.5
+    environment:
+      MT5_LOGIN: ${MT5_LOGIN:?set MT5_LOGIN in deploy/vps/.env, never in git}
+      MT5_PASSWORD: ${MT5_PASSWORD:?set MT5_PASSWORD in deploy/vps/.env, never in git}
+      MT5_SERVER: ${MT5_SERVER:?set MT5_SERVER (broker server name) in deploy/vps/.env}
+    volumes:
+      - ichivol_mt5_wine:/root/.wine
+    networks:
+      - mt5_bridge
+    # No `ports:` on purpose -- not reachable from outside the mt5_bridge
+    # network. VNC (for first login / 2FA / manual reconfig) is exposed via
+    # SSH tunnel only, see mt5-bridge/README.md -- never a public port on
+    # this shared VPS.
+
 volumes:
   ichivol_pg:
+  ichivol_mt5_wine:
 
 networks:
   ichivol:
     name: ichivol
+  # Isolated on purpose: only `engine` and `mt5-bridge` sit on this network.
+  # Never shared with `ichivol` clients' other containers or with any other
+  # project's network on this VPS (gsms-crm, pizzeria, qatrial, grace, ...).
+  mt5_bridge:
+    name: ichivol_mt5_bridge
