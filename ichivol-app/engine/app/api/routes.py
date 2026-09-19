@@ -285,6 +285,111 @@ def get_structure(
     }
 
 
+@router.get("/context/news")
+def get_context_news(limit: int = 20, sources: str | None = None) -> dict:
+    """Read-only crypto news headlines (CDC "adapters context", V3, opt-in)
+    -- free/keyless RSS, never wired into the decision pipeline (see
+    app/context/news.py). `sources` (comma-separated) restricts to a subset
+    of `news.FEEDS`; omit for all of them. One feed failing never empties
+    the others -- worst case this returns `[]`, never a 502."""
+    source_list = [s.strip() for s in sources.split(",") if s.strip()] if sources else None
+    items = fetch_news(limit=limit, sources=source_list)
+    return {
+        "items": [
+            {"title": i.title, "url": i.url, "source": i.source, "published_at": i.published_at}
+            for i in items
+        ]
+    }
+
+
+@router.get("/context/calendar")
+def get_context_calendar(limit: int | None = None) -> dict:
+    """Read-only macro economic calendar, this week (CDC "adapters context",
+    V3, opt-in) -- free/keyless community feed, never wired into the
+    decision pipeline (see app/context/calendar.py). Degrades to an empty
+    list on any upstream failure, never a 502."""
+    events = fetch_calendar_events(limit=limit)
+    return {
+        "events": [
+            {
+                "title": e.title, "country": e.country, "date": e.date,
+                "impact": e.impact, "forecast": e.forecast, "previous": e.previous,
+            }
+            for e in events
+        ]
+    }
+
+
+def _paper_position_dict(p) -> dict:
+    return {
+        "id": p.id,
+        "portfolio_id": p.portfolio_id,
+        "symbol": p.symbol,
+        "timeframe": p.timeframe,
+        "source": p.source,
+        "user_id": p.user_id,
+        "direction": p.direction,
+        "status": p.status,
+        "entry_time": p.entry_time.isoformat(),
+        "entry_price": p.entry_price,
+        "entry_decision": p.entry_decision,
+        "exit_time": p.exit_time.isoformat() if p.exit_time else None,
+        "exit_price": p.exit_price,
+        "exit_reason": p.exit_reason,
+        "pnl_pct": p.pnl_pct,
+        "qty": p.qty,
+        "notional": p.notional,
+        "stop_price": p.stop_price,
+        "take_profit_price": p.take_profit_price,
+        "risk_pct": p.risk_pct,
+        "risk_amount": p.risk_amount,
+        "realized_pnl": p.realized_pnl,
+        "mfe_pct": p.mfe_pct,
+        "mae_pct": p.mae_pct,
+        "decision_id": getattr(p, "decision_id", None),
+        "evidence_id": getattr(p, "evidence_id", None),
+        "entry_signal": getattr(p, "entry_signal", None),
+    }
+
+
+def _paper_perf_dict(perf) -> dict:
+    return {
+        "num_closed_trades": perf.num_closed_trades,
+        "num_open_positions": perf.num_open_positions,
+        "total_return": perf.total_return,
+        "win_rate": perf.win_rate,
+        "profit_factor": perf.profit_factor if perf.profit_factor != float("inf") else None,
+        "expectancy": perf.expectancy,
+        "avg_holding_hours": perf.avg_holding_hours,
+        "best_trade_pct": perf.best_trade_pct,
+        "worst_trade_pct": perf.worst_trade_pct,
+        "initial_cash": getattr(perf, "initial_cash", None),
+        "cash": getattr(perf, "cash", None),
+        "equity": getattr(perf, "equity", None),
+        "realized_pnl": getattr(perf, "realized_pnl", None),
+        "unrealized_pnl": getattr(perf, "unrealized_pnl", None),
+        "max_drawdown": getattr(perf, "max_drawdown", None),
+        "expectancy_eur": getattr(perf, "expectancy_eur", None),
+        "valuation_mode": getattr(perf, "valuation_mode", None),
+    }
+
+
+def _portfolio_dict(p) -> dict:
+    return {
+        "id": p.id,
+        "code": p.code,
+        "label": p.label,
+        "currency": p.currency,
+        "valuation_mode": p.valuation_mode,
+        "initial_cash": p.initial_cash,
+        "cash": p.cash,
+        "realized_pnl": p.realized_pnl,
+        "is_active": p.is_active,
+        "started_at": p.started_at.isoformat(),
+        "strategy_profile": p.strategy_profile,
+    }
+
+
 @router.get("/context/{symbol}")
 def get_context_indicators(
     symbol: str,
@@ -1208,107 +1313,6 @@ def get_correlations(
     }
 
 
-@router.get("/context/news")
-def get_context_news(limit: int = 20, sources: str | None = None) -> dict:
-    """Read-only crypto news headlines (CDC "adapters context", V3, opt-in)
-    -- free/keyless RSS, never wired into the decision pipeline (see
-    app/context/news.py). `sources` (comma-separated) restricts to a subset
-    of `news.FEEDS`; omit for all of them. One feed failing never empties
-    the others -- worst case this returns `[]`, never a 502."""
-    source_list = [s.strip() for s in sources.split(",") if s.strip()] if sources else None
-    items = fetch_news(limit=limit, sources=source_list)
-    return {
-        "items": [
-            {"title": i.title, "url": i.url, "source": i.source, "published_at": i.published_at}
-            for i in items
-        ]
-    }
-
-
-@router.get("/context/calendar")
-def get_context_calendar(limit: int | None = None) -> dict:
-    """Read-only macro economic calendar, this week (CDC "adapters context",
-    V3, opt-in) -- free/keyless community feed, never wired into the
-    decision pipeline (see app/context/calendar.py). Degrades to an empty
-    list on any upstream failure, never a 502."""
-    events = fetch_calendar_events(limit=limit)
-    return {
-        "events": [
-            {
-                "title": e.title, "country": e.country, "date": e.date,
-                "impact": e.impact, "forecast": e.forecast, "previous": e.previous,
-            }
-            for e in events
-        ]
-    }
-
-
-def _paper_position_dict(p) -> dict:
-    return {
-        "id": p.id,
-        "portfolio_id": p.portfolio_id,
-        "symbol": p.symbol,
-        "timeframe": p.timeframe,
-        "source": p.source,
-        "user_id": p.user_id,
-        "direction": p.direction,
-        "status": p.status,
-        "entry_time": p.entry_time.isoformat(),
-        "entry_price": p.entry_price,
-        "entry_decision": p.entry_decision,
-        "exit_time": p.exit_time.isoformat() if p.exit_time else None,
-        "exit_price": p.exit_price,
-        "exit_reason": p.exit_reason,
-        "pnl_pct": p.pnl_pct,
-        "qty": p.qty,
-        "notional": p.notional,
-        "stop_price": p.stop_price,
-        "take_profit_price": p.take_profit_price,
-        "risk_pct": p.risk_pct,
-        "risk_amount": p.risk_amount,
-        "realized_pnl": p.realized_pnl,
-        "mfe_pct": p.mfe_pct,
-        "mae_pct": p.mae_pct,
-    }
-
-
-def _paper_perf_dict(perf) -> dict:
-    return {
-        "num_closed_trades": perf.num_closed_trades,
-        "num_open_positions": perf.num_open_positions,
-        "total_return": perf.total_return,
-        "win_rate": perf.win_rate,
-        "profit_factor": perf.profit_factor if perf.profit_factor != float("inf") else None,
-        "expectancy": perf.expectancy,
-        "avg_holding_hours": perf.avg_holding_hours,
-        "best_trade_pct": perf.best_trade_pct,
-        "worst_trade_pct": perf.worst_trade_pct,
-        "initial_cash": getattr(perf, "initial_cash", None),
-        "cash": getattr(perf, "cash", None),
-        "equity": getattr(perf, "equity", None),
-        "realized_pnl": getattr(perf, "realized_pnl", None),
-        "unrealized_pnl": getattr(perf, "unrealized_pnl", None),
-        "max_drawdown": getattr(perf, "max_drawdown", None),
-        "expectancy_eur": getattr(perf, "expectancy_eur", None),
-        "valuation_mode": getattr(perf, "valuation_mode", None),
-    }
-
-
-def _portfolio_dict(p) -> dict:
-    return {
-        "id": p.id,
-        "code": p.code,
-        "label": p.label,
-        "currency": p.currency,
-        "valuation_mode": p.valuation_mode,
-        "initial_cash": p.initial_cash,
-        "cash": p.cash,
-        "realized_pnl": p.realized_pnl,
-        "is_active": p.is_active,
-        "started_at": p.started_at.isoformat(),
-        "strategy_profile": p.strategy_profile,
-    }
-
 
 @router.get("/paper/positions")
 def list_paper_positions(
@@ -1454,6 +1458,22 @@ def open_paper_position(
     stop = row.atr.suggested_stop_distance if row.atr is not None else None
     session = SessionLocal()
     try:
+        evidence_id = None
+        if row.evidence is not None:
+            from app.evidence.persistence import persist_evidence
+
+            evidence_row = persist_evidence(
+                session,
+                report=row.evidence,
+                decision=row.pipeline.decision,
+                market_snapshot={
+                    "price": row.price,
+                    "volume_type": row.candles[-1].volume_type.value if row.candles else "NONE",
+                },
+            )
+            evidence_id = evidence_row.id
+            session.flush()
+
         position = paper_engine.open_user_confirmed(
             session,
             symbol=row.symbol,
@@ -1462,12 +1482,20 @@ def open_paper_position(
             price=row.price,
             pipeline=row.pipeline,
             stop_distance=stop,
+            evidence_id=evidence_id,
+            signal_extra={
+                "evidence_id": evidence_id,
+                "context": row.context.to_dict() if row.context else None,
+            },
         )
         if position is None:
             raise HTTPException(
                 status_code=422,
                 detail="not_actionable: pipeline.decision is WATCH/NO_TRADE, nothing to open",
             )
+        if evidence_id and position.evidence_id is None:
+            position.evidence_id = evidence_id
+            session.commit()
         return _paper_position_dict(position)
     finally:
         session.close()

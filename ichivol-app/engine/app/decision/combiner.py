@@ -70,6 +70,10 @@ class DecisionResult:
     reasons: list[str] = field(default_factory=list)
     risks: list[str] = field(default_factory=list)
     invalidation: list[str] = field(default_factory=list)
+    # Explainable refusal (Evidence Engine / pipeline contradictions).
+    positive_evidence: list[str] = field(default_factory=list)
+    contradictions: list[str] = field(default_factory=list)
+    why_not: list[str] = field(default_factory=list)
 
 
 def _decision_label(direction: Direction, confidence: float) -> str:
@@ -114,6 +118,19 @@ def combine_ichimoku_rvol(
     probability = ichimoku.probability
     confidence = round(ichimoku.confidence * rvol.confidence, 4)
     decision = _decision_label(direction, confidence)
+    risks = _risks(ichimoku, rvol)
+
+    positive = list(ichimoku.reasons)
+    if rvol.metadata.get("confirmed"):
+        positive.append("rvol_confirmed")
+    contradictions = list(risks)
+    why_not: list[str] = []
+    if decision in ("WATCH", "WAIT"):
+        why_not = list(risks) if risks else ["signal_present_but_not_validated"]
+        if direction == Direction.LONG:
+            why_not = [*(why_not), "not_long_until_participation_and_structure_clear"]
+        elif direction == Direction.SHORT:
+            why_not = [*(why_not), "not_short_until_participation_and_structure_clear"]
 
     return DecisionResult(
         strategy_version=STRATEGY_VERSION,
@@ -129,6 +146,9 @@ def combine_ichimoku_rvol(
             "ichimoku_confidence": ichimoku.confidence,
         },
         reasons=[*ichimoku.reasons, *rvol.reasons],
-        risks=_risks(ichimoku, rvol),
+        risks=risks,
         invalidation=ichimoku.invalidation,
+        positive_evidence=positive,
+        contradictions=contradictions,
+        why_not=why_not,
     )

@@ -11,6 +11,7 @@ import math
 
 from app.backtest.engine import BacktestResult
 from app.backtest.metrics import Metrics
+from app.evidence.engine import evidence_report_dict
 from app.screener.service import ScreenerRow
 
 
@@ -69,15 +70,21 @@ def summary_dict(row: ScreenerRow) -> dict:
 
 
 def detail_dict(row: ScreenerRow) -> dict:
-    return {
+    body = {
         **summary_dict(row),
         "reasons": row.decision.reasons,
         "risks": row.decision.risks,
         "invalidation": row.decision.invalidation,
+        "positive_evidence": row.decision.positive_evidence,
+        "contradictions": row.decision.contradictions,
+        "why_not": row.decision.why_not,
         "agreement": row.decision.agreement,
         "weights_used": row.decision.weights_used,
         "strategy_version": row.decision.strategy_version,
         "timestamp": row.candles[-1].time,
+        "volume_type": (
+            row.candles[-1].volume_type.value if row.candles else "NONE"
+        ),
         "ichimoku": {
             "direction": row.ichimoku.direction.value,
             "confidence": row.ichimoku.confidence,
@@ -89,8 +96,34 @@ def detail_dict(row: ScreenerRow) -> dict:
             "confidence": row.rvol.confidence,
             "reasons": row.rvol.reasons,
             "metadata": row.rvol.metadata,
+            "volume_type": (
+                row.candles[-1].volume_type.value if row.candles else "NONE"
+            ),
         },
     }
+    if row.context is not None:
+        body["context"] = row.context.to_dict()
+    if row.evidence is not None:
+        # Prefer Evidence Engine explanations when richer than combiner MVP.
+        ev = evidence_report_dict(row.evidence)
+        body["evidence"] = ev
+        if ev.get("positive_evidence"):
+            body["positive_evidence"] = ev["positive_evidence"]
+        if ev.get("contradictions"):
+            body["contradictions"] = ev["contradictions"]
+        if row.pipeline.direction.value == "LONG" and ev.get("why_not_long"):
+            body["why_not"] = ev["why_not_long"]
+        elif row.pipeline.direction.value == "SHORT" and ev.get("why_not_short"):
+            body["why_not"] = ev["why_not_short"]
+        elif ev.get("why_not_long") or ev.get("why_not_short"):
+            body["why_not"] = list(
+                dict.fromkeys([*(ev.get("why_not_long") or []), *(ev.get("why_not_short") or [])])
+            )
+        if ev.get("invalidation"):
+            body["invalidation"] = list(
+                dict.fromkeys([*row.decision.invalidation, *ev["invalidation"]])
+            )
+    return body
 
 
 def metrics_dict(m: Metrics) -> dict:

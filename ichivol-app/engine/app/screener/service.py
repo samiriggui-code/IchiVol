@@ -18,6 +18,9 @@ from app.agents import ichimoku_agent, rvol_agent
 from app.agents.types import Direction, StrategyAgentOutput
 from app.decision.combiner import DecisionResult, combine_ichimoku_rvol
 from app.decision.pipeline import PipelineResult, build_pipeline
+from app.evidence.catalog import build_in_window_catalog
+from app.evidence.context import SignalContext, build_signal_context
+from app.evidence.engine import EvidenceEngine, EvidenceReport
 from app.indicators.adx import compute_adx
 from app.indicators.atr import AtrParams, AtrState, compute_atr
 from app.indicators.cvd import compute_cvd
@@ -31,8 +34,8 @@ from app.market_data import binance_futures
 from app.market_data.accumulator import fetch_with_accumulation, needs_accumulation
 from app.market_data.resolve import resolve_and_fetch
 from app.market_data.timeframes import HIGHER_TIMEFRAME
-from app.universe.catalog import default_watchlist
-
+from app.universe.catalog import default_watchlist, get_instrument
+from app.universe.types import AssetClass
 logger = logging.getLogger(__name__)
 
 _OI_PERIODS = {"15m", "1h", "4h", "1d"}
@@ -109,6 +112,10 @@ class ScreenerRow:
     broker) has a machine-readable `suggested_stop_distance` instead of
     having to parse prose. Optional only for backward-compat with call sites
     that fabricate a ScreenerRow without one (tests)."""
+    context: SignalContext | None = None
+    """Canonical SignalContext at the last bar (Evidence Engine input)."""
+    evidence: EvidenceReport | None = None
+    """Evidence pack (historical matches + explainable contradictions)."""
 
 
 def scan_symbol(
@@ -166,6 +173,40 @@ def scan_symbol(
         donchian=donchian_state,
     )
 
+    instrument = get_instrument(symbol)
+    asset_class = instrument.asset_class if instrument else AssetClass.CRYPTO
+    context = build_signal_context(
+        symbol=symbol,
+        timeframe=timeframe,
+        candles=candles,
+        provider=provider.id,
+        asset_class=asset_class,
+        ichimoku=ichimoku_output,
+        rvol=rvol_output,
+        pipeline=pipeline,
+        structure=structure_state,
+        atr=atr_state,
+    )
+    # In-window catalog for historical matching (same series, past bars only).
+    # step=3 keeps scan latency bounded on large windows.
+    catalog = build_in_window_catalog(
+        candles,
+        symbol=symbol,
+        timeframe=timeframe,
+        provider=provider.id,
+        asset_class=asset_class.value,
+        ichi_params=ichi_params,
+        rvol_params=rvol_params,
+        structure_params=structure_params,
+        atr_params=atr_params,
+        step=3,
+    )
+    evidence = EvidenceEngine(strategy_version=pipeline.strategy_version).evaluate(
+        context,
+        catalog,
+        extra_invalidation=decision.invalidation,
+    )
+
     return ScreenerRow(
         symbol=symbol,
         exchange=provider.id,
@@ -177,8 +218,9 @@ def scan_symbol(
         decision=decision,
         pipeline=pipeline,
         atr=atr_state,
+        context=context,
+        evidence=evidence,
     )
-
 
 def scan_watchlist(
     symbols: Sequence[str] = DEFAULT_WATCHLIST,
