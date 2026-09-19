@@ -2,14 +2,30 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import OperationalError
 
 from app.api import routes
+from app.db.session import engine as db_engine
 from app.indicators.ichimoku import Candle
 from app.main import app
 from app.market_data import binance, binance_futures
 from app.screener import cache as cache_module
 
 client = TestClient(app)
+
+try:
+    with db_engine.connect():
+        pass
+    DB_AVAILABLE = True
+except OperationalError:
+    DB_AVAILABLE = False
+
+# Paper routes hit the real ichivol_engine_dev Postgres (same convention as
+# tests/paper/test_engine.py). Skip when unreachable so CI/local without DB
+# still get a green suite for the pure route/shape tests above.
+requires_db = pytest.mark.skipif(
+    not DB_AVAILABLE, reason="ichivol_engine_dev Postgres not reachable"
+)
 
 
 @pytest.fixture(autouse=True)
@@ -356,6 +372,7 @@ def test_decision_endpoint_without_the_header_uses_the_operator_key(monkeypatch)
     assert all(k == "operator-key" for k in captured_keys)
 
 
+@requires_db
 def test_list_paper_positions_endpoint_shape():
     resp = client.get("/api/engine/paper/positions")
     assert resp.status_code == 200
@@ -364,6 +381,7 @@ def test_list_paper_positions_endpoint_shape():
     assert isinstance(body["positions"], list)
 
 
+@requires_db
 def test_paper_performance_endpoint_shape():
     resp = client.get("/api/engine/paper/performance")
     assert resp.status_code == 200
@@ -375,6 +393,7 @@ def test_paper_performance_endpoint_shape():
         assert field in body
 
 
+@requires_db
 def test_open_paper_position_opens_on_an_actionable_decision(monkeypatch):
     # Getting a real 5-gate pipeline to actually resolve to BUY out of a
     # synthetic candle fixture is fragile (Location/Regime routinely FAIL
@@ -432,6 +451,7 @@ def test_open_paper_position_opens_on_an_actionable_decision(monkeypatch):
         session.close()
 
 
+@requires_db
 def test_open_paper_position_accepts_rvol_and_atr_threshold_overrides(monkeypatch):
     # Feature parity with /decisions/{symbol} and /screener (2026-09-16):
     # this route previously always scanned with default thresholds, so a
@@ -473,6 +493,7 @@ def test_open_paper_position_accepts_rvol_and_atr_threshold_overrides(monkeypatc
     assert captured["atr_params"] == AtrParams()
 
 
+@requires_db
 def test_open_paper_position_accepts_a_non_crypto_symbol(monkeypatch):
     # Paper multi-classe (docs/CAHIER-DES-CHARGES.md §5 V2, lifted
     # 2026-09-16): a biquote-backed symbol (forex/métal/index/énergie) opens
@@ -518,6 +539,7 @@ def test_open_paper_position_404s_on_insufficient_history(monkeypatch):
     assert resp.status_code == 404
 
 
+@requires_db
 def test_close_paper_position_404s_for_an_unknown_id():
     resp = client.post("/api/engine/paper/positions/does-not-exist/close")
     assert resp.status_code == 404
