@@ -124,6 +124,8 @@ def sync_position(
     stop_distance: float | None = None,
     signal_extra: dict[str, Any] | None = None,
     portfolio: PaperPortfolio | None = None,
+    decision_id: str | None = None,
+    evidence_id: str | None = None,
 ) -> PaperPosition | None:
     """One symbol open/hold/close for one portfolio. Capital sizing when stop set."""
     if portfolio is None:
@@ -187,6 +189,8 @@ def sync_position(
             decision=pipeline.decision,
             stop_distance=stop_distance,
             signal=signal,
+            decision_id=decision_id,
+            evidence_id=evidence_id,
         )
         if position is not None:
             session.flush()
@@ -362,6 +366,9 @@ def open_user_confirmed(
     price: float,
     pipeline: PipelineResult,
     stop_distance: float | None = None,
+    decision_id: str | None = None,
+    evidence_id: str | None = None,
+    signal_extra: dict[str, Any] | None = None,
 ) -> PaperPosition | None:
     existing = _get_open_position(
         session, symbol=symbol, timeframe=timeframe, source="user_confirmed", user_id=user_id
@@ -382,6 +389,9 @@ def open_user_confirmed(
         price=price,
         pipeline=pipeline,
         stop_distance=stop_distance,
+        decision_id=decision_id,
+        evidence_id=evidence_id,
+        signal_extra=signal_extra,
     )
     session.commit()
     return position

@@ -68,6 +68,8 @@ def open_capital_position(
     decision: str,
     stop_distance: float,
     signal: dict[str, Any] | None = None,
+    decision_id: str | None = None,
+    evidence_id: str | None = None,
 ) -> PaperPosition | None:
     """Open a sized paper position. Returns None if risk/cash/caps block it."""
     profile = _profile(portfolio)
@@ -120,6 +122,8 @@ def open_capital_position(
         mae_pct=0.0,
         highest_price_seen=sized.entry_fill,
         lowest_price_seen=sized.entry_fill,
+        decision_id=decision_id,
+        evidence_id=evidence_id,
         created_at=now,
         updated_at=now,
     )
