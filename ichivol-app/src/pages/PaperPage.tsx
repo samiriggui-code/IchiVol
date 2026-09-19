@@ -193,12 +193,14 @@ function PositionsTable({
             <th>Symbole</th>
             <th>Sens</th>
             <th>Statut</th>
+            <th>Qty</th>
             <th>Entrée</th>
             <th>Prix</th>
             <th>Stop</th>
             <th>TP</th>
             <th>Sortie</th>
             <th>PnL</th>
+            <th>Evidence</th>
             <th>Raison</th>
             <th />
           </tr>
@@ -212,6 +214,9 @@ function PositionsTable({
               </td>
               <td>{p.direction}</td>
               <td>{p.status}</td>
+              <td className="mono muted">
+                {p.qty != null && Number.isFinite(p.qty) ? p.qty.toPrecision(4) : '—'}
+              </td>
               <td className="mono muted">
                 {new Date(p.entry_time).toLocaleString('fr-FR', {
                   day: '2-digit',
@@ -229,6 +234,19 @@ function PositionsTable({
               </td>
               <td className="mono">{p.exit_price != null ? p.exit_price.toPrecision(6) : '—'}</td>
               <td className={`mono ${tone(p.pnl_pct)}`}>{fmtPct(p.pnl_pct, 2)}</td>
+              <td>
+                {p.evidence_id || p.decision_id ? (
+                  <Link
+                    to={`/app/decisions?symbol=${encodeURIComponent(p.symbol)}`}
+                    className="paper-evidence-link"
+                    title={p.evidence_id ?? p.decision_id ?? undefined}
+                  >
+                    Voir
+                  </Link>
+                ) : (
+                  <span className="muted">—</span>
+                )}
+              </td>
               <td className="muted">{p.exit_reason ?? p.entry_decision}</td>
               <td>
                 {p.status === 'OPEN' && onClose && (
@@ -246,7 +264,7 @@ function PositionsTable({
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={11} className="muted center">
+              <td colSpan={13} className="muted center">
                 Aucune position.
               </td>
             </tr>
@@ -375,8 +393,8 @@ export function PaperPage() {
 
         {tab === 'user_confirmed' && positions.length === 0 && !loading && (
           <p className="muted paper-empty-hint">
-            Vide — sur <Link to="/app/decisions">Décisions</Link>, confirme une ligne
-            actionable (BUY/SELL portes).
+            Vide — sur <Link to="/app/decisions">Décisions</Link>, ouvre le détail puis confirme
+            l’ordre paper proposé (BUY/SELL portes).
           </p>
         )}
 

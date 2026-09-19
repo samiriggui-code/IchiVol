@@ -528,6 +528,17 @@ def get_decision(
             for c in row.candles
         ]
         payload["provider"] = row.exchange
+
+    # Paper order intent (suggest before act) — never a live order.
+    session = SessionLocal()
+    try:
+        from app.paper.intent import propose_order_intent
+
+        payload["order_intent"] = propose_order_intent(session, row).to_dict()
+    except Exception:
+        payload["order_intent"] = None
+    finally:
+        session.close()
     return payload
 
 
@@ -1419,6 +1430,48 @@ def get_shadow_positions(
             limit=min(limit, 200),
         )
         return {"positions": [shadow_to_dict(r) for r in rows]}
+    finally:
+        session.close()
+
+
+@router.get("/paper/propose")
+def propose_paper_trade(
+    symbol: str,
+    timeframe: str = "1h",
+    portfolio_code: str = "ICHIVOL_BASELINE_V1",
+    rvol_low: float | None = None,
+    rvol_significant: float | None = None,
+    rvol_strong: float | None = None,
+    rvol_anomaly: float | None = None,
+    atr_dead_percentile: float | None = None,
+    atr_extreme_percentile: float | None = None,
+    atr_stop_multiplier: float | None = None,
+) -> dict:
+    """Dry-run paper order intent (qty/stop/TP) — read-only, never opens a position.
+
+    Front flow: propose → user confirms → POST /paper/positions.
+    """
+    from app.paper.intent import propose_order_intent
+
+    rvol_params = _rvol_params_override(rvol_low, rvol_significant, rvol_strong, rvol_anomaly)
+    atr_params = _atr_params_override(atr_dead_percentile, atr_extreme_percentile, atr_stop_multiplier)
+    try:
+        row = scan_symbol(
+            symbol.upper(), timeframe=timeframe, rvol_params=rvol_params, atr_params=atr_params
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    session = SessionLocal()
+    try:
+        intent = propose_order_intent(session, row, portfolio_code=portfolio_code)
+        return {
+            "intent": intent.to_dict(),
+            "pipeline": {
+                "decision": row.pipeline.decision,
+                "direction": row.pipeline.direction.value,
+            },
+        }
     finally:
         session.close()
 

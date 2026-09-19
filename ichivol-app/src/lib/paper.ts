@@ -29,6 +29,38 @@ export interface PaperPosition {
   realized_pnl?: number | null
   mfe_pct?: number | null
   mae_pct?: number | null
+  /** Lien Evidence Engine / décision source */
+  decision_id?: string | null
+  evidence_id?: string | null
+  entry_signal?: Record<string, unknown> | null
+}
+
+export interface OrderIntent {
+  actionable: boolean
+  reason: string
+  symbol: string
+  timeframe: string
+  pipeline_decision: string
+  direction: string | null
+  price: number
+  stop_distance: number | null
+  qty: number | null
+  notional: number | null
+  entry_fill: number | null
+  stop_price: number | null
+  take_profit_price: number | null
+  risk_pct: number | null
+  risk_amount: number | null
+  portfolio_code: string
+  equity: number | null
+  cash: number | null
+  volume_type?: string | null
+  evidence_summary?: {
+    sample_size: number
+    sample_quality: string
+    status: string
+    calibration_note?: string
+  } | null
 }
 
 export interface PaperPerformance {
@@ -116,6 +148,20 @@ export async function openPaperPosition(
   })
   if (!res.ok) throw new Error(await parseError(res))
   return res.json() as Promise<PaperPosition>
+}
+
+/** Propose un ordre paper (qty/stop/TP) sans l’ouvrir. */
+export async function proposePaperTrade(
+  symbol: string,
+  timeframe = '1h',
+): Promise<OrderIntent> {
+  const params = new URLSearchParams({ symbol, timeframe })
+  const res = await fetch(`/api/engine/paper/propose?${params}`, {
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+  const body = (await res.json()) as { intent: OrderIntent }
+  return body.intent
 }
 
 export async function closePaperPosition(id: string): Promise<PaperPosition> {

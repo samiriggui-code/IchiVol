@@ -1960,6 +1960,81 @@ button, select { font: inherit; color: inherit; }
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
+
+/* FRONT — propose → confirm paper (Decisions sheet) */
+.propose-paper-panel {
+  margin: 0.5rem 0;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  background: var(--secondary);
+}
+.propose-paper-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+.propose-paper-head .subhead { margin: 0; }
+.propose-badge {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--border);
+}
+.propose-badge.is-ok {
+  color: var(--bull);
+  background: color-mix(in srgb, var(--bull) 12%, transparent);
+}
+.propose-badge.is-block {
+  color: var(--bear);
+  background: color-mix(in srgb, var(--bear) 12%, transparent);
+}
+.propose-reason {
+  margin: 0 0 0.4rem;
+  font-size: 0.7rem;
+}
+.propose-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.35rem 0.5rem;
+  margin: 0 0 0.4rem;
+}
+.propose-stats dt {
+  margin: 0;
+  font-size: 0.58rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.propose-stats dd {
+  margin: 0.1rem 0 0;
+  font-size: 0.72rem;
+}
+.propose-evidence-note {
+  margin: 0 0 0.35rem;
+  font-size: 0.62rem;
+}
+.propose-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.propose-paper-loading {
+  margin: 0.4rem 0;
+  font-size: 0.7rem;
+}
+.paper-evidence-link {
+  font-size: 0.68rem;
+}
+@media (max-width: 720px) {
+  .propose-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 .journal-tabs { gap: 0.35rem; }
 .journal-actions {
   display: flex;

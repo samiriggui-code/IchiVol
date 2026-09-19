@@ -1,4 +1,5 @@
 import { appendEngineThresholds, loadEngineThresholds } from './engineThresholds'
+import type { OrderIntent } from './paper'
 
 export type DecisionLabel = 'STRONG_BUY' | 'BUY' | 'WATCH' | 'WAIT' | 'SELL' | 'STRONG_SELL'
 export type AgentDirection = 'LONG' | 'SHORT' | 'NEUTRAL'
@@ -95,6 +96,8 @@ export interface DecisionDetail extends ScreenerDecisionRow {
   pipeline?: DecisionPipelinePayload
   evidence?: EvidencePack
   context?: Record<string, unknown>
+  /** Intent paper (qty/stop/TP) — suggest before act */
+  order_intent?: OrderIntent | null
 }
 
 async function parseError(res: Response): Promise<string> {

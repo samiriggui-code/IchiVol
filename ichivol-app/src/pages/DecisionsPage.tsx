@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
 import { GateMatrix } from '../components/GateMatrix'
+import { ProposePaperTradePanel } from '../components/ProposePaperTradePanel'
 import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
 import { VerdictBadge } from '../components/VerdictBadge'
 import { labelDecision, labelDirection, labelReason } from '../lib/decisionLabels'
@@ -22,7 +23,7 @@ import {
   type EngineInstrument,
 } from '../lib/universe'
 import { confirmUserDecision } from '../lib/userDecisions'
-import { openPaperPosition } from '../lib/paper'
+import { openPaperPosition, proposePaperTrade, type OrderIntent } from '../lib/paper'
 import { decisionPayloadFromDetail } from '../lib/agent'
 import { useCopilotNav } from '../lib/useCopilotNav'
 
@@ -163,6 +164,9 @@ export function DecisionsPage() {
   const [listView, setListView] = useState<ListView>('liste')
   const [paperBusySymbol, setPaperBusySymbol] = useState<string | null>(null)
   const [paperMsg, setPaperMsg] = useState<string | null>(null)
+  const [paperConfirming, setPaperConfirming] = useState(false)
+  const [intentOverride, setIntentOverride] = useState<OrderIntent | null>(null)
+  const [intentLoading, setIntentLoading] = useState(false)
   const { explainDecision, compareGates } = useCopilotNav()
 
   const byId = useMemo(() => {
@@ -270,23 +274,49 @@ export function DecisionsPage() {
         confidence: detail.confidence,
       })
       const journalNote = journalRow.deduped ? ' (déjà au journal, mis à jour)' : ''
-      let paperNote = ''
-      try {
-        await openPaperPosition(detail.symbol, detail.timeframe)
-        paperNote = ' · position paper ouverte'
-      } catch (paperErr: unknown) {
-        const msg = paperErr instanceof Error ? paperErr.message : ''
-        if (msg.includes('not_actionable')) {
-          paperNote = ' · paper skip (WATCH/NO_TRADE)'
-        } else if (msg) {
-          paperNote = ` · paper: ${msg}`
-        }
-      }
-      setConfirmMsg(`ok${journalNote}${paperNote}`)
+      setConfirmMsg(`ok${journalNote}`)
     } catch (err: unknown) {
       setConfirmMsg(err instanceof Error ? err.message : 'Échec enregistrement')
     } finally {
       setConfirming(false)
+    }
+  }
+
+  async function onConfirmPaperOrder() {
+    if (!detail) return
+    setPaperConfirming(true)
+    setConfirmMsg(null)
+    try {
+      await confirmUserDecision({
+        symbol: detail.symbol,
+        interval: detail.timeframe,
+        bias: detail.direction,
+        rvol: detail.rvol ?? 0,
+        signalKind: detail.decision,
+        gateDecision: detail.pipeline?.decision,
+        confidence: detail.confidence,
+      })
+      const pos = await openPaperPosition(detail.symbol, detail.timeframe)
+      setConfirmMsg(
+        `ok · paper ${pos.direction} qty ${pos.qty != null ? pos.qty.toPrecision(4) : '—'}`,
+      )
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Échec paper'
+      setConfirmMsg(msg.includes('not_actionable') ? 'paper skip (WATCH/NO_TRADE)' : msg)
+    } finally {
+      setPaperConfirming(false)
+    }
+  }
+
+  async function onRefreshIntent() {
+    if (!detail) return
+    setIntentLoading(true)
+    try {
+      setIntentOverride(await proposePaperTrade(detail.symbol, detail.timeframe))
+    } catch {
+      setIntentOverride(null)
+    } finally {
+      setIntentLoading(false)
     }
   }
 
@@ -310,6 +340,8 @@ export function DecisionsPage() {
     setDetail(null)
     setDetailError(null)
     setSymbolQuery('')
+    setIntentOverride(null)
+    setConfirmMsg(null)
   }
 
   useEffect(() => {
@@ -326,6 +358,8 @@ export function DecisionsPage() {
     setDetail(null)
     setDetailError(null)
     setDetailLoading(false)
+    setIntentOverride(null)
+    setConfirmMsg(null)
   }
 
   function onSelect(symbol: string) {
@@ -337,6 +371,8 @@ export function DecisionsPage() {
     setDetail(null)
     setDetailError(null)
     setDetailLoading(true)
+    setIntentOverride(null)
+    setConfirmMsg(null)
     getDecisionDetail(symbol)
       .then(setDetail)
       .catch((err: unknown) =>
@@ -352,6 +388,8 @@ export function DecisionsPage() {
     setDetail(null)
     setDetailError(null)
     setDetailLoading(true)
+    setIntentOverride(null)
+    setConfirmMsg(null)
     getDecisionDetail(fromNotif)
       .then(setDetail)
       .catch((err: unknown) =>
@@ -371,6 +409,7 @@ export function DecisionsPage() {
   }
 
   const colCount = sheetOpen ? 3 : 6
+  const activeIntent: OrderIntent | null = intentOverride ?? detail?.order_intent ?? null
 
   return (
     <div className={`decisions-page${sheetOpen ? ' is-sheet-open' : ''}`}>
@@ -674,6 +713,14 @@ export function DecisionsPage() {
                 <div className="decision-detail-body">
                   <SignalEvidenceCard detail={detail} />
 
+                  <ProposePaperTradePanel
+                    intent={activeIntent}
+                    loading={intentLoading || detailLoading}
+                    confirming={paperConfirming}
+                    onConfirm={() => void onConfirmPaperOrder()}
+                    onRefresh={() => void onRefreshIntent()}
+                  />
+
                   <div className="decision-confirm-row">
                     <button
                       type="button"
@@ -700,7 +747,7 @@ export function DecisionsPage() {
                       Écart portes
                     </button>
                     <span className="muted">
-                      Snapshot local — pas un ordre broker.
+                      Journal ≠ paper — snapshot local seulement.
                     </span>
                     {confirmMsg?.startsWith('ok') ? (
                       <span className="panel-meta">
