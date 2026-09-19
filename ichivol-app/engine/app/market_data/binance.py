@@ -17,8 +17,11 @@ from __future__ import annotations
 import httpx
 
 from app.indicators.ichimoku import Candle
+from app.market_data.volume_semantics import VolumeType
 
 BASE_URL = "https://data-api.binance.vision"
+
+VOLUME_TYPE = VolumeType.EXCHANGE_VOLUME
 
 
 def fetch_klines(symbol: str, interval: str, limit: int = 300) -> list[Candle]:
@@ -38,6 +41,7 @@ def fetch_klines(symbol: str, interval: str, limit: int = 300) -> list[Candle]:
             close=float(row[4]),
             volume=float(row[5]),
             taker_buy_volume=float(row[9]) if len(row) > 9 else None,
+            volume_type=VOLUME_TYPE,
         )
         for row in rows
     ]
@@ -51,6 +55,7 @@ class BinanceSpotProvider:
     ...)`), whether they go through this class or call it directly."""
 
     id = "binance"
+    volume_type = VOLUME_TYPE
 
     def fetch_ohlcv(self, provider_symbol: str, timeframe: str, limit: int = 300) -> list[Candle]:
         return fetch_klines(provider_symbol, timeframe, limit)

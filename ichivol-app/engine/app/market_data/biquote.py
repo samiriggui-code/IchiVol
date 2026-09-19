@@ -35,8 +35,11 @@ from datetime import datetime, timezone
 import httpx
 
 from app.indicators.ichimoku import Candle
+from app.market_data.volume_semantics import VolumeType
 
 BASE_URL = "https://biquote.io/api"
+
+VOLUME_TYPE = VolumeType.TICK_VOLUME
 
 _SUPPORTED_TIMEFRAMES = {"15m", "1h", "4h", "1d"}
 
@@ -97,6 +100,7 @@ def fetch_ohlc(provider_symbol: str, timeframe: str, limit: int = 300) -> list[C
             low=float(bar["low"]),
             close=float(bar["close"]),
             volume=float(bar.get("tickVolume") or 0.0),
+            volume_type=VOLUME_TYPE,
         )
         for bar in bars
     ]
@@ -109,6 +113,7 @@ def fetch_ohlc(provider_symbol: str, timeframe: str, limit: int = 300) -> list[C
 
 class BiquoteProvider:
     id = "biquote"
+    volume_type = VOLUME_TYPE
 
     def fetch_ohlcv(self, provider_symbol: str, timeframe: str, limit: int = 300) -> list[Candle]:
         return fetch_ohlc(provider_symbol, timeframe, limit)

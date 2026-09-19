@@ -37,6 +37,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, Sequence
 
+from app.market_data.volume_semantics import VolumeType
+
 
 @dataclass(frozen=True)
 class Candle:
@@ -52,6 +54,10 @@ class Candle:
     call -- see app/market_data/binance.py). `None` everywhere else
     (Twelve Data, biquote); app/indicators/cvd.py degrades gracefully when
     so, same convention as MTF being optional."""
+    volume_type: VolumeType = VolumeType.NONE
+    """Semantic of `volume` for this bar. Providers must set this; default
+    NONE means "unlabeled / unusable" so RVOL consumers never silently
+    treat tick counts as exchange volume."""
 
 
 @dataclass(frozen=True)

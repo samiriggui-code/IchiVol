@@ -31,6 +31,7 @@ import httpx
 
 from app.config import settings
 from app.indicators.ichimoku import Candle
+from app.market_data.volume_semantics import VolumeType
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +160,9 @@ def fetch_time_series(provider_symbol: str, timeframe: str, limit: int = 300) ->
     for row in values:
         vol_raw = row.get("volume")
         volume = float(vol_raw) if vol_raw not in (None, "", "null") else 0.0
+        # Equities usually carry reported exchange volume; FX/indices often
+        # collapse to 0 → NONE so RVOL is never presented as exchange-like.
+        vol_type = VolumeType.REPORTED_VOLUME if volume > 0.0 else VolumeType.NONE
         candles.append(
             Candle(
                 time=_parse_time(str(row["datetime"])),
@@ -167,6 +171,7 @@ def fetch_time_series(provider_symbol: str, timeframe: str, limit: int = 300) ->
                 low=float(row["low"]),
                 close=float(row["close"]),
                 volume=volume,
+                volume_type=vol_type,
             )
         )
 
@@ -177,6 +182,7 @@ def fetch_time_series(provider_symbol: str, timeframe: str, limit: int = 300) ->
 
 class TwelveDataProvider:
     id = "twelve_data"
+    volume_type = VolumeType.REPORTED_VOLUME
 
     def fetch_ohlcv(self, provider_symbol: str, timeframe: str, limit: int = 300) -> list[Candle]:
         return fetch_time_series(provider_symbol, timeframe, limit)
