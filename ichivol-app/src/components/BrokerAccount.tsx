@@ -6,7 +6,7 @@ function tone(v: number | null | undefined): string {
   return v > 0 ? 'up' : 'down'
 }
 
-/** Cartes investissement — une par position ouverte. */
+/** Cartes investissement compactes — l’essentiel, le détail est dans la fiche. */
 export function InvestmentCards({
   overview,
   onSelect,
@@ -19,12 +19,11 @@ export function InvestmentCards({
   closingId?: string | null
 }) {
   const open = overview.positions.filter((p) => p.status === 'OPEN')
-  const equity = overview.account.equity || 1
 
   if (open.length === 0) {
     return (
-      <p className="muted">
-        Aucun investissement en cours — {eur(overview.account.cash)} libres sur le compte.
+      <p className="muted synthese-empty">
+        Aucun investissement — {eur(overview.account.cash)} libres.
       </p>
     )
   }
@@ -32,57 +31,32 @@ export function InvestmentCards({
   return (
     <div className="invest-cards">
       {open.map((p) => {
-        const value =
-          p.current_price != null && p.qty != null ? p.qty * p.current_price : p.notional
-        const share = value != null ? (value / equity) * 100 : null
-        const dir = directionWords(p.direction)
         return (
-          <article key={p.id} className="invest-card">
+          <article key={p.id} className="invest-card invest-card--slim">
             <header className="invest-card-head">
-              <div>
-                <strong className="invest-card-asset">{assetName(p.symbol)}</strong>
-                <span className="muted"> · {p.timeframe}</span>
-              </div>
-              <span className={`invest-card-dir is-${p.direction.toLowerCase()}`}>{dir.title}</span>
+              <strong className="invest-card-asset">{assetName(p.symbol)}</strong>
+              <span className={`invest-card-dir is-${p.direction.toLowerCase()}`}>
+                {p.direction === 'LONG' ? 'Long' : 'Short'}
+              </span>
             </header>
-            <p className="invest-card-invested">
-              <span className="context-label">Somme investie</span>
-              <strong>{eur(p.notional)}</strong>
-            </p>
-            <dl className="invest-card-grid">
+            <div className="invest-card-slim-row">
               <div>
-                <dt>Valeur actuelle</dt>
-                <dd>{eur(value)}</dd>
+                <span className="context-label">Investi</span>
+                <strong>{eur(p.notional)}</strong>
               </div>
               <div>
-                <dt>Gain / perte</dt>
-                <dd className={tone(p.unrealized_pnl)}>
+                <span className="context-label">P&amp;L</span>
+                <strong className={tone(p.unrealized_pnl)}>
                   {signedEur(p.unrealized_pnl)}
-                  {p.unrealized_pct != null && <small> · {pct(p.unrealized_pct, 2)}</small>}
-                </dd>
+                  {p.unrealized_pct != null && (
+                    <small className="muted"> {pct(p.unrealized_pct, 1)}</small>
+                  )}
+                </strong>
               </div>
-              <div>
-                <dt>Part du compte</dt>
-                <dd>{share != null ? `${share.toFixed(1)} %` : '—'}</dd>
-              </div>
-              <div>
-                <dt>Entrée → actuel</dt>
-                <dd className="mono">
-                  {price(p.entry_price)} → {price(p.current_price)}
-                </dd>
-              </div>
-              <div>
-                <dt>Stop</dt>
-                <dd className="mono down">{price(p.stop_price)}</dd>
-              </div>
-              <div>
-                <dt>Objectif</dt>
-                <dd className="mono up">{price(p.take_profit_price)}</dd>
-              </div>
-            </dl>
+            </div>
             <footer className="invest-card-actions">
               <button type="button" className="ghost" onClick={() => onSelect(p)}>
-                Voir la fiche
+                Fiche
               </button>
               {onClose && (
                 <button
@@ -102,57 +76,40 @@ export function InvestmentCards({
   )
 }
 
-/** Cartes compte uniquement — pas de graphique. */
+/** Bandeau compte compact — une ligne, pas de pavé. */
 export function BrokerAccount({ overview }: { overview: PaperOverview }) {
   const a = overview.account
   const totalPct = a.initial_cash ? a.total_pnl / a.initial_cash : null
-  const legacy = overview.positions.filter((p) => p.status === 'OPEN' && p.qty == null).length
-  const unpriced = a.open_positions - a.priced_positions
 
   return (
-    <div className="broker-account">
-      <div className="broker-equity-row">
-        <div className="broker-equity">
-          <span className="context-label">Valeur du portefeuille</span>
+    <div className="broker-account broker-account--slim">
+      <div className="broker-slim">
+        <div className="broker-slim-equity">
+          <span className="context-label">Portefeuille</span>
           <strong className="broker-equity-value">{eur(a.equity)}</strong>
           <span className={`broker-equity-delta ${tone(a.total_pnl)}`}>
-            {signedEur(a.total_pnl)} ({pct(totalPct, 2)}) depuis le départ ({eur(a.initial_cash, 0)})
+            {signedEur(a.total_pnl)} · {pct(totalPct, 2)}
           </span>
         </div>
-        <div className="paper-perf-grid broker-equity-stats">
-          <div className="context-card">
+        <div className="broker-slim-stats">
+          <div>
             <span className="context-label">Libre</span>
-            <strong className="context-value">{eur(a.cash)}</strong>
+            <strong>{eur(a.cash)}</strong>
           </div>
-          <div className="context-card">
+          <div>
             <span className="context-label">Investi</span>
-            <strong className="context-value">{eur(a.invested)}</strong>
+            <strong>{eur(a.invested)}</strong>
           </div>
-          <div className="context-card">
-            <span className="context-label">En cours</span>
-            <strong className={`context-value ${tone(a.unrealized_pnl)}`}>
-              {signedEur(a.unrealized_pnl)}
-            </strong>
+          <div>
+            <span className="context-label">Latent</span>
+            <strong className={tone(a.unrealized_pnl)}>{signedEur(a.unrealized_pnl)}</strong>
           </div>
-          <div className="context-card">
+          <div>
             <span className="context-label">Encaissé</span>
-            <strong className={`context-value ${tone(a.realized_pnl)}`}>
-              {signedEur(a.realized_pnl)}
-            </strong>
+            <strong className={tone(a.realized_pnl)}>{signedEur(a.realized_pnl)}</strong>
           </div>
         </div>
       </div>
-
-      {legacy > 0 && (
-        <p className="muted paper-perf-note">
-          {legacy} position(s) legacy sans montant investi (€).
-        </p>
-      )}
-      {unpriced > 0 && (
-        <p className="muted paper-perf-note">
-          Prix actuel indisponible pour {unpriced} position(s).
-        </p>
-      )}
     </div>
   )
 }

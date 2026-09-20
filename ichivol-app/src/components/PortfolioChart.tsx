@@ -3,27 +3,18 @@ import {
   AreaSeries,
   ColorType,
   createChart,
-  createSeriesMarkers,
   LineSeries,
   LineStyle,
   type IChartApi,
   type ISeriesApi,
   type MouseEventParams,
-  type SeriesMarker,
   type Time,
   type UTCTimestamp,
 } from 'lightweight-charts'
 import { readChartColors, type ChartColors } from '../lib/chartColors'
 import type { PaperOrderRow, PaperOverviewPosition } from '../lib/paper'
 import { THEME_CHANGE_EVENT } from '../lib/theme'
-import {
-  assetName,
-  directionWords,
-  eur,
-  exitReasonLabel,
-  price,
-  signedEur,
-} from '../lib/tradeStory'
+import { assetName, eur, signedEur } from '../lib/tradeStory'
 
 type Point = { t: string; equity: number }
 
@@ -71,15 +62,6 @@ function fmtWhen(unix: number): string {
   })
 }
 
-function acquisitionWhy(o: PaperOrderRow): string {
-  if (o.reason === 'open') {
-    return o.side === 'BUY'
-      ? 'Ouverture longue — signal jugé assez fort pour entrer'
-      : 'Ouverture short — pari à la baisse validé'
-  }
-  return exitReasonLabel(o.reason)
-}
-
 function sampleSteps(steps: { t: number; v: number }[], t: number): number {
   let v = 0
   for (const s of steps) {
@@ -104,12 +86,10 @@ function downsample(
     .map(([t, value]) => ({ time: t as UTCTimestamp, value }))
 }
 
-export type PortfolioAsset = {
+type AssetRow = {
   symbol: string
   label: string
   color: string
-  invested: number
-  opens: PaperOrderRow[]
   line: { time: UTCTimestamp; value: number }[]
 }
 
@@ -117,44 +97,33 @@ type Hover = {
   time: number
   equity: number
   vsInitial: number
-  events: PaperOrderRow[]
   assets: { symbol: string; label: string; color: string; invested: number }[]
 }
 
 type LayerVis = Record<string, boolean>
 
-/**
- * Graphique style Marché (même chart-wrap / legend / host) :
- * courbe capital + évolution des sommes investies par actif acquis.
- */
+/** Courbe capital + évolution des sommes investies — sans marqueurs ni panneau latéral. */
 export function PortfolioChart({
   points,
   initial,
   orders = [],
   positions = [],
   range,
-  focusSymbol = null,
-  onAssetsChange,
 }: {
   points: Point[]
   initial: number
   orders?: PaperOrderRow[]
   positions?: PaperOverviewPosition[]
   range: PortfolioRange
-  /** Actif mis en avant (ligne plus épaisse) — null = capital. */
-  focusSymbol?: string | null
-  onAssetsChange?: (assets: PortfolioAsset[]) => void
 }) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const capitalRef = useRef<ISeriesApi<'Area'> | null>(null)
   const assetSeriesRef = useRef<Map<string, ISeriesApi<'Line'>>>(new Map())
-  const markersApiRef = useRef<ReturnType<typeof createSeriesMarkers<Time>> | null>(null)
   const startLineDone = useRef(false)
   const hoverMap = useRef<Map<number, Hover>>(new Map())
   const layersRef = useRef<LayerVis>({ capital: true })
-  const focusRef = useRef<string | null>(focusSymbol)
   const colorsRef = useRef<ChartColors>(readChartColors())
 
   const [colors, setColors] = useState<ChartColors>(() => readChartColors())
@@ -165,8 +134,6 @@ export function PortfolioChart({
     y: number
     point: Hover | null
   }>({ visible: false, x: 0, y: 0, point: null })
-
-  focusRef.current = focusSymbol
 
   const model = useMemo(() => {
     const equityRaw = points
@@ -181,28 +148,23 @@ export function PortfolioChart({
 
     const bucket = PORTFOLIO_RANGES.find((r) => r.id === range)?.bucketSec ?? 86400
     let capital = downsample(equityRaw, bucket)
-    // Si le bucket écrase tout en 1 point, garder le raw
     if (capital.length < 2 && equityRaw.length >= 2) {
       capital = equityRaw.map((p) => ({ time: p.time as UTCTimestamp, value: p.equity }))
     }
 
     const sortedOrders = [...orders].sort((a, b) => Date.parse(a.time) - Date.parse(b.time))
-    const bySym = new Map<
-      string,
-      { invested: number; steps: { t: number; v: number }[]; opens: PaperOrderRow[] }
-    >()
+    const bySym = new Map<string, { invested: number; steps: { t: number; v: number }[] }>()
 
     for (const o of sortedOrders) {
       const u = toUnix(o.time)
       if (u == null) continue
       let row = bySym.get(o.symbol)
       if (!row) {
-        row = { invested: 0, steps: [{ t: u - 1, v: 0 }], opens: [] }
+        row = { invested: 0, steps: [{ t: u - 1, v: 0 }] }
         bySym.set(o.symbol, row)
       }
       if (o.reason === 'open') {
         row.invested += Math.abs(o.notional || 0)
-        row.opens.push(o)
       } else {
         row.invested = Math.max(0, row.invested - Math.abs(o.notional || 0))
       }
@@ -218,25 +180,22 @@ export function PortfolioChart({
           { t: u - 1, v: 0 },
           { t: u, v: Math.abs(p.notional ?? 0) },
         ],
-        opens: [],
       })
     }
 
     const times = capital.map((p) => Number(p.time))
-    const assets: PortfolioAsset[] = [...bySym.entries()]
+    const assets: AssetRow[] = [...bySym.entries()]
       .map(([symbol, row]) => ({
         symbol,
         label: assetName(symbol),
         color: colorForSymbol(symbol),
-        invested: row.invested,
-        opens: row.opens,
         line: times.map((t) => ({
           time: t as UTCTimestamp,
           value: sampleSteps(row.steps, t),
         })),
       }))
-      .filter((a) => a.line.some((p) => p.value > 0) || a.opens.length > 0 || a.invested > 0)
-      .sort((a, b) => b.invested - a.invested || a.label.localeCompare(b.label))
+      .filter((a) => a.line.some((p) => p.value > 0))
+      .sort((a, b) => a.label.localeCompare(b.label))
 
     const map = new Map<number, Hover>()
     for (const c of capital) {
@@ -245,7 +204,6 @@ export function PortfolioChart({
         time: t,
         equity: c.value,
         vsInitial: c.value - initial,
-        events: [],
         assets: assets.map((a) => ({
           symbol: a.symbol,
           label: a.label,
@@ -258,38 +216,13 @@ export function PortfolioChart({
       })
     }
 
-    for (const o of sortedOrders) {
-      const u = toUnix(o.time)
-      if (u == null || map.size === 0) continue
-      let best: number | null = null
-      let bestD = Infinity
-      for (const t of map.keys()) {
-        const d = Math.abs(t - u)
-        if (d < bestD) {
-          bestD = d
-          best = t
-        }
-      }
-      if (best != null && bestD <= bucket * 2) {
-        map.get(best)!.events.push(o)
-      }
-    }
-
-    const last = capital.length > 0 ? capital[capital.length - 1].value : initial
-    return { capital, assets, map, last, nRaw: equityRaw.length }
+    return { capital, assets, map, nRaw: equityRaw.length }
   }, [points, initial, orders, positions, range])
 
   useEffect(() => {
-    onAssetsChange?.(model.assets)
-  }, [model.assets, onAssetsChange])
-
-  // Init layer keys when assets appear
-  useEffect(() => {
     setLayers((prev) => {
       const next: LayerVis = { capital: prev.capital !== false }
-      for (const a of model.assets) {
-        next[a.symbol] = prev[a.symbol] !== false
-      }
+      for (const a of model.assets) next[a.symbol] = prev[a.symbol] !== false
       layersRef.current = next
       return next
     })
@@ -299,7 +232,6 @@ export function PortfolioChart({
     layersRef.current = layers
   }, [layers])
 
-  // Mount chart once (like PriceChart)
   useEffect(() => {
     const el = hostRef.current
     if (!el) return
@@ -325,16 +257,16 @@ export function PortfolioChart({
       },
       crosshair: {
         mode: 1,
-        vertLine: { color: `${initialColors.muted}73`, labelBackgroundColor: initialColors.background },
-        horzLine: { color: `${initialColors.muted}73`, labelBackgroundColor: initialColors.background },
+        vertLine: { color: `${initialColors.muted}55`, labelBackgroundColor: initialColors.background },
+        horzLine: { color: `${initialColors.muted}55`, labelBackgroundColor: initialColors.background },
       },
     })
 
     const capital = chart.addSeries(AreaSeries, {
-      lineWidth: 3,
+      lineWidth: 2,
       lineColor: initialColors.bull || '#16a34a',
-      topColor: `${initialColors.bull || '#16a34a'}55`,
-      bottomColor: `${initialColors.bull || '#16a34a'}08`,
+      topColor: `${initialColors.bull || '#16a34a'}40`,
+      bottomColor: `${initialColors.bull || '#16a34a'}05`,
       lastValueVisible: true,
       priceLineVisible: false,
       priceScaleId: 'right',
@@ -342,7 +274,6 @@ export function PortfolioChart({
     })
     capital.priceScale().applyOptions({ scaleMargins: { top: 0.08, bottom: 0.12 } })
 
-    markersApiRef.current = createSeriesMarkers(capital, [])
     chartRef.current = chart
     capitalRef.current = capital
 
@@ -383,11 +314,11 @@ export function PortfolioChart({
         return
       }
       const wrap = wrapRef.current
-      const tipW = 280
-      const tipH = 260
-      let x = param.point.x + 16
-      let y = param.point.y + 16
-      if (x + tipW > wrap.clientWidth - 8) x = param.point.x - tipW - 12
+      const tipW = 220
+      const tipH = 160
+      let x = param.point.x + 14
+      let y = param.point.y + 14
+      if (x + tipW > wrap.clientWidth - 8) x = param.point.x - tipW - 10
       if (y + tipH > wrap.clientHeight - 8) y = Math.max(8, param.point.y - tipH - 8)
       setTip({ visible: true, x: Math.max(8, x), y: Math.max(8, y), point })
     }
@@ -406,8 +337,8 @@ export function PortfolioChart({
       })
       capital.applyOptions({
         lineColor: next.bull || '#16a34a',
-        topColor: `${next.bull || '#16a34a'}55`,
-        bottomColor: `${next.bull || '#16a34a'}08`,
+        topColor: `${next.bull || '#16a34a'}40`,
+        bottomColor: `${next.bull || '#16a34a'}05`,
       })
     }
     window.addEventListener(THEME_CHANGE_EVENT, onTheme)
@@ -416,17 +347,14 @@ export function PortfolioChart({
       window.removeEventListener(THEME_CHANGE_EVENT, onTheme)
       chart.unsubscribeCrosshairMove(onMove)
       ro.disconnect()
-      markersApiRef.current?.setMarkers([])
       chart.remove()
       chartRef.current = null
       capitalRef.current = null
       assetSeriesRef.current.clear()
-      markersApiRef.current = null
       startLineDone.current = false
     }
   }, [])
 
-  // Push data whenever model changes
   useEffect(() => {
     const chart = chartRef.current
     const capital = capitalRef.current
@@ -435,7 +363,6 @@ export function PortfolioChart({
     if (model.capital.length < 2) {
       capital.setData([])
       for (const s of assetSeriesRef.current.values()) s.setData([])
-      markersApiRef.current?.setMarkers([])
       return
     }
 
@@ -444,11 +371,11 @@ export function PortfolioChart({
     if (!startLineDone.current) {
       capital.createPriceLine({
         price: initial,
-        color: colorsRef.current.muted || '#888',
+        color: `${colorsRef.current.muted || '#888'}99`,
         lineWidth: 1,
         lineStyle: LineStyle.Dashed,
-        axisLabelVisible: true,
-        title: 'Départ',
+        axisLabelVisible: false,
+        title: '',
       })
       startLineDone.current = true
     }
@@ -468,79 +395,38 @@ export function PortfolioChart({
       if (!series) {
         series = chart.addSeries(LineSeries, {
           color: a.color,
-          lineWidth: focusRef.current === a.symbol ? 3 : 2,
-          lastValueVisible: true,
+          lineWidth: 2,
+          lastValueVisible: false,
           priceLineVisible: false,
+          crosshairMarkerVisible: false,
           priceScaleId: 'left',
-          title: a.label,
+          title: '',
         })
-        series.priceScale().applyOptions({ scaleMargins: { top: 0.15, bottom: 0.05 } })
+        series.priceScale().applyOptions({ scaleMargins: { top: 0.2, bottom: 0.05 } })
         assetSeriesRef.current.set(a.symbol, series)
       }
-      const on = layersRef.current[a.symbol] !== false
       series.applyOptions({
-        visible: on,
+        visible: layersRef.current[a.symbol] !== false,
         color: a.color,
-        lineWidth: focusRef.current === a.symbol ? 3 : 2,
-        title: a.label,
       })
       series.setData(a.line)
     }
 
-    const markers: SeriesMarker<Time>[] = []
-    for (const a of model.assets) {
-      if (layersRef.current[a.symbol] === false) continue
-      if (focusRef.current && focusRef.current !== a.symbol) continue
-      for (const o of a.opens) {
-        const u = toUnix(o.time)
-        if (u == null) continue
-        markers.push({
-          time: u as UTCTimestamp,
-          position: 'belowBar',
-          color: a.color,
-          shape: 'arrowUp',
-          text: a.label.slice(0, 6),
-        })
-      }
-    }
-    markersApiRef.current?.setMarkers(markers)
     chart.timeScale().fitContent()
   }, [model, initial])
 
-  // Layer / focus visibility without full data rebuild
   useEffect(() => {
     capitalRef.current?.applyOptions({ visible: layers.capital !== false })
     for (const [sym, series] of assetSeriesRef.current) {
-      series.applyOptions({
-        visible: layers[sym] !== false,
-        lineWidth: focusSymbol === sym ? 3 : 2,
-      })
+      series.applyOptions({ visible: layers[sym] !== false })
     }
-    const markers: SeriesMarker<Time>[] = []
-    for (const a of model.assets) {
-      if (layers[a.symbol] === false) continue
-      if (focusSymbol && focusSymbol !== a.symbol) continue
-      for (const o of a.opens) {
-        const u = toUnix(o.time)
-        if (u == null) continue
-        markers.push({
-          time: u as UTCTimestamp,
-          position: 'belowBar',
-          color: a.color,
-          shape: 'arrowUp',
-          text: a.label.slice(0, 6),
-        })
-      }
-    }
-    markersApiRef.current?.setMarkers(markers)
-  }, [layers, focusSymbol, model.assets])
+  }, [layers])
 
   if (model.capital.length < 2) {
     return (
       <div className="chart-wrap">
         <p className="muted broker-curve-empty">
-          Pas assez d’historique ({model.nRaw} point{model.nRaw > 1 ? 's' : ''}) — la courbe
-          apparaîtra après les prochains cycles du moteur.
+          Pas assez d’historique ({model.nRaw} pt{model.nRaw > 1 ? 's' : ''}).
         </p>
       </div>
     )
@@ -556,7 +442,7 @@ export function PortfolioChart({
 
   return (
     <div className="chart-wrap" ref={wrapRef}>
-      <div className="chart-legend" role="toolbar" aria-label="Couches du graphique">
+      <div className="chart-legend" role="toolbar" aria-label="Couches">
         <button
           type="button"
           className={`legend-chip${layers.capital !== false ? ' is-on' : ' is-off'}`}
@@ -572,9 +458,7 @@ export function PortfolioChart({
           <button
             key={a.symbol}
             type="button"
-            className={`legend-chip${layers[a.symbol] !== false ? ' is-on' : ' is-off'}${
-              focusSymbol === a.symbol ? ' is-focus' : ''
-            }`}
+            className={`legend-chip${layers[a.symbol] !== false ? ' is-on' : ' is-off'}`}
             aria-pressed={layers[a.symbol] !== false}
             onClick={() => toggle(a.symbol)}
           >
@@ -584,14 +468,13 @@ export function PortfolioChart({
             {a.label}
           </button>
         ))}
-        <span className="legend-hint">Afficher / masquer · focus à droite</span>
       </div>
 
       <div className="chart-host" ref={hostRef} />
 
       {tip.visible && tip.point && (
         <div
-          className="chart-tip"
+          className="chart-tip chart-tip--slim"
           style={{ transform: `translate(${tip.x}px, ${tip.y}px)` }}
           role="tooltip"
         >
@@ -601,60 +484,23 @@ export function PortfolioChart({
               {signedEur(tip.point.vsInitial)}
             </span>
           </header>
-          <div className="tip-section">
-            <h4>Capital</h4>
-            <dl>
-              <div>
-                <dt>Valeur</dt>
-                <dd className="mono">{eur(tip.point.equity)}</dd>
-              </div>
-            </dl>
-          </div>
-          {tip.point.assets.filter((a) => a.invested > 0).length > 0 && (
-            <div className="tip-section">
-              <h4>Investi</h4>
-              <dl>
-                {tip.point.assets
-                  .filter((a) => a.invested > 0)
-                  .slice(0, 6)
-                  .map((a) => (
-                    <div key={a.symbol}>
-                      <dt>
-                        <i style={{ background: a.color }} /> {a.label}
-                      </dt>
-                      <dd className="mono">{eur(a.invested)}</dd>
-                    </div>
-                  ))}
-              </dl>
+          <dl>
+            <div>
+              <dt>Capital</dt>
+              <dd className="mono">{eur(tip.point.equity)}</dd>
             </div>
-          )}
-          {tip.point.events.length > 0 && (
-            <div className="tip-section">
-              <h4>À ce moment</h4>
-              <ul className="portfolio-tip-trades">
-                {tip.point.events.slice(0, 4).map((o) => {
-                  const open = o.reason === 'open'
-                  const dir = directionWords(o.side === 'BUY' ? 'LONG' : 'SHORT')
-                  return (
-                    <li key={o.id}>
-                      <div className="portfolio-tip-trade-head">
-                        <strong style={{ color: colorForSymbol(o.symbol) }}>
-                          {assetName(o.symbol)}
-                        </strong>
-                        <span className={open ? 'up' : 'down'}>
-                          {open ? dir.title : 'Clôture'}
-                        </span>
-                      </div>
-                      <div className="portfolio-tip-trade-body">
-                        Prix {price(o.filled_price)} · {eur(o.notional)}
-                      </div>
-                      <div className="portfolio-tip-trade-why muted">{acquisitionWhy(o)}</div>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          )}
+            {tip.point.assets
+              .filter((a) => a.invested > 0)
+              .slice(0, 4)
+              .map((a) => (
+                <div key={a.symbol}>
+                  <dt>
+                    <i style={{ background: a.color }} /> {a.label}
+                  </dt>
+                  <dd className="mono">{eur(a.invested)}</dd>
+                </div>
+              ))}
+          </dl>
         </div>
       )}
     </div>
