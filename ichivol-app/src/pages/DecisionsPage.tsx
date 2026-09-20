@@ -39,7 +39,7 @@ import {
   type EngineAssetClass,
   type EngineInstrument,
 } from '../lib/universe'
-import { confirmUserDecision, patchUserDecisionStatus } from '../lib/userDecisions'
+import { confirmUserDecision } from '../lib/userDecisions'
 import {
   getPaperOverview,
   listPaperPositions,
@@ -446,37 +446,35 @@ export function DecisionsPage() {
     try {
       const sameDetail = detail?.symbol === paperConfirm.symbol ? detail : null
       const gate = paperConfirm.intent.pipeline_decision
-      const journalRow = await confirmUserDecision({
-        symbol: paperConfirm.symbol,
-        interval: paperConfirm.timeframe,
-        bias: paperConfirm.intent.direction === 'SHORT' ? 'BEARISH' : 'BULLISH',
-        rvol: sameDetail?.rvol ?? 0,
-        signalKind:
-          sameDetail?.decision ??
-          (gate === 'SELL' ? 'SELL' : gate === 'BUY' ? 'BUY' : 'WATCH'),
-        gateDecision: gate,
-        confidence: sameDetail?.confidence,
-      })
-      let pos: Awaited<ReturnType<typeof openPaperPosition>>
+      // Ordre : le moteur d'abord. Un refus (Portes repassées à Attente, fonds…) lève ici,
+      // avant toute écriture au journal — ni position, ni « confirmation » orpheline.
+      const pos = await openPaperPosition(paperConfirm.symbol, paperConfirm.timeframe)
+      let journalWarn = ''
       try {
-        pos = await openPaperPosition(paperConfirm.symbol, paperConfirm.timeframe)
-      } catch (openErr) {
-        // Pas de décision « confirmée » orpheline : si le moteur refuse l'ouverture,
-        // on écarte l'entrée de journal qu'on vient de créer (sauf si elle existait déjà).
-        if (!journalRow.deduped) {
-          await patchUserDecisionStatus(journalRow.id, 'dismissed').catch(() => undefined)
-        }
-        throw openErr
+        await confirmUserDecision({
+          symbol: paperConfirm.symbol,
+          interval: paperConfirm.timeframe,
+          bias: paperConfirm.intent.direction === 'SHORT' ? 'BEARISH' : 'BULLISH',
+          rvol: sameDetail?.rvol ?? 0,
+          signalKind:
+            sameDetail?.decision ??
+            (gate === 'SELL' ? 'SELL' : gate === 'BUY' ? 'BUY' : 'WATCH'),
+          gateDecision: gate,
+          confidence: sameDetail?.confidence,
+        })
+      } catch {
+        // La position existe : on le dit, on ne prétend pas que le journal est à jour.
+        journalWarn = ' · journal non enregistré (réessayer depuis le Journal)'
       }
       const already = pos.already_open === true || pos.created === false
       const msg = already
         ? `déjà ouvert · ${pos.symbol} ${pos.direction} (pas de 2ᵉ notional)`
         : `ok · paper ${pos.direction} qty ${pos.qty != null ? pos.qty.toPrecision(4) : '—'}`
-      setConfirmMsg(msg)
+      setConfirmMsg(msg + journalWarn)
       setPaperMsg(
-        already
+        (already
           ? `${pos.symbol} · déjà en portefeuille — achat verrouillé`
-          : `${pos.symbol} · paper ${pos.direction} @ ${pos.entry_price}`,
+          : `${pos.symbol} · paper ${pos.direction} @ ${pos.entry_price}`) + journalWarn,
       )
       setOpenPaperSymbols((prev) => new Set([...prev, pos.symbol]))
       setPaperConfirm(null)
