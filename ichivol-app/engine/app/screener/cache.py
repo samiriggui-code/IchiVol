@@ -37,6 +37,17 @@ class CacheEntry:
     timeframe: str
 
 
+# Providers whose rows the paper broker may trade. Equities (twelve_data) stay out: free-tier quota.
+PAPER_EXCHANGES = ("binance", "biquote")
+# USDJPY is quoted in JPY: sizing and cash are in EUR/USD-proxy units, so it needs a quote-currency
+# conversion that does not exist yet. Excluded rather than mis-sized.
+PAPER_EXCLUDED_SYMBOLS = frozenset({"USDJPY"})
+
+
+def paper_tradable_rows(rows):
+    return [r for r in rows if r.exchange in PAPER_EXCHANGES and r.symbol not in PAPER_EXCLUDED_SYMBOLS]
+
+
 class ScreenerCache:
     def __init__(self, refresh_interval_s: float = 300.0, default_timeframe: str = "1h"):
         self.refresh_interval_s = refresh_interval_s
@@ -97,17 +108,12 @@ class ScreenerCache:
             finally:
                 session.close()
 
-            # Paper trading's auto_watchlist track (CDC V2) rides this same
-            # cycle, gated the same way as persistence above -- reuses
-            # `rows` as-is (no extra Binance calls), and `persist=False`
-            # callers (tests, on-demand recomputes that don't want DB
-            # writes) get none of this either. Crypto-only for now
-            # (docs/HANDOFF-CLAUDE-CDC-CAP-2026-09-16.md §1.5: "Paper/watch
-            # multi-classe = après paper crypto stable (V2)") -- `exchange`
-            # is "binance" only for crypto in this catalog, biquote/
-            # twelve_data-backed rows (forex/metal/index/equity) are
-            # excluded until that's revisited.
-            crypto_rows = [r for r in rows if r.exchange == "binance"]
+            # Paper trading's auto_watchlist track rides this same cycle, gated
+            # the same way as persistence above -- reuses `rows` as-is (no extra
+            # provider calls), and `persist=False` callers get none of this.
+            # Multi-market since 2026-09-21: crypto (binance) AND forex / metals /
+            # indices / energy (biquote), see `paper_tradable_rows`.
+            crypto_rows = paper_tradable_rows(rows)
             paper_session = SessionLocal()
             try:
                 paper_engine.sync_auto_watchlist(paper_session, crypto_rows)

@@ -67,9 +67,8 @@ def test_background_thread_refreshes_at_least_once(monkeypatch):
         c.stop()
 
 
-def test_refresh_only_feeds_crypto_rows_to_paper_trading(monkeypatch):
-    # Crypto-only for now (docs/HANDOFF-CLAUDE-CDC-CAP-2026-09-16.md §1.5:
-    # "Paper/watch multi-classe = après paper crypto stable (V2)").
+def test_refresh_feeds_crypto_and_biquote_rows_to_paper_trading_but_not_jpy_or_equities(monkeypatch):
+    # Multi-market paper since 2026-09-21; USDJPY (JPY quote) and twelve_data equities stay out.
     from app.paper import engine as paper_engine
 
     def _mixed_watchlist(symbols, timeframe="1h", limit=300):
@@ -80,6 +79,14 @@ def test_refresh_only_feeds_crypto_rows_to_paper_trading(monkeypatch):
             ),
             ScreenerRow(
                 symbol="EURUSD", exchange="biquote", timeframe=timeframe, price=1.0,
+                candles=[], ichimoku=None, rvol=None, decision=None, pipeline=None,
+            ),
+            ScreenerRow(
+                symbol="USDJPY", exchange="biquote", timeframe=timeframe, price=1.0,
+                candles=[], ichimoku=None, rvol=None, decision=None, pipeline=None,
+            ),
+            ScreenerRow(
+                symbol="AAPL", exchange="twelve_data", timeframe=timeframe, price=1.0,
                 candles=[], ichimoku=None, rvol=None, decision=None, pipeline=None,
             ),
         ]
@@ -95,7 +102,7 @@ def test_refresh_only_feeds_crypto_rows_to_paper_trading(monkeypatch):
     c = ScreenerCache(refresh_interval_s=999)
     c.refresh(persist=True)
 
-    assert [r.symbol for r in captured["rows"]] == ["BTCUSDT"]
+    assert [r.symbol for r in captured["rows"]] == ["BTCUSDT", "EURUSD"]
 
 
 def test_refresh_survives_a_persist_failure(monkeypatch):
