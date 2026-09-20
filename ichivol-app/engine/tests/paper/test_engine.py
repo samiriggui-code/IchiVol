@@ -170,31 +170,36 @@ def test_sync_auto_watchlist_processes_multiple_rows_and_commits(_session):
 
 
 def test_open_user_confirmed_is_idempotent(_session):
-    first = paper.open_user_confirmed(
+    first, created1 = paper.open_user_confirmed(
         _session, symbol=SYMBOL, timeframe=TIMEFRAME, user_id="user-1", price=100.0,
         pipeline=_pipeline("BUY"),
     )
-    second = paper.open_user_confirmed(
+    second, created2 = paper.open_user_confirmed(
         _session, symbol=SYMBOL, timeframe=TIMEFRAME, user_id="user-1", price=105.0,
         pipeline=_pipeline("BUY"),
     )
+    assert created1 is True
+    assert created2 is False
+    assert first is not None and second is not None
     assert first.id == second.id
     assert second.entry_price == 100.0  # not overwritten by the second call
 
 
 def test_open_user_confirmed_does_not_open_on_a_non_actionable_decision(_session):
-    result = paper.open_user_confirmed(
+    result, created = paper.open_user_confirmed(
         _session, symbol=SYMBOL, timeframe=TIMEFRAME, user_id="user-1", price=100.0,
         pipeline=_pipeline("WATCH"),
     )
     assert result is None
+    assert created is False
 
 
 def test_close_manually_closes_an_open_position(_session):
-    position = paper.open_user_confirmed(
+    position, _ = paper.open_user_confirmed(
         _session, symbol=SYMBOL, timeframe=TIMEFRAME, user_id="user-1", price=100.0,
         pipeline=_pipeline("BUY"),
     )
+    assert position is not None
     closed = paper.close_manually(_session, position.id, price=120.0)
     assert closed.status == "CLOSED"
     assert closed.exit_reason == "manual_close"
@@ -202,10 +207,11 @@ def test_close_manually_closes_an_open_position(_session):
 
 
 def test_close_manually_returns_none_for_an_already_closed_position(_session):
-    position = paper.open_user_confirmed(
+    position, _ = paper.open_user_confirmed(
         _session, symbol=SYMBOL, timeframe=TIMEFRAME, user_id="user-1", price=100.0,
         pipeline=_pipeline("BUY"),
     )
+    assert position is not None
     paper.close_manually(_session, position.id, price=120.0)
     assert paper.close_manually(_session, position.id, price=130.0) is None
 
@@ -215,13 +221,14 @@ def test_list_positions_filters_by_source_user_and_status(_session):
         _session, symbol=SYMBOL, timeframe=TIMEFRAME, user_id="user-1", price=100.0,
         pipeline=_pipeline("BUY"),
     )
+    auto_sym = f"{SYMBOL}_AUTO"
     paper.sync_position(
-        _session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
+        _session, symbol=auto_sym, timeframe=TIMEFRAME, source="auto_watchlist",
         user_id=None, price=100.0, pipeline=_pipeline("SELL", Direction.SHORT),
     )
     _session.commit()
 
-    # Filter results down to this test's own symbol before counting -- a
+    # Filter results down to this test's own symbols before counting -- a
     # real background screener cache may be running concurrently (its
     # auto_watchlist sync rides the same table, see app/screener/cache.py)
     # and would otherwise pollute an unscoped count.
@@ -233,10 +240,37 @@ def test_list_positions_filters_by_source_user_and_status(_session):
     assert user_positions[0].source == "user_confirmed"
 
     auto_positions = [
-        p for p in paper.list_positions(_session, source="auto_watchlist") if p.symbol == SYMBOL
+        p for p in paper.list_positions(_session, source="auto_watchlist") if p.symbol == auto_sym
     ]
     assert len(auto_positions) == 1
     assert auto_positions[0].user_id is None
 
     open_only = paper.list_positions(_session, status="OPEN")
     assert all(p.status == "OPEN" for p in open_only)
+
+    # Cleanup auto_sym row
+    _session.query(PaperPosition).filter(PaperPosition.symbol == auto_sym).delete(
+        synchronize_session=False
+    )
+    _session.commit()
+
+
+def test_open_user_confirmed_locks_symbol_already_open_on_portfolio(_session):
+    """Second buy on the same symbol must not spend a second notional."""
+    first, created1 = paper.open_user_confirmed(
+        _session, symbol=SYMBOL, timeframe=TIMEFRAME, user_id="user-1", price=100.0,
+        pipeline=_pipeline("BUY"),
+    )
+    second, created2 = paper.open_user_confirmed(
+        _session, symbol=SYMBOL, timeframe="4h", user_id="user-1", price=110.0,
+        pipeline=_pipeline("BUY"),
+    )
+    assert created1 is True and first is not None
+    assert created2 is False and second is not None
+    assert first.id == second.id
+    open_same = [
+        p
+        for p in paper.list_positions(_session, status="OPEN")
+        if p.symbol == SYMBOL
+    ]
+    assert len(open_same) == 1

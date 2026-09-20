@@ -44,6 +44,8 @@ def size_position(
     commission_bps: float = 5.0,
     spread_bps: float = 2.0,
     slippage_bps: float = 3.0,
+    min_fill_fraction: float = 0.0,
+    min_notional: float = 0.0,
 ) -> SizedOrder | None:
     if equity <= 0 or entry_price <= 0 or stop_distance <= 0:
         return None
@@ -61,6 +63,7 @@ def size_position(
         notional = qty * entry_fill
         risk_amount = qty * stop_distance
 
+    intended_notional = notional
     fee = notional * (commission_bps / 10_000.0)
     if notional + fee > cash:
         affordable = cash / (1.0 + commission_bps / 10_000.0)
@@ -71,6 +74,12 @@ def size_position(
         risk_amount = qty * stop_distance
         if qty <= 0 or notional <= 0:
             return None
+        # Cash-limited: refuse a dust lot far below the intended risk-based size
+        # rather than opening a position that no longer matches the risk plan.
+        if notional < intended_notional * min_fill_fraction:
+            return None
+    if notional < min_notional:
+        return None
 
     if direction == "LONG":
         stop_price = entry_fill - stop_distance

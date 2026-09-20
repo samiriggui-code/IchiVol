@@ -90,6 +90,8 @@ def open_capital_position(
         commission_bps=float(profile.get("commission_bps", 5.0)),
         spread_bps=float(profile.get("spread_bps", 2.0)),
         slippage_bps=float(profile.get("slippage_bps", 3.0)),
+        min_fill_fraction=float(profile.get("min_fill_fraction", 0.25)),
+        min_notional=float(profile.get("min_notional", 10.0)),
     )
     if sized is None:
         return None

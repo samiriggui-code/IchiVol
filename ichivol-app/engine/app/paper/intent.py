@@ -43,6 +43,7 @@ class OrderIntent:
     cash: float | None
     volume_type: str | None = None
     evidence_summary: dict[str, Any] | None = None
+    signal_timing: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -102,8 +103,11 @@ def propose_order_intent(
             cash=extra.get("cash"),
             volume_type=volume_type,
             evidence_summary=evidence_summary,
+            signal_timing=getattr(row, "signal_timing", None),
         )
 
+    if (getattr(row, "signal_timing", None) or {}).get("stale"):
+        return _blocked("stale_data")
     if direction is None:
         return _blocked("not_actionable")
     if stop is None or stop <= 0:
@@ -161,4 +165,5 @@ def propose_order_intent(
         cash=portfolio.cash,
         volume_type=volume_type,
         evidence_summary=evidence_summary,
+        signal_timing=getattr(row, "signal_timing", None),
     )

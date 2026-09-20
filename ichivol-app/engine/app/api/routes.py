@@ -352,6 +352,8 @@ def _paper_position_dict(p) -> dict:
         "take_profit_price": p.take_profit_price,
         "risk_pct": p.risk_pct,
         "risk_amount": p.risk_amount,
+        "entry_fee": getattr(p, "entry_fee", None),
+        "exit_fee": getattr(p, "exit_fee", None),
         "realized_pnl": p.realized_pnl,
         "mfe_pct": p.mfe_pct,
         "mae_pct": p.mae_pct,
@@ -1412,14 +1414,30 @@ def get_paper_portfolio_overview(code: str) -> dict:
         rows: list[dict] = []
         invested = 0.0
         unrealized = 0.0
+        open_entry_fees = 0.0
+        incomplete_open = 0
         for p in positions:
             d = _paper_position_dict(p)
             d["current_price"] = None
             d["unrealized_pnl"] = None
             d["unrealized_pct"] = None
+            d["market_value"] = None
+            d["valuation_status"] = None
             if p.status == "OPEN":
                 invested += p.notional or 0.0
+                open_entry_fees += float(p.entry_fee or 0.0)
                 mark = marks.get(p.symbol)
+                if p.qty is None:
+                    d["valuation_status"] = "missing_qty"
+                    incomplete_open += 1
+                elif mark is None:
+                    d["valuation_status"] = "missing_mark"
+                    incomplete_open += 1
+                elif p.notional is None:
+                    d["valuation_status"] = "missing_notional"
+                    incomplete_open += 1
+                else:
+                    d["valuation_status"] = "priced"
                 if mark is not None and p.entry_price:
                     price = mark[0]
                     move = (price - p.entry_price) / p.entry_price
@@ -1434,10 +1452,13 @@ def get_paper_portfolio_overview(code: str) -> dict:
                             else p.qty * (p.entry_price - price)
                         )
                         d["unrealized_pnl"] = gain
+                        d["market_value"] = p.qty * price
                         unrealized += gain
             rows.append(d)
 
         equity = portfolio.cash + invested + unrealized
+        realized = float(portfolio.realized_pnl or 0.0)
+        total_pnl = equity - portfolio.initial_cash
         snaps = (
             session.execute(
                 select(PaperEquitySnapshot)
@@ -1462,6 +1483,8 @@ def get_paper_portfolio_overview(code: str) -> dict:
             ),
             None,
         )
+        open_n = sum(1 for r in rows if r["status"] == "OPEN")
+        priced_n = sum(1 for r in rows if r["status"] == "OPEN" and r["valuation_status"] == "priced")
         return {
             "portfolio": _portfolio_dict(portfolio),
             "account": {
@@ -1469,12 +1492,17 @@ def get_paper_portfolio_overview(code: str) -> dict:
                 "cash": portfolio.cash,
                 "invested": invested,
                 "unrealized_pnl": unrealized,
-                "realized_pnl": portfolio.realized_pnl,
+                "realized_pnl": realized,
                 "equity": equity,
-                "total_pnl": equity - portfolio.initial_cash,
+                "total_pnl": total_pnl,
                 "day_change": (equity - ref) if ref is not None else None,
-                "priced_positions": sum(1 for r in rows if r["status"] == "OPEN" and r["current_price"] is not None),
-                "open_positions": sum(1 for r in rows if r["status"] == "OPEN"),
+                "open_entry_fees": open_entry_fees,
+                "realized_plus_unrealized": realized + unrealized,
+                # Entry fees on OPEN lots hit cash immediately but enter realized only on close.
+                "pnl_explained": realized + unrealized - open_entry_fees,
+                "priced_positions": priced_n,
+                "incomplete_open": incomplete_open,
+                "open_positions": open_n,
             },
             "positions": rows[:200],
             "equity_curve": curve,
@@ -1670,6 +1698,11 @@ def open_paper_position(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+    if (getattr(row, "signal_timing", None) or {}).get("stale"):
+        raise HTTPException(
+            status_code=422,
+            detail="stale_data: provider candles are late/frozen, refusing to open on an outdated signal",
+        )
     stop = row.atr.suggested_stop_distance if row.atr is not None else None
     session = SessionLocal()
     try:
@@ -1689,7 +1722,7 @@ def open_paper_position(
             evidence_id = evidence_row.id
             session.flush()
 
-        position = paper_engine.open_user_confirmed(
+        position, created = paper_engine.open_user_confirmed(
             session,
             symbol=row.symbol,
             timeframe=timeframe,
@@ -1711,7 +1744,11 @@ def open_paper_position(
         if evidence_id and position.evidence_id is None:
             position.evidence_id = evidence_id
             session.commit()
-        return _paper_position_dict(position)
+        payload = _paper_position_dict(position)
+        payload["created"] = created
+        if not created:
+            payload["already_open"] = True
+        return payload
     finally:
         session.close()
 
