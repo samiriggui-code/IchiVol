@@ -7,6 +7,7 @@ from app.api.routes import router as engine_router
 from app.backtest.evidence import backtest_evidence_scheduler
 from app.config import settings
 from app.evidence.outcomes import outcome_tracker
+from app.paper.protection import protection_monitor
 from app.screener.cache import screener_cache
 
 
@@ -17,7 +18,11 @@ async def lifespan(app: FastAPI):
         backtest_evidence_scheduler.start()
     if settings.enable_signal_tracking:
         outcome_tracker.start()
+    if settings.enable_protection_monitor:
+        protection_monitor.interval_s = settings.protection_interval_s
+        protection_monitor.start()
     yield
+    protection_monitor.stop()
     screener_cache.stop()
     if settings.enable_signal_tracking:
         outcome_tracker.stop()

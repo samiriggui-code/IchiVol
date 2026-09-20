@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     # can flip BUY <-> NO_TRADE within seconds (see propose -> confirm 422).
     # Entry price stays the live last price. Set false to restore the old behaviour.
     decide_on_closed_candles: bool = True
+    # Stops/targets are watched every protection_interval_s independent of signals.
+    # Shipped OFF (dry-run first); activation is a separate, explicit commit.
+    enable_protection_monitor: bool = False
+    protection_interval_s: float = 60.0
 
 
 settings = Settings()
