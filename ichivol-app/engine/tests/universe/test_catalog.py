@@ -82,3 +82,16 @@ def test_default_watchlist_is_crypto_plus_biquote_not_twelve_data():
 def test_instrument_ids_are_unique():
     ids = [i.id for i in UNIVERSE]
     assert len(ids) == len(set(ids))
+
+
+def test_simulation_unavailable_until_product_and_fee_profile_documented():
+    from app.universe.types import ProductType
+    import dataclasses
+
+    for i in UNIVERSE:
+        assert i.simulation_available is False  # nothing documented yet -> honest default
+    btc = get_instrument("BTCUSDT")
+    ready = dataclasses.replace(btc, product_type=ProductType.SPOT, fee_profile_id="X")
+    assert ready.simulation_available is True
+    idx = dataclasses.replace(btc, product_type=ProductType.INDEX_REFERENCE, fee_profile_id="X")
+    assert idx.simulation_available is False

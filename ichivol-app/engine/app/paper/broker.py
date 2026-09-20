@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import math
 from datetime import datetime, timezone
+from dataclasses import replace as _replace
 from typing import Any
 
 from sqlalchemy import func, select
@@ -15,12 +17,45 @@ from app.db.models import (
     PaperPortfolio,
     PaperPosition,
 )
+from app.brokerage import persistence as ledger_db
+from app.brokerage.execution import fill_at_quote
+from app.brokerage.fee_profiles import get_schedule
+from app.brokerage.ledger import Cause, Leg
+from app.market_data.contracts import ExecutionMode, Quote
 from app.paper.risk import apply_exit_friction, size_position
 from app.paper.strategy_profiles import BASELINE_PROFILE
 
 
 def _profile(portfolio: PaperPortfolio) -> dict[str, Any]:
     return portfolio.strategy_profile or dict(BASELINE_PROFILE)
+
+
+def _fee_meta(profile: dict[str, Any]) -> dict[str, Any]:
+    fid = profile.get("fee_profile_id")
+    if not fid:
+        return {"model": "legacy_bps", "commission_bps": float(profile.get("commission_bps", 5.0))}
+    sch = get_schedule(fid)
+    return {"model": "schedule", "id": sch.id, "version": sch.version, "source": sch.source}
+
+
+def _commission(profile: dict[str, Any], notional: float, qty: float) -> float:
+    """Whole-order commission: versioned schedule when the profile names one,
+    else the legacy flat-bps rule (unchanged for existing portfolios)."""
+    fid = profile.get("fee_profile_id")
+    if not fid:
+        return notional * (float(profile.get("commission_bps", 5.0)) / 10_000.0)
+    return float(get_schedule(fid).order_fee(ledger_db.to_decimal(notional), ledger_db.to_decimal(qty)))
+
+
+def _lock_portfolio(session: Session, portfolio: PaperPortfolio | None) -> None:
+    """Serialise cash read-modify-write per portfolio (row lock held until commit)."""
+    if portfolio is None:
+        return
+    bind = session.get_bind()
+    if bind is not None and bind.dialect.name == "postgresql":
+        session.flush()  # keep pending changes of this transaction before reloading
+        session.execute(select(PaperPortfolio.id).where(PaperPortfolio.id == portfolio.id).with_for_update()).all()
+        session.refresh(portfolio)
 
 
 def _count_open(session: Session, portfolio_id: str) -> int:
@@ -70,33 +105,68 @@ def open_capital_position(
     signal: dict[str, Any] | None = None,
     decision_id: str | None = None,
     evidence_id: str | None = None,
+    quote: Quote | None = None,
 ) -> PaperPosition | None:
     """Open a sized paper position. Returns None if risk/cash/caps block it."""
+    _lock_portfolio(session, portfolio)
     profile = _profile(portfolio)
     max_open = int(profile.get("max_open_positions", 5))
     if _count_open(session, portfolio.id) >= max_open:
         return None
 
     equity = estimate_equity(session, portfolio)
+    side = "BUY" if direction == "LONG" else "SELL"
+    quoted = quote is not None
+    if quoted:
+        # Real bid/ask: the spread is already in the fill price, so no extra spread/slippage.
+        ref_price = quote.ask if side == "BUY" else quote.bid
+        spread_bps, slippage_bps = 0.0, 0.0
+    else:
+        ref_price = price
+        spread_bps = float(profile.get("spread_bps", 2.0))
+        slippage_bps = float(profile.get("slippage_bps", 3.0))
     sized = size_position(
         equity=equity,
         cash=portfolio.cash,
         direction=direction,
-        entry_price=price,
+        entry_price=ref_price,
         stop_distance=stop_distance,
         risk_pct=float(profile.get("risk_pct", 0.01)),
         take_profit_r=float(profile.get("take_profit_r", 2.0)),
         max_notional_pct=float(profile.get("max_notional_pct", 0.25)),
         commission_bps=float(profile.get("commission_bps", 5.0)),
-        spread_bps=float(profile.get("spread_bps", 2.0)),
-        slippage_bps=float(profile.get("slippage_bps", 3.0)),
+        spread_bps=spread_bps,
+        slippage_bps=slippage_bps,
         min_fill_fraction=float(profile.get("min_fill_fraction", 0.25)),
         min_notional=float(profile.get("min_notional", 10.0)),
     )
     if sized is None:
         return None
+    exec_meta: dict[str, Any] = {
+        "model": ExecutionMode.CANDLE_ONLY.value,
+        "spread_bps": spread_bps,
+        "slippage_bps": slippage_bps,
+    }
+    if quoted:
+        fill = fill_at_quote(side, sized.qty, quote)
+        if fill.rejected:
+            return None
+        if fill.is_partial:
+            qty = fill.filled_qty
+            sized = _replace(sized, qty=qty, notional=qty * sized.entry_fill, risk_amount=qty * stop_distance)
+        exec_meta = {
+            "model": fill.model.value,
+            "reason": fill.reason,
+            "assumptions": list(fill.assumptions),
+            "quote_source": quote.provenance.source,
+            "quote_received_at": quote.provenance.received_at.isoformat(),
+            "bid": quote.bid,
+            "ask": quote.ask,
+        }
 
-    fee = sized.notional * (float(profile.get("commission_bps", 5.0)) / 10_000.0)
+    fee = _commission(profile, sized.notional, sized.qty)
+    if not all(math.isfinite(x) for x in (sized.notional, sized.qty, fee, sized.entry_fill)):
+        return None
     if sized.notional + fee > portfolio.cash:
         return None
 
@@ -132,7 +202,6 @@ def open_capital_position(
     session.add(position)
     session.flush()
 
-    side = "BUY" if direction == "LONG" else "SELL"
     session.add(
         PaperOrder(
             portfolio_id=portfolio.id,
@@ -146,15 +215,30 @@ def open_capital_position(
             qty=sized.qty,
             notional=sized.notional,
             fee=fee,
-            spread_bps=float(profile.get("spread_bps", 2.0)),
-            slippage_bps=float(profile.get("slippage_bps", 3.0)),
+            spread_bps=spread_bps,
+            slippage_bps=slippage_bps,
             status="FILLED",
             reason="open",
             created_at=now,
         )
     )
+    ledger_db.guarded(session, portfolio.id, position.id, "opening", lambda: ledger_db.ensure_opening(session, portfolio, now))
     portfolio.cash -= sized.notional + fee
     portfolio.updated_at = now
+    ledger_db.guarded(
+        session, portfolio.id, position.id, "open",
+        lambda: ledger_db.post(
+            session,
+            portfolio.id,
+            f"open:{position.id}",
+            now,
+            [
+                Leg(portfolio.currency, -ledger_db.to_decimal(sized.notional), Cause.EXECUTION, f"{side} {symbol}"),
+                Leg(portfolio.currency, -ledger_db.to_decimal(fee), Cause.COMMISSION, "entry commission"),
+            ],
+            ref=position.id,
+        ),
+    )
     _journal(
         session,
         portfolio_id=portfolio.id,
@@ -169,6 +253,9 @@ def open_capital_position(
             "qty": sized.qty,
             "risk_pct": sized.risk_pct,
             "decision": decision,
+            "protection_monitored": True,
+            "fee": _fee_meta(profile) | {"amount": fee},
+            "execution": exec_meta,
         },
     )
     return position
@@ -181,25 +268,50 @@ def close_capital_position(
     price: float,
     reason: str,
     signal: dict[str, Any] | None = None,
+    quote: Quote | None = None,
+    at: datetime | None = None,
 ) -> PaperPosition:
+    if position.status != "OPEN":
+        return position  # replay/double close: no second credit, no second order
+    if not math.isfinite(float(price)):
+        raise ValueError(f"non-finite exit price: {price!r}")
     portfolio = session.get(PaperPortfolio, position.portfolio_id) if position.portfolio_id else None
+    _lock_portfolio(session, portfolio)
     profile = _profile(portfolio) if portfolio is not None else dict(BASELINE_PROFILE)
-    now = datetime.now(timezone.utc)
+    now = at or datetime.now(timezone.utc)
 
     exit_fill = price
     exit_fee = 0.0
     realized = None
+    close_exec = None
 
     if position.qty and position.qty > 0 and portfolio is not None:
-        exit_fill = apply_exit_friction(
-            price,
-            direction=position.direction,
-            spread_bps=float(profile.get("spread_bps", 2.0)),
-            slippage_bps=float(profile.get("slippage_bps", 3.0)),
-        )
-        exit_fee = (position.qty * exit_fill) * (
-            float(profile.get("commission_bps", 5.0)) / 10_000.0
-        )
+        ledger_db.guarded(session, portfolio.id, position.id, "opening", lambda: ledger_db.ensure_opening(session, portfolio, now))
+        cash_before = portfolio.cash
+        if quote is not None:
+            exit_fill = quote.bid if position.direction == "LONG" else quote.ask
+            exit_spread_bps = exit_slip_bps = 0.0
+            close_exec = {
+                "model": ExecutionMode.QUOTE_BASED.value,
+                "bid": quote.bid,
+                "ask": quote.ask,
+                "quote_source": quote.provenance.source,
+            }
+        else:
+            exit_spread_bps = float(profile.get("spread_bps", 2.0))
+            exit_slip_bps = float(profile.get("slippage_bps", 3.0))
+            exit_fill = apply_exit_friction(
+                price,
+                direction=position.direction,
+                spread_bps=exit_spread_bps,
+                slippage_bps=exit_slip_bps,
+            )
+            close_exec = {
+                "model": ExecutionMode.CANDLE_ONLY.value,
+                "spread_bps": exit_spread_bps,
+                "slippage_bps": exit_slip_bps,
+            }
+        exit_fee = _commission(profile, position.qty * exit_fill, position.qty)
         entry_notional = position.notional or 0.0
         if position.direction == "LONG":
             proceeds = position.qty * exit_fill
@@ -212,6 +324,26 @@ def close_capital_position(
             portfolio.cash += entry_notional + realized
         portfolio.realized_pnl += realized
         portfolio.updated_at = now
+        cash_delta = portfolio.cash - cash_before
+        ledger_db.guarded(
+            session, portfolio.id, position.id, "close",
+            lambda: ledger_db.post(
+                session,
+                portfolio.id,
+                f"close:{position.id}",
+                now,
+                [
+                    Leg(
+                        portfolio.currency,
+                        ledger_db.to_decimal(cash_delta + exit_fee),
+                        Cause.EXECUTION,
+                        f"close {position.symbol} ({reason})",
+                    ),
+                    Leg(portfolio.currency, -ledger_db.to_decimal(exit_fee), Cause.COMMISSION, "exit commission"),
+                ],
+                ref=position.id,
+            ),
+        )
 
         session.add(
             PaperOrder(
@@ -226,8 +358,8 @@ def close_capital_position(
                 qty=position.qty,
                 notional=position.qty * exit_fill,
                 fee=exit_fee,
-                spread_bps=float(profile.get("spread_bps", 2.0)),
-                slippage_bps=float(profile.get("slippage_bps", 3.0)),
+                spread_bps=exit_spread_bps,
+                slippage_bps=exit_slip_bps,
                 status="FILLED",
                 reason=reason,
                 created_at=now,
@@ -259,6 +391,8 @@ def close_capital_position(
                 "exit": exit_fill,
                 "pnl_pct": position.pnl_pct,
                 "realized_pnl": realized,
+                "fee": _fee_meta(profile) | {"amount": exit_fee},
+                "execution": close_exec,
             },
         )
     return position
