@@ -237,7 +237,7 @@ export function SynthesePage() {
             <header className="panel-head">
               <h2>Compte · {overview.portfolio.label}</h2>
             </header>
-            <BrokerAccount overview={overview} />
+            <BrokerAccount overview={overview} orders={activity} />
             <p className="muted paper-perf-note">
               Règle simple : on risque environ 1 % du capital par trade, objectif ≈ 2× ce risque
               (2R). Maximum 5 positions en même temps.

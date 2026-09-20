@@ -4,11 +4,9 @@ import { PaperTradeSheet } from '../components/PaperTradeSheet'
 import {
   closePaperPosition,
   getPaperPerformance,
-  getPaperPortfolio,
   getShadowStats,
   listPaperPositions,
   type PaperPerformance,
-  type PaperPortfolioSummary,
   type PaperPosition,
   type PaperSource,
   type ShadowStats,
@@ -51,7 +49,6 @@ function ShadowCards({ stats }: { stats: ShadowStats | null }) {
           : 'Pas assez de closes (≥5)'
   return (
     <div className="paper-perf-block">
-      <h3 className="subhead">ShadowBroker · counterfactuels</h3>
       <div className="paper-perf-grid">
         <div className="context-card">
           <span className="context-label">Ouvertes</span>
@@ -79,56 +76,6 @@ function ShadowCards({ stats }: { stats: ShadowStats | null }) {
       <p className="muted paper-perf-note">
         Hors cash. Si mean R &gt; 0 sur trades bloqués, le filtre a écarté des winners.
       </p>
-    </div>
-  )
-}
-
-function BrokerCards({ summary }: { summary: PaperPortfolioSummary | null }) {
-  if (!summary) {
-    return (
-      <p className="muted">
-        PaperBroker pas encore initialisé (migration / redémarrage moteur).
-      </p>
-    )
-  }
-  const { portfolio, performance: perf } = summary
-  return (
-    <div className="paper-perf-block">
-      <h3 className="subhead">PaperBroker · {portfolio.code}</h3>
-      <div className="paper-perf-grid">
-        <div className="context-card">
-          <span className="context-label">Capital initial</span>
-          <strong className="context-value">{fmtNum(portfolio.initial_cash, 0)} €</strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">Cash</span>
-          <strong className="context-value">{fmtNum(portfolio.cash, 2)} €</strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">Equity</span>
-          <strong
-            className={`context-value ${tone(perf.equity != null && portfolio.initial_cash ? perf.equity - portfolio.initial_cash : null)}`}
-          >
-            {fmtNum(perf.equity ?? null, 2)} €
-          </strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">PnL réalisé</span>
-          <strong className={`context-value ${tone(portfolio.realized_pnl)}`}>
-            {fmtNum(portfolio.realized_pnl, 2)} €
-          </strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">Max drawdown</span>
-          <strong className="context-value">{fmtPct(perf.max_drawdown ?? null)}</strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">Expectancy €</span>
-          <strong className={`context-value ${tone(perf.expectancy_eur ?? null)}`}>
-            {fmtNum(perf.expectancy_eur ?? null, 2)} €
-          </strong>
-        </div>
-      </div>
     </div>
   )
 }
@@ -286,7 +233,6 @@ export function PaperPage() {
   const [autoCache, setAutoCache] = useState<PaperPosition[]>([])
   const [perfMine, setPerfMine] = useState<PaperPerformance | null>(null)
   const [perfAuto, setPerfAuto] = useState<PaperPerformance | null>(null)
-  const [broker, setBroker] = useState<PaperPortfolioSummary | null>(null)
   const [shadow, setShadow] = useState<ShadowStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -303,15 +249,13 @@ export function PaperPage() {
       ])
       setMineCache(mine)
       setAutoCache(auto)
-      const [pMine, pAuto, port, sh] = await Promise.all([
+      const [pMine, pAuto, sh] = await Promise.all([
         getPaperPerformance({ source: 'user_confirmed' }).catch(() => null),
         getPaperPerformance({ source: 'auto_watchlist' }).catch(() => null),
-        getPaperPortfolio('ICHIVOL_BASELINE_V1').catch(() => null),
         getShadowStats().catch(() => null),
       ])
       setPerfMine(pMine)
       setPerfAuto(pAuto)
-      setBroker(port)
       setShadow(sh)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erreur paper tech')
@@ -356,12 +300,11 @@ export function PaperPage() {
 
       <section className="panel">
         <header className="panel-head">
-          <h2>PaperBroker · raw</h2>
+          <h2>ShadowBroker · counterfactuels</h2>
           <button type="button" className="ghost" onClick={() => void reload()} disabled={loading}>
             {loading ? '…' : 'Actualiser'}
           </button>
         </header>
-        <BrokerCards summary={broker} />
         <ShadowCards stats={shadow} />
       </section>
 
