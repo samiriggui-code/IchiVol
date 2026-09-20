@@ -213,8 +213,8 @@ export function SynthesePage() {
       <header className="page-head">
         <h1>Synthèse</h1>
         <p className="muted">
-          Compte virtuel : cartes capital / investissements en haut, graphique type Marché en
-          dessous (capital + évolution des actifs acquis).
+          Cartes compte et investissements en haut. Graphique en dessous : capital + courbes des
+          actifs acquis.
         </p>
       </header>
 
@@ -299,40 +299,7 @@ export function SynthesePage() {
             </details>
           </section>
 
-          <div className="market-toolbar topbar synthese-chart-toolbar">
-            <div className="controls">
-              <label>
-                Contexte
-                <select
-                  value={focusSymbol ?? 'capital'}
-                  onChange={(e) =>
-                    setFocusSymbol(e.target.value === 'capital' ? null : e.target.value)
-                  }
-                >
-                  <option value="capital">Capital global</option>
-                  {chartAssets.map((a) => (
-                    <option key={a.symbol} value={a.symbol}>
-                      {a.label} · {a.symbol}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="tf-group tf-group--toolbar" role="group" aria-label="Timeframe">
-                {PORTFOLIO_RANGES.map((tf) => (
-                  <button
-                    key={tf.id}
-                    type="button"
-                    className={tf.id === range ? 'is-active' : undefined}
-                    onClick={() => setRange(tf.id)}
-                  >
-                    {tf.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
+          {/* Un seul bloc graph : légende = masquer/afficher, panneau = focus, TF une fois en bas */}
           <main className={`layout${sideOpen ? '' : ' is-side-collapsed'}`}>
             <section className="chart-panel panel">
               <header className="panel-head">
@@ -343,7 +310,7 @@ export function SynthesePage() {
                   <span className="market-pair-meta">
                     {focusedAsset
                       ? `${focusedAsset.symbol} · somme investie · ${range}`
-                      : `portefeuille · ${range} · courbe equity`}
+                      : `portefeuille · ${range}`}
                   </span>
                 </h2>
                 <div className="panel-head-actions">
@@ -395,8 +362,8 @@ export function SynthesePage() {
             >
               <div className="panel">
                 <header className="panel-head">
-                  <h2>Contextes</h2>
-                  <span className="panel-meta">capital ou actif acquis</span>
+                  <h2>Focus</h2>
+                  <span className="panel-meta">mettre en avant une courbe</span>
                 </header>
                 <button
                   type="button"
@@ -405,17 +372,14 @@ export function SynthesePage() {
                 >
                   <span className="portfolio-live-dot" style={{ background: 'var(--bull)' }} />
                   <div className="portfolio-side-copy">
-                    <strong>Capital global</strong>
-                    <span className="muted">courbe du portefeuille</span>
+                    <strong>Capital</strong>
+                    <span className="muted">valeur du compte</span>
                   </div>
                   <span className={`mono ${up ? 'up' : 'down'}`}>{eur(equity)}</span>
                 </button>
-                <p className="subhead" style={{ padding: '0.5rem 0.75rem 0.2rem' }}>
-                  Actions acquises
-                </p>
                 {chartAssets.length === 0 && (
                   <p className="muted" style={{ padding: '0.4rem 0.75rem' }}>
-                    Aucune action encore.
+                    Aucun actif acquis.
                   </p>
                 )}
                 {chartAssets.map((a) => (
@@ -429,7 +393,7 @@ export function SynthesePage() {
                     <div className="portfolio-side-copy">
                       <strong>{a.label}</strong>
                       <span className="muted">
-                        {a.invested > 0 ? 'position ouverte' : 'historique'}
+                        {a.invested > 0 ? 'ouvert' : 'historique'}
                       </span>
                     </div>
                     <span className="mono">{a.invested > 0 ? eur(a.invested) : '—'}</span>

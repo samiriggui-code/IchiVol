@@ -584,7 +584,7 @@ export function PortfolioChart({
             {a.label}
           </button>
         ))}
-        <span className="legend-hint">Clique pour afficher / masquer</span>
+        <span className="legend-hint">Afficher / masquer · focus à droite</span>
       </div>
 
       <div className="chart-host" ref={hostRef} />
