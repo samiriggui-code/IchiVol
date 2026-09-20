@@ -16,8 +16,12 @@ def test_baseline_has_no_structure_filter():
     assert BASELINE_PROFILE["structure_detectors"] == []
 
 
+def test_single_portfolio_mode_syncs_only_the_baseline():
+    assert syncable_profile_codes() == [BASELINE_CODE]
+
+
 def test_experimental_codes_registered():
-    codes = syncable_profile_codes()
+    codes = ALL_PROFILES
     assert BASELINE_CODE in codes
     assert "STRUCTURE_MVPP" in codes
     assert "STRUCTURE_CONSENSUS" in codes

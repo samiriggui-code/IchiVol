@@ -6,7 +6,7 @@ from app.paper.strategy_profiles import ALL_PROFILES, BASELINE_CODE, syncable_pr
 
 
 def test_phase3_profiles_present():
-    codes = syncable_profile_codes()
+    codes = ALL_PROFILES
     assert BASELINE_CODE in codes
     for code in (
         "ICHIVOL_CTX_RSI",
@@ -29,6 +29,5 @@ def test_baseline_context_flags_false():
 
 
 def test_phase4_fib_profile_present():
-    codes = syncable_profile_codes()
-    assert "ICHIVOL_MS_FIB" in codes
+    assert "ICHIVOL_MS_FIB" in ALL_PROFILES
     assert ALL_PROFILES["ICHIVOL_MS_FIB"]["fibonacci_filter"] == "require_confluence"

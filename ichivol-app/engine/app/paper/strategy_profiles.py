@@ -230,8 +230,15 @@ def profile_for(code: str) -> dict[str, Any]:
     return deepcopy(BASELINE_PROFILE) | {"code": code}
 
 
+# 2026-09-20: everything was reset to a single virtual portfolio (one account, one lot per symbol).
+# The experimental profiles above stay registered as definitions but are no longer seeded or synced.
+SINGLE_PORTFOLIO_MODE = True
+
+
 def syncable_profile_codes() -> list[str]:
-    """Codes that receive auto_watchlist sync (baseline + experiments)."""
+    """Codes that receive auto_watchlist sync."""
+    if SINGLE_PORTFOLIO_MODE:
+        return [BASELINE_CODE]
     return [
         code
         for code, profile in ALL_PROFILES.items()
