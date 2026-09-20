@@ -52,8 +52,8 @@ const NAV_ITEMS: NavItem[] = [
 /** Primary tabs on phone — rest go in the « Plus » sheet. */
 const MOBILE_PRIMARY = new Set([
   '/app/overview',
-  '/app/market',
   '/app/decisions',
+  '/app/synthese',
   '/app/agent',
 ])
 

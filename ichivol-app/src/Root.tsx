@@ -45,6 +45,7 @@ export function Root() {
             <Route path="backtests" element={<BacktestsPage />} />
             <Route path="agent" element={<AgentPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="*" element={<Navigate to="overview" replace />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

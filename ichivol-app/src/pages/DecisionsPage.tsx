@@ -589,6 +589,15 @@ export function DecisionsPage() {
   useEffect(() => {
     const fromUrl = searchParams.get('symbol')
     const classQ = searchParams.get('class')
+    const intervalQ = searchParams.get('interval')
+    if (
+      intervalQ === '15m' ||
+      intervalQ === '1h' ||
+      intervalQ === '4h' ||
+      intervalQ === '1d'
+    ) {
+      setTimeframe(intervalQ)
+    }
     if (
       classQ === 'crypto' ||
       classQ === 'forex' ||
@@ -606,7 +615,14 @@ export function DecisionsPage() {
     setDetailLoading(true)
     setIntentOverride(null)
     setConfirmMsg(null)
-    getDecisionDetail(fromUrl, timeframe)
+    const tf =
+      intervalQ === '15m' ||
+      intervalQ === '1h' ||
+      intervalQ === '4h' ||
+      intervalQ === '1d'
+        ? intervalQ
+        : timeframe
+    getDecisionDetail(fromUrl, tf)
       .then((d) => {
         setDetail(d)
         const inst = instruments.find((i) => i.id === fromUrl)

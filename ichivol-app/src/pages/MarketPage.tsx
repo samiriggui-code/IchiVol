@@ -126,6 +126,15 @@ export function MarketPage() {
         setInstruments(u.instruments)
         setUniverseError(null)
         const fromUrl = searchParams.get('symbol')
+        const intervalQ = searchParams.get('interval')
+        if (
+          intervalQ === '15m' ||
+          intervalQ === '1h' ||
+          intervalQ === '4h' ||
+          intervalQ === '1d'
+        ) {
+          setInterval(intervalQ)
+        }
         if (fromUrl && u.instruments.some((i) => i.id === fromUrl)) {
           const inst = u.instruments.find((i) => i.id === fromUrl)!
           setSymbol(fromUrl)

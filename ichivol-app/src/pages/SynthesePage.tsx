@@ -431,7 +431,11 @@ export function SynthesePage() {
 
           <section className="panel">
             <header className="panel-head">
-              <h2>Activité</h2>
+              <h2>Mouvements paper</h2>
+              <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+                Ordres du compte — pas la page{' '}
+                <Link to="/app/activite">Activité</Link> (circuit auto).
+              </p>
             </header>
             <div className="synthese-panel-body">
               <ActivityJournal orders={activity} />

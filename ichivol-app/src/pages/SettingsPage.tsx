@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import {
   invalidateEngineThresholdsCache,
   validateEngineThresholds,
@@ -68,6 +69,8 @@ export function SettingsPage() {
   const [customModel, setCustomModel] = useState('')
   const [llmApiKey, setLlmApiKey] = useState('')
   const [clearKey, setClearKey] = useState(false)
+  const [pendingClearLlm, setPendingClearLlm] = useState(false)
+  const [pendingClearTwelve, setPendingClearTwelve] = useState(false)
   const [catalog, setCatalog] = useState<Record<LlmProvider, LlmModelOption[]> | undefined>()
   const [connections, setConnections] = useState<
     NonNullable<AppSettings['llmConnections']>
@@ -495,8 +498,11 @@ export function SettingsPage() {
                           type="checkbox"
                           checked={clearKey}
                           onChange={(e) => {
-                            setClearKey(e.target.checked)
-                            if (e.target.checked) setLlmApiKey('')
+                            if (e.target.checked) {
+                              setPendingClearLlm(true)
+                              return
+                            }
+                            setClearKey(false)
                           }}
                         />
                         Effacer la clé stockée en base
@@ -595,8 +601,11 @@ export function SettingsPage() {
                       type="checkbox"
                       checked={clearTwelveDataKey}
                       onChange={(e) => {
-                        setClearTwelveDataKey(e.target.checked)
-                        if (e.target.checked) setTwelveDataApiKey('')
+                        if (e.target.checked) {
+                          setPendingClearTwelve(true)
+                          return
+                        }
+                        setClearTwelveDataKey(false)
                       }}
                     />
                     Effacer ma clé (retour à la clé opérateur)
@@ -780,6 +789,36 @@ export function SettingsPage() {
           )}
         </form>
       </div>
+
+      {pendingClearLlm && (
+        <ConfirmDialog
+          title="Effacer la clé LLM ?"
+          body="La clé stockée en base sera supprimée à l’enregistrement. Irréversible tant que tu n’en resaisis pas une nouvelle."
+          confirmLabel="Effacer"
+          danger
+          onConfirm={() => {
+            setClearKey(true)
+            setLlmApiKey('')
+            setPendingClearLlm(false)
+          }}
+          onCancel={() => setPendingClearLlm(false)}
+        />
+      )}
+
+      {pendingClearTwelve && (
+        <ConfirmDialog
+          title="Effacer la clé Twelve Data ?"
+          body="Ta clé perso sera retirée à l’enregistrement — retour à la clé opérateur si configurée."
+          confirmLabel="Effacer"
+          danger
+          onConfirm={() => {
+            setClearTwelveDataKey(true)
+            setTwelveDataApiKey('')
+            setPendingClearTwelve(false)
+          }}
+          onCancel={() => setPendingClearTwelve(false)}
+        />
+      )}
     </div>
   )
 }
