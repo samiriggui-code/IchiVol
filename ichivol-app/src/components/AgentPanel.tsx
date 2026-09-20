@@ -10,10 +10,27 @@ import {
 } from '../lib/agent'
 import { useAgentSession } from '../lib/agentSession'
 import type { MarketSnapshot } from '../lib/marketSnapshot'
+import { getSettings, type LlmConnection, type LlmProvider } from '../lib/settings'
 import { signalLabel } from '../lib/signals'
 
 interface Props {
   snapshot: MarketSnapshot | null
+}
+
+const PROVIDER_LABEL: Record<LlmProvider, string> = {
+  openrouter: 'OpenRouter',
+  anthropic: 'Claude (Anthropic) · agent à outils',
+  openai: 'OpenAI',
+}
+const PROVIDER_STORAGE_KEY = 'ichivol.agent.provider'
+
+function readStoredProvider(): LlmProvider | null {
+  try {
+    const v = localStorage.getItem(PROVIDER_STORAGE_KEY)
+    return v === 'anthropic' || v === 'openai' || v === 'openrouter' ? v : null
+  } catch {
+    return null
+  }
 }
 
 export function AgentPanel({ snapshot }: Props) {
@@ -42,6 +59,36 @@ export function AgentPanel({ snapshot }: Props) {
   // Bulle en direct pendant que Claude écrit / interroge le moteur.
   const [liveText, setLiveText] = useState('')
   const [liveTool, setLiveTool] = useState<string | null>(null)
+
+  // Fournisseurs ayant une clé (personnelle et/ou serveur) : on choisit par message, sans toucher aux réglages.
+  const [connections, setConnections] = useState<LlmConnection[]>([])
+  const [providerChoice, setProviderChoice] = useState<LlmProvider | null>(readStoredProvider)
+  useEffect(() => {
+    let cancelled = false
+    getSettings()
+      .then((s) => {
+        if (!cancelled) setConnections((s.llmConnections ?? []).filter((c) => c.connected))
+      })
+      .catch(() => {
+        // Sans réglages lisibles, le sélecteur reste masqué et le serveur garde le fournisseur actif.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  const activeProvider = connections.find((c) => c.active)?.provider ?? null
+  const chosenProvider =
+    providerChoice && connections.some((c) => c.provider === providerChoice)
+      ? providerChoice
+      : activeProvider
+  function onProviderChange(next: LlmProvider) {
+    setProviderChoice(next)
+    try {
+      localStorage.setItem(PROVIDER_STORAGE_KEY, next)
+    } catch {
+      // Stockage indisponible (navigation privée) : le choix vaut pour la session.
+    }
+  }
 
   const lastSignal = snapshot?.signals.length ? snapshot.signals[snapshot.signals.length - 1] : null
 
@@ -137,6 +184,7 @@ export function AgentPanel({ snapshot }: Props) {
       const res = await askAgentStream(
         {
         mode: activeMode,
+        provider: chosenProvider ?? undefined,
         question: question || defaultQ,
         threadId: threadId ?? undefined,
         symbol: decision?.symbol ?? live?.symbol ?? snapshot?.symbol,
@@ -290,6 +338,25 @@ export function AgentPanel({ snapshot }: Props) {
         )}
         {error && <div className="banner error">{error}</div>}
       </div>
+
+      {connections.length > 1 && (
+        <div className="agent-provider" style={{ padding: '0 0.65rem 0.35rem' }}>
+          <label className="muted" style={{ fontSize: '0.78rem' }}>
+            Modèle :{' '}
+            <select
+              value={chosenProvider ?? ''}
+              onChange={(e) => onProviderChange(e.target.value as LlmProvider)}
+              disabled={loading}
+            >
+              {connections.map((c) => (
+                <option key={c.provider} value={c.provider}>
+                  {PROVIDER_LABEL[c.provider]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
 
       <div className="agent-input">
         <textarea

@@ -158,7 +158,7 @@ export async function handleAgentChat(req: Request, res: Response): Promise<void
 
   let resolved: Awaited<ReturnType<typeof resolveLlmForUser>>
   try {
-    resolved = await resolveLlmForUser(req.user.id)
+    resolved = await resolveLlmForUser(req.user.id, body.provider)
   } catch (err) {
     res.status(502).json({ error: err instanceof Error ? err.message : 'Erreur inconnue' })
     return
@@ -172,7 +172,7 @@ export async function handleAgentChat(req: Request, res: Response): Promise<void
   }
 
   // Claude (Anthropic) : agent à outils — il appelle lui-même le moteur en lecture seule.
-  if ((body.provider ?? resolved.provider) === 'anthropic') {
+  if (resolved.provider === 'anthropic') {
     try {
       const dbHistory = await loadThreadHistory(thread.id)
       const history = dbHistory
@@ -326,7 +326,7 @@ export async function handleAgentChat(req: Request, res: Response): Promise<void
 
   try {
     const provider = getProvider({
-      provider: body.provider ?? resolved.provider,
+      provider: resolved.provider,
       apiKey: resolved.apiKey,
       model: resolved.model,
     })

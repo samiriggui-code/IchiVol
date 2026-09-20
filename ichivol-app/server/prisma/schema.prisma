@@ -37,6 +37,8 @@ model Setting {
   llmProvider     String   @default("openrouter")
   llmModel        String   @default("openai/gpt-4o-mini")
   llmApiKeyEnc    String?
+  /// Clés LLM chiffrées, une par fournisseur : { anthropic: enc, openrouter: enc, ... }
+  llmKeysEnc      Json?
   twelveDataApiKeyEnc String?
   updatedAt       DateTime @updatedAt
 

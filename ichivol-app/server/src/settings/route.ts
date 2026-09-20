@@ -3,6 +3,7 @@ import { type ProviderName } from '../config.js'
 import { db } from '../db.js'
 import { testLlmConnection } from './llmTest.js'
 import { DEFAULT_LLM_MODELS, LLM_MODEL_CATALOG } from './models.js'
+import { effectiveEncKeys, withKey } from './llmKeys.js'
 import { getOrCreateSetting, resolveLlmForUser, toPublicSettings } from './resolve.js'
 import { encryptSecret } from './secrets.js'
 import type { SettingsPatch } from './types.js'
@@ -93,12 +94,13 @@ export async function handlePatchSettings(req: Request, res: Response): Promise<
     return
   }
 
-  await getOrCreateSetting(req.user.id)
+  const current = await getOrCreateSetting(req.user.id)
 
   const update: {
     llmProvider?: string
     llmModel?: string
     llmApiKeyEnc?: string | null
+    llmKeysEnc?: Record<string, string>
     twelveDataApiKeyEnc?: string | null
     theme?: string
     activeSources?: string[]
@@ -114,9 +116,21 @@ export async function handlePatchSettings(req: Request, res: Response): Promise<
   if (data.ichimokuParams !== undefined) update.ichimokuParams = data.ichimokuParams
   if (data.volumeParams !== undefined) update.volumeParams = data.volumeParams
 
+  // Une clé par fournisseur : la clé saisie va au fournisseur choisi dans ce
+  // même enregistrement (sinon l'actif) et ne touche jamais celles des autres.
+  // L'ancienne clé unique est rattachée à son fournisseur puis retirée, pour
+  // qu'un changement de fournisseur ne la fasse pas passer pour celle du nouveau.
+  const targetProvider = (data.llmProvider ?? current.llmProvider) as ProviderName
+  let keys = effectiveEncKeys(current)
+  let keysChanged = Boolean(current.llmApiKeyEnc)
   if (data.llmApiKey !== undefined) {
     const trimmed = data.llmApiKey.trim()
-    update.llmApiKeyEnc = trimmed ? encryptSecret(trimmed) : null
+    keys = withKey(keys, targetProvider, trimmed ? encryptSecret(trimmed) : null)
+    keysChanged = true
+  }
+  if (keysChanged) {
+    update.llmKeysEnc = keys as Record<string, string>
+    update.llmApiKeyEnc = null
   }
   if (data.twelveDataApiKey !== undefined) {
     const trimmed = data.twelveDataApiKey.trim()
@@ -147,8 +161,9 @@ export async function handleLlmTest(req: Request, res: Response): Promise<void> 
     apiKey?: unknown
   }
 
-  const resolved = await resolveLlmForUser(req.user.id)
-  const provider = isProvider(body.provider) ? body.provider : resolved.provider
+  const requested = isProvider(body.provider) ? body.provider : undefined
+  const resolved = await resolveLlmForUser(req.user.id, requested)
+  const provider = resolved.provider
   const model =
     typeof body.model === 'string' && body.model.trim()
       ? body.model.trim()

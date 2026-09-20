@@ -1,6 +1,8 @@
 import type { Setting } from '@prisma/client'
 import { config, type ProviderName } from '../config.js'
 import { db } from '../db.js'
+import { effectiveEncKeys, keySource, LLM_PROVIDERS } from './llmKeys.js'
+import { DEFAULT_LLM_MODELS } from './models.js'
 import { decryptSecret } from './secrets.js'
 import type { SettingsPublic } from './types.js'
 
@@ -66,22 +68,19 @@ export async function getOrCreateSetting(userId: string): Promise<Setting> {
 
 export function toPublicSettings(row: Setting): SettingsPublic {
   const llmProvider = asProvider(row.llmProvider)
-  const llmApiKeySet = Boolean(row.llmApiKeyEnc)
+  const uiKeys = effectiveEncKeys(row)
+  const llmApiKeySet = Boolean(uiKeys[llmProvider])
   const llmReady = llmApiKeySet || Boolean(envKeyFor(llmProvider))
   const llmModel = row.llmModel || config.llmModel
 
-  const providers: ProviderName[] = ['openrouter', 'anthropic', 'openai']
-  const llmConnections = providers.map((p) => {
-    const ui = p === llmProvider && llmApiKeySet
+  // Une ligne par fournisseur : chaque clé (personnelle et/ou serveur) est indépendante.
+  const llmConnections = LLM_PROVIDERS.map((p) => {
+    const ui = Boolean(uiKeys[p])
     const env = Boolean(envKeyFor(p))
-    let keySource: 'ui' | 'env' | 'both' | 'none' = 'none'
-    if (ui && env) keySource = 'both'
-    else if (ui) keySource = 'ui'
-    else if (env) keySource = 'env'
     return {
       provider: p,
       connected: ui || env,
-      keySource,
+      keySource: keySource(ui, env),
       active: p === llmProvider,
       model: p === llmProvider ? llmModel : null,
     }
@@ -115,12 +114,20 @@ export interface ResolvedLlm {
   apiKey: string | undefined
 }
 
-export async function resolveLlmForUser(userId: string): Promise<ResolvedLlm> {
+/**
+ * Fournisseur + modèle + clé à utiliser. Sans `providerOverride` : le
+ * fournisseur actif des réglages. Avec : ce fournisseur-là, avec SA clé
+ * (personnelle sinon serveur) et son modèle par défaut si ce n'est pas l'actif.
+ */
+export async function resolveLlmForUser(
+  userId: string,
+  providerOverride?: ProviderName,
+): Promise<ResolvedLlm> {
   const row = await getOrCreateSetting(userId)
-  const provider = asProvider(row.llmProvider)
-  const model = row.llmModel || config.llmModel
-  if (row.llmApiKeyEnc) {
-    return { provider, model, apiKey: decryptSecret(row.llmApiKeyEnc) }
-  }
-  return { provider, model, apiKey: envKeyFor(provider) }
+  const active = asProvider(row.llmProvider)
+  const provider = providerOverride ?? active
+  const model =
+    provider === active ? row.llmModel || config.llmModel : DEFAULT_LLM_MODELS[provider]
+  const enc = effectiveEncKeys(row)[provider]
+  return { provider, model, apiKey: enc ? decryptSecret(enc) : envKeyFor(provider) }
 }

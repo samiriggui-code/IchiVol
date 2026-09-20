@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "test": "tsx --test src/agent/claudeTools.test.ts",
+    "test": "tsx --test src/agent/claudeTools.test.ts src/settings/llmKeys.test.ts",
     "build": "tsc -p tsconfig.json && node scripts/copy-knowledge-docs.mjs",
     "start": "node dist/index.js",
     "create-admin": "tsx prisma/seed-admin.ts"

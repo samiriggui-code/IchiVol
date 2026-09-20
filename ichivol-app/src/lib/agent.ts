@@ -51,6 +51,8 @@ export interface AgentChatRequest {
   timeframe?: string
   threadId?: string
   history?: Array<{ role: 'user' | 'assistant'; content: string }>
+  /** Fournisseur LLM pour ce message (clé et modèle du fournisseur choisi). Omis = celui des réglages. */
+  provider?: 'anthropic' | 'openai' | 'openrouter'
   /** Demande une réponse en flux SSE (agent Claude ; sinon le serveur répond en JSON). */
   stream?: boolean
 }
