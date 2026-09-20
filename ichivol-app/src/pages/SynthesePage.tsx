@@ -50,11 +50,7 @@ function ClosedHistory({
   )
 
   if (closed.length === 0) {
-    return (
-      <p className="muted">
-        Aucun trade terminé pour l’instant.
-      </p>
-    )
+    return <p className="muted">Aucun trade terminé pour l’instant.</p>
   }
 
   return (
@@ -166,33 +162,35 @@ export function SynthesePage() {
 
   return (
     <div className="synthese-page">
-      <header className="page-head">
-        <h1>Synthèse</h1>
+      <header className="page-head market-head">
+        <div className="market-head-copy">
+          <h1>Synthèse</h1>
+          <p className="muted">Compte virtuel : capital, investissements, courbe.</p>
+        </div>
+        <div className="market-class-tabs" role="tablist" aria-label="Volets synthèse">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'synthese'}
+            className={tab === 'synthese' ? 'is-active' : undefined}
+            onClick={() => setTab('synthese')}
+          >
+            Synthèse
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'historique'}
+            className={tab === 'historique' ? 'is-active' : undefined}
+            onClick={() => setTab('historique')}
+          >
+            Historique{closedCount > 0 ? ` (${closedCount})` : ''}
+          </button>
+          <button type="button" onClick={() => void reload()} disabled={loading}>
+            {loading ? '…' : 'Actualiser'}
+          </button>
+        </div>
       </header>
-
-      <div className="synthese-tabs journal-tabs" role="tablist" aria-label="Volets synthèse">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'synthese'}
-          className={tab === 'synthese' ? 'is-active ghost' : 'ghost'}
-          onClick={() => setTab('synthese')}
-        >
-          Synthèse
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'historique'}
-          className={tab === 'historique' ? 'is-active ghost' : 'ghost'}
-          onClick={() => setTab('historique')}
-        >
-          Historique{closedCount > 0 ? ` (${closedCount})` : ''}
-        </button>
-        <button type="button" className="ghost" onClick={() => void reload()} disabled={loading}>
-          {loading ? '…' : 'Actualiser'}
-        </button>
-      </div>
 
       {error && (
         <div className="banner error" role="alert">
@@ -205,31 +203,38 @@ export function SynthesePage() {
       {!overview && !loading && (
         <div className="panel">
           <p className="muted">
-            Compte pas encore prêt.{' '}
-            <Link to="/app/decisions">Décisions</Link>
+            Compte pas encore prêt. <Link to="/app/decisions">Décisions</Link>
           </p>
         </div>
       )}
 
       {overview && tab === 'synthese' && (
         <>
-          <section className="panel synthese-strip">
-            <BrokerAccount overview={overview} />
+          <section className="panel synthese-account-panel">
+            <header className="panel-head">
+              <h2>Compte · {overview.portfolio.label}</h2>
+            </header>
+            <div className="synthese-panel-body">
+              <BrokerAccount overview={overview} />
+            </div>
           </section>
 
-          <section className="panel synthese-strip">
+          <section className="panel synthese-account-panel">
             <header className="panel-head">
               <h2>Investissements</h2>
               <span className="panel-meta">
-                {overview.account.open_positions} · {eur(overview.account.invested)}
+                {overview.account.open_positions} ouvert
+                {overview.account.open_positions > 1 ? 's' : ''} · {eur(overview.account.invested)}
               </span>
             </header>
-            <InvestmentCards
-              overview={overview}
-              onSelect={setSheetPos}
-              onClose={onClose}
-              closingId={closingId}
-            />
+            <div className="synthese-panel-body">
+              <InvestmentCards
+                overview={overview}
+                onSelect={setSheetPos}
+                onClose={onClose}
+                closingId={closingId}
+              />
+            </div>
           </section>
 
           <section className="chart-panel panel synthese-chart-panel">
@@ -270,7 +275,9 @@ export function SynthesePage() {
             <header className="panel-head">
               <h2>Activité</h2>
             </header>
-            <ActivityJournal orders={activity} />
+            <div className="synthese-panel-body">
+              <ActivityJournal orders={activity} />
+            </div>
           </section>
         </>
       )}
@@ -280,7 +287,9 @@ export function SynthesePage() {
           <header className="panel-head">
             <h2>Historique</h2>
           </header>
-          <ClosedHistory rows={history} onSelect={setSheetPos} />
+          <div className="synthese-panel-body">
+            <ClosedHistory rows={history} onSelect={setSheetPos} />
+          </div>
         </section>
       )}
 

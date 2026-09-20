@@ -6,7 +6,7 @@ function tone(v: number | null | undefined): string {
   return v > 0 ? 'up' : 'down'
 }
 
-/** Cartes investissement compactes — l’essentiel, le détail est dans la fiche. */
+/** Cartes investissement — visibles, une par position ouverte. */
 export function InvestmentCards({
   overview,
   onSelect,
@@ -19,11 +19,12 @@ export function InvestmentCards({
   closingId?: string | null
 }) {
   const open = overview.positions.filter((p) => p.status === 'OPEN')
+  const equity = overview.account.equity || 1
 
   if (open.length === 0) {
     return (
       <p className="muted synthese-empty">
-        Aucun investissement — {eur(overview.account.cash)} libres.
+        Aucun investissement ouvert — {eur(overview.account.cash)} libres sur le compte.
       </p>
     )
   }
@@ -31,29 +32,44 @@ export function InvestmentCards({
   return (
     <div className="invest-cards">
       {open.map((p) => {
+        const value =
+          p.current_price != null && p.qty != null ? p.qty * p.current_price : p.notional
+        const share = value != null ? (value / equity) * 100 : null
+        const dir = directionWords(p.direction)
         return (
-          <article key={p.id} className="invest-card invest-card--slim">
+          <article key={p.id} className="invest-card">
             <header className="invest-card-head">
-              <strong className="invest-card-asset">{assetName(p.symbol)}</strong>
-              <span className={`invest-card-dir is-${p.direction.toLowerCase()}`}>
-                {p.direction === 'LONG' ? 'Long' : 'Short'}
-              </span>
+              <div>
+                <strong className="invest-card-asset">{assetName(p.symbol)}</strong>
+                <span className="muted"> · {p.timeframe}</span>
+              </div>
+              <span className={`invest-card-dir is-${p.direction.toLowerCase()}`}>{dir.title}</span>
             </header>
-            <div className="invest-card-slim-row">
+            <p className="invest-card-invested">
+              <span className="context-label">Somme investie</span>
+              <strong>{eur(p.notional)}</strong>
+            </p>
+            <dl className="invest-card-grid">
               <div>
-                <span className="context-label">Investi</span>
-                <strong>{eur(p.notional)}</strong>
+                <dt>Valeur</dt>
+                <dd>{eur(value)}</dd>
               </div>
               <div>
-                <span className="context-label">P&amp;L</span>
-                <strong className={tone(p.unrealized_pnl)}>
+                <dt>P&amp;L</dt>
+                <dd className={tone(p.unrealized_pnl)}>
                   {signedEur(p.unrealized_pnl)}
-                  {p.unrealized_pct != null && (
-                    <small className="muted"> {pct(p.unrealized_pct, 1)}</small>
-                  )}
-                </strong>
+                  {p.unrealized_pct != null && <small> · {pct(p.unrealized_pct, 1)}</small>}
+                </dd>
               </div>
-            </div>
+              <div>
+                <dt>Part</dt>
+                <dd>{share != null ? `${share.toFixed(1)} %` : '—'}</dd>
+              </div>
+              <div>
+                <dt>Entrée</dt>
+                <dd className="mono">{price(p.entry_price)}</dd>
+              </div>
+            </dl>
             <footer className="invest-card-actions">
               <button type="button" className="ghost" onClick={() => onSelect(p)}>
                 Fiche
@@ -76,37 +92,41 @@ export function InvestmentCards({
   )
 }
 
-/** Bandeau compte compact — une ligne, pas de pavé. */
+/** Bandeau compte — cartes context-card (même pattern que le reste de l’app). */
 export function BrokerAccount({ overview }: { overview: PaperOverview }) {
   const a = overview.account
   const totalPct = a.initial_cash ? a.total_pnl / a.initial_cash : null
 
   return (
-    <div className="broker-account broker-account--slim">
-      <div className="broker-slim">
-        <div className="broker-slim-equity">
-          <span className="context-label">Portefeuille</span>
+    <div className="broker-account">
+      <div className="broker-equity-row">
+        <div className="broker-equity">
+          <span className="context-label">Valeur du portefeuille</span>
           <strong className="broker-equity-value">{eur(a.equity)}</strong>
           <span className={`broker-equity-delta ${tone(a.total_pnl)}`}>
-            {signedEur(a.total_pnl)} · {pct(totalPct, 2)}
+            {signedEur(a.total_pnl)} ({pct(totalPct, 2)}) depuis {eur(a.initial_cash, 0)}
           </span>
         </div>
-        <div className="broker-slim-stats">
-          <div>
+        <div className="context-grid broker-equity-stats">
+          <div className="context-card">
             <span className="context-label">Libre</span>
-            <strong>{eur(a.cash)}</strong>
+            <strong className="context-value">{eur(a.cash)}</strong>
           </div>
-          <div>
+          <div className="context-card">
             <span className="context-label">Investi</span>
-            <strong>{eur(a.invested)}</strong>
+            <strong className="context-value">{eur(a.invested)}</strong>
           </div>
-          <div>
+          <div className="context-card">
             <span className="context-label">Latent</span>
-            <strong className={tone(a.unrealized_pnl)}>{signedEur(a.unrealized_pnl)}</strong>
+            <strong className={`context-value ${tone(a.unrealized_pnl)}`}>
+              {signedEur(a.unrealized_pnl)}
+            </strong>
           </div>
-          <div>
+          <div className="context-card">
             <span className="context-label">Encaissé</span>
-            <strong className={tone(a.realized_pnl)}>{signedEur(a.realized_pnl)}</strong>
+            <strong className={`context-value ${tone(a.realized_pnl)}`}>
+              {signedEur(a.realized_pnl)}
+            </strong>
           </div>
         </div>
       </div>

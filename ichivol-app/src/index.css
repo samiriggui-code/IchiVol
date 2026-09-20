@@ -3168,23 +3168,7 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 .trade-timeline h4 { margin: 0 0 0.2rem; font-size: 0.78rem; }
 .trade-timeline p { margin: 0.15rem 0; font-size: 0.74rem; line-height: 1.5; }
 
-/* FRONT — compte + positions façon broker */
-.broker-equity-row {
-  display: grid;
-  grid-template-columns: minmax(180px, 0.9fr) minmax(0, 1.4fr);
-  gap: 0.85rem;
-  align-items: end;
-  margin-bottom: 0.85rem;
-}
-@media (max-width: 900px) {
-  .broker-equity-row { grid-template-columns: 1fr; }
-}
-.broker-equity { display: flex; flex-direction: column; gap: 0.15rem; }
-.broker-equity-value { font-size: 1.9rem; line-height: 1.1; }
-.broker-equity-delta { font-size: 0.78rem; }
-.broker-equity-delta.up, .broker-account .up, .table-wrap .up { color: var(--bull); }
-.broker-equity-delta.down, .broker-account .down, .table-wrap .down { color: var(--bear); }
-.broker-equity-stats { margin: 0; }
+/* FRONT — compte + positions façon broker (styles détaillés plus bas avec Synthèse) */
 
 .portfolio-market {
   display: grid;
@@ -3277,18 +3261,22 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
   gap: 0.65rem;
   min-height: 0;
 }
-.synthese-strip {
-  padding: 0.65rem 0.85rem;
+.synthese-account-panel {
+  overflow: visible;
 }
-.synthese-strip .panel-head {
-  margin-bottom: 0.45rem;
+.synthese-panel-body {
+  padding: 0.35rem 0.75rem 0.75rem;
 }
-.synthese-empty { margin: 0; font-size: 0.78rem; }
-.synthese-chart-toolbar { margin: 0; }
+.synthese-empty {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+}
 .synthese-chart-panel {
   min-height: 480px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 .synthese-chart-panel .chart-wrap {
   flex: 1 1 auto;
@@ -3299,70 +3287,103 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
   min-height: 340px;
 }
 
-.broker-account--slim { margin: 0; }
-.broker-slim {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 1rem 1.5rem;
+.broker-equity-row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 0.9fr) minmax(0, 1.4fr);
+  gap: 0.75rem 1rem;
+  align-items: stretch;
 }
-.broker-slim-equity {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  min-width: 9rem;
+@media (max-width: 720px) {
+  .broker-equity-row { grid-template-columns: 1fr; }
 }
-.broker-slim-equity .broker-equity-value { font-size: 1.55rem; }
-.broker-slim-equity .broker-equity-delta { font-size: 0.72rem; }
-.broker-slim-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.85rem 1.25rem;
-  flex: 1;
-}
-.broker-slim-stats > div {
+.broker-equity {
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
-  min-width: 4.5rem;
+  gap: 0.2rem;
+  padding: 0.45rem 0.55rem;
+  background: var(--secondary);
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
 }
-.broker-slim-stats strong { font-size: 0.92rem; font-variant-numeric: tabular-nums; }
+.broker-equity-value {
+  font-size: 1.65rem;
+  line-height: 1.1;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+.broker-equity-delta { font-size: 0.78rem; }
+.broker-equity-delta.up, .broker-account .up, .table-wrap .up { color: var(--bull); }
+.broker-equity-delta.down, .broker-account .down, .table-wrap .down { color: var(--bear); }
+.broker-equity-stats {
+  margin: 0;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+}
+.broker-equity-stats .context-value {
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
 
 .invest-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 0.55rem;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.65rem;
 }
 .invest-card {
-  padding: 0.75rem 0.85rem;
+  padding: 0.7rem 0.8rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
-  background: color-mix(in srgb, var(--secondary) 70%, transparent);
-  display: flex; flex-direction: column; gap: 0.55rem;
-}
-.invest-card--slim {
-  padding: 0.55rem 0.65rem;
-  gap: 0.4rem;
-  background: transparent;
-}
-.invest-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.4rem; }
-.invest-card-asset { font-size: 0.92rem; }
-.invest-card-dir { font-size: 0.65rem; font-weight: 600; padding: 0.1rem 0.35rem; border-radius: 0.25rem; border: 1px solid var(--border); }
-.invest-card-dir.is-long { color: var(--bull); }
-.invest-card-dir.is-short { color: var(--bear); }
-.invest-card-slim-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-.invest-card-slim-row > div {
+  background: var(--secondary);
   display: flex;
   flex-direction: column;
-  gap: 0.05rem;
+  gap: 0.5rem;
+  color: var(--foreground);
 }
-.invest-card-slim-row strong { font-size: 0.88rem; font-variant-numeric: tabular-nums; }
-.invest-card-actions { display: flex; gap: 0.25rem; }
-.invest-card-actions .ghost { padding: 0.15rem 0.4rem; font-size: 0.68rem; }
+.invest-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.invest-card-asset { font-size: 0.95rem; color: var(--foreground); }
+.invest-card-dir {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.12rem 0.35rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--border);
+}
+.invest-card-dir.is-long { color: var(--bull); }
+.invest-card-dir.is-short { color: var(--bear); }
+.invest-card-invested {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.invest-card-invested strong {
+  font-size: 1.2rem;
+  line-height: 1.15;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+.invest-card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 0.6rem;
+  margin: 0;
+}
+.invest-card-grid dt {
+  font-size: 0.62rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+.invest-card-grid dd {
+  margin: 0.05rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.invest-card-actions { display: flex; gap: 0.35rem; }
 
 .chart-tip--slim {
   min-width: 0;
@@ -3372,7 +3393,13 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 .chart-tip--slim header { margin-bottom: 0.25rem; }
 .chart-tip--slim dl { margin: 0; display: grid; gap: 0.15rem; }
 .chart-tip--slim dl > div { display: flex; justify-content: space-between; gap: 0.75rem; }
-.chart-tip--slim dt { font-size: 0.65rem; color: var(--muted-foreground); display: inline-flex; align-items: center; gap: 0.25rem; }
+.chart-tip--slim dt {
+  font-size: 0.65rem;
+  color: var(--muted-foreground);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
 .chart-tip--slim dd { margin: 0; font-size: 0.72rem; }
 
 .position-chart { width: 100%; min-height: 260px; margin-bottom: 0.5rem; }

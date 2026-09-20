@@ -189,17 +189,19 @@ export function ActivityPage() {
 
   return (
     <div className="page act-page">
-      <header className="page-head">
-        <div>
+      <header className="page-head market-head">
+        <div className="market-head-copy">
           <h1>Activité automatique</h1>
           <p className="muted">
             Tout ce que le système fait sans toi : il lit le marché, ouvre et ferme des trades
             fictifs, refuse certains trades, puis se teste chaque jour. Chaque ligne est datée.
           </p>
         </div>
-        <button type="button" className="ghost" onClick={() => void load()} disabled={loading}>
-          {loading ? '…' : 'Actualiser'}
-        </button>
+        <div className="market-class-tabs">
+          <button type="button" onClick={() => void load()} disabled={loading}>
+            {loading ? '…' : 'Actualiser'}
+          </button>
+        </div>
       </header>
 
       {error && <div className="banner error">{error}</div>}

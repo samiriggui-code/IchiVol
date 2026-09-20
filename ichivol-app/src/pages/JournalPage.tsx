@@ -163,35 +163,42 @@ export function JournalPage() {
 
   return (
     <div className="journal-page">
-      <header className="page-head">
-        <h1>Journal</h1>
-        <p className="muted">
-          Tes confirms en observation. <strong>Actualiser</strong> sur une ligne = relecture moteur
-          live (combiner + portes + RVOL) pour voir si tu gardes ou tu retires — le marché bouge.
-        </p>
+      <header className="page-head market-head">
+        <div className="market-head-copy">
+          <h1>Journal</h1>
+          <p className="muted">
+            Tes confirms en observation. <strong>Actualiser</strong> sur une ligne = relecture moteur
+            live (combiner + portes + RVOL) pour voir si tu gardes ou tu retires — le marché bouge.
+          </p>
+        </div>
+        <div className="market-class-tabs" role="tablist" aria-label="Volets journal">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={!showArchived}
+            className={!showArchived ? 'is-active' : undefined}
+            onClick={() => setShowArchived(false)}
+          >
+            Confirmées
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={showArchived}
+            className={showArchived ? 'is-active' : undefined}
+            onClick={() => setShowArchived(true)}
+          >
+            Archivées
+          </button>
+          <button type="button" onClick={load} disabled={loading}>
+            {loading ? '…' : 'Recharger'}
+          </button>
+        </div>
       </header>
 
       <section className="panel">
         <header className="panel-head">
-          <div className="panel-head-actions journal-tabs">
-            <button
-              type="button"
-              className={!showArchived ? 'is-active ghost' : 'ghost'}
-              onClick={() => setShowArchived(false)}
-            >
-              Confirmées
-            </button>
-            <button
-              type="button"
-              className={showArchived ? 'is-active ghost' : 'ghost'}
-              onClick={() => setShowArchived(true)}
-            >
-              Archivées
-            </button>
-          </div>
-          <button type="button" className="ghost" onClick={load} disabled={loading}>
-            {loading ? '…' : 'Recharger liste'}
-          </button>
+          <h2>{showArchived ? 'Archivées' : 'Confirmées'}</h2>
         </header>
 
         {error && (

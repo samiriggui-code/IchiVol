@@ -284,12 +284,37 @@ export function PaperPage() {
 
   return (
     <div className="paper-page">
-      <header className="page-head">
-        <h1>Paper</h1>
-        <p className="muted">
-          Vue technique : sources, métriques %, evidence IDs, ShadowBroker. Le compte en langage
-          clair est sur <Link to="/app/synthese">Synthèse</Link>.
-        </p>
+      <header className="page-head market-head">
+        <div className="market-head-copy">
+          <h1>Paper</h1>
+          <p className="muted">
+            Vue technique : sources, métriques %, evidence IDs, ShadowBroker. Le compte en langage
+            clair est sur <Link to="/app/synthese">Synthèse</Link>.
+          </p>
+        </div>
+        <div className="market-class-tabs" role="tablist" aria-label="Source paper">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'user_confirmed'}
+            className={tab === 'user_confirmed' ? 'is-active' : undefined}
+            onClick={() => setTab('user_confirmed')}
+          >
+            Mes confirms
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'auto_watchlist'}
+            className={tab === 'auto_watchlist' ? 'is-active' : undefined}
+            onClick={() => setTab('auto_watchlist')}
+          >
+            Auto screener
+          </button>
+          <button type="button" onClick={() => void reload()} disabled={loading}>
+            {loading ? '…' : 'Actualiser'}
+          </button>
+        </div>
       </header>
 
       {error && (
@@ -301,9 +326,6 @@ export function PaperPage() {
       <section className="panel">
         <header className="panel-head">
           <h2>ShadowBroker · counterfactuels</h2>
-          <button type="button" className="ghost" onClick={() => void reload()} disabled={loading}>
-            {loading ? '…' : 'Actualiser'}
-          </button>
         </header>
         <ShadowCards stats={shadow} />
       </section>
@@ -320,23 +342,7 @@ export function PaperPage() {
 
       <section className="panel">
         <header className="panel-head">
-          <div className="panel-head-actions journal-tabs">
-            <button
-              type="button"
-              className={tab === 'user_confirmed' ? 'is-active ghost' : 'ghost'}
-              onClick={() => setTab('user_confirmed')}
-            >
-              Mes confirms
-            </button>
-            <button
-              type="button"
-              className={tab === 'auto_watchlist' ? 'is-active ghost' : 'ghost'}
-              onClick={() => setTab('auto_watchlist')}
-            >
-              Auto screener
-            </button>
-          </div>
-          <span className="panel-meta">{sourceLabel(tab)}</span>
+          <h2>Positions · {sourceLabel(tab)}</h2>
         </header>
         <PositionsTable
           rows={positions}
