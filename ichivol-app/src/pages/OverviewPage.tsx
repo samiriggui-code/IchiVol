@@ -26,9 +26,14 @@ const QUICK_LINKS = [
     body: 'Pipeline Direction → Participation → Structure → Location → Régime.',
   },
   {
+    to: '/app/synthese',
+    title: 'Synthèse',
+    body: 'Compte virtuel clair : cash, somme investie par action, gains.',
+  },
+  {
     to: '/app/paper',
     title: 'Paper',
-    body: 'Positions virtuelles auto_watchlist + confirmées.',
+    body: 'Vue technique : sources, %, evidence, ShadowBroker.',
   },
   {
     to: '/app/backtests',
@@ -238,8 +243,8 @@ export function OverviewPage() {
             ouvertes · {paper ? `${paper.num_closed_trades} clôturées` : 'auto_watchlist'}
             {paper?.total_return != null ? ` · ${fmtPct(paper.total_return)}` : ''}
           </span>
-          <Link to="/app/paper" className="overview-stat-link">
-            Voir paper →
+          <Link to="/app/synthese" className="overview-stat-link">
+            Voir synthèse →
           </Link>
         </div>
         <div className="panel overview-stat">

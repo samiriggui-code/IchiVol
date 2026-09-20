@@ -14,6 +14,7 @@ import {
   IconOverview,
   IconPaper,
   IconSettings,
+  IconSynthese,
   IconWatchlist,
 } from '../components/NavIcons'
 import { BrandMark } from '../components/BrandMark'
@@ -39,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/app/decisions', label: 'Décisions', Icon: IconDecisions },
   { to: '/app/journal', label: 'Journal', Icon: IconJournal },
   { to: '/app/watchlist', label: 'Watchlist', Icon: IconWatchlist },
+  { to: '/app/synthese', label: 'Synthèse', Icon: IconSynthese },
   { to: '/app/paper', label: 'Paper', Icon: IconPaper },
   { to: '/app/backtests', label: 'Backtests', Icon: IconBacktests },
   { to: '/app/agent', label: 'Copilot', Icon: IconChat },

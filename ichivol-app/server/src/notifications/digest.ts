@@ -90,6 +90,10 @@ async function runDigestCycle(): Promise<void> {
 
 export function startDigestJob(): void {
   if (timer) return
+  // Premier envoi ~2 min après boot (sinon un redémarrage remettait le
+  // compteur à 24 h et on ne voyait plus de mails / notifs digest).
+  const BOOT_DELAY_MS = 120_000
+  setTimeout(() => void runDigestCycle(), BOOT_DELAY_MS)
   timer = setInterval(() => void runDigestCycle(), config.digestIntervalMs)
 }
 

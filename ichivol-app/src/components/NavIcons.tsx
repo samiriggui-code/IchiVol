@@ -22,6 +22,10 @@ export function IconPaper({ className }: IconProps) {
   return <KeenIcon icon="document" className={className} />
 }
 
+export function IconSynthese({ className }: IconProps) {
+  return <KeenIcon icon="chart-pie-simple" className={className} />
+}
+
 export function IconJournal({ className }: IconProps) {
   return <KeenIcon icon="notepad" className={className} />
 }

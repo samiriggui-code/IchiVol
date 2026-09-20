@@ -3176,12 +3176,54 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 .broker-equity-delta { font-size: 0.78rem; }
 .broker-equity-delta.up, .broker-account .up, .table-wrap .up { color: var(--bull); }
 .broker-equity-delta.down, .broker-account .down, .table-wrap .down { color: var(--bear); }
+.broker-curve-wrap { width: 100%; }
 .broker-curve { width: 100%; height: 110px; }
+.broker-curve-rich { height: auto; min-height: 200px; }
 .broker-curve-base { stroke: var(--border); stroke-dasharray: 4 4; }
-.broker-curve-line { stroke-width: 2; }
+.broker-curve-line { stroke-width: 2.5; }
 .broker-curve-line.is-up { stroke: var(--bull); }
 .broker-curve-line.is-down { stroke: var(--bear); }
 .broker-curve-empty { font-size: 0.72rem; }
+.broker-curve-axis { fill: var(--muted); font-size: 10px; }
+.broker-curve-bubble circle { fill: var(--fg); stroke: var(--bg); stroke-width: 1.5; }
+.broker-curve-bubble.is-min circle { fill: var(--bear); }
+.broker-curve-bubble.is-max circle, .broker-curve-bubble.is-now circle { fill: var(--bull); }
+.broker-curve-bubble-bg { fill: var(--bg); stroke: var(--border); stroke-width: 1; }
+.broker-curve-bubble-text { fill: var(--fg); font-size: 10px; font-weight: 600; }
+.broker-curve-legend {
+  display: flex; flex-wrap: wrap; gap: 0.75rem 1.1rem;
+  margin-top: 0.45rem; font-size: 0.72rem; color: var(--muted);
+}
+.broker-curve-legend strong { color: var(--fg); font-weight: 600; }
+.broker-curve-legend .up strong { color: var(--bull); }
+.broker-curve-legend .down strong { color: var(--bear); }
+
+.synthese-tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0 0 0.85rem; }
+.invest-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+.invest-card {
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--secondary) 70%, transparent);
+  display: flex; flex-direction: column; gap: 0.55rem;
+}
+.invest-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.4rem; }
+.invest-card-asset { font-size: 1rem; }
+.invest-card-dir { font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.4rem; border-radius: 0.3rem; border: 1px solid var(--border); }
+.invest-card-dir.is-long { color: var(--bull); }
+.invest-card-dir.is-short { color: var(--bear); }
+.invest-card-invested { margin: 0; display: flex; flex-direction: column; gap: 0.1rem; }
+.invest-card-invested strong { font-size: 1.35rem; line-height: 1.15; }
+.invest-card-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem 0.6rem; margin: 0;
+}
+.invest-card-grid dt { font-size: 0.62rem; color: var(--muted); margin: 0; }
+.invest-card-grid dd { margin: 0.05rem 0 0; font-size: 0.78rem; font-weight: 600; }
+.invest-card-actions { display: flex; gap: 0.35rem; margin-top: 0.15rem; }
 .position-chart { width: 100%; min-height: 260px; margin-bottom: 0.5rem; }
 .trade-market { margin-bottom: 0.9rem; }
 .table-wrap td.up { color: var(--bull); }

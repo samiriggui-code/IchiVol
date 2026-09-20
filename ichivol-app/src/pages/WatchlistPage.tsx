@@ -66,8 +66,10 @@ export function WatchlistPage() {
       <header className="page-head">
         <h1>Watchlist</h1>
         <p className="muted">
-          Symboles épinglés (Copilot « ajoute X à la watchlist »). Ce n’est pas le{' '}
-          <Link to="/app/journal">Journal</Link> des décisions confirmées.
+          Liste <strong>manuelle</strong> : elle reste vide tant que vous n’avez pas demandé au
+          Copilot « ajoute BTC à la watchlist » puis Confirmé. Ce n’est <em>pas</em> le screener
+          auto (voir <Link to="/app/decisions">Décisions</Link> /{' '}
+          <Link to="/app/paper">Paper</Link>), ni le <Link to="/app/journal">Journal</Link>.
         </p>
       </header>
 

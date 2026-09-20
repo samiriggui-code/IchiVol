@@ -11,9 +11,9 @@ import { LoginPage } from './pages/LoginPage'
 import { MarketPage } from './pages/MarketPage'
 import { OverviewPage } from './pages/OverviewPage'
 import { PaperPage } from './pages/PaperPage'
-import { PaperTechPage } from './pages/PaperTechPage'
 import { RequireAuth } from './pages/RequireAuth'
 import { SettingsPage } from './pages/SettingsPage'
+import { SynthesePage } from './pages/SynthesePage'
 import { WatchlistPage } from './pages/WatchlistPage'
 import './theme/camap-tokens.css'
 import './theme/keenicons.css'
@@ -37,8 +37,9 @@ export function Root() {
             <Route path="decisions" element={<DecisionsPage />} />
             <Route path="journal" element={<JournalPage />} />
             <Route path="watchlist" element={<WatchlistPage />} />
+            <Route path="synthese" element={<SynthesePage />} />
             <Route path="paper" element={<PaperPage />} />
-            <Route path="paper/tech" element={<PaperTechPage />} />
+            <Route path="paper/tech" element={<Navigate to="/app/paper" replace />} />
             <Route path="backtests" element={<BacktestsPage />} />
             <Route path="agent" element={<AgentPage />} />
             <Route path="settings" element={<SettingsPage />} />
