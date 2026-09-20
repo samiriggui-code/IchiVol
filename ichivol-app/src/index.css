@@ -2277,6 +2277,10 @@ button, select { font: inherit; color: inherit; }
   align-items: center;
   gap: 0.4rem;
 }
+.propose-confirm-cta {
+  font-weight: 650;
+  border-color: color-mix(in srgb, var(--bull) 45%, var(--border));
+}
 .propose-paper-loading {
   margin: 0.4rem 0;
   font-size: 0.7rem;
