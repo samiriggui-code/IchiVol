@@ -216,6 +216,12 @@ def sync_position(
                 )
             return None
 
+        if existing.source != source:
+            # A lot opened from another source (e.g. user_confirmed) is NOT managed by this loop's
+            # signal: a signal downgrade must never close a manual position. Only its stop/target
+            # (checked above, and by app/paper/protection.py) or the user can close it.
+            return None
+
         reason = "pipeline_flipped" if direction is not None else "pipeline_downgraded"
         if existing.qty:
             paper_broker.close_capital_position(
