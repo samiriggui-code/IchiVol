@@ -106,22 +106,22 @@ export function ProposePaperTradePanel({
       <div className="propose-actions">
         <button
           type="button"
-          className="ghost"
+          className="ghost propose-confirm-cta"
           disabled={!intent.actionable || confirming}
           onClick={onConfirm}
         >
           {confirming
             ? '…'
             : intent.direction === 'SHORT' || intent.pipeline_decision === 'SELL'
-              ? 'Vérifier la vente…'
-              : 'Vérifier l’achat…'}
+              ? 'Ouvrir le dialogue de vente…'
+              : 'Ouvrir le dialogue d’achat…'}
         </button>
         {onRefresh && (
           <button type="button" className="ghost" disabled={loading} onClick={onRefresh}>
             Recalculer
           </button>
         )}
-        <span className="muted">Virtuel — dialogue de confirmation ensuite.</span>
+        <span className="muted">Virtuel — récap qty / stop / liquidités avant confirm.</span>
       </div>
     </section>
   )

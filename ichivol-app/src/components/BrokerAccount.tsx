@@ -115,88 +115,28 @@ function LotRow({
   closingId?: string | null
 }) {
   const value = marketValue(p)
-  const asOf =
-    p.price_as_of != null
-      ? new Date(p.price_as_of * 1000).toLocaleString('fr-FR', {
-          day: '2-digit',
-          month: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-        })
-      : null
   return (
-    <li className="invest-lot">
-      <div className="invest-lot-main">
+    <li className="invest-lot invest-lot--compact">
+      <button type="button" className="invest-lot-pick" onClick={() => onSelect(p)}>
         <strong>
-          {p.timeframe} · {p.source}
+          {p.timeframe} · {p.source === 'user_confirmed' ? 'Manuel' : 'Auto'}
         </strong>
-        <span className="muted mono">
-          {new Date(p.entry_time).toLocaleString('fr-FR', {
-            day: '2-digit',
-            month: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
+        <span className="mono muted">{eur(p.notional)}</span>
+        <span className={tone(p.unrealized_pnl)}>
+          {p.unrealized_pnl != null ? signedEur(p.unrealized_pnl) : '—'}
         </span>
-      </div>
-      <dl className="invest-lot-grid">
-        <div>
-          <dt>Coût</dt>
-          <dd>{eur(p.notional)}</dd>
-        </div>
-        <div>
-          <dt>Qté</dt>
-          <dd className="mono">{p.qty != null ? p.qty.toPrecision(4) : '—'}</dd>
-        </div>
-        <div>
-          <dt>Entrée</dt>
-          <dd className="mono">{price(p.entry_price)}</dd>
-        </div>
-        <div>
-          <dt title={asOf ? `Cours du ${asOf}` : undefined}>Cours</dt>
-          <dd className="mono">{price(p.current_price)}</dd>
-        </div>
-        <div>
-          <dt>Valeur</dt>
-          <dd>{value != null ? eur(value) : '—'}</dd>
-        </div>
-        <div>
-          <dt title="(cours − entrée) / entrée · hors frais de sortie">Latent</dt>
-          <dd className={tone(p.unrealized_pnl)}>
-            {p.unrealized_pnl != null ? signedEur(p.unrealized_pnl) : '—'}
-            {p.unrealized_pct != null && <small> · {pct(p.unrealized_pct, 1)}</small>}
-          </dd>
-        </div>
-        {p.entry_fee != null && p.entry_fee > 0 && (
-          <div>
-            <dt>Frais entrée</dt>
-            <dd className="mono">{eur(p.entry_fee)}</dd>
-          </div>
-        )}
-        {(p.stop_price != null || p.take_profit_price != null) && (
-          <div>
-            <dt>Stop / TP</dt>
-            <dd className="mono">
-              {price(p.stop_price)} / {price(p.take_profit_price)}
-            </dd>
-          </div>
-        )}
-      </dl>
-      <div className="invest-card-actions">
-        <button type="button" className="ghost" onClick={() => onSelect(p)}>
-          Fiche
+        <span className="muted mono">{value != null ? eur(value) : '—'}</span>
+      </button>
+      {onClose && (
+        <button
+          type="button"
+          className="ghost"
+          disabled={closingId === p.id}
+          onClick={() => onClose(p.id)}
+        >
+          Clôturer…
         </button>
-        {onClose && (
-          <button
-            type="button"
-            className="ghost"
-            disabled={closingId === p.id}
-            onClick={() => onClose(p.id)}
-          >
-            Clôturer…
-          </button>
-        )}
-      </div>
+      )}
     </li>
   )
 }
@@ -214,13 +154,14 @@ function GroupCard({
   onClose?: (id: string) => void
   closingId?: string | null
 }) {
-  const [open, setOpen] = useState(group.lots.length > 1)
+  const [lotsOpen, setLotsOpen] = useState(false)
   const dir = directionWords(group.direction)
   const share = group.value != null && equity > 0 ? (group.value / equity) * 100 : null
   const multi = group.lots.length > 1
+  const primary = group.lots.reduce((a, b) => ((a.notional ?? 0) >= (b.notional ?? 0) ? a : b))
 
   return (
-    <article className="invest-card">
+    <article className="invest-card invest-card--compact">
       <header className="invest-card-head">
         <div>
           <strong className="invest-card-asset">{assetName(group.symbol)}</strong>
@@ -235,13 +176,13 @@ function GroupCard({
         <span className="context-label">Coût d’acquisition</span>
         <strong>{eur(group.notional)}</strong>
       </p>
-      <dl className="invest-card-grid">
+      <dl className="invest-card-grid invest-card-grid--compact">
         <div>
           <dt>Valeur actuelle</dt>
           <dd>{group.value != null ? eur(group.value) : '—'}</dd>
         </div>
         <div>
-          <dt title="Mark-to-market · hors frais de sortie estimés · non acquis">Latent</dt>
+          <dt title="Mark-to-market · hors frais de sortie · non acquis">Latent</dt>
           <dd className={tone(group.unrealized)}>
             {group.unrealized != null ? signedEur(group.unrealized) : '—'}
             {group.unrealizedPct != null && <small> · {pct(group.unrealizedPct, 1)}</small>}
@@ -256,18 +197,34 @@ function GroupCard({
           <dd className="mono">{price(group.avgEntry)}</dd>
         </div>
       </dl>
-      {multi && (
-        <button
-          type="button"
-          className="ghost invest-lots-toggle"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? 'Masquer les lots' : `Détail des ${group.lots.length} lots`}
+      <footer className="invest-card-actions">
+        <button type="button" className="ghost" onClick={() => onSelect(primary)}>
+          Fiche…
         </button>
-      )}
-      {(open || !multi) && (
-        <ul className="invest-lots">
+        {multi ? (
+          <button
+            type="button"
+            className="ghost"
+            aria-expanded={lotsOpen}
+            onClick={() => setLotsOpen((v) => !v)}
+          >
+            {lotsOpen ? 'Masquer lots' : `Lots (${group.lots.length})…`}
+          </button>
+        ) : (
+          onClose && (
+            <button
+              type="button"
+              className="ghost"
+              disabled={closingId === primary.id}
+              onClick={() => onClose(primary.id)}
+            >
+              Clôturer…
+            </button>
+          )
+        )}
+      </footer>
+      {multi && lotsOpen && (
+        <ul className="invest-lots" aria-label={`Lots ${assetName(group.symbol)}`}>
           {group.lots.map((p) => (
             <LotRow
               key={p.id}
@@ -296,7 +253,7 @@ function IncompleteCard({
 }) {
   const dir = directionWords(p.direction)
   return (
-    <article className="invest-card invest-card--incomplete">
+    <article className="invest-card invest-card--incomplete invest-card--compact">
       <header className="invest-card-head">
         <div>
           <strong className="invest-card-asset">{assetName(p.symbol)}</strong>
@@ -305,7 +262,7 @@ function IncompleteCard({
         <span className={`invest-card-dir is-${p.direction.toLowerCase()}`}>{dir.title}</span>
       </header>
       <p className="invest-incomplete-badge">{valuationLabel(p.valuation_status)}</p>
-      <dl className="invest-card-grid">
+      <dl className="invest-card-grid invest-card-grid--compact">
         <div>
           <dt>Coût</dt>
           <dd>{p.notional != null ? eur(p.notional) : '—'}</dd>
@@ -314,28 +271,10 @@ function IncompleteCard({
           <dt>Entrée</dt>
           <dd className="mono">{price(p.entry_price)}</dd>
         </div>
-        <div>
-          <dt>Cours</dt>
-          <dd className="mono">{price(p.current_price)}</dd>
-        </div>
-        <div>
-          <dt title="Performance prix seule — pas un rendement de portefeuille">Δ prix</dt>
-          <dd className={tone(p.unrealized_pct)}>
-            {p.unrealized_pct != null ? pct(p.unrealized_pct, 1) : '—'}
-          </dd>
-        </div>
-        <div>
-          <dt>Valeur / P&amp;L €</dt>
-          <dd>—</dd>
-        </div>
-        <div>
-          <dt>Statut</dt>
-          <dd className="muted">Hors totaux capitalisés</dd>
-        </div>
       </dl>
       <footer className="invest-card-actions">
         <button type="button" className="ghost" onClick={() => onSelect(p)}>
-          Fiche
+          Fiche…
         </button>
         {onClose && (
           <button

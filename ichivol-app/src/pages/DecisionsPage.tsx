@@ -537,6 +537,28 @@ export function DecisionsPage() {
     }
   }
 
+  // Toujours avoir un intent pour afficher « Vérifier l’achat… » → PaperConfirmSheet.
+  useEffect(() => {
+    if (!detail) return
+    if (detail.order_intent || intentOverride) return
+    let cancelled = false
+    setIntentLoading(true)
+    proposePaperTrade(detail.symbol, detail.timeframe || timeframe)
+      .then((intent) => {
+        if (!cancelled) setIntentOverride(intent)
+      })
+      .catch(() => {
+        if (!cancelled) setIntentOverride(null)
+      })
+      .finally(() => {
+        if (!cancelled) setIntentLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when symbol/tf change
+  }, [detail?.symbol, detail?.timeframe, detail?.order_intent])
+
   function selectClass(next: EngineAssetClass) {
     setMarketClass(next)
     setSelected(null)
