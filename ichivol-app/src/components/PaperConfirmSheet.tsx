@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { labelPipelineGate } from '../lib/decisionLabels'
 import type { PipelineGateLabel } from '../lib/decisions'
@@ -19,22 +19,30 @@ function fmtEur(v: number | null | undefined): string {
 }
 
 /**
- * Backdrop de confirmation paper — avant toute ouverture virtuelle.
- * Aucun ordre live.
+ * Backdrop de confirmation paper — avant toute ouverture virtuelle (achat ou vente short).
+ * Garde-fou anti double-clic. Aucun ordre live.
  */
 export function PaperConfirmSheet({
   symbolLabel,
   intent,
   confirming,
+  error,
   onConfirm,
   onCancel,
 }: {
   symbolLabel: string
   intent: OrderIntent
   confirming?: boolean
+  error?: string | null
   onConfirm: () => void
   onCancel: () => void
 }) {
+  const clickLock = useRef(false)
+
+  useEffect(() => {
+    if (!confirming) clickLock.current = false
+  }, [confirming])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !confirming) onCancel()
@@ -43,12 +51,22 @@ export function PaperConfirmSheet({
     return () => window.removeEventListener('keydown', onKey)
   }, [onCancel, confirming])
 
+  const isSell = intent.direction === 'SHORT' || intent.pipeline_decision === 'SELL'
+  const actionWord = isSell ? 'Vente' : 'Achat'
+  const confirmLabel = isSell ? 'Confirmer la vente (paper)' : 'Confirmer l’achat (paper)'
+
+  function handleConfirm() {
+    if (confirming || clickLock.current || !intent.actionable) return
+    clickLock.current = true
+    onConfirm()
+  }
+
   return (
     <div
       className="trade-sheet-backdrop paper-confirm-backdrop"
       role="dialog"
       aria-modal="true"
-      aria-label="Confirmer l’ordre paper"
+      aria-label={`Confirmer ${actionWord.toLowerCase()} paper`}
       onClick={(e) => {
         if (e.target === e.currentTarget && !confirming) onCancel()
       }}
@@ -56,17 +74,22 @@ export function PaperConfirmSheet({
       <aside className="panel trade-sheet paper-confirm-sheet">
         <header className="panel-head trade-sheet-head">
           <div>
-            <h2>Confirmer l’ordre paper</h2>
+            <h2>Confirmer {actionWord.toLowerCase()} paper</h2>
             <p className="muted">
               {symbolLabel} · virtuel — aucun broker réel
             </p>
           </div>
           <button type="button" className="ghost" onClick={onCancel} disabled={confirming}>
-            Fermer
+            Annuler
           </button>
         </header>
 
         <div className="trade-sheet-scroll">
+          {error && (
+            <div className="banner error" role="alert">
+              {error}
+            </div>
+          )}
           {!intent.actionable && (
             <div className="banner error" role="alert">
               Ordre non actionnable — Portes ≠ Achat/Vente ou risque insuffisant (
@@ -75,7 +98,7 @@ export function PaperConfirmSheet({
           )}
 
           <div className="trade-sheet-brief">
-            <p className="subhead">Récapitulatif</p>
+            <p className="subhead">Récapitulatif — {actionWord}</p>
             <p>
               Portes :{' '}
               <strong>
@@ -121,16 +144,15 @@ export function PaperConfirmSheet({
               </dd>
             </div>
             <div>
-              <dt>Cash libre</dt>
+              <dt>Liquidités</dt>
               <dd className="mono">{fmtEur(intent.cash)}</dd>
             </div>
           </dl>
 
           <p className="muted paper-confirm-note">
-            Confirmer ouvre une position paper et un snapshot journal. Ensuite :{' '}
-            <Link to="/app/synthese">Synthèse</Link> (compte) ·{' '}
-            <Link to="/app/paper">Paper</Link> (positions) ·{' '}
-            <Link to="/app/journal">Journal</Link> (snapshots).
+            Un seul lot par symbole sur le compte. Confirmer ouvre la position paper et un snapshot
+            journal. Ensuite : <Link to="/app/synthese">Synthèse</Link> ·{' '}
+            <Link to="/app/paper">Paper</Link> · <Link to="/app/journal">Journal</Link>.
           </p>
 
           <div className="paper-confirm-actions">
@@ -138,9 +160,9 @@ export function PaperConfirmSheet({
               type="button"
               className="ghost"
               disabled={!intent.actionable || confirming}
-              onClick={onConfirm}
+              onClick={handleConfirm}
             >
-              {confirming ? 'Ouverture…' : 'Confirmer (paper)'}
+              {confirming ? 'Ouverture…' : confirmLabel}
             </button>
             <button type="button" className="ghost" disabled={confirming} onClick={onCancel}>
               Annuler

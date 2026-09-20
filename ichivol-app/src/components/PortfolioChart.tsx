@@ -102,7 +102,7 @@ type Hover = {
 
 type LayerVis = Record<string, boolean>
 
-/** Courbe capital + évolution des sommes investies — sans marqueurs ni panneau latéral. */
+/** Courbe valeur du portefeuille (€). Exposition engagée = couches optionnelles (off par défaut). */
 export function PortfolioChart({
   points,
   initial,
@@ -127,7 +127,9 @@ export function PortfolioChart({
   const colorsRef = useRef<ChartColors>(readChartColors())
 
   const [colors, setColors] = useState<ChartColors>(() => readChartColors())
+  /** Asset layers stay off until the user opts in (avoids dual-scale confusion). */
   const [layers, setLayers] = useState<LayerVis>({ capital: true })
+  const [showExposure, setShowExposure] = useState(false)
   const [tip, setTip] = useState<{
     visible: boolean
     x: number
@@ -222,11 +224,23 @@ export function PortfolioChart({
   useEffect(() => {
     setLayers((prev) => {
       const next: LayerVis = { capital: prev.capital !== false }
-      for (const a of model.assets) next[a.symbol] = prev[a.symbol] !== false
+      for (const a of model.assets) {
+        // Keep prior explicit choice; default off so equity scale stays clean.
+        next[a.symbol] = prev[a.symbol] === true
+      }
       layersRef.current = next
       return next
     })
   }, [model.assets])
+
+  useEffect(() => {
+    const chart = chartRef.current
+    if (!chart) return
+    const anyAssetOn = showExposure && model.assets.some((a) => layers[a.symbol] === true)
+    chart.applyOptions({
+      leftPriceScale: { visible: anyAssetOn, borderVisible: false },
+    })
+  }, [showExposure, layers, model.assets])
 
   useEffect(() => {
     layersRef.current = layers
@@ -244,7 +258,7 @@ export function PortfolioChart({
       width: el.clientWidth || 800,
       height: el.clientHeight || 420,
       rightPriceScale: { borderVisible: false },
-      leftPriceScale: { visible: true, borderVisible: false },
+      leftPriceScale: { visible: false, borderVisible: false },
       timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false },
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
@@ -270,7 +284,7 @@ export function PortfolioChart({
       lastValueVisible: true,
       priceLineVisible: false,
       priceScaleId: 'right',
-      title: 'Capital',
+      title: 'Valeur (€)',
     })
     capital.priceScale().applyOptions({ scaleMargins: { top: 0.08, bottom: 0.12 } })
 
@@ -406,7 +420,7 @@ export function PortfolioChart({
         assetSeriesRef.current.set(a.symbol, series)
       }
       series.applyOptions({
-        visible: layersRef.current[a.symbol] !== false,
+        visible: layersRef.current[a.symbol] === true,
         color: a.color,
       })
       series.setData(a.line)
@@ -418,7 +432,7 @@ export function PortfolioChart({
   useEffect(() => {
     capitalRef.current?.applyOptions({ visible: layers.capital !== false })
     for (const [sym, series] of assetSeriesRef.current) {
-      series.applyOptions({ visible: layers[sym] !== false })
+      series.applyOptions({ visible: layers[sym] === true })
     }
   }, [layers])
 
@@ -434,11 +448,15 @@ export function PortfolioChart({
 
   const toggle = (key: string) => {
     setLayers((prev) => {
-      const next = { ...prev, [key]: !(prev[key] !== false) }
+      const on =
+        key === 'capital' ? !(prev.capital !== false) : !(prev[key] === true)
+      const next = { ...prev, [key]: on }
       layersRef.current = next
       return next
     })
   }
+
+  const exposureOn = showExposure
 
   return (
     <div className="chart-wrap" ref={wrapRef}>
@@ -452,23 +470,59 @@ export function PortfolioChart({
           <span className="legend-dots" aria-hidden>
             <i style={{ background: colors.bull }} />
           </span>
-          Capital
+          Valeur (€)
         </button>
-        {model.assets.map((a) => (
-          <button
-            key={a.symbol}
-            type="button"
-            className={`legend-chip${layers[a.symbol] !== false ? ' is-on' : ' is-off'}`}
-            aria-pressed={layers[a.symbol] !== false}
-            onClick={() => toggle(a.symbol)}
-          >
-            <span className="legend-dots" aria-hidden>
-              <i style={{ background: a.color }} />
-            </span>
-            {a.label}
-          </button>
-        ))}
+        <button
+          type="button"
+          className={`legend-chip${exposureOn ? ' is-on' : ' is-off'}`}
+          aria-pressed={exposureOn}
+          onClick={() => {
+            setShowExposure((v) => {
+              const next = !v
+              if (next) {
+                setLayers((prev) => {
+                  const allOn: LayerVis = { ...prev, capital: prev.capital !== false }
+                  for (const a of model.assets) allOn[a.symbol] = true
+                  layersRef.current = allOn
+                  return allOn
+                })
+              } else {
+                setLayers((prev) => {
+                  const allOff: LayerVis = { capital: prev.capital !== false }
+                  for (const a of model.assets) allOff[a.symbol] = false
+                  layersRef.current = allOff
+                  return allOff
+                })
+              }
+              return next
+            })
+          }}
+        >
+          Exposition engagée
+        </button>
+        {exposureOn &&
+          model.assets.map((a) => (
+            <button
+              key={a.symbol}
+              type="button"
+              className={`legend-chip${layers[a.symbol] === true ? ' is-on' : ' is-off'}`}
+              aria-pressed={layers[a.symbol] === true}
+              onClick={() => toggle(a.symbol)}
+            >
+              <span className="legend-dots" aria-hidden>
+                <i style={{ background: a.color }} />
+              </span>
+              {a.label}
+            </button>
+          ))}
       </div>
+
+      <p className="muted chart-snapshot-note">
+        Échelle droite = valeur totale du compte (€). Ligne pointillée = capital initial. Snapshots
+        ≈ toutes les 5 min — pas de points inventés ; les longues lignes relient des absences de
+        mesure. « Exposition engagée » (optionnel) = coût d’acquisition par actif, échelle gauche
+        séparée.
+      </p>
 
       <div className="chart-host" ref={hostRef} />
 
@@ -486,20 +540,21 @@ export function PortfolioChart({
           </header>
           <dl>
             <div>
-              <dt>Capital</dt>
+              <dt>Valeur</dt>
               <dd className="mono">{eur(tip.point.equity)}</dd>
             </div>
-            {tip.point.assets
-              .filter((a) => a.invested > 0)
-              .slice(0, 4)
-              .map((a) => (
-                <div key={a.symbol}>
-                  <dt>
-                    <i style={{ background: a.color }} /> {a.label}
-                  </dt>
-                  <dd className="mono">{eur(a.invested)}</dd>
-                </div>
-              ))}
+            {exposureOn &&
+              tip.point.assets
+                .filter((a) => a.invested > 0 && layers[a.symbol] === true)
+                .slice(0, 4)
+                .map((a) => (
+                  <div key={a.symbol}>
+                    <dt>
+                      <i style={{ background: a.color }} /> {a.label}
+                    </dt>
+                    <dd className="mono">{eur(a.invested)}</dd>
+                  </div>
+                ))}
           </dl>
         </div>
       )}

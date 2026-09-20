@@ -52,6 +52,8 @@ export interface GateMatrixProps {
   /** Ouvre une position paper (user_confirmed) sans passer par le Journal. */
   onOpenPaper?: (row: ScreenerDecisionRow) => void | Promise<void>
   paperBusySymbol?: string | null
+  /** Symboles déjà ouverts sur le portefeuille — bouton verrouillé. */
+  openPaperSymbols?: ReadonlySet<string>
 }
 
 /** Matrice portes — Option B : PORTES = seul verdict d’action ; Brut = diagnostic Ichi+RVOL. */
@@ -63,6 +65,7 @@ export function GateMatrix({
   emptyHint = 'Aucune ligne pour cette vue.',
   onOpenPaper,
   paperBusySymbol = null,
+  openPaperSymbols,
 }: GateMatrixProps) {
   if (rows.length === 0) {
     return <p className="empty muted">{emptyHint}</p>
@@ -111,6 +114,8 @@ export function GateMatrix({
             const active = selected === row.symbol
             const canPaper = Boolean(onOpenPaper) && isPaperActionable(gate)
             const busy = paperBusySymbol === row.symbol
+            const alreadyOpen = openPaperSymbols?.has(row.symbol) === true
+            const canOpen = canPaper && !busy && !alreadyOpen
             return (
               <tr
                 key={row.symbol}
@@ -163,19 +168,21 @@ export function GateMatrix({
                     <button
                       type="button"
                       className="ghost gate-matrix-paper-btn"
-                      disabled={!canPaper || busy}
+                      disabled={!canOpen}
                       title={
-                        canPaper
-                          ? 'Ouvrir une position paper (virtuelle)'
-                          : 'Paper seulement si Portes = Achat ou Vente'
+                        alreadyOpen
+                          ? 'Déjà une position ouverte sur ce symbole — pas de 2ᵉ achat'
+                          : canPaper
+                            ? 'Préparer un ordre paper (récap + confirmation)'
+                            : 'Paper seulement si Portes = Achat ou Vente'
                       }
                       onClick={(e) => {
                         e.stopPropagation()
-                        if (!canPaper || busy) return
+                        if (!canOpen) return
                         void onOpenPaper(row)
                       }}
                     >
-                      {busy ? '…' : 'Ouvrir'}
+                      {busy ? '…' : alreadyOpen ? 'Ouvert' : 'Vérifier…'}
                     </button>
                   </td>
                 )}

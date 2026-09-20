@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ActivityJournal } from '../components/ActivityJournal'
 import { BrokerAccount, InvestmentCards } from '../components/BrokerAccount'
+import { PaperCloseConfirmSheet } from '../components/PaperCloseConfirmSheet'
 import { PaperTradeSheet } from '../components/PaperTradeSheet'
 import {
   PortfolioChart,
@@ -15,6 +16,7 @@ import {
   listPaperPositions,
   type PaperOrderRow,
   type PaperOverview,
+  type PaperOverviewPosition,
   type PaperPosition,
 } from '../lib/paper'
 import {
@@ -33,6 +35,11 @@ function tone(v: number | null | undefined): string {
   return v > 0 ? 'up' : 'down'
 }
 
+type ResultFilter = 'all' | 'win' | 'loss' | 'flat'
+type SourceFilter = 'all' | 'user_confirmed' | 'auto_watchlist'
+
+const HISTORY_PAGE_SIZE = 25
+
 function ClosedHistory({
   rows,
   onSelect,
@@ -40,65 +47,191 @@ function ClosedHistory({
   rows: PaperPosition[]
   onSelect: (p: PaperPosition) => void
 }) {
-  const closed = useMemo(
+  const [symbolQ, setSymbolQ] = useState('')
+  const [resultFilter, setResultFilter] = useState<ResultFilter>('all')
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
+  const [page, setPage] = useState(0)
+
+  const closedAll = useMemo(
     () =>
       rows
         .filter((p) => p.status === 'CLOSED')
-        .sort((a, b) => +new Date(b.exit_time ?? b.entry_time) - +new Date(a.exit_time ?? a.entry_time))
-        .slice(0, 40),
+        .sort(
+          (a, b) =>
+            +new Date(b.exit_time ?? b.entry_time) - +new Date(a.exit_time ?? a.entry_time),
+        ),
     [rows],
   )
 
-  if (closed.length === 0) {
+  const filtered = useMemo(() => {
+    const q = symbolQ.trim().toLowerCase()
+    return closedAll.filter((p) => {
+      if (q) {
+        const sym = p.symbol.toLowerCase()
+        const label = assetName(p.symbol).toLowerCase()
+        if (!sym.includes(q) && !label.includes(q) && !sym.replace(/usdt$/, '').includes(q)) {
+          return false
+        }
+      }
+      if (sourceFilter !== 'all' && p.source !== sourceFilter) return false
+      if (resultFilter !== 'all') {
+        const pnl = p.realized_pnl ?? (p.pnl_pct != null ? p.pnl_pct : null)
+        if (pnl == null) return resultFilter === 'flat'
+        if (resultFilter === 'win' && !(pnl > 0)) return false
+        if (resultFilter === 'loss' && !(pnl < 0)) return false
+        if (resultFilter === 'flat' && pnl !== 0) return false
+      }
+      return true
+    })
+  }, [closedAll, symbolQ, resultFilter, sourceFilter])
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / HISTORY_PAGE_SIZE))
+  const safePage = Math.min(page, pageCount - 1)
+  const pageRows = filtered.slice(
+    safePage * HISTORY_PAGE_SIZE,
+    safePage * HISTORY_PAGE_SIZE + HISTORY_PAGE_SIZE,
+  )
+  const from = filtered.length === 0 ? 0 : safePage * HISTORY_PAGE_SIZE + 1
+  const to = Math.min(filtered.length, (safePage + 1) * HISTORY_PAGE_SIZE)
+
+  useEffect(() => {
+    setPage(0)
+  }, [symbolQ, resultFilter, sourceFilter])
+
+  if (closedAll.length === 0) {
     return <p className="muted">Aucun trade terminé pour l’instant.</p>
   }
 
   return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Quand</th>
-            <th>Quoi</th>
-            <th>Investi</th>
-            <th>Résultat</th>
-            <th>Sortie</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {closed.map((p) => {
-            const dir = directionWords(p.direction)
-            const when = p.exit_time ?? p.entry_time
-            return (
-              <tr key={p.id}>
-                <td className="mono muted">
-                  {new Date(when).toLocaleString('fr-FR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </td>
-                <td>
-                  {dir.title} <strong>{assetName(p.symbol)}</strong>
-                  <span className="muted"> · {p.timeframe}</span>
-                </td>
-                <td className="mono muted">{eur(p.notional)}</td>
-                <td className={`mono ${tone(p.realized_pnl ?? p.pnl_pct)}`}>
-                  {p.realized_pnl != null ? signedEur(p.realized_pnl) : pct(p.pnl_pct, 2)}
-                </td>
-                <td>{exitReasonLabel(p.exit_reason)}</td>
-                <td>
-                  <button type="button" className="ghost" onClick={() => onSelect(p)}>
-                    Fiche
-                  </button>
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+    <div className="synthese-history">
+      <div className="synthese-history-filters" role="search">
+        <label className="synthese-history-filter">
+          <span>Symbole</span>
+          <input
+            type="search"
+            value={symbolQ}
+            onChange={(e) => setSymbolQ(e.target.value)}
+            placeholder="NEAR, LINK…"
+          />
+        </label>
+        <label className="synthese-history-filter">
+          <span>Résultat</span>
+          <select
+            value={resultFilter}
+            onChange={(e) => setResultFilter(e.target.value as ResultFilter)}
+          >
+            <option value="all">Tous</option>
+            <option value="win">Gains</option>
+            <option value="loss">Pertes</option>
+            <option value="flat">Neutre / —</option>
+          </select>
+        </label>
+        <label className="synthese-history-filter">
+          <span>Source</span>
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value as SourceFilter)}
+          >
+            <option value="all">Toutes</option>
+            <option value="auto_watchlist">Auto</option>
+            <option value="user_confirmed">Manuel</option>
+          </select>
+        </label>
+        {(symbolQ || resultFilter !== 'all' || sourceFilter !== 'all') && (
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => {
+              setSymbolQ('')
+              setResultFilter('all')
+              setSourceFilter('all')
+            }}
+          >
+            Réinitialiser
+          </button>
+        )}
+      </div>
+
+      <p className="muted synthese-history-meta">
+        {filtered.length === closedAll.length
+          ? `${closedAll.length} trade${closedAll.length > 1 ? 's' : ''} · affichage ${from}–${to}`
+          : `${filtered.length} / ${closedAll.length} · affichage ${from}–${to}`}
+      </p>
+
+      {filtered.length === 0 ? (
+        <p className="muted">Aucun trade pour ces filtres.</p>
+      ) : (
+        <>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Quand</th>
+                  <th>Quoi</th>
+                  <th>Investi</th>
+                  <th>Résultat</th>
+                  <th>Sortie</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {pageRows.map((p) => {
+                  const dir = directionWords(p.direction)
+                  const when = p.exit_time ?? p.entry_time
+                  return (
+                    <tr key={p.id}>
+                      <td className="mono muted">
+                        {new Date(when).toLocaleString('fr-FR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </td>
+                      <td>
+                        {dir.title} <strong>{assetName(p.symbol)}</strong>
+                        <span className="muted"> · {p.timeframe}</span>
+                      </td>
+                      <td className="mono muted">{eur(p.notional)}</td>
+                      <td className={`mono ${tone(p.realized_pnl ?? p.pnl_pct)}`}>
+                        {p.realized_pnl != null ? signedEur(p.realized_pnl) : pct(p.pnl_pct, 2)}
+                      </td>
+                      <td>{exitReasonLabel(p.exit_reason)}</td>
+                      <td>
+                        <button type="button" className="ghost" onClick={() => onSelect(p)}>
+                          Fiche
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="synthese-history-pager" role="navigation" aria-label="Pages historique">
+            <button
+              type="button"
+              className="ghost"
+              disabled={safePage <= 0}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
+              ← Précédent
+            </button>
+            <span className="muted mono">
+              Page {safePage + 1} / {pageCount}
+            </span>
+            <button
+              type="button"
+              className="ghost"
+              disabled={safePage >= pageCount - 1}
+              onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+            >
+              Suivant →
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -111,6 +244,9 @@ export function SynthesePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [closingId, setClosingId] = useState<string | null>(null)
+  const [closeTarget, setCloseTarget] = useState<PaperOverviewPosition | null>(null)
+  const [closeError, setCloseError] = useState<string | null>(null)
+  const closeLock = useRef(false)
   const [sheetPos, setSheetPos] = useState<PaperPosition | null>(null)
   const [range, setRange] = useState<PortfolioRange>('1d')
 
@@ -138,15 +274,27 @@ export function SynthesePage() {
     void reload()
   }, [reload])
 
-  async function onClose(id: string) {
-    setClosingId(id)
+  function requestClose(id: string) {
+    const pos = overview?.positions.find((p) => p.id === id && p.status === 'OPEN') ?? null
+    if (!pos) return
+    setCloseError(null)
+    setCloseTarget(pos)
+  }
+
+  async function executeClose() {
+    if (!closeTarget || closeLock.current) return
+    closeLock.current = true
+    setClosingId(closeTarget.id)
+    setCloseError(null)
     try {
-      await closePaperPosition(id)
+      await closePaperPosition(closeTarget.id)
+      setCloseTarget(null)
       await reload()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Fermeture impossible')
+      setCloseError(e instanceof Error ? e.message : 'Fermeture impossible')
     } finally {
       setClosingId(null)
+      closeLock.current = false
     }
   }
 
@@ -166,8 +314,8 @@ export function SynthesePage() {
         <div className="market-head-copy">
           <h1>Synthèse</h1>
           <p className="muted">
-            Compte virtuel baseline : cash, engagé, courbe. Positions techniques →{' '}
-            <Link to="/app/paper">Paper</Link>. Circuit auto →{' '}
+            Compte virtuel baseline depuis sa création : liquidités, engagé, latent, réalisé.
+            Positions techniques → <Link to="/app/paper">Paper</Link>. Circuit auto →{' '}
             <Link to="/app/activite">Activité</Link>.
           </p>
         </div>
@@ -228,14 +376,20 @@ export function SynthesePage() {
               <h2>Investissements</h2>
               <span className="panel-meta">
                 {overview.account.open_positions} ouvert
-                {overview.account.open_positions > 1 ? 's' : ''} · {eur(overview.account.invested)}
+                {overview.account.open_positions > 1 ? 's' : ''}
+                {overview.account.priced_positions != null &&
+                  ` · ${overview.account.priced_positions} valorisée${overview.account.priced_positions > 1 ? 's' : ''}`}
+                {(overview.account.incomplete_open ?? 0) > 0 &&
+                  ` · ${overview.account.incomplete_open} incomplète${(overview.account.incomplete_open ?? 0) > 1 ? 's' : ''}`}
+                {' · '}
+                {eur(overview.account.invested)} engagé
               </span>
             </header>
             <div className="synthese-panel-body">
               <InvestmentCards
                 overview={overview}
                 onSelect={setSheetPos}
-                onClose={onClose}
+                onClose={requestClose}
                 closingId={closingId}
               />
             </div>
@@ -244,8 +398,8 @@ export function SynthesePage() {
           <section className="chart-panel panel synthese-chart-panel">
             <header className="panel-head">
               <h2>
-                <span className="market-pair-title">Capital</span>
-                <span className="market-pair-meta">portefeuille · {range}</span>
+                <span className="market-pair-title">Valeur du portefeuille</span>
+                <span className="market-pair-meta">€ · depuis création · {range}</span>
               </h2>
               <div className="panel-head-actions">
                 <div className="tf-group" role="group" aria-label="Timeframe">
@@ -298,6 +452,21 @@ export function SynthesePage() {
       )}
 
       {sheetPos && <PaperTradeSheet position={sheetPos} onClose={() => setSheetPos(null)} />}
+
+      {closeTarget && (
+        <PaperCloseConfirmSheet
+          position={closeTarget}
+          confirming={closingId === closeTarget.id}
+          error={closeError}
+          onConfirm={() => void executeClose()}
+          onCancel={() => {
+            if (!closingId) {
+              setCloseTarget(null)
+              setCloseError(null)
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

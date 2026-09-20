@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
 import { GateMatrix } from '../components/GateMatrix'
@@ -39,8 +39,14 @@ import {
   type EngineAssetClass,
   type EngineInstrument,
 } from '../lib/universe'
-import { confirmUserDecision } from '../lib/userDecisions'
-import { openPaperPosition, proposePaperTrade, type OrderIntent } from '../lib/paper'
+import { confirmUserDecision, patchUserDecisionStatus } from '../lib/userDecisions'
+import {
+  getPaperOverview,
+  listPaperPositions,
+  openPaperPosition,
+  proposePaperTrade,
+  type OrderIntent,
+} from '../lib/paper'
 import { decisionPayloadFromDetail } from '../lib/agent'
 import { useCopilotNav } from '../lib/useCopilotNav'
 import './DecisionsPage.css'
@@ -261,9 +267,34 @@ export function DecisionsPage() {
   const [paperMsg, setPaperMsg] = useState<string | null>(null)
   const [paperConfirming, setPaperConfirming] = useState(false)
   const [paperConfirm, setPaperConfirm] = useState<PaperConfirmState | null>(null)
+  const [paperConfirmError, setPaperConfirmError] = useState<string | null>(null)
+  const [openPaperSymbols, setOpenPaperSymbols] = useState<ReadonlySet<string>>(() => new Set())
+  const paperConfirmLock = useRef(false)
   const [intentOverride, setIntentOverride] = useState<OrderIntent | null>(null)
   const [intentLoading, setIntentLoading] = useState(false)
   const { explainDecision, compareGates } = useCopilotNav()
+
+  const refreshOpenPaperSymbols = useCallback(async () => {
+    try {
+      const ov = await getPaperOverview('ICHIVOL_BASELINE_V1')
+      const fromOverview = ov.positions.filter((p) => p.status === 'OPEN').map((p) => p.symbol)
+      if (fromOverview.length > 0) {
+        setOpenPaperSymbols(new Set(fromOverview))
+        return
+      }
+    } catch {
+      /* fallback below */
+    }
+    try {
+      const [mine, auto] = await Promise.all([
+        listPaperPositions({ source: 'user_confirmed', status: 'OPEN' }),
+        listPaperPositions({ source: 'auto_watchlist', status: 'OPEN' }),
+      ])
+      setOpenPaperSymbols(new Set([...mine, ...auto].map((p) => p.symbol)))
+    } catch {
+      /* keep previous set */
+    }
+  }, [])
 
   const byId = useMemo(() => {
     const m = new Map<string, EngineInstrument>()
@@ -358,6 +389,10 @@ export function DecisionsPage() {
   }, [])
 
   useEffect(() => {
+    void refreshOpenPaperSymbols()
+  }, [refreshOpenPaperSymbols])
+
+  useEffect(() => {
     load()
   }, [timeframe])
 
@@ -387,6 +422,12 @@ export function DecisionsPage() {
   async function onConfirmPaperOrder() {
     const intent = intentOverride ?? detail?.order_intent ?? null
     if (!detail || !intent) return
+    if (openPaperSymbols.has(detail.symbol)) {
+      setPaperMsg(`${detail.symbol} · déjà ouvert — pas de 2ᵉ achat`)
+      setConfirmMsg('Déjà une position ouverte sur ce symbole')
+      return
+    }
+    setPaperConfirmError(null)
     setPaperConfirm({
       symbol: detail.symbol,
       timeframe: detail.timeframe,
@@ -396,14 +437,16 @@ export function DecisionsPage() {
   }
 
   async function executePaperConfirm() {
-    if (!paperConfirm) return
+    if (!paperConfirm || paperConfirmLock.current) return
+    paperConfirmLock.current = true
     setPaperConfirming(true)
     setConfirmMsg(null)
     setPaperMsg(null)
+    setPaperConfirmError(null)
     try {
       const sameDetail = detail?.symbol === paperConfirm.symbol ? detail : null
       const gate = paperConfirm.intent.pipeline_decision
-      await confirmUserDecision({
+      const journalRow = await confirmUserDecision({
         symbol: paperConfirm.symbol,
         interval: paperConfirm.timeframe,
         bias: paperConfirm.intent.direction === 'SHORT' ? 'BEARISH' : 'BULLISH',
@@ -414,36 +457,58 @@ export function DecisionsPage() {
         gateDecision: gate,
         confidence: sameDetail?.confidence,
       })
-      const pos = await openPaperPosition(paperConfirm.symbol, paperConfirm.timeframe)
-      const msg = `ok · paper ${pos.direction} qty ${pos.qty != null ? pos.qty.toPrecision(4) : '—'}`
+      let pos: Awaited<ReturnType<typeof openPaperPosition>>
+      try {
+        pos = await openPaperPosition(paperConfirm.symbol, paperConfirm.timeframe)
+      } catch (openErr) {
+        // Pas de décision « confirmée » orpheline : si le moteur refuse l'ouverture,
+        // on écarte l'entrée de journal qu'on vient de créer (sauf si elle existait déjà).
+        if (!journalRow.deduped) {
+          await patchUserDecisionStatus(journalRow.id, 'dismissed').catch(() => undefined)
+        }
+        throw openErr
+      }
+      const already = pos.already_open === true || pos.created === false
+      const msg = already
+        ? `déjà ouvert · ${pos.symbol} ${pos.direction} (pas de 2ᵉ notional)`
+        : `ok · paper ${pos.direction} qty ${pos.qty != null ? pos.qty.toPrecision(4) : '—'}`
       setConfirmMsg(msg)
-      setPaperMsg(`${pos.symbol} · paper ${pos.direction} @ ${pos.entry_price}`)
+      setPaperMsg(
+        already
+          ? `${pos.symbol} · déjà en portefeuille — achat verrouillé`
+          : `${pos.symbol} · paper ${pos.direction} @ ${pos.entry_price}`,
+      )
+      setOpenPaperSymbols((prev) => new Set([...prev, pos.symbol]))
       setPaperConfirm(null)
+      void refreshOpenPaperSymbols()
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : 'Échec paper'
-      const msg = raw.includes('not_actionable') ? 'paper skip (Portes ≠ Achat/Vente)' : raw
+      const stale = raw.includes('not_actionable')
+      const msg = stale
+        ? 'La décision est repassée à Attente/Pas de trade depuis l’affichage (bougie en formation). Aucune position ouverte.'
+        : raw
       setConfirmMsg(msg)
       setPaperMsg(msg)
+      setPaperConfirmError(msg)
+      if (stale) {
+        try {
+          const fresh = await proposePaperTrade(paperConfirm.symbol, paperConfirm.timeframe)
+          setPaperConfirm((cur) => (cur ? { ...cur, intent: fresh } : cur))
+        } catch {
+          /* le message d'erreur reste affiché */
+        }
+      }
     } finally {
       setPaperConfirming(false)
-    }
-  }
-
-  async function onRefreshIntent() {
-    if (!detail) return
-    setIntentLoading(true)
-    try {
-      setIntentOverride(await proposePaperTrade(detail.symbol, detail.timeframe || timeframe))
-    } catch {
-      setIntentOverride(null)
-    } finally {
-      setIntentLoading(false)
+      paperConfirmLock.current = false
     }
   }
 
   async function onOpenPaperFromMatrix(row: ScreenerDecisionRow) {
+    if (openPaperSymbols.has(row.symbol) || paperBusySymbol) return
     setPaperBusySymbol(row.symbol)
     setPaperMsg(null)
+    setPaperConfirmError(null)
     try {
       const intent = await proposePaperTrade(row.symbol, row.timeframe || timeframe)
       setPaperConfirm({
@@ -457,6 +522,18 @@ export function DecisionsPage() {
       setPaperMsg(msg.includes('not_actionable') ? `${row.symbol} · pas actionable (Portes)` : msg)
     } finally {
       setPaperBusySymbol(null)
+    }
+  }
+
+  async function onRefreshIntent() {
+    if (!detail) return
+    setIntentLoading(true)
+    try {
+      setIntentOverride(await proposePaperTrade(detail.symbol, detail.timeframe || timeframe))
+    } catch {
+      setIntentOverride(null)
+    } finally {
+      setIntentLoading(false)
     }
   }
 
@@ -774,6 +851,7 @@ export function DecisionsPage() {
                     symbolLabel={instrumentLabel}
                     onOpenPaper={onOpenPaperFromMatrix}
                     paperBusySymbol={paperBusySymbol}
+                    openPaperSymbols={openPaperSymbols}
                     emptyHint={
                       classRows.length === 0
                         ? marketClass === 'equity'
@@ -1040,6 +1118,7 @@ export function DecisionsPage() {
           symbolLabel={instrumentLabel(paperConfirm.symbol)}
           intent={paperConfirm.intent}
           confirming={paperConfirming}
+          error={paperConfirmError}
           onConfirm={() => void executePaperConfirm()}
           onCancel={() => {
             if (!paperConfirming) setPaperConfirm(null)

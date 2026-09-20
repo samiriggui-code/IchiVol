@@ -26,6 +26,8 @@ export interface PaperPosition {
   take_profit_price?: number | null
   risk_pct?: number | null
   risk_amount?: number | null
+  entry_fee?: number | null
+  exit_fee?: number | null
   realized_pnl?: number | null
   mfe_pct?: number | null
   mae_pct?: number | null
@@ -133,11 +135,14 @@ export async function getPaperPerformance(opts?: {
   return res.json() as Promise<PaperPerformance>
 }
 
-/** Ouvre une position user_confirmed (user_id injecté par Express). */
+/** Ouvre une position user_confirmed (user_id injecté par Express).
+ * Idempotent côté engine : si le symbole est déjà OPEN sur le portefeuille
+ * baseline, renvoie la position existante avec `already_open: true` (pas de 2ᵉ notional).
+ */
 export async function openPaperPosition(
   symbol: string,
   timeframe = '1h',
-): Promise<PaperPosition> {
+): Promise<PaperPosition & { created?: boolean; already_open?: boolean }> {
   const params = new URLSearchParams({
     symbol,
     timeframe,
@@ -147,7 +152,7 @@ export async function openPaperPosition(
     credentials: 'include',
   })
   if (!res.ok) throw new Error(await parseError(res))
-  return res.json() as Promise<PaperPosition>
+  return res.json() as Promise<PaperPosition & { created?: boolean; already_open?: boolean }>
 }
 
 /** Propose un ordre paper (qty/stop/TP) sans l’ouvrir. */
@@ -221,11 +226,15 @@ export async function getShadowStats(portfolioCode?: string): Promise<ShadowStat
   return res.json() as Promise<ShadowStats>
 }
 
+export type ValuationStatus = 'priced' | 'missing_qty' | 'missing_mark' | 'missing_notional'
+
 export interface PaperOverviewPosition extends PaperPosition {
   current_price: number | null
   unrealized_pnl: number | null
   unrealized_pct: number | null
   price_as_of?: number
+  market_value?: number | null
+  valuation_status?: ValuationStatus | null
 }
 
 export interface PaperOverview {
@@ -239,7 +248,11 @@ export interface PaperOverview {
     equity: number
     total_pnl: number
     day_change: number | null
+    open_entry_fees?: number
+    realized_plus_unrealized?: number
+    pnl_explained?: number
     priced_positions: number
+    incomplete_open?: number
     open_positions: number
   }
   positions: PaperOverviewPosition[]

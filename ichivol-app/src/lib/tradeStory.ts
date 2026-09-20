@@ -75,7 +75,7 @@ export const EXIT_RULES: { title: string; text: string }[] = [
   },
   {
     title: 'Fermeture manuelle',
-    text: 'Vous pouvez toujours fermer vous-même depuis la page Paper.',
+    text: 'Vous pouvez toujours clôturer vous-même depuis Synthèse ou Paper (manuel et auto).',
   },
 ]
 

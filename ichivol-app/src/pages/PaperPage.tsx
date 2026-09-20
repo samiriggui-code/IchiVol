@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { PaperCloseConfirmSheet } from '../components/PaperCloseConfirmSheet'
 import { PaperTradeSheet } from '../components/PaperTradeSheet'
 import {
   closePaperPosition,
@@ -208,7 +209,7 @@ function PositionsTable({
                     disabled={closingId === p.id}
                     onClick={() => onClose(p.id)}
                   >
-                    Fermer
+                    Fermer…
                   </button>
                 )}
               </td>
@@ -237,6 +238,9 @@ export function PaperPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [closingId, setClosingId] = useState<string | null>(null)
+  const [closeTarget, setCloseTarget] = useState<PaperPosition | null>(null)
+  const [closeError, setCloseError] = useState<string | null>(null)
+  const closeLock = useRef(false)
   const [sheetPos, setSheetPos] = useState<PaperPosition | null>(null)
 
   const reload = useCallback(async () => {
@@ -270,15 +274,27 @@ export function PaperPage() {
 
   const positions = tab === 'user_confirmed' ? mineCache : autoCache
 
-  async function onClose(id: string) {
-    setClosingId(id)
+  function requestClose(id: string) {
+    const pos = positions.find((p) => p.id === id && p.status === 'OPEN') ?? null
+    if (!pos) return
+    setCloseError(null)
+    setCloseTarget(pos)
+  }
+
+  async function executeClose() {
+    if (!closeTarget || closeLock.current) return
+    closeLock.current = true
+    setClosingId(closeTarget.id)
+    setCloseError(null)
     try {
-      await closePaperPosition(id)
+      await closePaperPosition(closeTarget.id)
+      setCloseTarget(null)
       await reload()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Fermeture impossible')
+      setCloseError(e instanceof Error ? e.message : 'Fermeture impossible')
     } finally {
       setClosingId(null)
+      closeLock.current = false
     }
   }
 
@@ -348,13 +364,28 @@ export function PaperPage() {
         </header>
         <PositionsTable
           rows={positions}
-          onClose={tab === 'user_confirmed' ? onClose : undefined}
+          onClose={tab === 'user_confirmed' ? requestClose : undefined}
           closingId={closingId}
           onSelect={setSheetPos}
         />
       </section>
 
       {sheetPos && <PaperTradeSheet position={sheetPos} onClose={() => setSheetPos(null)} />}
+
+      {closeTarget && (
+        <PaperCloseConfirmSheet
+          position={closeTarget}
+          confirming={closingId === closeTarget.id}
+          error={closeError}
+          onConfirm={() => void executeClose()}
+          onCancel={() => {
+            if (!closingId) {
+              setCloseTarget(null)
+              setCloseError(null)
+            }
+          }}
+        />
+      )}
     </div>
   )
 }
