@@ -47,6 +47,15 @@ def _commission(profile: dict[str, Any], notional: float, qty: float) -> float:
     return float(get_schedule(fid).order_fee(ledger_db.to_decimal(notional), ledger_db.to_decimal(qty)))
 
 
+def _friction(profile: dict[str, Any], symbol: str) -> tuple[float, float]:
+    """(spread_bps, slippage_bps) per side. ``friction_bps_by_symbol`` (documented assumption table)
+    gives the combined per-side friction and replaces both defaults for that symbol."""
+    table = profile.get("friction_bps_by_symbol") or {}
+    if symbol in table:
+        return float(table[symbol]), 0.0
+    return float(profile.get("spread_bps", 2.0)), float(profile.get("slippage_bps", 3.0))
+
+
 def _lock_portfolio(session: Session, portfolio: PaperPortfolio | None) -> None:
     """Serialise cash read-modify-write per portfolio (row lock held until commit)."""
     if portfolio is None:
@@ -123,8 +132,7 @@ def open_capital_position(
         spread_bps, slippage_bps = 0.0, 0.0
     else:
         ref_price = price
-        spread_bps = float(profile.get("spread_bps", 2.0))
-        slippage_bps = float(profile.get("slippage_bps", 3.0))
+        spread_bps, slippage_bps = _friction(profile, symbol)
     sized = size_position(
         equity=equity,
         cash=portfolio.cash,
@@ -277,6 +285,13 @@ def close_capital_position(
         raise ValueError(f"non-finite exit price: {price!r}")
     portfolio = session.get(PaperPortfolio, position.portfolio_id) if position.portfolio_id else None
     _lock_portfolio(session, portfolio)
+    bind = session.get_bind()
+    if portfolio is not None and bind is not None and bind.dialect.name == "postgresql":
+        # Another transaction (auto loop / monitor) may have closed this lot while we waited for the
+        # portfolio lock: reload it and re-check, otherwise cash would be credited twice.
+        session.refresh(position)
+        if position.status != "OPEN":
+            return position
     profile = _profile(portfolio) if portfolio is not None else dict(BASELINE_PROFILE)
     now = at or datetime.now(timezone.utc)
 
@@ -298,8 +313,7 @@ def close_capital_position(
                 "quote_source": quote.provenance.source,
             }
         else:
-            exit_spread_bps = float(profile.get("spread_bps", 2.0))
-            exit_slip_bps = float(profile.get("slippage_bps", 3.0))
+            exit_spread_bps, exit_slip_bps = _friction(profile, position.symbol)
             exit_fill = apply_exit_friction(
                 price,
                 direction=position.direction,

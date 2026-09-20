@@ -63,6 +63,8 @@ class Breach:
 class ScanResult:
     breach: Breach | None
     checked_through_ms: int
+    bars_seen: int = 0
+    bars_expected: int = 0
 
 
 def _hit(direction: str, stop: float, target: float, price: float) -> str | None:
@@ -123,10 +125,13 @@ def find_first_breach(
         return ScanResult(None, max(checked, min(start, end_closed)))
 
     rows = klines_fn(symbol, start, end_closed)
+    expected = (end_closed - start) // MINUTE_MS
+    seen = 0
     for k in rows:
         open_ms = int(k[0])
         if open_ms < start or open_ms + MINUTE_MS > end_closed:
             continue
+        seen += 1
         o, h, l = float(k[1]), float(k[2]), float(k[3])
         r = resolve_bar_exit(direction, stop, target, o, h, l)
         checked = open_ms + MINUTE_MS
@@ -142,7 +147,7 @@ def find_first_breach(
                 )
         reason = {"target_hit": "take_profit_hit", "target_gap": "take_profit_hit"}.get(r.reason, r.reason)
         return ScanResult(Breach(reason, float(r.price), open_ms, "1m", r.note), checked)
-    return ScanResult(None, max(checked, end_closed))
+    return ScanResult(None, checked, seen, expected)  # only advanced by bars actually seen: no data != no breach
 
 
 # ── Binance data access ─────────────────────────────────────────────────────
@@ -168,22 +173,20 @@ def binance_klines_1m(symbol: str, start_ms: int, end_ms: int) -> list[list[Any]
 
 
 def binance_agg_trades(symbol: str, start_ms: int, end_ms: int) -> list[tuple[int, float]]:
+    """Aggregated trades in [start_ms, end_ms). First page by time, next pages by ``fromId``
+    (Binance forbids mixing both) so trades sharing a millisecond are never skipped."""
     out: list[tuple[int, float]] = []
-    cur = start_ms
-    for _ in range(20):  # a minute rarely exceeds a few thousand trades; hard cap
-        r = httpx.get(
-            f"{BASE_URL}/api/v3/aggTrades",
-            params={"symbol": symbol, "startTime": cur, "endTime": end_ms - 1, "limit": 1000},
-            timeout=20.0,
-        )
+    params: dict[str, Any] = {"symbol": symbol, "startTime": start_ms, "endTime": end_ms - 1, "limit": 1000}
+    for _ in range(50):
+        r = httpx.get(f"{BASE_URL}/api/v3/aggTrades", params=params, timeout=20.0)
         r.raise_for_status()
         rows = r.json()
         if not rows:
             break
-        out.extend((int(x["T"]), float(x["p"])) for x in rows)
-        if len(rows) < 1000:
+        out.extend((int(x["T"]), float(x["p"])) for x in rows if start_ms <= int(x["T"]) < end_ms)
+        if len(rows) < 1000 or int(rows[-1]["T"]) >= end_ms - 1:
             break
-        cur = int(rows[-1]["T"]) + 1
+        params = {"symbol": symbol, "fromId": int(rows[-1]["a"]) + 1, "limit": 1000}
     return out
 
 
@@ -227,6 +230,79 @@ def _write_check(session: Session, position: PaperPosition, through_ms: int, leg
     )
 
 
+_FAILS: dict[str, int] = {}
+FAIL_ALERT_AFTER = 5
+NO_DATA_AFTER_MS = 5 * MINUTE_MS
+
+
+def _report_breach(b: Breach) -> dict[str, Any]:
+    return {
+        "reason": b.reason, "price": b.price, "at": datetime.fromtimestamp(b.time_ms / 1000, timezone.utc).isoformat(),
+        "granularity": b.granularity, "note": b.note,
+    }
+
+
+def _process_position(
+    session: Session, pos: PaperPosition, row: dict[str, Any], *, klines_fn: KlinesFn, trades_fn: TradesFn | None,
+    now: datetime, now_ms: int, dry_run: bool, enforce_legacy: bool,
+) -> None:
+    row.update(symbol=pos.symbol, source=pos.source)
+    if not pos.qty or pos.stop_price is None or pos.take_profit_price is None:
+        row["status"] = "unprotected_legacy_no_levels"
+        return
+    inst = get_instrument(pos.symbol)
+    if inst is None or inst.provider != "binance" or not inst.provider_symbol:
+        row["status"] = "unsupported_provider"
+        return
+
+    since_ms, legacy = _seed(session, pos)
+    if since_ms is None:
+        # Legacy lot, first sight: report what history says, never act on it; watermark = now.
+        hist = find_first_breach(
+            pos.direction, pos.stop_price, pos.take_profit_price, symbol=inst.provider_symbol,
+            since_ms=_ms(pos.entry_time), until_ms=now_ms, klines_fn=klines_fn, trades_fn=trades_fn,
+        )
+        row["status"] = "legacy_watermark_initialised"
+        row["history_breach"] = None if hist.breach is None else _report_breach(hist.breach)
+        if not dry_run:
+            _write_check(session, pos, now_ms - now_ms % MINUTE_MS, True, now)
+        return
+
+    scan = find_first_breach(
+        pos.direction, pos.stop_price, pos.take_profit_price, symbol=inst.provider_symbol,
+        since_ms=since_ms, until_ms=now_ms, klines_fn=klines_fn, trades_fn=trades_fn,
+    )
+    row["checked_through_ms"] = scan.checked_through_ms
+
+    if scan.breach is None:
+        if scan.bars_seen == 0 and scan.bars_expected >= 5:
+            row["status"] = "no_data"  # provider returned no bar: watermark NOT advanced, position NOT declared safe
+            return
+        row["status"] = "ok"
+        if not dry_run and now_ms - since_ms >= CHECK_EVENT_EVERY_MS:
+            _write_check(session, pos, scan.checked_through_ms, legacy, now)
+        return
+
+    b = scan.breach
+    row["breach"] = _report_breach(b)
+    if legacy and not enforce_legacy:
+        # A lot opened before monitoring existed is report-only: it can already sit beyond a level
+        # (first bar opens past the stop), which would be a closure driven by history, not by an event.
+        row["status"] = "legacy_report_only"
+        return
+    if dry_run:
+        row["status"] = "would_close"
+        return
+    at = datetime.fromtimestamp(b.time_ms / 1000, timezone.utc)
+    paper_broker.close_capital_position(
+        session, pos, price=b.price, reason=b.reason,
+        signal={"protection": {"reason": b.reason, "trigger_price": b.price, "breach_at": at.isoformat(),
+                               "granularity": b.granularity, "note": b.note}},
+        at=at,
+    )
+    row["status"] = "closed" if pos.status == "CLOSED" else "already_closed_elsewhere"
+
+
 def run_protection_cycle(
     session: Session,
     *,
@@ -234,72 +310,52 @@ def run_protection_cycle(
     trades_fn: TradesFn | None = binance_agg_trades,
     now: datetime | None = None,
     dry_run: bool = False,
+    enforce_legacy: bool = False,
 ) -> list[dict[str, Any]]:
-    """Check every open protected position. Returns one report row per position.
+    """Check every open protected position; one report row each.
 
-    ``dry_run`` performs the scans but writes nothing and closes nothing."""
+    Isolation: each position is processed in its own try/except and committed on its own, so one
+    failing symbol (HTTP 400/429, bad data) never aborts or rolls back the others. ``dry_run`` scans
+    and reports but writes and closes nothing. Legacy lots are report-only unless ``enforce_legacy``."""
     now = now or datetime.now(timezone.utc)
     now_ms = _ms(now)
     report: list[dict[str, Any]] = []
-    session.flush()  # sessions here run with autoflush off
-    opens = session.execute(
-        select(PaperPosition).where(PaperPosition.status == "OPEN").order_by(PaperPosition.entry_time)
-    ).scalars().all()
-
-    for pos in opens:
-        row: dict[str, Any] = {"id": pos.id, "symbol": pos.symbol, "source": pos.source, "status": "skipped"}
+    session.flush()
+    ids = [
+        r[0] for r in session.execute(
+            select(PaperPosition.id).where(PaperPosition.status == "OPEN").order_by(PaperPosition.entry_time)
+        ).all()
+    ]
+    for pid in ids:
+        row: dict[str, Any] = {"id": pid, "status": "skipped"}
         report.append(row)
-        if not pos.qty or pos.stop_price is None or pos.take_profit_price is None:
-            row["status"] = "unprotected_legacy_no_levels"
-            continue
-        inst = get_instrument(pos.symbol)
-        if inst is None or inst.provider != "binance" or not inst.provider_symbol:
-            row["status"] = "unsupported_provider"
-            continue
-
-        since_ms, legacy = _seed(session, pos)
-        if since_ms is None:
-            # Legacy: report what history says, never act on it.
-            hist = find_first_breach(
-                pos.direction, pos.stop_price, pos.take_profit_price, symbol=inst.provider_symbol,
-                since_ms=_ms(pos.entry_time), until_ms=now_ms, klines_fn=klines_fn, trades_fn=trades_fn,
+        try:
+            pos = session.get(PaperPosition, pid, populate_existing=True)  # fresh state per position
+            if pos is None or pos.status != "OPEN":
+                row["status"] = "no_longer_open"
+                continue
+            _process_position(
+                session, pos, row, klines_fn=klines_fn, trades_fn=trades_fn, now=now, now_ms=now_ms,
+                dry_run=dry_run, enforce_legacy=enforce_legacy,
             )
-            row["status"] = "legacy_watermark_initialised"
-            row["history_breach"] = None if hist.breach is None else {
-                "reason": hist.breach.reason, "price": hist.breach.price,
-                "at": datetime.fromtimestamp(hist.breach.time_ms / 1000, timezone.utc).isoformat(),
-                "granularity": hist.breach.granularity, "note": hist.breach.note,
-            }
             if not dry_run:
-                _write_check(session, pos, now_ms - now_ms % MINUTE_MS, True, now)
-            continue
-
-        scan = find_first_breach(
-            pos.direction, pos.stop_price, pos.take_profit_price, symbol=inst.provider_symbol,
-            since_ms=since_ms, until_ms=now_ms, klines_fn=klines_fn, trades_fn=trades_fn,
-        )
-        row["checked_through_ms"] = scan.checked_through_ms
-        if scan.breach is None:
-            row["status"] = "ok"
-            if not dry_run and now_ms - since_ms >= CHECK_EVENT_EVERY_MS:
-                _write_check(session, pos, scan.checked_through_ms, legacy, now)
-            continue
-
-        b = scan.breach
-        at = datetime.fromtimestamp(b.time_ms / 1000, timezone.utc)
-        row.update(status="breach", breach={"reason": b.reason, "price": b.price, "at": at.isoformat(),
-                                             "granularity": b.granularity, "note": b.note})
-        if dry_run:
-            continue
-        paper_broker.close_capital_position(
-            session, pos, price=b.price, reason=b.reason,
-            signal={"protection": {"reason": b.reason, "trigger_price": b.price, "breach_at": at.isoformat(),
-                                   "granularity": b.granularity, "note": b.note}},
-            at=at,
-        )
-        row["status"] = "closed"
-    if not dry_run:
-        session.commit()
+                session.commit()
+            _FAILS.pop(pid, None)
+        except Exception as exc:  # noqa: BLE001 -- isolate: never let one position stop the others
+            session.rollback()
+            row.update(status="error", error=repr(exc)[:200])
+            n = _FAILS[pid] = _FAILS.get(pid, 0) + 1
+            logger.warning("protection: %s failed (%d consecutive): %r", pid, n, exc)
+            if n == FAIL_ALERT_AFTER and not dry_run:
+                try:
+                    p2 = session.get(PaperPosition, pid)
+                    session.add(PaperJournalEvent(
+                        portfolio_id=p2.portfolio_id if p2 else None, position_id=pid, event_type="PROTECTION_ERROR",
+                        payload={"consecutive_failures": n, "error": repr(exc)[:200]}, created_at=now,
+                    ))
+                    session.commit()
+                except Exception:  # noqa: BLE001
+                    session.rollback()
     return report
 
 
@@ -354,10 +410,11 @@ def _cli() -> None:
     mode = ap.add_mutually_exclusive_group(required=True)
     mode.add_argument("--dry-run", action="store_true", help="scan and report, write/close nothing")
     mode.add_argument("--apply", action="store_true", help="enforce breaches and write watermarks")
+    ap.add_argument("--enforce-legacy", action="store_true", help="also close legacy lots on breaches after their watermark (default: report only)")
     args = ap.parse_args()
     session = SessionLocal()
     try:
-        print(json.dumps(run_protection_cycle(session, dry_run=args.dry_run), indent=1, default=str))
+        print(json.dumps(run_protection_cycle(session, dry_run=args.dry_run, enforce_legacy=args.enforce_legacy), indent=1, default=str))
     finally:
         session.close()
 

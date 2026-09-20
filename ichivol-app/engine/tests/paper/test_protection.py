@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime, timezone
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 
 from app.brokerage import persistence as ledger_db
@@ -153,4 +154,74 @@ def test_legacy_position_is_never_closed_from_history_but_breach_is_reported(ses
     k2, t2 = _fetchers(bars2)
     later = datetime.fromtimestamp(now.timestamp() + 10 * 60, timezone.utc)
     r2 = run_protection_cycle(session, klines_fn=k2, trades_fn=t2, now=later)
-    assert r2[0]["status"] == "closed" and pos.exit_reason == "stop_hit"
+    # legacy lots are report-only by default: a later breach is reported, never enforced
+    assert r2[0]["status"] == "legacy_report_only" and r2[0]["breach"]["reason"] == "stop_hit" and pos.status == "OPEN"
+    r3 = run_protection_cycle(session, klines_fn=k2, trades_fn=t2, now=later, enforce_legacy=True)
+    assert r3[0]["status"] == "closed" and pos.exit_reason == "stop_hit"
+
+
+def _open_sym(s, symbol):
+    return broker.open_capital_position(
+        s, portfolio=s.info["p"], symbol=symbol, timeframe="1h", source="auto_watchlist", user_id=None,
+        direction="LONG", price=80000.0 if symbol == "BTCUSDT" else 2600.0, decision="BUY",
+        stop_distance=1000.0 if symbol == "BTCUSDT" else 40.0,
+    )
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_one_failing_symbol_does_not_abort_or_roll_back_the_others(session):
+    btc, eth = _open_sym(session, "BTCUSDT"), _open_sym(session, "ETHUSDT")
+    session.commit()
+    m1 = int(btc.entry_time.timestamp() * 1000) // M * M + M
+    ok_bars = [kline(m1, 2600, 2900, 2590, 2850)]  # ETH: target hit
+
+    def klines(sym, a, b):
+        if sym == "BTCUSDT":
+            raise RuntimeError("HTTP 429")
+        return [x for x in ok_bars if a <= x[0] < b]
+
+    now = datetime.fromtimestamp((m1 + 5 * M) / 1000, timezone.utc)
+    rep = {r["symbol"] if "symbol" in r else r["id"]: r for r in run_protection_cycle(session, klines_fn=klines, trades_fn=lambda *a: [], now=now)}
+    statuses = sorted(r["status"] for r in rep.values())
+    assert statuses == ["closed", "error"], statuses
+    session.expire_all()
+    assert session.get(PaperPosition, eth.id).status == "CLOSED"  # committed despite the other failure
+    assert session.get(PaperPosition, btc.id).status == "OPEN"
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_no_data_is_not_declared_safe_and_watermark_does_not_advance(session):
+    pos = _open_sym(session, "BTCUSDT")
+    session.commit()
+    entry_ms = int(pos.entry_time.timestamp() * 1000)
+    now = datetime.fromtimestamp((entry_ms + 30 * 60_000) / 1000, timezone.utc)
+    rep = run_protection_cycle(session, klines_fn=lambda *a: [], trades_fn=lambda *a: [], now=now)
+    assert rep[0]["status"] == "no_data"
+    assert session.query(PaperJournalEvent).filter_by(position_id=pos.id, event_type=CHECK_EVENT).count() == 0
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_concurrent_close_of_the_same_position_credits_cash_once(session):
+    """Regression (review H1): a stale object in another session must not credit cash a second time."""
+    from app.db.session import SessionLocal as SL
+
+    pos = _open_sym(session, "BTCUSDT")
+    session.commit()
+    pid, portfolio_id = pos.id, pos.portfolio_id
+    s2 = SL()
+    try:
+        stale = s2.get(PaperPosition, pid)  # session 2 loads the lot while it is still OPEN
+        assert stale.status == "OPEN"
+        broker.close_capital_position(session, session.get(PaperPosition, pid), price=81000.0, reason="auto_loop")
+        session.commit()
+        def cash():  # scalar read: does not touch (or expire) the stale ORM object in s2
+            return s2.execute(select(PaperPortfolio.cash).where(PaperPortfolio.id == portfolio_id)).scalar_one()
+
+        cash_after_first = cash()
+        broker.close_capital_position(s2, stale, price=81000.0, reason="monitor_late")  # stale OPEN object
+        s2.commit()
+        assert cash() == cash_after_first  # no second credit
+        assert s2.execute(select(PaperPosition.exit_reason).where(PaperPosition.id == pid)).scalar_one() == "auto_loop"
+        assert s2.query(PaperOrder).filter_by(position_id=pid, side="SELL").count() == 1
+    finally:
+        s2.close()
