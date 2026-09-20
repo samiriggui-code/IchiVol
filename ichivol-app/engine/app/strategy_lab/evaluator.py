@@ -115,6 +115,55 @@ def _condition_holds(
             bar.kumo_thickness_atr is not None
             and bar.kumo_thickness_atr <= float(expected)
         )
+    # --- T-EXP experimental (PPO / BEST Cloud) ---
+    if key == "ppo_above_signal":
+        return bar.ppo_above_signal == expected
+    if key == "ppo_below_signal":
+        return bar.ppo_below_signal == expected
+    if key == "ppo_above_zero":
+        return bar.ppo_above_zero == expected
+    if key == "ppo_below_zero":
+        return bar.ppo_below_zero == expected
+    if key == "ppo_histogram_rising":
+        return bar.ppo_histogram_rising == expected
+    if key == "ppo_histogram_falling":
+        return bar.ppo_histogram_falling == expected
+    if key == "ppo_signal_cross_bullish":
+        return bar.ppo_signal_cross_bullish == expected
+    if key == "ppo_signal_cross_bearish":
+        return bar.ppo_signal_cross_bearish == expected
+    if key == "ppo_cross_age_max":
+        age = (
+            bar.ppo_cross_age_bullish
+            if direction == Direction.LONG
+            else bar.ppo_cross_age_bearish
+        )
+        return age is not None and age <= int(expected)
+    if key == "ppo_min":
+        return bar.ppo is not None and bar.ppo >= float(expected)
+    if key == "ppo_max":
+        return bar.ppo is not None and bar.ppo <= float(expected)
+    if key == "ppo_momentum":
+        return bar.ppo_momentum == str(expected)
+    if key == "best_cloud_trend":
+        return bar.best_cloud_trend == str(expected)
+    if key == "best_cloud_bullish":
+        return bar.best_cloud_bullish == expected
+    if key == "best_cloud_bearish":
+        return bar.best_cloud_bearish == expected
+    if key == "best_cloud_inside":
+        return bar.best_cloud_inside == expected
+    if key == "best_cloud_cross_bullish":
+        return bar.best_cloud_cross_bullish == expected
+    if key == "best_cloud_cross_bearish":
+        return bar.best_cloud_cross_bearish == expected
+    if key == "best_cloud_cross_age_max":
+        age = (
+            bar.best_cloud_cross_age_bullish
+            if direction == Direction.LONG
+            else bar.best_cloud_cross_age_bearish
+        )
+        return age is not None and age <= int(expected)
     return False
 
 

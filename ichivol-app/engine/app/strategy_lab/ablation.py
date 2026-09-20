@@ -47,6 +47,30 @@ KIJUN_ABLATION_LAYERS: tuple[tuple[str, dict[str, bool | int | float | str]], ..
     ("E_KUMO_ORIENT", {"kumo_orientation": "BULLISH"}),
 )
 
+# T-EXP ladder (docs/ICHIVOL_V2_ROADMAP.md): Ichimoku -> RVOL -> structure ->
+# PPO -> BEST Cloud. Cumulative steps = models A (A+B), B (+C), C (+D), D (+E).
+# PPO/BEST Cloud parameters are fixed a priori (12/26/9 ; EMA 20/50).
+PPO_ABLATION_LAYERS: tuple[tuple[str, dict[str, bool | int | float | str]], ...] = (
+    (
+        "A_ICHIMOKU",
+        {
+            "price_above_kumo": True,
+            "tenkan_above_kijun": True,
+            "tk_cross_age_max": 3,
+        },
+    ),
+    ("B_RVOL", {"rvol_min": 1.5}),
+    ("C_BOS", {"bos_bullish": True}),
+    ("D_PPO", {"ppo_momentum": "STRONG_BULLISH"}),
+    ("E_BEST_CLOUD", {"best_cloud_trend": "BULLISH"}),
+)
+
+ABLATION_LADDERS = {
+    "default": DEFAULT_ABLATION_LAYERS,
+    "kijun": KIJUN_ABLATION_LAYERS,
+    "ppo": PPO_ABLATION_LAYERS,
+}
+
 
 @dataclass(frozen=True)
 class AblationStep:
@@ -171,6 +195,68 @@ def build_leave_one_out_rulesets(
     return out
 
 
+def build_leave_one_layer_out_rulesets(
+    layers: Sequence[tuple[str, Mapping[str, bool | int | float | str]]],
+    *,
+    base_id: str = "IV_ABLATION",
+    direction: Direction = Direction.LONG,
+    stop_atr: float = 1.0,
+    target_atr: float = 2.0,
+    version: str = "1",
+) -> list[Ruleset]:
+    """FULL (all layers) plus FULL without each *layer* (all its conditions).
+
+    Unlike per-key leave-one-out this answers "does removing PPO / BEST Cloud
+    / RVOL change anything?" even when a layer carries several conditions.
+    Layers must not share condition keys (else a drop would be ambiguous).
+    """
+    if len(layers) < 2:
+        raise ValueError("leave-one-layer-out needs at least 2 layers")
+    seen: dict[str, str] = {}
+    for label, conds in layers:
+        for key in conds:
+            if key in seen:
+                raise ValueError(
+                    f"condition {key!r} is in both layers {seen[key]!r} and {label!r}"
+                )
+            seen[key] = label
+
+    def _mk(label: str, conds: dict, desc: str, extra: dict) -> Ruleset:
+        return parse_ruleset(
+            {
+                "id": f"{base_id}__{label}",
+                "version": version,
+                "direction": direction.value,
+                "description": desc,
+                "conditions": conds,
+                "entry": "next_open",
+                "stop_atr": stop_atr,
+                "target_atr": target_atr,
+                "meta": {
+                    "ablation_label": label,
+                    "ablation_mode": "leave_one_layer_out",
+                    **extra,
+                },
+            }
+        )
+
+    full: dict[str, bool | int | float | str] = {}
+    for _, conds in layers:
+        full.update(dict(conds))
+    out = [_mk("FULL", full, "Ablation full layer set", {})]
+    for drop_label, drop_conds in layers:
+        remaining = {k: v for k, v in full.items() if k not in drop_conds}
+        out.append(
+            _mk(
+                f"NO_{drop_label}",
+                remaining,
+                f"Ablation without layer {drop_label}",
+                {"dropped": drop_label},
+            )
+        )
+    return out
+
+
 def _metric_pair(
     prev: RulesetStudyResult, curr: RulesetStudyResult
 ) -> AblationDelta:
@@ -281,6 +367,17 @@ def run_ablation_on_candles(
             stop_atr=stop_atr,
             target_atr=target_atr,
         )
+    elif mode_l in ("leave_one_layer_out", "loll"):
+        layer_list = list(layers) if layers is not None else [
+            (lab, dict(c)) for lab, c in DEFAULT_ABLATION_LAYERS
+        ]
+        rulesets = build_leave_one_layer_out_rulesets(
+            layer_list,
+            base_id=base_id,
+            direction=direction,
+            stop_atr=stop_atr,
+            target_atr=target_atr,
+        )
     elif mode_l in ("leave_one_out", "loo"):
         if full_conditions is None:
             # Default: merge default ladder into full set
@@ -296,7 +393,9 @@ def run_ablation_on_candles(
             target_atr=target_atr,
         )
     else:
-        raise ValueError("mode must be 'cumulative' or 'leave_one_out'")
+        raise ValueError(
+            "mode must be 'cumulative', 'leave_one_out' or 'leave_one_layer_out'"
+        )
 
     steps: list[AblationStep] = []
     for rs in rulesets:
@@ -369,7 +468,11 @@ def run_ablation(
     dir_enum = Direction(direction.upper())
     if dir_enum == Direction.NEUTRAL:
         raise ValueError("direction must be LONG or SHORT")
-    parsed_layers = parse_layers(layers) if mode.lower() == "cumulative" else None
+    parsed_layers = (
+        parse_layers(layers)
+        if mode.lower() in ("cumulative", "leave_one_layer_out")
+        else None
+    )
     return run_ablation_on_candles(
         candles,
         symbol=symbol.upper(),

@@ -50,11 +50,35 @@ CONDITION_SCHEMA: dict[str, type] = {
     "kumo_twist_age_max": int,
     "kumo_thickness_atr_min": float,
     "kumo_thickness_atr_max": float,
+    # T-EXP experimental (Lab only)
+    "ppo_above_signal": bool,
+    "ppo_below_signal": bool,
+    "ppo_above_zero": bool,
+    "ppo_below_zero": bool,
+    "ppo_histogram_rising": bool,
+    "ppo_histogram_falling": bool,
+    "ppo_signal_cross_bullish": bool,
+    "ppo_signal_cross_bearish": bool,
+    "ppo_cross_age_max": int,  # bars since last signal cross in trade direction
+    "ppo_min": float,
+    "ppo_max": float,
+    "ppo_momentum": str,  # STRONG_BULLISH | BULLISH | NEUTRAL | BEARISH | STRONG_BEARISH
+    "best_cloud_trend": str,  # BULLISH | BEARISH | NEUTRAL
+    "best_cloud_bullish": bool,
+    "best_cloud_bearish": bool,
+    "best_cloud_inside": bool,
+    "best_cloud_cross_bullish": bool,
+    "best_cloud_cross_bearish": bool,
+    "best_cloud_cross_age_max": int,  # bars since last cross in trade direction
 }
 
 CONDITION_ENUMS: dict[str, frozenset[str]] = {
     "kijun_slope": frozenset({"RISING", "FLAT", "FALLING"}),
     "kumo_orientation": frozenset({"BULLISH", "BEARISH"}),
+    "ppo_momentum": frozenset(
+        {"STRONG_BULLISH", "BULLISH", "NEUTRAL", "BEARISH", "STRONG_BEARISH"}
+    ),
+    "best_cloud_trend": frozenset({"BULLISH", "BEARISH", "NEUTRAL"}),
 }
 
 _ENTRY_MODES = frozenset({"next_open", "close_confirmation"})

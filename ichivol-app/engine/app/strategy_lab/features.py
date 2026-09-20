@@ -7,7 +7,7 @@ Ichimoku Analytics (Kijun / Kumo research layer — not live votes).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Sequence
 
 from app.indicators.atr import AtrParams, AtrState, compute_atr
@@ -29,6 +29,13 @@ from app.indicators.ichimoku_analytics import (
     compute_ichimoku_analytics,
 )
 from app.indicators.rsi import RsiParams, RsiState, compute_rsi
+from app.indicators.best_cloud import (
+    BestCloudParams,
+    BestCloudState,
+    CloudCross,
+    compute_best_cloud,
+)
+from app.indicators.ppo import PpoCross, PpoParams, PpoState, compute_ppo
 from app.indicators.rvol import RvolParams, RvolState, compute_rvol
 from app.indicators.structure import (
     BosEvent,
@@ -80,6 +87,31 @@ class FeatureBar:
     bars_since_kumo_twist: int | None
     kumo_thickness_atr: float | None
     kumo_thickness_pct: float | None
+    # --- T-EXP experimental features (Lab only; NOT live votes, see ROADMAP) ---
+    ppo: float | None = None
+    ppo_signal: float | None = None
+    ppo_histogram: float | None = None
+    ppo_above_signal: bool = False
+    ppo_below_signal: bool = False
+    ppo_above_zero: bool = False
+    ppo_below_zero: bool = False
+    ppo_histogram_rising: bool = False
+    ppo_histogram_falling: bool = False
+    ppo_signal_cross_bullish: bool = False
+    ppo_signal_cross_bearish: bool = False
+    ppo_cross_age_bullish: int | None = None
+    """Bars since last signal cross, only while that cross was bullish."""
+    ppo_cross_age_bearish: int | None = None
+    ppo_momentum: str = "UNKNOWN"
+    best_cloud_trend: str = "UNKNOWN"
+    best_cloud_bullish: bool = False
+    best_cloud_bearish: bool = False
+    best_cloud_inside: bool = False
+    best_cloud_cross_bullish: bool = False
+    best_cloud_cross_bearish: bool = False
+    best_cloud_cross_age_bullish: int | None = None
+    best_cloud_cross_age_bearish: int | None = None
+    best_cloud_distance_pct: float | None = None
 
 
 @dataclass(frozen=True)
@@ -93,6 +125,45 @@ class FeatureSeries:
     atr: list[AtrState]
     cmf: list[CmfState]
     rsi: list[RsiState]
+    ppo: list[PpoState] = field(default_factory=list)
+    best_cloud: list[BestCloudState] = field(default_factory=list)
+
+
+def _ppo_kwargs(p: PpoState) -> dict:
+    bullish = p.last_signal_cross == PpoCross.BULLISH
+    bearish = p.last_signal_cross == PpoCross.BEARISH
+    return dict(
+        ppo=p.ppo,
+        ppo_signal=p.signal,
+        ppo_histogram=p.histogram,
+        ppo_above_signal=p.ppo_above_signal,
+        ppo_below_signal=p.ppo_below_signal,
+        ppo_above_zero=p.ppo_above_zero,
+        ppo_below_zero=p.ppo_below_zero,
+        ppo_histogram_rising=p.histogram_rising,
+        ppo_histogram_falling=p.histogram_falling,
+        ppo_signal_cross_bullish=p.signal_cross == PpoCross.BULLISH,
+        ppo_signal_cross_bearish=p.signal_cross == PpoCross.BEARISH,
+        ppo_cross_age_bullish=p.bars_since_signal_cross if bullish else None,
+        ppo_cross_age_bearish=p.bars_since_signal_cross if bearish else None,
+        ppo_momentum=p.momentum.value,
+    )
+
+
+def _best_cloud_kwargs(b: BestCloudState) -> dict:
+    bullish = b.last_cross == CloudCross.BULLISH_CROSS
+    bearish = b.last_cross == CloudCross.BEARISH_CROSS
+    return dict(
+        best_cloud_trend=b.trend.value,
+        best_cloud_bullish=b.trend.value == "BULLISH",
+        best_cloud_bearish=b.trend.value == "BEARISH",
+        best_cloud_inside=b.price_inside_cloud,
+        best_cloud_cross_bullish=b.cross == CloudCross.BULLISH_CROSS,
+        best_cloud_cross_bearish=b.cross == CloudCross.BEARISH_CROSS,
+        best_cloud_cross_age_bullish=b.bars_since_cross if bullish else None,
+        best_cloud_cross_age_bearish=b.bars_since_cross if bearish else None,
+        best_cloud_distance_pct=b.distance_price_cloud_pct,
+    )
 
 
 def build_feature_series(
@@ -105,6 +176,8 @@ def build_feature_series(
     atr_params: AtrParams = AtrParams(),
     cmf_params: CmfParams = CmfParams(),
     rsi_params: RsiParams = RsiParams(),
+    ppo_params: PpoParams = PpoParams(),
+    best_cloud_params: BestCloudParams = BestCloudParams(),
 ) -> FeatureSeries:
     ichi = compute_ichimoku(candles, ichi_params)
     rvol = compute_rvol(candles, rvol_params)
@@ -112,6 +185,8 @@ def build_feature_series(
     atr = compute_atr(candles, atr_params)
     cmf = compute_cmf(candles, cmf_params)
     rsi = compute_rsi(candles, rsi_params)
+    ppo = compute_ppo(candles, ppo_params)
+    best_cloud = compute_best_cloud(candles, best_cloud_params)
     analytics = compute_ichimoku_analytics(
         candles,
         ichi=ichi,
@@ -173,6 +248,8 @@ def build_feature_series(
                 bars_since_kumo_twist=a.bars_since_kumo_twist,
                 kumo_thickness_atr=a.kumo_thickness_atr,
                 kumo_thickness_pct=a.kumo_thickness_pct,
+                **_ppo_kwargs(ppo[i]),
+                **_best_cloud_kwargs(best_cloud[i]),
             )
         )
 
@@ -186,6 +263,8 @@ def build_feature_series(
         atr=atr,
         cmf=cmf,
         rsi=rsi,
+        ppo=ppo,
+        best_cloud=best_cloud,
     )
 
 
