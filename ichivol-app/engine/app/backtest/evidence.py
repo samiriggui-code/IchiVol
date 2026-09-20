@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import logging
 import threading
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select
 
@@ -101,6 +101,29 @@ def run_snapshot_cycle(
     return written
 
 
+def seconds_until_due(last_run: datetime | None, interval_s: float, now: datetime) -> float:
+    """How long to wait before the next full cycle. Without this every engine
+    restart (each deploy) re-ran all ~40 backtests, so "daily" collection had
+    15 runs in 4 days, mostly duplicates of the same data."""
+    if last_run is None:
+        return 0.0
+    if last_run.tzinfo is None:
+        last_run = last_run.replace(tzinfo=timezone.utc)
+    elapsed = (now - last_run).total_seconds()
+    return max(0.0, interval_s - elapsed)
+
+
+def _last_snapshot_time() -> datetime | None:
+    session = SessionLocal()
+    try:
+        return session.execute(select(func.max(BacktestSnapshot.computed_at))).scalar_one_or_none()
+    except Exception:
+        logger.warning("backtest evidence: cannot read last run time", exc_info=True)
+        return None
+    finally:
+        session.close()
+
+
 class BacktestEvidenceScheduler:
     """Background thread that runs `run_snapshot_cycle()` on an interval --
     same start/stop/_loop shape as app/screener/cache.py::ScreenerCache, so
@@ -126,6 +149,11 @@ class BacktestEvidenceScheduler:
             self._thread = None
 
     def _loop(self) -> None:
+        wait = seconds_until_due(_last_snapshot_time(), self.interval_s, datetime.now(timezone.utc))
+        if wait > 0:
+            logger.info("backtest evidence: last run is recent, next cycle in %.0f s", wait)
+            if self._stop.wait(wait):
+                return
         while not self._stop.is_set():
             try:
                 written = run_snapshot_cycle()

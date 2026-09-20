@@ -34,6 +34,10 @@ export function IconWatchlist({ className }: IconProps) {
   return <KeenIcon icon="star" className={className} />
 }
 
+export function IconActivity({ className }: IconProps) {
+  return <KeenIcon icon="timer" className={className} />
+}
+
 export function IconBacktests({ className }: IconProps) {
   return <KeenIcon icon="flask" className={className} />
 }

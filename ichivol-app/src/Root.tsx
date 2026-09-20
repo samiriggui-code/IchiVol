@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ContextPage } from './pages/ContextPage'
 import { DashboardShell } from './layouts/DashboardShell'
 import { initTheme } from './lib/theme'
+import { ActivityPage } from './pages/ActivityPage'
 import { AgentPage } from './pages/AgentPage'
 import { BacktestsPage } from './pages/BacktestsPage'
 import { DecisionsPage } from './pages/DecisionsPage'
@@ -40,6 +41,7 @@ export function Root() {
             <Route path="synthese" element={<SynthesePage />} />
             <Route path="paper" element={<PaperPage />} />
             <Route path="paper/tech" element={<Navigate to="/app/paper" replace />} />
+            <Route path="activite" element={<ActivityPage />} />
             <Route path="backtests" element={<BacktestsPage />} />
             <Route path="agent" element={<AgentPage />} />
             <Route path="settings" element={<SettingsPage />} />

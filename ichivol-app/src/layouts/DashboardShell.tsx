@@ -2,6 +2,7 @@ import { useEffect, useState, type ComponentType } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { NotificationBell } from '../components/NotificationBell'
 import {
+  IconActivity,
   IconBacktests,
   IconChat,
   IconChevronLeft,
@@ -41,6 +42,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/app/journal', label: 'Journal', Icon: IconJournal },
   { to: '/app/watchlist', label: 'Watchlist', Icon: IconWatchlist },
   { to: '/app/synthese', label: 'Synthèse', Icon: IconSynthese },
+  { to: '/app/activite', label: 'Activité', Icon: IconActivity },
   { to: '/app/paper', label: 'Paper', Icon: IconPaper },
   { to: '/app/backtests', label: 'Backtests', Icon: IconBacktests },
   { to: '/app/agent', label: 'Copilot', Icon: IconChat },

@@ -1,0 +1,108 @@
+/* Page « Activité automatique » : styles isolés (préfixe act-), sans toucher index.css. */
+
+.act-page { display: flex; flex-direction: column; gap: 1rem; }
+
+.act-circuit {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+@media (max-width: 1100px) { .act-circuit { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .act-circuit { grid-template-columns: 1fr; } }
+
+.act-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.85rem 0.9rem 0.8rem;
+  border: 1px solid var(--border, #e2e2e2);
+  border-left-width: 4px;
+  border-radius: 10px;
+  background: var(--panel, transparent);
+}
+.act-step.is-ok { border-left-color: #1f9d6b; }
+.act-step.is-warn { border-left-color: #d99a1c; }
+.act-step.is-off { border-left-color: #d0453a; }
+.act-step h3 { margin: 0; font-size: 0.95rem; }
+.act-step-num {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.7rem;
+  font-size: 0.72rem;
+  opacity: 0.55;
+}
+.act-step-what { margin: 0; font-size: 0.78rem; line-height: 1.35; opacity: 0.75; }
+.act-step-value { font-size: 1.15rem; margin-top: 0.15rem; }
+.act-step-sub { font-size: 0.76rem; opacity: 0.7; }
+.act-step.is-off .act-step-value { color: #d0453a; }
+
+.act-eff-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  padding: 0 0.9rem 0.9rem;
+}
+@media (max-width: 800px) { .act-eff-body { grid-template-columns: 1fr; } }
+.act-eff h3 { margin: 0 0 0.4rem; font-size: 0.92rem; }
+.act-eff-list { margin: 0 0 0.5rem; padding-left: 1.1rem; font-size: 0.85rem; line-height: 1.5; }
+.act-good { color: #1f9d6b; font-weight: 600; }
+.act-bad { color: #d0453a; font-weight: 600; }
+
+.act-filters { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.act-filters button {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border, #e2e2e2);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.act-filters button.is-active { background: var(--accent-soft, #e8f0ff); border-color: var(--accent, #2f6bff); }
+
+.act-day { padding: 0 0.9rem 0.6rem; }
+.act-day-title {
+  margin: 0.8rem 0 0.4rem;
+  font-size: 0.8rem;
+  text-transform: capitalize;
+  opacity: 0.65;
+  font-weight: 600;
+}
+.act-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.act-row {
+  display: grid;
+  grid-template-columns: 3rem 0.7rem minmax(0, 1fr) auto;
+  gap: 0.6rem;
+  align-items: start;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--border, #eee);
+  font-size: 0.86rem;
+}
+.act-time { font-variant-numeric: tabular-nums; opacity: 0.6; font-size: 0.8rem; }
+.act-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; margin-top: 0.3rem; background: #8a8f98; }
+.act-dot.is-good { background: #1f9d6b; }
+.act-dot.is-bad { background: #d0453a; }
+.act-dot.is-blocked { background: #d99a1c; }
+.act-dot.is-run { background: #2f6bff; }
+.act-body { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.act-detail { opacity: 0.75; font-size: 0.8rem; }
+.act-portfolio { font-size: 0.7rem; opacity: 0.55; white-space: nowrap; }
+.act-empty { padding: 0 0.9rem 0.9rem; }
+
+.act-run-toggle {
+  all: unset;
+  cursor: pointer;
+  display: block;
+  line-height: 1.4;
+}
+.act-chevron { margin-left: 0.4rem; opacity: 0.6; }
+.act-run-table-wrap { overflow-x: auto; margin-top: 0.5rem; }
+.act-run-table { border-collapse: collapse; font-size: 0.8rem; width: 100%; }
+.act-run-table th, .act-run-table td {
+  padding: 0.3rem 0.6rem;
+  border-bottom: 1px solid var(--border, #eee);
+  text-align: left;
+  white-space: nowrap;
+}
+.act-badge { margin-left: 0.4rem; padding: 0.05rem 0.4rem; border-radius: 999px; font-size: 0.68rem; }
+.act-badge.is-warn { background: #fdf0d3; color: #8a5a00; }
