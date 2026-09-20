@@ -196,3 +196,19 @@ Défauts relevés et traitement :
 A long seul perd 6 fois moins que A ; E long seul est positive en validation avec un drawdown de −16 % (contre −31 %), et reste légèrement positive en défavorable sur V1 et V3. Développement négatif : **toujours pas de raison de retenir E** — c'est la piste la plus prometteuse à suivre en avant, pas une conclusion.
 
 Production : D1 déployé par ichivol-49 après votre accord (commit `fc0674530e`, branche `release/d1-2026-09-20` : compteurs, bougies clôturées, chemin d'ouverture, garde TON). Grand livre (D2), moniteur de protection (D3) et archive LINK (D4) restent en attente de votre accord.
+
+## 13. Addendum — la stratégie sur forex et or (2026-09-21)
+
+Données : Twelve Data, offre gratuite, clé de l'utilisateur, usage de recherche seul (`research_lab/data_td.py`). EUR/USD, GBP/USD, XAU/USD en 1h, ~6,9 mois (2026-02-24 → 2026-09-20), bougies clôturées, sans volume (le RVOL ne peut pas confirmer). Réglages du pipeline inchangés. Fenêtre de développement 15/03 → 15/06, validation 15/06 → 20/09, 5 000 € de départ. **Petit échantillon, aucune décision possible.**
+
+Signaux : BUY/SELL sur ~3 % des bougies (comme en crypto). Résultat net (€) :
+
+| Règle | Fenêtre | Transactions | Frais du profil paper actuel (5 bps comm. + 5 bps friction) | Frais réalistes FX/or (~1,5 bp/côté) | Sans frais |
+|---|---|---|---|---|---|
+| A | développement | 158 | −345 | −28 | +24 |
+| A | validation | 154 | −305 | +3 | +57 |
+| E (sortie direction) | développement | 132 | −277 | −22 | +37 |
+| E | validation | 132 | −355 | −99 | −52 |
+| E longs seuls | dév. / val. | 53 / 66 | −145 / −167 | −38 / −45 | −15 / −26 |
+
+Lectures : (1) **pas d'avantage brut** sur ces marchés (brut entre −52 et +69 €) ; (2) le barème de frais du profil actuel est **trop lourd pour le FX/or** (10 bps par côté) et transforme un résultat nul en −6/−7 % ; avec des frais réalistes le résultat est proche de zéro ; (3) les positions ont un risque minuscule (1–2 € sur EUR/USD) car le plafond de 25 % du capital limite la taille avant le risque de 1 % ; (4) taux de réussite 11–43 % selon le barème. Conclusion : le pipeline peut ouvrir des positions sur ces marchés, mais rien ne montre qu'il y gagne ; à traiter comme une observation, pas comme un test réussi. Un barème de coûts par classe d'actif (hors crypto) serait plus réaliste ; il n'a pas été appliqué au profil en production.

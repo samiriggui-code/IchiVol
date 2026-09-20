@@ -1,0 +1,200 @@
+[
+ {
+  "rules": "A",
+  "win": "DEV",
+  "cost": "paper_base",
+  "trades": 158,
+  "gross": 38.23,
+  "net": -345.03,
+  "dd": -7.38,
+  "wr": 0.108,
+  "hold": 0.96
+ },
+ {
+  "rules": "A",
+  "win": "DEV",
+  "cost": "fx_realistic",
+  "trades": 158,
+  "gross": 30.96,
+  "net": -28.41,
+  "dd": -1.48,
+  "wr": 0.278,
+  "hold": 1.05
+ },
+ {
+  "rules": "A",
+  "win": "DEV",
+  "cost": "zero",
+  "trades": 158,
+  "gross": 23.72,
+  "net": 23.72,
+  "dd": -0.75,
+  "wr": 0.38,
+  "hold": 1.06
+ },
+ {
+  "rules": "A",
+  "win": "VAL",
+  "cost": "paper_base",
+  "trades": 154,
+  "gross": 69.27,
+  "net": -304.58,
+  "dd": -6.16,
+  "wr": 0.143,
+  "hold": 1.01
+ },
+ {
+  "rules": "A",
+  "win": "VAL",
+  "cost": "fx_realistic",
+  "trades": 154,
+  "gross": 60.68,
+  "net": 2.84,
+  "dd": -0.47,
+  "wr": 0.318,
+  "hold": 1.14
+ },
+ {
+  "rules": "A",
+  "win": "VAL",
+  "cost": "zero",
+  "trades": 154,
+  "gross": 56.56,
+  "net": 56.56,
+  "dd": -0.35,
+  "wr": 0.435,
+  "hold": 1.15
+ },
+ {
+  "rules": "E",
+  "win": "DEV",
+  "cost": "paper_base",
+  "trades": 132,
+  "gross": 45.84,
+  "net": -276.67,
+  "dd": -6.81,
+  "wr": 0.174,
+  "hold": 5.23
+ },
+ {
+  "rules": "E",
+  "win": "DEV",
+  "cost": "fx_realistic",
+  "trades": 127,
+  "gross": 25.94,
+  "net": -21.83,
+  "dd": -2.22,
+  "wr": 0.244,
+  "hold": 6.01
+ },
+ {
+  "rules": "E",
+  "win": "DEV",
+  "cost": "zero",
+  "trades": 125,
+  "gross": 36.66,
+  "net": 36.66,
+  "dd": -1.52,
+  "wr": 0.264,
+  "hold": 6.42
+ },
+ {
+  "rules": "E",
+  "win": "VAL",
+  "cost": "paper_base",
+  "trades": 132,
+  "gross": -37.01,
+  "net": -354.73,
+  "dd": -7.13,
+  "wr": 0.152,
+  "hold": 4.61
+ },
+ {
+  "rules": "E",
+  "win": "VAL",
+  "cost": "fx_realistic",
+  "trades": 131,
+  "gross": -50.84,
+  "net": -99.43,
+  "dd": -2.11,
+  "wr": 0.206,
+  "hold": 6.18
+ },
+ {
+  "rules": "E",
+  "win": "VAL",
+  "cost": "zero",
+  "trades": 129,
+  "gross": -51.66,
+  "net": -51.66,
+  "dd": -1.29,
+  "wr": 0.233,
+  "hold": 7.28
+ },
+ {
+  "rules": "E_long",
+  "win": "DEV",
+  "cost": "paper_base",
+  "trades": 53,
+  "gross": -13.62,
+  "net": -144.55,
+  "dd": -3.2,
+  "wr": 0.17,
+  "hold": 7.58
+ },
+ {
+  "rules": "E_long",
+  "win": "DEV",
+  "cost": "fx_realistic",
+  "trades": 51,
+  "gross": -18.91,
+  "net": -38.01,
+  "dd": -1.33,
+  "wr": 0.235,
+  "hold": 9.0
+ },
+ {
+  "rules": "E_long",
+  "win": "DEV",
+  "cost": "zero",
+  "trades": 49,
+  "gross": -15.27,
+  "net": -15.27,
+  "dd": -0.99,
+  "wr": 0.265,
+  "hold": 9.51
+ },
+ {
+  "rules": "E_long",
+  "win": "VAL",
+  "cost": "paper_base",
+  "trades": 66,
+  "gross": -4.44,
+  "net": -166.85,
+  "dd": -3.38,
+  "wr": 0.152,
+  "hold": 4.77
+ },
+ {
+  "rules": "E_long",
+  "win": "VAL",
+  "cost": "fx_realistic",
+  "trades": 63,
+  "gross": -21.34,
+  "net": -44.88,
+  "dd": -0.96,
+  "wr": 0.175,
+  "hold": 6.9
+ },
+ {
+  "rules": "E_long",
+  "win": "VAL",
+  "cost": "zero",
+  "trades": 63,
+  "gross": -26.31,
+  "net": -26.31,
+  "dd": -0.72,
+  "wr": 0.175,
+  "hold": 7.78
+ }
+]
