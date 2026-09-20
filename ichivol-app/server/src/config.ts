@@ -12,6 +12,7 @@ export interface Config {
   openaiApiKey: string | undefined
   openrouterApiKey: string | undefined
   engineUrl: string
+  appUrl: string
   smtp: {
     host: string | undefined
     port: number
@@ -44,6 +45,10 @@ export const config: Config = {
   openaiApiKey: process.env.OPENAI_API_KEY,
   openrouterApiKey: process.env.OPENROUTER_API_KEY,
   engineUrl: process.env.ENGINE_URL || 'http://127.0.0.1:8000',
+  appUrl:
+    process.env.APP_URL ||
+    process.env.PUBLIC_APP_URL ||
+    'https://ichivol.global-it-ss.com',
   smtp: {
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT) || 587,

@@ -26,14 +26,34 @@ function getTransporter(): Transporter | null {
   return transporter
 }
 
+export type MailAttachment = {
+  filename: string
+  content: Buffer
+  contentType?: string
+}
+
 /** Never throws -- a failed/missing SMTP config must not crash the
- * watchdog/digest job that's trying to report a problem in the first
- * place. Returns whether the mail was actually sent. */
-export async function sendMail(input: { to: string; subject: string; html: string }): Promise<boolean> {
+ * watchdog/digest job. Returns whether the mail was actually sent. */
+export async function sendMail(input: {
+  to: string
+  subject: string
+  html: string
+  attachments?: MailAttachment[]
+}): Promise<boolean> {
   const t = getTransporter()
   if (!t) return false
   try {
-    await t.sendMail({ from: config.smtp.from, to: input.to, subject: input.subject, html: input.html })
+    await t.sendMail({
+      from: config.smtp.from,
+      to: input.to,
+      subject: input.subject,
+      html: input.html,
+      attachments: input.attachments?.map((a) => ({
+        filename: a.filename,
+        content: a.content,
+        contentType: a.contentType,
+      })),
+    })
     return true
   } catch (err) {
     console.error('[mailer] envoi échoué:', err instanceof Error ? err.message : err)
