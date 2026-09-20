@@ -103,7 +103,7 @@ export function InvestmentCards({
   )
 }
 
-/** En-tête « compte » façon broker : valeur, cash, investi, gains, graphe TradingView. */
+/** En-tête compte + graphe style Marché (bougies + panneau contextes). */
 export function BrokerAccount({
   overview,
   orders = [],
@@ -123,45 +123,37 @@ export function BrokerAccount({
             {signedEur(a.total_pnl)} ({pct(totalPct, 2)}) depuis le départ ({eur(a.initial_cash, 0)})
           </span>
         </div>
+        <div className="paper-perf-grid broker-equity-stats">
+          <div className="context-card">
+            <span className="context-label">Libre</span>
+            <strong className="context-value">{eur(a.cash)}</strong>
+          </div>
+          <div className="context-card">
+            <span className="context-label">Investi</span>
+            <strong className="context-value">{eur(a.invested)}</strong>
+          </div>
+          <div className="context-card">
+            <span className="context-label">En cours</span>
+            <strong className={`context-value ${tone(a.unrealized_pnl)}`}>
+              {signedEur(a.unrealized_pnl)}
+            </strong>
+          </div>
+          <div className="context-card">
+            <span className="context-label">Encaissé</span>
+            <strong className={`context-value ${tone(a.realized_pnl)}`}>
+              {signedEur(a.realized_pnl)}
+            </strong>
+          </div>
+        </div>
       </div>
+
       <PortfolioChart
         points={overview.equity_curve}
         initial={a.initial_cash}
         orders={orders}
         positions={overview.positions}
       />
-      <div className="paper-perf-grid">
-        <div className="context-card">
-          <span className="context-label">Argent libre</span>
-          <strong className="context-value">{eur(a.cash)}</strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">Argent investi</span>
-          <strong className="context-value">{eur(a.invested)}</strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">Gain / perte en cours</span>
-          <strong className={`context-value ${tone(a.unrealized_pnl)}`}>
-            {signedEur(a.unrealized_pnl)}
-          </strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">Gain / perte encaissé</span>
-          <strong className={`context-value ${tone(a.realized_pnl)}`}>
-            {signedEur(a.realized_pnl)}
-          </strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">Variation 24 h</span>
-          <strong className={`context-value ${tone(a.day_change)}`}>
-            {signedEur(a.day_change)}
-          </strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">Positions ouvertes</span>
-          <strong className="context-value">{a.open_positions}</strong>
-        </div>
-      </div>
+
       {(() => {
         const legacy = overview.positions.filter((p) => p.status === 'OPEN' && p.qty == null).length
         const unpriced = a.open_positions - a.priced_positions
@@ -169,14 +161,12 @@ export function BrokerAccount({
           <>
             {legacy > 0 && (
               <p className="muted paper-perf-note">
-                {legacy} position(s) ouvertes avant l’arrivée du capital virtuel : pas de montant
-                investi, donc seule leur variation en % est affichée (pas de gain en €).
+                {legacy} position(s) legacy sans montant investi (€).
               </p>
             )}
             {unpriced > 0 && (
               <p className="muted paper-perf-note">
-                Prix actuel indisponible pour {unpriced} position(s) (absentes du dernier scan du
-                screener).
+                Prix actuel indisponible pour {unpriced} position(s).
               </p>
             )}
           </>

@@ -3169,53 +3169,87 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 .trade-timeline p { margin: 0.15rem 0; font-size: 0.74rem; line-height: 1.5; }
 
 /* FRONT — compte + positions façon broker */
-.broker-equity-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: 0.5rem; }
-.broker-equity { display: flex; flex-direction: column; gap: 0.15rem; flex: 1 1 220px; }
+.broker-equity-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.9fr) minmax(0, 1.4fr);
+  gap: 0.85rem;
+  align-items: end;
+  margin-bottom: 0.85rem;
+}
+@media (max-width: 900px) {
+  .broker-equity-row { grid-template-columns: 1fr; }
+}
+.broker-equity { display: flex; flex-direction: column; gap: 0.15rem; }
 .broker-equity-value { font-size: 1.9rem; line-height: 1.1; }
 .broker-equity-delta { font-size: 0.78rem; }
 .broker-equity-delta.up, .broker-account .up, .table-wrap .up { color: var(--bull); }
 .broker-equity-delta.down, .broker-account .down, .table-wrap .down { color: var(--bear); }
-.portfolio-chart { position: relative; margin: 0 0 0.9rem; }
-.portfolio-chart-head { display: flex; flex-direction: column; gap: 0.55rem; margin-bottom: 0.4rem; }
-.portfolio-curve-picks {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.35rem;
+.broker-equity-stats { margin: 0; }
+
+.portfolio-market {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+  gap: 0.75rem;
+  align-items: stretch;
+  min-height: 480px;
 }
-.portfolio-curve-picks-label {
-  font-size: 0.68rem; font-weight: 600; color: var(--muted); margin-right: 0.25rem;
+.portfolio-market.is-side-collapsed {
+  grid-template-columns: minmax(0, 1fr);
 }
-.portfolio-mini { font-size: 0.62rem !important; padding: 0.15rem 0.4rem !important; }
-.portfolio-chip-amt {
-  margin-left: 0.25rem; font-size: 0.58rem; color: var(--muted); font-weight: 500;
+.portfolio-chart-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 480px;
+  margin: 0;
 }
-.portfolio-live-cards {
-  display: flex; flex-wrap: wrap; gap: 0.4rem;
+.portfolio-chart-panel .chart-wrap {
+  flex: 1;
+  min-height: 360px;
 }
-.portfolio-live-card {
-  display: inline-flex; align-items: center; gap: 0.35rem;
-  padding: 0.35rem 0.55rem;
-  border: 1px solid var(--border);
-  border-radius: 0.45rem;
-  background: color-mix(in srgb, var(--secondary) 70%, transparent);
-  font-size: 0.72rem; cursor: pointer; color: var(--foreground);
+.portfolio-chart-host {
+  width: 100%;
+  height: 100%;
+  min-height: 340px;
 }
-.portfolio-live-card strong { font-size: 0.78rem; }
-.portfolio-live-card.is-on {
-  background: color-mix(in srgb, var(--primary) 8%, transparent);
+.portfolio-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
 }
+.portfolio-side .panel { margin: 0; height: 100%; }
+.portfolio-side-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.portfolio-side-item:hover {
+  background: color-mix(in srgb, var(--secondary) 80%, transparent);
+}
+.portfolio-side-item.is-active {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.portfolio-side-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  flex: 1;
+  min-width: 0;
+}
+.portfolio-side-copy strong { font-size: 0.82rem; }
+.portfolio-side-copy .muted { font-size: 0.62rem; }
 .portfolio-live-dot {
   width: 0.55rem; height: 0.55rem; border-radius: 50%; flex-shrink: 0;
 }
-.portfolio-chart-host { width: 100%; height: 400px; }
-.portfolio-chart-hint { margin: 0.35rem 0 0; font-size: 0.68rem; }
-.portfolio-tip { pointer-events: none; z-index: 5; max-width: 300px; }
-.portfolio-tip-symbols { list-style: none; margin: 0.2rem 0 0; padding: 0; }
-.portfolio-tip-symbols li {
-  display: flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; margin: 0.15rem 0;
-}
-.portfolio-tip-symbols i {
-  width: 0.45rem; height: 0.45rem; border-radius: 50%; display: inline-block;
-}
-.portfolio-tip-symbols span { margin-left: auto; font-variant-numeric: tabular-nums; }
 .portfolio-tip-trades { list-style: none; margin: 0.25rem 0 0; padding: 0; }
 .portfolio-tip-trades > li {
   padding: 0.35rem 0; border-top: 1px solid var(--border); font-size: 0.72rem;
@@ -3224,7 +3258,14 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 .portfolio-tip-trade-head { display: flex; justify-content: space-between; gap: 0.4rem; }
 .portfolio-tip-trade-body { margin-top: 0.1rem; }
 .portfolio-tip-trade-why { margin-top: 0.15rem; font-size: 0.66rem; line-height: 1.35; }
-.broker-curve-empty { font-size: 0.72rem; }
+.broker-curve-empty { font-size: 0.72rem; padding: 0.75rem; }
+
+@media (max-width: 980px) {
+  .portfolio-market {
+    grid-template-columns: 1fr;
+  }
+  .portfolio-side { order: 2; }
+}
 
 .synthese-tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0 0 0.85rem; }
 .invest-cards {
