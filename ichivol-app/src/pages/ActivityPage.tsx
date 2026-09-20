@@ -67,12 +67,14 @@ function CircuitCard(props: {
   state: 'ok' | 'warn' | 'off'
 }) {
   return (
-    <article className={`act-step is-${props.state}`}>
-      <span className="act-step-num">{props.step}</span>
-      <h3>{props.title}</h3>
-      <p className="act-step-what">{props.what}</p>
-      <strong className="act-step-value">{props.value}</strong>
-      <span className="act-step-sub">{props.sub}</span>
+    <article className={`panel overview-stat act-step is-${props.state}`}>
+      <div className="act-step-top">
+        <span className="overview-stat-label muted">{props.title}</span>
+        <span className="act-step-num muted">{props.step}</span>
+      </div>
+      <strong className="mono act-step-value">{props.value}</strong>
+      <span className="overview-stat-meta muted">{props.sub}</span>
+      <p className="act-step-what muted">{props.what}</p>
     </article>
   )
 }
@@ -80,15 +82,15 @@ function CircuitCard(props: {
 function RunDetail({ run, minTrades }: { run: BacktestRun; minTrades: number }) {
   const names = Object.keys(run.experiments)
   return (
-    <div className="act-run-table-wrap">
-      <table className="act-run-table">
+    <div className="table-wrap act-run-table-wrap">
+      <table>
         <thead>
           <tr>
             <th>Méthode</th>
             <th>Trades / paire</th>
             <th>Réussite</th>
-            <th>Profit factor (médiane)</th>
-            <th>Sharpe moyen</th>
+            <th>PF médiane</th>
+            <th>Sharpe</th>
           </tr>
         </thead>
         <tbody>
@@ -97,17 +99,22 @@ function RunDetail({ run, minTrades }: { run: BacktestRun; minTrades: number }) 
             return (
               <tr key={name}>
                 <td>{EXPERIMENT_LABELS[name] ?? name}</td>
-                <td>
+                <td className="mono">
                   {e.trades_mean.toFixed(1)}
                   {e.small_sample && (
-                    <span className="act-badge is-warn" title={`Moins de ${minTrades} trades par paire : trop peu pour conclure`}>
-                      échantillon faible
+                    <span
+                      className="act-badge is-warn"
+                      title={`Moins de ${minTrades} trades par paire : trop peu pour conclure`}
+                    >
+                      faible
                     </span>
                   )}
                 </td>
-                <td>{e.win_rate_mean == null ? '—' : `${(e.win_rate_mean * 100).toFixed(0)} %`}</td>
-                <td>{fmtNumber(e.profit_factor_median)}</td>
-                <td>{fmtNumber(e.sharpe_mean)}</td>
+                <td className="mono">
+                  {e.win_rate_mean == null ? '—' : `${(e.win_rate_mean * 100).toFixed(0)} %`}
+                </td>
+                <td className="mono">{fmtNumber(e.profit_factor_median)}</td>
+                <td className="mono">{fmtNumber(e.sharpe_mean)}</td>
               </tr>
             )
           })}
@@ -156,8 +163,6 @@ export function ActivityPage() {
   const timeline = useMemo(() => {
     const entries: TimelineEntry[] = []
     if (filter !== 'backtest') {
-      // Plusieurs portefeuilles suivent le même signal : même minute, même événement,
-      // même texte. On les regroupe en une ligne avec la liste des portefeuilles.
       const merged = new Map<string, Extract<TimelineEntry, { type: 'feed' }>>()
       for (const item of feed) {
         const isPaper = item.kind === 'paper_opened' || item.kind === 'paper_closed'
@@ -188,13 +193,12 @@ export function ActivityPage() {
   const minTrades = runs?.min_trades_per_pair ?? 30
 
   return (
-    <div className="page act-page">
+    <div className="act-page">
       <header className="page-head market-head">
         <div className="market-head-copy">
-          <h1>Activité automatique</h1>
+          <h1>Activité</h1>
           <p className="muted">
-            Tout ce que le système fait sans toi : il lit le marché, ouvre et ferme des trades
-            fictifs, refuse certains trades, puis se teste chaque jour. Chaque ligne est datée.
+            Circuit automatique : décisions, paper, filtres, backtests — chaque ligne est datée.
           </p>
         </div>
         <div className="market-class-tabs">
@@ -204,25 +208,33 @@ export function ActivityPage() {
         </div>
       </header>
 
-      {error && <div className="banner error">{error}</div>}
+      {error && (
+        <div className="banner error" role="alert">
+          {error}
+        </div>
+      )}
 
       <section className="act-circuit" aria-label="Le circuit automatique">
         <CircuitCard
           step={1}
           title="Décisions"
-          what="Le moteur relit régulièrement les marchés surveillés (crypto, forex, métaux, indices) et note chaque décision."
+          what="Le moteur relit les marchés surveillés et note chaque décision."
           value={summary ? fmtInt(summary.decisions.total) : '…'}
-          sub={summary ? `${fmtInt(summary.decisions.last_24h)} sur 24 h · dernière ${fmtAgo(summary.decisions.last_at)}` : ''}
+          sub={
+            summary
+              ? `${fmtInt(summary.decisions.last_24h)} / 24 h · ${fmtAgo(summary.decisions.last_at)}`
+              : ''
+          }
           state={summary && summary.decisions.last_24h > 0 ? 'ok' : 'warn'}
         />
         <CircuitCard
           step={2}
           title="Trades papier"
-          what="Quand le pipeline valide un achat ou une vente, un trade fictif s'ouvre tout seul (jamais d'argent réel)."
+          what="Ouvertures fictives quand le pipeline valide (jamais d’argent réel)."
           value={summary ? `${fmtInt(summary.paper.opened_total)} ouverts` : '…'}
           sub={
             summary
-              ? `${summary.paper.open_now} en cours · dernière ouverture ${fmtAgo(summary.paper.last_opened_at)}`
+              ? `${summary.paper.open_now} en cours · ${fmtAgo(summary.paper.last_opened_at)}`
               : ''
           }
           state={summary && summary.paper.opened_total > 0 ? 'ok' : 'warn'}
@@ -230,40 +242,45 @@ export function ActivityPage() {
         <CircuitCard
           step={3}
           title="Trades refusés"
-          what="Des filtres (structure, contexte, Fibonacci) refusent des trades. Le système suit ce qu'ils seraient devenus."
+          what="Filtres structure / contexte / Fib — suivi counterfactual."
           value={summary ? `${fmtInt(summary.shadow.blocked_total)} refusés` : '…'}
-          sub={summary ? `${fmtInt(summary.shadow.judged_total)} jugés a posteriori` : ''}
+          sub={summary ? `${fmtInt(summary.shadow.judged_total)} jugés` : ''}
           state={summary && summary.shadow.blocked_total > 0 ? 'ok' : 'warn'}
         />
         <CircuitCard
           step={4}
           title="Backtests"
-          what="Une fois par jour, 5 méthodes sont rejouées sur 20 cryptos (1 h et 4 h) pour comparer le pipeline à Ichimoku seul. Le forex et les métaux ne sont pas couverts."
-          value={summary ? `${fmtInt(summary.backtest.runs_total)} lancements` : '…'}
+          what="Collecte quotidienne · 5 méthodes · crypto 1h/4h."
+          value={summary ? `${fmtInt(summary.backtest.runs_total)} runs` : '…'}
           sub={summary ? `dernier ${fmtAgo(summary.backtest.last_at)}` : ''}
           state={summary && summary.backtest.runs_total > 0 ? 'ok' : 'warn'}
         />
         <CircuitCard
           step={5}
-          title="Suivi de chaque signal"
-          what="Chaque signal devrait être enregistré puis comparé à ce qui s'est passé ensuite. C'est ce qui prouverait l'efficacité."
-          value={summary ? (evidenceWired ? `${fmtInt(summary.evidence.rows_total)} suivis` : 'Non branché') : '…'}
+          title="Suivi signaux"
+          what="Enregistrement signal → outcome pour prouver l’efficacité."
+          value={
+            summary ? (evidenceWired ? `${fmtInt(summary.evidence.rows_total)} suivis` : 'Non branché') : '…'
+          }
           sub={
             summary && !evidenceWired
-              ? "aucun signal enregistré : ce maillon ne se déclenche pas tout seul pour l'instant"
-              : ''
+              ? 'aucun signal enregistré automatiquement'
+              : evidenceWired
+                ? 'maillon actif'
+                : ''
           }
           state={evidenceWired ? 'ok' : 'off'}
         />
       </section>
 
-      <section className="panel act-eff" aria-label="Efficacité">
+      <section className="panel" aria-label="Efficacité">
         <header className="panel-head">
-          <h2>Ce que ça prouve (pour l&apos;instant)</h2>
+          <h2>Ce que ça prouve</h2>
+          <span className="panel-meta">filtres · edge backtest</span>
         </header>
         <div className="act-eff-body">
-          <div>
-            <h3>Filtres : ont-ils aidé ?</h3>
+          <div className="act-eff-block">
+            <h3 className="subhead">Filtres</h3>
             {shadow && shadow.n_closed > 0 ? (
               <>
                 <ul className="act-eff-list">
@@ -271,40 +288,42 @@ export function ActivityPage() {
                     const helped = s.mean_pnl_r < 0
                     return (
                       <li key={source}>
-                        <strong>{source}</strong> : {s.n} trades refusés, résultat moyen{' '}
-                        <span className={helped ? 'act-good' : 'act-bad'}>
+                        <strong>{source}</strong> · {s.n} refusés ·{' '}
+                        <span className={helped ? 'up' : 'down'}>
                           {s.mean_pnl_r >= 0 ? '+' : ''}
                           {s.mean_pnl_r.toFixed(2)} R
-                        </span>{' '}
-                        — {helped ? 'le filtre a écarté des perdants (utile)' : 'le filtre a écarté des gagnants (coûteux)'}
+                        </span>
+                        <span className="muted">
+                          {' '}
+                          — {helped ? 'écarté des perdants' : 'écarté des gagnants'}
+                        </span>
                       </li>
                     )
                   })}
                 </ul>
-                <p className="muted">
-                  Verdict du moteur : <strong>{shadow.filter_verdict ?? 'inconnu'}</strong>. Trop peu de trades pour
-                  trancher.
+                <p className="muted act-eff-note">
+                  Verdict : <strong>{shadow.filter_verdict ?? 'inconnu'}</strong>
+                  {shadow.n_closed < 5 ? ' · échantillon encore mince' : ''}
                 </p>
               </>
             ) : (
               <p className="muted">Pas encore de trade refusé jugé.</p>
             )}
           </div>
-          <div>
-            <h3>Backtests : le pipeline est-il meilleur ?</h3>
+          <div className="act-eff-block">
+            <h3 className="subhead">Pipeline vs Ichimoku</h3>
             {runs && runs.runs[0] ? (
               <>
-                <p>
-                  Au dernier lancement, le pipeline bat Ichimoku seul sur{' '}
-                  <strong>
-                    {runs.runs[0].pipeline_vs_ichimoku.beats} paires sur {runs.runs[0].pipeline_vs_ichimoku.compared}
+                <p className="act-eff-lead">
+                  Dernier run : pipeline bat Ichimoku sur{' '}
+                  <strong className="mono">
+                    {runs.runs[0].pipeline_vs_ichimoku.beats}/{runs.runs[0].pipeline_vs_ichimoku.compared}
                   </strong>{' '}
-                  (Sharpe).
+                  paires (Sharpe).
                 </p>
-                <p className="muted">
-                  Attention : le pipeline ne fait qu&apos;environ{' '}
-                  {runs.runs[0].experiments.PIPELINE?.trades_mean.toFixed(0) ?? '?'} trades par paire (il en faudrait au
-                  moins {minTrades}). Son profit factor élevé est du bruit, pas une preuve.
+                <p className="muted act-eff-note">
+                  ~{runs.runs[0].experiments.PIPELINE?.trades_mean.toFixed(0) ?? '?'} trades / paire
+                  (seuil {minTrades}) — PF élevé = bruit tant que l’échantillon est faible.
                 </p>
               </>
             ) : (
@@ -317,7 +336,7 @@ export function ActivityPage() {
       <section className="panel act-history" aria-label="Historique">
         <header className="panel-head">
           <h2>Historique</h2>
-          <div className="act-filters" role="tablist">
+          <div className="market-class-tabs act-filters" role="tablist" aria-label="Filtre historique">
             {FILTERS.map((f) => (
               <button
                 key={f.id}
@@ -333,11 +352,13 @@ export function ActivityPage() {
           </div>
         </header>
 
-        {!loading && timeline.length === 0 && <p className="muted act-empty">Aucune activité pour ce filtre.</p>}
+        {!loading && timeline.length === 0 && (
+          <p className="muted act-empty">Aucune activité pour ce filtre.</p>
+        )}
 
         {timeline.map((group) => (
           <div key={group.day} className="act-day">
-            <h3 className="act-day-title">{group.day}</h3>
+            <h3 className="subhead act-day-title">{group.day}</h3>
             <ul className="act-list">
               {group.entries.map((entry) => {
                 if (entry.type === 'run') {
@@ -346,13 +367,23 @@ export function ActivityPage() {
                   const v = entry.run.pipeline_vs_ichimoku
                   return (
                     <li key={`run-${key}`} className="act-row is-run">
-                      <span className="act-time">{fmtWhen(entry.run.ended_at).slice(-5)}</span>
+                      <span className="act-time mono muted">{fmtWhen(entry.run.ended_at).slice(-5)}</span>
                       <span className="act-dot is-run" aria-hidden />
                       <div className="act-body">
-                        <button type="button" className="act-run-toggle" onClick={() => setOpenRun(open ? null : key)}>
-                          <strong>Backtest automatique</strong> — {entry.run.n_pairs} paires, {fmtInt(entry.run.n_rows)}{' '}
-                          résultats · pipeline &gt; Ichimoku sur {v.beats}/{v.compared}
-                          <span className="act-chevron">{open ? '▾' : '▸'}</span>
+                        <button
+                          type="button"
+                          className="act-run-toggle"
+                          onClick={() => setOpenRun(open ? null : key)}
+                        >
+                          <strong>Backtest auto</strong>
+                          <span className="muted">
+                            {' '}
+                            · {entry.run.n_pairs} paires · {fmtInt(entry.run.n_rows)} rows · edge{' '}
+                            {v.beats}/{v.compared}
+                          </span>
+                          <span className="act-chevron muted" aria-hidden>
+                            {open ? '▾' : '▸'}
+                          </span>
                         </button>
                         {open && <RunDetail run={entry.run} minTrades={minTrades} />}
                       </div>
@@ -361,18 +392,20 @@ export function ActivityPage() {
                 }
                 const it = entry.item
                 return (
-                  <li key={`${it.time}-${it.kind}-${it.symbol}-${it.portfolio}-${it.detail}`} className="act-row">
-                    <span className="act-time">{fmtWhen(it.time).slice(-5)}</span>
+                  <li
+                    key={`${it.time}-${it.kind}-${it.symbol}-${it.portfolio}-${it.detail}`}
+                    className="act-row"
+                  >
+                    <span className="act-time mono muted">{fmtWhen(it.time).slice(-5)}</span>
                     <span className={`act-dot is-${it.tone}`} aria-hidden />
                     <div className="act-body">
                       <strong>{it.title}</strong>
-                      <span className="act-detail">{it.detail}</span>
+                      <span className="act-detail muted">{it.detail}</span>
                     </div>
-                    <span
-                      className="act-portfolio"
-                      title={entry.portfolios.join(', ')}
-                    >
-                      {entry.portfolios.length > 1 ? `${entry.portfolios.length} portefeuilles` : it.portfolio}
+                    <span className="act-portfolio muted" title={entry.portfolios.join(', ')}>
+                      {entry.portfolios.length > 1
+                        ? `${entry.portfolios.length} portes`
+                        : it.portfolio}
                     </span>
                   </li>
                 )
