@@ -1,0 +1,182 @@
+[
+ {
+  "window": "DEV",
+  "id": "A",
+  "cost_mult": 0.0,
+  "trades": 1198,
+  "net": -573.52,
+  "gross": -573.52,
+  "end_equity": 4426.48
+ },
+ {
+  "window": "DEV",
+  "id": "A",
+  "cost_mult": 0.5,
+  "trades": 1198,
+  "net": -1727.71,
+  "gross": -458.68,
+  "end_equity": 3272.29
+ },
+ {
+  "window": "DEV",
+  "id": "A",
+  "cost_mult": 1.0,
+  "trades": 1197,
+  "net": -2564.22,
+  "gross": -341.32,
+  "end_equity": 2435.78
+ },
+ {
+  "window": "DEV",
+  "id": "A",
+  "cost_mult": 2.0,
+  "trades": 1197,
+  "net": -3665.6,
+  "gross": -207.59,
+  "end_equity": 1334.4
+ },
+ {
+  "window": "DEV",
+  "id": "A",
+  "cost_mult": 3.0,
+  "trades": 1183,
+  "net": -4246.26,
+  "gross": -79.92,
+  "end_equity": 753.74
+ },
+ {
+  "window": "DEV",
+  "id": "E",
+  "cost_mult": 0.0,
+  "trades": 770,
+  "net": 1417.48,
+  "gross": 1417.48,
+  "end_equity": 6418.8
+ },
+ {
+  "window": "DEV",
+  "id": "E",
+  "cost_mult": 0.5,
+  "trades": 768,
+  "net": 251.82,
+  "gross": 1237.95,
+  "end_equity": 5251.59
+ },
+ {
+  "window": "DEV",
+  "id": "E",
+  "cost_mult": 1.0,
+  "trades": 759,
+  "net": -750.23,
+  "gross": 1031.82,
+  "end_equity": 4248.51
+ },
+ {
+  "window": "DEV",
+  "id": "E",
+  "cost_mult": 2.0,
+  "trades": 753,
+  "net": -2235.24,
+  "gross": 657.4,
+  "end_equity": 2762.56
+ },
+ {
+  "window": "DEV",
+  "id": "E",
+  "cost_mult": 3.0,
+  "trades": 743,
+  "net": -3371.44,
+  "gross": 134.93,
+  "end_equity": 1626.45
+ },
+ {
+  "window": "VAL",
+  "id": "A",
+  "cost_mult": 0.0,
+  "trades": 1353,
+  "net": 1412.19,
+  "gross": 1412.19,
+  "end_equity": 6412.19
+ },
+ {
+  "window": "VAL",
+  "id": "A",
+  "cost_mult": 0.5,
+  "trades": 1364,
+  "net": -485.11,
+  "gross": 1148.46,
+  "end_equity": 4514.89
+ },
+ {
+  "window": "VAL",
+  "id": "A",
+  "cost_mult": 1.0,
+  "trades": 1371,
+  "net": -1817.24,
+  "gross": 971.9,
+  "end_equity": 3182.76
+ },
+ {
+  "window": "VAL",
+  "id": "A",
+  "cost_mult": 2.0,
+  "trades": 1374,
+  "net": -3380.43,
+  "gross": 807.83,
+  "end_equity": 1619.57
+ },
+ {
+  "window": "VAL",
+  "id": "A",
+  "cost_mult": 3.0,
+  "trades": 1375,
+  "net": -4184.49,
+  "gross": 704.14,
+  "end_equity": 815.51
+ },
+ {
+  "window": "VAL",
+  "id": "E",
+  "cost_mult": 0.0,
+  "trades": 882,
+  "net": 3829.29,
+  "gross": 3829.29,
+  "end_equity": 8829.29
+ },
+ {
+  "window": "VAL",
+  "id": "E",
+  "cost_mult": 0.5,
+  "trades": 887,
+  "net": 1886.36,
+  "gross": 3210.25,
+  "end_equity": 6886.36
+ },
+ {
+  "window": "VAL",
+  "id": "E",
+  "cost_mult": 1.0,
+  "trades": 893,
+  "net": 475.01,
+  "gross": 2855.43,
+  "end_equity": 5475.01
+ },
+ {
+  "window": "VAL",
+  "id": "E",
+  "cost_mult": 2.0,
+  "trades": 911,
+  "net": -1439.71,
+  "gross": 2626.26,
+  "end_equity": 3560.29
+ },
+ {
+  "window": "VAL",
+  "id": "E",
+  "cost_mult": 3.0,
+  "trades": 913,
+  "net": -2606.2,
+  "gross": 2518.73,
+  "end_equity": 2393.8
+ }
+]

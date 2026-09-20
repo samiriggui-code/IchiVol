@@ -1,0 +1,322 @@
+[
+ {
+  "window": "DEV",
+  "rules": "A_reference",
+  "cost": "base",
+  "trades": 1197,
+  "net": -2564.22,
+  "dd": -51.98
+ },
+ {
+  "window": "DEV",
+  "rules": "A_reference",
+  "cost": "bnb_taker",
+  "trades": 1197,
+  "net": -2901.95,
+  "dd": -58.27
+ },
+ {
+  "window": "DEV",
+  "rules": "A_reference",
+  "cost": "maker",
+  "trades": 1198,
+  "net": -2341.89,
+  "dd": -47.87
+ },
+ {
+  "window": "DEV",
+  "rules": "A_reference",
+  "cost": "vip_maker",
+  "trades": 1198,
+  "net": -1300.74,
+  "dd": -31.21
+ },
+ {
+  "window": "DEV",
+  "rules": "E_exit_direction_flip",
+  "cost": "base",
+  "trades": 759,
+  "net": -750.23,
+  "dd": -24.32
+ },
+ {
+  "window": "DEV",
+  "rules": "E_exit_direction_flip",
+  "cost": "bnb_taker",
+  "trades": 756,
+  "net": -1113.2,
+  "dd": -28.3
+ },
+ {
+  "window": "DEV",
+  "rules": "E_exit_direction_flip",
+  "cost": "maker",
+  "trades": 765,
+  "net": -582.69,
+  "dd": -21.48
+ },
+ {
+  "window": "DEV",
+  "rules": "E_exit_direction_flip",
+  "cost": "vip_maker",
+  "trades": 768,
+  "net": 431.84,
+  "dd": -15.64
+ },
+ {
+  "window": "V1",
+  "rules": "A_reference",
+  "cost": "base",
+  "trades": 506,
+  "net": -533.16,
+  "dd": -14.4
+ },
+ {
+  "window": "V1",
+  "rules": "A_reference",
+  "cost": "bnb_taker",
+  "trades": 506,
+  "net": -806.59,
+  "dd": -17.87
+ },
+ {
+  "window": "V1",
+  "rules": "A_reference",
+  "cost": "maker",
+  "trades": 506,
+  "net": -351.25,
+  "dd": -12.13
+ },
+ {
+  "window": "V1",
+  "rules": "A_reference",
+  "cost": "vip_maker",
+  "trades": 505,
+  "net": 336.92,
+  "dd": -6.14
+ },
+ {
+  "window": "V1",
+  "rules": "E_exit_direction_flip",
+  "cost": "base",
+  "trades": 318,
+  "net": 1151.45,
+  "dd": -13.23
+ },
+ {
+  "window": "V1",
+  "rules": "E_exit_direction_flip",
+  "cost": "bnb_taker",
+  "trades": 317,
+  "net": 918.55,
+  "dd": -14.16
+ },
+ {
+  "window": "V1",
+  "rules": "E_exit_direction_flip",
+  "cost": "maker",
+  "trades": 315,
+  "net": 1266.12,
+  "dd": -10.9
+ },
+ {
+  "window": "V1",
+  "rules": "E_exit_direction_flip",
+  "cost": "vip_maker",
+  "trades": 316,
+  "net": 1806.14,
+  "dd": -8.8
+ },
+ {
+  "window": "V2",
+  "rules": "A_reference",
+  "cost": "base",
+  "trades": 429,
+  "net": -1172.39,
+  "dd": -24.0
+ },
+ {
+  "window": "V2",
+  "rules": "A_reference",
+  "cost": "bnb_taker",
+  "trades": 429,
+  "net": -1370.98,
+  "dd": -27.93
+ },
+ {
+  "window": "V2",
+  "rules": "A_reference",
+  "cost": "maker",
+  "trades": 432,
+  "net": -1056.97,
+  "dd": -21.85
+ },
+ {
+  "window": "V2",
+  "rules": "A_reference",
+  "cost": "vip_maker",
+  "trades": 430,
+  "net": -550.0,
+  "dd": -13.15
+ },
+ {
+  "window": "V2",
+  "rules": "E_exit_direction_flip",
+  "cost": "base",
+  "trades": 293,
+  "net": -324.03,
+  "dd": -21.16
+ },
+ {
+  "window": "V2",
+  "rules": "E_exit_direction_flip",
+  "cost": "bnb_taker",
+  "trades": 293,
+  "net": -487.18,
+  "dd": -23.11
+ },
+ {
+  "window": "V2",
+  "rules": "E_exit_direction_flip",
+  "cost": "maker",
+  "trades": 292,
+  "net": -342.96,
+  "dd": -20.63
+ },
+ {
+  "window": "V2",
+  "rules": "E_exit_direction_flip",
+  "cost": "vip_maker",
+  "trades": 293,
+  "net": 63.15,
+  "dd": -16.14
+ },
+ {
+  "window": "V3",
+  "rules": "A_reference",
+  "cost": "base",
+  "trades": 427,
+  "net": -201.93,
+  "dd": -12.75
+ },
+ {
+  "window": "V3",
+  "rules": "A_reference",
+  "cost": "bnb_taker",
+  "trades": 428,
+  "net": -458.03,
+  "dd": -15.27
+ },
+ {
+  "window": "V3",
+  "rules": "A_reference",
+  "cost": "maker",
+  "trades": 427,
+  "net": -62.96,
+  "dd": -11.65
+ },
+ {
+  "window": "V3",
+  "rules": "A_reference",
+  "cost": "vip_maker",
+  "trades": 424,
+  "net": 560.8,
+  "dd": -7.24
+ },
+ {
+  "window": "V3",
+  "rules": "E_exit_direction_flip",
+  "cost": "base",
+  "trades": 287,
+  "net": -12.73,
+  "dd": -16.34
+ },
+ {
+  "window": "V3",
+  "rules": "E_exit_direction_flip",
+  "cost": "bnb_taker",
+  "trades": 286,
+  "net": -182.78,
+  "dd": -18.73
+ },
+ {
+  "window": "V3",
+  "rules": "E_exit_direction_flip",
+  "cost": "maker",
+  "trades": 285,
+  "net": -7.32,
+  "dd": -16.17
+ },
+ {
+  "window": "V3",
+  "rules": "E_exit_direction_flip",
+  "cost": "vip_maker",
+  "trades": 285,
+  "net": 410.51,
+  "dd": -11.23
+ },
+ {
+  "window": "VAL",
+  "rules": "A_reference",
+  "cost": "base",
+  "trades": 1371,
+  "net": -1817.24,
+  "dd": -41.39
+ },
+ {
+  "window": "VAL",
+  "rules": "A_reference",
+  "cost": "bnb_taker",
+  "trades": 1373,
+  "net": -2325.29,
+  "dd": -48.89
+ },
+ {
+  "window": "VAL",
+  "rules": "A_reference",
+  "cost": "maker",
+  "trades": 1371,
+  "net": -1474.59,
+  "dd": -36.87
+ },
+ {
+  "window": "VAL",
+  "rules": "A_reference",
+  "cost": "vip_maker",
+  "trades": 1360,
+  "net": 173.2,
+  "dd": -19.04
+ },
+ {
+  "window": "VAL",
+  "rules": "E_exit_direction_flip",
+  "cost": "base",
+  "trades": 893,
+  "net": 475.01,
+  "dd": -30.38
+ },
+ {
+  "window": "VAL",
+  "rules": "E_exit_direction_flip",
+  "cost": "bnb_taker",
+  "trades": 895,
+  "net": -91.48,
+  "dd": -34.47
+ },
+ {
+  "window": "VAL",
+  "rules": "E_exit_direction_flip",
+  "cost": "maker",
+  "trades": 887,
+  "net": 813.03,
+  "dd": -27.2
+ },
+ {
+  "window": "VAL",
+  "rules": "E_exit_direction_flip",
+  "cost": "vip_maker",
+  "trades": 885,
+  "net": 2369.44,
+  "dd": -21.09
+ }
+]

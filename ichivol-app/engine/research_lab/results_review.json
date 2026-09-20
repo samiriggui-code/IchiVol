@@ -1,0 +1,202 @@
+[
+ {
+  "id": "A",
+  "window": "DEV",
+  "net_mean10": -2610.0,
+  "net_sd": 27.0,
+  "seed7": -2564.22,
+  "trades": 1197,
+  "dd": -51.98,
+  "adverse": -3819.59
+ },
+ {
+  "id": "A",
+  "window": "V1",
+  "net_mean10": -484.0,
+  "net_sd": 46.0,
+  "seed7": -534.69,
+  "trades": 507,
+  "dd": -14.43,
+  "adverse": -1694.38
+ },
+ {
+  "id": "A",
+  "window": "V2",
+  "net_mean10": -1196.0,
+  "net_sd": 37.0,
+  "seed7": -1178.12,
+  "trades": 433,
+  "dd": -24.11,
+  "adverse": -2057.18
+ },
+ {
+  "id": "A",
+  "window": "V3",
+  "net_mean10": -233.0,
+  "net_sd": 19.0,
+  "seed7": -224.54,
+  "trades": 434,
+  "dd": -12.95,
+  "adverse": -1269.8
+ },
+ {
+  "id": "A",
+  "window": "VAL",
+  "net_mean10": -1763.0,
+  "net_sd": 49.0,
+  "seed7": -1843.67,
+  "trades": 1381,
+  "dd": -41.8,
+  "adverse": -3589.08
+ },
+ {
+  "id": "E",
+  "window": "DEV",
+  "net_mean10": -1112.0,
+  "net_sd": 233.0,
+  "seed7": -750.23,
+  "trades": 759,
+  "dd": -24.32,
+  "adverse": -2549.05
+ },
+ {
+  "id": "E",
+  "window": "V1",
+  "net_mean10": 1333.0,
+  "net_sd": 108.0,
+  "seed7": 1242.24,
+  "trades": 319,
+  "dd": -12.2,
+  "adverse": 347.88
+ },
+ {
+  "id": "E",
+  "window": "V2",
+  "net_mean10": -331.0,
+  "net_sd": 123.0,
+  "seed7": -313.36,
+  "trades": 295,
+  "dd": -20.98,
+  "adverse": -958.71
+ },
+ {
+  "id": "E",
+  "window": "V3",
+  "net_mean10": -102.0,
+  "net_sd": 133.0,
+  "seed7": -180.96,
+  "trades": 291,
+  "dd": -17.78,
+  "adverse": -889.42
+ },
+ {
+  "id": "E",
+  "window": "VAL",
+  "net_mean10": 784.0,
+  "net_sd": 268.0,
+  "seed7": 294.65,
+  "trades": 900,
+  "dd": -31.44,
+  "adverse": -1639.68
+ },
+ {
+  "id": "A_longonly",
+  "window": "DEV",
+  "net_mean10": -1461.0,
+  "net_sd": 29.0,
+  "seed7": -1483.77,
+  "trades": 655,
+  "dd": -30.07,
+  "adverse": -2640.77
+ },
+ {
+  "id": "A_longonly",
+  "window": "V1",
+  "net_mean10": -143.0,
+  "net_sd": 40.0,
+  "seed7": -172.25,
+  "trades": 224,
+  "dd": -7.57,
+  "adverse": -768.33
+ },
+ {
+  "id": "A_longonly",
+  "window": "V2",
+  "net_mean10": -536.0,
+  "net_sd": 17.0,
+  "seed7": -525.08,
+  "trades": 208,
+  "dd": -12.18,
+  "adverse": -1040.97
+ },
+ {
+  "id": "A_longonly",
+  "window": "V3",
+  "net_mean10": 438.0,
+  "net_sd": 18.0,
+  "seed7": 436.86,
+  "trades": 264,
+  "dd": -6.05,
+  "adverse": -301.31
+ },
+ {
+  "id": "A_longonly",
+  "window": "VAL",
+  "net_mean10": -310.0,
+  "net_sd": 54.0,
+  "seed7": -380.58,
+  "trades": 697,
+  "dd": -18.43,
+  "adverse": -1897.65
+ },
+ {
+  "id": "E_longonly",
+  "window": "DEV",
+  "net_mean10": -957.0,
+  "net_sd": 134.0,
+  "seed7": -737.5,
+  "trades": 417,
+  "dd": -16.39,
+  "adverse": -1821.2
+ },
+ {
+  "id": "E_longonly",
+  "window": "V1",
+  "net_mean10": 437.0,
+  "net_sd": 58.0,
+  "seed7": 460.87,
+  "trades": 134,
+  "dd": -9.75,
+  "adverse": 83.39
+ },
+ {
+  "id": "E_longonly",
+  "window": "V2",
+  "net_mean10": -252.0,
+  "net_sd": 104.0,
+  "seed7": -273.55,
+  "trades": 146,
+  "dd": -8.69,
+  "adverse": -578.55
+ },
+ {
+  "id": "E_longonly",
+  "window": "V3",
+  "net_mean10": 510.0,
+  "net_sd": 110.0,
+  "seed7": 429.39,
+  "trades": 175,
+  "dd": -11.2,
+  "adverse": 130.4
+ },
+ {
+  "id": "E_longonly",
+  "window": "VAL",
+  "net_mean10": 719.0,
+  "net_sd": 147.0,
+  "seed7": 576.55,
+  "trades": 454,
+  "dd": -16.2,
+  "adverse": -454.95
+ }
+]
