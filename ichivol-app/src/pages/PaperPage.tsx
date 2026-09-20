@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ActivityJournal } from '../components/ActivityJournal'
+import { BrokerAccount, BrokerPositions } from '../components/BrokerAccount'
+import { PaperTradeSheet } from '../components/PaperTradeSheet'
 import {
   closePaperPosition,
+  getPaperActivity,
+  getPaperOverview,
   getPaperPerformance,
   getPaperPortfolio,
   getShadowStats,
   listPaperPositions,
+  type PaperOrderRow,
+  type PaperOverview,
   type PaperPerformance,
   type PaperPortfolioSummary,
   type PaperPosition,
@@ -180,8 +187,10 @@ function PositionsTable({
   rows,
   onClose,
   closingId,
+  onSelect,
 }: {
   rows: PaperPosition[]
+  onSelect?: (p: PaperPosition) => void
   onClose?: (id: string) => void
   closingId?: string | null
 }) {
@@ -249,6 +258,11 @@ function PositionsTable({
               </td>
               <td className="muted">{p.exit_reason ?? p.entry_decision}</td>
               <td>
+                {onSelect && (
+                  <button type="button" className="ghost" onClick={() => onSelect(p)}>
+                    Fiche
+                  </button>
+                )}
                 {p.status === 'OPEN' && onClose && (
                   <button
                     type="button"
@@ -281,11 +295,14 @@ export function PaperPage() {
   const [autoCache, setAutoCache] = useState<PaperPosition[]>([])
   const [perfMine, setPerfMine] = useState<PaperPerformance | null>(null)
   const [perfAuto, setPerfAuto] = useState<PaperPerformance | null>(null)
+  const [activity, setActivity] = useState<PaperOrderRow[]>([])
+  const [overview, setOverview] = useState<PaperOverview | null>(null)
   const [broker, setBroker] = useState<PaperPortfolioSummary | null>(null)
   const [shadow, setShadow] = useState<ShadowStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [closingId, setClosingId] = useState<string | null>(null)
+  const [sheetPos, setSheetPos] = useState<PaperPosition | null>(null)
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -297,12 +314,16 @@ export function PaperPage() {
       ])
       setMineCache(mine)
       setAutoCache(auto)
-      const [pMine, pAuto, port, sh] = await Promise.all([
+      const [pMine, pAuto, port, sh, ov, act] = await Promise.all([
         getPaperPerformance({ source: 'user_confirmed' }).catch(() => null),
         getPaperPerformance({ source: 'auto_watchlist' }).catch(() => null),
         getPaperPortfolio('ICHIVOL_BASELINE_V1').catch(() => null),
         getShadowStats().catch(() => null),
+        getPaperOverview('ICHIVOL_BASELINE_V1').catch(() => null),
+        getPaperActivity('ICHIVOL_BASELINE_V1', 60).catch(() => [] as PaperOrderRow[]),
       ])
+      setActivity(act)
+      setOverview(ov)
       setPerfMine(pMine)
       setPerfAuto(pAuto)
       setBroker(port)
@@ -349,9 +370,44 @@ export function PaperPage() {
         </div>
       )}
 
+      {overview && (
+        <>
+          <section className="panel">
+            <header className="panel-head">
+              <h2>Mon compte · {overview.portfolio.label}</h2>
+              <button type="button" className="ghost" onClick={() => void reload()} disabled={loading}>
+                {loading ? '…' : 'Actualiser'}
+              </button>
+            </header>
+            <BrokerAccount overview={overview} />
+          </section>
+
+          <section className="panel">
+            <header className="panel-head">
+              <h2>Positions ouvertes</h2>
+              <span className="panel-meta">portefeuille baseline · prix du dernier scan</span>
+            </header>
+            <BrokerPositions
+              overview={overview}
+              onSelect={setSheetPos}
+              onClose={onClose}
+              closingId={closingId}
+            />
+          </section>
+
+          <section className="panel">
+            <header className="panel-head">
+              <h2>Activité du moteur</h2>
+              <span className="panel-meta">derniers ordres virtuels</span>
+            </header>
+            <ActivityJournal orders={activity} />
+          </section>
+        </>
+      )}
+
       <section className="panel">
         <header className="panel-head">
-          <h2>PaperBroker</h2>
+          <h2>Détails techniques · PaperBroker</h2>
           <button type="button" className="ghost" onClick={() => void reload()} disabled={loading}>
             {loading ? '…' : 'Actualiser'}
           </button>
@@ -402,8 +458,11 @@ export function PaperPage() {
           rows={positions}
           onClose={tab === 'user_confirmed' ? onClose : undefined}
           closingId={closingId}
+          onSelect={setSheetPos}
         />
       </section>
+
+      {sheetPos && <PaperTradeSheet position={sheetPos} onClose={() => setSheetPos(null)} />}
     </div>
   )
 }

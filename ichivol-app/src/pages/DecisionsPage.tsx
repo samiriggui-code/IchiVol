@@ -6,6 +6,7 @@ import { ProposePaperTradePanel } from '../components/ProposePaperTradePanel'
 import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
 import { VerdictBadge } from '../components/VerdictBadge'
 import { labelDecision, labelDirection, labelReason } from '../lib/decisionLabels'
+import { TradePlanCard } from '../components/TradePlanCard'
 import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
 import {
   getDecisionDetail,
@@ -712,6 +713,8 @@ export function DecisionsPage() {
               {detail && (
                 <div className="decision-detail-body">
                   <SignalEvidenceCard detail={detail} />
+
+                  <TradePlanCard intent={activeIntent} pipelineView={pipelineView} />
 
                   <ProposePaperTradePanel
                     intent={activeIntent}

@@ -200,3 +200,64 @@ export async function getShadowStats(portfolioCode?: string): Promise<ShadowStat
   if (!res.ok) throw new Error(await parseError(res))
   return res.json() as Promise<ShadowStats>
 }
+
+export interface PaperOverviewPosition extends PaperPosition {
+  current_price: number | null
+  unrealized_pnl: number | null
+  unrealized_pct: number | null
+  price_as_of?: number
+}
+
+export interface PaperOverview {
+  portfolio: PaperPortfolioSummary['portfolio']
+  account: {
+    initial_cash: number
+    cash: number
+    invested: number
+    unrealized_pnl: number
+    realized_pnl: number
+    equity: number
+    total_pnl: number
+    day_change: number | null
+    priced_positions: number
+    open_positions: number
+  }
+  positions: PaperOverviewPosition[]
+  equity_curve: { t: string; equity: number }[]
+}
+
+export async function getPaperOverview(code = 'ICHIVOL_BASELINE_V1'): Promise<PaperOverview> {
+  const res = await fetch(`/api/engine/paper/portfolios/${encodeURIComponent(code)}/overview`, {
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json() as Promise<PaperOverview>
+}
+
+export interface PaperOrderRow {
+  id: string
+  position_id: string | null
+  time: string
+  symbol: string
+  timeframe: string
+  side: 'BUY' | 'SELL' | string
+  requested_price: number
+  filled_price: number
+  qty: number
+  notional: number
+  fee: number
+  status: string
+  reason: string | null
+}
+
+export async function getPaperActivity(
+  code = 'ICHIVOL_BASELINE_V1',
+  limit = 100,
+): Promise<PaperOrderRow[]> {
+  const res = await fetch(
+    `/api/engine/paper/portfolios/${encodeURIComponent(code)}/activity?limit=${limit}`,
+    { credentials: 'include' },
+  )
+  if (!res.ok) throw new Error(await parseError(res))
+  return ((await res.json()) as { orders: PaperOrderRow[] }).orders
+}

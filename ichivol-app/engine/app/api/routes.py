@@ -1378,6 +1378,159 @@ def get_paper_portfolio(code: str) -> dict:
             session.commit()
         portfolio = get_portfolio_by_code(session, code)
         if portfolio is None:
+def _latest_marks() -> dict[str, tuple[float, float]]:
+    """symbol -> (last screener price, computed_at epoch). Read-only cache peek."""
+    marks: dict[str, tuple[float, float]] = {}
+    for tf in ("1h", "4h", "15m", "1d"):
+        entry = screener_cache.get(tf)
+        if entry is None:
+            continue
+        for row in entry.rows:
+            marks.setdefault(row.symbol, (row.price, entry.computed_at))
+    return marks
+
+
+@router.get("/paper/portfolios/{code}/overview")
+def get_paper_portfolio_overview(code: str) -> dict:
+    """Broker-style account view: cash / invested / unrealized P&L, open positions
+    marked to the last screener price, and the equity curve. Read-only.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import select
+
+    from app.db.models import PaperEquitySnapshot
+
+    session = SessionLocal()
+    try:
+        portfolio = get_portfolio_by_code(session, code)
+        if portfolio is None:
+            raise HTTPException(status_code=404, detail="portfolio_not_found")
+        positions = paper_engine.list_positions(session, portfolio_id=portfolio.id)
+        marks = _latest_marks()
+
+        rows: list[dict] = []
+        invested = 0.0
+        unrealized = 0.0
+        for p in positions:
+            d = _paper_position_dict(p)
+            d["current_price"] = None
+            d["unrealized_pnl"] = None
+            d["unrealized_pct"] = None
+            if p.status == "OPEN":
+                invested += p.notional or 0.0
+                mark = marks.get(p.symbol)
+                if mark is not None and p.entry_price:
+                    price = mark[0]
+                    move = (price - p.entry_price) / p.entry_price
+                    d["current_price"] = price
+                    d["price_as_of"] = mark[1]
+                    d["unrealized_pct"] = move if p.direction == "LONG" else -move
+                    # € P&L only for capital-sized positions (legacy ones have no qty)
+                    if p.qty:
+                        gain = (
+                            p.qty * (price - p.entry_price)
+                            if p.direction == "LONG"
+                            else p.qty * (p.entry_price - price)
+                        )
+                        d["unrealized_pnl"] = gain
+                        unrealized += gain
+            rows.append(d)
+
+        equity = portfolio.cash + invested + unrealized
+        snaps = (
+            session.execute(
+                select(PaperEquitySnapshot)
+                .where(PaperEquitySnapshot.portfolio_id == portfolio.id)
+                .order_by(PaperEquitySnapshot.timestamp.desc())
+                .limit(500)
+            )
+            .scalars()
+            .all()
+        )
+        curve = [
+            {"t": s.timestamp.isoformat(), "equity": s.equity}
+            for s in reversed(snaps)
+        ]
+        day_ago = datetime.now(timezone.utc) - timedelta(hours=24)
+        ref = next(
+            (
+                s.equity
+                for s in snaps
+                if (s.timestamp if s.timestamp.tzinfo else s.timestamp.replace(tzinfo=timezone.utc))
+                <= day_ago
+            ),
+            None,
+        )
+        return {
+            "portfolio": _portfolio_dict(portfolio),
+            "account": {
+                "initial_cash": portfolio.initial_cash,
+                "cash": portfolio.cash,
+                "invested": invested,
+                "unrealized_pnl": unrealized,
+                "realized_pnl": portfolio.realized_pnl,
+                "equity": equity,
+                "total_pnl": equity - portfolio.initial_cash,
+                "day_change": (equity - ref) if ref is not None else None,
+                "priced_positions": sum(1 for r in rows if r["status"] == "OPEN" and r["current_price"] is not None),
+                "open_positions": sum(1 for r in rows if r["status"] == "OPEN"),
+            },
+            "positions": rows[:200],
+            "equity_curve": curve,
+        }
+    finally:
+        session.close()
+
+
+@router.get("/paper/portfolios/{code}/activity")
+def get_paper_portfolio_activity(code: str, limit: int = 100) -> dict:
+    """Virtual fill log (buys / sells) newest first, for the broker-style activity
+    journal. Read-only; never a real venue.
+    """
+    from sqlalchemy import select
+
+    from app.db.models import PaperOrder
+
+    session = SessionLocal()
+    try:
+        portfolio = get_portfolio_by_code(session, code)
+        if portfolio is None:
+            raise HTTPException(status_code=404, detail="portfolio_not_found")
+        orders = (
+            session.execute(
+                select(PaperOrder)
+                .where(PaperOrder.portfolio_id == portfolio.id)
+                .order_by(PaperOrder.created_at.desc())
+                .limit(max(1, min(limit, 500)))
+            )
+            .scalars()
+            .all()
+        )
+        return {
+            "orders": [
+                {
+                    "id": o.id,
+                    "position_id": o.position_id,
+                    "time": o.created_at.isoformat(),
+                    "symbol": o.symbol,
+                    "timeframe": o.timeframe,
+                    "side": o.side,
+                    "requested_price": o.requested_price,
+                    "filled_price": o.filled_price,
+                    "qty": o.qty,
+                    "notional": o.notional,
+                    "fee": o.fee,
+                    "status": o.status,
+                    "reason": o.reason,
+                }
+                for o in orders
+            ]
+        }
+    finally:
+        session.close()
+
+
             raise HTTPException(status_code=404, detail="portfolio_not_found")
         positions = paper_engine.list_positions(session, portfolio_id=portfolio.id)
         perf = compute_portfolio_performance(session, portfolio, positions)

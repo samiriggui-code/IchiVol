@@ -3113,3 +3113,51 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
   line-height: 1.3;
 }
 .sec-hist strong { font-variant-numeric: tabular-nums; }
+
+/* FRONT — fiches trade lisibles (Décisions plan + Paper fiche) */
+.trade-plan { margin: 0.5rem 0; padding: 0.65rem 0.7rem; border: 1px solid var(--border); border-radius: 0.4rem; background: var(--secondary); }
+.trade-plan-lead { margin: 0.25rem 0 0.6rem; font-size: 0.78rem; line-height: 1.45; }
+.trade-plan-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem 0.8rem; margin: 0 0 0.6rem; }
+.trade-plan-grid dt { margin: 0; font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.trade-plan-grid dd { margin: 0.1rem 0 0; font-size: 0.85rem; font-weight: 600; }
+.trade-plan-grid dd small { display: block; font-weight: 400; font-size: 0.66rem; color: var(--muted); }
+.trade-plan .up, .trade-sheet .up { color: var(--bull); }
+.trade-plan .down, .trade-sheet .down { color: var(--bear); }
+.trade-plan-sub { margin: 0.7rem 0 0.25rem; font-size: 0.72rem; }
+.trade-plan-details summary { cursor: pointer; font-size: 0.72rem; margin: 0.3rem 0; }
+.trade-plan-calc, .trade-plan-rules, .trade-plan-stages { margin: 0.2rem 0; padding-left: 1.1rem; font-size: 0.72rem; line-height: 1.5; }
+.trade-plan-stages { list-style: none; padding-left: 0; }
+.trade-plan-stages li { display: flex; gap: 0.5rem; align-items: baseline; margin: 0.2rem 0; }
+.trade-stage-status { flex-shrink: 0; font-size: 0.6rem; font-weight: 600; padding: 0.1rem 0.35rem; border-radius: 0.25rem; border: 1px solid var(--border); }
+.trade-stage-status.is-pass { color: var(--bull); }
+.trade-stage-status.is-fail { color: var(--bear); }
+.trade-plan-note { margin: 0.6rem 0 0; font-size: 0.64rem; }
+.trade-sheet-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.45); display: flex; justify-content: flex-end; }
+.trade-sheet { width: min(560px, 100%); height: 100%; overflow: hidden; display: flex; flex-direction: column; border-radius: 0; }
+.trade-sheet-head { align-items: flex-start; }
+.trade-sheet-head h2 { font-size: 0.95rem; margin: 0 0 0.25rem; }
+.trade-sheet-scroll { overflow-y: auto; padding: 0.65rem 0.8rem 1rem; }
+.trade-timeline { list-style: none; margin: 0; padding: 0 0 0 0.8rem; border-left: 2px solid var(--border); }
+.trade-timeline > li { position: relative; margin: 0 0 0.9rem; }
+.trade-timeline > li::before { content: ''; position: absolute; left: -1.05rem; top: 0.3rem; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--muted); }
+.trade-timeline h4 { margin: 0 0 0.2rem; font-size: 0.78rem; }
+.trade-timeline p { margin: 0.15rem 0; font-size: 0.74rem; line-height: 1.5; }
+
+/* FRONT — compte + positions façon broker */
+.broker-account-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 1rem; align-items: center; margin-bottom: 0.8rem; }
+@media (max-width: 800px) { .broker-account-top { grid-template-columns: 1fr; } }
+.broker-equity { display: flex; flex-direction: column; gap: 0.15rem; }
+.broker-equity-value { font-size: 1.9rem; line-height: 1.1; }
+.broker-equity-delta { font-size: 0.78rem; }
+.broker-equity-delta.up, .broker-account .up, .table-wrap .up { color: var(--bull); }
+.broker-equity-delta.down, .broker-account .down, .table-wrap .down { color: var(--bear); }
+.broker-curve { width: 100%; height: 110px; }
+.broker-curve-base { stroke: var(--border); stroke-dasharray: 4 4; }
+.broker-curve-line { stroke-width: 2; }
+.broker-curve-line.is-up { stroke: var(--bull); }
+.broker-curve-line.is-down { stroke: var(--bear); }
+.broker-curve-empty { font-size: 0.72rem; }
+.position-chart { width: 100%; min-height: 260px; margin-bottom: 0.5rem; }
+.trade-market { margin-bottom: 0.9rem; }
+.table-wrap td.up { color: var(--bull); }
+.table-wrap td.down { color: var(--bear); }
