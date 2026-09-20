@@ -1,7 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  askAgent,
+  askAgentStream,
   confirmAgentAction,
   type AgentChatResponse,
   type AgentDecisionPayload,
@@ -16,18 +16,6 @@ interface Props {
   snapshot: MarketSnapshot | null
 }
 
-const MODES: {
-  id: AgentMode
-  label: string
-  needsSnapshot?: boolean
-  needsDecision?: boolean
-}[] = [
-  { id: 'explain_decision', label: 'Décision', needsDecision: true },
-  { id: 'explain_signal', label: 'Signal', needsSnapshot: true },
-  { id: 'research', label: 'Recherche' },
-  { id: 'trade_idea', label: 'Idée', needsSnapshot: true },
-]
-
 export function AgentPanel({ snapshot }: Props) {
   const {
     threadId,
@@ -37,8 +25,6 @@ export function AgentPanel({ snapshot }: Props) {
     launch,
     clearLaunch,
     takeLaunch,
-    mode,
-    setMode,
     input,
     setInput,
     history,
@@ -52,6 +38,10 @@ export function AgentPanel({ snapshot }: Props) {
     error,
     setError,
   } = useAgentSession()
+
+  // Bulle en direct pendant que Claude écrit / interroge le moteur.
+  const [liveText, setLiveText] = useState('')
+  const [liveTool, setLiveTool] = useState<string | null>(null)
 
   const lastSignal = snapshot?.signals.length ? snapshot.signals[snapshot.signals.length - 1] : null
 
@@ -114,7 +104,8 @@ export function AgentPanel({ snapshot }: Props) {
     forceDecision?: AgentDecisionPayload | null
     forceLive?: AgentLivePayload | null
   }) {
-    const activeMode = opts?.forceMode ?? mode
+    // Claude choisit ses outils : sans « Expliquer » forcé, c'est une question libre.
+    const activeMode = opts?.forceMode ?? 'research'
     const question = (opts?.forceQuestion ?? input).trim()
     const decision = opts?.forceDecision !== undefined ? opts.forceDecision : decisionPayload
     const live = opts?.forceLive !== undefined ? opts.forceLive : liveFromSnapshot
@@ -143,15 +134,16 @@ export function AgentPanel({ snapshot }: Props) {
     ])
 
     try {
-      const res = await askAgent({
+      const res = await askAgentStream(
+        {
         mode: activeMode,
         question: question || defaultQ,
         threadId: threadId ?? undefined,
         symbol: decision?.symbol ?? live?.symbol ?? snapshot?.symbol,
         timeframe: decision?.timeframe ?? live?.interval ?? snapshot?.interval,
         history: undefined,
-        decision: activeMode === 'explain_decision' && decision ? decision : undefined,
-        live: activeMode === 'explain_signal' && live ? live : undefined,
+        decision: decision ?? undefined,
+        live: live ?? undefined,
         screenerRows:
           activeMode === 'trade_idea' && snapshot
             ? snapshot.rows.map((r) => ({
@@ -162,7 +154,19 @@ export function AgentPanel({ snapshot }: Props) {
                 change24h: r.change24h,
               }))
             : undefined,
-      })
+        },
+        {
+          onText: (d) => {
+            if (gen === getChatGeneration()) setLiveText((t) => t + d)
+          },
+          // Le texte avant un appel d'outil est du « je regarde… » : on l'efface.
+          onToolStart: (name) => {
+            setLiveText('')
+            setLiveTool(name)
+          },
+          onToolEnd: () => setLiveTool(null),
+        },
+      )
       if (gen !== getChatGeneration()) return
       if (res.threadId) setThreadId(res.threadId)
       setAssumedSlots(res.assumedSymbol ?? null, res.assumedTimeframe ?? null)
@@ -173,6 +177,7 @@ export function AgentPanel({ snapshot }: Props) {
           content: res.answer,
           citations: res.citations,
           disclaimer: res.disclaimer,
+          toolCalls: res.toolCalls,
           pendingAction: res.pendingAction,
         },
       ])
@@ -180,13 +185,14 @@ export function AgentPanel({ snapshot }: Props) {
       if (gen !== getChatGeneration()) return
       setError(e instanceof Error ? e.message : 'Erreur agent')
     } finally {
+      setLiveText('')
+      setLiveTool(null)
       if (gen === getChatGeneration()) setLoading(false)
     }
   }
 
   useEffect(() => {
     if (!launch || !takeLaunch(launch.requestId)) return
-    setMode(launch.mode)
     if (launch.autoSend) {
       setInput('')
       void send({
@@ -202,45 +208,16 @@ export function AgentPanel({ snapshot }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- launch.requestId only
   }, [launch])
 
-  const hasDecision = Boolean(decisionPayload || launch?.decision)
-  const hasLive = Boolean(snapshot || launch?.live)
-
   return (
     <div className="agent-panel-body">
-      <div className="agent-modes" role="group" aria-label="Mode agent">
-        {MODES.map((m) => {
-          const disabled =
-            (m.needsSnapshot && !hasLive && m.id === 'explain_signal') ||
-            (m.needsSnapshot && !snapshot && m.id === 'trade_idea') ||
-            (m.needsDecision && !hasDecision)
-          return (
-            <button
-              key={m.id}
-              type="button"
-              className={m.id === mode ? 'is-active' : undefined}
-              disabled={disabled}
-              title={
-                disabled
-                  ? m.needsDecision
-                    ? 'Lance depuis Décisions / Journal / Watchlist'
-                    : 'Disponible depuis Marché'
-                  : undefined
-              }
-              onClick={() => setMode(m.id)}
-            >
-              {m.label}
-            </button>
-          )
-        })}
-      </div>
-
       <div className="agent-history">
         {history.length === 0 && !loading && (
           <div className="agent-empty">
-            <p className="agent-empty-title">Prêt à expliquer une décision</p>
+            <p className="agent-empty-title">Pose ta question au moteur</p>
             <p className="muted">
-              Tu n’es pas censé inventer la question. Lance depuis une page métier —
-              le prompt arrive déjà rempli. Quitter la page ne perd plus la conversation.
+              Claude interroge le moteur IchiVol (scan, décision, multi-timeframe,
+              backtest, walk-forward) en lecture seule, puis explique. Tu peux aussi
+              lancer « Expliquer » depuis une page métier.
             </p>
             <div className="agent-empty-actions">
               <Link to="/app/decisions" className="ghost">
@@ -258,6 +235,14 @@ export function AgentPanel({ snapshot }: Props) {
         {history.map((entry, i) => (
           <div key={i} className={`agent-msg agent-msg-${entry.role}`}>
             <p>{entry.content}</p>
+            {entry.toolCalls && entry.toolCalls.length > 0 && (
+              <p className="muted" style={{ fontSize: '0.78rem' }}>
+                Moteur interrogé :{' '}
+                {entry.toolCalls
+                  .map((t) => `${t.name}${t.ok ? '' : ' ✗'} (${(t.ms / 1000).toFixed(1)}s)`)
+                  .join(' · ')}
+              </p>
+            )}
             {entry.disclaimer && <p className="agent-disclaimer">{entry.disclaimer}</p>}
             {entry.pendingAction && (
               <div className="agent-action-bar" style={{ display: 'flex', gap: 8, marginTop: 8 }}>
@@ -292,19 +277,25 @@ export function AgentPanel({ snapshot }: Props) {
             )}
           </div>
         ))}
-        {loading && <p className="muted">L&apos;agent réfléchit…</p>}
+        {loading && liveText && (
+          <div className="agent-msg agent-msg-assistant">
+            <p>{liveText}</p>
+          </div>
+        )}
+        {loading && liveTool && (
+          <p className="muted">Interrogation du moteur : {liveTool}…</p>
+        )}
+        {loading && !liveText && !liveTool && (
+          <p className="muted">L&apos;agent réfléchit…</p>
+        )}
         {error && <div className="banner error">{error}</div>}
       </div>
 
       <div className="agent-input">
         <textarea
           value={input}
-          rows={mode === 'research' || input.length > 80 ? 3 : 2}
-          placeholder={
-            mode === 'research'
-              ? 'Pose une question sur Ichimoku, RVOL…'
-              : 'Affiner la question (optionnel)…'
-          }
+          rows={input.length > 80 ? 3 : 2}
+          placeholder="Ex. : BTCUSDT en 1h, qu'en dit le moteur ? Compare 15m/1h/4h."
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {

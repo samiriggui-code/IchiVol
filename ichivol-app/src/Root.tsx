@@ -11,6 +11,7 @@ import { LoginPage } from './pages/LoginPage'
 import { MarketPage } from './pages/MarketPage'
 import { OverviewPage } from './pages/OverviewPage'
 import { PaperPage } from './pages/PaperPage'
+import { PaperTechPage } from './pages/PaperTechPage'
 import { RequireAuth } from './pages/RequireAuth'
 import { SettingsPage } from './pages/SettingsPage'
 import { WatchlistPage } from './pages/WatchlistPage'
@@ -37,6 +38,7 @@ export function Root() {
             <Route path="journal" element={<JournalPage />} />
             <Route path="watchlist" element={<WatchlistPage />} />
             <Route path="paper" element={<PaperPage />} />
+            <Route path="paper/tech" element={<PaperTechPage />} />
             <Route path="backtests" element={<BacktestsPage />} />
             <Route path="agent" element={<AgentPage />} />
             <Route path="settings" element={<SettingsPage />} />

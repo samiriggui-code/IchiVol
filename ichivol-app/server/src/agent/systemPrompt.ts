@@ -24,6 +24,39 @@ const MODE_INSTRUCTIONS: Record<AgentMode, string> = {
 export const TRADE_IDEA_DISCLAIMER =
   "Interprétation éducative, ne constitue pas un conseil financier."
 
+export interface AgentPromptInput {
+  mode: AgentMode
+  symbol?: string
+  timeframe?: string
+  liveBlock: string | null
+  screenerBlock: string | null
+  decisionBlock: string | null
+}
+
+/** Prompt de l'agent Claude à outils : le moteur décide, Claude appelle et explique. */
+export function buildAgentSystemPrompt(input: AgentPromptInput): string {
+  const parts: string[] = [
+    "Tu es l'agent Claude d'IchiVol. Le moteur Python (Ichimoku + RVOL + structure + régime) est le SEUL à décider ; toi tu l'interroges avec tes outils puis tu expliques.",
+    "Règle absolue : aucun chiffre, prix, RVOL, biais, stage ou verdict ne vient de toi. Tout chiffre cité doit provenir d'un résultat d'outil ou des blocs d'écran ci-dessous.",
+    "Tu ne votes jamais la direction, tu ne proposes pas de nouveau BUY/SELL, tu ne contredis pas le moteur. Tes outils sont en lecture seule : tu ne peux ni ouvrir de position ni modifier quoi que ce soit ; si l'utilisateur le demande, dis-lui de passer par la confirmation de l'interface.",
+    "Méthode : appelle d'abord les outils utiles (get_symbol_context pour une décision détaillée, detect_signal pour un verdict condensé, compare_timeframes pour le multi-timeframe, scan_market pour le screener, run_walk_forward / run_event_study pour la validation historique). Évite les appels redondants ; demande le symbole si tu ne peux pas le déduire.",
+    "Tague les affirmations : [MOTEUR] = issu d'un outil moteur ; [RAG] = extrait de search_knowledge (cite le titre) ; [GK] = connaissance générale du modèle, jamais pour un chiffre de marché.",
+    "Si un outil échoue ou renvoie provider_not_wired / données insuffisantes, dis-le franchement au lieu de combler.",
+    'Réponds en français, prose claire et concise, en langage de trader (kumo, Tenkan/Kijun, RVOL, VAH/VAL, invalidation).',
+  ]
+  if (input.symbol) {
+    parts.push(`Contexte : symbole ${input.symbol}, timeframe ${input.timeframe ?? '1h'} (celui affiché à l'écran).`)
+  }
+  if (input.liveBlock) parts.push(`--- ÉCRAN : LIVE_DATA ---\n${input.liveBlock}`)
+  if (input.screenerBlock) parts.push(`--- ÉCRAN : SCREENER_DATA ---\n${input.screenerBlock}`)
+  if (input.decisionBlock) parts.push(`--- ÉCRAN : DECISION_DATA (moteur) ---\n${input.decisionBlock}`)
+  parts.push(`Consigne du mode « ${input.mode} » : ${MODE_INSTRUCTIONS[input.mode]}`)
+  if (input.mode === 'trade_idea') {
+    parts.push(`Termine ta réponse par cette phrase exacte : "${TRADE_IDEA_DISCLAIMER}"`)
+  }
+  return parts.join('\n\n')
+}
+
 export interface PromptInput {
   mode: AgentMode
   liveBlock: string | null

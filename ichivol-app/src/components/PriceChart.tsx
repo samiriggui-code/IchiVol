@@ -8,6 +8,7 @@ import {
   LineSeries,
   LineStyle,
   type IChartApi,
+  type IPriceLine,
   type ISeriesApi,
   type ISeriesMarkersPluginApi,
   type MouseEventParams,
@@ -18,6 +19,7 @@ import {
 import { type ChartColors, readChartColors } from '../lib/chartColors'
 import { computeIchimoku, projectedSpans } from '../lib/ichimoku'
 import { biasFromIchi, computeVolumePulse, signalLabel } from '../lib/signals'
+import type { StructureOverlay } from '../lib/structure'
 import { THEME_CHANGE_EVENT } from '../lib/theme'
 import {
   DEFAULT_ICHI,
@@ -31,6 +33,8 @@ import {
 interface Props {
   candles: Candle[]
   onSignals?: (signals: Signal[]) => void
+  /** Zones S/R + trendlines calculées par le moteur (pas par le navigateur). */
+  structure?: StructureOverlay | null
 }
 
 type SeriesBag = {
@@ -58,7 +62,15 @@ type TipState = {
   point: HoverPoint | null
 }
 
-type LayerKey = 'candles' | 'tenkan' | 'kijun' | 'spanA' | 'spanB' | 'volume' | 'signals'
+type LayerKey =
+  | 'candles'
+  | 'tenkan'
+  | 'kijun'
+  | 'spanA'
+  | 'spanB'
+  | 'volume'
+  | 'signals'
+  | 'structure'
 
 type LayerVis = Record<LayerKey, boolean>
 
@@ -70,6 +82,7 @@ const DEFAULT_LAYERS: LayerVis = {
   spanB: true,
   volume: true,
   signals: true,
+  structure: true,
 }
 
 function buildLegend(colors: ChartColors): { key: LayerKey; label: string; color: string; color2?: string }[] {
@@ -81,6 +94,7 @@ function buildLegend(colors: ChartColors): { key: LayerKey; label: string; color
     { key: 'spanB', label: 'Span B', color: colors.spanB },
     { key: 'volume', label: 'Volume', color: colors.bull, color2: colors.bear },
     { key: 'signals', label: 'Signaux', color: colors.neutral },
+    { key: 'structure', label: 'Structure', color: colors.bull, color2: colors.bear },
   ]
 }
 
@@ -150,7 +164,9 @@ function applyChartTheme(chart: IChartApi, series: SeriesBag, colors: ChartColor
   series.spanB.applyOptions({ color: colors.spanB })
 }
 
-export function PriceChart({ candles, onSignals }: Props) {
+export function PriceChart({ candles, onSignals, structure }: Props) {
+  const priceLinesRef = useRef<IPriceLine[]>([])
+  const trendSeriesRef = useRef<ISeriesApi<'Line'>[]>([])
   const hostRef = useRef<HTMLDivElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -362,6 +378,58 @@ export function PriceChart({ candles, onSignals }: Props) {
       : []
     markersRef.current?.setMarkers(markers)
   }, [layers, candles, colors])
+
+  // Overlays moteur : zones = 2 lignes de prix (bas/haut), trendlines = séries à 2 points.
+  useEffect(() => {
+    const chart = chartRef.current
+    const series = seriesRef.current
+    if (!chart || !series) return
+
+    for (const pl of priceLinesRef.current) series.candle.removePriceLine(pl)
+    priceLinesRef.current = []
+    for (const ts_ of trendSeriesRef.current) chart.removeSeries(ts_)
+    trendSeriesRef.current = []
+
+    if (!structure || !layers.structure) return
+
+    for (const z of structure.zones) {
+      const color = z.side === 'support' ? colors.bull : colors.bear
+      const label = `${z.side === 'support' ? 'S' : 'R'} ×${z.touch_count}`
+      for (const [price, title] of [[z.high, label], [z.low, '']] as const) {
+        priceLinesRef.current.push(
+          series.candle.createPriceLine({
+            price,
+            color: `${color}b3`,
+            lineWidth: 1,
+            lineStyle: LineStyle.Dotted,
+            axisLabelVisible: title !== '',
+            title,
+          }),
+        )
+      }
+    }
+
+    for (const t of structure.trendlines) {
+      const color = t.side === 'support' ? colors.bull : colors.bear
+      const line = chart.addSeries(
+        LineSeries,
+        {
+          color,
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          lastValueVisible: false,
+          priceLineVisible: false,
+          crosshairMarkerVisible: false,
+        },
+        0,
+      )
+      line.setData([
+        { time: ts(t.start_time), value: t.start_price },
+        { time: ts(t.end_time), value: t.end_price },
+      ])
+      trendSeriesRef.current.push(line)
+    }
+  }, [structure, layers.structure, colors, candles])
 
   const p = tip.point
   const up = p ? p.candle.close >= p.candle.open : false

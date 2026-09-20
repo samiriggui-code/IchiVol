@@ -1,11 +1,10 @@
 import { Link } from 'react-router-dom'
-import { AgentEnginePanel } from '../components/AgentEnginePanel'
 import { AgentPanel } from '../components/AgentPanel'
 import { useAgentSession } from '../lib/agentSession'
 import { useMarketSnapshot } from '../lib/marketSnapshot'
 
 /**
- * Atelier Copilot — conversation LLM + lecture moteur déterministe.
+ * Agent Claude : il interroge le moteur en lecture seule (outils) puis explique.
  */
 export function AgentPage() {
   const { snapshot } = useMarketSnapshot()
@@ -35,13 +34,13 @@ export function AgentPage() {
           <p className="agent-atelier-kicker">Atelier d’analyse</p>
           <h1>Copilot</h1>
           <p className="agent-atelier-lede">
-            Le <strong>moteur Python</strong> calcule. Le <strong>chat</strong> explique.
+            Le <strong>moteur Python</strong> calcule. Claude <strong>interroge le moteur</strong> avec ses outils, puis explique.
             Depuis Décisions ou Journal, un clic « Expliquer » t’amène ici avec la
             question déjà prête.
           </p>
           <div className="agent-atelier-roles" aria-label="Rôles">
             <span className="agent-role-pill is-engine">Moteur = chiffres</span>
-            <span className="agent-role-pill is-llm">LLM = explication</span>
+            <span className="agent-role-pill is-llm">Claude = outils + explication</span>
             <span className="agent-role-pill is-you">Toi = confirmation</span>
           </div>
         </div>
@@ -81,7 +80,6 @@ export function AgentPage() {
           <AgentPanel snapshot={snapshot} />
         </section>
 
-        <AgentEnginePanel symbol={symbol} timeframe={timeframe} />
       </div>
     </div>
   )

@@ -1,6 +1,5 @@
 import { useEffect, useState, type ComponentType } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { AgentChat } from '../components/AgentChat'
 import { NotificationBell } from '../components/NotificationBell'
 import {
   IconBacktests,
@@ -298,7 +297,6 @@ function DashboardShellInner() {
         </>
       )}
 
-      <AgentChat />
     </div>
   )
 }

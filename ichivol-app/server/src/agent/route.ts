@@ -6,7 +6,8 @@ import { resolveLlmForUser } from '../settings/resolve.js'
 import { SOURCES } from '../sources/registry.js'
 import { formatDecisionContext, formatLiveContext, formatScreenerRows } from './context.js'
 import { intentToMode, planIntent } from './planner.js'
-import { buildSystemPrompt, TRADE_IDEA_DISCLAIMER } from './systemPrompt.js'
+import { runClaudeAgent } from './claudeAgent.js'
+import { buildAgentSystemPrompt, buildSystemPrompt, TRADE_IDEA_DISCLAIMER } from './systemPrompt.js'
 import {
   appendMessage,
   createThread,
@@ -155,6 +156,110 @@ export async function handleAgentChat(req: Request, res: Response): Promise<void
     return
   }
 
+  let resolved: Awaited<ReturnType<typeof resolveLlmForUser>>
+  try {
+    resolved = await resolveLlmForUser(req.user.id)
+  } catch (err) {
+    res.status(502).json({ error: err instanceof Error ? err.message : 'Erreur inconnue' })
+    return
+  }
+  if (!resolved.apiKey) {
+    res.status(400).json({
+      error:
+        'Aucune clé LLM résolue pour ce provider. Vérifie Settings → Agent LLM (OpenRouter déjà possible via .env).',
+    })
+    return
+  }
+
+  // Claude (Anthropic) : agent à outils — il appelle lui-même le moteur en lecture seule.
+  if ((body.provider ?? resolved.provider) === 'anthropic') {
+    try {
+      const dbHistory = await loadThreadHistory(thread.id)
+      const history = dbHistory
+        .slice(0, -1)
+        .filter((m) => m.role === 'user' || m.role === 'assistant')
+        .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+
+      const wantsStream = body.stream === true
+      const abort = new AbortController()
+      const send = (payload: object) => {
+        if (wantsStream && !res.writableEnded) {
+          res.write('data: ' + JSON.stringify(payload) + '\n\n')
+        }
+      }
+      if (wantsStream) {
+        // Le navigateur ferme l'onglet / annule : on coupe l'appel Claude (et sa facture).
+        res.on('close', () => {
+          if (!res.writableFinished) abort.abort()
+        })
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream; charset=utf-8',
+          'Cache-Control': 'no-cache, no-transform',
+          Connection: 'keep-alive',
+          'X-Accel-Buffering': 'no', // nginx : ne pas bufferiser le flux
+        })
+        res.flushHeaders()
+      }
+
+      const out = await runClaudeAgent({
+        onEvent: wantsStream ? send : undefined,
+        signal: abort.signal,
+        apiKey: resolved.apiKey,
+        model: resolved.model,
+        system: buildAgentSystemPrompt({
+          mode: effectiveMode,
+          symbol,
+          timeframe,
+          liveBlock: formatLiveContext(body.live),
+          screenerBlock: formatScreenerRows(body.screenerRows),
+          decisionBlock: formatDecisionContext(hasFullClientDecision(body) ? body.decision : undefined),
+        }),
+        history,
+        question: userContent || body.question,
+      })
+
+      await appendMessage({
+        threadId: thread.id,
+        role: 'assistant',
+        content: out.answer,
+        mode: effectiveMode,
+        intent: plan.intent,
+        citations: out.citations,
+      })
+
+      const agentResponse: AgentChatResponse = {
+        answer: out.answer,
+        disclaimer: effectiveMode === 'trade_idea' ? TRADE_IDEA_DISCLAIMER : undefined,
+        citations: out.citations,
+        provider: 'anthropic',
+        model: out.model,
+        intent: plan.intent,
+        threadId: thread.id,
+        assumedSymbol: symbol ?? null,
+        assumedTimeframe: timeframe,
+        toolCalls: out.toolCalls,
+      }
+      if (wantsStream) {
+        send({ type: 'done', response: agentResponse })
+        res.end()
+      } else {
+        res.json(agentResponse)
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erreur inconnue'
+      if (res.headersSent) {
+        // Flux déjà ouvert : on ne peut plus changer le statut HTTP, on signale dans le flux.
+        if (!res.writableEnded) {
+          res.write('data: ' + JSON.stringify({ type: 'error', error: message }) + '\n\n')
+          res.end()
+        }
+      } else {
+        res.status(502).json({ error: message })
+      }
+    }
+    return
+  }
+
   const clientDecisionFull = hasFullClientDecision(body)
   const hasClientLive = body.live != null
 
@@ -220,15 +325,6 @@ export async function handleAgentChat(req: Request, res: Response): Promise<void
   const historyForLlm = dbHistory.slice(0, -1)
 
   try {
-    const resolved = await resolveLlmForUser(req.user.id)
-    if (!resolved.apiKey) {
-      res.status(400).json({
-        error:
-          'Aucune clé LLM résolue pour ce provider. Vérifie Settings → Agent LLM (OpenRouter déjà possible via .env).',
-      })
-      return
-    }
-
     const provider = getProvider({
       provider: body.provider ?? resolved.provider,
       apiKey: resolved.apiKey,

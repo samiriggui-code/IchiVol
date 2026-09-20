@@ -38,6 +38,7 @@ export interface ChatEntry {
   content: string
   citations?: AgentCitation[]
   disclaimer?: string
+  toolCalls?: AgentChatResponse['toolCalls']
   pendingAction?: AgentChatResponse['pendingAction']
 }
 

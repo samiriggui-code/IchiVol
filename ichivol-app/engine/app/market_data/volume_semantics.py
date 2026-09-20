@@ -35,11 +35,6 @@ PROVIDER_VOLUME_TYPE: dict[str, VolumeType] = {
     "binance": VolumeType.EXCHANGE_VOLUME,
     "biquote": VolumeType.TICK_VOLUME,
     "twelve_data": VolumeType.REPORTED_VOLUME,
-    # Safe default for MT5 CFD/forex brokers -- most report tick counts, not
-    # real traded volume. app/market_data/mt5.py overrides per-candle
-    # whenever the bridge explicitly reports "real" (some MT5 futures feeds
-    # do), so this default only applies when nothing more specific is known.
-    "mt5": VolumeType.TICK_VOLUME,
 }
 
 

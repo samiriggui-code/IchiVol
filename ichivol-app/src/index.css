@@ -2057,6 +2057,22 @@ button, select { font: inherit; color: inherit; }
   gap: 0.4rem;
 }
 .paper-perf-note { font-size: 0.62rem; margin: 0.4rem 0 0; }
+.paper-tech-link { margin: 1rem 0 0.5rem; font-size: 0.72rem; }
+.paper-rules-details {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  font-size: 0.74rem;
+}
+.paper-rules-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+}
+.paper-rules-details summary::-webkit-details-marker { display: none; }
+.paper-rules-details[open] summary { margin-bottom: 0.4rem; }
+.paper-shadow-plain { margin: 0; font-size: 0.85rem; line-height: 1.45; }
 .paper-empty-hint { padding: 0 0.75rem 0.75rem; font-size: 0.7rem; }
 .decision-agents { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.25rem; }
 .decision-agent {
@@ -2457,7 +2473,7 @@ button, select { font: inherit; color: inherit; }
 }
 .agent-atelier-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.9fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   min-height: 0;
   flex: 1;
@@ -3137,6 +3153,15 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 .trade-sheet-head { align-items: flex-start; }
 .trade-sheet-head h2 { font-size: 0.95rem; margin: 0 0 0.25rem; }
 .trade-sheet-scroll { overflow-y: auto; padding: 0.65rem 0.8rem 1rem; }
+.trade-sheet-brief {
+  margin: 0 0 0.9rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--secondary) 80%, transparent);
+  border: 1px solid var(--border);
+}
+.trade-sheet-brief .subhead { margin: 0 0 0.35rem; }
+.trade-sheet-brief p { margin: 0.25rem 0; font-size: 0.8rem; line-height: 1.5; }
 .trade-timeline { list-style: none; margin: 0; padding: 0 0 0 0.8rem; border-left: 2px solid var(--border); }
 .trade-timeline > li { position: relative; margin: 0 0 0.9rem; }
 .trade-timeline > li::before { content: ''; position: absolute; left: -1.05rem; top: 0.3rem; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--muted); }

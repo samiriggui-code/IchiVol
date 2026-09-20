@@ -53,6 +53,8 @@ export interface AgentChatRequest {
   threadId?: string
   history?: Array<{ role: 'user' | 'assistant'; content: string }>
   provider?: 'anthropic' | 'openai' | 'openrouter'
+  /** Réponse en flux SSE (agent Claude uniquement ; sinon JSON classique). */
+  stream?: boolean
 }
 
 export interface Citation {
@@ -74,6 +76,8 @@ export interface AgentChatResponse {
   threadId?: string
   assumedSymbol?: string | null
   assumedTimeframe?: string | null
+  /** Outils moteur appelés par Claude pour cette réponse (transparence UI). */
+  toolCalls?: Array<{ name: string; input: Record<string, unknown>; ok: boolean; ms: number }>
   /** Action mute proposée — UI confirmera en E5. */
   pendingAction?: {
     intent: 'save_decision' | 'pin_symbol' | 'open_paper_position'

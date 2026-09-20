@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ActivityJournal } from '../components/ActivityJournal'
 import { BrokerAccount, BrokerPositions } from '../components/BrokerAccount'
@@ -7,282 +7,111 @@ import {
   closePaperPosition,
   getPaperActivity,
   getPaperOverview,
-  getPaperPerformance,
-  getPaperPortfolio,
   getShadowStats,
   listPaperPositions,
   type PaperOrderRow,
   type PaperOverview,
-  type PaperPerformance,
-  type PaperPortfolioSummary,
   type PaperPosition,
-  type PaperSource,
   type ShadowStats,
 } from '../lib/paper'
+import {
+  assetName,
+  directionWords,
+  EXIT_RULES,
+  exitReasonLabel,
+  pct,
+  signedEur,
+} from '../lib/tradeStory'
 
-function fmtPct(v: number | null, digits = 1): string {
-  if (v == null || !Number.isFinite(v)) return '—'
-  return `${(v * 100).toFixed(digits)}%`
+function tone(v: number | null | undefined): string {
+  if (v == null || v === 0) return ''
+  return v > 0 ? 'up' : 'down'
 }
 
-function fmtNum(v: number | null, digits = 2): string {
-  if (v == null || !Number.isFinite(v)) return '—'
-  return v.toFixed(digits)
-}
-
-function tone(v: number | null): string {
-  if (v == null) return ''
-  return v >= 0 ? 'up' : 'down'
-}
-
-function sourceLabel(s: string): string {
-  if (s === 'auto_watchlist') return 'Auto screener'
-  if (s === 'user_confirmed') return 'Mes confirms'
-  return s
-}
-
-function ShadowCards({ stats }: { stats: ShadowStats | null }) {
-  if (!stats) {
-    return <p className="muted">ShadowBroker pas encore peuplé (filtres Structure/Fib/Ctx).</p>
+function shadowPlain(stats: ShadowStats | null): string {
+  if (!stats || stats.n_closed < 5) {
+    return 'Pas encore assez de cas pour juger les filtres (il en faut au moins 5 fermés).'
   }
-  const verdictLabel =
-    stats.filter_verdict === 'filter_too_aggressive'
-      ? 'Filtre trop agressif'
-      : stats.filter_verdict === 'filter_helpful'
-        ? 'Filtre utile'
-        : stats.filter_verdict === 'inconclusive'
-          ? 'Inconclusif'
-          : 'Pas assez de closes (≥5)'
-  return (
-    <div className="paper-perf-block">
-      <h3 className="subhead">ShadowBroker · counterfactuels</h3>
-      <div className="paper-perf-grid">
-        <div className="context-card">
-          <span className="context-label">Ouvertes</span>
-          <strong className="context-value">{stats.n_open}</strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">Fermées</span>
-          <strong className="context-value">{stats.n_closed}</strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">Win rate shadow</span>
-          <strong className="context-value">{fmtPct(stats.win_rate)}</strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">Mean R (bloqués)</span>
-          <strong className={`context-value ${tone(stats.mean_pnl_r)}`}>
-            {fmtNum(stats.mean_pnl_r, 2)} R
-          </strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">Verdict filtre</span>
-          <strong className="context-value">{verdictLabel}</strong>
-        </div>
-      </div>
-      <p className="muted paper-perf-note">
-        Hors cash. Si mean R &gt; 0 sur trades bloqués, le filtre a écarté des winners.
-      </p>
-    </div>
-  )
-}
-
-function BrokerCards({ summary }: { summary: PaperPortfolioSummary | null }) {
-  if (!summary) {
-    return (
-      <p className="muted">
-        PaperBroker pas encore initialisé (migration / redémarrage moteur).
-      </p>
-    )
+  if (stats.filter_verdict === 'filter_too_aggressive') {
+    return 'Les filtres ont souvent bloqué des trades qui auraient gagné — ils sont peut‑être trop stricts.'
   }
-  const { portfolio, performance: perf } = summary
-  return (
-    <div className="paper-perf-block">
-      <h3 className="subhead">PaperBroker · {portfolio.code}</h3>
-      <div className="paper-perf-grid">
-        <div className="context-card">
-          <span className="context-label">Capital initial</span>
-          <strong className="context-value">{fmtNum(portfolio.initial_cash, 0)} €</strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">Cash</span>
-          <strong className="context-value">{fmtNum(portfolio.cash, 2)} €</strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">Equity</span>
-          <strong className={`context-value ${tone(perf.equity != null && portfolio.initial_cash ? perf.equity - portfolio.initial_cash : null)}`}>
-            {fmtNum(perf.equity ?? null, 2)} €
-          </strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">PnL réalisé</span>
-          <strong className={`context-value ${tone(portfolio.realized_pnl)}`}>
-            {fmtNum(portfolio.realized_pnl, 2)} €
-          </strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">Max drawdown</span>
-          <strong className="context-value">{fmtPct(perf.max_drawdown ?? null)}</strong>
-        </div>
-        <div className="context-card">
-          <span className="context-label">Expectancy €</span>
-          <strong className={`context-value ${tone(perf.expectancy_eur ?? null)}`}>
-            {fmtNum(perf.expectancy_eur ?? null, 2)} €
-          </strong>
-        </div>
-      </div>
-      <p className="muted paper-perf-note">
-        Risk 1% / TP 2R / max 5 positions · valuation {portfolio.valuation_mode} · jamais d’ordre réel.
-      </p>
-    </div>
-  )
+  if (stats.filter_verdict === 'filter_helpful') {
+    return 'Les filtres ont surtout bloqué des trades qui auraient perdu — utiles pour l’instant.'
+  }
+  return 'Résultat mitigé : les filtres n’améliorent ni ne dégradent clairement le résultat.'
 }
 
-function PerfCards({ perf, title }: { perf: PaperPerformance | null; title: string }) {
-  return (
-    <div className="paper-perf-block">
-      <h3 className="subhead">{title}</h3>
-      {!perf ? (
-        <p className="muted">Perf indisponible (redémarre le moteur si 404)…</p>
-      ) : (
-        <div className="paper-perf-grid">
-          <div className="context-card">
-            <span className="context-label">Ouvertes</span>
-            <strong className="context-value">{perf.num_open_positions}</strong>
-          </div>
-          <div className="context-card">
-            <span className="context-label">Fermées</span>
-            <strong className="context-value">{perf.num_closed_trades}</strong>
-          </div>
-          <div className="context-card">
-            <span className="context-label">Return composé</span>
-            <strong className={`context-value ${tone(perf.total_return)}`}>
-              {fmtPct(perf.total_return)}
-            </strong>
-          </div>
-          <div className="context-card">
-            <span className="context-label">Win rate</span>
-            <strong className="context-value">{fmtPct(perf.win_rate)}</strong>
-          </div>
-          <div className="context-card">
-            <span className="context-label">Profit factor</span>
-            <strong className="context-value">{fmtNum(perf.profit_factor)}</strong>
-          </div>
-          <div className="context-card">
-            <span className="context-label">Expectancy</span>
-            <strong className={`context-value ${tone(perf.expectancy)}`}>
-              {fmtPct(perf.expectancy)}
-            </strong>
-          </div>
-        </div>
-      )}
-      <p className="muted paper-perf-note">
-        Pas de Sharpe ici (closes irrégulières). Stats utiles dès qu’assez de trades fermés.
-      </p>
-    </div>
-  )
-}
-
-function PositionsTable({
+function ClosedHistory({
   rows,
-  onClose,
-  closingId,
   onSelect,
 }: {
   rows: PaperPosition[]
-  onSelect?: (p: PaperPosition) => void
-  onClose?: (id: string) => void
-  closingId?: string | null
+  onSelect: (p: PaperPosition) => void
 }) {
+  const closed = useMemo(
+    () =>
+      rows
+        .filter((p) => p.status === 'CLOSED')
+        .sort((a, b) => +new Date(b.exit_time ?? b.entry_time) - +new Date(a.exit_time ?? a.entry_time))
+        .slice(0, 20),
+    [rows],
+  )
+
+  if (closed.length === 0) {
+    return (
+      <p className="muted">
+        Aucun trade terminé pour l’instant. Quand une position se ferme (stop, objectif, ou à la
+        main), elle apparaîtra ici avec le résultat en euros.
+      </p>
+    )
+  }
+
   return (
     <div className="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Symbole</th>
-            <th>Sens</th>
-            <th>Statut</th>
-            <th>Qty</th>
-            <th>Entrée</th>
-            <th>Prix</th>
-            <th>Stop</th>
-            <th>TP</th>
-            <th>Sortie</th>
-            <th>PnL</th>
-            <th>Evidence</th>
-            <th>Raison</th>
+            <th>Quand</th>
+            <th>Quoi</th>
+            <th>Résultat</th>
+            <th>Pourquoi sorti</th>
             <th />
           </tr>
         </thead>
         <tbody>
-          {rows.map((p) => (
-            <tr key={p.id}>
-              <td>
-                <strong>{p.symbol.replace(/USDT$/i, '')}</strong>
-                <span className="muted"> · {p.timeframe}</span>
-              </td>
-              <td>{p.direction}</td>
-              <td>{p.status}</td>
-              <td className="mono muted">
-                {p.qty != null && Number.isFinite(p.qty) ? p.qty.toPrecision(4) : '—'}
-              </td>
-              <td className="mono muted">
-                {new Date(p.entry_time).toLocaleString('fr-FR', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </td>
-              <td className="mono">{p.entry_price.toPrecision(6)}</td>
-              <td className="mono muted">
-                {p.stop_price != null ? p.stop_price.toPrecision(6) : '—'}
-              </td>
-              <td className="mono muted">
-                {p.take_profit_price != null ? p.take_profit_price.toPrecision(6) : '—'}
-              </td>
-              <td className="mono">{p.exit_price != null ? p.exit_price.toPrecision(6) : '—'}</td>
-              <td className={`mono ${tone(p.pnl_pct)}`}>{fmtPct(p.pnl_pct, 2)}</td>
-              <td>
-                {p.evidence_id || p.decision_id ? (
-                  <Link
-                    to={`/app/decisions?symbol=${encodeURIComponent(p.symbol)}`}
-                    className="paper-evidence-link"
-                    title={p.evidence_id ?? p.decision_id ?? undefined}
-                  >
-                    Voir
-                  </Link>
-                ) : (
-                  <span className="muted">—</span>
-                )}
-              </td>
-              <td className="muted">{p.exit_reason ?? p.entry_decision}</td>
-              <td>
-                {onSelect && (
+          {closed.map((p) => {
+            const dir = directionWords(p.direction)
+            const when = p.exit_time ?? p.entry_time
+            return (
+              <tr key={p.id}>
+                <td className="mono muted">
+                  {new Date(when).toLocaleString('fr-FR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </td>
+                <td>
+                  {dir.title} de <strong>{assetName(p.symbol)}</strong>
+                  <span className="muted"> · {p.timeframe}</span>
+                  <br />
+                  <span className="muted">
+                    {p.source === 'auto_watchlist' ? 'Ouvert auto (screener)' : 'Confirmé par vous'}
+                  </span>
+                </td>
+                <td className={`mono ${tone(p.realized_pnl ?? p.pnl_pct)}`}>
+                  {p.realized_pnl != null ? signedEur(p.realized_pnl) : pct(p.pnl_pct, 2)}
+                </td>
+                <td>{exitReasonLabel(p.exit_reason)}</td>
+                <td>
                   <button type="button" className="ghost" onClick={() => onSelect(p)}>
-                    Fiche
+                    Voir l’histoire
                   </button>
-                )}
-                {p.status === 'OPEN' && onClose && (
-                  <button
-                    type="button"
-                    className="ghost"
-                    disabled={closingId === p.id}
-                    onClick={() => onClose(p.id)}
-                  >
-                    Fermer
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-          {rows.length === 0 && (
-            <tr>
-              <td colSpan={13} className="muted center">
-                Aucune position.
-              </td>
-            </tr>
-          )}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -290,14 +119,9 @@ function PositionsTable({
 }
 
 export function PaperPage() {
-  const [tab, setTab] = useState<PaperSource>('user_confirmed')
-  const [mineCache, setMineCache] = useState<PaperPosition[]>([])
-  const [autoCache, setAutoCache] = useState<PaperPosition[]>([])
-  const [perfMine, setPerfMine] = useState<PaperPerformance | null>(null)
-  const [perfAuto, setPerfAuto] = useState<PaperPerformance | null>(null)
-  const [activity, setActivity] = useState<PaperOrderRow[]>([])
   const [overview, setOverview] = useState<PaperOverview | null>(null)
-  const [broker, setBroker] = useState<PaperPortfolioSummary | null>(null)
+  const [activity, setActivity] = useState<PaperOrderRow[]>([])
+  const [history, setHistory] = useState<PaperPosition[]>([])
   const [shadow, setShadow] = useState<ShadowStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -308,28 +132,19 @@ export function PaperPage() {
     setLoading(true)
     setError(null)
     try {
-      const [mine, auto] = await Promise.all([
-        listPaperPositions({ source: 'user_confirmed' }),
-        listPaperPositions({ source: 'auto_watchlist' }),
-      ])
-      setMineCache(mine)
-      setAutoCache(auto)
-      const [pMine, pAuto, port, sh, ov, act] = await Promise.all([
-        getPaperPerformance({ source: 'user_confirmed' }).catch(() => null),
-        getPaperPerformance({ source: 'auto_watchlist' }).catch(() => null),
-        getPaperPortfolio('ICHIVOL_BASELINE_V1').catch(() => null),
-        getShadowStats().catch(() => null),
-        getPaperOverview('ICHIVOL_BASELINE_V1').catch(() => null),
+      const [ov, act, mine, auto, sh] = await Promise.all([
+        getPaperOverview('ICHIVOL_BASELINE_V1'),
         getPaperActivity('ICHIVOL_BASELINE_V1', 60).catch(() => [] as PaperOrderRow[]),
+        listPaperPositions({ source: 'user_confirmed' }).catch(() => [] as PaperPosition[]),
+        listPaperPositions({ source: 'auto_watchlist' }).catch(() => [] as PaperPosition[]),
+        getShadowStats().catch(() => null),
       ])
-      setActivity(act)
       setOverview(ov)
-      setPerfMine(pMine)
-      setPerfAuto(pAuto)
-      setBroker(port)
+      setActivity(act)
+      setHistory([...mine, ...auto])
       setShadow(sh)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Erreur paper')
+      setError(e instanceof Error ? e.message : 'Impossible de charger le compte paper')
     } finally {
       setLoading(false)
     }
@@ -338,8 +153,6 @@ export function PaperPage() {
   useEffect(() => {
     void reload()
   }, [reload])
-
-  const positions = tab === 'user_confirmed' ? mineCache : autoCache
 
   async function onClose(id: string) {
     setClosingId(id)
@@ -356,11 +169,11 @@ export function PaperPage() {
   return (
     <div className="paper-page">
       <header className="page-head">
-        <h1>Paper</h1>
+        <h1>Mon compte paper</h1>
         <p className="muted">
-          Positions <strong>virtuelles</strong> — PaperBroker 5 000 € (risk 1%, TP 2R). Ouvertes par
-          le screener (auto) ou quand tu confirmes. Stop/TP + MFE/MAE quand l’ATR est dispo. Jamais
-          d’ordre réel.
+          Argent <strong>virtuel</strong> (5 000 € de départ). IchiVol ouvre et ferme des positions
+          comme un courtier — sans ordre réel. Cliquez sur un trade pour lire son histoire en
+          français.
         </p>
       </header>
 
@@ -370,22 +183,37 @@ export function PaperPage() {
         </div>
       )}
 
+      {!overview && loading && <p className="muted">Chargement du compte…</p>}
+
+      {!overview && !loading && (
+        <div className="panel">
+          <p className="muted">
+            Compte paper pas encore prêt (moteur / migration). Réessayez après un redémarrage, ou
+            ouvrez une position depuis <Link to="/app/decisions">Décisions</Link>.
+          </p>
+        </div>
+      )}
+
       {overview && (
         <>
           <section className="panel">
             <header className="panel-head">
-              <h2>Mon compte · {overview.portfolio.label}</h2>
+              <h2>Synthèse · {overview.portfolio.label}</h2>
               <button type="button" className="ghost" onClick={() => void reload()} disabled={loading}>
                 {loading ? '…' : 'Actualiser'}
               </button>
             </header>
             <BrokerAccount overview={overview} />
+            <p className="muted paper-perf-note">
+              Règle simple : on risque environ 1 % du capital par trade, et l’objectif de gain est
+              deux fois ce risque (2R). Maximum 5 positions en même temps.
+            </p>
           </section>
 
           <section className="panel">
             <header className="panel-head">
-              <h2>Positions ouvertes</h2>
-              <span className="panel-meta">portefeuille baseline · prix du dernier scan</span>
+              <h2>Positions en cours</h2>
+              <span className="panel-meta">prix du dernier passage du screener</span>
             </header>
             <BrokerPositions
               overview={overview}
@@ -393,74 +221,53 @@ export function PaperPage() {
               onClose={onClose}
               closingId={closingId}
             />
+            <details className="paper-rules-details">
+              <summary>Comment une position se termine ?</summary>
+              <ul className="trade-plan-rules">
+                {EXIT_RULES.map((r) => (
+                  <li key={r.title}>
+                    <strong>{r.title}.</strong> {r.text}
+                  </li>
+                ))}
+              </ul>
+            </details>
           </section>
 
           <section className="panel">
             <header className="panel-head">
-              <h2>Activité du moteur</h2>
-              <span className="panel-meta">derniers ordres virtuels</span>
+              <h2>Dernières actions du moteur</h2>
+              <span className="panel-meta">achats et ventes virtuels</span>
             </header>
             <ActivityJournal orders={activity} />
+          </section>
+
+          <section className="panel">
+            <header className="panel-head">
+              <h2>Historique des trades</h2>
+              <span className="panel-meta">les 20 derniers fermés</span>
+            </header>
+            <ClosedHistory rows={history} onSelect={setSheetPos} />
+          </section>
+
+          <section className="panel">
+            <header className="panel-head">
+              <h2>Filtres (lecture simple)</h2>
+            </header>
+            <p className="paper-shadow-plain">{shadowPlain(shadow)}</p>
+            {shadow && shadow.n_closed > 0 && (
+              <p className="muted paper-perf-note">
+                {shadow.n_closed} cas fermés · mean R {shadow.mean_pnl_r?.toFixed(2) ?? '—'} (hors
+                cash — ShadowBroker).
+              </p>
+            )}
           </section>
         </>
       )}
 
-      <section className="panel">
-        <header className="panel-head">
-          <h2>Détails techniques · PaperBroker</h2>
-          <button type="button" className="ghost" onClick={() => void reload()} disabled={loading}>
-            {loading ? '…' : 'Actualiser'}
-          </button>
-        </header>
-        <BrokerCards summary={broker} />
-        <ShadowCards stats={shadow} />
-      </section>
-
-      <section className="panel">
-        <header className="panel-head">
-          <h2>Performance (% trades)</h2>
-        </header>
-        <div className="paper-perf-columns">
-          <PerfCards perf={perfMine} title="Mes confirms" />
-          <PerfCards perf={perfAuto} title="Auto screener" />
-        </div>
-      </section>
-
-      <section className="panel">
-        <header className="panel-head">
-          <div className="panel-head-actions journal-tabs">
-            <button
-              type="button"
-              className={tab === 'user_confirmed' ? 'is-active ghost' : 'ghost'}
-              onClick={() => setTab('user_confirmed')}
-            >
-              Mes confirms
-            </button>
-            <button
-              type="button"
-              className={tab === 'auto_watchlist' ? 'is-active ghost' : 'ghost'}
-              onClick={() => setTab('auto_watchlist')}
-            >
-              Auto screener
-            </button>
-          </div>
-          <span className="panel-meta">{sourceLabel(tab)}</span>
-        </header>
-
-        {tab === 'user_confirmed' && positions.length === 0 && !loading && (
-          <p className="muted paper-empty-hint">
-            Vide — sur <Link to="/app/decisions">Décisions</Link>, ouvre le détail puis confirme
-            l’ordre paper proposé (BUY/SELL portes).
-          </p>
-        )}
-
-        <PositionsTable
-          rows={positions}
-          onClose={tab === 'user_confirmed' ? onClose : undefined}
-          closingId={closingId}
-          onSelect={setSheetPos}
-        />
-      </section>
+      <p className="muted paper-tech-link">
+        Besoin des tableaux techniques (sources, %, evidence) ?{' '}
+        <Link to="/app/paper/tech">Ouvrir Paper technique</Link>
+      </p>
 
       {sheetPos && <PaperTradeSheet position={sheetPos} onClose={() => setSheetPos(null)} />}
     </div>

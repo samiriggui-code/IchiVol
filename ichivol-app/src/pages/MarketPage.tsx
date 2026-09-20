@@ -12,6 +12,7 @@ import {
 import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
 import { computeIchimoku } from '../lib/ichimoku'
 import { displaySymbol } from '../lib/markets'
+import { getEngineStructure, type StructureOverlay } from '../lib/structure'
 import { useMarketSnapshot } from '../lib/marketSnapshot'
 import { biasFromIchi, computeVolumePulse } from '../lib/signals'
 import {
@@ -74,6 +75,7 @@ export function MarketPage() {
   const [interval, setInterval] = useState<Interval>('1h')
   const [candles, setCandles] = useState<Candle[]>([])
   const [chartProvider, setChartProvider] = useState<string | null>(null)
+  const [structure, setStructure] = useState<StructureOverlay | null>(null)
   const [signals, setSignals] = useState<Signal[]>([])
   const [rows, setRows] = useState<ScreenerRow[]>([])
   const [chartLoading, setChartLoading] = useState(false)
@@ -291,6 +293,25 @@ export function MarketPage() {
   }, [symbol, interval, current, loadChart])
 
   useEffect(() => {
+    setStructure(null)
+    // Twelve Data (actions) : budget de crédits serré, /structure refetche les bougies.
+    if (!current?.wired || current.provider === 'twelve_data' || !ENGINE_TIMEFRAMES.has(interval)) {
+      return
+    }
+    let cancelled = false
+    getEngineStructure(symbol, interval, 300)
+      .then((s) => {
+        if (!cancelled) setStructure(s)
+      })
+      .catch(() => {
+        // La structure est un overlay optionnel : le graphique reste utilisable sans.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [symbol, interval, current])
+
+  useEffect(() => {
     if (!classInstruments.length) return
     void runClassScan(interval, classInstruments)
   }, [interval, marketClass, classInstruments, runClassScan])
@@ -423,7 +444,7 @@ export function MarketPage() {
               </button>
             </div>
           </header>
-          <PriceChart candles={candles} onSignals={setSignals} />
+          <PriceChart candles={candles} onSignals={setSignals} structure={structure} />
           <div className="tf-group tf-group--chart" role="group" aria-label="Timeframe">
             {INTERVALS.map((tf) => (
               <button

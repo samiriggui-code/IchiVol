@@ -7,6 +7,7 @@ import {
   assetName,
   directionWords,
   eur,
+  EXIT_RULES,
   exitReasonLabel,
   holdingLabel,
   pct,
@@ -103,6 +104,38 @@ export function PaperTradeSheet({
         </header>
 
         <div className="trade-sheet-scroll">
+          <div className="trade-sheet-brief">
+            <h3 className="subhead">En bref</h3>
+            <p>
+              {open ? (
+                <>
+                  Position <strong>encore ouverte</strong> : {dir.title.toLowerCase()} de{' '}
+                  <strong>{asset}</strong> depuis le {entryDate}, à {price(p.entry_price)}.
+                  {p.notional != null && (
+                    <> Environ <strong>{eur(p.notional)}</strong> investis.</>
+                  )}{' '}
+                  On gagne si le prix {p.direction === 'LONG' ? 'monte' : 'baisse'} ; on sort au
+                  stop ({price(p.stop_price)}) ou à l’objectif ({price(p.take_profit_price)}).
+                </>
+              ) : (
+                <>
+                  Trade <strong>terminé</strong> le {exitDate ?? '—'}. {dir.title} de{' '}
+                  <strong>{asset}</strong> : résultat{' '}
+                  <strong className={tone(p.realized_pnl)}>{signedEur(p.realized_pnl)}</strong>
+                  {' — '}
+                  {exitReasonLabel(p.exit_reason)}.
+                </>
+              )}
+            </p>
+            <p className="muted">
+              {dir.detail}. Origine :{' '}
+              {p.source === 'auto_watchlist'
+                ? 'le screener a ouvert tout seul'
+                : 'vous avez confirmé depuis Décisions'}
+              .
+            </p>
+          </div>
+
           <dl className="trade-plan-grid">
             <div>
               <dt>Montant investi</dt>
@@ -267,6 +300,15 @@ export function PaperTradeSheet({
               )}
             </li>
           </ol>
+
+          <h3 className="subhead">Rappels : comment on sort</h3>
+          <ul className="trade-plan-rules">
+            {EXIT_RULES.map((r) => (
+              <li key={r.title}>
+                <strong>{r.title}.</strong> {r.text}
+              </li>
+            ))}
+          </ul>
 
           <p className="muted trade-plan-note">
             Simulation : argent virtuel, aucun ordre réel. Montants en € (USDT utilisé comme

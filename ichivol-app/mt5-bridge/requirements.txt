@@ -1,4 +1,0 @@
-# Native Linux side (bridge_server.py) -- no Wine needed for these.
-fastapi==0.115.0
-uvicorn[standard]==0.30.6
-mt5linux==0.1.9

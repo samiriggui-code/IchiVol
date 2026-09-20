@@ -198,8 +198,8 @@ def _zone_dict(z: PriceZone) -> dict:
     }
 
 
-def _line_dict(line: TrendlineSegment) -> dict:
-    return {
+def _line_dict(line: TrendlineSegment, series: list | None = None) -> dict:
+    out = {
         "side": line.side.value,
         "slope": line.slope,
         "intercept": line.intercept,
@@ -210,6 +210,14 @@ def _line_dict(line: TrendlineSegment) -> dict:
         "source": line.source.value,
         "pivot_bars": list(line.pivot_bars),
     }
+    # Bar indices are relative to the detector's windowed series; the chart
+    # needs absolute time/price to draw the segment. `series` is that window.
+    if series and 0 <= line.start_bar < len(series) and 0 <= line.end_bar < len(series):
+        out["start_time"] = series[line.start_bar].time
+        out["end_time"] = series[line.end_bar].time
+        out["start_price"] = line.price_at(line.start_bar)
+        out["end_price"] = line.price_at(line.end_bar)
+    return out
 
 
 @router.get("/structure/{symbol}")
@@ -242,6 +250,7 @@ def get_structure(
         candles, params, include_pytrendline=include_pytrendline
     )
     consensus = snap.consensus
+    window = list(candles[-params.window_bars :])
     return {
         "symbol": symbol.upper(),
         "timeframe": timeframe,
@@ -262,8 +271,8 @@ def get_structure(
                 "structure_score": ms.structure_score,
                 "support_zones": [_zone_dict(z) for z in ms.support_zones],
                 "resistance_zones": [_zone_dict(z) for z in ms.resistance_zones],
-                "support_trendlines": [_line_dict(t) for t in ms.support_trendlines],
-                "resistance_trendlines": [_line_dict(t) for t in ms.resistance_trendlines],
+                "support_trendlines": [_line_dict(t, window) for t in ms.support_trendlines],
+                "resistance_trendlines": [_line_dict(t, window) for t in ms.resistance_trendlines],
                 "pivot_count": len(ms.pivots),
                 "meta": ms.meta,
             }
@@ -1369,15 +1378,6 @@ def get_paper_portfolios() -> dict:
         session.close()
 
 
-@router.get("/paper/portfolios/{code}")
-def get_paper_portfolio(code: str) -> dict:
-    session = SessionLocal()
-    try:
-        if code in ALL_PROFILES:
-            ensure_portfolio(session, code)
-            session.commit()
-        portfolio = get_portfolio_by_code(session, code)
-        if portfolio is None:
 def _latest_marks() -> dict[str, tuple[float, float]]:
     """symbol -> (last screener price, computed_at epoch). Read-only cache peek."""
     marks: dict[str, tuple[float, float]] = {}
@@ -1531,6 +1531,15 @@ def get_paper_portfolio_activity(code: str, limit: int = 100) -> dict:
         session.close()
 
 
+@router.get("/paper/portfolios/{code}")
+def get_paper_portfolio(code: str) -> dict:
+    session = SessionLocal()
+    try:
+        if code in ALL_PROFILES:
+            ensure_portfolio(session, code)
+            session.commit()
+        portfolio = get_portfolio_by_code(session, code)
+        if portfolio is None:
             raise HTTPException(status_code=404, detail="portfolio_not_found")
         positions = paper_engine.list_positions(session, portfolio_id=portfolio.id)
         perf = compute_portfolio_performance(session, portfolio, positions)
