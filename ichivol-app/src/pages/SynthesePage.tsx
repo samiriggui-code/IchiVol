@@ -7,6 +7,12 @@ import {
 } from '../components/BrokerAccount'
 import { PaperTradeSheet } from '../components/PaperTradeSheet'
 import {
+  PortfolioChart,
+  PORTFOLIO_RANGES,
+  type PortfolioAsset,
+  type PortfolioRange,
+} from '../components/PortfolioChart'
+import {
   closePaperPosition,
   getPaperActivity,
   getPaperOverview,
@@ -136,6 +142,10 @@ export function SynthesePage() {
   const [error, setError] = useState<string | null>(null)
   const [closingId, setClosingId] = useState<string | null>(null)
   const [sheetPos, setSheetPos] = useState<PaperPosition | null>(null)
+  const [range, setRange] = useState<PortfolioRange>('1d')
+  const [focusSymbol, setFocusSymbol] = useState<string | null>(null)
+  const [sideOpen, setSideOpen] = useState(true)
+  const [chartAssets, setChartAssets] = useState<PortfolioAsset[]>([])
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -163,6 +173,16 @@ export function SynthesePage() {
     void reload()
   }, [reload])
 
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 980px)')
+    const apply = () => {
+      if (mq.matches) setSideOpen(true)
+    }
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
+
   async function onClose(id: string) {
     setClosingId(id)
     try {
@@ -180,13 +200,21 @@ export function SynthesePage() {
     [history],
   )
 
+  const focusedAsset = focusSymbol
+    ? chartAssets.find((a) => a.symbol === focusSymbol) ?? null
+    : null
+  const equity = overview?.account.equity ?? 0
+  const initial = overview?.account.initial_cash ?? 0
+  const up = equity >= initial
+  const curvePts = overview?.equity_curve?.length ?? 0
+
   return (
     <div className="synthese-page">
       <header className="page-head">
         <h1>Synthèse</h1>
         <p className="muted">
-          Compte virtuel en langage clair : cash, investissements en cartes, courbe chiffrée, et
-          historique des trades.
+          Compte virtuel : cartes capital / investissements en haut, graphique type Marché en
+          dessous (capital + évolution des actifs acquis).
         </p>
       </header>
 
@@ -233,18 +261,18 @@ export function SynthesePage() {
 
       {overview && tab === 'synthese' && (
         <>
-          <section className="panel">
+          <section className="panel synthese-cards-section">
             <header className="panel-head">
               <h2>Compte · {overview.portfolio.label}</h2>
             </header>
-            <BrokerAccount overview={overview} orders={activity} />
+            <BrokerAccount overview={overview} />
             <p className="muted paper-perf-note">
               Règle simple : on risque environ 1 % du capital par trade, objectif ≈ 2× ce risque
               (2R). Maximum 5 positions en même temps.
             </p>
           </section>
 
-          <section className="panel">
+          <section className="panel synthese-cards-section">
             <header className="panel-head">
               <h2>Mes investissements</h2>
               <span className="panel-meta">
@@ -270,6 +298,146 @@ export function SynthesePage() {
               </ul>
             </details>
           </section>
+
+          <div className="market-toolbar topbar synthese-chart-toolbar">
+            <div className="controls">
+              <label>
+                Contexte
+                <select
+                  value={focusSymbol ?? 'capital'}
+                  onChange={(e) =>
+                    setFocusSymbol(e.target.value === 'capital' ? null : e.target.value)
+                  }
+                >
+                  <option value="capital">Capital global</option>
+                  {chartAssets.map((a) => (
+                    <option key={a.symbol} value={a.symbol}>
+                      {a.label} · {a.symbol}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="tf-group tf-group--toolbar" role="group" aria-label="Timeframe">
+                {PORTFOLIO_RANGES.map((tf) => (
+                  <button
+                    key={tf.id}
+                    type="button"
+                    className={tf.id === range ? 'is-active' : undefined}
+                    onClick={() => setRange(tf.id)}
+                  >
+                    {tf.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <main className={`layout${sideOpen ? '' : ' is-side-collapsed'}`}>
+            <section className="chart-panel panel">
+              <header className="panel-head">
+                <h2>
+                  <span className="market-pair-title">
+                    {focusedAsset ? focusedAsset.label : 'Capital'}
+                  </span>
+                  <span className="market-pair-meta">
+                    {focusedAsset
+                      ? `${focusedAsset.symbol} · somme investie · ${range}`
+                      : `portefeuille · ${range} · courbe equity`}
+                  </span>
+                </h2>
+                <div className="panel-head-actions">
+                  <span className={`panel-meta ${up ? 'up' : 'down'}`}>
+                    {curvePts > 0 ? `${curvePts} pts · ${eur(equity)}` : 'chargement…'}
+                  </span>
+                  <button
+                    type="button"
+                    className="side-toggle"
+                    aria-expanded={sideOpen}
+                    aria-controls="synthese-side"
+                    title={sideOpen ? 'Réduire le panneau' : 'Afficher le panneau'}
+                    onClick={() => setSideOpen((o) => !o)}
+                  >
+                    {sideOpen ? '⟩' : '⟨'}
+                  </button>
+                </div>
+              </header>
+
+              <PortfolioChart
+                points={overview.equity_curve}
+                initial={overview.account.initial_cash}
+                orders={activity}
+                positions={overview.positions}
+                range={range}
+                focusSymbol={focusSymbol}
+                onAssetsChange={setChartAssets}
+              />
+
+              <div className="tf-group tf-group--chart" role="group" aria-label="Timeframe">
+                {PORTFOLIO_RANGES.map((tf) => (
+                  <button
+                    key={tf.id}
+                    type="button"
+                    className={tf.id === range ? 'is-active' : undefined}
+                    onClick={() => setRange(tf.id)}
+                  >
+                    {tf.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <aside
+              id="synthese-side"
+              className="side"
+              hidden={!sideOpen}
+              aria-hidden={!sideOpen}
+            >
+              <div className="panel">
+                <header className="panel-head">
+                  <h2>Contextes</h2>
+                  <span className="panel-meta">capital ou actif acquis</span>
+                </header>
+                <button
+                  type="button"
+                  className={`portfolio-side-item${focusSymbol == null ? ' is-active' : ''}`}
+                  onClick={() => setFocusSymbol(null)}
+                >
+                  <span className="portfolio-live-dot" style={{ background: 'var(--bull)' }} />
+                  <div className="portfolio-side-copy">
+                    <strong>Capital global</strong>
+                    <span className="muted">courbe du portefeuille</span>
+                  </div>
+                  <span className={`mono ${up ? 'up' : 'down'}`}>{eur(equity)}</span>
+                </button>
+                <p className="subhead" style={{ padding: '0.5rem 0.75rem 0.2rem' }}>
+                  Actions acquises
+                </p>
+                {chartAssets.length === 0 && (
+                  <p className="muted" style={{ padding: '0.4rem 0.75rem' }}>
+                    Aucune action encore.
+                  </p>
+                )}
+                {chartAssets.map((a) => (
+                  <button
+                    key={a.symbol}
+                    type="button"
+                    className={`portfolio-side-item${focusSymbol === a.symbol ? ' is-active' : ''}`}
+                    onClick={() => setFocusSymbol(a.symbol)}
+                  >
+                    <span className="portfolio-live-dot" style={{ background: a.color }} />
+                    <div className="portfolio-side-copy">
+                      <strong>{a.label}</strong>
+                      <span className="muted">
+                        {a.invested > 0 ? 'position ouverte' : 'historique'}
+                      </span>
+                    </div>
+                    <span className="mono">{a.invested > 0 ? eur(a.invested) : '—'}</span>
+                  </button>
+                ))}
+              </div>
+            </aside>
+          </main>
 
           <section className="panel">
             <header className="panel-head">

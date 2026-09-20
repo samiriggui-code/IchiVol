@@ -1,6 +1,5 @@
-import type { PaperOrderRow, PaperOverview, PaperOverviewPosition } from '../lib/paper'
+import type { PaperOverview, PaperOverviewPosition } from '../lib/paper'
 import { assetName, directionWords, eur, pct, price, signedEur } from '../lib/tradeStory'
-import { PortfolioChart } from './PortfolioChart'
 
 function tone(v: number | null | undefined): string {
   if (v == null || v === 0) return ''
@@ -103,16 +102,13 @@ export function InvestmentCards({
   )
 }
 
-/** En-tête compte + graphe style Marché (bougies + panneau contextes). */
-export function BrokerAccount({
-  overview,
-  orders = [],
-}: {
-  overview: PaperOverview
-  orders?: PaperOrderRow[]
-}) {
+/** Cartes compte uniquement — pas de graphique. */
+export function BrokerAccount({ overview }: { overview: PaperOverview }) {
   const a = overview.account
   const totalPct = a.initial_cash ? a.total_pnl / a.initial_cash : null
+  const legacy = overview.positions.filter((p) => p.status === 'OPEN' && p.qty == null).length
+  const unpriced = a.open_positions - a.priced_positions
+
   return (
     <div className="broker-account">
       <div className="broker-equity-row">
@@ -147,31 +143,16 @@ export function BrokerAccount({
         </div>
       </div>
 
-      <PortfolioChart
-        points={overview.equity_curve}
-        initial={a.initial_cash}
-        orders={orders}
-        positions={overview.positions}
-      />
-
-      {(() => {
-        const legacy = overview.positions.filter((p) => p.status === 'OPEN' && p.qty == null).length
-        const unpriced = a.open_positions - a.priced_positions
-        return (
-          <>
-            {legacy > 0 && (
-              <p className="muted paper-perf-note">
-                {legacy} position(s) legacy sans montant investi (€).
-              </p>
-            )}
-            {unpriced > 0 && (
-              <p className="muted paper-perf-note">
-                Prix actuel indisponible pour {unpriced} position(s).
-              </p>
-            )}
-          </>
-        )
-      })()}
+      {legacy > 0 && (
+        <p className="muted paper-perf-note">
+          {legacy} position(s) legacy sans montant investi (€).
+        </p>
+      )}
+      {unpriced > 0 && (
+        <p className="muted paper-perf-note">
+          Prix actuel indisponible pour {unpriced} position(s).
+        </p>
+      )}
     </div>
   )
 }
