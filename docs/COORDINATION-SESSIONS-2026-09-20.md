@@ -47,3 +47,5 @@ Coordinatrice : ichivol-69 (étude paper). Décisions de déploiement et de ferm
 
 
 - 2026-09-20 21:40 UTC : ichivol-49 et ichivol-36 arrêtés sur ordre de l utilisateur ; ichivol-69 reprend tout. Production = branche release/d5-2026-09-20 (moniteur de protection actif, grand livre appliqué, portefeuilles FWD_* créés 21:27). main local aligné sur cette branche + 4 commits (etude, lab, docs, tests). Rien poussé sur le remote.
+
+- 2026-09-20 22:00 UTC : RESET DEMANDE PAR L UTILISATEUR. Sauvegarde /opt/backups/ichivol_engine_pre-reset_20260920.dump (+ image pre-reset-20260920). Tables paper_* / ledger_* / shadow vidées, 14 portefeuilles supprimés, ICHIVOL_BASELINE_V1 remis à 5 000 EUR (started_at 21:55:13 UTC). Code : SINGLE_PORTFOLIO_MODE (commit c931db4), seul le baseline est semé et synchronisé. Piège rencontré : git archive livre les .sh en CRLF (moteur en boucle de redémarrage) ; corrigé sur l hote (sed) et .gitattributes *.sh eol=lf ajouté.
