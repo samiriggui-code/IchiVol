@@ -193,7 +193,7 @@ function LotRow({
             disabled={closingId === p.id}
             onClick={() => onClose(p.id)}
           >
-            Fermer…
+            Clôturer…
           </button>
         )}
       </div>
@@ -286,9 +286,13 @@ function GroupCard({
 function IncompleteCard({
   p,
   onSelect,
+  onClose,
+  closingId,
 }: {
   p: PaperOverviewPosition
   onSelect: (p: PaperOverviewPosition) => void
+  onClose?: (id: string) => void
+  closingId?: string | null
 }) {
   const dir = directionWords(p.direction)
   return (
@@ -333,6 +337,16 @@ function IncompleteCard({
         <button type="button" className="ghost" onClick={() => onSelect(p)}>
           Fiche
         </button>
+        {onClose && (
+          <button
+            type="button"
+            className="ghost"
+            disabled={closingId === p.id}
+            onClick={() => onClose(p.id)}
+          >
+            Clôturer…
+          </button>
+        )}
       </footer>
     </article>
   )
@@ -397,7 +411,13 @@ export function InvestmentCards({
           </p>
           <div className="invest-cards">
             {incomplete.map((p) => (
-              <IncompleteCard key={p.id} p={p} onSelect={onSelect} />
+              <IncompleteCard
+                key={p.id}
+                p={p}
+                onSelect={onSelect}
+                onClose={onClose}
+                closingId={closingId}
+              />
             ))}
           </div>
         </div>
@@ -566,7 +586,7 @@ export function BrokerPositions({
                         disabled={closingId === p.id}
                         onClick={() => onClose(p.id)}
                       >
-                        Fermer…
+                        Clôturer…
                       </button>
                     )}
                   </td>

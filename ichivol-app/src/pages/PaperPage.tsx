@@ -31,8 +31,8 @@ function tone(v: number | null): string {
 }
 
 function sourceLabel(s: string): string {
-  if (s === 'auto_watchlist') return 'Auto screener'
-  if (s === 'user_confirmed') return 'Mes confirms'
+  if (s === 'auto_watchlist') return 'Auto'
+  if (s === 'user_confirmed') return 'Manuel'
   return s
 }
 
@@ -209,7 +209,7 @@ function PositionsTable({
                     disabled={closingId === p.id}
                     onClick={() => onClose(p.id)}
                   >
-                    Fermer…
+                    Clôturer…
                   </button>
                 )}
               </td>
@@ -318,7 +318,7 @@ export function PaperPage() {
             className={tab === 'user_confirmed' ? 'is-active' : undefined}
             onClick={() => setTab('user_confirmed')}
           >
-            Mes confirms
+            Mes confirms (Manuel)
           </button>
           <button
             type="button"
@@ -327,7 +327,7 @@ export function PaperPage() {
             className={tab === 'auto_watchlist' ? 'is-active' : undefined}
             onClick={() => setTab('auto_watchlist')}
           >
-            Auto screener
+            Auto
           </button>
           <button type="button" onClick={() => void reload()} disabled={loading}>
             {loading ? '…' : 'Actualiser'}
@@ -353,8 +353,8 @@ export function PaperPage() {
           <h2>Performance (% trades)</h2>
         </header>
         <div className="paper-perf-columns">
-          <PerfCards perf={perfMine} title="Mes confirms" />
-          <PerfCards perf={perfAuto} title="Auto screener" />
+          <PerfCards perf={perfMine} title="Manuel (confirms)" />
+          <PerfCards perf={perfAuto} title="Auto" />
         </div>
       </section>
 
@@ -364,7 +364,7 @@ export function PaperPage() {
         </header>
         <PositionsTable
           rows={positions}
-          onClose={tab === 'user_confirmed' ? requestClose : undefined}
+          onClose={requestClose}
           closingId={closingId}
           onSelect={setSheetPos}
         />
