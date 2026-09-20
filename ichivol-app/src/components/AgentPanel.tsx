@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { PaperConfirmSheet } from './PaperConfirmSheet'
 import {
   askAgentStream,
   confirmAgentAction,
@@ -10,6 +11,7 @@ import {
 } from '../lib/agent'
 import { useAgentSession } from '../lib/agentSession'
 import type { MarketSnapshot } from '../lib/marketSnapshot'
+import { proposePaperTrade, type OrderIntent } from '../lib/paper'
 import { getSettings, type LlmConnection, type LlmProvider } from '../lib/settings'
 import { signalLabel } from '../lib/signals'
 
@@ -59,6 +61,15 @@ export function AgentPanel({ snapshot }: Props) {
   // Bulle en direct pendant que Claude écrit / interroge le moteur.
   const [liveText, setLiveText] = useState('')
   const [liveTool, setLiveTool] = useState<string | null>(null)
+
+  /** open_paper_position → même récap qty/stop/cash que Décisions. */
+  const [paperSheet, setPaperSheet] = useState<{
+    pending: NonNullable<AgentChatResponse['pendingAction']>
+    intent: OrderIntent
+    entryIndex: number
+  } | null>(null)
+  const [paperConfirming, setPaperConfirming] = useState(false)
+  const [paperConfirmError, setPaperConfirmError] = useState<string | null>(null)
 
   // Fournisseurs ayant une clé (personnelle et/ou serveur) : on choisit par message, sans toucher aux réglages.
   const [connections, setConnections] = useState<LlmConnection[]>([])
@@ -110,11 +121,37 @@ export function AgentPanel({ snapshot }: Props) {
       }
     : null
 
+  function clearPendingFromHistory(entryIndex: number) {
+    setHistory((h) =>
+      h.map((e, i) => (i === entryIndex ? { ...e, pendingAction: undefined } : e)),
+    )
+  }
+
   async function onConfirmAction(
     pending: NonNullable<AgentChatResponse['pendingAction']>,
     confirm: boolean,
     entryIndex: number,
   ) {
+    // Paper : d’abord le sheet récap (qty/stop/liquidités), puis confirm API.
+    if (confirm && pending.intent === 'open_paper_position') {
+      if (!pending.symbol) {
+        setError('Symbole manquant pour ouvrir en paper')
+        return
+      }
+      setActionBusy(true)
+      setError(null)
+      setPaperConfirmError(null)
+      try {
+        const intent = await proposePaperTrade(pending.symbol, pending.timeframe ?? '1h')
+        setPaperSheet({ pending, intent, entryIndex })
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Proposition paper impossible')
+      } finally {
+        setActionBusy(false)
+      }
+      return
+    }
+
     setActionBusy(true)
     setError(null)
     try {
@@ -126,20 +163,74 @@ export function AgentPanel({ snapshot }: Props) {
         threadId: threadId ?? undefined,
         actionId: pending.actionId,
       })
-      setHistory((h) => {
-        const next = h.map((e, i) =>
-          i === entryIndex ? { ...e, pendingAction: undefined } : e,
-        )
-        return [
-          ...next,
-          {
-            role: 'assistant' as const,
-            content: res.message ?? (confirm ? 'Action confirmée.' : 'Action annulée.'),
-          },
-        ]
-      })
+      clearPendingFromHistory(entryIndex)
+      setHistory((h) => [
+        ...h,
+        {
+          role: 'assistant' as const,
+          content: res.message ?? (confirm ? 'Action confirmée.' : 'Action annulée.'),
+        },
+      ])
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur action')
+    } finally {
+      setActionBusy(false)
+    }
+  }
+
+  async function executePaperSheetConfirm() {
+    if (!paperSheet) return
+    const { pending, entryIndex } = paperSheet
+    setPaperConfirming(true)
+    setPaperConfirmError(null)
+    setError(null)
+    try {
+      const res = await confirmAgentAction({
+        intent: pending.intent,
+        confirm: true,
+        symbol: pending.symbol,
+        timeframe: pending.timeframe,
+        threadId: threadId ?? undefined,
+        actionId: pending.actionId,
+      })
+      clearPendingFromHistory(entryIndex)
+      setPaperSheet(null)
+      setHistory((h) => [
+        ...h,
+        {
+          role: 'assistant' as const,
+          content: res.message ?? 'Position paper ouverte.',
+        },
+      ])
+    } catch (e) {
+      setPaperConfirmError(e instanceof Error ? e.message : 'Ouverture paper impossible')
+    } finally {
+      setPaperConfirming(false)
+    }
+  }
+
+  async function cancelPaperSheet() {
+    if (!paperSheet || paperConfirming) return
+    const { pending, entryIndex } = paperSheet
+    setPaperSheet(null)
+    setPaperConfirmError(null)
+    setActionBusy(true)
+    try {
+      await confirmAgentAction({
+        intent: pending.intent,
+        confirm: false,
+        symbol: pending.symbol,
+        timeframe: pending.timeframe,
+        threadId: threadId ?? undefined,
+        actionId: pending.actionId,
+      })
+      clearPendingFromHistory(entryIndex)
+      setHistory((h) => [
+        ...h,
+        { role: 'assistant' as const, content: 'Ouverture paper annulée.' },
+      ])
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Annulation impossible')
     } finally {
       setActionBusy(false)
     }
@@ -297,15 +388,17 @@ export function AgentPanel({ snapshot }: Props) {
                 <button
                   type="button"
                   className="ghost"
-                  disabled={actionBusy}
+                  disabled={actionBusy || !!paperSheet}
                   onClick={() => void onConfirmAction(entry.pendingAction!, true, i)}
                 >
-                  Confirmer
+                  {entry.pendingAction.intent === 'open_paper_position'
+                    ? 'Vérifier…'
+                    : 'Confirmer'}
                 </button>
                 <button
                   type="button"
                   className="ghost"
-                  disabled={actionBusy}
+                  disabled={actionBusy || !!paperSheet}
                   onClick={() => void onConfirmAction(entry.pendingAction!, false, i)}
                 >
                   Annuler
@@ -375,6 +468,17 @@ export function AgentPanel({ snapshot }: Props) {
           {loading ? '…' : 'Envoyer'}
         </button>
       </div>
+
+      {paperSheet && (
+        <PaperConfirmSheet
+          symbolLabel={paperSheet.pending.symbol?.replace(/USDT$/i, '') ?? '—'}
+          intent={paperSheet.intent}
+          confirming={paperConfirming}
+          error={paperConfirmError}
+          onConfirm={() => void executePaperSheetConfirm()}
+          onCancel={() => void cancelPaperSheet()}
+        />
+      )}
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { getDecisionDetail } from '../lib/decisions'
 import { decisionPayloadFromDetail } from '../lib/agent'
 import { useCopilotNav } from '../lib/useCopilotNav'
@@ -15,6 +16,8 @@ export function WatchlistPage() {
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [pendingRemove, setPendingRemove] = useState<WatchlistRow | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const { explainDecision } = useCopilotNav()
 
   const load = useCallback(() => {
@@ -48,14 +51,23 @@ export function WatchlistPage() {
   }
 
   async function onRetirer(row: WatchlistRow) {
+    setActionError(null)
+    setPendingRemove(row)
+  }
+
+  async function executeRemove() {
+    if (!pendingRemove) return
+    const row = pendingRemove
     setBusyId(row.id)
     setError(null)
+    setActionError(null)
     try {
       await removeWatchlistSymbol(row.symbol)
       setRows((prev) => prev.filter((r) => r.id !== row.id))
       setInfo(`${row.symbol} retiré de la watchlist`)
+      setPendingRemove(null)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Retrait impossible')
+      setActionError(err instanceof Error ? err.message : 'Retrait impossible')
     } finally {
       setBusyId(null)
     }
@@ -88,7 +100,7 @@ export function WatchlistPage() {
         {loading && <p className="muted">Chargement…</p>}
         {!loading && rows.length === 0 && (
           <p className="muted">
-            Vide — dans l’Agent : « ajoute BTC à la watchlist », puis Confirmer.
+            Vide — dans le Copilot : « ajoute BTC à la watchlist », puis Confirmer.
           </p>
         )}
 
@@ -143,6 +155,23 @@ export function WatchlistPage() {
           </div>
         )}
       </div>
+
+      {pendingRemove && (
+        <ConfirmDialog
+          title="Retirer de la watchlist ?"
+          body={`Retirer ${pendingRemove.symbol.replace(/USDT$/i, '')} (${pendingRemove.symbol}) de la liste manuelle.`}
+          confirmLabel="Retirer"
+          confirming={busyId === pendingRemove.id}
+          error={actionError}
+          onConfirm={() => void executeRemove()}
+          onCancel={() => {
+            if (!busyId) {
+              setPendingRemove(null)
+              setActionError(null)
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

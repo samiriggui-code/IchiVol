@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { labelDecision, labelDirection, labelPipelineGate } from '../lib/decisionLabels'
 import { getDecisionDetail, type DecisionLabel } from '../lib/decisions'
 import { decisionPayloadFromDetail } from '../lib/agent'
@@ -26,6 +27,9 @@ export function JournalPage() {
   const [info, setInfo] = useState<string | null>(null)
   const [showArchived, setShowArchived] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<UserDecisionRow | null>(null)
+  const [pendingArchive, setPendingArchive] = useState<UserDecisionRow | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const { explainDecision } = useCopilotNav()
 
   const byId = useMemo(() => {
@@ -98,14 +102,25 @@ export function JournalPage() {
   }
 
   async function onRetirer(id: string) {
+    const row = rows.find((r) => r.id === id) ?? null
+    if (!row) return
+    setActionError(null)
+    setPendingArchive(row)
+  }
+
+  async function executeArchive() {
+    if (!pendingArchive) return
+    const id = pendingArchive.id
     setBusyId(id)
     setError(null)
     setInfo(null)
+    setActionError(null)
     try {
       await patchUserDecisionStatus(id, 'archived')
       setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'archived' } : r)))
+      setPendingArchive(null)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Impossible de retirer')
+      setActionError(err instanceof Error ? err.message : 'Impossible de retirer')
     } finally {
       setBusyId(null)
     }
@@ -126,14 +141,25 @@ export function JournalPage() {
   }
 
   async function onSupprimer(id: string) {
+    const row = rows.find((r) => r.id === id) ?? null
+    if (!row) return
+    setActionError(null)
+    setPendingDelete(row)
+  }
+
+  async function executeDelete() {
+    if (!pendingDelete) return
+    const id = pendingDelete.id
     setBusyId(id)
     setError(null)
     setInfo(null)
+    setActionError(null)
     try {
       await deleteUserDecision(id)
       setRows((prev) => prev.filter((r) => r.id !== id))
+      setPendingDelete(null)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Impossible de supprimer')
+      setActionError(err instanceof Error ? err.message : 'Impossible de supprimer')
     } finally {
       setBusyId(null)
     }
@@ -222,8 +248,8 @@ export function JournalPage() {
                 <th>MAJ</th>
                 <th>Symbole</th>
                 <th>TF</th>
-                <th>Combiner</th>
-                <th>Portes</th>
+                <th title="Badge combiner (Ichi+RVOL) — diagnostic">Brut</th>
+                <th title="Verdict Portes (pipeline) — action">Portes</th>
                 <th>RVOL</th>
                 <th>Actions</th>
               </tr>
@@ -328,6 +354,41 @@ export function JournalPage() {
           </table>
         </div>
       </section>
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title="Supprimer définitivement ?"
+          body={`Supprimer le snapshot ${label(pendingDelete.symbol)} du journal. Irréversible — préfère « Retirer » (archive) si tu veux pouvoir restaurer.`}
+          confirmLabel="Supprimer"
+          danger
+          confirming={busyId === pendingDelete.id}
+          error={actionError}
+          onConfirm={() => void executeDelete()}
+          onCancel={() => {
+            if (!busyId) {
+              setPendingDelete(null)
+              setActionError(null)
+            }
+          }}
+        />
+      )}
+
+      {pendingArchive && (
+        <ConfirmDialog
+          title="Retirer du journal ?"
+          body={`Archiver ${label(pendingArchive.symbol)} — tu pourras le restaurer depuis les archivés.`}
+          confirmLabel="Retirer"
+          confirming={busyId === pendingArchive.id}
+          error={actionError}
+          onConfirm={() => void executeArchive()}
+          onCancel={() => {
+            if (!busyId) {
+              setPendingArchive(null)
+              setActionError(null)
+            }
+          }}
+        />
+      )}
     </div>
   )
 }
