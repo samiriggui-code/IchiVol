@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { BiasPanel } from '../components/BiasPanel'
 import { PriceChart } from '../components/PriceChart'
 import { Screener } from '../components/Screener'
@@ -68,6 +69,7 @@ function friendlyDataError(raw: string): string {
 
 export function MarketPage() {
   const { setSnapshot } = useMarketSnapshot()
+  const [searchParams] = useSearchParams()
   const [instruments, setInstruments] = useState<EngineInstrument[]>([])
   const [universeError, setUniverseError] = useState<string | null>(null)
   const [marketClass, setMarketClass] = useState<EngineAssetClass>('crypto')
@@ -123,6 +125,13 @@ export function MarketPage() {
         if (cancelled) return
         setInstruments(u.instruments)
         setUniverseError(null)
+        const fromUrl = searchParams.get('symbol')
+        if (fromUrl && u.instruments.some((i) => i.id === fromUrl)) {
+          const inst = u.instruments.find((i) => i.id === fromUrl)!
+          setSymbol(fromUrl)
+          setMarketClass(inst.asset_class)
+          return
+        }
         const firstCrypto = u.instruments.find((i) => i.asset_class === 'crypto' && i.wired)
         if (firstCrypto) setSymbol((s) => (u.instruments.some((i) => i.id === s) ? s : firstCrypto.id))
       })
@@ -134,6 +143,7 @@ export function MarketPage() {
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deep-link on first universe load
   }, [])
 
   const selectClass = useCallback(

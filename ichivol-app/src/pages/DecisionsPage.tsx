@@ -2,18 +2,34 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
 import { GateMatrix } from '../components/GateMatrix'
+import { PaperConfirmSheet } from '../components/PaperConfirmSheet'
 import { ProposePaperTradePanel } from '../components/ProposePaperTradePanel'
 import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
-import { VerdictBadge } from '../components/VerdictBadge'
-import { labelDecision, labelDirection, labelReason } from '../lib/decisionLabels'
 import { TradePlanCard } from '../components/TradePlanCard'
-import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
+import { VerdictBadge } from '../components/VerdictBadge'
+import {
+  buildDecisionSummary,
+  labelDecision,
+  labelDirection,
+  labelPipelineGate,
+  labelReason,
+} from '../lib/decisionLabels'
+import {
+  PIPELINE_STAGE_ORDER,
+  pipelineFromDecisionDetail,
+  stageFullLabel,
+  stageMatrixLabel,
+  stageStatusesFromRow,
+  type PipelineStageId,
+  type PipelineStageStatus,
+} from '../lib/decisionPipeline'
 import {
   getDecisionDetail,
   getScreener,
   type AgentDetail,
   type DecisionDetail,
   type DecisionLabel,
+  type PipelineGateLabel,
   type ScreenerDecisionRow,
 } from '../lib/decisions'
 import {
@@ -27,6 +43,7 @@ import { confirmUserDecision } from '../lib/userDecisions'
 import { openPaperPosition, proposePaperTrade, type OrderIntent } from '../lib/paper'
 import { decisionPayloadFromDetail } from '../lib/agent'
 import { useCopilotNav } from '../lib/useCopilotNav'
+import './DecisionsPage.css'
 
 type SortKey = 'symbol' | 'decision' | 'confidence' | 'ichimoku_score' | 'rvol' | 'price'
 type SortDir = 'asc' | 'desc'
@@ -75,6 +92,19 @@ const DECISION_RANK: Record<DecisionLabel, number> = {
   STRONG_SELL: 1,
 }
 
+const GATE_RANK: Record<PipelineGateLabel, number> = {
+  BUY: 4,
+  SELL: 3,
+  WATCH: 2,
+  NO_TRADE: 1,
+}
+
+function rowGate(r: ScreenerDecisionRow): PipelineGateLabel | null {
+  const raw = r.pipeline?.decision
+  if (raw === 'BUY' || raw === 'SELL' || raw === 'WATCH' || raw === 'NO_TRADE') return raw
+  return null
+}
+
 function fmtCacheAge(seconds: number): string {
   if (seconds < 5) return 'à l’instant'
   if (seconds < 60) return `il y a ${Math.floor(seconds)}s`
@@ -117,8 +147,14 @@ function compareRows(a: ScreenerDecisionRow, b: ScreenerDecisionRow, key: SortKe
   switch (key) {
     case 'symbol':
       return mul * a.symbol.localeCompare(b.symbol)
-    case 'decision':
+    case 'decision': {
+      const ga = rowGate(a)
+      const gb = rowGate(b)
+      if (ga && gb) return mul * (GATE_RANK[ga] - GATE_RANK[gb])
+      if (ga) return mul * 1
+      if (gb) return mul * -1
       return mul * (DECISION_RANK[a.decision] - DECISION_RANK[b.decision])
+    }
     case 'confidence':
       return mul * (a.confidence - b.confidence)
     case 'ichimoku_score': {
@@ -140,6 +176,62 @@ function compareRows(a: ScreenerDecisionRow, b: ScreenerDecisionRow, key: SortKe
   }
 }
 
+function MethodBanner({ rows }: { rows: ScreenerDecisionRow[] }) {
+  const counts = useMemo(() => {
+    const byStage: Record<PipelineStageId, Record<PipelineStageStatus, number>> = {
+      direction: { pass: 0, fail: 0, watch: 0, pending: 0, skip: 0 },
+      participation: { pass: 0, fail: 0, watch: 0, pending: 0, skip: 0 },
+      structure: { pass: 0, fail: 0, watch: 0, pending: 0, skip: 0 },
+      location: { pass: 0, fail: 0, watch: 0, pending: 0, skip: 0 },
+      regime: { pass: 0, fail: 0, watch: 0, pending: 0, skip: 0 },
+    }
+    for (const row of rows) {
+      const st = stageStatusesFromRow(row)
+      for (const id of PIPELINE_STAGE_ORDER) {
+        byStage[id][st[id]] += 1
+      }
+    }
+    return byStage
+  }, [rows])
+
+  return (
+    <section className="panel dec-method" aria-label="Méthode">
+      <p className="dec-method-lead">
+        Cinq portes successives. Seules <strong>Achat</strong> / <strong>Vente</strong> (colonne
+        Portes) autorisent un ordre paper. <strong>Brut</strong> = Ichimoku + RVOL seul — diagnostic,
+        pas un verdict d’action.
+      </p>
+      <ol className="dec-method-steps">
+        {PIPELINE_STAGE_ORDER.map((id) => {
+          const c = counts[id]
+          const ok = c.pass
+          const blocked = c.fail
+          const soft = c.watch + c.pending
+          return (
+            <li key={id} title={stageFullLabel(id)}>
+              <span className="dec-method-n">{stageMatrixLabel(id)}</span>
+              <strong>{stageFullLabel(id)}</strong>
+              <span className="muted dec-method-counts">
+                <span className="up">{ok} ok</span>
+                {' · '}
+                <span className="down">{blocked} bloqué</span>
+                {soft > 0 ? ` · ${soft} prudence` : ''}
+              </span>
+            </li>
+          )
+        })}
+      </ol>
+    </section>
+  )
+}
+
+type PaperConfirmState = {
+  symbol: string
+  timeframe: string
+  intent: OrderIntent
+  source: 'sheet' | 'matrix'
+}
+
 export function DecisionsPage() {
   const [searchParams] = useSearchParams()
   const [instruments, setInstruments] = useState<EngineInstrument[]>([])
@@ -159,6 +251,8 @@ export function DecisionsPage() {
   const [symbolQuery, setSymbolQuery] = useState('')
   const [decisionFilter, setDecisionFilter] = useState<'all' | DecisionLabel>('all')
   const [rvolMin, setRvolMin] = useState('')
+  const [actionableOnly, setActionableOnly] = useState(false)
+  const [timeframe, setTimeframe] = useState('1h')
 
   const [confirming, setConfirming] = useState(false)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null)
@@ -166,6 +260,7 @@ export function DecisionsPage() {
   const [paperBusySymbol, setPaperBusySymbol] = useState<string | null>(null)
   const [paperMsg, setPaperMsg] = useState<string | null>(null)
   const [paperConfirming, setPaperConfirming] = useState(false)
+  const [paperConfirm, setPaperConfirm] = useState<PaperConfirmState | null>(null)
   const [intentOverride, setIntentOverride] = useState<OrderIntent | null>(null)
   const [intentLoading, setIntentLoading] = useState(false)
   const { explainDecision, compareGates } = useCopilotNav()
@@ -211,13 +306,17 @@ export function DecisionsPage() {
         if (!sym.includes(q) && !short.includes(q) && !label.includes(q)) return false
       }
       if (decisionFilter !== 'all' && r.decision !== decisionFilter) return false
+      if (actionableOnly) {
+        const g = rowGate(r)
+        if (g !== 'BUY' && g !== 'SELL') return false
+      }
       if (minR != null && Number.isFinite(minR)) {
         if (r.rvol == null || r.rvol < minR) return false
       }
       return true
     })
     return [...filtered].sort((a, b) => compareRows(a, b, sortKey, sortDir))
-  }, [classRows, symbolQuery, decisionFilter, rvolMin, sortKey, sortDir, byId])
+  }, [classRows, symbolQuery, decisionFilter, rvolMin, actionableOnly, sortKey, sortDir, byId])
 
   function instrumentLabel(id: string): string {
     return byId.get(id)?.label ?? id.replace(/USDT$/i, '')
@@ -226,7 +325,7 @@ export function DecisionsPage() {
   function load(force = false) {
     setLoading(true)
     setError(null)
-    getScreener('1h', force)
+    getScreener(timeframe, force)
       .then((res) => {
         setRows(res.rows)
         setCacheAge(res.cache_age_seconds)
@@ -258,7 +357,9 @@ export function DecisionsPage() {
     }
   }, [])
 
-  useEffect(() => load(), [])
+  useEffect(() => {
+    load()
+  }, [timeframe])
 
   async function onConfirmDetail() {
     if (!detail) return
@@ -284,26 +385,45 @@ export function DecisionsPage() {
   }
 
   async function onConfirmPaperOrder() {
-    if (!detail) return
+    const intent = intentOverride ?? detail?.order_intent ?? null
+    if (!detail || !intent) return
+    setPaperConfirm({
+      symbol: detail.symbol,
+      timeframe: detail.timeframe,
+      intent,
+      source: 'sheet',
+    })
+  }
+
+  async function executePaperConfirm() {
+    if (!paperConfirm) return
     setPaperConfirming(true)
     setConfirmMsg(null)
+    setPaperMsg(null)
     try {
+      const sameDetail = detail?.symbol === paperConfirm.symbol ? detail : null
+      const gate = paperConfirm.intent.pipeline_decision
       await confirmUserDecision({
-        symbol: detail.symbol,
-        interval: detail.timeframe,
-        bias: detail.direction,
-        rvol: detail.rvol ?? 0,
-        signalKind: detail.decision,
-        gateDecision: detail.pipeline?.decision,
-        confidence: detail.confidence,
+        symbol: paperConfirm.symbol,
+        interval: paperConfirm.timeframe,
+        bias: paperConfirm.intent.direction === 'SHORT' ? 'BEARISH' : 'BULLISH',
+        rvol: sameDetail?.rvol ?? 0,
+        signalKind:
+          sameDetail?.decision ??
+          (gate === 'SELL' ? 'SELL' : gate === 'BUY' ? 'BUY' : 'WATCH'),
+        gateDecision: gate,
+        confidence: sameDetail?.confidence,
       })
-      const pos = await openPaperPosition(detail.symbol, detail.timeframe)
-      setConfirmMsg(
-        `ok · paper ${pos.direction} qty ${pos.qty != null ? pos.qty.toPrecision(4) : '—'}`,
-      )
+      const pos = await openPaperPosition(paperConfirm.symbol, paperConfirm.timeframe)
+      const msg = `ok · paper ${pos.direction} qty ${pos.qty != null ? pos.qty.toPrecision(4) : '—'}`
+      setConfirmMsg(msg)
+      setPaperMsg(`${pos.symbol} · paper ${pos.direction} @ ${pos.entry_price}`)
+      setPaperConfirm(null)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Échec paper'
-      setConfirmMsg(msg.includes('not_actionable') ? 'paper skip (WATCH/NO_TRADE)' : msg)
+      const raw = err instanceof Error ? err.message : 'Échec paper'
+      const msg = raw.includes('not_actionable') ? 'paper skip (Portes ≠ Achat/Vente)' : raw
+      setConfirmMsg(msg)
+      setPaperMsg(msg)
     } finally {
       setPaperConfirming(false)
     }
@@ -313,7 +433,7 @@ export function DecisionsPage() {
     if (!detail) return
     setIntentLoading(true)
     try {
-      setIntentOverride(await proposePaperTrade(detail.symbol, detail.timeframe))
+      setIntentOverride(await proposePaperTrade(detail.symbol, detail.timeframe || timeframe))
     } catch {
       setIntentOverride(null)
     } finally {
@@ -325,8 +445,13 @@ export function DecisionsPage() {
     setPaperBusySymbol(row.symbol)
     setPaperMsg(null)
     try {
-      const pos = await openPaperPosition(row.symbol, row.timeframe || '1h')
-      setPaperMsg(`${pos.symbol} · paper ${pos.direction} @ ${pos.entry_price}`)
+      const intent = await proposePaperTrade(row.symbol, row.timeframe || timeframe)
+      setPaperConfirm({
+        symbol: row.symbol,
+        timeframe: row.timeframe || timeframe,
+        intent,
+        source: 'matrix',
+      })
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Échec paper'
       setPaperMsg(msg.includes('not_actionable') ? `${row.symbol} · pas actionable (Portes)` : msg)
@@ -368,13 +493,15 @@ export function DecisionsPage() {
       closeSheet()
       return
     }
+    const inst = byId.get(symbol)
+    if (inst) setMarketClass(inst.asset_class)
     setSelected(symbol)
     setDetail(null)
     setDetailError(null)
     setDetailLoading(true)
     setIntentOverride(null)
     setConfirmMsg(null)
-    getDecisionDetail(symbol)
+    getDecisionDetail(symbol, timeframe)
       .then(setDetail)
       .catch((err: unknown) =>
         setDetailError(err instanceof Error ? err.message : 'Erreur de chargement'),
@@ -383,22 +510,37 @@ export function DecisionsPage() {
   }
 
   useEffect(() => {
-    const fromNotif = searchParams.get('symbol')
-    if (!fromNotif || selected === fromNotif) return
-    setSelected(fromNotif)
+    const fromUrl = searchParams.get('symbol')
+    const classQ = searchParams.get('class')
+    if (
+      classQ === 'crypto' ||
+      classQ === 'forex' ||
+      classQ === 'metal' ||
+      classQ === 'index' ||
+      classQ === 'equity' ||
+      classQ === 'energy'
+    ) {
+      setMarketClass(classQ)
+    }
+    if (!fromUrl || selected === fromUrl) return
+    setSelected(fromUrl)
     setDetail(null)
     setDetailError(null)
     setDetailLoading(true)
     setIntentOverride(null)
     setConfirmMsg(null)
-    getDecisionDetail(fromNotif)
-      .then(setDetail)
+    getDecisionDetail(fromUrl, timeframe)
+      .then((d) => {
+        setDetail(d)
+        const inst = instruments.find((i) => i.id === fromUrl)
+        if (inst) setMarketClass(inst.asset_class)
+      })
       .catch((err: unknown) =>
         setDetailError(err instanceof Error ? err.message : 'Erreur de chargement'),
       )
       .finally(() => setDetailLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deep-link once per symbol query
-  }, [searchParams])
+  }, [searchParams, instruments])
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -412,15 +554,29 @@ export function DecisionsPage() {
   const colCount = sheetOpen ? 3 : 6
   const activeIntent: OrderIntent | null = intentOverride ?? detail?.order_intent ?? null
 
+  const gateStats = useMemo(() => {
+    let buy = 0
+    let sell = 0
+    let watch = 0
+    let none = 0
+    for (const r of classRows) {
+      const g = rowGate(r)
+      if (g === 'BUY') buy += 1
+      else if (g === 'SELL') sell += 1
+      else if (g === 'WATCH') watch += 1
+      else none += 1
+    }
+    return { buy, sell, watch, none, total: classRows.length }
+  }, [classRows])
+
   return (
     <div className={`decisions-page${sheetOpen ? ' is-sheet-open' : ''}`}>
       <header className="page-head market-head">
         <div className="market-head-copy">
           <h1>Décisions</h1>
           <p className="muted">
-            Pipeline Direction → Participation → Structure → Location → Régime. Vue{' '}
-            <strong>Liste</strong> ou <strong>Matrice</strong> (pastilles par porte) — clic = détail
-            à droite.
+            Filtre actionnable · comprendre les portes · confirmer paper. Vue Liste ou Matrice —
+            clic = détail.
           </p>
           <p className="muted">{CLASS_BLURBS[marketClass]}</p>
         </div>
@@ -441,6 +597,53 @@ export function DecisionsPage() {
           </div>
         )}
       </header>
+
+      <MethodBanner rows={classRows} />
+
+      <section className="dec-gate-stats" aria-label="Résumé Portes">
+        <button
+          type="button"
+          className="panel overview-stat overview-stat--bull"
+          onClick={() => {
+            setActionableOnly(true)
+            setDecisionFilter('all')
+          }}
+          title="Filtrer les actionnables Achat"
+        >
+          <span className="overview-stat-label muted">Achats (Portes)</span>
+          <strong className="mono">{loading && !classRows.length ? '—' : gateStats.buy}</strong>
+        </button>
+        <button
+          type="button"
+          className="panel overview-stat overview-stat--bear"
+          onClick={() => {
+            setActionableOnly(true)
+            setDecisionFilter('all')
+          }}
+          title="Filtrer les actionnables Vente"
+        >
+          <span className="overview-stat-label muted">Ventes (Portes)</span>
+          <strong className="mono">{loading && !classRows.length ? '—' : gateStats.sell}</strong>
+        </button>
+        <button
+          type="button"
+          className="panel overview-stat"
+          onClick={() => {
+            setActionableOnly(false)
+            setDecisionFilter('all')
+          }}
+        >
+          <span className="overview-stat-label muted">Surveillance</span>
+          <strong className="mono">{loading && !classRows.length ? '—' : gateStats.watch}</strong>
+        </button>
+        <div className="panel overview-stat">
+          <span className="overview-stat-label muted">Scannées · {timeframe}</span>
+          <strong className="mono">{loading && !classRows.length ? '—' : gateStats.total}</strong>
+          <span className="overview-stat-meta muted">
+            {gateStats.buy + gateStats.sell} actionnables
+          </span>
+        </div>
+      </section>
 
       {error && (
         <div className="banner error" role="alert">
@@ -492,6 +695,15 @@ export function DecisionsPage() {
 
           <div className="decisions-filters" role="search">
             <label className="decisions-filter">
+              <span className="muted">TF</span>
+              <select value={timeframe} onChange={(e) => setTimeframe(e.target.value)}>
+                <option value="15m">15m</option>
+                <option value="1h">1h</option>
+                <option value="4h">4h</option>
+                <option value="1d">1d</option>
+              </select>
+            </label>
+            <label className="decisions-filter">
               <span className="muted">Symbole</span>
               <input
                 type="search"
@@ -525,7 +737,15 @@ export function DecisionsPage() {
                 placeholder="ex. 1.5"
               />
             </label>
-            {(symbolQuery || decisionFilter !== 'all' || rvolMin) && (
+            <label className="decisions-filter dec-filter-check">
+              <input
+                type="checkbox"
+                checked={actionableOnly}
+                onChange={(e) => setActionableOnly(e.target.checked)}
+              />
+              <span className="muted">Actionnables (Portes Achat/Vente)</span>
+            </label>
+            {(symbolQuery || decisionFilter !== 'all' || rvolMin || actionableOnly) && (
               <button
                 type="button"
                 className="ghost decisions-filter-reset"
@@ -533,6 +753,7 @@ export function DecisionsPage() {
                   setSymbolQuery('')
                   setDecisionFilter('all')
                   setRvolMin('')
+                  setActionableOnly(false)
                 }}
               >
                 Reset
@@ -578,7 +799,7 @@ export function DecisionsPage() {
                         type="button"
                         className="th-sort"
                         onClick={() => toggleSort('decision')}
-                        title="Tri sur le combiner legacy ; le badge affiché = Portes (pipeline) si dispo"
+                        title="Tri sur le verdict Portes (pipeline) ; Brut = diagnostic Ichi+RVOL"
                       >
                         Portes{sortMarker(sortKey === 'decision', sortDir)}
                       </button>
@@ -689,9 +910,19 @@ export function DecisionsPage() {
                       : ''}
                 </span>
               </div>
-              <button type="button" className="ghost decision-sheet-close" onClick={closeSheet}>
-                Fermer
-              </button>
+              <div className="dec-sheet-head-actions">
+                {selected && (
+                  <Link
+                    to={`/app/market?symbol=${encodeURIComponent(selected)}`}
+                    className="ghost"
+                  >
+                    Marché →
+                  </Link>
+                )}
+                <button type="button" className="ghost decision-sheet-close" onClick={closeSheet}>
+                  Fermer
+                </button>
+              </div>
             </header>
 
             <div className="decision-sheet-scroll">
@@ -712,26 +943,38 @@ export function DecisionsPage() {
 
               {detail && (
                 <div className="decision-detail-body">
-                  <SignalEvidenceCard detail={detail} />
+                  <p className="dec-sheet-summary">{buildDecisionSummary(detail)}</p>
 
-                  <TradePlanCard intent={activeIntent} pipelineView={pipelineView} />
+                  <div className="dec-sheet-verdict">
+                    <VerdictBadge decision={detail.decision} pipeline={detail.pipeline} />
+                    {detail.pipeline?.decision && (
+                      <span className="muted">
+                        Portes = {labelPipelineGate(detail.pipeline.decision as PipelineGateLabel)} ·
+                        Brut = {labelDecision(detail.decision)}
+                      </span>
+                    )}
+                  </div>
 
-                  <ProposePaperTradePanel
-                    intent={activeIntent}
-                    loading={intentLoading || detailLoading}
-                    confirming={paperConfirming}
-                    onConfirm={() => void onConfirmPaperOrder()}
-                    onRefresh={() => void onRefreshIntent()}
-                  />
+                  <section className="dec-before-open" aria-label="Avant d’ouvrir">
+                    <h3 className="subhead">Avant d’ouvrir (paper)</h3>
+                    <TradePlanCard intent={activeIntent} pipelineView={pipelineView} />
+                    <ProposePaperTradePanel
+                      intent={activeIntent}
+                      loading={intentLoading || detailLoading}
+                      confirming={paperConfirming}
+                      onConfirm={() => void onConfirmPaperOrder()}
+                      onRefresh={() => void onRefreshIntent()}
+                    />
+                  </section>
 
-                  <div className="decision-confirm-row">
+                  <div className="decision-confirm-row dec-secondary-actions">
                     <button
                       type="button"
                       className="ghost"
                       disabled={confirming}
                       onClick={() => void onConfirmDetail()}
                     >
-                      {confirming ? 'Enregistrement…' : 'Confirmer dans le journal'}
+                      {confirming ? 'Enregistrement…' : 'Journal seulement'}
                     </button>
                     <button
                       type="button"
@@ -745,17 +988,19 @@ export function DecisionsPage() {
                       type="button"
                       className="ghost"
                       onClick={() => compareGates(decisionPayloadFromDetail(detail))}
-                      title="Écart badge combiner vs verdict portes"
+                      title="Écart badge Brut vs verdict Portes"
                     >
-                      Écart portes
+                      Écart Portes / Brut
                     </button>
                     <span className="muted">
-                      Journal ≠ paper — snapshot local seulement.
+                      Paper = position virtuelle (CTA ci-dessus) · Journal = snapshot local.
                     </span>
                     {confirmMsg?.startsWith('ok') ? (
                       <span className="panel-meta">
                         Enregistré{confirmMsg.slice(2)} ·{' '}
                         <Link to="/app/journal">journal</Link>
+                        {' · '}
+                        <Link to="/app/synthese">synthèse</Link>
                         {' · '}
                         <Link to="/app/paper">paper</Link>
                       </span>
@@ -764,7 +1009,17 @@ export function DecisionsPage() {
                     )}
                   </div>
 
-                  {pipelineView && <DecisionPipelinePanel view={pipelineView} />}
+                  {pipelineView && (
+                    <details className="decision-agents-details" open>
+                      <summary className="subhead">Pipeline (5 portes)</summary>
+                      <DecisionPipelinePanel view={pipelineView} />
+                    </details>
+                  )}
+
+                  <details className="decision-agents-details">
+                    <summary className="subhead">Evidence &amp; preuves</summary>
+                    <SignalEvidenceCard detail={detail} />
+                  </details>
 
                   <details className="decision-agents-details">
                     <summary className="subhead">Agents bruts (Ichimoku / RVOL)</summary>
@@ -779,6 +1034,18 @@ export function DecisionsPage() {
           </aside>
         )}
       </div>
+
+      {paperConfirm && (
+        <PaperConfirmSheet
+          symbolLabel={instrumentLabel(paperConfirm.symbol)}
+          intent={paperConfirm.intent}
+          confirming={paperConfirming}
+          onConfirm={() => void executePaperConfirm()}
+          onCancel={() => {
+            if (!paperConfirming) setPaperConfirm(null)
+          }}
+        />
+      )}
     </div>
   )
 }

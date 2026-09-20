@@ -35,7 +35,7 @@ type NavItem = {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/app/overview', label: 'Overview', Icon: IconOverview },
+  { to: '/app/overview', label: 'Cockpit', Icon: IconOverview },
   { to: '/app/market', label: 'Marché', Icon: IconMarket },
   { to: '/app/context', label: 'Contexte', Icon: IconGlobe },
   { to: '/app/decisions', label: 'Décisions', Icon: IconDecisions },
@@ -46,7 +46,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/app/paper', label: 'Paper', Icon: IconPaper },
   { to: '/app/backtests', label: 'Backtests', Icon: IconBacktests },
   { to: '/app/agent', label: 'Copilot', Icon: IconChat },
-  { to: '/app/settings', label: 'Settings', Icon: IconSettings },
+  { to: '/app/settings', label: 'Paramètres', Icon: IconSettings },
 ]
 
 /** Primary tabs on phone — rest go in the « Plus » sheet. */

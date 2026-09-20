@@ -59,8 +59,9 @@ function RunTable({ run, minTrades }: { run: BacktestRun; minTrades: number }) {
   )
 }
 
-/** Historique des backtests lancés automatiquement, daté, avec le détail par méthode. */
-export function BacktestRunsPanel() {
+/** Liste des backtests lancés automatiquement, datée, avec le détail par méthode au clic.
+ *  Sans cadre : elle vit dans le volet « Historique » de la page Backtests. */
+export function BacktestRunsList() {
   const [data, setData] = useState<BacktestRuns | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<string | null>(null)
@@ -80,43 +81,46 @@ export function BacktestRunsPanel() {
   }, [])
 
   return (
-    <section className="panel" aria-label="Lancements automatiques">
-      <header className="panel-head">
-        <h2>Lancements automatiques</h2>
-        <span className="panel-meta">
-          {data ? `${data.total_runs} au total` : '…'} · vue d’ensemble dans <Link to="/app/activite">Activité</Link>
-        </span>
-      </header>
+    <>
       {error && <div className="banner error">{error}</div>}
+      {!data && !error && <p className="muted">Chargement…</p>}
       {data && data.runs.length === 0 && <p className="muted">Aucun lancement enregistré.</p>}
       {data && data.runs.length > 0 && (
-        <ul className="act-list" style={{ padding: '0 0.75rem 0.5rem' }}>
-          {data.runs.map((run) => {
-            const key = run.started_at
-            const isOpen = open === key
-            const v = run.pipeline_vs_ichimoku
-            return (
-              <li key={key} style={{ borderTop: '1px solid var(--border)', padding: '0.45rem 0' }}>
-                <button
-                  type="button"
-                  className="act-run-toggle"
-                  onClick={() => setOpen(isOpen ? null : key)}
-                  aria-expanded={isOpen}
-                >
-                  <strong>{fmtDateTime(run.ended_at)}</strong>
-                  <span className="muted">
-                    {' '}
-                    — {run.n_pairs} paires, {run.n_rows} résultats · le pipeline bat Ichimoku sur {v.beats}/
-                    {v.compared}
-                  </span>
-                  <span className="act-chevron">{isOpen ? '▾' : '▸'}</span>
-                </button>
-                {isOpen && <RunTable run={run} minTrades={data.min_trades_per_pair} />}
-              </li>
-            )
-          })}
-        </ul>
+        <>
+          <p className="muted">
+            {data.total_runs} lancements au total. Chaque ligne s’ouvre pour voir le détail par méthode.
+          </p>
+          <ul className="act-list">
+            {data.runs.map((run) => {
+              const key = run.started_at
+              const isOpen = open === key
+              const v = run.pipeline_vs_ichimoku
+              return (
+                <li key={key} style={{ borderTop: '1px solid var(--border)', padding: '0.45rem 0' }}>
+                  <button
+                    type="button"
+                    className="act-run-toggle"
+                    onClick={() => setOpen(isOpen ? null : key)}
+                    aria-expanded={isOpen}
+                  >
+                    <strong>{fmtDateTime(run.ended_at)}</strong>
+                    <span className="muted">
+                      {' '}
+                      — {run.n_pairs} paires, {run.n_rows} résultats · le pipeline bat Ichimoku sur {v.beats}/
+                      {v.compared}
+                    </span>
+                    <span className="act-chevron">{isOpen ? '▾' : '▸'}</span>
+                  </button>
+                  {isOpen && <RunTable run={run} minTrades={data.min_trades_per_pair} />}
+                </li>
+              )
+            })}
+          </ul>
+        </>
       )}
-    </section>
+      <p className="muted">
+        Vue d’ensemble de tout le circuit automatique : <Link to="/app/activite">Activité</Link>.
+      </p>
+    </>
   )
 }

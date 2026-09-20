@@ -121,7 +121,10 @@ export function WatchlistPage() {
                       >
                         Expliquer
                       </button>
-                      <Link className="ghost" to={`/app/decisions`}>
+                      <Link
+                        className="ghost"
+                        to={`/app/decisions?symbol=${encodeURIComponent(row.symbol)}`}
+                      >
                         Décisions
                       </Link>
                       <button

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   EXPERIMENT_LABELS,
   getActivityFeed,
@@ -212,6 +213,9 @@ export function ActivityPage() {
           </p>
         </div>
         <div className="market-class-tabs">
+          <Link to="/app/backtests" className="ghost">
+            Lab backtests →
+          </Link>
           <button type="button" onClick={() => void load()} disabled={loading}>
             {loading ? '…' : 'Actualiser'}
           </button>
@@ -260,7 +264,7 @@ export function ActivityPage() {
         <CircuitCard
           step={4}
           title="Backtests"
-          what="Collecte quotidienne · 5 méthodes · crypto 1h/4h."
+          what="Collecte quotidienne · 5 méthodes · couverture actuelle (souvent crypto)."
           value={summary ? `${fmtInt(summary.backtest.runs_total)} runs` : '…'}
           sub={summary ? `dernier ${fmtAgo(summary.backtest.last_at)}` : ''}
           state={summary && summary.backtest.runs_total > 0 ? 'ok' : 'warn'}

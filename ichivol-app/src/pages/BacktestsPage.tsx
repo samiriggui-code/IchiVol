@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { BacktestRunsPanel } from '../components/BacktestRunsPanel'
+import { BacktestRunsList } from '../components/BacktestRunsPanel'
+import './BacktestsPage.css'
 import {
   getAblation,
   getBacktestComparison,
@@ -114,6 +114,7 @@ export function BacktestsPage() {
   const [walkForward, setWalkForward] = useState<WalkForwardResult | null>(null)
   const [walkForwardOpt, setWalkForwardOpt] = useState<WalkForwardOptResult | null>(null)
   const [evidence, setEvidence] = useState<BacktestEvidenceSummary | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   const visibleClasses = useMemo(() => {
     const present = new Set(
@@ -263,18 +264,15 @@ export function BacktestsPage() {
         <div className="market-head-copy">
           <h1>Backtests</h1>
           <p className="muted">
-            En haut : collecte auto quotidienne (preuve C1). En bas : comparaison manuelle ponctuelle
-            sur un symbole. Même univers que Marché. Seuils RVOL/ATR depuis Settings. Pas un conseil
-            financier.
-          </p>
-          <p className="muted">
-            Chaque lancement automatique, daté et détaillé par méthode : voir{' '}
-            <Link to="/app/activite">Activité</Link>.
+            Comparaison manuelle ponctuelle sur un symbole. Même univers que Marché. Seuils RVOL/ATR
+            depuis Settings. Le bouton <strong>Historique</strong> ouvre les backtests lancés
+            automatiquement chaque jour (preuve C1). Pas un conseil financier.
           </p>
           {current && (
             <p className="muted">{CLASS_BLURBS[current.asset_class]}</p>
           )}
         </div>
+        <div className="bt-head-actions">
         {visibleClasses.length > 0 && (
           <div className="market-class-tabs" role="tablist" aria-label="Classe d’actif">
             {visibleClasses.map((c) => (
@@ -291,41 +289,19 @@ export function BacktestsPage() {
             ))}
           </div>
         )}
+          <button
+            type="button"
+            className={`ghost${historyOpen ? ' is-active' : ''}`}
+            aria-pressed={historyOpen}
+            onClick={() => setHistoryOpen((o) => !o)}
+          >
+            Historique
+          </button>
+        </div>
       </header>
 
-      <section className="overview-collect backtests-evidence" aria-label="Collecte automatique">
-        <div className="panel overview-stat">
-          <span className="overview-stat-label muted">Collecte auto (C1)</span>
-          <strong className="mono">
-            {evidence?.enabled === false
-              ? 'off'
-              : evidence
-                ? `${evidence.runs_total ?? evidence.total_rows} ${evidence.runs_total != null ? 'lancements' : 'lignes'}`
-                : '—'}
-          </strong>
-          <span className="overview-stat-meta muted">
-            {evidence?.enabled === false
-              ? 'Job désactivé (ENABLE_BACKTEST_EVIDENCE)'
-              : evidence?.note
-                ? evidence.note
-                : `Dernier cycle ${fmtWhen(evidence?.last_run_at ?? null)}`}
-            {evidence && evidence.distinct_days > 0
-              ? ` · ${evidence.distinct_days} j d’historique · ${evidence.total_rows} résultats`
-              : ''}
-          </span>
-        </div>
-        <div className="panel overview-stat">
-          <span className="overview-stat-label muted">PIPELINE &gt; Ichimoku (Sharpe)</span>
-          <strong className="mono">{edgeLabel}</strong>
-          <span className="overview-stat-meta muted">
-            {edge
-              ? `paires du dernier cycle · ${evidence?.latest_pairs ?? 0} paires scorées`
-              : 'Indicateur descriptif — ne promeut pas Option C ni le live'}
-          </span>
-        </div>
-      </section>
-
-      <BacktestRunsPanel />
+      <div className={`bt-split${historyOpen ? ' is-open' : ''}`}>
+        <div className="bt-main">
 
       <section className="panel">
         <header className="panel-head">
@@ -1084,6 +1060,56 @@ export function BacktestsPage() {
           <p className="muted">Choisis un instrument et lance un backtest pour voir la comparaison.</p>
         </div>
       )}
+        </div>
+
+        {historyOpen && (
+          <aside className="panel decision-sheet bt-sheet" aria-label="Historique des backtests automatiques">
+            <header className="panel-head decision-sheet-head">
+              <div>
+                <h2>Historique automatique</h2>
+                <span className="panel-meta">backtests quotidiens · preuve C1</span>
+              </div>
+              <button type="button" className="ghost decision-sheet-close" onClick={() => setHistoryOpen(false)}>
+                Fermer
+              </button>
+            </header>
+            <div className="decision-sheet-scroll">
+      <section className="overview-collect backtests-evidence" aria-label="Collecte automatique">
+        <div className="panel overview-stat">
+          <span className="overview-stat-label muted">Collecte auto (C1)</span>
+          <strong className="mono">
+            {evidence?.enabled === false
+              ? 'off'
+              : evidence
+                ? `${evidence.runs_total ?? evidence.total_rows} ${evidence.runs_total != null ? 'lancements' : 'lignes'}`
+                : '—'}
+          </strong>
+          <span className="overview-stat-meta muted">
+            {evidence?.enabled === false
+              ? 'Job désactivé (ENABLE_BACKTEST_EVIDENCE)'
+              : evidence?.note
+                ? evidence.note
+                : `Dernier cycle ${fmtWhen(evidence?.last_run_at ?? null)}`}
+            {evidence && evidence.distinct_days > 0
+              ? ` · ${evidence.distinct_days} j d’historique · ${evidence.total_rows} résultats`
+              : ''}
+          </span>
+        </div>
+        <div className="panel overview-stat">
+          <span className="overview-stat-label muted">PIPELINE &gt; Ichimoku (Sharpe)</span>
+          <strong className="mono">{edgeLabel}</strong>
+          <span className="overview-stat-meta muted">
+            {edge
+              ? `paires du dernier cycle · ${evidence?.latest_pairs ?? 0} paires scorées`
+              : 'Indicateur descriptif — ne promeut pas Option C ni le live'}
+          </span>
+        </div>
+      </section>
+              <BacktestRunsList />
+            </div>
+          </aside>
+        )}
+      </div>
     </div>
   )
 }

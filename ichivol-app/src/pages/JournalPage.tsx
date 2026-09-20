@@ -167,12 +167,10 @@ export function JournalPage() {
         <div className="market-head-copy">
           <h1>Journal</h1>
           <p className="muted">
-            Tes confirms en observation. <strong>Actualiser</strong> sur une ligne = relecture moteur
-            live (combiner + portes + RVOL) pour voir si tu gardes ou tu retires — le marché bouge.
-          </p>
-          <p className="muted">
-            Cette page = tes actions manuelles. Ce que le système fait tout seul (trades papier, trades
-            refusés, backtests) est daté dans <Link to="/app/activite">Activité</Link>.
+            Snapshot de tes décisions confirmées (observation manuelle). Ce n’est pas le compte
+            paper — pour le capital voir <Link to="/app/synthese">Synthèse</Link>, pour les
+            positions techniques <Link to="/app/paper">Paper</Link>. Le circuit auto est dans{' '}
+            <Link to="/app/activite">Activité</Link>.
           </p>
         </div>
         <div className="market-class-tabs" role="tablist" aria-label="Volets journal">

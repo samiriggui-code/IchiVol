@@ -12,7 +12,7 @@ function reasonLabel(reason: string): string {
     case 'ok':
       return 'Prêt à ouvrir (paper)'
     case 'not_actionable':
-      return 'Pas d’entrée — WATCH / NO_TRADE'
+      return 'Pas d’entrée — Portes = Surveillance / Pas de trade'
     case 'no_stop':
       return 'Stop ATR indisponible'
     case 'insufficient_cash_or_risk':
@@ -50,7 +50,7 @@ export function ProposePaperTradePanel({
       <header className="propose-paper-head">
         <span className="subhead">Ordre paper proposé</span>
         <span className={`propose-badge ${intent.actionable ? 'is-ok' : 'is-block'}`}>
-          {intent.actionable ? 'ACTIONNABLE' : 'BLOQUÉ'}
+          {intent.actionable ? 'Prêt' : 'Bloqué'}
         </span>
       </header>
 
@@ -58,7 +58,7 @@ export function ProposePaperTradePanel({
 
       <dl className="propose-stats">
         <div>
-          <dt>Pipeline</dt>
+          <dt>Portes</dt>
           <dd>
             {labelPipelineGate(intent.pipeline_decision as PipelineGateLabel) ||
               intent.pipeline_decision}
@@ -110,7 +110,7 @@ export function ProposePaperTradePanel({
           disabled={!intent.actionable || confirming}
           onClick={onConfirm}
         >
-          {confirming ? 'Ouverture…' : 'Confirmer l’ordre paper'}
+          {confirming ? '…' : 'Vérifier et confirmer…'}
         </button>
         {onRefresh && (
           <button type="button" className="ghost" disabled={loading} onClick={onRefresh}>

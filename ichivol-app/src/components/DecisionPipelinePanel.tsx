@@ -130,7 +130,7 @@ export function DecisionPipelinePanel({ view }: { view: DecisionPipelineView }) 
             {labelPipelineGate(view.gateDecision)}
           </span>
           <span className="pipeline-gate-note muted">
-            Le badge table reste sur le combiner legacy (Option A)
+            Portes = verdict d’action · Brut (liste) = Ichi+RVOL diagnostic
           </span>
         </div>
       )}

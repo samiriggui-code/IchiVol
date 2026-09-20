@@ -57,7 +57,7 @@ export function SignalEvidenceCard({ detail }: { detail: DecisionDetail }) {
   const volumeType = detail.volume_type ?? detail.rvol_detail?.volume_type ?? ctx.volume?.volume_type
 
   return (
-    <article className="signal-evidence-card" aria-label="Signal Evidence Card">
+    <article className="signal-evidence-card" aria-label="Preuves du signal">
       <header className="sec-head">
         <div>
           <h3 className="sec-symbol">{detail.symbol}</h3>
@@ -133,7 +133,7 @@ export function SignalEvidenceCard({ detail }: { detail: DecisionDetail }) {
       </section>
 
       <section className="sec-block sec-hist">
-        <span className="subhead">Evidence historique</span>
+        <span className="subhead">Preuves historiques</span>
         {!hist ? (
           <p className="muted">Pas encore calculée pour ce signal.</p>
         ) : (
@@ -142,7 +142,7 @@ export function SignalEvidenceCard({ detail }: { detail: DecisionDetail }) {
               <strong>{hist.sample_size}</strong> configurations comparables
               {' · '}
               <span className="muted">
-                {hist.sample_quality} · {hist.status}
+                qualité {hist.sample_quality} · {hist.status}
               </span>
             </p>
             <p className="muted">{ev?.calibration_note}</p>
@@ -153,23 +153,23 @@ export function SignalEvidenceCard({ detail }: { detail: DecisionDetail }) {
                   <dd>{hist.horizon} barres</dd>
                 </div>
                 <div>
-                  <dt>Mean</dt>
+                  <dt title="Rendement moyen">Moyenne</dt>
                   <dd>{pct(hist.mean_return_pct)}</dd>
                 </div>
                 <div>
-                  <dt>Median</dt>
+                  <dt title="Rendement médian">Médiane</dt>
                   <dd>{pct(hist.median_return_pct)}</dd>
                 </div>
                 <div>
-                  <dt>MFE</dt>
+                  <dt title="Max Favorable Excursion — meilleur parcours">MFE</dt>
                   <dd>{pct(hist.mean_mfe_pct)}</dd>
                 </div>
                 <div>
-                  <dt>MAE</dt>
+                  <dt title="Max Adverse Excursion — pire parcours">MAE</dt>
                   <dd>{pct(hist.mean_mae_pct)}</dd>
                 </div>
                 <div>
-                  <dt>Favorable</dt>
+                  <dt>Taux favorable</dt>
                   <dd>
                     {hist.favorable_rate != null
                       ? `${(hist.favorable_rate * 100).toFixed(1)}%`
@@ -184,14 +184,14 @@ export function SignalEvidenceCard({ detail }: { detail: DecisionDetail }) {
 
       {ev?.ablation && ev.ablation.length > 0 && (
         <section className="sec-block">
-          <span className="subhead">Ablation</span>
+          <span className="subhead">Ablation (sans / avec filtres)</span>
           <table className="sec-ablation">
             <thead>
               <tr>
                 <th>Modèle</th>
                 <th>N</th>
                 <th>Favorable</th>
-                <th>Mean</th>
+                <th>Moyenne</th>
               </tr>
             </thead>
             <tbody>

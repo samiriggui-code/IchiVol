@@ -288,8 +288,10 @@ export function PaperPage() {
         <div className="market-head-copy">
           <h1>Paper</h1>
           <p className="muted">
-            Vue technique : sources, métriques %, evidence IDs, ShadowBroker. Le compte en langage
-            clair est sur <Link to="/app/synthese">Synthèse</Link>.
+            Positions paper techniques (sources, %, ShadowBroker). Compte clair →{' '}
+            <Link to="/app/synthese">Synthèse</Link>. Snapshots de décisions →{' '}
+            <Link to="/app/journal">Journal</Link>. Circuit auto →{' '}
+            <Link to="/app/activite">Activité</Link>.
           </p>
         </div>
         <div className="market-class-tabs" role="tablist" aria-label="Source paper">

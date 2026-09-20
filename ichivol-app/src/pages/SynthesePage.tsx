@@ -165,7 +165,11 @@ export function SynthesePage() {
       <header className="page-head market-head">
         <div className="market-head-copy">
           <h1>Synthèse</h1>
-          <p className="muted">Compte virtuel : capital, investissements, courbe.</p>
+          <p className="muted">
+            Compte virtuel baseline : cash, engagé, courbe. Positions techniques →{' '}
+            <Link to="/app/paper">Paper</Link>. Circuit auto →{' '}
+            <Link to="/app/activite">Activité</Link>.
+          </p>
         </div>
         <div className="market-class-tabs" role="tablist" aria-label="Volets synthèse">
           <button

@@ -173,6 +173,26 @@ export async function closePaperPosition(id: string): Promise<PaperPosition> {
   return res.json() as Promise<PaperPosition>
 }
 
+export interface PaperPortfolioRow {
+  id: string
+  code: string
+  label: string
+  currency: string
+  valuation_mode: string
+  initial_cash: number
+  cash: number
+  realized_pnl: number
+  is_active: boolean
+  started_at: string
+  strategy_profile: string
+}
+
+export async function listPaperPortfolios(): Promise<PaperPortfolioRow[]> {
+  const res = await fetch('/api/engine/paper/portfolios', { credentials: 'include' })
+  if (!res.ok) throw new Error(await parseError(res))
+  return ((await res.json()) as { portfolios: PaperPortfolioRow[] }).portfolios
+}
+
 export async function getPaperPortfolio(code = 'ICHIVOL_BASELINE_V1'): Promise<PaperPortfolioSummary> {
   const res = await fetch(`/api/engine/paper/portfolios/${encodeURIComponent(code)}`, {
     credentials: 'include',
