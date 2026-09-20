@@ -205,6 +205,25 @@ def sync_position(
             session.flush()
             return existing
 
+        _prof = (portfolio.strategy_profile or {}) if portfolio is not None else {}
+        if _prof.get("exit_mode") == "direction" and existing.source == source:
+            # Long-only forward test (FWD_E_LONG): a lot closes on stop/target (above) or when the
+            # Ichimoku DIRECTION of the last closed bar is no longer the lot's direction. A decision that
+            # merely falls back to WATCH/NO_TRADE never closes it.
+            if existing.timeframe != timeframe:
+                return None  # a lot is only managed by the row of its own timeframe
+            _pdir = getattr(pipeline.direction, "value", str(pipeline.direction))
+            if _pdir == existing.direction:
+                return None
+            if existing.qty:
+                paper_broker.close_capital_position(
+                    session, existing, price=price, reason="direction_flipped", signal=signal
+                )
+            else:
+                _close_legacy(existing, price=price, reason="direction_flipped")
+            session.flush()
+            return existing
+
         if direction == existing.direction:
             # A signal blocked by a lot opened from another source/timeframe is a real rejection; the same lot
             # seen again every cycle is not (it would inflate the counter), so only the former is journaled.
@@ -237,6 +256,11 @@ def sync_position(
 
     profile = (portfolio.strategy_profile or {}) if portfolio is not None else {}
     log_rej = bool(profile.get("log_rejections")) and portfolio is not None
+    if direction == "SHORT" and portfolio is not None and profile.get("allow_short", True) is False:
+        # No short selling on this portfolio, ever. Does not consume the signal run (no gate call).
+        if log_rej:
+            paper_counters.record_rejection(session, portfolio, symbol=symbol, timeframe=timeframe, reason="short_not_allowed")
+        return None
     if portfolio is not None and paper_gates.has_gates(profile):
         # Optional experimental gates (all OFF for the baseline): first failing reason wins.
         reason = paper_gates.entry_gate(

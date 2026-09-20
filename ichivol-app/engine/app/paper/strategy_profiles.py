@@ -157,6 +157,50 @@ ICHIVOL_MS_FIB = _with(
     shadow_on_block=True,
 )
 
+# --- Forward test (docs/PLAN-SUIVI-EN-AVANT-2026-09-20.md): frozen for >= 8 weeks -----------------
+# Per-side friction (bps) per Binance spot pair: half tick + liquidity-tier slippage. The slippage tier is an
+# ASSUMPTION (not measured), see docs/REVUE-SIM-ET-COUTS-ichivol-36-2026-09-20.md. Commission 7.5 bps = spot
+# fee with BNB discount. Unlisted symbols fall back to the profile spread/slippage.
+FWD_FRICTION_BPS_BY_SYMBOL: dict[str, float] = {
+    "PEPEUSDT": 14.6, "APTUSDT": 10.9, "DOTUSDT": 8.5, "OPUSDT": 8.0, "TONUSDT": 7.1, "ATOMUSDT": 6.9,
+    "ARBUSDT": 6.5, "ADAUSDT": 4.2, "NEARUSDT": 3.3, "LTCUSDT": 2.9, "SUIUSDT": 2.6, "UNIUSDT": 2.6,
+    "AVAXUSDT": 2.4, "LINKUSDT": 2.4, "DOGEUSDT": 1.6, "SOLUSDT": 1.5, "XRPUSDT": 1.4,
+    "BNBUSDT": 1.0, "ETHUSDT": 1.0, "BTCUSDT": 1.0,
+}
+_FWD_COMMON: dict[str, Any] = dict(
+    commission_bps=7.5,
+    friction_bps_by_symbol=FWD_FRICTION_BPS_BY_SYMBOL,
+    log_rejections=True,
+    one_position_per_symbol=True,
+    one_entry_per_signal_run=True,
+    max_open_risk_pct=0.04,
+    max_symbol_notional_pct=0.25,
+    daily_loss_limit_pct=0.03,
+    shadow_on_block=False,
+)
+
+FWD_A_REF = _with(
+    code="FWD_A_REF",
+    label="Forward test - A reference (closed candles, one lot/symbol, aggregate guards, long+short)",
+    **_FWD_COMMON,
+)
+
+FWD_A_LONG = _with(
+    code="FWD_A_LONG",
+    label="Forward test - A long-only (exit on decision, shorts never opened)",
+    allow_short=False,
+    exit_mode="decision",
+    **_FWD_COMMON,
+)
+
+FWD_E_LONG = _with(
+    code="FWD_E_LONG",
+    label="Forward test - E long-only (exit on Ichimoku direction change, shorts never opened)",
+    allow_short=False,
+    exit_mode="direction",
+    **_FWD_COMMON,
+)
+
 EXPERIMENTAL_PROFILES: dict[str, dict[str, Any]] = {
     STRUCTURE_MVPP["code"]: STRUCTURE_MVPP,
     STRUCTURE_TRENDLN["code"]: STRUCTURE_TRENDLN,
@@ -169,6 +213,9 @@ EXPERIMENTAL_PROFILES: dict[str, dict[str, Any]] = {
     ICHIVOL_MS_REGIME["code"]: ICHIVOL_MS_REGIME,
     ICHIVOL_CTX_FULL["code"]: ICHIVOL_CTX_FULL,
     ICHIVOL_MS_FIB["code"]: ICHIVOL_MS_FIB,
+    FWD_A_REF["code"]: FWD_A_REF,
+    FWD_A_LONG["code"]: FWD_A_LONG,
+    FWD_E_LONG["code"]: FWD_E_LONG,
 }
 
 ALL_PROFILES: dict[str, dict[str, Any]] = {
