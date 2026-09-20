@@ -209,3 +209,22 @@ def test_default_watchlist_matches_the_catalogs_wired_crypto_and_biquote_instrum
     # Twelve Data-backed equities, kept out to protect its free-tier quota.
     assert "EURUSD" in service.DEFAULT_WATCHLIST
     assert "AAPL" not in service.DEFAULT_WATCHLIST
+
+
+def test_closed_only_drops_forming_bar_and_respects_setting(monkeypatch):
+    import time as _t
+
+    from app.config import settings
+    from app.indicators.ichimoku import Candle
+    from app.screener import service
+
+    now = int(_t.time())
+    tf = 3600
+    open_now = now - (now % tf)  # current forming bar opens at the top of this hour
+    bars = [Candle(time=open_now - tf * (3 - i), open=1, high=2, low=1, close=1.5) for i in range(4)]
+    assert bars[-1].time == open_now  # last bar is the forming one
+    monkeypatch.setattr(settings, "decide_on_closed_candles", True)
+    assert [c.time for c in service._closed_only(bars, "1h")] == [c.time for c in bars[:-1]]
+    assert service._closed_only(bars, "weird") == bars  # unknown timeframe untouched
+    monkeypatch.setattr(settings, "decide_on_closed_candles", False)
+    assert service._closed_only(bars, "1h") == bars

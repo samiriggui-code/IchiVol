@@ -10,6 +10,7 @@ read from instead.
 from __future__ import annotations
 
 import logging
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from typing import Sequence
@@ -33,7 +34,10 @@ from app.indicators.structure import StructureParams, compute_structure
 from app.market_data import binance_futures
 from app.market_data.accumulator import fetch_with_accumulation, needs_accumulation
 from app.market_data.resolve import resolve_and_fetch
-from app.market_data.timeframes import HIGHER_TIMEFRAME
+from app.config import settings
+from app.market_data.quality import closed_candles
+from app.screener.timing import compute_signal_timing
+from app.market_data.timeframes import HIGHER_TIMEFRAME, TF_SECONDS
 from app.universe.catalog import default_watchlist, get_instrument
 from app.universe.types import AssetClass
 logger = logging.getLogger(__name__)
@@ -63,6 +67,16 @@ def _oi_funding_state(
         return None
 
 
+def _closed_only(candles: list[Candle], timeframe: str, now: int | None = None) -> list[Candle]:
+    """Drop the still-forming bar (when enabled and possible). Unknown timeframes
+    and series that would become too short are returned unchanged."""
+    tf = TF_SECONDS.get(timeframe)
+    if not settings.decide_on_closed_candles or tf is None:
+        return candles
+    closed = closed_candles(candles, tf, int(time.time()) if now is None else now)
+    return closed if len(closed) >= 2 else candles
+
+
 def _mtf_direction(
     provider, symbol: str, provider_symbol: str, timeframe: str, ichi_params: IchimokuParams
 ) -> Direction | None:
@@ -75,6 +89,7 @@ def _mtf_direction(
             if needs_accumulation(provider.id)
             else provider.fetch_ohlcv(provider_symbol, higher_tf, 300)
         )
+        htf_candles = _closed_only(htf_candles, higher_tf)
         if len(htf_candles) < 2:
             return None
         return ichimoku_agent.analyze(htf_candles, ichi_params)[-1].direction
@@ -116,6 +131,8 @@ class ScreenerRow:
     """Canonical SignalContext at the last bar (Evidence Engine input)."""
     evidence: EvidenceReport | None = None
     """Evidence pack (historical matches + explainable contradictions)."""
+    signal_timing: dict | None = None
+    """See app/screener/timing.py: closed bar used, computation time, live price, lateness."""
 
 
 def scan_symbol(
@@ -134,6 +151,9 @@ def scan_symbol(
     )
     if len(candles) < 2:
         raise ValueError(f"not enough candles returned for {symbol} {timeframe}")
+    # Live price = last traded (forming bar close); every signal uses closed bars only.
+    live_price = candles[-1].close
+    candles = _closed_only(candles, timeframe)
 
     ichimoku_output = ichimoku_agent.analyze(candles, ichi_params)[-1]
     rvol_output = rvol_agent.analyze(candles, rvol_params)[-1]
@@ -211,7 +231,15 @@ def scan_symbol(
         symbol=symbol,
         exchange=provider.id,
         timeframe=timeframe,
-        price=candles[-1].close,
+        price=live_price,
+        signal_timing=(
+            compute_signal_timing(
+                candles, TF_SECONDS[timeframe], int(time.time()), live_price, timeframe,
+                settings.decide_on_closed_candles,
+            ).to_dict()
+            if timeframe in TF_SECONDS
+            else None
+        ),
         candles=candles,
         ichimoku=ichimoku_output,
         rvol=rvol_output,

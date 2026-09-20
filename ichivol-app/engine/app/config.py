@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     # screener scan, then measure what happened after it.
     enable_signal_tracking: bool = True
     signal_outcome_interval_s: float = 900.0
+    # Decide on CLOSED candles only: a signal computed on the still-forming bar
+    # can flip BUY <-> NO_TRADE within seconds (see propose -> confirm 422).
+    # Entry price stays the live last price. Set false to restore the old behaviour.
+    decide_on_closed_candles: bool = True
 
 
 settings = Settings()

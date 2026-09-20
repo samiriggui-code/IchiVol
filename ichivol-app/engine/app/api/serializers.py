@@ -82,6 +82,7 @@ def detail_dict(row: ScreenerRow) -> dict:
         "weights_used": row.decision.weights_used,
         "strategy_version": row.decision.strategy_version,
         "timestamp": row.candles[-1].time,
+        "signal_timing": getattr(row, "signal_timing", None),
         "volume_type": (
             row.candles[-1].volume_type.value if row.candles else "NONE"
         ),
