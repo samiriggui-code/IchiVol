@@ -80,6 +80,8 @@ export interface BacktestEvidenceSummary {
   enabled: boolean
   interval_s: number
   total_rows: number
+  /** Lancements de collecte distincts (total_rows = résultats, pas lancements). */
+  runs_total?: number
   last_run_at: string | null
   first_run_at: string | null
   distinct_days: number

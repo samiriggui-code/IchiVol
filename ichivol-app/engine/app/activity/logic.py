@@ -50,6 +50,18 @@ def cluster_runs(rows: list[SnapshotLite]) -> list[list[SnapshotLite]]:
     return runs
 
 
+def count_runs(times: list[datetime]) -> int:
+    """Number of collection runs in a list of snapshot timestamps."""
+    ordered = sorted(times)
+    runs = 0
+    prev: datetime | None = None
+    for t in ordered:
+        if prev is None or t - prev > RUN_GAP:
+            runs += 1
+        prev = t
+    return runs
+
+
 def _finite(values: list[float | None]) -> list[float]:
     return [v for v in values if v is not None and not math.isnan(v) and not math.isinf(v)]
 

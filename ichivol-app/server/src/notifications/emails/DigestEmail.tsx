@@ -284,7 +284,7 @@ export function DigestEmail({ briefing }: { briefing: DailyBriefing }) {
               <>
                 <Text style={body}>{evidence.edgePlain}</Text>
                 <Text style={{ ...muted, fontSize: 12 }}>
-                  {evidence.totalRows} snapshots · {evidence.distinctDays} j ·{' '}
+                  {evidence.runsTotal} lancements ({evidence.totalRows} résultats) · {evidence.distinctDays} j ·{' '}
                   {evidence.latestPairs} paires dernier cycle
                   {evidence.lastRunAt
                     ? ` · maj ${new Date(evidence.lastRunAt).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}`

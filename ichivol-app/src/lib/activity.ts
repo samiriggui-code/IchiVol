@@ -12,7 +12,45 @@ export interface ActivitySummary {
   }
   shadow: { blocked_total: number; blocked_24h: number; judged_total: number }
   backtest: { runs_total: number; last_at: string | null }
-  evidence: { rows_total: number }
+  evidence: {
+    rows_total: number
+    measured: number
+    complete: number
+    tracking_enabled: boolean
+  }
+}
+
+export interface OutcomeHorizon {
+  n: number
+  mean_return: number | null
+  median_return: number | null
+  hit_rate: number | null
+  small_sample: boolean
+}
+
+export interface OutcomeGroup {
+  id: string
+  label: string
+  n_signals: number
+  horizons: Record<string, OutcomeHorizon>
+  mean_mfe: number | null
+  mean_mae: number | null
+}
+
+export interface EvidenceOutcomes {
+  min_n: number
+  first_of_run_only: boolean
+  n_total: number
+  n_used: number
+  groups: OutcomeGroup[]
+}
+
+export interface BacktestCoverage {
+  crypto_symbols: number
+  timeframes: string[]
+  min_bars: number
+  pairs_covered: number
+  others: { symbol: string; label: string; asset_class: string; timeframe: string; bars: number; covered: boolean }[]
 }
 
 export type FeedTone = 'neutral' | 'good' | 'bad' | 'blocked'
@@ -65,6 +103,8 @@ async function getJson<T>(path: string): Promise<T> {
 export const getActivitySummary = () => getJson<ActivitySummary>('/api/engine/activity/summary')
 export const getActivityFeed = (limit = 150) =>
   getJson<{ items: ActivityItem[] }>(`/api/engine/activity/feed?limit=${limit}`)
+export const getEvidenceOutcomes = () => getJson<EvidenceOutcomes>('/api/engine/evidence/outcomes')
+export const getBacktestCoverage = () => getJson<BacktestCoverage>('/api/engine/backtest/coverage')
 export const getBacktestRuns = (limit = 30) =>
   getJson<BacktestRuns>(`/api/engine/backtest/runs?limit=${limit}`)
 

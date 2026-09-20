@@ -1,4 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { BacktestRunsPanel } from '../components/BacktestRunsPanel'
 import {
   getAblation,
   getBacktestComparison,
@@ -265,6 +267,10 @@ export function BacktestsPage() {
             sur un symbole. Même univers que Marché. Seuils RVOL/ATR depuis Settings. Pas un conseil
             financier.
           </p>
+          <p className="muted">
+            Chaque lancement automatique, daté et détaillé par méthode : voir{' '}
+            <Link to="/app/activite">Activité</Link>.
+          </p>
           {current && (
             <p className="muted">{CLASS_BLURBS[current.asset_class]}</p>
           )}
@@ -294,7 +300,7 @@ export function BacktestsPage() {
             {evidence?.enabled === false
               ? 'off'
               : evidence
-                ? `${evidence.total_rows} lignes`
+                ? `${evidence.runs_total ?? evidence.total_rows} ${evidence.runs_total != null ? 'lancements' : 'lignes'}`
                 : '—'}
           </strong>
           <span className="overview-stat-meta muted">
@@ -304,7 +310,7 @@ export function BacktestsPage() {
                 ? evidence.note
                 : `Dernier cycle ${fmtWhen(evidence?.last_run_at ?? null)}`}
             {evidence && evidence.distinct_days > 0
-              ? ` · ${evidence.distinct_days} j d’historique`
+              ? ` · ${evidence.distinct_days} j d’historique · ${evidence.total_rows} résultats`
               : ''}
           </span>
         </div>
@@ -318,6 +324,8 @@ export function BacktestsPage() {
           </span>
         </div>
       </section>
+
+      <BacktestRunsPanel />
 
       <section className="panel">
         <header className="panel-head">

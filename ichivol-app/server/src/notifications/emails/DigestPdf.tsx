@@ -261,7 +261,7 @@ function DigestPdfDoc({ briefing }: { briefing: DailyBriefing }) {
           <>
             <Text style={styles.body}>{evidence.edgePlain}</Text>
             <Text style={styles.muted}>
-              {evidence.totalRows} snapshots · {evidence.distinctDays} j · edge{' '}
+              {evidence.runsTotal} lancements ({evidence.totalRows} résultats) · {evidence.distinctDays} j · edge{' '}
               {evidence.pipelineBeats}/{evidence.pipelineCompared}
             </Text>
           </>

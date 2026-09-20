@@ -29,7 +29,9 @@ from app.config import settings
 from app.db.models import BacktestSnapshot
 from app.db.session import SessionLocal
 from app.decision.pipeline import STRATEGY_VERSION
-from app.universe.catalog import by_class
+from app.activity.logic import count_runs
+from app.db.models import Asset, Candle as CandleRow
+from app.universe.catalog import by_class, wired_instruments
 from app.universe.types import AssetClass
 
 logger = logging.getLogger(__name__)
@@ -39,6 +41,42 @@ logger = logging.getLogger(__name__)
 # "sweep élargi" methodology already used to judge Donchian/Wyckoff.
 DEFAULT_SYMBOLS: tuple[str, ...] = tuple(i.id for i in by_class(AssetClass.CRYPTO))
 DEFAULT_TIMEFRAMES: tuple[str, ...] = ("1h", "4h")
+
+# FX / metals / indices / energy come from a provider that returns ~100 bars per
+# call, so their history builds up slowly. With an Ichimoku warm-up of ~78 bars,
+# a backtest on a few hundred bars yields 0-2 trades: noise that would pollute
+# the "pipeline beats Ichimoku" count. They join the daily run only once enough
+# history has accumulated.
+MIN_BARS_FOR_BACKTEST = 400
+NON_CRYPTO_SYMBOLS: tuple[str, ...] = tuple(
+    i.id for i in wired_instruments() if i.asset_class != AssetClass.CRYPTO and i.provider == "biquote"
+)
+
+
+def select_backtest_pairs(
+    crypto: tuple[str, ...],
+    non_crypto: tuple[str, ...],
+    timeframes: tuple[str, ...],
+    stored_bars: dict[tuple[str, str], int],
+    min_bars: int = MIN_BARS_FOR_BACKTEST,
+) -> list[tuple[str, str]]:
+    """Crypto always; other markets only for the timeframes with enough history."""
+    pairs = [(s, tf) for s in crypto for tf in timeframes]
+    pairs += [
+        (s, tf) for s in non_crypto for tf in timeframes if stored_bars.get((s, tf), 0) >= min_bars
+    ]
+    return pairs
+
+
+def stored_bar_counts(session) -> dict[tuple[str, str], int]:
+    """Bars accumulated in the engine's own DB, per (symbol, timeframe), non-crypto only."""
+    rows = session.execute(
+        select(Asset.symbol, CandleRow.timeframe, func.count())
+        .join(CandleRow, CandleRow.asset_id == Asset.id)
+        .where(Asset.symbol.in_(NON_CRYPTO_SYMBOLS))
+        .group_by(Asset.symbol, CandleRow.timeframe)
+    ).all()
+    return {(s, tf): n for s, tf, n in rows}
 DEFAULT_LIMIT = 500  # lighter than the 1000 used for one-off manual runs -- this repeats daily
 
 
@@ -82,8 +120,8 @@ def snapshot_symbol(session, symbol: str, timeframe: str, limit: int = DEFAULT_L
 
 
 def run_snapshot_cycle(
-    symbols: tuple[str, ...] = DEFAULT_SYMBOLS,
-    timeframes: tuple[str, ...] = DEFAULT_TIMEFRAMES,
+    symbols: tuple[str, ...] | None = None,
+    timeframes: tuple[str, ...] | None = None,
     limit: int = DEFAULT_LIMIT,
 ) -> dict[str, int]:
     """One full evidence-collection pass -- every (symbol, timeframe) pair,
@@ -92,10 +130,15 @@ def run_snapshot_cycle(
     written: dict[str, int] = {}
     session = SessionLocal()
     try:
-        for symbol in symbols:
-            for timeframe in timeframes:
-                key = f"{symbol} {timeframe}"
-                written[key] = snapshot_symbol(session, symbol, timeframe, limit=limit)
+        if symbols is None and timeframes is None:
+            pairs = select_backtest_pairs(
+                DEFAULT_SYMBOLS, NON_CRYPTO_SYMBOLS, DEFAULT_TIMEFRAMES, stored_bar_counts(session)
+            )
+        else:
+            pairs = [(s, tf) for s in (symbols or DEFAULT_SYMBOLS) for tf in (timeframes or DEFAULT_TIMEFRAMES)]
+        for symbol, timeframe in pairs:
+            key = f"{symbol} {timeframe}"
+            written[key] = snapshot_symbol(session, symbol, timeframe, limit=limit)
     finally:
         session.close()
     return written
@@ -183,6 +226,7 @@ def compute_evidence_summary(session) -> dict:
         return {
             **base,
             "total_rows": 0,
+            "runs_total": 0,
             "last_run_at": None,
             "first_run_at": None,
             "distinct_days": 0,
@@ -218,9 +262,12 @@ def compute_evidence_summary(session) -> dict:
 
     pairs, edge = _score_pipeline_vs_ichimoku(recent_rows)
 
+    run_times = [t for (t,) in session.execute(select(BacktestSnapshot.computed_at)).all()]
+
     return {
         **base,
         "total_rows": total_rows,
+        "runs_total": count_runs(run_times),
         "last_run_at": last_run.isoformat() if last_run else None,
         "first_run_at": first_run.isoformat() if first_run else None,
         "distinct_days": distinct_days,

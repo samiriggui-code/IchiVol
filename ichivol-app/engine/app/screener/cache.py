@@ -22,6 +22,8 @@ from dataclasses import dataclass
 
 from app.db.session import SessionLocal
 from app.paper import engine as paper_engine
+from app.config import settings
+from app.evidence.recorder import record_signal_evidence
 from app.screener.persistence import persist_scan
 from app.screener.service import DEFAULT_WATCHLIST, ScreenerRow, scan_watchlist
 
@@ -80,6 +82,18 @@ class ScreenerCache:
                             "screener cache: failed to persist %s", row.symbol, exc_info=True
                         )
                         session.rollback()
+                    if settings.enable_signal_tracking:
+                        # Its own guard: a tracking failure must never cost the decision above.
+                        try:
+                            record_signal_evidence(session, row)
+                            session.commit()
+                        except Exception:
+                            logger.warning(
+                                "screener cache: failed to record evidence for %s",
+                                row.symbol,
+                                exc_info=True,
+                            )
+                            session.rollback()
             finally:
                 session.close()
 

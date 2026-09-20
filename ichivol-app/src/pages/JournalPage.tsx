@@ -170,6 +170,10 @@ export function JournalPage() {
             Tes confirms en observation. <strong>Actualiser</strong> sur une ligne = relecture moteur
             live (combiner + portes + RVOL) pour voir si tu gardes ou tu retires — le marché bouge.
           </p>
+          <p className="muted">
+            Cette page = tes actions manuelles. Ce que le système fait tout seul (trades papier, trades
+            refusés, backtests) est daté dans <Link to="/app/activite">Activité</Link>.
+          </p>
         </div>
         <div className="market-class-tabs" role="tablist" aria-label="Volets journal">
           <button

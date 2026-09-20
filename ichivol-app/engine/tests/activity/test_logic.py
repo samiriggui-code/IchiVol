@@ -128,3 +128,25 @@ def test_scheduler_waits_out_the_interval_instead_of_rerunning_on_every_restart(
     assert seconds_until_due(None, 86400, now) == 0.0
     assert seconds_until_due(now - timedelta(hours=2), 86400, now) == 86400 - 7200
     assert seconds_until_due(now - timedelta(days=3), 86400, now) == 0.0
+
+
+def test_count_runs_ignores_rows_written_in_the_same_run():
+    from app.activity.logic import count_runs
+
+    times = [T0 + timedelta(minutes=m) for m in (0, 2, 5, 60 * 24, 60 * 24 + 3)]
+    assert count_runs(times) == 2
+    assert count_runs([]) == 0
+
+
+def test_non_crypto_markets_join_the_backtest_only_with_enough_history():
+    from app.backtest.evidence import MIN_BARS_FOR_BACKTEST, select_backtest_pairs
+
+    crypto = ("BTCUSDT",)
+    others = ("EURUSD", "XAUUSD")
+    tfs = ("1h", "4h")
+    counts = {("EURUSD", "1h"): 146, ("EURUSD", "4h"): MIN_BARS_FOR_BACKTEST, ("XAUUSD", "1h"): 900}
+    pairs = select_backtest_pairs(crypto, others, tfs, counts)
+    assert ("BTCUSDT", "1h") in pairs and ("BTCUSDT", "4h") in pairs   # crypto always
+    assert ("EURUSD", "4h") in pairs and ("XAUUSD", "1h") in pairs     # enough history
+    assert ("EURUSD", "1h") not in pairs                               # 146 bars: noise
+    assert ("XAUUSD", "4h") not in pairs                               # nothing stored yet

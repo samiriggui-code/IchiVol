@@ -50,6 +50,8 @@ export interface BriefingShadow {
 
 export interface BriefingEvidence {
   totalRows: number
+  /** Lancements de collecte distincts (totalRows compte des résultats, pas des lancements). */
+  runsTotal: number
   distinctDays: number
   latestPairs: number
   lastRunAt: string | null

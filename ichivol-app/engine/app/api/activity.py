@@ -14,6 +14,7 @@ from sqlalchemy import func, select
 
 from app.activity.logic import SnapshotLite, cluster_runs, humanize_journal_event, summarize_run
 from app.config import settings
+from app.evidence.outcome_stats import OutcomeRow, summarize_outcomes
 from app.db.models import (
     BacktestSnapshot,
     Decision,
@@ -61,6 +62,50 @@ def get_backtest_runs(limit: int = 30) -> dict:
             "runs": summaries[: max(1, min(limit, 100))],
             "total_runs": len(runs),
             "min_trades_per_pair": 30,
+        }
+    finally:
+        session.close()
+
+
+@router.get("/backtest/coverage")
+def get_backtest_coverage() -> dict:
+    """Which markets the daily backtest covers, and how far the others are from qualifying."""
+    from app.backtest.evidence import (
+        DEFAULT_SYMBOLS,
+        DEFAULT_TIMEFRAMES,
+        MIN_BARS_FOR_BACKTEST,
+        NON_CRYPTO_SYMBOLS,
+        select_backtest_pairs,
+        stored_bar_counts,
+    )
+    from app.universe.catalog import get_instrument
+
+    session = SessionLocal()
+    try:
+        counts = stored_bar_counts(session)
+        covered = set(
+            select_backtest_pairs(DEFAULT_SYMBOLS, NON_CRYPTO_SYMBOLS, DEFAULT_TIMEFRAMES, counts)
+        )
+        rows = []
+        for symbol in NON_CRYPTO_SYMBOLS:
+            inst = get_instrument(symbol)
+            for tf in DEFAULT_TIMEFRAMES:
+                rows.append(
+                    {
+                        "symbol": symbol,
+                        "label": inst.label if inst else symbol,
+                        "asset_class": inst.asset_class.value if inst else "?",
+                        "timeframe": tf,
+                        "bars": counts.get((symbol, tf), 0),
+                        "covered": (symbol, tf) in covered,
+                    }
+                )
+        return {
+            "crypto_symbols": len(DEFAULT_SYMBOLS),
+            "timeframes": list(DEFAULT_TIMEFRAMES),
+            "min_bars": MIN_BARS_FOR_BACKTEST,
+            "pairs_covered": len(covered),
+            "others": rows,
         }
     finally:
         session.close()
@@ -135,7 +180,44 @@ def get_activity_summary() -> dict:
                 "last_at": runs[-1][-1].computed_at.isoformat() if runs else None,
             },
             # Signal -> outcome tracking. 0 rows means nothing feeds it automatically.
-            "evidence": {"rows_total": count(SignalEvidenceRecord)},
+            "evidence": {
+                "rows_total": count(SignalEvidenceRecord),
+                "measured": count(SignalEvidenceRecord, SignalEvidenceRecord.outcome_json.is_not(None)),
+                "complete": count(SignalEvidenceRecord, SignalEvidenceRecord.outcome_recorded_at.is_not(None)),
+                "tracking_enabled": settings.enable_signal_tracking,
+            },
         }
+    finally:
+        session.close()
+
+
+@router.get("/evidence/outcomes")
+def get_evidence_outcomes(first_of_run_only: bool = True, asset_class: str | None = None) -> dict:
+    """Recorded signals grouped by confluence, with what happened after them."""
+    session = SessionLocal()
+    try:
+        q = select(SignalEvidenceRecord).where(SignalEvidenceRecord.outcome_json.is_not(None))
+        if asset_class:
+            q = q.where(SignalEvidenceRecord.asset_class == asset_class)
+        rows = []
+        for rec in session.execute(q.limit(20000)).scalars():
+            outcome = rec.outcome_json or {}
+            if outcome.get("stale"):
+                continue
+            stages = ((rec.context_json or {}).get("confluence") or {}).get("stage_statuses") or {}
+            snapshot = rec.market_snapshot or {}
+            rows.append(
+                OutcomeRow(
+                    direction=snapshot.get("direction", ""),
+                    decision=rec.decision,
+                    stages=stages,
+                    asset_class=rec.asset_class,
+                    forward_returns=outcome.get("forward_returns") or {},
+                    mfe_pct=outcome.get("mfe_pct"),
+                    mae_pct=outcome.get("mae_pct"),
+                    first_of_run=bool(snapshot.get("first_of_run", True)),
+                )
+            )
+        return summarize_outcomes(rows, first_of_run_only=first_of_run_only)
     finally:
         session.close()

@@ -69,7 +69,8 @@ export function WatchlistPage() {
           Liste <strong>manuelle</strong> : elle reste vide tant que vous n’avez pas demandé au
           Copilot « ajoute BTC à la watchlist » puis Confirmé. Ce n’est <em>pas</em> le screener
           auto (voir <Link to="/app/decisions">Décisions</Link> /{' '}
-          <Link to="/app/paper">Paper</Link>), ni le <Link to="/app/journal">Journal</Link>.
+          <Link to="/app/paper">Paper</Link>), ni le <Link to="/app/journal">Journal</Link>. L&apos;historique
+          de ce que le système fait tout seul est dans <Link to="/app/activite">Activité</Link>.
         </p>
       </header>
 

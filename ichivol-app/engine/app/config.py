@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     paper_risk_pct: float = 0.01
     paper_take_profit_r: float = 2.0
     paper_max_open_positions: int = 5
+    # Signal tracking (evidence circuit): record every directional signal on each
+    # screener scan, then measure what happened after it.
+    enable_signal_tracking: bool = True
+    signal_outcome_interval_s: float = 900.0
 
 
 settings = Settings()

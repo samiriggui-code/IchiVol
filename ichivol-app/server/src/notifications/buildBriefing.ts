@@ -126,7 +126,7 @@ function buildNarrative(
 
   if (evidence) {
     lines.push(
-      `Preuve edge : ${evidence.edgePlain} Sur ${evidence.distinctDays} j de collecte (${evidence.totalRows} snapshots).`,
+      `Preuve edge : ${evidence.edgePlain} Sur ${evidence.distinctDays} j : ${evidence.runsTotal} lancements, ${evidence.totalRows} résultats.`,
     )
   }
 
@@ -185,6 +185,7 @@ interface ShadowRaw {
 
 interface EvidenceRaw {
   total_rows: number
+  runs_total?: number
   distinct_days: number
   latest_pairs: number
   last_run_at: string | null
@@ -301,6 +302,7 @@ export async function buildDailyBriefing(): Promise<DailyBriefing> {
   const evidence: BriefingEvidence | null = evidenceRaw
     ? {
         totalRows: evidenceRaw.total_rows,
+        runsTotal: evidenceRaw.runs_total ?? 0,
         distinctDays: evidenceRaw.distinct_days,
         latestPairs: evidenceRaw.latest_pairs,
         lastRunAt: evidenceRaw.last_run_at,

@@ -3,11 +3,15 @@ import {
   EXPERIMENT_LABELS,
   getActivityFeed,
   getActivitySummary,
+  getBacktestCoverage,
   getBacktestRuns,
+  getEvidenceOutcomes,
   type ActivityItem,
   type ActivitySummary,
+  type BacktestCoverage,
   type BacktestRun,
   type BacktestRuns,
+  type EvidenceOutcomes,
 } from '../lib/activity'
 import { getShadowStats, type ShadowStats } from '../lib/paper'
 import './ActivityPage.css'
@@ -129,6 +133,8 @@ export function ActivityPage() {
   const [feed, setFeed] = useState<ActivityItem[]>([])
   const [runs, setRuns] = useState<BacktestRuns | null>(null)
   const [shadow, setShadow] = useState<ShadowStats | null>(null)
+  const [outcomes, setOutcomes] = useState<EvidenceOutcomes | null>(null)
+  const [coverage, setCoverage] = useState<BacktestCoverage | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<Filter>('all')
@@ -136,16 +142,20 @@ export function ActivityPage() {
 
   const load = useCallback(async () => {
     try {
-      const [s, f, r, sh] = await Promise.all([
+      const [s, f, r, sh, oc, cov] = await Promise.all([
         getActivitySummary(),
         getActivityFeed(150),
         getBacktestRuns(30),
         getShadowStats().catch(() => null),
+        getEvidenceOutcomes().catch(() => null),
+        getBacktestCoverage().catch(() => null),
       ])
       setSummary(s)
       setFeed(f.items)
       setRuns(r)
       setShadow(sh)
+      setOutcomes(oc)
+      setCoverage(cov)
       setError(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Activité indisponible')
@@ -260,23 +270,31 @@ export function ActivityPage() {
           title="Suivi signaux"
           what="Enregistrement signal → outcome pour prouver l’efficacité."
           value={
-            summary ? (evidenceWired ? `${fmtInt(summary.evidence.rows_total)} suivis` : 'Non branché') : '…'
+            !summary
+              ? '…'
+              : !summary.evidence.tracking_enabled
+                ? 'Désactivé'
+                : evidenceWired
+                  ? `${fmtInt(summary.evidence.rows_total)} suivis`
+                  : 'En attente'
           }
           sub={
-            summary && !evidenceWired
-              ? 'aucun signal enregistré automatiquement'
-              : evidenceWired
-                ? 'maillon actif'
-                : ''
+            !summary
+              ? ''
+              : !summary.evidence.tracking_enabled
+                ? 'suivi coupé (ENABLE_SIGNAL_TRACKING)'
+                : evidenceWired
+                  ? `${fmtInt(summary.evidence.measured)} mesurés · ${fmtInt(summary.evidence.complete)} terminés`
+                  : 'premier signal directionnel au prochain scan'
           }
-          state={evidenceWired ? 'ok' : 'off'}
+          state={!summary?.evidence.tracking_enabled ? 'off' : evidenceWired ? 'ok' : 'warn'}
         />
       </section>
 
-      <section className="panel" aria-label="Efficacité">
+      <section className="panel act-eff" aria-label="Efficacité">
         <header className="panel-head">
           <h2>Ce que ça prouve</h2>
-          <span className="panel-meta">filtres · edge backtest</span>
+          <span className="panel-meta">filtres · edge backtest · signaux suivis</span>
         </header>
         <div className="act-eff-body">
           <div className="act-eff-block">
@@ -328,6 +346,79 @@ export function ActivityPage() {
               </>
             ) : (
               <p className="muted">Aucun backtest enregistré.</p>
+            )}
+            {coverage && (
+              <p className="muted act-eff-note">
+                Couverture : {coverage.crypto_symbols} cryptos × {coverage.timeframes.join(' / ')} (
+                {coverage.pairs_covered} paires). Forex, métaux, indices : {coverage.others.filter((o) => o.covered).length}/
+                {coverage.others.length} paires ; il faut {coverage.min_bars} bougies
+                {coverage.others.length
+                  ? ` (${coverage.others[0].label} ${coverage.others[0].timeframe} : ${coverage.others[0].bars})`
+                  : ''}
+                . Ils rejoignent le backtest tout seuls dès que l’historique suffit.
+              </p>
+            )}
+          </div>
+          <div className="act-eff-block act-eff-wide">
+            <h3 className="subhead">Signaux suivis : plus de confluences, meilleurs résultats ?</h3>
+            {outcomes && outcomes.n_used > 0 ? (
+              <>
+                <div className="act-run-table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Groupe</th>
+                        <th>Signaux</th>
+                        {['5', '10', '20'].map((h) => (
+                          <th key={h}>À {h} bougies</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {outcomes.groups.map((g) => (
+                        <tr key={g.id}>
+                          <td>{g.label}</td>
+                          <td className="mono">{g.n_signals}</td>
+                          {['5', '10', '20'].map((h) => {
+                            const cell = g.horizons[h]
+                            if (!cell || cell.n === 0) {
+                              return (
+                                <td key={h} className="muted">
+                                  —
+                                </td>
+                              )
+                            }
+                            return (
+                              <td key={h} className="mono">
+                                <span className={(cell.mean_return ?? 0) >= 0 ? 'up' : 'down'}>
+                                  {(cell.mean_return ?? 0) >= 0 ? '+' : ''}
+                                  {((cell.mean_return ?? 0) * 100).toFixed(2)} %
+                                </span>{' '}
+                                <span className="muted">
+                                  · {cell.hit_rate == null ? '—' : `${(cell.hit_rate * 100).toFixed(0)} %`} juste · n=
+                                  {cell.n}
+                                </span>
+                                {cell.small_sample && <span className="act-badge">échantillon faible</span>}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="muted act-eff-note">
+                  Un signal compte une fois par série de bougies dans le même sens ({outcomes.n_used} sur{' '}
+                  {outcomes.n_total}). Seuil de lecture : {outcomes.min_n} signaux par groupe.
+                </p>
+              </>
+            ) : (
+              <p className="muted act-eff-note">
+                {summary && summary.evidence.rows_total > 0
+                  ? `${fmtInt(summary.evidence.rows_total)} signaux enregistrés, aucun mesuré encore : le premier résultat arrive une bougie après le signal, le verdict à 20 bougies (environ 20 h en 1 h).`
+                  : 'Le suivi vient de démarrer : les signaux sont enregistrés à chaque scan, leur résultat suit.'}{' '}
+                Il faudra environ {outcomes?.min_n ?? 30} signaux par groupe pour conclure.
+              </p>
             )}
           </div>
         </div>
