@@ -115,17 +115,20 @@ export function BrokerAccount({
   const totalPct = a.initial_cash ? a.total_pnl / a.initial_cash : null
   return (
     <div className="broker-account">
-      <div className="broker-equity">
-        <span className="context-label">Valeur du portefeuille</span>
-        <strong className="broker-equity-value">{eur(a.equity)}</strong>
-        <span className={`broker-equity-delta ${tone(a.total_pnl)}`}>
-          {signedEur(a.total_pnl)} ({pct(totalPct, 2)}) depuis le départ ({eur(a.initial_cash, 0)})
-        </span>
+      <div className="broker-equity-row">
+        <div className="broker-equity">
+          <span className="context-label">Valeur du portefeuille</span>
+          <strong className="broker-equity-value">{eur(a.equity)}</strong>
+          <span className={`broker-equity-delta ${tone(a.total_pnl)}`}>
+            {signedEur(a.total_pnl)} ({pct(totalPct, 2)}) depuis le départ ({eur(a.initial_cash, 0)})
+          </span>
+        </div>
       </div>
       <PortfolioChart
         points={overview.equity_curve}
         initial={a.initial_cash}
         orders={orders}
+        positions={overview.positions}
       />
       <div className="paper-perf-grid">
         <div className="context-card">
