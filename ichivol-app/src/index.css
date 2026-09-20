@@ -1322,9 +1322,251 @@ button, select { font: inherit; color: inherit; }
   .decisions-page.is-sheet-open .decisions-split {
     grid-template-columns: 1fr;
   }
+  /* Tablet: sheet on top with usable height — phones use the rule below */
   .decision-sheet {
     order: -1;
-    max-height: 48vh;
+    max-height: min(62vh, 32rem);
+  }
+}
+
+/* Phone — Décisions: sheet plein écran, filtres empilés, boutons accessibles */
+@media (max-width: 768px) {
+  .dash-shell.is-mobile .decisions-page {
+    gap: 0.35rem;
+    /* Avoid flex-shrink of the screener table under tall headers */
+    flex: none;
+    min-height: auto;
+    height: auto;
+  }
+  .dash-shell.is-mobile .decisions-split {
+    flex: none;
+    min-height: auto;
+  }
+  .dash-shell.is-mobile .decisions-table-panel {
+    min-height: auto;
+  }
+  .dash-shell.is-mobile .decisions-table-panel .table-wrap {
+    flex: none;
+    min-height: 14rem;
+    max-height: none;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.75rem;
+  }
+
+  .dash-shell.is-mobile .decisions-page .market-head-copy p:not(:first-of-type) {
+    display: none;
+  }
+  .dash-shell.is-mobile .decisions-page .market-head-copy p:first-of-type {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .dash-shell.is-mobile .market-class-tabs {
+    padding-right: 0.75rem;
+    mask-image: linear-gradient(to right, #000 88%, transparent);
+  }
+  .dash-shell.is-mobile .market-class-tabs button {
+    flex-shrink: 0;
+  }
+
+  .dash-shell.is-mobile .decisions-page .panel-head {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+  .dash-shell.is-mobile .decisions-page .panel-head-actions {
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: flex-start;
+    gap: 0.35rem;
+  }
+  .dash-shell.is-mobile .decisions-page .panel-head-actions .panel-meta {
+    flex: 1 1 100%;
+  }
+
+  .dash-shell.is-mobile .decisions-filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: end;
+    gap: 0.45rem;
+    padding: 0.45rem 0.55rem;
+  }
+  .dash-shell.is-mobile .decisions-filter {
+    width: 100%;
+    min-width: 0;
+  }
+  .dash-shell.is-mobile .decisions-filter input,
+  .dash-shell.is-mobile .decisions-filter select {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .dash-shell.is-mobile .decisions-filter input[type='number'] {
+    width: 100%;
+    min-width: 0;
+  }
+  .dash-shell.is-mobile .decisions-filter-reset {
+    grid-column: 1 / -1;
+    width: 100%;
+    align-self: stretch;
+  }
+  .dash-shell.is-mobile .dec-filter-check {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  .dash-shell.is-mobile .dec-filter-check span {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.68rem;
+    line-height: 1.3;
+  }
+
+  .dash-shell.is-mobile .dec-method-steps {
+    grid-template-columns: 1fr 1fr;
+  }
+  .dash-shell.is-mobile .dec-method-lead {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Symbol open → full-height detail; list hidden (Fermer to go back) */
+  .dash-shell.is-mobile .decisions-page.is-sheet-open {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+  }
+  .dash-shell.is-mobile .decisions-page.is-sheet-open .market-head,
+  .dash-shell.is-mobile .decisions-page.is-sheet-open .dec-method,
+  .dash-shell.is-mobile .decisions-page.is-sheet-open .dec-gate-stats {
+    display: none;
+  }
+  .dash-shell.is-mobile .decisions-page.is-sheet-open .decisions-table-panel {
+    display: none;
+  }
+  .dash-shell.is-mobile .decisions-page.is-sheet-open .decisions-split {
+    grid-template-columns: 1fr;
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+  }
+  .dash-shell.is-mobile .decisions-page.is-sheet-open .decision-sheet {
+    order: 0;
+    max-height: none;
+    height: 100%;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dash-shell.is-mobile .decision-confirm-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+  }
+  .dash-shell.is-mobile .decision-confirm-row > button {
+    width: 100%;
+    justify-content: center;
+  }
+  .dash-shell.is-mobile .decision-confirm-row > .muted,
+  .dash-shell.is-mobile .decision-confirm-row > .panel-meta {
+    width: 100%;
+  }
+
+  .dash-shell.is-mobile .propose-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dash-shell.is-mobile .propose-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .dash-shell.is-mobile .propose-actions > button {
+    width: 100%;
+  }
+
+  .dash-shell.is-mobile .gate-matrix {
+    min-width: 36rem;
+  }
+  .dash-shell.is-mobile .gate-matrix-wrap {
+    margin: 0 -0.15rem;
+    padding-bottom: 0.35rem;
+  }
+
+  .dash-shell.is-mobile .paper-perf-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dash-shell.is-mobile .paper-page .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .dash-shell.is-mobile .paper-page table {
+    min-width: 40rem;
+  }
+
+  /* Screener: keep Symbol · Portes · RVOL only on phone */
+  .dash-shell.is-mobile .decisions-table th:nth-child(3),
+  .dash-shell.is-mobile .decisions-table td:nth-child(3),
+  .dash-shell.is-mobile .decisions-table th:nth-child(4),
+  .dash-shell.is-mobile .decisions-table td:nth-child(4),
+  .dash-shell.is-mobile .decisions-table th:nth-child(6),
+  .dash-shell.is-mobile .decisions-table td:nth-child(6) {
+    display: none;
+  }
+  .dash-shell.is-mobile .decisions-table {
+    width: 100%;
+    table-layout: fixed;
+  }
+  .dash-shell.is-mobile .decisions-table th:nth-child(1),
+  .dash-shell.is-mobile .decisions-table td:nth-child(1) {
+    width: 22%;
+  }
+  .dash-shell.is-mobile .decisions-table th:nth-child(2),
+  .dash-shell.is-mobile .decisions-table td:nth-child(2) {
+    width: 52%;
+  }
+  .dash-shell.is-mobile .decisions-table th:nth-child(5),
+  .dash-shell.is-mobile .decisions-table td:nth-child(5) {
+    width: 26%;
+  }
+  .dash-shell.is-mobile .decision-cell-diag {
+    display: none;
+  }
+  .dash-shell.is-mobile .decisions-table .bias {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  .dash-shell.is-mobile .decision-sheet-scroll {
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0));
+    scroll-padding-top: 0.5rem;
+  }
+  /* Extra room so last blocks clear the fixed tab bar */
+  .dash-shell.is-mobile .decisions-page.is-sheet-open .decision-sheet-scroll {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0));
+  }
+  .dash-shell.is-mobile .decision-sheet-head {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+  .dash-shell.is-mobile .pipeline-stage,
+  .dash-shell.is-mobile .pipeline-reading-card,
+  .dash-shell.is-mobile .propose-paper-panel,
+  .dash-shell.is-mobile .decision-agents-details {
+    scroll-margin-top: 0.5rem;
   }
 }
 .decisions-table-panel {
@@ -1362,6 +1604,17 @@ button, select { font: inherit; color: inherit; }
 }
 .decisions-filter input[type='number'] { width: 5.5rem; min-width: 5.5rem; }
 .decisions-filter-reset { align-self: flex-end; margin-bottom: 0.05rem; }
+.dec-filter-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}
+.dec-filter-check span {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.68rem;
+}
+
 .decisions-view-tabs {
   display: inline-flex;
   gap: 0.15rem;
