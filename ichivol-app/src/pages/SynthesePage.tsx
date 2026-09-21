@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ActivityJournal } from '../components/ActivityJournal'
 import { BrokerAccount, InvestmentCards } from '../components/BrokerAccount'
+import { CostsPanel } from '../components/CostsPanel'
 import { PaperCloseConfirmSheet } from '../components/PaperCloseConfirmSheet'
 import { PaperTradeSheet } from '../components/PaperTradeSheet'
 import {
@@ -370,6 +371,18 @@ export function SynthesePage() {
               <BrokerAccount overview={overview} />
             </div>
           </section>
+
+          {overview.costs && (
+            <section className="panel synthese-account-panel">
+              <header className="panel-head">
+                <h2>Bénéfice net et frais</h2>
+                <span className="panel-meta">du brut au net, frais courtier inclus</span>
+              </header>
+              <div className="synthese-panel-body">
+                <CostsPanel costs={overview.costs} />
+              </div>
+            </section>
+          )}
 
           <section className="panel synthese-account-panel">
             <header className="panel-head">

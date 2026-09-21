@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PaperConfirmSheet } from './PaperConfirmSheet'
+import { PaperIntentConfirmSheet } from './PaperIntentConfirmSheet'
 import {
   askAgentStream,
   confirmAgentAction,
@@ -470,7 +470,7 @@ export function AgentPanel({ snapshot }: Props) {
       </div>
 
       {paperSheet && (
-        <PaperConfirmSheet
+        <PaperIntentConfirmSheet
           symbolLabel={paperSheet.pending.symbol?.replace(/USDT$/i, '') ?? '—'}
           intent={paperSheet.intent}
           confirming={paperConfirming}

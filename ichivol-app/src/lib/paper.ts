@@ -139,14 +139,90 @@ export async function getPaperPerformance(opts?: {
  * Idempotent côté engine : si le symbole est déjà OPEN sur le portefeuille
  * baseline, renvoie la position existante avec `already_open: true` (pas de 2ᵉ notional).
  */
+export interface ManualOrderInput {
+  /** Montant à investir en € (hors frais). */
+  notional: number
+  /** Distance du stop en fraction du prix (0.02 = 2 %). */
+  stopPct: number
+  /** Objectif en multiples du risque (2 = gain visé 2× la perte au stop). */
+  takeProfitR: number
+}
+
+export interface ManualPreview {
+  ok: boolean
+  blocking: { code: string; message: string }[]
+  warnings: { code: string; message: string }[]
+  symbol: string
+  timeframe: string
+  price: number
+  engine_verdict: string
+  engine_stop_distance: number | null
+  inputs: { notional: number; stop_pct: number; stop_distance: number; take_profit_r: number }
+  order: {
+    qty: number
+    entry_fill: number
+    notional: number
+    stop_price: number
+    take_profit_price: number
+    risk_amount: number
+    risk_pct_of_equity: number | null
+  }
+  costs: {
+    commission_entry: number
+    commission_exit_at_target: number
+    spread_slippage_entry: number
+    round_trip_at_target: number
+    commission_bps: number
+    friction_bps_per_side: number
+  }
+  outcomes: { net_gain_if_target: number; net_loss_if_stop: number; reward_risk_net: number | null }
+  portfolio: {
+    cash_before: number
+    cash_after: number
+    equity: number
+    lines_before: number
+    lines_after: number
+    max_lines: number
+    open_risk_before: number
+    open_risk_after: number
+    open_risk_cap: number | null
+  }
+}
+
+/** Aperçu d'un achat choisi par l'utilisateur : coûts, gain/perte nets, effet sur le portefeuille. Ne place rien. */
+export async function previewPaperBuy(
+  symbol: string,
+  timeframe: string,
+  order: ManualOrderInput,
+  signal?: AbortSignal,
+): Promise<ManualPreview> {
+  const params = new URLSearchParams({
+    symbol,
+    timeframe,
+    notional: String(order.notional),
+    stop_pct: String(order.stopPct),
+    take_profit_r: String(order.takeProfitR),
+  })
+  const res = await fetch(`/api/engine/paper/preview?${params}`, { credentials: 'include', signal })
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json() as Promise<ManualPreview>
+}
+
 export async function openPaperPosition(
   symbol: string,
   timeframe = '1h',
+  order?: ManualOrderInput,
 ): Promise<PaperPosition & { created?: boolean; already_open?: boolean }> {
   const params = new URLSearchParams({
     symbol,
     timeframe,
   })
+  if (order) {
+    params.set('discretionary', 'true')
+    params.set('notional', String(order.notional))
+    params.set('stop_pct', String(order.stopPct))
+    params.set('take_profit_r', String(order.takeProfitR))
+  }
   const res = await fetch(`/api/engine/paper/positions?${params}`, {
     method: 'POST',
     credentials: 'include',
@@ -237,6 +313,33 @@ export interface PaperOverviewPosition extends PaperPosition {
   valuation_status?: ValuationStatus | null
 }
 
+export interface PaperCosts {
+  currency: string
+  initial_cash: number
+  equity: number
+  gross_result: number
+  commissions: number
+  spread_slippage: number
+  total_costs: number
+  net_result: number
+  net_return_pct: number | null
+  cost_share_of_gross_pct: number | null
+  orders: number
+  notional_traded: number
+  open_positions: number
+  invested_now: number
+  closed_trades: number
+  wins: number
+  losses: number
+  sum_wins: number
+  sum_losses: number
+  by_market: Record<
+    string,
+    { commissions: number; friction: number; orders: number; traded: number; total_costs: number }
+  >
+  note: string
+}
+
 export interface PaperOverview {
   portfolio: PaperPortfolioSummary['portfolio']
   account: {
@@ -257,6 +360,7 @@ export interface PaperOverview {
   }
   positions: PaperOverviewPosition[]
   equity_curve: { t: string; equity: number }[]
+  costs?: PaperCosts
 }
 
 export async function getPaperOverview(code = 'ICHIVOL_BASELINE_V1'): Promise<PaperOverview> {

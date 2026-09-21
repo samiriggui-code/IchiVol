@@ -44,6 +44,14 @@ export function PaperCloseConfirmSheet({
   const current = isOverview(position) ? position.current_price : null
   const latent = isOverview(position) ? position.unrealized_pnl : null
   const latentPct = isOverview(position) ? position.unrealized_pct : null
+  const entryFee = position.entry_fee ?? 0
+  const marketValue = isOverview(position) ? (position.market_value ?? null) : null
+  // Estimation : même taux de commission qu'à l'entrée, appliqué à la valeur actuelle (la vraie valeur est calculée à la clôture).
+  const exitFeeEst =
+    position.notional && position.notional > 0 && marketValue != null
+      ? entryFee * (marketValue / position.notional)
+      : entryFee
+  const netEst = latent != null ? latent - entryFee - exitFeeEst : null
   const sourceLabel =
     position.source === 'auto_watchlist'
       ? 'Auto'
@@ -70,7 +78,7 @@ export function PaperCloseConfirmSheet({
       <aside className="panel trade-sheet paper-confirm-sheet">
         <header className="panel-head trade-sheet-head">
           <div>
-            <h2>Clôturer la position</h2>
+            <h2>Vendre · clôturer la position</h2>
             <p className="muted">
               {label} · {dir.title} · virtuel — aucun broker réel
             </p>
@@ -122,6 +130,20 @@ export function PaperCloseConfirmSheet({
               </dd>
             </div>
             <div>
+              <dt>Frais d’entrée déjà payés</dt>
+              <dd className="mono">{eur(entryFee)}</dd>
+            </div>
+            <div>
+              <dt>Frais de sortie (estimés)</dt>
+              <dd className="mono">≈ {eur(exitFeeEst)}</dd>
+            </div>
+            <div>
+              <dt>Résultat net estimé</dt>
+              <dd className={`mono ${netEst != null && netEst < 0 ? 'down' : netEst != null && netEst > 0 ? 'up' : ''}`}>
+                {netEst != null ? signedEur(netEst) : '—'}
+              </dd>
+            </div>
+            <div>
               <dt>Stop / TP</dt>
               <dd className="mono">
                 {price(position.stop_price)} / {price(position.take_profit_price)}
@@ -130,8 +152,9 @@ export function PaperCloseConfirmSheet({
           </dl>
 
           <p className="muted paper-confirm-note">
-            La clôture réalise le P&amp;L (net frais de sortie) et libère les liquidités. Action
-            irréversible sur le compte paper — pas une « vente » marché séparée.
+            Vendre = clôturer la ligne : le résultat est réalisé (frais et écart de sortie déduits) et les liquidités
+            sont libérées pour de nouveaux achats. Le montant exact est calculé à la clôture. Virtuel — irréversible sur
+            le compte paper.
           </p>
 
           <div className="paper-confirm-actions">

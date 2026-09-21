@@ -31,6 +31,36 @@ def apply_exit_friction(price: float, *, direction: str, spread_bps: float, slip
     return price * (1.0 + total)
 
 
+def _size_manual(
+    *, equity: float, cash: float, direction: str, entry_price: float, stop_distance: float, take_profit_r: float,
+    commission_bps: float, spread_bps: float, slippage_bps: float, min_notional: float, notional_target: float,
+) -> SizedOrder | None:
+    """Discretionary order: the USER picks the amount. The risk-% and per-order caps do not apply (the caller
+    checks portfolio-level guards and shows the resulting risk); cash still can never go negative."""
+    entry_fill = apply_entry_friction(
+        entry_price, direction=direction, spread_bps=spread_bps, slippage_bps=slippage_bps
+    )
+    if notional_target <= 0 or notional_target < min_notional:
+        return None
+    qty = notional_target / entry_fill
+    notional = qty * entry_fill
+    if notional * (1.0 + commission_bps / 10_000.0) > cash + 1e-9:
+        return None
+    if direction == "LONG":
+        stop_price = entry_fill - stop_distance
+        take_profit_price = entry_fill + stop_distance * take_profit_r
+    else:
+        stop_price = entry_fill + stop_distance
+        take_profit_price = entry_fill - stop_distance * take_profit_r
+    if stop_price <= 0 or take_profit_price <= 0:
+        return None
+    risk_amount = qty * stop_distance
+    return SizedOrder(
+        qty=qty, notional=notional, stop_price=stop_price, take_profit_price=take_profit_price,
+        risk_pct=(risk_amount / equity) if equity > 0 else 0.0, risk_amount=risk_amount, entry_fill=entry_fill,
+    )
+
+
 def size_position(
     *,
     equity: float,
@@ -46,9 +76,16 @@ def size_position(
     slippage_bps: float = 3.0,
     min_fill_fraction: float = 0.0,
     min_notional: float = 0.0,
+    manual_notional: float | None = None,
 ) -> SizedOrder | None:
     if equity <= 0 or entry_price <= 0 or stop_distance <= 0:
         return None
+    if manual_notional is not None:
+        return _size_manual(
+            equity=equity, cash=cash, direction=direction, entry_price=entry_price, stop_distance=stop_distance,
+            take_profit_r=take_profit_r, commission_bps=commission_bps, spread_bps=spread_bps,
+            slippage_bps=slippage_bps, min_notional=min_notional, notional_target=manual_notional,
+        )
 
     entry_fill = apply_entry_friction(
         entry_price, direction=direction, spread_bps=spread_bps, slippage_bps=slippage_bps

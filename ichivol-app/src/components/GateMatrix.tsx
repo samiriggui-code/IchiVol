@@ -39,10 +39,6 @@ function gateTone(gate: PipelineGateLabel | null): 'bull' | 'bear' | 'neutral' {
   return 'neutral'
 }
 
-function isPaperActionable(gate: PipelineGateLabel | null): boolean {
-  return gate === 'BUY' || gate === 'SELL'
-}
-
 export interface GateMatrixProps {
   rows: ScreenerDecisionRow[]
   selected: string | null
@@ -112,7 +108,7 @@ export function GateMatrix({
               typeof row.pipeline?.decision === 'string' ? row.pipeline.decision : undefined,
             )
             const active = selected === row.symbol
-            const canPaper = Boolean(onOpenPaper) && isPaperActionable(gate)
+            const canPaper = Boolean(onOpenPaper) // achat possible quel que soit l'avis du moteur (ticket d'ordre)
             const busy = paperBusySymbol === row.symbol
             const alreadyOpen = openPaperSymbols?.has(row.symbol) === true
             const canOpen = canPaper && !busy && !alreadyOpen

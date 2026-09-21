@@ -29,6 +29,7 @@ from app.indicators.rsi import compute_rsi
 from app.indicators.rvol import RvolParams
 from app.market_data import twelve_data
 from app.paper import engine as paper_engine
+from app.paper.costs import compute_costs
 from app.paper.performance import compute_performance, compute_portfolio_performance
 from app.paper.portfolio import (
     ensure_baseline_portfolio,
@@ -1506,6 +1507,7 @@ def get_paper_portfolio_overview(code: str) -> dict:
             },
             "positions": rows[:200],
             "equity_curve": curve,
+            "costs": compute_costs(session, portfolio, equity=equity),
         }
     finally:
         session.close()
@@ -1624,6 +1626,31 @@ def get_shadow_positions(
         session.close()
 
 
+@router.get("/paper/preview")
+def preview_manual_paper_buy(
+    symbol: str,
+    notional: float,
+    timeframe: str = "1h",
+    stop_pct: float | None = None,
+    take_profit_r: float | None = None,
+    portfolio_code: str = "ICHIVOL_BASELINE_V1",
+) -> dict:
+    """What a user-chosen buy would cost, risk and do to the portfolio. Read-only, never opens anything."""
+    from app.paper.manual import preview_manual_buy
+
+    try:
+        row = scan_symbol(symbol.upper(), timeframe=timeframe)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    session = SessionLocal()
+    try:
+        return preview_manual_buy(
+            session, row, notional=notional, stop_pct=stop_pct, take_profit_r=take_profit_r, portfolio_code=portfolio_code
+        )
+    finally:
+        session.close()
+
+
 @router.get("/paper/propose")
 def propose_paper_trade(
     symbol: str,
@@ -1678,6 +1705,10 @@ def open_paper_position(
     atr_dead_percentile: float | None = None,
     atr_extreme_percentile: float | None = None,
     atr_stop_multiplier: float | None = None,
+    discretionary: bool = False,
+    notional: float | None = None,
+    stop_pct: float | None = None,
+    take_profit_r: float | None = None,
 ) -> dict:
     """Called by the server when a user hits "Confirmer" in the Journal --
     opens a virtual `user_confirmed` position at the current live
@@ -1704,6 +1735,31 @@ def open_paper_position(
             detail="stale_data: provider candles are late/frozen, refusing to open on an outdated signal",
         )
     stop = row.atr.suggested_stop_distance if row.atr is not None else None
+    manual_notional = None
+    pipeline_for_open = row.pipeline
+    extra_signal: dict = {}
+    if discretionary:
+        # Buy chosen by the user (any amount, own stop/target), no engine BUY required. Re-validated here with the
+        # same numbers the preview showed; refusals are explained, never silent.
+        from dataclasses import replace as _dc_replace
+
+        from app.agents.types import Direction as _Dir
+        from app.paper.manual import preview_manual_buy
+
+        if notional is None:
+            raise HTTPException(status_code=422, detail="bad_request: notional is required for a discretionary buy")
+        _s = SessionLocal()
+        try:
+            prev = preview_manual_buy(_s, row, notional=notional, stop_pct=stop_pct, take_profit_r=take_profit_r)
+        finally:
+            _s.close()
+        if not prev["ok"]:
+            first = prev["blocking"][0]
+            raise HTTPException(status_code=422, detail=f"{first['code']}: {first['message']}")
+        manual_notional = notional
+        stop = prev["inputs"]["stop_distance"]
+        pipeline_for_open = _dc_replace(row.pipeline, decision="BUY", direction=_Dir.LONG)
+        extra_signal = {"discretionary": True, "engine_verdict": row.pipeline.decision}
     session = SessionLocal()
     try:
         evidence_id = None
@@ -1728,13 +1784,16 @@ def open_paper_position(
             timeframe=timeframe,
             user_id=user_id,
             price=row.price,
-            pipeline=row.pipeline,
+            pipeline=pipeline_for_open,
             stop_distance=stop,
             evidence_id=evidence_id,
             signal_extra={
                 "evidence_id": evidence_id,
                 "context": row.context.to_dict() if row.context else None,
+                **extra_signal,
             },
+            manual_notional=manual_notional,
+            take_profit_r=take_profit_r if discretionary else None,
         )
         if position is None:
             raise HTTPException(

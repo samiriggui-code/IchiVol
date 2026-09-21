@@ -45,6 +45,7 @@ import {
   listPaperPositions,
   openPaperPosition,
   proposePaperTrade,
+  type ManualOrderInput,
   type OrderIntent,
 } from '../lib/paper'
 import { decisionPayloadFromDetail } from '../lib/agent'
@@ -234,7 +235,7 @@ function MethodBanner({ rows }: { rows: ScreenerDecisionRow[] }) {
 type PaperConfirmState = {
   symbol: string
   timeframe: string
-  intent: OrderIntent
+  intent: OrderIntent | null
   source: 'sheet' | 'matrix'
 }
 
@@ -421,7 +422,7 @@ export function DecisionsPage() {
 
   async function onConfirmPaperOrder() {
     const intent = intentOverride ?? detail?.order_intent ?? null
-    if (!detail || !intent) return
+    if (!detail) return
     if (openPaperSymbols.has(detail.symbol)) {
       setPaperMsg(`${detail.symbol} · déjà ouvert — pas de 2ᵉ achat`)
       setConfirmMsg('Déjà une position ouverte sur ce symbole')
@@ -436,7 +437,7 @@ export function DecisionsPage() {
     })
   }
 
-  async function executePaperConfirm() {
+  async function executePaperConfirm(order: ManualOrderInput) {
     if (!paperConfirm || paperConfirmLock.current) return
     paperConfirmLock.current = true
     setPaperConfirming(true)
@@ -445,16 +446,16 @@ export function DecisionsPage() {
     setPaperConfirmError(null)
     try {
       const sameDetail = detail?.symbol === paperConfirm.symbol ? detail : null
-      const gate = paperConfirm.intent.pipeline_decision
+      const gate = paperConfirm.intent?.pipeline_decision ?? sameDetail?.pipeline?.decision ?? 'WATCH'
       // Ordre : le moteur d'abord. Un refus (Portes repassées à Attente, fonds…) lève ici,
       // avant toute écriture au journal — ni position, ni « confirmation » orpheline.
-      const pos = await openPaperPosition(paperConfirm.symbol, paperConfirm.timeframe)
+      const pos = await openPaperPosition(paperConfirm.symbol, paperConfirm.timeframe, order)
       let journalWarn = ''
       try {
         await confirmUserDecision({
           symbol: paperConfirm.symbol,
           interval: paperConfirm.timeframe,
-          bias: paperConfirm.intent.direction === 'SHORT' ? 'BEARISH' : 'BULLISH',
+          bias: 'BULLISH',
           rvol: sameDetail?.rvol ?? 0,
           signalKind:
             sameDetail?.decision ??
@@ -481,10 +482,8 @@ export function DecisionsPage() {
       void refreshOpenPaperSymbols()
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : 'Échec paper'
-      const stale = raw.includes('not_actionable')
-      const msg = stale
-        ? 'La décision est repassée à Attente/Pas de trade depuis l’affichage (bougie en formation). Aucune position ouverte.'
-        : raw
+      const stale = false
+      const msg = raw.replace(/^[a-z_]+: /, '')
       setConfirmMsg(msg)
       setPaperMsg(msg)
       setPaperConfirmError(msg)
@@ -508,16 +507,14 @@ export function DecisionsPage() {
     setPaperMsg(null)
     setPaperConfirmError(null)
     try {
-      const intent = await proposePaperTrade(row.symbol, row.timeframe || timeframe)
+      // La proposition du moteur sert de taille suggérée ; son absence n'empêche pas d'acheter.
+      const intent = await proposePaperTrade(row.symbol, row.timeframe || timeframe).catch(() => null)
       setPaperConfirm({
         symbol: row.symbol,
         timeframe: row.timeframe || timeframe,
         intent,
         source: 'matrix',
       })
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Échec paper'
-      setPaperMsg(msg.includes('not_actionable') ? `${row.symbol} · pas actionable (Portes)` : msg)
     } finally {
       setPaperBusySymbol(null)
     }
@@ -1151,11 +1148,13 @@ export function DecisionsPage() {
 
       {paperConfirm && (
         <PaperConfirmSheet
+          symbol={paperConfirm.symbol}
+          timeframe={paperConfirm.timeframe}
           symbolLabel={instrumentLabel(paperConfirm.symbol)}
           intent={paperConfirm.intent}
           confirming={paperConfirming}
           error={paperConfirmError}
-          onConfirm={() => void executePaperConfirm()}
+          onConfirm={(order) => void executePaperConfirm(order)}
           onCancel={() => {
             if (!paperConfirming) setPaperConfirm(null)
           }}

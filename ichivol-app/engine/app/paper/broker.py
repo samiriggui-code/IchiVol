@@ -122,8 +122,11 @@ def open_capital_position(
     decision_id: str | None = None,
     evidence_id: str | None = None,
     quote: Quote | None = None,
+    manual_notional: float | None = None,
+    take_profit_r: float | None = None,
 ) -> PaperPosition | None:
-    """Open a sized paper position. Returns None if risk/cash/caps block it."""
+    """Open a sized paper position. Returns None if risk/cash/caps block it.
+    ``manual_notional`` / ``take_profit_r``: discretionary order chosen by the user (see risk._size_manual)."""
     _lock_portfolio(session, portfolio)
     profile = _profile(portfolio)
     max_open = int(profile.get("max_open_positions", 5))
@@ -147,13 +150,14 @@ def open_capital_position(
         entry_price=ref_price,
         stop_distance=stop_distance,
         risk_pct=float(profile.get("risk_pct", 0.01)),
-        take_profit_r=float(profile.get("take_profit_r", 2.0)),
+        take_profit_r=float(take_profit_r if take_profit_r is not None else profile.get("take_profit_r", 2.0)),
         max_notional_pct=float(profile.get("max_notional_pct", 0.25)),
         commission_bps=_commission_bps(profile, symbol),
         spread_bps=spread_bps,
         slippage_bps=slippage_bps,
         min_fill_fraction=float(profile.get("min_fill_fraction", 0.25)),
         min_notional=float(profile.get("min_notional", 10.0)),
+        manual_notional=manual_notional,
     )
     if sized is None:
         return None

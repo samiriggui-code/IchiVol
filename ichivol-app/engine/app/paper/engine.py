@@ -168,6 +168,8 @@ def sync_position(
     decision_id: str | None = None,
     evidence_id: str | None = None,
     run_id: int | None = None,
+    manual_notional: float | None = None,
+    take_profit_r: float | None = None,
 ) -> PaperPosition | None:
     """One symbol open/hold/close for one portfolio. Capital sizing when stop set."""
     if portfolio is None:
@@ -261,7 +263,8 @@ def sync_position(
         if log_rej:
             paper_counters.record_rejection(session, portfolio, symbol=symbol, timeframe=timeframe, reason="short_not_allowed")
         return None
-    if portfolio is not None and paper_gates.has_gates(profile):
+    if portfolio is not None and manual_notional is None and paper_gates.has_gates(profile):
+        # (a user-chosen amount is validated with its real numbers by app.paper.manual before it gets here)
         # Optional experimental gates (all OFF for the baseline): first failing reason wins.
         reason = paper_gates.entry_gate(
             session, portfolio, symbol=symbol, timeframe=timeframe, price=price,
@@ -288,6 +291,8 @@ def sync_position(
             signal=signal,
             decision_id=decision_id,
             evidence_id=evidence_id,
+            manual_notional=manual_notional,
+            take_profit_r=take_profit_r,
         )
         if position is not None:
             session.flush()
@@ -505,6 +510,8 @@ def open_user_confirmed(
     decision_id: str | None = None,
     evidence_id: str | None = None,
     signal_extra: dict[str, Any] | None = None,
+    manual_notional: float | None = None,
+    take_profit_r: float | None = None,
 ) -> tuple[PaperPosition | None, bool]:
     """Open a user-confirmed paper lot.
 
@@ -543,6 +550,8 @@ def open_user_confirmed(
         evidence_id=evidence_id,
         signal_extra=signal_extra,
         portfolio=portfolio,
+        manual_notional=manual_notional,
+        take_profit_r=take_profit_r,
     )
     session.commit()
     return position, position is not None
