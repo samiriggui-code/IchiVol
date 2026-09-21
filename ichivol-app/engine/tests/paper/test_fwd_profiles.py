@@ -170,12 +170,20 @@ def test_t10_replay_200_bars_never_short_and_ledger_reconciles(factory, code):
 def test_t11_default_profiles_unchanged_shorts_allowed_and_decision_exit(factory):
     s, make = factory
     base = make("FWD_A_REF")  # long+short, decision exit: the defaults of the engine
-    baseline_like = make(BASELINE_CODE)  # frozen baseline profile: no exit_mode/allow_short keys
-    for pf in (base, baseline_like):
-        assert step(s, pf, "SELL", S_, 100.0, run_id=1) is not None  # short allowed
-        assert positions(s, pf, direction="SHORT")
-        step(s, pf, "WATCH", N, 99.0)
-        assert positions(s, pf)[0].exit_reason == "pipeline_downgraded"  # decision-based exit
+    assert step(s, base, "SELL", S_, 100.0, run_id=1) is not None  # short allowed
+    assert positions(s, base, direction="SHORT")
+    step(s, base, "WATCH", N, 99.0)
+    assert positions(s, base)[0].exit_reason == "pipeline_downgraded"  # decision-based exit
+
+
+def test_baseline_since_2026_09_21_is_long_only_with_direction_exit_and_class_costs(factory):
+    s, make = factory
+    b = profile_for(BASELINE_CODE)
+    assert b["allow_short"] is False and b["exit_mode"] == "direction" and b["commission_bps"] == 7.5
+    assert b["commission_bps_by_symbol"]["XAUUSD"] == 0.0 and b["friction_bps_by_symbol"]["EURUSD"] == 0.8
+    pf = make(BASELINE_CODE)
+    assert step(s, pf, "SELL", S_, 100.0, run_id=1) is None  # no short selling
+    assert not positions(s, pf)
 
 
 def test_profiles_are_frozen_definitions():
@@ -187,7 +195,6 @@ def test_profiles_are_frozen_definitions():
     assert profile_for("FWD_A_REF").get("allow_short", True) is True
     assert profile_for("FWD_A_LONG")["allow_short"] is False and profile_for("FWD_A_LONG")["exit_mode"] == "decision"
     assert profile_for("FWD_E_LONG")["allow_short"] is False and profile_for("FWD_E_LONG")["exit_mode"] == "direction"
-    assert "exit_mode" not in profile_for(BASELINE_CODE) and "allow_short" not in profile_for(BASELINE_CODE)
 
 
 def test_direction_exit_only_from_the_lots_own_timeframe(factory):

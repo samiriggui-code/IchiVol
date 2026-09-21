@@ -38,12 +38,19 @@ def _fee_meta(profile: dict[str, Any]) -> dict[str, Any]:
     return {"model": "schedule", "id": sch.id, "version": sch.version, "source": sch.source}
 
 
-def _commission(profile: dict[str, Any], notional: float, qty: float) -> float:
+def _commission_bps(profile: dict[str, Any], symbol: str | None) -> float:
+    by_symbol = profile.get("commission_bps_by_symbol") or {}
+    if symbol is not None and symbol in by_symbol:
+        return float(by_symbol[symbol])
+    return float(profile.get("commission_bps", 5.0))
+
+
+def _commission(profile: dict[str, Any], notional: float, qty: float, symbol: str | None = None) -> float:
     """Whole-order commission: versioned schedule when the profile names one,
     else the legacy flat-bps rule (unchanged for existing portfolios)."""
     fid = profile.get("fee_profile_id")
     if not fid:
-        return notional * (float(profile.get("commission_bps", 5.0)) / 10_000.0)
+        return notional * (_commission_bps(profile, symbol) / 10_000.0)
     return float(get_schedule(fid).order_fee(ledger_db.to_decimal(notional), ledger_db.to_decimal(qty)))
 
 
@@ -142,7 +149,7 @@ def open_capital_position(
         risk_pct=float(profile.get("risk_pct", 0.01)),
         take_profit_r=float(profile.get("take_profit_r", 2.0)),
         max_notional_pct=float(profile.get("max_notional_pct", 0.25)),
-        commission_bps=float(profile.get("commission_bps", 5.0)),
+        commission_bps=_commission_bps(profile, symbol),
         spread_bps=spread_bps,
         slippage_bps=slippage_bps,
         min_fill_fraction=float(profile.get("min_fill_fraction", 0.25)),
@@ -172,7 +179,7 @@ def open_capital_position(
             "ask": quote.ask,
         }
 
-    fee = _commission(profile, sized.notional, sized.qty)
+    fee = _commission(profile, sized.notional, sized.qty, symbol)
     if not all(math.isfinite(x) for x in (sized.notional, sized.qty, fee, sized.entry_fill)):
         return None
     if sized.notional + fee > portfolio.cash:
@@ -325,7 +332,7 @@ def close_capital_position(
                 "spread_bps": exit_spread_bps,
                 "slippage_bps": exit_slip_bps,
             }
-        exit_fee = _commission(profile, position.qty * exit_fill, position.qty)
+        exit_fee = _commission(profile, position.qty * exit_fill, position.qty, position.symbol)
         entry_notional = position.notional or 0.0
         if position.direction == "LONG":
             proceeds = position.qty * exit_fill

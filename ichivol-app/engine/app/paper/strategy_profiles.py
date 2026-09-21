@@ -12,6 +12,21 @@ from typing import Any
 
 BASELINE_CODE = "ICHIVOL_BASELINE_V1"
 
+# 2026-09-21 (user decision): realistic costs by asset class. Per-side friction (bps) = half quoted spread +
+# a slippage tier. ASSUMPTIONS, not measured: crypto from docs/REVUE-SIM-ET-COUTS-ichivol-36 (tick-based),
+# CFD/index/FX values are typical retail-broker orders of magnitude (verify against a real broker before trusting).
+CRYPTO_FRICTION_BPS: dict[str, float] = {
+    "PEPEUSDT": 14.6, "APTUSDT": 10.9, "DOTUSDT": 8.5, "OPUSDT": 8.0, "TONUSDT": 7.1, "ATOMUSDT": 6.9,
+    "ARBUSDT": 6.5, "ADAUSDT": 4.2, "NEARUSDT": 3.3, "LTCUSDT": 2.9, "SUIUSDT": 2.6, "UNIUSDT": 2.6,
+    "AVAXUSDT": 2.4, "LINKUSDT": 2.4, "DOGEUSDT": 1.6, "SOLUSDT": 1.5, "XRPUSDT": 1.4,
+    "BNBUSDT": 1.0, "ETHUSDT": 1.0, "BTCUSDT": 1.0,
+}
+OTHER_MARKETS_FRICTION_BPS: dict[str, float] = {
+    "EURUSD": 0.8, "GBPUSD": 1.2, "XAUUSD": 2.0, "XAGUSD": 4.0, "SPX": 1.5, "NDX": 2.0, "WTI": 3.0,
+}
+# Non-crypto markets are priced as CFDs / spread-only: no separate commission.
+COMMISSION_BPS_BY_SYMBOL: dict[str, float] = {s: 0.0 for s in OTHER_MARKETS_FRICTION_BPS}
+
 BASELINE_PROFILE: dict[str, Any] = {
     "code": BASELINE_CODE,
     "label": "IchiVol baseline V1 (paper broker)",
@@ -21,9 +36,15 @@ BASELINE_PROFILE: dict[str, Any] = {
     "take_profit_r": 2.0,
     "max_open_positions": 5,
     "max_notional_pct": 0.25,
-    "commission_bps": 5.0,
+    "commission_bps": 7.5,  # Binance spot with BNB discount (was 5.0, below the real fee)
+    "commission_bps_by_symbol": COMMISSION_BPS_BY_SYMBOL,
+    "friction_bps_by_symbol": {**CRYPTO_FRICTION_BPS, **OTHER_MARKETS_FRICTION_BPS},
     "slippage_bps": 3.0,
     "spread_bps": 2.0,
+    # 2026-09-21 (user decision, from the research study): no short selling (shorts made most of the losses)
+    # and lots are held until stop/target/Ichimoku direction change instead of the first gate downgrade.
+    "allow_short": False,
+    "exit_mode": "direction",
     "require_atr_stop": True,
     "valuation_mode": "USDT_AS_EUR_PROXY",
     "initial_cash_eur": 5000.0,
@@ -169,6 +190,7 @@ FWD_FRICTION_BPS_BY_SYMBOL: dict[str, float] = {
 }
 _FWD_COMMON: dict[str, Any] = dict(
     commission_bps=7.5,
+    commission_bps_by_symbol={},
     friction_bps_by_symbol=FWD_FRICTION_BPS_BY_SYMBOL,
     log_rejections=True,
     one_position_per_symbol=True,
@@ -182,6 +204,8 @@ _FWD_COMMON: dict[str, Any] = dict(
 FWD_A_REF = _with(
     code="FWD_A_REF",
     label="Forward test - A reference (closed candles, one lot/symbol, aggregate guards, long+short)",
+    allow_short=True,
+    exit_mode="decision",
     **_FWD_COMMON,
 )
 

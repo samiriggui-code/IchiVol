@@ -1,0 +1,548 @@
+{
+  "timeframe": "1h",
+  "limit": 1000,
+  "symbols": {
+    "BTCUSDT": {
+      "n_bars": 1000,
+      "experiments": {
+        "IV_EXP_A_KUMO_BO_001": {
+          "n_signals": 23,
+          "n_trades": 17,
+          "win_rate": 0.29411764705882354,
+          "profit_factor": 0.6890882862820187,
+          "expectancy": -0.0011766836046114347,
+          "max_dd": 0.0703180805215141,
+          "sharpe": -4.335920491935132,
+          "sortino": -1.8416038338274938,
+          "mean_mfe_atr": 3.241896533201587,
+          "mean_mae_atr": 1.8954951459473481
+        },
+        "IV_EXP_B_KUMO_RVOL_001": {
+          "n_signals": 9,
+          "n_trades": 9,
+          "win_rate": 0.3333333333333333,
+          "profit_factor": 0.8342902560615957,
+          "expectancy": -0.0005701657025866854,
+          "max_dd": 0.04134895386247566,
+          "sharpe": -2.7951965102594034,
+          "sortino": -0.6991157513472501,
+          "mean_mfe_atr": 2.447048783850389,
+          "mean_mae_atr": 2.9416997517116843
+        },
+        "IV_EXP_C_KUMO_RVOL_KIJUN_SLOPE_001": {
+          "n_signals": 6,
+          "n_trades": 6,
+          "win_rate": 0.3333333333333333,
+          "profit_factor": 1.0808436606064562,
+          "expectancy": 0.00026125717185678427,
+          "max_dd": 0.02550976414159689,
+          "sharpe": -1.729186788277758,
+          "sortino": -0.3068234046968468,
+          "mean_mfe_atr": 2.7095025299781166,
+          "mean_mae_atr": 3.4381171076068804
+        },
+        "IV_EXP_D_KUMO_RVOL_KIJUN_DIST_001": {
+          "n_signals": 3,
+          "n_trades": 3,
+          "win_rate": 0.6666666666666666,
+          "profit_factor": 3.940634129806632,
+          "expectancy": 0.00521302737371913,
+          "max_dd": 0.006908486844341755,
+          "sharpe": 3.7847680799282406,
+          "sortino": 0.7011390332308409,
+          "mean_mfe_atr": 5.003253008227406,
+          "mean_mae_atr": 0.7179155769434488
+        },
+        "IV_EXP_E_KUMO_RVOL_RETEST_001": {
+          "n_signals": 0,
+          "n_trades": 0,
+          "win_rate": null,
+          "profit_factor": null,
+          "expectancy": null,
+          "max_dd": 0.0,
+          "sharpe": null,
+          "sortino": null,
+          "mean_mfe_atr": null,
+          "mean_mae_atr": null
+        },
+        "IV_EXP_F_TK_KUMO_RVOL_001": {
+          "n_signals": 5,
+          "n_trades": 5,
+          "win_rate": 0.4,
+          "profit_factor": 1.5827591430722092,
+          "expectancy": 0.0017659895706214179,
+          "max_dd": 0.021384257648687833,
+          "sharpe": 0.07849711559401135,
+          "sortino": 0.02824472261800829,
+          "mean_mfe_atr": 8.090648727142385,
+          "mean_mae_atr": 0.8182602752168825
+        },
+        "IV_EXP_G_TK_AGE_001": {
+          "n_signals": 5,
+          "n_trades": 5,
+          "win_rate": 0.4,
+          "profit_factor": 1.5827591430722092,
+          "expectancy": 0.0017659895706214179,
+          "max_dd": 0.021384257648687833,
+          "sharpe": 0.07849711559401135,
+          "sortino": 0.02824472261800829,
+          "mean_mfe_atr": 8.090648727142385,
+          "mean_mae_atr": 0.8182602752168825
+        }
+      },
+      "kijun_ablation": [
+        {
+          "label": "A_KUMO_BO",
+          "n_signals": 23,
+          "n_trades": 17,
+          "win_rate": 0.29411764705882354,
+          "profit_factor": 0.6890882862820187,
+          "expectancy": -0.0011766836046114347,
+          "max_dd": 0.0703180805215141,
+          "sharpe": -4.335920491935132,
+          "sortino": -1.8416038338274938,
+          "mean_mfe_atr": 3.241896533201587,
+          "mean_mae_atr": 1.8954951459473481
+        },
+        {
+          "label": "B_RVOL",
+          "n_signals": 9,
+          "n_trades": 9,
+          "win_rate": 0.3333333333333333,
+          "profit_factor": 0.8342902560615957,
+          "expectancy": -0.0005701657025866854,
+          "max_dd": 0.04134895386247566,
+          "sharpe": -2.7951965102594034,
+          "sortino": -0.6991157513472501,
+          "mean_mfe_atr": 2.447048783850389,
+          "mean_mae_atr": 2.9416997517116843
+        },
+        {
+          "label": "C_KIJUN_SLOPE",
+          "n_signals": 6,
+          "n_trades": 6,
+          "win_rate": 0.3333333333333333,
+          "profit_factor": 1.0808436606064562,
+          "expectancy": 0.00026125717185678427,
+          "max_dd": 0.02550976414159689,
+          "sharpe": -1.729186788277758,
+          "sortino": -0.3068234046968468,
+          "mean_mfe_atr": 2.7095025299781166,
+          "mean_mae_atr": 3.4381171076068804
+        },
+        {
+          "label": "D_KIJUN_DIST",
+          "n_signals": 3,
+          "n_trades": 3,
+          "win_rate": 0.6666666666666666,
+          "profit_factor": 3.940634129806632,
+          "expectancy": 0.00521302737371913,
+          "max_dd": 0.006908486844341755,
+          "sharpe": 3.7847680799282406,
+          "sortino": 0.7011390332308409,
+          "mean_mfe_atr": 5.003253008227406,
+          "mean_mae_atr": 0.7179155769434488
+        },
+        {
+          "label": "E_KUMO_ORIENT",
+          "n_signals": 0,
+          "n_trades": 0,
+          "win_rate": null,
+          "profit_factor": null,
+          "expectancy": null,
+          "max_dd": 0.0,
+          "sharpe": null,
+          "sortino": null,
+          "mean_mfe_atr": null,
+          "mean_mae_atr": null
+        }
+      ],
+      "regime_on_B": [
+        {
+          "regime": "GLOBAL",
+          "n_signals": 9,
+          "n_trades": 9,
+          "win_rate": 0.3333333333333333,
+          "profit_factor": 0.8342902560615957,
+          "expectancy": -0.0005701657025866854,
+          "max_dd": 0.04134895386247566,
+          "sharpe": -2.7951965102594034,
+          "sortino": -0.6991157513472501,
+          "mean_mfe_atr": 2.447048783850389,
+          "mean_mae_atr": 2.9416997517116843
+        },
+        {
+          "regime": "TRENDING",
+          "n_signals": 2,
+          "n_trades": 2,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "expectancy": -0.00536300632281983,
+          "max_dd": 0.013860233663075872,
+          "sharpe": -4.0938974461320825,
+          "sortino": -0.6089115258326586,
+          "mean_mfe_atr": 0.6236280775932397,
+          "mean_mae_atr": 4.833388053799933
+        },
+        {
+          "regime": "RANGING",
+          "n_signals": 7,
+          "n_trades": 7,
+          "win_rate": 0.42857142857142855,
+          "profit_factor": 1.2763991601993798,
+          "expectancy": 0.0007992173317656416,
+          "max_dd": 0.0278750752558214,
+          "sharpe": -0.9348262752446072,
+          "sortino": -0.2244425207221823,
+          "mean_mfe_atr": 2.968026128495289,
+          "mean_mae_atr": 2.4012173796864706
+        },
+        {
+          "regime": "HIGH_VOLATILITY",
+          "n_signals": 2,
+          "n_trades": 2,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "expectancy": -0.00595767735608399,
+          "max_dd": 0.015037627256003883,
+          "sharpe": -4.15918940295831,
+          "sortino": -1.0896709972587078,
+          "mean_mfe_atr": 0.6849008746913008,
+          "mean_mae_atr": 4.45340686353798
+        },
+        {
+          "regime": "NORMAL_VOLATILITY",
+          "n_signals": 6,
+          "n_trades": 6,
+          "win_rate": 0.3333333333333333,
+          "profit_factor": 0.8938570827575546,
+          "expectancy": -0.0003370283505709411,
+          "max_dd": 0.026713027151658027,
+          "sharpe": -2.003636053578875,
+          "sortino": -0.47609405130715654,
+          "mean_mfe_atr": 1.9177936116334608,
+          "mean_mae_atr": 2.8465329454438546
+        },
+        {
+          "regime": "LOW_VOLATILITY",
+          "n_signals": 1,
+          "n_trades": 1,
+          "win_rate": 1.0,
+          "profit_factor": null,
+          "expectancy": 0.008806033492313459,
+          "max_dd": 0.0010593485251490958,
+          "sharpe": 4.859974805349355,
+          "sortino": 0.6335551808434509,
+          "mean_mfe_atr": 9.146875635470138,
+          "mean_mae_atr": 0.4892863656660728
+        },
+        {
+          "regime": "BULL",
+          "n_signals": 2,
+          "n_trades": 2,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "expectancy": -0.00536300632281983,
+          "max_dd": 0.013860233663075872,
+          "sharpe": -4.0938974461320825,
+          "sortino": -0.6089115258326586,
+          "mean_mfe_atr": 0.6236280775932397,
+          "mean_mae_atr": 4.833388053799933
+        },
+        {
+          "regime": "SIDEWAYS",
+          "n_signals": 7,
+          "n_trades": 7,
+          "win_rate": 0.42857142857142855,
+          "profit_factor": 1.2763991601993798,
+          "expectancy": 0.0007992173317656416,
+          "max_dd": 0.0278750752558214,
+          "sharpe": -0.9348262752446072,
+          "sortino": -0.2244425207221823,
+          "mean_mfe_atr": 2.968026128495289,
+          "mean_mae_atr": 2.4012173796864706
+        }
+      ],
+      "wf": {
+        "B": {
+          "n_folds": 5,
+          "folds_with_trades": 4,
+          "mean_oos_expectancy": -0.0029299871577399455,
+          "mean_oos_profit_factor": 0.5712064469791246,
+          "mean_oos_sharpe": -2.0795435801406064,
+          "pct_folds_pf_gt_1": 0.25,
+          "pct_folds_expectancy_gt_0": 0.25,
+          "total_oos_trades": 7
+        },
+        "C": {
+          "n_folds": 5,
+          "folds_with_trades": 3,
+          "mean_oos_expectancy": -0.0017640028175916294,
+          "mean_oos_profit_factor": 0.7616085959721661,
+          "mean_oos_sharpe": -1.8627648621182151,
+          "pct_folds_pf_gt_1": 0.3333333333333333,
+          "pct_folds_expectancy_gt_0": 0.3333333333333333,
+          "total_oos_trades": 5
+        }
+      }
+    },
+    "ETHUSDT": {
+      "n_bars": 1000,
+      "experiments": {
+        "IV_EXP_A_KUMO_BO_001": {
+          "n_signals": 28,
+          "n_trades": 24,
+          "win_rate": 0.375,
+          "profit_factor": 1.2299032232135239,
+          "expectancy": 0.0008693610551049799,
+          "max_dd": 0.07042436986088756,
+          "sharpe": -1.1107223836154074,
+          "sortino": -0.5321141061346674,
+          "mean_mfe_atr": 2.278770699275852,
+          "mean_mae_atr": 2.217861651180048
+        },
+        "IV_EXP_B_KUMO_RVOL_001": {
+          "n_signals": 12,
+          "n_trades": 12,
+          "win_rate": 0.5,
+          "profit_factor": 1.3974728730159751,
+          "expectancy": 0.001547491336951562,
+          "max_dd": 0.0291333392448781,
+          "sharpe": -0.10065510592453489,
+          "sortino": -0.030212933247042172,
+          "mean_mfe_atr": 3.1577082529845324,
+          "mean_mae_atr": 2.8210682579244195
+        },
+        "IV_EXP_C_KUMO_RVOL_KIJUN_SLOPE_001": {
+          "n_signals": 10,
+          "n_trades": 10,
+          "win_rate": 0.6,
+          "profit_factor": 2.092176609220282,
+          "expectancy": 0.003408316316964988,
+          "max_dd": 0.026593685709958268,
+          "sharpe": 1.675278199115573,
+          "sortino": 0.40257779610380884,
+          "mean_mfe_atr": 3.639282820408514,
+          "mean_mae_atr": 2.7932267344116513
+        },
+        "IV_EXP_D_KUMO_RVOL_KIJUN_DIST_001": {
+          "n_signals": 6,
+          "n_trades": 6,
+          "win_rate": 0.6666666666666666,
+          "profit_factor": 2.826743197389354,
+          "expectancy": 0.005576105675427138,
+          "max_dd": 0.015565419331304895,
+          "sharpe": 2.461755024901365,
+          "sortino": 0.5269578595951058,
+          "mean_mfe_atr": 2.891442707095913,
+          "mean_mae_atr": 1.528627141698058
+        },
+        "IV_EXP_E_KUMO_RVOL_RETEST_001": {
+          "n_signals": 0,
+          "n_trades": 0,
+          "win_rate": null,
+          "profit_factor": null,
+          "expectancy": null,
+          "max_dd": 0.0,
+          "sharpe": null,
+          "sortino": null,
+          "mean_mfe_atr": null,
+          "mean_mae_atr": null
+        },
+        "IV_EXP_F_TK_KUMO_RVOL_001": {
+          "n_signals": 3,
+          "n_trades": 3,
+          "win_rate": 0.6666666666666666,
+          "profit_factor": 2.5683966342255093,
+          "expectancy": 0.0024795842040575464,
+          "max_dd": 0.008853554215994064,
+          "sharpe": 0.6591307018115886,
+          "sortino": 0.17155877683613124,
+          "mean_mfe_atr": 2.5368043515238865,
+          "mean_mae_atr": 2.709250523885671
+        },
+        "IV_EXP_G_TK_AGE_001": {
+          "n_signals": 3,
+          "n_trades": 3,
+          "win_rate": 0.6666666666666666,
+          "profit_factor": 2.5683966342255093,
+          "expectancy": 0.0024795842040575464,
+          "max_dd": 0.008853554215994064,
+          "sharpe": 0.6591307018115886,
+          "sortino": 0.17155877683613124,
+          "mean_mfe_atr": 2.5368043515238865,
+          "mean_mae_atr": 2.709250523885671
+        }
+      },
+      "kijun_ablation": [
+        {
+          "label": "A_KUMO_BO",
+          "n_signals": 28,
+          "n_trades": 24,
+          "win_rate": 0.375,
+          "profit_factor": 1.2299032232135239,
+          "expectancy": 0.0008693610551049799,
+          "max_dd": 0.07042436986088756,
+          "sharpe": -1.1107223836154074,
+          "sortino": -0.5321141061346674,
+          "mean_mfe_atr": 2.278770699275852,
+          "mean_mae_atr": 2.217861651180048
+        },
+        {
+          "label": "B_RVOL",
+          "n_signals": 12,
+          "n_trades": 12,
+          "win_rate": 0.5,
+          "profit_factor": 1.3974728730159751,
+          "expectancy": 0.001547491336951562,
+          "max_dd": 0.0291333392448781,
+          "sharpe": -0.10065510592453489,
+          "sortino": -0.030212933247042172,
+          "mean_mfe_atr": 3.1577082529845324,
+          "mean_mae_atr": 2.8210682579244195
+        },
+        {
+          "label": "C_KIJUN_SLOPE",
+          "n_signals": 10,
+          "n_trades": 10,
+          "win_rate": 0.6,
+          "profit_factor": 2.092176609220282,
+          "expectancy": 0.003408316316964988,
+          "max_dd": 0.026593685709958268,
+          "sharpe": 1.675278199115573,
+          "sortino": 0.40257779610380884,
+          "mean_mfe_atr": 3.639282820408514,
+          "mean_mae_atr": 2.7932267344116513
+        },
+        {
+          "label": "D_KIJUN_DIST",
+          "n_signals": 6,
+          "n_trades": 6,
+          "win_rate": 0.6666666666666666,
+          "profit_factor": 2.826743197389354,
+          "expectancy": 0.005576105675427138,
+          "max_dd": 0.015565419331304895,
+          "sharpe": 2.461755024901365,
+          "sortino": 0.5269578595951058,
+          "mean_mfe_atr": 2.891442707095913,
+          "mean_mae_atr": 1.528627141698058
+        },
+        {
+          "label": "E_KUMO_ORIENT",
+          "n_signals": 2,
+          "n_trades": 2,
+          "win_rate": 0.5,
+          "profit_factor": 0.734447478057244,
+          "expectancy": -0.0012559119389661255,
+          "max_dd": 0.011042457668211715,
+          "sharpe": -1.3896292505912207,
+          "sortino": -0.048775812615671016,
+          "mean_mfe_atr": 2.127895125623921,
+          "mean_mae_atr": 1.7258843388248049
+        }
+      ],
+      "regime_on_B": [
+        {
+          "regime": "GLOBAL",
+          "n_signals": 12,
+          "n_trades": 12,
+          "win_rate": 0.5,
+          "profit_factor": 1.3974728730159751,
+          "expectancy": 0.001547491336951562,
+          "max_dd": 0.0291333392448781,
+          "sharpe": -0.10065510592453489,
+          "sortino": -0.030212933247042172,
+          "mean_mfe_atr": 3.1577082529845324,
+          "mean_mae_atr": 2.8210682579244195
+        },
+        {
+          "regime": "TRENDING",
+          "n_signals": 2,
+          "n_trades": 2,
+          "win_rate": 1.0,
+          "profit_factor": null,
+          "expectancy": 0.009799827322258592,
+          "max_dd": 0.0007774264365271294,
+          "sharpe": 5.575427940491071,
+          "sortino": 1.962848182613423,
+          "mean_mfe_atr": 6.3550080181119775,
+          "mean_mae_atr": 6.046671527448243
+        },
+        {
+          "regime": "RANGING",
+          "n_signals": 10,
+          "n_trades": 10,
+          "win_rate": 0.4,
+          "profit_factor": 0.9779588906295161,
+          "expectancy": -0.00010297586010984405,
+          "max_dd": 0.03213558231152892,
+          "sharpe": -1.485451493420637,
+          "sortino": -0.4330435130586135,
+          "mean_mfe_atr": 2.5182482999590436,
+          "mean_mae_atr": 2.175947604019655
+        },
+        {
+          "regime": "NORMAL_VOLATILITY",
+          "n_signals": 12,
+          "n_trades": 12,
+          "win_rate": 0.5,
+          "profit_factor": 1.3974728730159751,
+          "expectancy": 0.001547491336951562,
+          "max_dd": 0.0291333392448781,
+          "sharpe": -0.10065510592453489,
+          "sortino": -0.030212933247042172,
+          "mean_mfe_atr": 3.1577082529845324,
+          "mean_mae_atr": 2.8210682579244195
+        },
+        {
+          "regime": "BULL",
+          "n_signals": 2,
+          "n_trades": 2,
+          "win_rate": 1.0,
+          "profit_factor": null,
+          "expectancy": 0.009799827322258592,
+          "max_dd": 0.0007774264365271294,
+          "sharpe": 5.575427940491071,
+          "sortino": 1.962848182613423,
+          "mean_mfe_atr": 6.3550080181119775,
+          "mean_mae_atr": 6.046671527448243
+        },
+        {
+          "regime": "SIDEWAYS",
+          "n_signals": 10,
+          "n_trades": 10,
+          "win_rate": 0.4,
+          "profit_factor": 0.9779588906295161,
+          "expectancy": -0.00010297586010984405,
+          "max_dd": 0.03213558231152892,
+          "sharpe": -1.485451493420637,
+          "sortino": -0.4330435130586135,
+          "mean_mfe_atr": 2.5182482999590436,
+          "mean_mae_atr": 2.175947604019655
+        }
+      ],
+      "wf": {
+        "B": {
+          "n_folds": 5,
+          "folds_with_trades": 4,
+          "mean_oos_expectancy": -0.0031377326504553466,
+          "mean_oos_profit_factor": 0.6802772787578211,
+          "mean_oos_sharpe": -1.9625864026893665,
+          "pct_folds_pf_gt_1": 0.25,
+          "pct_folds_expectancy_gt_0": 0.25,
+          "total_oos_trades": 7
+        },
+        "C": {
+          "n_folds": 5,
+          "folds_with_trades": 4,
+          "mean_oos_expectancy": 0.0014283303508395573,
+          "mean_oos_profit_factor": 0.0,
+          "mean_oos_sharpe": -0.17694536424079121,
+          "pct_folds_pf_gt_1": 0.0,
+          "pct_folds_expectancy_gt_0": 0.5,
+          "total_oos_trades": 5
+        }
+      }
+    }
+  }
+}
