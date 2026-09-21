@@ -3897,3 +3897,18 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 .order-confirm { font-weight: 700; }
 .banner.warn { border-left: 3px solid #d9a400; background: rgba(217, 164, 0, 0.1); padding: 0.5rem 0.75rem; border-radius: 6px; margin-bottom: 0.5rem; font-size: 0.85rem; }
 @media (max-width: 520px) { .order-outcomes { grid-template-columns: 1fr; } }
+
+
+/* --- Synthèse : progression du test --- */
+.progress-panel { display: flex; flex-direction: column; gap: 0.75rem; }
+.progress-verdict { margin: 0; font-size: 1rem; }
+.progress-verdict--candidate strong { color: var(--bull); }
+.progress-verdict--not_retained strong { color: var(--bear); }
+.progress-gauge-head { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.25rem; }
+.progress-gauge-bar { height: 10px; border-radius: 5px; background: var(--surface-2, rgba(128, 128, 128, 0.15)); overflow: hidden; }
+.progress-gauge-bar span { display: block; height: 100%; background: var(--accent, #4a8); border-radius: 5px; }
+.progress-checks { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.25rem; font-size: 0.85rem; }
+.progress-checks .is-ok { color: var(--bull); }
+.progress-checks .is-ko { color: var(--bear); }
+.progress-checks .is-wait { color: var(--muted, #888); }
+.progress-note { font-size: 0.75rem; margin: 0; }

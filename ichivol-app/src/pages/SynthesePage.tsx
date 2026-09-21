@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ActivityJournal } from '../components/ActivityJournal'
 import { BrokerAccount, InvestmentCards } from '../components/BrokerAccount'
 import { CostsPanel } from '../components/CostsPanel'
+import { TestProgressPanel } from '../components/TestProgressPanel'
 import { PaperCloseConfirmSheet } from '../components/PaperCloseConfirmSheet'
 import { PaperTradeSheet } from '../components/PaperTradeSheet'
 import {
@@ -371,6 +372,18 @@ export function SynthesePage() {
               <BrokerAccount overview={overview} />
             </div>
           </section>
+
+          {overview.progress && (
+            <section className="panel synthese-account-panel">
+              <header className="panel-head">
+                <h2>Progression du test en direct</h2>
+                <span className="panel-meta">le système tourne seul — verdict quand l’échantillon est assez grand</span>
+              </header>
+              <div className="synthese-panel-body">
+                <TestProgressPanel progress={overview.progress} />
+              </div>
+            </section>
+          )}
 
           {overview.costs && (
             <section className="panel synthese-account-panel">

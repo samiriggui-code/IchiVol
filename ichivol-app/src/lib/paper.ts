@@ -340,6 +340,25 @@ export interface PaperCosts {
   note: string
 }
 
+export interface PaperProgress {
+  days: number
+  min_days: number
+  closed_trades: number
+  min_trades: number
+  trades_per_day: number | null
+  eta_days_to_min_trades: number | null
+  progress_pct: number
+  net_realized_closed: number
+  top3_gains: number
+  net_without_top3: number
+  sub_period_net: number[]
+  max_drawdown_pct: number
+  checks: Record<string, boolean>
+  verdict: 'insufficient' | 'candidate' | 'not_retained'
+  verdict_label: string
+  rules: string
+}
+
 export interface PaperOverview {
   portfolio: PaperPortfolioSummary['portfolio']
   account: {
@@ -361,6 +380,7 @@ export interface PaperOverview {
   positions: PaperOverviewPosition[]
   equity_curve: { t: string; equity: number }[]
   costs?: PaperCosts
+  progress?: PaperProgress
 }
 
 export async function getPaperOverview(code = 'ICHIVOL_BASELINE_V1'): Promise<PaperOverview> {

@@ -30,6 +30,7 @@ from app.indicators.rvol import RvolParams
 from app.market_data import twelve_data
 from app.paper import engine as paper_engine
 from app.paper.costs import compute_costs
+from app.paper.verdict import compute_progress
 from app.paper.performance import compute_performance, compute_portfolio_performance
 from app.paper.portfolio import (
     ensure_baseline_portfolio,
@@ -1508,6 +1509,7 @@ def get_paper_portfolio_overview(code: str) -> dict:
             "positions": rows[:200],
             "equity_curve": curve,
             "costs": compute_costs(session, portfolio, equity=equity),
+            "progress": compute_progress(session, portfolio, equity=equity),
         }
     finally:
         session.close()
