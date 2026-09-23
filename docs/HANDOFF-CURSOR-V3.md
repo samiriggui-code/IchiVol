@@ -10,8 +10,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T1d — Chemin live via le REGISTRY
 
 - Branche : `v3/t1d-live-path-registry`
-- PR : (draft — lien après ouverture)
-- Commit(s) : `89caa75` (fixtures golden **avant** refactor) ; migration + ratchet (ce push)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/9 (draft)
+- Commit(s) : `89caa75` (fixtures golden **avant** refactor) ; `51b0edf` (migration + ratchet)
 
 - Livré :
   - `ichivol-app/engine/app/screener/service.py` — `REGISTRY.compute_many` (structure/atr/location/cvd/adx/donchian) ; `compute_oi_funding` reste direct
@@ -23,7 +23,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - tests d'égalité stricte + `ALLOWED_DIRECT_CALLERS` réduit aux 6 modules T1e
 
 - Tests :
-  - suites indicators/strategy_lab/screener/context/evidence/agents + indicators_route (hors persistence Postgres) → OK
+  - suites indicators/strategy_lab/screener/context/evidence/agents + indicators_route (hors persistence Postgres) → **317 passed**, 2 skipped
   - suite complète → **4 failed** Postgres connus uniquement
   - cliquet ratchet vert (5 modules retirés)
 
