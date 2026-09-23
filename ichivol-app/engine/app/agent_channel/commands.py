@@ -606,6 +606,32 @@ def cmd_get_event_context(args: dict) -> dict:
     return payload
 
 
+def cmd_get_family_weights(args: dict) -> dict:
+    """T5a — versioned family-weight observation from live pipeline.
+
+    Read-only. Never alters decision or confidence. Uses scan_symbol so the
+    observation matches the HTTP decision detail payload.
+    """
+    from app.confluence.observe import family_weights_observation_dict
+
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = str(args.get("timeframe", "1h"))
+    limit = int(args.get("limit", 300))
+    try:
+        row = scan_symbol(symbol, timeframe=timeframe, limit=limit)
+    except (ValueError, ProviderNotWiredError) as exc:
+        raise CommandError(str(exc)) from exc
+    fw = family_weights_observation_dict(getattr(row, "family_weights", None))
+    return {
+        "symbol": row.symbol,
+        "timeframe": row.timeframe,
+        "decision": row.decision.decision,
+        "confidence": row.decision.confidence,
+        "pipeline_decision": row.pipeline.decision,
+        "family_weights": fw,
+    }
+
+
 def cmd_filter_backtest_overlay(args: dict) -> dict:
     """T4b — backtest overlay with structured filters for Claude (read-only).
 

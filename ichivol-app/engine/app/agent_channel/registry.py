@@ -31,6 +31,7 @@ from app.agent_channel.commands import (
     cmd_get_chart_objects,
     cmd_get_correlations,
     cmd_get_event_context,
+    cmd_get_family_weights,
     cmd_filter_backtest_overlay,
     cmd_get_news,
     cmd_get_structure,
@@ -315,6 +316,17 @@ TOOLS: dict[str, ToolSpec] = {
                 "include_macro": "bool, défaut true",
             },
             cmd_get_event_context,
+        ),
+        ToolSpec(
+            "get_family_weights",
+            "T5a — observation poids familles (direction/participation/structure/location/regime). Ne change pas decision/confidence.",
+            True,
+            {
+                "symbol": "str, requis",
+                "timeframe": "str, défaut '1h'",
+                "limit": "int, défaut 300",
+            },
+            cmd_get_family_weights,
         ),
         ToolSpec(
             "filter_backtest_overlay",
