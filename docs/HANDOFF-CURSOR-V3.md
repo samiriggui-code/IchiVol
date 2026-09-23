@@ -30,8 +30,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `cursor/t3c-condition-registry-a2fe` (Claude : `v3/t3c-condition-registry` — préfixe cloud `cursor/…-a2fe`)
 - PR : https://github.com/samiriggui-code/IchiVol/pull/21 (**draft**)
-- Commit(s) : `0545826` (fixtures **avant** refactor) ; `51834cd` (registre) ; `bcdf90e` (handoff)
-- Statut : **ATTENTE CLAUDE** — **ne pas merger** avant revue.
+- Commit(s) : `0545826` (fixtures **avant** refactor) ; `51834cd` (registre) ; `1ad9588` (handoff PR)
+- Statut : **ATTENTE CLAUDE** — CI **VERTE** ; **ne pas merger** avant revue.
 
 ### Objectif
 
@@ -49,6 +49,12 @@ Une condition DSL = une déclaration (`ConditionSpec`) ; `CONDITION_SCHEMA` et `
 
 `CONDITION_ENUMS` **existait déjà** avant T3c (même valeurs). Déplacé sur `ConditionSpec.allowed_values` → dérivation. **Aucun builtin ne viole** les enums (re-parse catalog OK). Pas de correction catalog.
 
+### CI Actions
+
+- **VERTE** (HEAD `1ad9588`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35860079478
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
 ### Arbitrages T3 (Claude — à respecter)
 
 - **T3b StrategyCompiler** : **non** — `ruleset_backtest` exécute déjà le DSL ; pas de couche compilation.
@@ -58,6 +64,10 @@ Une condition DSL = une déclaration (`ConditionSpec`) ; `CONDITION_SCHEMA` et `
 ### Hors scope T3c
 
 Nouvelles conditions ; MTF (T3e) ; éditeur conversationnel (T3d).
+
+### Attente
+
+**Cursor s’arrête ici** jusqu’à la revue Claude.
 
 ---
 
