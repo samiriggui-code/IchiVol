@@ -120,3 +120,13 @@ def test_indicator_unknown_symbol_404(monkeypatch):
     monkeypatch.setattr("app.market_data.resolve.resolve_and_fetch", boom)
     resp = client.get("/api/engine/indicators/ichimoku/NOPE")
     assert resp.status_code == 404
+
+
+def test_indicator_limit_bounds_422():
+    """limit=0 / negative used to slice oddly (states[-0:] = full series)."""
+    for bad in (0, -5):
+        resp = client.get(
+            "/api/engine/indicators/rvol/BTCUSDT",
+            params={"limit": bad},
+        )
+        assert resp.status_code == 422, bad

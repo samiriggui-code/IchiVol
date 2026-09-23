@@ -30,7 +30,7 @@ def get_indicator_series(
     indicator_id: str,
     symbol: str,
     timeframe: str = "1h",
-    limit: int = 300,
+    limit: int = Query(300, ge=1, le=5000),
     params: str | None = Query(default=None, description="JSON object of param overrides"),
     x_twelve_data_key: str | None = Header(default=None, alias="X-Twelve-Data-Key"),
 ) -> dict[str, Any]:
