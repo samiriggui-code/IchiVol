@@ -10,7 +10,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T1b — Front servi par le moteur (Ichimoku / RVOL / kumo projeté)
 
 - Branche : `v3/t1b-front-engine-indicators`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/7 (prête — hors draft, en attente revalidation Claude)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/7 (mergée) — **validé par Claude**
 - Commit(s) : `25e2249` (code initial) ; handoff `417da25`… ; corrections revue Claude `30991c7`
 
 - Livré :
@@ -38,12 +38,11 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - Chikou affichage uniquement ; pas de fallback close non décalé.
 
 - Doutes / points à vérifier par Claude :
-  - Revalidation des 3 corrections (warmup, chikou, REGISTRY) avant merge.
-  - Smoke Marché BTCUSDT 1h authentifié (nuage à droite de la dernière bougie).
+  - Aucun restant — **validé par Claude**.
 
 - Non fait / reste à faire :
   - Structure unifiée, découpage `routes.py`, `ChartObject` (hors périmètre T1b).
-  - **Ne pas merger** tant que Claude n’a pas revalidé.
+  - Mergé dans `main` (fast-forward). Suite : T1c.
 
 ---
 
