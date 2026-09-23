@@ -37,7 +37,7 @@ def test_chart_objects_engine_source(monkeypatch):
         return P(), symbol, candles[:limit]
 
     monkeypatch.setattr(
-        "app.market_data.resolve.resolve_and_fetch", fake_resolve
+        "app.chart_objects.collect.resolve_and_fetch", fake_resolve
     )
     resp = client.get("/api/engine/chart-objects/BTCUSDT?timeframe=1h&limit=120&sources=engine")
     assert resp.status_code == 200
@@ -54,9 +54,22 @@ def test_chart_objects_non_engine_sources_empty(monkeypatch):
     def boom(*_a, **_k):
         raise AssertionError("should not fetch when engine not requested")
 
-    monkeypatch.setattr("app.market_data.resolve.resolve_and_fetch", boom)
+    monkeypatch.setattr("app.chart_objects.collect.resolve_and_fetch", boom)
     resp = client.get(
         "/api/engine/chart-objects/BTCUSDT?timeframe=1h&sources=user,claude"
+    )
+    assert resp.status_code == 200
+    # Empty store → empty list (not an error). STRATEGY/BACKTEST also empty.
+    assert resp.json()["objects"] == []
+
+
+def test_chart_objects_strategy_source_empty(monkeypatch):
+    def boom(*_a, **_k):
+        raise AssertionError("should not fetch when engine not requested")
+
+    monkeypatch.setattr("app.chart_objects.collect.resolve_and_fetch", boom)
+    resp = client.get(
+        "/api/engine/chart-objects/BTCUSDT?timeframe=1h&sources=strategy,backtest"
     )
     assert resp.status_code == 200
     assert resp.json()["objects"] == []

@@ -15,11 +15,13 @@ import {
   closePaperPosition,
   getPaperActivity,
   getPaperOverview,
+  getPaperReconcile,
   listPaperPositions,
   type PaperOrderRow,
   type PaperOverview,
   type PaperOverviewPosition,
   type PaperPosition,
+  type PaperReconcileReport,
 } from '../lib/paper'
 import {
   assetName,
@@ -251,24 +253,31 @@ export function SynthesePage() {
   const closeLock = useRef(false)
   const [sheetPos, setSheetPos] = useState<PaperPosition | null>(null)
   const [range, setRange] = useState<PortfolioRange>('1d')
+  const [reconcile, setReconcile] = useState<PaperReconcileReport | null>(null)
+  const [reconcileOpen, setReconcileOpen] = useState(false)
+  const [reconcileLoading, setReconcileLoading] = useState(false)
 
   const reload = useCallback(async () => {
     setLoading(true)
     setError(null)
+    setReconcileLoading(true)
     try {
-      const [ov, act, mine, auto] = await Promise.all([
+      const [ov, act, mine, auto, rec] = await Promise.all([
         getPaperOverview('ICHIVOL_BASELINE_V1'),
         getPaperActivity('ICHIVOL_BASELINE_V1', 60).catch(() => [] as PaperOrderRow[]),
         listPaperPositions({ source: 'user_confirmed' }).catch(() => [] as PaperPosition[]),
         listPaperPositions({ source: 'auto_watchlist' }).catch(() => [] as PaperPosition[]),
+        getPaperReconcile('ICHIVOL_BASELINE_V1').catch(() => null),
       ])
       setOverview(ov)
       setActivity(act)
       setHistory([...mine, ...auto])
+      setReconcile(rec)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Impossible de charger le compte')
     } finally {
       setLoading(false)
+      setReconcileLoading(false)
     }
   }, [])
 
@@ -367,8 +376,49 @@ export function SynthesePage() {
           <section className="panel synthese-account-panel">
             <header className="panel-head">
               <h2>Compte · {overview.portfolio.label}</h2>
+              <button
+                type="button"
+                className={`ghost synthese-reconcile-badge${
+                  reconcileLoading
+                    ? ' is-checking'
+                    : reconcile == null
+                      ? ''
+                      : reconcile.ok
+                        ? ' is-ok'
+                        : ' is-bad'
+                }`}
+                aria-expanded={reconcileOpen}
+                disabled={reconcileLoading || reconcile == null}
+                onClick={() => setReconcileOpen((v) => !v)}
+                title="Audit comptable cash / ledger / ordres (lecture seule)"
+              >
+                {reconcileLoading
+                  ? 'Comptabilité : …'
+                  : reconcile == null
+                    ? 'Comptabilité : —'
+                    : reconcile.ok
+                      ? 'Comptabilité : OK'
+                      : `Comptabilité : ${reconcile.anomaly_count} anomalie${
+                          reconcile.anomaly_count > 1 ? 's' : ''
+                        }`}
+              </button>
             </header>
             <div className="synthese-panel-body">
+              {reconcileOpen && reconcile && (
+                <div className="synthese-reconcile-detail" role="region" aria-label="Détail réconciliation">
+                  <ul className="synthese-reconcile-list">
+                    {reconcile.checks.map((c) => (
+                      <li key={c.name} className={c.ok ? 'ok' : 'bad'}>
+                        <strong>{c.name}</strong>
+                        <span className="muted">
+                          {c.ok ? 'OK' : `écart ${String(c.delta)}`}
+                          {!c.ok && c.positions?.length ? ` · ${c.positions.length} position(s)` : ''}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <BrokerAccount overview={overview} />
             </div>
           </section>

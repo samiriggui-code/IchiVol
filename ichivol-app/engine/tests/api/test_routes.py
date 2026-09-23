@@ -538,12 +538,11 @@ def test_open_paper_position_accepts_rvol_and_atr_threshold_overrides(monkeypatc
 
 @requires_db
 def test_open_paper_position_accepts_a_non_crypto_symbol(monkeypatch):
-    # Paper multi-classe (docs/CAHIER-DES-CHARGES.md §5 V2, lifted
-    # 2026-09-16): a biquote-backed symbol (forex/métal/index/énergie) opens
-    # a paper position exactly like a Binance one -- the engine/DB side was
-    # already asset-agnostic (PaperPosition has no exchange column), only
-    # this route's explicit crypto-only guard blocked it.
-    # Baseline is long-only + ATR stop: exercise multi-classe via BUY/LONG.
+    # Paper multi-classe: biquote symbol opens like Binance. Route always targets
+    # baseline via ensure_baseline_portfolio — monkeypatch to a disposable so a
+    # poisoned baseline (daily_loss_halt) cannot fail this test.
+    import uuid
+    from copy import deepcopy
     from types import SimpleNamespace
 
     from app.agents.types import Direction
@@ -552,11 +551,35 @@ def test_open_paper_position_accepts_a_non_crypto_symbol(monkeypatch):
         LedgerTransaction,
         PaperJournalEvent,
         PaperOrder,
+        PaperPortfolio,
         PaperPosition,
     )
     from app.db.session import SessionLocal
     from app.decision.pipeline import PipelineResult
+    from app.paper import engine as paper_engine_mod
+    from app.paper.strategy_profiles import BASELINE_PROFILE
     from app.screener.service import ScreenerRow
+
+    s = SessionLocal()
+    code = f"T_ROUTE_{uuid.uuid4().hex[:8]}"
+    pf = PaperPortfolio(
+        code=code,
+        label="route-disposable",
+        currency="EUR",
+        initial_cash=5000.0,
+        cash=5000.0,
+        strategy_profile={**deepcopy(BASELINE_PROFILE), "code": code},
+        is_active=True,
+    )
+    s.add(pf)
+    s.commit()
+    pid_pf = pf.id
+
+    def _disp(_session):
+        return _session.get(PaperPortfolio, pid_pf) or pf
+
+    monkeypatch.setattr(paper_engine_mod, "ensure_baseline_portfolio", _disp)
+    monkeypatch.setattr(paper_orders_routes, "ensure_baseline_portfolio", _disp)
 
     fake_pipeline = PipelineResult(decision="BUY", direction=Direction.LONG, stages=[])
     fake_row = ScreenerRow(
@@ -565,9 +588,7 @@ def test_open_paper_position_accepts_a_non_crypto_symbol(monkeypatch):
         atr=SimpleNamespace(suggested_stop_distance=0.01),
     )
     monkeypatch.setattr(routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
-
     monkeypatch.setattr(decisions_routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
-
     monkeypatch.setattr(paper_routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
     monkeypatch.setattr(paper_orders_routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
 
@@ -579,33 +600,139 @@ def test_open_paper_position_accepts_a_non_crypto_symbol(monkeypatch):
     assert body["symbol"] == "GBPUSD"
     assert body["direction"] == "LONG"
     assert body["status"] == "OPEN"
+    assert body["portfolio_id"] == pid_pf
 
-    session = SessionLocal()
     try:
         pid = body["id"]
-        session.query(PaperJournalEvent).filter_by(position_id=pid).delete()
-        tx_ids = [
-            t.id for t in session.query(LedgerTransaction).filter_by(ref=pid).all()
-        ]
+        s.query(PaperJournalEvent).filter_by(position_id=pid).delete()
+        tx_ids = [t.id for t in s.query(LedgerTransaction).filter_by(ref=pid).all()]
         if tx_ids:
-            session.query(LedgerLeg).filter(
-                LedgerLeg.transaction_id.in_(tx_ids)
-            ).delete(synchronize_session=False)
-            session.query(LedgerTransaction).filter(
-                LedgerTransaction.id.in_(tx_ids)
-            ).delete(synchronize_session=False)
-        session.query(PaperOrder).filter_by(position_id=pid).delete()
-        session.query(PaperPosition).filter_by(id=pid).delete()
-        from app.db.models import PaperPortfolio
-        from app.paper.strategy_profiles import BASELINE_CODE
-
-        base = session.query(PaperPortfolio).filter_by(code=BASELINE_CODE).one_or_none()
-        if base is not None:
-            base.cash = base.initial_cash
-            base.realized_pnl = 0.0
-        session.commit()
+            s.query(LedgerLeg).filter(LedgerLeg.transaction_id.in_(tx_ids)).delete(
+                synchronize_session=False
+            )
+            s.query(LedgerTransaction).filter(LedgerTransaction.id.in_(tx_ids)).delete(
+                synchronize_session=False
+            )
+        s.query(PaperOrder).filter_by(position_id=pid).delete()
+        s.query(PaperPosition).filter_by(id=pid).delete()
+        s.query(LedgerLeg).filter(
+            LedgerLeg.transaction_id.in_(
+                s.query(LedgerTransaction.id).filter_by(portfolio_id=pid_pf)
+            )
+        ).delete(synchronize_session=False)
+        for m in (LedgerTransaction, PaperJournalEvent):
+            s.query(m).filter_by(portfolio_id=pid_pf).delete()
+        s.query(PaperPortfolio).filter_by(id=pid_pf).delete()
+        s.commit()
     finally:
-        session.close()
+        s.close()
+
+
+@requires_db
+def test_open_paper_route_uses_disposable_even_if_baseline_halted(monkeypatch):
+    """Guard: baseline with a synthetic −5% day must not block disposable-routed opens."""
+    import uuid
+    from copy import deepcopy
+    from datetime import datetime, timedelta, timezone
+    from types import SimpleNamespace
+
+    from app.agents.types import Direction
+    from app.db.models import (
+        LedgerLeg,
+        LedgerTransaction,
+        PaperEquitySnapshot,
+        PaperJournalEvent,
+        PaperOrder,
+        PaperPortfolio,
+        PaperPosition,
+    )
+    from app.db.session import SessionLocal
+    from app.decision.pipeline import PipelineResult
+    from app.paper import engine as paper_engine_mod
+    from app.paper.portfolio import ensure_baseline_portfolio
+    from app.paper.strategy_profiles import BASELINE_CODE, BASELINE_PROFILE
+    from app.screener.service import ScreenerRow
+
+    s = SessionLocal()
+    base = ensure_baseline_portfolio(s)
+    cash_before = float(base.cash)
+    # Inject a −5% equity day (before midnight) so daily_loss_halt would trip on baseline.
+    yesterday = datetime.now(timezone.utc) - timedelta(days=1)
+    snap = PaperEquitySnapshot(
+        portfolio_id=base.id,
+        timestamp=yesterday,
+        equity=float(base.initial_cash) * 0.95,
+        cash=float(base.cash),
+        positions_value=0.0,
+        unrealized_pnl=0.0,
+        realized_pnl=float(base.realized_pnl or 0.0),
+    )
+    s.add(snap)
+    s.commit()
+    snap_id = snap.id
+
+    code = f"T_ROUTE_H_{uuid.uuid4().hex[:8]}"
+    pf = PaperPortfolio(
+        code=code,
+        label="route-halt-guard",
+        currency="EUR",
+        initial_cash=5000.0,
+        cash=5000.0,
+        strategy_profile={**deepcopy(BASELINE_PROFILE), "code": code},
+        is_active=True,
+    )
+    s.add(pf)
+    s.commit()
+    pid_pf = pf.id
+
+    def _disp(_session):
+        return _session.get(PaperPortfolio, pid_pf)
+
+    monkeypatch.setattr(paper_engine_mod, "ensure_baseline_portfolio", _disp)
+    monkeypatch.setattr(paper_orders_routes, "ensure_baseline_portfolio", _disp)
+
+    fake_pipeline = PipelineResult(decision="BUY", direction=Direction.LONG, stages=[])
+    fake_row = ScreenerRow(
+        symbol="EURUSD", exchange="biquote", timeframe="1h", price=1.10,
+        candles=[], ichimoku=None, rvol=None, decision=None, pipeline=fake_pipeline,
+        atr=SimpleNamespace(suggested_stop_distance=0.01),
+    )
+    for mod in (routes, decisions_routes, paper_routes, paper_orders_routes):
+        monkeypatch.setattr(mod, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
+
+    resp = client.post(
+        "/api/engine/paper/positions", params={"symbol": "EURUSD", "user_id": "test-halt-guard"}
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["portfolio_id"] == pid_pf
+
+    try:
+        pid = resp.json()["id"]
+        s.query(PaperJournalEvent).filter_by(position_id=pid).delete()
+        tx_ids = [t.id for t in s.query(LedgerTransaction).filter_by(ref=pid).all()]
+        if tx_ids:
+            s.query(LedgerLeg).filter(LedgerLeg.transaction_id.in_(tx_ids)).delete(
+                synchronize_session=False
+            )
+            s.query(LedgerTransaction).filter(LedgerTransaction.id.in_(tx_ids)).delete(
+                synchronize_session=False
+            )
+        s.query(PaperOrder).filter_by(position_id=pid).delete()
+        s.query(PaperPosition).filter_by(id=pid).delete()
+        s.query(LedgerLeg).filter(
+            LedgerLeg.transaction_id.in_(
+                s.query(LedgerTransaction.id).filter_by(portfolio_id=pid_pf)
+            )
+        ).delete(synchronize_session=False)
+        for m in (LedgerTransaction, PaperJournalEvent):
+            s.query(m).filter_by(portfolio_id=pid_pf).delete()
+        s.query(PaperPortfolio).filter_by(id=pid_pf).delete()
+        s.query(PaperEquitySnapshot).filter_by(id=snap_id).delete()
+        base2 = s.query(PaperPortfolio).filter_by(code=BASELINE_CODE).one()
+        assert abs(float(base2.cash) - cash_before) < 1e-6
+        s.commit()
+    finally:
+        s.close()
 
 
 @requires_db

@@ -53,13 +53,23 @@ def compute_costs(
         b["orders"] += 1
         b["traded"] += float(o.notional or 0.0)
 
+    from app.paper.financing import financing_total_for_portfolio
+    from app.brokerage.fee_profiles import FINANCING_ASSUMPTION_META
+    from app.paper.broker import _profile
+
+    financing = financing_total_for_portfolio(session, portfolio.id)
+    prof = _profile(portfolio)
+    fin_meta = dict(prof.get("financing_assumption") or FINANCING_ASSUMPTION_META)
+
     closed = [p for p in positions if p.status == "CLOSED" and p.realized_pnl is not None]
     wins = [float(p.realized_pnl) for p in closed if float(p.realized_pnl) > 0]
     losses = [float(p.realized_pnl) for p in closed if float(p.realized_pnl) <= 0]
     initial = float(portfolio.initial_cash)
     net = equity - initial
-    gross = net + commissions + friction
+    gross = net + commissions + friction + financing
     opens = [p for p in positions if p.status == "OPEN"]
+    long_bps = float(fin_meta.get("long_bps_per_day") or 0.0)
+    short_bps = float(fin_meta.get("short_bps_per_day") or 0.0)
     return {
         "currency": portfolio.currency,
         "initial_cash": initial,
@@ -67,10 +77,14 @@ def compute_costs(
         "gross_result": gross,
         "commissions": commissions,
         "spread_slippage": friction,
-        "total_costs": commissions + friction,
+        "financing": financing,
+        "financing_bps_per_day_long": long_bps,
+        "financing_bps_per_day_short": short_bps,
+        "financing_assumption": fin_meta,
+        "total_costs": commissions + friction + financing,
         "net_result": net,
         "net_return_pct": (net / initial) if initial else None,
-        "cost_share_of_gross_pct": ((commissions + friction) / abs(gross)) if gross else None,
+        "cost_share_of_gross_pct": ((commissions + friction + financing) / abs(gross)) if gross else None,
         "orders": len(orders),
         "notional_traded": traded,
         "open_positions": len(opens),
@@ -84,5 +98,10 @@ def compute_costs(
             k: {kk: round(vv, 4) for kk, vv in v.items()} | {"total_costs": round(v["commissions"] + v["friction"], 4)}
             for k, v in by_class.items()
         },
-        "note": "Frais de sortie des positions ouvertes non inclus (pas encore payés). Écarts et glissement sont déjà dans les prix d'exécution.",
+        "note": (
+            "Frais de sortie des positions ouvertes non inclus (pas encore payés). "
+            "Écarts et glissement sont déjà dans les prix d'exécution. "
+            f"Financement overnight CFD ASSUMPTION : long {long_bps:.2f} bps/j, "
+            f"short {short_bps:.2f} bps/j (0 pour crypto spot)."
+        ),
     }

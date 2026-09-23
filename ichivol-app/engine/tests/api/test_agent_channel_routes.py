@@ -46,15 +46,24 @@ def test_agent_tools_lists_the_full_v1_allowlist():
     assert resp.status_code == 200
     names = {t["name"] for t in resp.json()["tools"]}
     assert names == set(TOOLS.keys())
-    assert all(t["read_only"] for t in resp.json()["tools"])
+    assert "get_structure" in names
+    assert "draw_horizontal_line" in names
+    assert "delete_chart_object" in names
+    write_names = {t["name"] for t in resp.json()["tools"] if not t["read_only"]}
+    assert write_names == {
+        n for n, spec in TOOLS.items() if not spec.read_only
+    }
+    assert all(n.startswith("draw_") or n == "delete_chart_object" for n in write_names)
 
 
-def test_agent_capabilities_is_a_read_only_stub():
+def test_agent_capabilities_exposes_chart_write_scope():
     resp = client.get("/api/engine/agent/capabilities")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["read_only"] is True
-    assert body["write_tier_enabled"] is False
+    assert body["read_only"] is False
+    assert body["write_tier_enabled"] is True
+    assert body["write_scopes"] == ["chart_objects"]
+    assert "draw_horizontal_line" in body["write_commands"]
     assert body["max_batch_items"] == 20
     assert set(body["commands"]) == set(TOOLS.keys())
 

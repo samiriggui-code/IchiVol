@@ -722,7 +722,7 @@
     },
     "/api/engine/agent/capabilities": {
       "get": {
-        "description": "Stub-level capabilities descriptor (per brief: \"stub OK\"). No WRITE\ntier in this pass -- paper trading stays reachable only through\n`POST /paper/positions` directly (app/paper/engine.py), never through\nthis command channel, until a WRITE allowlist is explicitly asked for.",
+        "description": "Capabilities descriptor. Chart-overlay WRITE (draw_*/delete_chart_object)\nis enabled (T2b). Paper trading stays off this channel \u2014 only via\n``POST /paper/positions`` (app/paper/engine.py).",
         "operationId": "get_agent_capabilities_api_engine_agent_capabilities_get",
         "responses": {
           "200": {
@@ -1101,7 +1101,7 @@
     },
     "/api/engine/chart-objects/{symbol}": {
       "get": {
-        "description": "Typed chart overlays derived from Market Structure (ENGINE source).\n\nNon-engine sources requested in ``sources`` return no objects (empty list\ncontribution) until T2b/T5 persistence lands. No real orders \u2014 analysis only.",
+        "description": "Typed chart overlays: ENGINE from structure; USER/CLAUDE from store (T2b).\n\nSTRATEGY / BACKTEST sources return empty until T4/T5. No real orders.",
         "operationId": "get_chart_objects_api_engine_chart_objects__symbol__get",
         "parameters": [
           {
@@ -2431,7 +2431,7 @@
     },
     "/api/engine/paper/portfolios/{code}/overview": {
       "get": {
-        "description": "Broker-style account view: cash / invested / unrealized P&L, open positions\nmarked to the last screener price, and the equity curve. Read-only.",
+        "description": "Broker-style account view: cash / invested / unrealized P&L, open positions\nmarked to screener cache or last candle, equity + liquidation_value. Read-only.",
         "operationId": "get_paper_portfolio_overview_api_engine_paper_portfolios__code__overview_get",
         "parameters": [
           {
@@ -2469,6 +2469,51 @@
           }
         },
         "summary": "Get Paper Portfolio Overview",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/paper/portfolios/{code}/reconcile": {
+      "get": {
+        "description": "Read-only fidelity audit of cash / ledger / orders / marks (T0-BROKER).",
+        "operationId": "get_paper_portfolio_reconcile_api_engine_paper_portfolios__code__reconcile_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Paper Portfolio Reconcile Api Engine Paper Portfolios  Code  Reconcile Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Paper Portfolio Reconcile",
         "tags": [
           "engine"
         ]
