@@ -29,9 +29,9 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T3c EN COURS — registre conditions + CONDITION_SCHEMA dérivé
 
 - Branche : `cursor/t3c-condition-registry-a2fe` (Claude : `v3/t3c-condition-registry` — préfixe cloud `cursor/…-a2fe`)
-- PR : (draft — lien dès ouverture)
-- Commit(s) : `0545826` (fixtures **avant** refactor) ; (refactor à suivre)
-- Statut : **EN COURS** / **ATTENTE CLAUDE** après CI ; **ne pas merger** avant revue.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/21 (**draft**)
+- Commit(s) : `0545826` (fixtures **avant** refactor) ; `51834cd` (registre) ; `bcdf90e` (handoff)
+- Statut : **ATTENTE CLAUDE** — **ne pas merger** avant revue.
 
 ### Objectif
 
