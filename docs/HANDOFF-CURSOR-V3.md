@@ -14,17 +14,18 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - **1 skip** réseau Binance
   - **Aucune régression V3** (même compte avant/après)
 - **Règle de merge** : avec la base, tout échec **hors** de ces 13 = régression → **bloque le merge**.
-- **T3 slice 1** : composition `all` / `any` — draft PR #18 (revue Claude).
-- **T3 slice 2** : `exit` — même PR #18. Risk/MTF différés (MTF = bridge FeatureBar, pas sugar).
-- **T4 slice 1** : UI Strategy Lab — rename + onglets DB — draft (cette branche).
+- **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
+- **T2a** : ChartObject — **mergé** (PR #15) — **validé par Claude**.
+- **T3** : DSL v3 slices 1–2 (`all`/`any` + `exit`) — draft PR #18 (revue Claude). Risk/MTF différés.
+- **T4 slice 1** : UI Strategy Lab — rename + onglets DB — draft PR #19.
 
 ---
 
 ## 2026-09-23 — T4 slice 1 — UI Strategy Lab (rename + onglets DB)
 
 - Branche : `cursor/t4-strategy-lab-ui-a2fe`
-- PR : *(draft — lien après création)*
-- Commit(s) : à venir
+- PR : https://github.com/samiriggui-code/IchiVol/pull/19 (**draft**)
+- Commit(s) : `9737a1f`
 
 ### Livré
 
