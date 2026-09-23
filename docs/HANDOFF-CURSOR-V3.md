@@ -24,7 +24,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `v3/t1f2-pytrendline-no-repaint`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/12 (draft) — **pas de merge avant revue Claude**
-- Commit(s) : `81a5db1` (comportement + tests + golden legacy + handoff)
+- Commit(s) : `81a5db1` (comportement + tests + golden legacy) ; `9831db9` (handoff PR #12)
 
 - Livré :
   - `StructureEngineParams.allow_provisional_anchors: bool = False` — `True` = ancien comportement (tests / A-B uniquement, jamais en profil live)
