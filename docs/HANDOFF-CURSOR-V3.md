@@ -39,8 +39,58 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T7** #37 — **MERGÉE** (Monte Carlo / risk of ruin).
 - **T3d** #39 — **MERGÉE** (propose ruleset edit + condition catalog).
 - **Researcher** #41 — **MERGÉE** (propose experiment plan).
-- **Job en cours** : **aucun** — suite optionnelle = T3e MTF / UI Lab.
+- **Job en cours** : **T0-NOTIF** — PR draft ; **attente revue Claude** (pas de merge, pas de job suivant).
 
+
+---
+
+## 2026-09-23 — T0-NOTIF — alertes push téléphone — PRÊT REVUE CLAUDE
+
+- Branche : `cursor/t0-notif-push-a2fe`
+- PR : (draft — lien après create)
+- Base : `main` (ne touche **pas** T0-CALC / EIL / T4b-d / T5a-b / T6 / T7 / T3d / Researcher)
+
+### Objectif
+
+Alerte **informative** sur téléphone (Web Push VAPID / PWA) quand une position paper OUVERTE approche objectif/stop, accélère (RVOL + BOS moteur), ou flip Ichimoku. **Jamais d’ordre.**
+
+### Livré
+
+1. **Infra push** : `PushSubscription` Prisma + migration ; `web-push` ; `sendPushToUser` / `sendPushRaw` (never throw, 410/404 → delete) ; `public/sw.js` + `manifest.webmanifest` ; env `VAPID_*` (jamais commités)
+2. **Kinds** (ajoutés) : `position_target_near` | `position_stop_near` | `position_accel` | `position_direction_flip`
+3. **Watcher séparé** `positionWatch.ts` (~60s) — **ne modifie pas** `watch.ts` ; filtre `user_confirmed` OPEN + `user_id`
+4. **Proximité** : `scenarios.level_remaining_frac` / `compute_level_proximity` + `GET /paper/positions/{id}/proximity` (même géométrie que T0-CALC)
+5. **Accel** : RVOL ≥ `rvolConfirm` settings **et** `bos_confirms_direction` du pipeline (pas recalcul local)
+6. **Dédup** : cooldown + resserrement de bande (20→10→5) / `stateKey`
+7. **API** : `GET push-vapid-public`, `POST/DELETE push-subscribe` ; prefs `Setting.pushAlertPrefs`
+8. **Front** : Settings « Alertes push » ; deep link `/app/paper?position=&symbol=` ; cloche → Paper
+9. **Tests** : server dedup / proximity parity / push soft-fail / grep no-order ; engine proximity unit ; OpenAPI goldens (proximity)
+
+### Flux téléphone (si non testable ici)
+
+1. Déployer avec `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`
+2. Android Chrome ou iOS 16.4+ PWA (« Ajouter à l’écran d’accueil »)
+3. Settings → Activer les alertes (permission) → Enregistrer prefs
+4. Position OPEN near target → notif système + ligne cloche ; tap → fiche Paper
+
+### Invariants
+
+- Aucun `open`/`close` paper dans `positionWatch.ts`
+- Push échoue → notif in-app quand même créée
+- Autre user : positions filtrées par `user_id` ; notifs scoped `userId`
+
+### Non-faits
+
+Stop suiveur / renforcement (T0-MANAGE) ; actions rapides « clore en un tap » ; UI Lab #43 (branche séparée).
+
+### Attente Claude
+
+1. Relire le diff PR
+2. Suite Postgres complète sur ce HEAD
+3. Valider informative-only + dédup + proximité = scenarios
+4. Marche à suivre : merge / retouches
+
+**Cursor s’arrête ici** — pas de merge, pas de job suivant sans revue explicite.
 
 ---
 
