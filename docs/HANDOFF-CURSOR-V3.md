@@ -32,7 +32,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **Event Intelligence PHASE 7** #29 — **MERGÉE** (SymbolNews + correlate → `EVENT_MARKET` ; Cursor solo, CI verte).
 - **T4c** #31 — **MERGÉE** (WHY ENTERED / REJECTED / EXITED).
 - **T4b** #32 — **MERGÉE** (filtres overlay structurés).
-- **Job en cours** : **T4d** — filtre régime Lab sur overlay — branche `cursor/t4d-regime-overlay-filter-a2fe`.
+- **Job en cours** : **T4d** — PR #33 draft — filtre régime overlay (ATTENTE CI).
 
 
 ---
@@ -40,8 +40,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T4d EN COURS — filtre régime overlay
 
 - Branche : `cursor/t4d-regime-overlay-filter-a2fe`
-- PR : (draft)
-- Statut : **EN COURS** — après #32.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/33 (**draft**)
+- Statut : **ATTENTE CI** — après #32.
 
 ### Livré
 
