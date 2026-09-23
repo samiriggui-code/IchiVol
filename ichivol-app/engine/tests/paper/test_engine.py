@@ -336,7 +336,9 @@ def test_sync_position_closes_when_pipeline_direction_flips(_session):
 
 
 def test_short_position_pnl_is_positive_when_price_falls(_session):
-    """Baseline is long-only; short PnL needs a disposable allow_short portfolio."""
+    """SHORT return uses (entry − exit) / entry — 100→80 = +20%, not reciprocal +25%."""
+    from app.paper import broker as paper_broker
+
     pf = _disposable(_session, allow_short=True)
     try:
         opened = paper.sync_position(
@@ -347,16 +349,27 @@ def test_short_position_pnl_is_positive_when_price_falls(_session):
         assert opened is not None and opened.direction == "SHORT"
         _session.flush()
 
-        # Stay inside the TP band (entry - 2×STOP ≈ 96) so stop/TP do not fire first.
-        result = paper.sync_position(
-            _session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
-            user_id=None, price=98.0, pipeline=_pipeline("WATCH", Direction.LONG),
+        closed = paper_broker.close_capital_position(
+            _session, opened, price=80.0, reason="test_short_win"
+        )
+        _session.flush()
+        assert closed.status == "CLOSED"
+        assert closed.pnl_pct == pytest.approx(0.20, abs=0.02)  # not 0.25 (legacy bug)
+        assert closed.pnl_pct < 0.22  # hard guard against reciprocal formula
+
+        opened2 = paper.sync_position(
+            _session, symbol=f"{SYMBOL}_L", timeframe=TIMEFRAME, source="auto_watchlist",
+            user_id=None, price=100.0, pipeline=_pipeline("SELL", Direction.SHORT),
             stop_distance=STOP, portfolio=pf,
         )
-        assert result is not None and result.status == "CLOSED"
-        assert result.exit_reason == "direction_flipped"
-        assert result.pnl_pct > 0.0
-        assert result.pnl_pct == pytest.approx(0.02, abs=0.01)
+        assert opened2 is not None
+        _session.flush()
+        closed2 = paper_broker.close_capital_position(
+            _session, opened2, price=125.0, reason="test_short_loss"
+        )
+        _session.flush()
+        assert closed2.pnl_pct == pytest.approx(-0.25, abs=0.02)
+        assert closed2.pnl_pct < -0.22  # not −0.20 from reciprocal
     finally:
         _drop_portfolio(_session, pf)
 

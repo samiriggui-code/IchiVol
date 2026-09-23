@@ -385,6 +385,11 @@ class ProtectionMonitor:
         while not self._stop.is_set():
             session = SessionLocal()
             try:
+                from app.paper.financing import apply_financing_all_portfolios
+
+                n_fin = apply_financing_all_portfolios(session)
+                if n_fin:
+                    logger.info("financing: applied %s overnight charge(s)", n_fin)
                 for row in run_protection_cycle(session):
                     if row["status"] in ("closed", "legacy_watermark_initialised"):
                         logger.info("protection: %s", row)

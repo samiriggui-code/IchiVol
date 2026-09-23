@@ -87,19 +87,29 @@ def _credits_hint(message: str) -> str:
     return message
 
 
+def _try_acquire_credit_slot() -> bool:
+    """Non-blocking credit take. True if a credit was reserved; False if budget full."""
+    with _lock:
+        now = time.monotonic()
+        alive = [t for t in _credit_times if now - t < 60.0]
+        _credit_times.clear()
+        _credit_times.extend(alive)
+        if len(_credit_times) < _MAX_CREDITS_PER_MIN:
+            _credit_times.append(now)
+            return True
+        return False
+
+
 def _wait_for_credit_slot() -> None:
     """Block until a credit is available under the per-minute budget."""
     while True:
+        if _try_acquire_credit_slot():
+            return
         with _lock:
             now = time.monotonic()
-            # drop timestamps older than 60s
-            alive = [t for t in _credit_times if now - t < 60.0]
-            _credit_times.clear()
-            _credit_times.extend(alive)
-            if len(_credit_times) < _MAX_CREDITS_PER_MIN:
-                _credit_times.append(now)
-                return
-            sleep_for = 60.0 - (now - _credit_times[0]) + 0.15
+            sleep_for = (
+                60.0 - (now - _credit_times[0]) + 0.15 if _credit_times else 0.2
+            )
         logger.info("twelve_data: rate limit pause %.1fs", sleep_for)
         time.sleep(max(sleep_for, 0.2))
 

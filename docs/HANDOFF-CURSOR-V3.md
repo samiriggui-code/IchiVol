@@ -13,9 +13,97 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - **13 échecs** : 11× `tests/paper/test_engine.py` + 2× `tests/api/test_routes.py` (`open_paper_position`)
   - **1 skip** réseau Binance
   - **Aucune régression V3** (même compte avant/après)
-- **Règle de merge** : avec la base, tout échec **hors** de ces 13 = régression → **bloque le merge**.
+- **Règle de merge** : avec la base, **0 échec** attendu (T0-CI #14 mergé). Tout échec bloque le merge.
 - **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
-- **T2a** : ChartObject — **à merger** (PR #15) après rebase sur main post-#14 — **validé par Claude**.
+- **T2a** : ChartObject — **mergé** (PR #15) — **validé par Claude**.
+- **T0-BROKER** : PR #16 (draft) — **CI Actions VERTE** (`5965b55`, run `35847816190`) ; **pas de merge avant revalidation Claude**.
+- **ATTENTE CLAUDE** : bilan Cursor (PRs #16 #17 #18 #19) — **ne pas merger** ; Claude donne la marche à suivre.
+
+---
+
+## 2026-09-23 — ATTENTE CLAUDE — bilan Cursor pendant ton absence
+
+**Cursor s’arrête ici.** Pas de nouveau code tant que Claude n’a pas revu et donné la marche à suivre.
+
+Contexte : Claude indisponible (restriction puis revue reportée). Cursor a continué seul sur des drafts. **Aucun merge** de ces PRs sans validation Claude.
+
+### File d’attente (drafts — à revoir)
+
+| PR | Sujet | Branche | Head | CI Actions |
+|----|--------|---------|------|------------|
+| [#16](https://github.com/samiriggui-code/IchiVol/pull/16) | T0-BROKER fidélité (reconcile, marks, financing) | `v3/t0-broker-fidelity` | `f904951` | VERTE [35849205949](https://github.com/samiriggui-code/IchiVol/actions/runs/35849205949) |
+| [#17](https://github.com/samiriggui-code/IchiVol/pull/17) | T2b agent draw_* + store USER/CLAUDE (+ passe 2 durcissement) | `cursor/t2b-agent-draw-a2fe` | `3ece878` | VERTE (voir entrée T2b) |
+| [#18](https://github.com/samiriggui-code/IchiVol/pull/18) | T3 DSL v3 slice 1+2 (`all`/`any` + `exit`) | `cursor/t3-dsl-v3-a2fe` | `8973a42` | VERTE [35852790018](https://github.com/samiriggui-code/IchiVol/actions/runs/35852790018) |
+| [#19](https://github.com/samiriggui-code/IchiVol/pull/19) | T4 UI Strategy Lab (rename + onglets DB) | `cursor/t4-strategy-lab-ui-a2fe` | `8eec800` | (voir check Actions sur la PR) |
+
+### Déjà sur `main` (validé avant / pendant)
+
+- T0-CI #14, T2a #15 — mergés, validés Claude.
+
+### Ce que Cursor a tranché seul (à confirmer ou corriger)
+
+1. **T3** : slices `all`/`any` + `exit` livrés ; **pas** de `risk{}` cosmétique ni MTF (FeatureBar mono-TF — trop gros). Suite T3 DSL = revue #18 puis décision Claude.
+2. **T4** démarré (UI) pendant que #16/#17/#18 attendent — orthogonal moteur. DB-first Compare/Regimes/Experiments ; Live = ancien recalcul.
+3. **T2b** : passe 2 après critique « trop rapide vs T1 » (force source=claude, points schema, front render, refresh chart).
+
+### Demandé à Claude
+
+1. Suite **Postgres complète** sur #16 et #17 (et #18/#19 si pertinent) — Cursor n’a pas de Postgres local.
+2. Revue des 4 drafts : merge / rebase / redo / kill.
+3. **Marche à suivre** pour Cursor (ordre des lots, quoi ne pas toucher).
+
+### Règle
+
+Cursor **attend** cette marche à suivre. Ne pas enchaîner un nouveau lot sans consignes Claude.
+
+---
+
+## 2026-09-23 — T0-BROKER — Fidélité paper broker + corrections revue Claude
+
+- Branche : `v3/t0-broker-fidelity` (rebasée sur `main` après #14+#15)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/16 (draft) — **pas de merge avant revue Claude**
+- **Annule et remplace** le brief T0-UI : journal d’ordres + P&L réalisé déjà sur Synthèse — **non refaits**.
+- Workflow CI : **retiré** le commit `d80382f` (arrivé via #14 sur `main`).
+
+### Validé (inchangé)
+
+- reconcile + badge Comptabilité ; liquidation_value ; marks âge/péremption
+- financing idempotent ; pas de rétroactif avant 2026-09-23 ; réalisé de clôture déduit le financement sans double débit cash
+- tests FID_* jetables ; golden API ajouts seuls
+
+### Corrections revue Claude (cette itération)
+
+**A) SHORT PnL** — formule corrigée `(entry − exit) / entry` et `qty × (entry − exit)` :
+| Fichier | Occurrences |
+|---------|-------------|
+| `app/paper/broker.py` | `close_capital_position` realized/cash/`pnl_pct` ; `update_excursions` MFE/MAE ; helpers `short_pnl_pct` / `short_realized_currency` |
+| `app/paper/liquidation.py` | preview SHORT cash_delta / realized |
+| `app/paper/engine.py` | `_close_legacy` pnl_pct |
+| `app/paper/reconcile.py` | reconstruction cash SHORT + check **lecture seule** `short_pnl_legacy_formula` (CLOSED avant 2026-09-23, écart stocké − correct ; **aucune réécriture**) |
+
+Shadow / research_lab / evidence étaient déjà corrects — non touchés.
+
+**B) Financing** — `fee_profiles.FINANCING_*` : `(benchmark≈4.3% + markup±2.5%)/365×10000` bps/j (~1.86 long, ~0.49 short) ASSUMPTION 2026-09-23 ; CostsPanel affiche les taux.
+
+**C) Marks** — overview `block_on_provider=False` + budget 2 s ; `_try_acquire_credit_slot` Twelve Data ; test limiteur saturé < 3 s.
+
+**D) Isolation routes** — `test_open_paper_position_accepts_a_non_crypto_symbol` + garde baseline −5 % → monkeypatch `ensure_baseline_portfolio` vers portefeuille jetable.
+
+
+### CI Actions
+
+- **VERTE** sur `5965b55` : https://github.com/samiriggui-code/IchiVol/actions/runs/35847816190
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
+### Tests locaux (Postgres)
+
+- `tests/paper` + golden API + brokerage ledger : **verts**
+- `npm run build` : **OK**
+
+### Non fait
+
+- Merge #16 (CI verte, attend Claude) ; T2b démarré en parallèle (PR #17)
 
 ---
 
@@ -157,7 +245,7 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
 ## 2026-09-23 — T2a — ChartObject (typed overlays from engine)
 
 - Branche : `v3/t2a-chart-objects`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/15 — **validé par Claude** (merge après rebase sur main post-#14)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/15 (**mergée**) — **validé par Claude**
 - Commit(s) : `3672f5d` (feat) ; `a41ef76` / `ad3f9a3` / `6b96c94` / `b9a9dd0` (handoff) ; `428c1f9` (fix detector window bars)
 - Base : `main` après merge PR #14 (T0-CI)
 
@@ -179,8 +267,6 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
   - `npm run build` → OK
 
 - Hors scope (T2b/T5) : outils dessin Claude, persistence USER/CLAUDE, ENTRY/STOP/TARGET
-
-- Non fait : merge ; T0-CI
 
 ---
 

@@ -11,10 +11,12 @@ function tone(v: number): string {
  * et ce qu'il vous reste. Tout vient du journal des ordres — aucun chiffre estimé.
  */
 export function CostsPanel({ costs }: { costs: PaperCosts }) {
+  const financing = costs.financing ?? 0
   const scale = Math.max(
     Math.abs(costs.gross_result),
     costs.commissions,
     costs.spread_slippage,
+    financing,
     Math.abs(costs.net_result),
     1,
   )
@@ -24,6 +26,19 @@ export function CostsPanel({ costs }: { costs: PaperCosts }) {
     { label: 'Résultat brut', hint: 'ce que les trades auraient rapporté sans aucun frais', value: costs.gross_result },
     { label: 'Commissions courtier', hint: 'prélevées à chaque achat et vente', value: -costs.commissions, cost: true },
     { label: 'Écart et glissement', hint: 'coût d’exécution, déjà inclus dans les prix', value: -costs.spread_slippage, cost: true },
+    {
+      label: 'Frais de détention',
+      hint:
+        costs.financing_bps_per_day_long != null
+          ? `overnight CFD ASSUMPTION — long ${Number(costs.financing_bps_per_day_long).toFixed(2)} bps/j` +
+            (costs.financing_bps_per_day_short != null
+              ? ` · short ${Number(costs.financing_bps_per_day_short).toFixed(2)} bps/j`
+              : '') +
+            ' · 0 crypto spot'
+          : 'financement overnight CFD (ASSUMPTION) — 0 pour crypto spot',
+      value: -financing,
+      cost: true,
+    },
     { label: 'Bénéfice net', hint: 'capital actuel − capital de départ', value: costs.net_result },
   ]
 
