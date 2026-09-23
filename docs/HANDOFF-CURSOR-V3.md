@@ -24,7 +24,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T2b — Agent draw_* + get_structure + store USER/CLAUDE
 
 - Branche : `cursor/t2b-agent-draw-a2fe`
-- PR : _(draft — lien après create)_ — **pas de merge avant revue Claude**
+- PR : https://github.com/samiriggui-code/IchiVol/pull/17 (draft) — **pas de merge avant revue Claude**
 - Base : `main` (post-#14+#15)
 
 ### Livré
