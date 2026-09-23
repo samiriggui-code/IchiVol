@@ -47,7 +47,12 @@ def _top_by_score(rows: Sequence, n: int) -> list:
 def _line_endpoints(
     line: TrendlineSegment, series: Sequence[Candle]
 ) -> tuple[ChartPoint, ChartPoint] | None:
-    """Drawable endpoints — same gate as structure.ts ``hasPoints``."""
+    """Drawable endpoints — same gate as structure.ts ``hasPoints``.
+
+    ``series`` must be the detector window: ``start_bar`` / ``end_bar`` are
+    indices into that series (see ``MarketStructure.meta["bars"]``), not the
+    full structure ``window_bars`` slice.
+    """
     if not series:
         return None
     if not (0 <= line.start_bar < len(series) and 0 <= line.end_bar < len(series)):
@@ -73,8 +78,9 @@ def structure_to_chart_objects(
 ) -> list[ChartObject]:
     """Convert structure snapshot → typed ChartObjects (ENGINE source).
 
-    ``candles`` must be the same window used for ``_line_dict`` / structure API
-    (typically ``candles[-window_bars:]``) so trendline bar indices align.
+    ``candles`` is typically the structure API window (``candles[-window_bars:]``).
+    Per-detector trendline bar indices are resolved against
+    ``candles[-meta["bars"]:]`` so capped detectors (pytrendline) align.
     """
     if not candles:
         return []
@@ -96,8 +102,10 @@ def structure_to_chart_objects(
     # --- trendlines from all detectors (drawable only, top by score per side) ---
     drawable: list[tuple[TrendlineSegment, tuple[ChartPoint, ChartPoint], str]] = []
     for det_name, ms in snapshot.by_detector.items():
+        bars = int(ms.meta.get("bars") or len(candles))
+        series = list(candles[-bars:])
         for line in list(ms.support_trendlines) + list(ms.resistance_trendlines):
-            pts = _line_endpoints(line, candles)
+            pts = _line_endpoints(line, series)
             if pts is None:
                 continue
             drawable.append((line, pts, det_name))

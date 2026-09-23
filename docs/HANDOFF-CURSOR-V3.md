@@ -157,8 +157,10 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
 
 - Branche : `v3/t2a-chart-objects`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/15 (draft) — **pas de merge avant revue Claude**
-- Commit(s) : `3672f5d` (feat) ; `a41ef76` / `ad3f9a3` / `6b96c94` (handoff)
+- Commit(s) : `3672f5d` (feat) ; `a41ef76` / `ad3f9a3` / `6b96c94` / `b9a9dd0` (handoff) ; **fix window offset** (à venir / ce commit)
 - Base : `main` @ `a19f924` (après merge PR #13 T1g — **validé / mergé**)
+
+- **Fix (pytrendline bar indices)** : `start_bar`/`end_bar` sont relatifs à la fenêtre du détecteur (`meta["bars"]`, pytrendline cap 150), pas à `window_bars` (300). `_line_dict` dans `get_structure` et `_line_endpoints` dans `from_structure` utilisent désormais `window[-bars:]` / `candles[-bars:]` par détecteur. Sans pytrendline, `bars == window_bars` → réponse `/structure` inchangée.
 
 - Livré :
   - Modèle `app/chart_objects/types.py` — `ChartObject` frozen, id déterministe (sha256[:24] de type/source/symbol/tf/coords arrondis/subtype), validation par type, `to_dict`/`from_dict`
@@ -170,6 +172,7 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
 
 - Tests :
   - `tests/chart_objects/` — round-trip, validation, id stable, sélection parity seeds 7 & 42, causalité `as_of`
+  - `tests/chart_objects/test_detector_window_alignment.py` — indices relatifs à `meta["bars"]` ; pytrendline seed 7 ≠ offset 150 ; `/structure` sans pytrendline identique
   - `tests/api/test_chart_objects_route.py` — ENGINE OK ; user/claude → `objects=[]`
   - `test_api_surface_golden` → vert
   - `npm run build` → OK

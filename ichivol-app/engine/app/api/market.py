@@ -118,6 +118,24 @@ def get_structure(
     )
     consensus = snap.consensus
     window = list(candles[-params.window_bars :])
+    detectors: dict = {}
+    for name, ms in snap.by_detector.items():
+        # Bar indices on trendlines are relative to the detector's own window
+        # (e.g. pytrendline caps at pytrendline_max_bars), not the full
+        # structure window — slice so _line_dict maps times correctly.
+        bars = int(ms.meta.get("bars") or len(window))
+        det_series = window[-bars:]
+        detectors[name] = {
+            "structure_score": ms.structure_score,
+            "support_zones": [_zone_dict(z) for z in ms.support_zones],
+            "resistance_zones": [_zone_dict(z) for z in ms.resistance_zones],
+            "support_trendlines": [_line_dict(t, det_series) for t in ms.support_trendlines],
+            "resistance_trendlines": [
+                _line_dict(t, det_series) for t in ms.resistance_trendlines
+            ],
+            "pivot_count": len(ms.pivots),
+            "meta": ms.meta,
+        }
     return {
         "symbol": symbol.upper(),
         "timeframe": timeframe,
@@ -133,18 +151,7 @@ def get_structure(
             "resistance_zones": [_zone_dict(z) for z in consensus.resistance_zones],
             "meta": consensus.meta,
         },
-        "detectors": {
-            name: {
-                "structure_score": ms.structure_score,
-                "support_zones": [_zone_dict(z) for z in ms.support_zones],
-                "resistance_zones": [_zone_dict(z) for z in ms.resistance_zones],
-                "support_trendlines": [_line_dict(t, window) for t in ms.support_trendlines],
-                "resistance_trendlines": [_line_dict(t, window) for t in ms.resistance_trendlines],
-                "pivot_count": len(ms.pivots),
-                "meta": ms.meta,
-            }
-            for name, ms in snap.by_detector.items()
-        },
+        "detectors": detectors,
         "breakout_candidates": [
             {
                 "side": b.side.value,

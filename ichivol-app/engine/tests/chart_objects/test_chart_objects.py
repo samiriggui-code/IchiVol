@@ -119,18 +119,22 @@ def test_causality_projected_extension_allowed():
 
 def _structure_api_shape(snap, window):
     """Mirror GET /structure response fields used by toStructureOverlay."""
+    detectors = {}
+    for name, ms in snap.by_detector.items():
+        bars = int(ms.meta.get("bars") or len(window))
+        det_series = window[-bars:]
+        detectors[name] = {
+            "support_trendlines": [_line_dict(t, det_series) for t in ms.support_trendlines],
+            "resistance_trendlines": [
+                _line_dict(t, det_series) for t in ms.resistance_trendlines
+            ],
+        }
     return {
         "consensus": {
             "support_zones": [_zone_dict(z) for z in snap.consensus.support_zones],
             "resistance_zones": [_zone_dict(z) for z in snap.consensus.resistance_zones],
         },
-        "detectors": {
-            name: {
-                "support_trendlines": [_line_dict(t, window) for t in ms.support_trendlines],
-                "resistance_trendlines": [_line_dict(t, window) for t in ms.resistance_trendlines],
-            }
-            for name, ms in snap.by_detector.items()
-        },
+        "detectors": detectors,
     }
 
 
