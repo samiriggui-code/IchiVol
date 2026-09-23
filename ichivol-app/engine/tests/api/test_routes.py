@@ -404,16 +404,26 @@ def test_open_paper_position_opens_on_an_actionable_decision(monkeypatch):
     # on hand-crafted series) -- this route only needs to prove it wires
     # scan_symbol's result into app/paper/engine.py correctly, which
     # app/paper/test_engine.py already covers in depth. Fake scan_symbol's
-    # result directly instead.
+    # result directly instead. Baseline require_atr_stop needs a stop stub.
+    from types import SimpleNamespace
+
     from app.agents.types import Direction
+    from app.db.models import (
+        LedgerLeg,
+        LedgerTransaction,
+        PaperJournalEvent,
+        PaperOrder,
+        PaperPosition,
+    )
+    from app.db.session import SessionLocal
     from app.decision.pipeline import PipelineResult
-    from app.screener import service as service_module
     from app.screener.service import ScreenerRow
 
     fake_pipeline = PipelineResult(decision="BUY", direction=Direction.LONG, stages=[])
     fake_row = ScreenerRow(
         symbol="BTCUSDT", exchange="binance", timeframe="1h", price=12345.0,
         candles=[], ichimoku=None, rvol=None, decision=None, pipeline=fake_pipeline,
+        atr=SimpleNamespace(suggested_stop_distance=200.0),
     )
     monkeypatch.setattr(routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
 
@@ -425,7 +435,7 @@ def test_open_paper_position_opens_on_an_actionable_decision(monkeypatch):
     resp = client.post(
         "/api/engine/paper/positions", params={"symbol": "BTCUSDT", "user_id": "test-user-routes"}
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["symbol"] == "BTCUSDT"
     assert body["source"] == "user_confirmed"
@@ -449,12 +459,29 @@ def test_open_paper_position_opens_on_an_actionable_decision(monkeypatch):
     # otherwise sit in the *real* paper_positions table forever, skewing
     # GET /paper/performance's aggregate stats -- these tests share the
     # real ichivol_engine_dev DB, there's no separate test database.
-    from app.db.models import PaperPosition
-    from app.db.session import SessionLocal
+    from app.db.models import PaperPortfolio
+    from app.paper.strategy_profiles import BASELINE_CODE
 
     session = SessionLocal()
     try:
-        session.query(PaperPosition).filter_by(id=body["id"]).delete()
+        pid = body["id"]
+        session.query(PaperJournalEvent).filter_by(position_id=pid).delete()
+        tx_ids = [
+            t.id for t in session.query(LedgerTransaction).filter_by(ref=pid).all()
+        ]
+        if tx_ids:
+            session.query(LedgerLeg).filter(
+                LedgerLeg.transaction_id.in_(tx_ids)
+            ).delete(synchronize_session=False)
+            session.query(LedgerTransaction).filter(
+                LedgerTransaction.id.in_(tx_ids)
+            ).delete(synchronize_session=False)
+        session.query(PaperOrder).filter_by(position_id=pid).delete()
+        session.query(PaperPosition).filter_by(id=pid).delete()
+        base = session.query(PaperPortfolio).filter_by(code=BASELINE_CODE).one_or_none()
+        if base is not None:
+            base.cash = base.initial_cash
+            base.realized_pnl = 0.0
         session.commit()
     finally:
         session.close()
@@ -516,14 +543,26 @@ def test_open_paper_position_accepts_a_non_crypto_symbol(monkeypatch):
     # a paper position exactly like a Binance one -- the engine/DB side was
     # already asset-agnostic (PaperPosition has no exchange column), only
     # this route's explicit crypto-only guard blocked it.
+    # Baseline is long-only + ATR stop: exercise multi-classe via BUY/LONG.
+    from types import SimpleNamespace
+
     from app.agents.types import Direction
+    from app.db.models import (
+        LedgerLeg,
+        LedgerTransaction,
+        PaperJournalEvent,
+        PaperOrder,
+        PaperPosition,
+    )
+    from app.db.session import SessionLocal
     from app.decision.pipeline import PipelineResult
     from app.screener.service import ScreenerRow
 
-    fake_pipeline = PipelineResult(decision="SELL", direction=Direction.SHORT, stages=[])
+    fake_pipeline = PipelineResult(decision="BUY", direction=Direction.LONG, stages=[])
     fake_row = ScreenerRow(
         symbol="GBPUSD", exchange="biquote", timeframe="1h", price=1.27,
         candles=[], ichimoku=None, rvol=None, decision=None, pipeline=fake_pipeline,
+        atr=SimpleNamespace(suggested_stop_distance=0.01),
     )
     monkeypatch.setattr(routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
 
@@ -535,21 +574,66 @@ def test_open_paper_position_accepts_a_non_crypto_symbol(monkeypatch):
     resp = client.post(
         "/api/engine/paper/positions", params={"symbol": "GBPUSD", "user_id": "test-user-routes"}
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["symbol"] == "GBPUSD"
-    assert body["direction"] == "SHORT"
+    assert body["direction"] == "LONG"
     assert body["status"] == "OPEN"
-
-    from app.db.models import PaperPosition
-    from app.db.session import SessionLocal
 
     session = SessionLocal()
     try:
-        session.query(PaperPosition).filter_by(id=body["id"]).delete()
+        pid = body["id"]
+        session.query(PaperJournalEvent).filter_by(position_id=pid).delete()
+        tx_ids = [
+            t.id for t in session.query(LedgerTransaction).filter_by(ref=pid).all()
+        ]
+        if tx_ids:
+            session.query(LedgerLeg).filter(
+                LedgerLeg.transaction_id.in_(tx_ids)
+            ).delete(synchronize_session=False)
+            session.query(LedgerTransaction).filter(
+                LedgerTransaction.id.in_(tx_ids)
+            ).delete(synchronize_session=False)
+        session.query(PaperOrder).filter_by(position_id=pid).delete()
+        session.query(PaperPosition).filter_by(id=pid).delete()
+        from app.db.models import PaperPortfolio
+        from app.paper.strategy_profiles import BASELINE_CODE
+
+        base = session.query(PaperPortfolio).filter_by(code=BASELINE_CODE).one_or_none()
+        if base is not None:
+            base.cash = base.initial_cash
+            base.realized_pnl = 0.0
         session.commit()
     finally:
         session.close()
+
+
+@requires_db
+def test_open_paper_position_reports_no_atr_stop_honestly(monkeypatch):
+    """BUY without ATR stop must 422 with no_atr_stop, not a fake WATCH message."""
+    from app.agents.types import Direction
+    from app.decision.pipeline import PipelineResult
+    from app.screener.service import ScreenerRow
+
+    fake_pipeline = PipelineResult(decision="BUY", direction=Direction.LONG, stages=[])
+    fake_row = ScreenerRow(
+        symbol="ETHUSDT", exchange="binance", timeframe="1h", price=3000.0,
+        candles=[], ichimoku=None, rvol=None, decision=None, pipeline=fake_pipeline,
+        atr=None,
+    )
+    monkeypatch.setattr(routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
+    monkeypatch.setattr(decisions_routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
+    monkeypatch.setattr(paper_routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
+    monkeypatch.setattr(paper_orders_routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
+
+    resp = client.post(
+        "/api/engine/paper/positions",
+        params={"symbol": "ETHUSDT", "user_id": "test-user-no-atr"},
+    )
+    assert resp.status_code == 422
+    detail = resp.json()["detail"]
+    assert "no_atr_stop" in detail
+    assert "WATCH" not in detail
 
 
 def test_open_paper_position_404s_on_insufficient_history(monkeypatch):

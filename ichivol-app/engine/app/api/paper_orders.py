@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
+from sqlalchemy.orm import Session
 
 from app.api.common import (
     _atr_params_override,
@@ -11,10 +12,57 @@ from app.api.common import (
 )
 from app.config import settings
 from app.db.session import SessionLocal
+from app.decision.pipeline import PipelineResult
+from app.paper import broker as paper_broker
 from app.paper import engine as paper_engine
+from app.paper import gates as paper_gates
+from app.paper.portfolio import ensure_baseline_portfolio
 from app.screener.service import scan_symbol
 
 router_after_shadow = APIRouter(prefix=settings.engine_api_prefix, tags=["engine"])
+
+
+def _open_refusal_detail(
+    session: Session,
+    *,
+    pipeline: PipelineResult,
+    stop_distance: float | None,
+    symbol: str,
+    timeframe: str,
+    price: float,
+) -> str:
+    """Honest 422 detail when open_user_confirmed returns None.
+
+    WATCH/NO_TRADE stay as ``not_actionable``; gates / short / sizing get their
+    real reason codes (``no_atr_stop``, ``short_not_allowed``, …).
+    """
+    decision = pipeline.decision
+    if decision in ("WATCH", "NO_TRADE"):
+        return "not_actionable: pipeline.decision is WATCH/NO_TRADE, nothing to open"
+    direction = "LONG" if decision == "BUY" else ("SHORT" if decision == "SELL" else None)
+    if direction is None:
+        return "not_actionable: pipeline.decision is WATCH/NO_TRADE, nothing to open"
+
+    portfolio = ensure_baseline_portfolio(session)
+    profile = portfolio.strategy_profile or {}
+    if direction == "SHORT" and profile.get("allow_short", True) is False:
+        return "short_not_allowed: baseline portfolio does not allow short selling"
+    if paper_gates.has_gates(profile):
+        reason = paper_gates.entry_gate(
+            session,
+            portfolio,
+            symbol=symbol,
+            timeframe=timeframe,
+            price=price,
+            stop_distance=stop_distance,
+            equity=paper_broker.estimate_equity(session, portfolio),
+        )
+        if reason is not None:
+            return f"{reason}: entry gate refused open"
+    if not stop_distance or stop_distance <= 0:
+        return "no_atr_stop: ATR stop required, nothing to open"
+    return "open_refused: insufficient_cash_or_size or max_positions"
+
 
 @router_after_shadow.get("/paper/preview")
 def preview_manual_paper_buy(
@@ -188,7 +236,14 @@ def open_paper_position(
         if position is None:
             raise HTTPException(
                 status_code=422,
-                detail="not_actionable: pipeline.decision is WATCH/NO_TRADE, nothing to open",
+                detail=_open_refusal_detail(
+                    session,
+                    pipeline=pipeline_for_open,
+                    stop_distance=stop,
+                    symbol=row.symbol,
+                    timeframe=timeframe,
+                    price=row.price,
+                ),
             )
         if evidence_id and position.evidence_id is None:
             position.evidence_id = evidence_id
