@@ -10,8 +10,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T1e — Fin de la migration REGISTRY (cliquet vide)
 
 - Branche : `v3/t1e-registry-remaining`
-- PR : (draft — lien après ouverture)
-- Commit(s) : `f345e17` (fixtures golden **avant** refactor) ; migration + cliquet vide (ce push)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/10 (draft)
+- Commit(s) : `0227abf` (fixtures golden **avant** refactor) ; `a4497a9` (migration + cliquet vide)
 
 - Livré :
   - `app/api/routes.py` — `GET /context/{symbol}` via `REGISTRY.compute_many(rsi/cmf/obv/atr)`
