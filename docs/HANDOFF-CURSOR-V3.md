@@ -38,8 +38,69 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **Researcher** #41 — **MERGÉE** (propose experiment plan).
 - **UI Lab Research** #43 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres).
 - **T0-NOTIF** #44 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres).
-- **Job en cours** : **aucun**.
+- **Job en cours** : **T0-MANAGE-a** — stop suiveur / breakeven en Strategy Lab (backtest only). Découpage complet ci-dessous. **Rappel process (incident 18 PR du 23/09)** : une sous-tranche à la fois, PR draft, **pas de merge sans revue Claude explicite**.
 
+
+---
+
+## 2026-09-23 — T0-MANAGE — découpage détaillé (prêt pour Cursor)
+
+Spec originale (une phrase, doc Feuille de route) : *stop suiveur ou remonté à l'entrée, prise de profit partielle, renforcement — le risque total ne dépasse jamais le risque initial. Chaque outil testé d'abord en Strategy Lab (DSL + backtest net), activable en paper seulement après.*
+
+Rien de ça n'existe en code aujourd'hui. Découpage en 6 sous-tranches, **une PR par sous-tranche**, ordre imposé (chaque paire *Lab d'abord, paper ensuite* ; ne pas sauter à la reinforcement avant que stop/TP partiel soient validés) :
+
+### T0-MANAGE-a — Stop suiveur / breakeven — Strategy Lab (backtest only)
+
+- Étendre `ExitSpec` (`app/strategy_lab/ruleset.py`) : nouveau champ optionnel, ex. `trail: TrailSpec | None` avec soit `breakeven_at_r: float` (remonte le stop au prix d'entrée + frais une fois `r_multiple` atteint), soit `atr_trail_mult: float` (stop = `close ± atr_trail_mult * ATR`, ne se resserre jamais côté perte — ratchet unidirectionnel).
+- `app/strategy_lab/ruleset_backtest.py` : aujourd'hui `_levels()` calcule stop/target **une fois** à l'entrée (ligne ~228, boucle « une position à la fois »). Il faut recalculer le stop **bar par bar après l'entrée**, sans lookahead (le nouveau stop d'un bar N ne peut utiliser que high/low/close ≤ bar N), et ne jamais le reculer par rapport à sa valeur précédente.
+- Priorité intra-bar existante (stop > target > signal > max_hold/eod) inchangée ; seul le niveau du stop devient mobile.
+- Tests : ratchet ne recule jamais (property test, N séquences aléatoires) ; breakeven se déclenche exactement à `r_multiple` atteint, pas avant ; golden `ruleset_backtest_golden.json` **inchangé** pour les rulesets existants (trail absent = comportement actuel).
+- **Non-fait** : rien en paper ; pas de prise de profit partielle ; pas de renforcement.
+
+### T0-MANAGE-b — Stop suiveur / breakeven — paper (après validation Lab)
+
+- Ne démarre qu'après revue Claude de T0-MANAGE-a.
+- Brancher sur `app/paper/protection.py` (déjà un watcher bar-par-bar indépendant des signaux, avec le même principe no-lookahead décrit dans son docstring) — appliquer la même logique de stop mobile validée en backtest.
+- Gate explicite : activable par position ou par portefeuille (pas par défaut sur tout l'historique) ; seulement `user_confirmed` dans un premier temps (comme T0-NOTIF).
+- Invariant : le stop ne recule jamais ; jamais d'ouverture/fermeture hors de la logique protection existante.
+- Tests : reprendre les fixtures de `tests/paper/test_protection.py` + cas trail-spécifiques.
+
+### T0-MANAGE-c — Prise de profit partielle — Strategy Lab (backtest only)
+
+- `PaperPosition` / `Trade` sont aujourd'hui **single-fill** (un seul `qty`, un seul `exit_price`). Une prise de profit partielle est un changement de modèle, pas juste une règle DSL.
+- DSL : nouveau champ `partial_tp: list[{r_multiple: float, fraction: float}]` sur `ExitSpec` (ex. `[{r_multiple: 1.0, fraction: 0.5}]` = clôturer 50 % à 1R).
+- Backtest : `Trade` doit pouvoir représenter plusieurs fills de sortie (ou une liste de `PartialExit`) ; PnL net = somme pondérée ; `r_multiple` du reliquat recalculé sur la qty restante.
+- Tests : invariant Σ (qty partielle × pnl) + (qty restante × pnl finale) == pnl total sur qty pleine ; golden inchangé si `partial_tp` absent.
+- **Non-fait** : paper ; renforcement.
+
+### T0-MANAGE-d — Prise de profit partielle — paper (après validation Lab)
+
+- Étendre `PaperPosition` (nouvelle table `paper_partial_exits` plutôt que muter les colonnes existantes — garder `paper_positions` single-row pour la position "vivante", journaliser chaque prise partielle comme une ligne, pattern proche de `ledger_transactions`/`ledger_legs`).
+- `qty` de la position OPEN diminue à chaque prise partielle ; `realized_pnl` cumule ; la position reste `OPEN` tant qu'il reste de la qty.
+- UI : historique des prises partielles sur la fiche position (Paper).
+- Tests : qty ne peut jamais devenir négative ; fermeture finale (stop/target/signal) solde le reliquat exact.
+
+### T0-MANAGE-e — Renforcement (pyramiding) — Strategy Lab (backtest only)
+
+- DSL : condition de déclenchement du renforcement (`ConditionGroup` réutilisé) + règle de sizing de l'ajout.
+- **Invariant non négociable** (c'est la seule contrainte donnée dans la spec originale) : après renforcement, le risque total ouvert (distance au stop × qty totale, prix moyen pondéré) **ne doit jamais dépasser** le risque initial de la position avant renforcement. Si l'ajout au sizing normal violerait ça, soit la qty ajoutée est réduite, soit le stop est resserré pour compenser — à trancher en revue avant merge (Cursor propose les deux options, Claude choisit).
+- Tests : construire des cas où renforcement + stop initial dépasseraient le risque → doit être bloqué/réduit, jamais silencieusement ignoré.
+- **Non-fait** : paper.
+
+### T0-MANAGE-f — Renforcement — paper (après validation Lab)
+
+- Brancher sur `app/paper/broker.py` (ordre d'ajout) avec la même vérification d'invariant *avant* exécution — refuser l'ordre plutôt que l'exécuter hors invariant.
+- Isolation : ne touche pas aux positions `auto_watchlist` sans confirmation utilisateur explicite (même logique que T2c pour les user trade points).
+
+### Grille commune (rappel garde-fous projet, s'applique aux 6 sous-tranches)
+
+- Aucun lookahead : un stop mobile au bar N ne connaît que les bars ≤ N.
+- Un seul chemin de calcul : le backtest (Lab) et le paper doivent appeler la **même** fonction de calcul de stop mobile / partial fill / invariant de risque — pas deux implémentations qui divergent.
+- Déterministe, testé avant merge, revue Claude explicite avant chaque merge (rappel incident 18 PR).
+
+### Attente Claude
+
+Cursor attaque **T0-MANAGE-a seul**, PR draft, CI verte, handoff mis à jour, **s'arrête** avant merge et avant T0-MANAGE-b.
 
 ---
 
