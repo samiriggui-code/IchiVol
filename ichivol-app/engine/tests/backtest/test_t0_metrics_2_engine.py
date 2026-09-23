@@ -21,8 +21,8 @@ def _flat(opens: list[float]) -> list[Candle]:
 
 def _assert_invariant(result, *, abs_tol: float = 1e-9) -> None:
     sum_net = sum(t.net_log_return for t in result.trades)
-    sum_bars = sum(result.bar_returns)
-    assert sum_net == pytest.approx(sum_bars, abs=abs_tol)
+    sum_path = sum(result.bar_returns) + result.eod_return
+    assert sum_net == pytest.approx(sum_path, abs=abs_tol)
 
 
 def test_engine_invariant_mid_close():
@@ -39,11 +39,12 @@ def test_engine_invariant_mid_close():
     assert len(r.trades) == 1
     ow = one_way_cost_log(5.0, 3.0)
     assert r.trades[0].cost_log == pytest.approx(2 * ow)
+    assert r.eod_return == 0.0
     _assert_invariant(r)
 
 
 def test_engine_invariant_eod_close_ne_open():
-    """EOD: trade @ last.close; bar_returns includes open→close + exit fee."""
+    """EOD: trade @ last.close; open→close − exit fee in eod_return (not bars)."""
     candles = [
         Candle(time=i, open=o, high=o + 1, low=o - 1, close=c, volume=1.0)
         for i, (o, c) in enumerate(
@@ -63,6 +64,9 @@ def test_engine_invariant_eod_close_ne_open():
     assert r.trades[0].exit_price == 110.0
     assert r.trades[0].cost_log == pytest.approx(2 * ow)
     assert r.trades[0].log_return == pytest.approx(math.log(110 / 102))
+    assert r.eod_return == pytest.approx(math.log(110 / 104) - ow)
+    # Last open→open bar must NOT include the close mark (truncation-stable).
+    assert r.bar_returns[-1] == pytest.approx(math.log(104 / 103))
     _assert_invariant(r)
 
 
@@ -72,16 +76,16 @@ def test_engine_invariant_flip_long_to_short():
         Direction.NEUTRAL,
         Direction.LONG,
         Direction.SHORT,
-        Direction.SHORT,
+        Direction.NEUTRAL,  # close short mid-series (posn lags one bar)
         Direction.NEUTRAL,
         Direction.NEUTRAL,
     ]
     r = run_backtest(_flat(opens), desired, commission_bps=5.0, slippage_bps=3.0)
     assert len(r.trades) == 2
     ow = one_way_cost_log(5.0, 3.0)
-    # Each trade: full round-trip (entry + exit)
     assert r.trades[0].cost_log == pytest.approx(2 * ow)
     assert r.trades[1].cost_log == pytest.approx(2 * ow)
+    assert r.eod_return == 0.0
     _assert_invariant(r)
 
 
@@ -91,12 +95,13 @@ def test_engine_invariant_flip_short_to_long():
         Direction.NEUTRAL,
         Direction.SHORT,
         Direction.LONG,
-        Direction.LONG,
+        Direction.NEUTRAL,
         Direction.NEUTRAL,
         Direction.NEUTRAL,
     ]
     r = run_backtest(_flat(opens), desired, commission_bps=5.0, slippage_bps=3.0)
     assert len(r.trades) == 2
+    assert r.eod_return == 0.0
     _assert_invariant(r)
 
 
@@ -124,7 +129,6 @@ def test_engine_invariant_property_200_random_sequences():
     for i in range(200):
         n = rng.randint(30, 120)
         candles = _make_candles(n, seed=1000 + i)
-        # Mutate closes so open≠close often (EOD path).
         mutated = [
             Candle(
                 time=c.time,
@@ -137,7 +141,6 @@ def test_engine_invariant_property_200_random_sequences():
             for c in candles
         ]
         desired = [rng.choice(dirs) for _ in range(n)]
-        # Keep first bar neutral-ish for realism (posn[0] already forced NEUTRAL)
         desired[0] = Direction.NEUTRAL
         r = run_backtest(
             mutated, desired, commission_bps=5.0, slippage_bps=3.0

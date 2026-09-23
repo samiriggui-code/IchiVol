@@ -8,7 +8,11 @@ the backtest.
 
 T0-METRICS: win_rate / expectancy / profit_factor are **net of fees**
 (``Trade.net_log_return``). Gross counterparts are exposed as ``*_gross``
-for transparency. ``total_return`` / max DD stay on ``bar_returns`` (already net).
+for transparency.
+
+T0-METRICS-2: ``total_return`` / max DD use ``sum(bar_returns) + eod_return``
+(``bar_returns`` stay open→open; EOD mark-to-close lives on
+``BacktestResult.eod_return``).
 """
 
 from __future__ import annotations
@@ -46,12 +50,17 @@ class Metrics:
     expectancy_gross: float | None = None
 
 
-def _max_drawdown(bar_returns: list[float]) -> float:
+def _max_drawdown(bar_returns: list[float], eod_return: float = 0.0) -> float:
     equity = 1.0
     peak = 1.0
     max_dd = 0.0
     for r in bar_returns:
         equity *= math.exp(r)
+        peak = max(peak, equity)
+        if peak > 0:
+            max_dd = max(max_dd, (peak - equity) / peak)
+    if eod_return != 0.0:
+        equity *= math.exp(eod_return)
         peak = max(peak, equity)
         if peak > 0:
             max_dd = max(max_dd, (peak - equity) / peak)
@@ -79,19 +88,21 @@ def _trade_stats(pnls: list[float]) -> tuple[float | None, float | None, float |
 
 def compute_metrics(result: BacktestResult) -> Metrics:
     bar_returns = result.bar_returns
+    eod_return = float(result.eod_return)
     n = len(bar_returns)
 
-    if n == 0:
+    if n == 0 and eod_return == 0.0:
         return Metrics(0, 0.0, None, None, None, 0.0, 0, None, None, None, 0.0)
 
-    total_log_return = sum(bar_returns)
+    total_log_return = sum(bar_returns) + eod_return
     total_return = math.exp(total_log_return) - 1
 
     periods_per_year = PERIODS_PER_YEAR.get(result.timeframe)
     cagr = None
     sharpe = None
     sortino = None
-    if periods_per_year is not None:
+    # Annualized stats stay on open→open bars (eod is a single terminal mark).
+    if periods_per_year is not None and n > 0:
         cagr = (1 + total_return) ** (periods_per_year / n) - 1
 
         mean_r = statistics.mean(bar_returns)
@@ -108,7 +119,7 @@ def compute_metrics(result: BacktestResult) -> Metrics:
         elif len(downside) == 1 and downside[0] != 0:
             sortino = (mean_r / abs(downside[0])) * math.sqrt(periods_per_year)
 
-    max_dd = _max_drawdown(bar_returns)
+    max_dd = _max_drawdown(bar_returns, eod_return=eod_return)
 
     trade_pnls_net = [math.exp(t.net_log_return) - 1 for t in result.trades]
     trade_pnls_gross = [math.exp(t.log_return) - 1 for t in result.trades]
@@ -116,7 +127,9 @@ def compute_metrics(result: BacktestResult) -> Metrics:
     win_rate, profit_factor, expectancy = _trade_stats(trade_pnls_net)
     win_rate_gross, profit_factor_gross, expectancy_gross = _trade_stats(trade_pnls_gross)
 
-    exposure = sum(1 for p in result.posn if p != Direction.NEUTRAL) / n
+    exposure = (
+        sum(1 for p in result.posn if p != Direction.NEUTRAL) / n if n > 0 else 0.0
+    )
 
     return Metrics(
         n_bars=n,

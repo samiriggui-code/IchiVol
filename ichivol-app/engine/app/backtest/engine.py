@@ -78,6 +78,10 @@ class BacktestResult:
     trades: list[Trade] = field(repr=False)
     commission_bps: float
     slippage_bps: float
+    # EOD mark-to-close when a position is still open at series end
+    # (sign × log(last.close/last.open) − one_way). Not folded into bar_returns
+    # so each bar stays open→open (truncation-stable). metrics fold it in.
+    eod_return: float = 0.0
 
 
 def run_backtest(
@@ -96,8 +100,8 @@ def run_backtest(
     Fee model (T0-METRICS-2 / ``net_v2``):
     - Open from flat or close to flat: charge ``one_way`` on that bar.
     - Flip long↔short: charge ``2 × one_way`` (exit + entry) on the flip bar.
-    - EOD force-close: append ``sign × log(last.close / last.open) − one_way``
-      so trade mark (``last.close``) and ``bar_returns`` share one price path.
+    - EOD force-close: trade marked at ``last.close``; the open→close leg and
+      exit fee go into ``eod_return`` (``bar_returns`` stay open→open only).
     """
     n = len(candles)
     if len(desired_positions) != n:
@@ -115,6 +119,7 @@ def run_backtest(
     open_trade_entry_price: float | None = None
     open_cost_log = 0.0  # fees already applied in bar_returns for the open trade
     prev_posn = Direction.NEUTRAL  # posn[0] is always NEUTRAL by construction above
+    eod_return = 0.0
 
     for i in range(n - 1):
         market_logret = (
@@ -156,17 +161,13 @@ def run_backtest(
         prev_posn = posn[i]
 
     if open_trade_direction is not None:
-        # EOD force-close: extend last open→open leg to last.close and charge exit.
+        # EOD force-close: keep bar_returns open→open; park mark-to-close in eod_return.
         last = candles[-1]
         sign = _DIRECTION_SIGN[open_trade_direction]
         if last.open > 0 and last.close > 0:
-            final_leg = sign * math.log(last.close / last.open) - one_way
+            eod_return = sign * math.log(last.close / last.open) - one_way
         else:
-            final_leg = -one_way
-        if bar_returns:
-            bar_returns[-1] += final_leg
-        else:
-            bar_returns.append(final_leg)
+            eod_return = -one_way
         trades.append(
             Trade(
                 entry_time=open_trade_entry_time,
@@ -189,6 +190,7 @@ def run_backtest(
         trades=trades,
         commission_bps=commission_bps,
         slippage_bps=slippage_bps,
+        eod_return=eod_return,
     )
 
 

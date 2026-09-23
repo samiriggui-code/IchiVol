@@ -156,6 +156,7 @@ def backtest_dict(result: BacktestResult) -> dict:
         "n_bars": result.n_bars,
         "commission_bps": result.commission_bps,
         "slippage_bps": result.slippage_bps,
+        "eod_return": result.eod_return,
         "trades": [
             {
                 "entry_time": t.entry_time,

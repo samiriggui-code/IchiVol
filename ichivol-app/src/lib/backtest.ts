@@ -41,6 +41,8 @@ export interface BacktestRunDetail {
   n_bars: number
   commission_bps: number
   slippage_bps: number
+  /** T0-METRICS-2: terminal mark-to-close when a position is open at EOD. */
+  eod_return?: number
   trades: BacktestTrade[]
 }
 

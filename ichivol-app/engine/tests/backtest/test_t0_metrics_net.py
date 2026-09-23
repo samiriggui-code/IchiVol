@@ -109,7 +109,7 @@ def test_engine_invariant_mid_close_and_eod_flat():
         _flat(opens), desired, commission_bps=5.0, slippage_bps=3.0
     )
     assert sum(t.net_log_return for t in r.trades) == pytest.approx(
-        sum(r.bar_returns), abs=1e-9
+        sum(r.bar_returns) + r.eod_return, abs=1e-9
     )
 
     opens2 = [100, 101, 102, 103, 104]
@@ -126,7 +126,7 @@ def test_engine_invariant_mid_close_and_eod_flat():
     assert len(r2.trades) == 1
     assert r2.trades[0].cost_log == pytest.approx(2 * one_way_cost_log(5.0, 3.0))
     assert sum(t.net_log_return for t in r2.trades) == pytest.approx(
-        sum(r2.bar_returns), abs=1e-9
+        sum(r2.bar_returns) + r2.eod_return, abs=1e-9
     )
 
 
