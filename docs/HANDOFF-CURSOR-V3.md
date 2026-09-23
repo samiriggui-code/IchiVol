@@ -35,7 +35,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T4d** #33 — **MERGÉE** (filtre régime overlay).
 - **T5a** #34 — **MERGÉE** (family weights observation-only).
 - **T5b** #35 — **MERGÉE** (profils poids + étude historique).
-- **Job en cours** : **T6** — AuditReport post-outcome (branche `cursor/t6-auditor-report-a2fe`).
+- **Job en cours** : **T6** — PR #36 draft — AuditReport post-outcome (ATTENTE CI).
 
 
 ---
@@ -43,8 +43,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T6 EN COURS — AuditReport (Claude Auditor scaffolding)
 
 - Branche : `cursor/t6-auditor-report-a2fe`
-- PR : *(draft à ouvrir)*
-- Statut : **EN COURS** — après merge #35.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/36 (**draft**)
+- Statut : **ATTENTE CI** — après merge #35.
 
 ### Livré
 

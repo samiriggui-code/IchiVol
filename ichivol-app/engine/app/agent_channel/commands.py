@@ -714,10 +714,16 @@ def cmd_build_audit_report(args: dict) -> dict:
     ruleset_id = args.get("ruleset_id")
     ruleset_raw = args.get("ruleset")
     if ruleset_raw is not None:
-        ruleset = parse_ruleset(ruleset_raw)
+        try:
+            ruleset = parse_ruleset(ruleset_raw)
+        except (TypeError, ValueError) as exc:
+            raise CommandError(f"invalid_ruleset: {exc}") from exc
         rid = getattr(ruleset, "id", None)
     elif ruleset_id:
-        ruleset = get_builtin_ruleset(str(ruleset_id))
+        try:
+            ruleset = get_builtin_ruleset(str(ruleset_id))
+        except ValueError as exc:
+            raise CommandError(str(exc)) from exc
         rid = str(ruleset_id)
     else:
         raise CommandError("missing_or_invalid_arg: ruleset_id or ruleset required")
