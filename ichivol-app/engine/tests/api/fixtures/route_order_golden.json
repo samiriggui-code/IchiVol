@@ -290,6 +290,13 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/paper/portfolios/{code}/reconcile",
+    "endpoint": "get_paper_portfolio_reconcile"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/paper/portfolios/{code}/activity",
     "endpoint": "get_paper_portfolio_activity"
   },

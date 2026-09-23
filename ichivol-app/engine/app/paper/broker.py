@@ -338,15 +338,18 @@ def close_capital_position(
             }
         exit_fee = _commission(profile, position.qty * exit_fill, position.qty, position.symbol)
         entry_notional = position.notional or 0.0
+        from app.paper.financing import financing_total_for_position
+
+        financing_paid = financing_total_for_position(session, position.id)
         if position.direction == "LONG":
             proceeds = position.qty * exit_fill
-            realized = proceeds - exit_fee - entry_notional - (position.entry_fee or 0.0)
+            realized = proceeds - exit_fee - entry_notional - (position.entry_fee or 0.0) - financing_paid
             portfolio.cash += proceeds - exit_fee
         else:
             pnl_pct_local = (position.entry_price / exit_fill) - 1.0
-            realized = entry_notional * pnl_pct_local - exit_fee
-            # Return reserved short margin + PnL
-            portfolio.cash += entry_notional + realized
+            realized = entry_notional * pnl_pct_local - exit_fee - financing_paid
+            # Return reserved short margin + PnL (financing already left cash day by day)
+            portfolio.cash += entry_notional + entry_notional * pnl_pct_local - exit_fee
         portfolio.realized_pnl += realized
         portfolio.updated_at = now
         cash_delta = portfolio.cash - cash_before

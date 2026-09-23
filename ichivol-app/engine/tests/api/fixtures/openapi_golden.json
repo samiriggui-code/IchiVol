@@ -2431,7 +2431,7 @@
     },
     "/api/engine/paper/portfolios/{code}/overview": {
       "get": {
-        "description": "Broker-style account view: cash / invested / unrealized P&L, open positions\nmarked to the last screener price, and the equity curve. Read-only.",
+        "description": "Broker-style account view: cash / invested / unrealized P&L, open positions\nmarked to screener cache or last candle, equity + liquidation_value. Read-only.",
         "operationId": "get_paper_portfolio_overview_api_engine_paper_portfolios__code__overview_get",
         "parameters": [
           {
@@ -2469,6 +2469,51 @@
           }
         },
         "summary": "Get Paper Portfolio Overview",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/paper/portfolios/{code}/reconcile": {
+      "get": {
+        "description": "Read-only fidelity audit of cash / ledger / orders / marks (T0-BROKER).",
+        "operationId": "get_paper_portfolio_reconcile_api_engine_paper_portfolios__code__reconcile_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Paper Portfolio Reconcile Api Engine Paper Portfolios  Code  Reconcile Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Paper Portfolio Reconcile",
         "tags": [
           "engine"
         ]

@@ -184,6 +184,29 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
 
 ---
 
+## 2026-09-23 — T0-BROKER — Fidélité paper broker (marks / liquidation / financing / reconcile)
+
+- Branche : `v3/t0-broker-fidelity`
+- PR : **draft à ouvrir** — **pas de merge avant revue Claude**
+- Commit(s) : voir SHA poussé sur la branche
+
+- Livré :
+  - Engine : `marks.py`, `liquidation.py`, `financing.py`, `reconcile.py` ; overview avec `liquidation_value` / marks stale ; `GET /paper/portfolios/{code}/reconcile`
+  - Financing overnight CFD branché sur le moniteur de protection ; réalisé de clôture déduit le financement déjà payé
+  - Front Synthèse : Equity + valeur de clôture, badge « Comptabilité : OK / N anomalies », frais de détention dans CostsPanel
+  - Tests : `tests/paper/test_broker_fidelity.py` (portefeuilles jetables uniquement)
+  - Golden OpenAPI / route order : **ajout seul** de `/paper/portfolios/{code}/reconcile` (+ docstring overview)
+
+- **Financing** :
+  - Activation : **2026-09-23** (UTC, inclusive) — **pas de rétroactif** avant cette date (`FINANCING_ACTIVATED_ON`)
+  - ASSUMPTION : **0.5 bps/jour** CFD (`FINANCING_BPS_PER_DAY_CFD_ASSUMED`) ; crypto spot = 0
+  - Idempotence : clé ledger `financing:{position_id}:{YYYY-MM-DD}`
+
+- Tests (Cursor, Postgres dispo ici) : `test_broker_fidelity` + `test_api_surface_golden` — à confirmer dans le commit
+- Non fait : merge ; T0-CI (branche parallèle) ; ne pas toucher `/workspace` t0-ci / t2a
+
+---
+
 ## 2026-09-23 — T1g — Découpage de `api/routes.py` (zéro changement de comportement)
 
 - Branche : `v3/t1g-split-routes`
