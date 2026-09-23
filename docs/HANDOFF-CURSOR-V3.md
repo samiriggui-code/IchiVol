@@ -5,6 +5,19 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 **Convention** : à chaque PR, ajouter une nouvelle entrée **en haut** ; ne jamais effacer les anciennes.
 
+### Suite de tests — Postgres (supervision 2026-09-23)
+
+- **Claude** (revue) : PostgreSQL 16 `ichivol_engine_dev`, migrations alembic appliquées → lance la suite **complète** (paper, backtest evidence, brokerage, market_data inclus).
+- **Cursor** (implémentation) : **pas** d’install Postgres local ; suite sans base comme d’habitude ; reporter les résultats dans le handoff. Les échecs liés à la base sont détectés / renvoyés par Claude.
+- **Baseline avec base** (mesurée par Claude, identique sur `main` `fe5b28f` = V3 jusqu’à T1e et sur `8a26a97` = avant V3) :
+  - **13 échecs** : 11× `tests/paper/test_engine.py` + 2× `tests/api/test_routes.py` (`open_paper_position`)
+  - **1 skip** réseau Binance
+  - **Aucune régression V3** (même compte avant/après)
+- **Règle de merge** : avec la base, tout échec **hors** de ces 13 = régression → **bloque le merge**.
+- **T0-CI** (toujours d’actualité, branche séparée de T1f / autres tranches) :
+  1. Diagnostiquer les 13 (obsolète vs vrai bug) → tableau dans le handoff
+  2. CI GitHub Actions avec Postgres = filet permanent sur chaque PR
+
 ---
 
 ## 2026-09-23 — T1f — Pivots confirmés + repaint mesuré (mark-only)
@@ -51,7 +64,9 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - Tests :
   - `test_structure_causality.py` → **18 passed**
   - suite `tests/structure/` → all green
-  - suite complète → **4 failed** Postgres connus uniquement ; fixtures inchangées
+  - suite complète **sans Postgres** (Cursor) → **4 failed** connexion DB (connus localement) ; fixtures inchangées
+  - revue Claude **avec Postgres** : baseline = les **13** échecs historiques ci-dessus ; tout écart = régression bloquante
+  - T0-CI non démarré ici (branche séparée si lancé en parallèle)
 
 ---
 
