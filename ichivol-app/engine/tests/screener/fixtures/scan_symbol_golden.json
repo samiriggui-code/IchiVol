@@ -1,0 +1,697 @@
+{
+  "seed_42": {
+    "atr": {
+      "atr": 1.6099202202644014,
+      "percentile": 0.38,
+      "regime": "NORMAL",
+      "suggested_stop_distance": 2.414880330396602,
+      "time": 299,
+      "true_range": 2.1061714547258106
+    },
+    "context": {
+      "asset_class": "crypto",
+      "confluence": {
+        "contradiction_codes": [
+          "low_participation",
+          "regime_no_trend",
+          "adx_developing"
+        ],
+        "direction": "SHORT",
+        "pipeline_decision": "NO_TRADE",
+        "positive_codes": [
+          "price_below_kumo",
+          "bearish_future_kumo",
+          "chikou_confirmation",
+          "structure_aligned",
+          "below_vwap",
+          "avwap_aligned",
+          "beyond_value_area"
+        ],
+        "stage_statuses": {
+          "direction": "pass",
+          "location": "pass",
+          "participation": "fail",
+          "regime": "fail",
+          "structure": "pass"
+        }
+      },
+      "feature_version": "signal_context_v1",
+      "ichimoku": {
+        "chikou_state": "CLEAR_BEARISH",
+        "cloud_state": "BEARISH",
+        "direction": "SHORT",
+        "kumo_breakout": "NONE",
+        "kumo_thickness": 0.9603573735509201,
+        "price_vs_cloud": "BELOW",
+        "score": -58.333333333333336,
+        "tk_state": "NONE"
+      },
+      "provider": "binance",
+      "regime": {
+        "codes": [
+          "regime_no_trend",
+          "adx_developing"
+        ],
+        "pipeline_regime": "fail"
+      },
+      "structure": {
+        "bos": "NONE",
+        "breakout_state": "NONE",
+        "swing_state": "DEFINED",
+        "trend": "BEARISH"
+      },
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "timestamp": 299,
+      "volatility": {
+        "atr": 1.6099202202644014,
+        "atr_percentile": 0.38,
+        "regime": "NORMAL"
+      },
+      "volume": {
+        "anomaly_level": "LOW",
+        "confirmed": false,
+        "participation_state": "INSUFFICIENT",
+        "rvol": 0.193019977101577,
+        "volume_type": "NONE"
+      }
+    },
+    "decision": {
+      "agreement": 0.1,
+      "confidence": 0.1,
+      "contradictions": [
+        "low_relative_volume_participation"
+      ],
+      "decision": "WATCH",
+      "direction": "SHORT",
+      "invalidation": [
+        "close_back_inside_kumo",
+        "bullish_tk_cross"
+      ],
+      "positive_evidence": [
+        "price_below_kumo",
+        "bearish_future_kumo",
+        "chikou_confirmation"
+      ],
+      "probability": 0.7917,
+      "reasons": [
+        "price_below_kumo",
+        "bearish_future_kumo",
+        "chikou_confirmation",
+        "low_participation"
+      ],
+      "risks": [
+        "low_relative_volume_participation"
+      ],
+      "strategy_version": "ichimoku_rvol_v1",
+      "weights_used": {
+        "ICHIMOKU_AGENT": "direction+probability",
+        "RVOL_AGENT": "confidence_multiplier",
+        "ichimoku_confidence": 1.0,
+        "rvol_confidence": 0.1
+      },
+      "why_not": [
+        "low_relative_volume_participation",
+        "not_short_until_participation_and_structure_clear"
+      ]
+    },
+    "evidence": {
+      "ablation": [],
+      "context": {
+        "asset_class": "crypto",
+        "confluence": {
+          "contradiction_codes": [
+            "low_participation",
+            "regime_no_trend",
+            "adx_developing"
+          ],
+          "direction": "SHORT",
+          "pipeline_decision": "NO_TRADE",
+          "positive_codes": [
+            "price_below_kumo",
+            "bearish_future_kumo",
+            "chikou_confirmation",
+            "structure_aligned",
+            "below_vwap",
+            "avwap_aligned",
+            "beyond_value_area"
+          ],
+          "stage_statuses": {
+            "direction": "pass",
+            "location": "pass",
+            "participation": "fail",
+            "regime": "fail",
+            "structure": "pass"
+          }
+        },
+        "feature_version": "signal_context_v1",
+        "ichimoku": {
+          "chikou_state": "CLEAR_BEARISH",
+          "cloud_state": "BEARISH",
+          "direction": "SHORT",
+          "kumo_breakout": "NONE",
+          "kumo_thickness": 0.9603573735509201,
+          "price_vs_cloud": "BELOW",
+          "score": -58.333333333333336,
+          "tk_state": "NONE"
+        },
+        "provider": "binance",
+        "regime": {
+          "codes": [
+            "regime_no_trend",
+            "adx_developing"
+          ],
+          "pipeline_regime": "fail"
+        },
+        "structure": {
+          "bos": "NONE",
+          "breakout_state": "NONE",
+          "swing_state": "DEFINED",
+          "trend": "BEARISH"
+        },
+        "symbol": "BTCUSDT",
+        "timeframe": "1h",
+        "timestamp": 299,
+        "volatility": {
+          "atr": 1.6099202202644014,
+          "atr_percentile": 0.38,
+          "regime": "NORMAL"
+        },
+        "volume": {
+          "anomaly_level": "LOW",
+          "confirmed": false,
+          "participation_state": "INSUFFICIENT",
+          "rvol": 0.193019977101577,
+          "volume_type": "NONE"
+        }
+      },
+      "contradictions": [
+        "rvol_insufficient:0.193019977101577",
+        "volume_semantics:NONE",
+        "regime_fail",
+        "low_participation",
+        "regime_no_trend",
+        "adx_developing"
+      ],
+      "event_study": null,
+      "evidence_engine_version": "evidence_v1",
+      "feature_version": "signal_context_v1",
+      "historical": {
+        "favorable_rate": null,
+        "horizon": 10,
+        "matches": [],
+        "mean_mae_pct": null,
+        "mean_mfe_pct": null,
+        "mean_return_pct": null,
+        "median_return_pct": null,
+        "sample_quality": "NO_DATA",
+        "sample_size": 0,
+        "status": "NO_DATA"
+      },
+      "invalidation": [
+        "close_above_kijun",
+        "structure_break_bullish",
+        "close_back_inside_kumo",
+        "bullish_tk_cross"
+      ],
+      "positive_evidence": [
+        "ichimoku_direction_short:NONE",
+        "price_below_kumo",
+        "structure_bearish",
+        "bearish_future_kumo",
+        "chikou_confirmation",
+        "structure_aligned",
+        "below_vwap",
+        "avwap_aligned",
+        "beyond_value_area"
+      ],
+      "rules_version": "pipeline_gates_v1",
+      "strategy_version": "ichivol_pipeline_v1",
+      "walk_forward": null,
+      "why_not_long": [
+        "rvol_insufficient",
+        "structure_opposed_to_long",
+        "regime_unfavorable"
+      ],
+      "why_not_short": [
+        "rvol_insufficient",
+        "regime_unfavorable"
+      ]
+    },
+    "exchange": "binance",
+    "ichimoku": {
+      "agent": "ICHIMOKU_AGENT",
+      "confidence": 1.0,
+      "direction": "SHORT",
+      "expected_value": 0.0,
+      "invalidation": [
+        "close_back_inside_kumo",
+        "bullish_tk_cross"
+      ],
+      "metadata": {
+        "chikou_state": "CLEAR_BEARISH",
+        "cloud_bot": 104.90710541569499,
+        "cloud_top": 105.8674627892459,
+        "future_kumo": "BEARISH",
+        "kijun": 105.26954192124128,
+        "kumo_breakout": "NONE",
+        "kumo_thickness": 0.9603573735509201,
+        "price_vs_kumo": "BELOW",
+        "score": -58.333333333333336,
+        "senkou_a": 104.90710541569499,
+        "senkou_b": 105.8674627892459,
+        "tenkan": 104.28038361168626,
+        "time": 299,
+        "tk_cross": "NONE",
+        "tk_strength": "MODERATE",
+        "trend_strength": "MODERATE"
+      },
+      "probability": 0.7917,
+      "reasons": [
+        "price_below_kumo",
+        "bearish_future_kumo",
+        "chikou_confirmation"
+      ]
+    },
+    "pipeline": {
+      "decision": "NO_TRADE",
+      "direction": "SHORT",
+      "stages": [
+        {
+          "codes": [
+            "price_below_kumo",
+            "bearish_future_kumo",
+            "chikou_confirmation"
+          ],
+          "id": "direction",
+          "status": "pass",
+          "summary": "SHORT \u00b7 score -58 \u00b7 conf 100%"
+        },
+        {
+          "codes": [
+            "low_participation"
+          ],
+          "id": "participation",
+          "status": "fail",
+          "summary": "RVOL 0.19\u00d7"
+        },
+        {
+          "codes": [
+            "structure_aligned"
+          ],
+          "id": "structure",
+          "status": "pass",
+          "summary": "Structure BEARISH"
+        },
+        {
+          "codes": [
+            "below_vwap",
+            "avwap_aligned",
+            "beyond_value_area"
+          ],
+          "id": "location",
+          "status": "pass",
+          "summary": "Prix 102.7 \u00b7 POC 106 \u00b7 VA [104.5, 108.4] \u00b7 AVWAP 103.9"
+        },
+        {
+          "codes": [
+            "regime_no_trend",
+            "adx_developing"
+          ],
+          "id": "regime",
+          "status": "fail",
+          "summary": "ATR 1.61 \u2014 r\u00e9gime normal mais pas de tendance confirm\u00e9e \u00b7 ADX 24.6"
+        }
+      ],
+      "strategy_version": "ichivol_pipeline_v1"
+    },
+    "price": 102.70217018023119,
+    "rvol": {
+      "agent": "RVOL_AGENT",
+      "confidence": 0.1,
+      "direction": "NEUTRAL",
+      "expected_value": 0.0,
+      "invalidation": [],
+      "metadata": {
+        "anomaly_level": "LOW",
+        "avg_volume": 503.82651549962964,
+        "confirmed": false,
+        "percentile": 0.08,
+        "rvol": 0.193019977101577,
+        "rvol10": 0.17533404892130613,
+        "rvol20": 0.193019977101577,
+        "rvol5": 0.15938679381097112,
+        "spike": false,
+        "time": 299,
+        "vol_accel": -0.17424716236965654,
+        "volume": 97.24858248490584
+      },
+      "probability": 0.5,
+      "reasons": [
+        "low_participation"
+      ]
+    },
+    "symbol": "BTCUSDT",
+    "timeframe": "1h"
+  },
+  "seed_7": {
+    "atr": {
+      "atr": 1.6848187691141152,
+      "percentile": 0.23,
+      "regime": "NORMAL",
+      "suggested_stop_distance": 2.5272281536711727,
+      "time": 299,
+      "true_range": 1.9159186344263048
+    },
+    "context": {
+      "asset_class": "crypto",
+      "confluence": {
+        "contradiction_codes": [
+          "regime_no_breakout",
+          "adx_trending"
+        ],
+        "direction": "SHORT",
+        "pipeline_decision": "NO_TRADE",
+        "positive_codes": [
+          "price_below_kumo",
+          "bearish_future_kumo",
+          "chikou_confirmation",
+          "significant_relative_volume",
+          "below_vwap",
+          "avwap_aligned",
+          "beyond_value_area"
+        ],
+        "stage_statuses": {
+          "direction": "pass",
+          "location": "pass",
+          "participation": "pass",
+          "regime": "fail",
+          "structure": "watch"
+        }
+      },
+      "feature_version": "signal_context_v1",
+      "ichimoku": {
+        "chikou_state": "CLEAR_BEARISH",
+        "cloud_state": "BEARISH",
+        "direction": "SHORT",
+        "kumo_breakout": "NONE",
+        "kumo_thickness": 0.4759951790580459,
+        "price_vs_cloud": "BELOW",
+        "score": -58.333333333333336,
+        "tk_state": "NONE"
+      },
+      "provider": "binance",
+      "regime": {
+        "codes": [
+          "regime_no_breakout",
+          "adx_trending"
+        ],
+        "pipeline_regime": "fail"
+      },
+      "structure": {
+        "bos": "NONE",
+        "breakout_state": "NONE",
+        "swing_state": "DEFINED",
+        "trend": "MIXED"
+      },
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "timestamp": 299,
+      "volatility": {
+        "atr": 1.6848187691141152,
+        "atr_percentile": 0.23,
+        "regime": "NORMAL"
+      },
+      "volume": {
+        "anomaly_level": "SIGNIFICANT",
+        "confirmed": true,
+        "participation_state": "CONFIRMED",
+        "rvol": 1.531768829003358,
+        "volume_type": "NONE"
+      }
+    },
+    "decision": {
+      "agreement": 0.65,
+      "confidence": 0.65,
+      "contradictions": [],
+      "decision": "SELL",
+      "direction": "SHORT",
+      "invalidation": [
+        "close_back_inside_kumo",
+        "bullish_tk_cross"
+      ],
+      "positive_evidence": [
+        "price_below_kumo",
+        "bearish_future_kumo",
+        "chikou_confirmation",
+        "rvol_confirmed"
+      ],
+      "probability": 0.7917,
+      "reasons": [
+        "price_below_kumo",
+        "bearish_future_kumo",
+        "chikou_confirmation",
+        "significant_relative_volume"
+      ],
+      "risks": [],
+      "strategy_version": "ichimoku_rvol_v1",
+      "weights_used": {
+        "ICHIMOKU_AGENT": "direction+probability",
+        "RVOL_AGENT": "confidence_multiplier",
+        "ichimoku_confidence": 1.0,
+        "rvol_confidence": 0.65
+      },
+      "why_not": []
+    },
+    "evidence": {
+      "ablation": [],
+      "context": {
+        "asset_class": "crypto",
+        "confluence": {
+          "contradiction_codes": [
+            "regime_no_breakout",
+            "adx_trending"
+          ],
+          "direction": "SHORT",
+          "pipeline_decision": "NO_TRADE",
+          "positive_codes": [
+            "price_below_kumo",
+            "bearish_future_kumo",
+            "chikou_confirmation",
+            "significant_relative_volume",
+            "below_vwap",
+            "avwap_aligned",
+            "beyond_value_area"
+          ],
+          "stage_statuses": {
+            "direction": "pass",
+            "location": "pass",
+            "participation": "pass",
+            "regime": "fail",
+            "structure": "watch"
+          }
+        },
+        "feature_version": "signal_context_v1",
+        "ichimoku": {
+          "chikou_state": "CLEAR_BEARISH",
+          "cloud_state": "BEARISH",
+          "direction": "SHORT",
+          "kumo_breakout": "NONE",
+          "kumo_thickness": 0.4759951790580459,
+          "price_vs_cloud": "BELOW",
+          "score": -58.333333333333336,
+          "tk_state": "NONE"
+        },
+        "provider": "binance",
+        "regime": {
+          "codes": [
+            "regime_no_breakout",
+            "adx_trending"
+          ],
+          "pipeline_regime": "fail"
+        },
+        "structure": {
+          "bos": "NONE",
+          "breakout_state": "NONE",
+          "swing_state": "DEFINED",
+          "trend": "MIXED"
+        },
+        "symbol": "BTCUSDT",
+        "timeframe": "1h",
+        "timestamp": 299,
+        "volatility": {
+          "atr": 1.6848187691141152,
+          "atr_percentile": 0.23,
+          "regime": "NORMAL"
+        },
+        "volume": {
+          "anomaly_level": "SIGNIFICANT",
+          "confirmed": true,
+          "participation_state": "CONFIRMED",
+          "rvol": 1.531768829003358,
+          "volume_type": "NONE"
+        }
+      },
+      "contradictions": [
+        "volume_semantics:NONE",
+        "regime_fail",
+        "regime_no_breakout",
+        "adx_trending"
+      ],
+      "event_study": null,
+      "evidence_engine_version": "evidence_v1",
+      "feature_version": "signal_context_v1",
+      "historical": {
+        "favorable_rate": null,
+        "horizon": 10,
+        "matches": [],
+        "mean_mae_pct": null,
+        "mean_mfe_pct": null,
+        "mean_return_pct": null,
+        "median_return_pct": null,
+        "sample_quality": "NO_DATA",
+        "sample_size": 0,
+        "status": "NO_DATA"
+      },
+      "invalidation": [
+        "close_above_kijun",
+        "structure_break_bullish",
+        "close_back_inside_kumo",
+        "bullish_tk_cross"
+      ],
+      "positive_evidence": [
+        "ichimoku_direction_short:NONE",
+        "price_below_kumo",
+        "rvol_confirmed:1.531768829003358",
+        "bearish_future_kumo",
+        "chikou_confirmation",
+        "significant_relative_volume",
+        "below_vwap",
+        "avwap_aligned",
+        "beyond_value_area"
+      ],
+      "rules_version": "pipeline_gates_v1",
+      "strategy_version": "ichivol_pipeline_v1",
+      "walk_forward": null,
+      "why_not_long": [
+        "regime_unfavorable"
+      ],
+      "why_not_short": [
+        "regime_unfavorable"
+      ]
+    },
+    "exchange": "binance",
+    "ichimoku": {
+      "agent": "ICHIMOKU_AGENT",
+      "confidence": 1.0,
+      "direction": "SHORT",
+      "expected_value": 0.0,
+      "invalidation": [
+        "close_back_inside_kumo",
+        "bullish_tk_cross"
+      ],
+      "metadata": {
+        "chikou_state": "CLEAR_BEARISH",
+        "cloud_bot": 59.73954224582265,
+        "cloud_top": 60.215537424880694,
+        "future_kumo": "BEARISH",
+        "kijun": 55.534859728129405,
+        "kumo_breakout": "NONE",
+        "kumo_thickness": 0.4759951790580459,
+        "price_vs_kumo": "BELOW",
+        "score": -58.333333333333336,
+        "senkou_a": 60.215537424880694,
+        "senkou_b": 59.73954224582265,
+        "tenkan": 54.45712649629129,
+        "time": 299,
+        "tk_cross": "NONE",
+        "tk_strength": "STRONG",
+        "trend_strength": "MODERATE"
+      },
+      "probability": 0.7917,
+      "reasons": [
+        "price_below_kumo",
+        "bearish_future_kumo",
+        "chikou_confirmation"
+      ]
+    },
+    "pipeline": {
+      "decision": "NO_TRADE",
+      "direction": "SHORT",
+      "stages": [
+        {
+          "codes": [
+            "price_below_kumo",
+            "bearish_future_kumo",
+            "chikou_confirmation"
+          ],
+          "id": "direction",
+          "status": "pass",
+          "summary": "SHORT \u00b7 score -58 \u00b7 conf 100%"
+        },
+        {
+          "codes": [
+            "significant_relative_volume"
+          ],
+          "id": "participation",
+          "status": "pass",
+          "summary": "RVOL 1.53\u00d7"
+        },
+        {
+          "codes": [],
+          "id": "structure",
+          "status": "watch",
+          "summary": "Structure MIXED"
+        },
+        {
+          "codes": [
+            "below_vwap",
+            "avwap_aligned",
+            "beyond_value_area"
+          ],
+          "id": "location",
+          "status": "pass",
+          "summary": "Prix 53.48 \u00b7 POC 58.21 \u00b7 VA [56.48, 61.9] \u00b7 AVWAP 54.6"
+        },
+        {
+          "codes": [
+            "regime_no_breakout",
+            "adx_trending"
+          ],
+          "id": "regime",
+          "status": "fail",
+          "summary": "ATR 1.685 \u2014 r\u00e9gime normal mais pas de vraie cassure de range \u00b7 ADX 26.3"
+        }
+      ],
+      "strategy_version": "ichivol_pipeline_v1"
+    },
+    "price": 53.47744713478903,
+    "rvol": {
+      "agent": "RVOL_AGENT",
+      "confidence": 0.65,
+      "direction": "NEUTRAL",
+      "expected_value": 0.0,
+      "invalidation": [],
+      "metadata": {
+        "anomaly_level": "SIGNIFICANT",
+        "avg_volume": 567.3926313874033,
+        "confirmed": true,
+        "percentile": 0.83,
+        "rvol": 1.531768829003358,
+        "rvol10": 1.1773699690587518,
+        "rvol20": 1.531768829003358,
+        "rvol5": 1.2748060634354044,
+        "spike": false,
+        "time": 299,
+        "vol_accel": -0.16775557819331388,
+        "volume": 869.1143465654167
+      },
+      "probability": 0.5,
+      "reasons": [
+        "significant_relative_volume"
+      ]
+    },
+    "symbol": "BTCUSDT",
+    "timeframe": "1h"
+  }
+}

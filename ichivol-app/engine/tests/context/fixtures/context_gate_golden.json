@@ -1,0 +1,61 @@
+{
+  "seed_42": {
+    "blocked": true,
+    "context_payload": {
+      "atr": 1.6099202202644014,
+      "atr_regime": "NORMAL",
+      "cmf": 0.03343357871690008,
+      "cmf_bias": "NEUTRAL",
+      "obv": -859.0227653657029,
+      "obv_bias": "FALLING",
+      "obv_slope": -157.19864060574565,
+      "rsi": 36.11100514789127,
+      "rsi_bias": "BEARISH"
+    },
+    "pipeline_decision": "NO_TRADE",
+    "pipeline_stages": [
+      {
+        "codes": [
+          "context_block",
+          "rsi_not_aligned_long",
+          "obv_falling_block_long"
+        ],
+        "id": "regime",
+        "status": "fail",
+        "summary": "ok \u00b7 CTX block: rsi_not_aligned_long;obv_falling_block_long"
+      }
+    ],
+    "raw_decision": "BUY",
+    "reason": "rsi_not_aligned_long;obv_falling_block_long"
+  },
+  "seed_7": {
+    "blocked": true,
+    "context_payload": {
+      "atr": 1.6848187691141152,
+      "atr_regime": "NORMAL",
+      "cmf": -0.12541415663799352,
+      "cmf_bias": "NEGATIVE",
+      "obv": -24822.90946946362,
+      "obv_bias": "FALLING",
+      "obv_slope": -38.933324620716306,
+      "rsi": 42.32623386342478,
+      "rsi_bias": "BEARISH"
+    },
+    "pipeline_decision": "NO_TRADE",
+    "pipeline_stages": [
+      {
+        "codes": [
+          "context_block",
+          "rsi_not_aligned_long",
+          "cmf_negative_block_long",
+          "obv_falling_block_long"
+        ],
+        "id": "regime",
+        "status": "fail",
+        "summary": "ok \u00b7 CTX block: rsi_not_aligned_long;cmf_negative_block_long;obv_falling_block_long"
+      }
+    ],
+    "raw_decision": "BUY",
+    "reason": "rsi_not_aligned_long;cmf_negative_block_long;obv_falling_block_long"
+  }
+}
