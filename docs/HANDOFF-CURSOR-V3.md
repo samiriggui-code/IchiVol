@@ -33,7 +33,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T4c** #31 — **MERGÉE** (WHY ENTERED / REJECTED / EXITED).
 - **T4b** #32 — **MERGÉE** (filtres overlay structurés).
 - **T4d** #33 — **MERGÉE** (filtre régime overlay).
-- **Job en cours** : **T5a** — poids familles observation-only (branche `cursor/t5a-family-weights-a2fe`).
+- **Job en cours** : **T5a** — PR #34 draft — family weights observation-only (ATTENTE CI).
 
 
 ---
@@ -41,8 +41,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T5a EN COURS — family weights observation-only
 
 - Branche : `cursor/t5a-family-weights-a2fe`
-- PR : *(draft à ouvrir)*
-- Statut : **EN COURS** — après merge #33.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/34 (**draft**)
+- Statut : **ATTENTE CI** — après merge #33.
 
 ### Livré
 
