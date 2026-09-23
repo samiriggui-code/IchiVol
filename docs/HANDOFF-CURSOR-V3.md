@@ -23,8 +23,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T3 slice 1 — DSL v3 `all` / `any` (rétrocompat flat)
 
 - Branche : `cursor/t3-dsl-v3-a2fe`
-- PR : *(draft — lien à compléter après création)*
-- Commit(s) : à venir sur cette branche
+- PR : https://github.com/samiriggui-code/IchiVol/pull/18 (**draft**)
+- Commit(s) : `ff0fc50`
 
 ### Livré
 
