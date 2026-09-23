@@ -27,7 +27,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `cursor/t2b-agent-draw-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/17 (**draft**)
-- Commit(s) : à venir
+- Commit(s) : 
 
 ### Correctif demandé
 
