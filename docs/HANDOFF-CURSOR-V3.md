@@ -32,8 +32,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `cursor/t0-metrics-net-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/23 (**draft**)
-- Commit(s) : `98eb8a7`
-- Statut : **ATTENTE CI** puis **ATTENTE CLAUDE**.
+- Commit(s) : `98eb8a7` (feat) ; `d90883f` (handoff PR)
+- Statut : **ATTENTE CLAUDE** — CI **VERTE** ; **ne pas merger** avant revue.
 
 ### Livré
 
