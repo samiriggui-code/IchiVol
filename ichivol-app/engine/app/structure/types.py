@@ -26,6 +26,11 @@ class PivotPoint:
     side: LevelSide
     quality: float = 1.0
     is_high_volume: bool = False
+    # Confirmation metadata (T1f) — measure/mark only; not exposed in API/goldens.
+    confirmed_bar: int | None = None
+    """Index of the bar at which this pivot becomes known (causal)."""
+    provisional: bool = False
+    """True if the pivot may disappear or change when a new bar arrives."""
 
 
 @dataclass(frozen=True)
