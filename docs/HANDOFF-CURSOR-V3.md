@@ -23,8 +23,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T1f — Pivots confirmés + repaint mesuré (mark-only)
 
 - Branche : `v3/t1f-pivot-confirmation`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/11 (draft) — **pas de merge avant revue Claude**
-- Commit(s) : `37ac28f` (métadonnées + adaptateurs + tests de causalité) ; `74a0c8f` / `c1ff782` (rapport handoff + lien PR)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/11 (mergée) — **validé par Claude**
+- Commit(s) : `37ac28f` (métadonnées + adaptateurs + tests de causalité) ; `74a0c8f` / `c1ff782` / `ef85f57` (rapport handoff)
 
 - Livré :
   - `PivotPoint.confirmed_bar` / `PivotPoint.provisional` (optionnels, défauts `None` / `False`)
@@ -53,13 +53,12 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - Consensus : propage `pivots` des sources (pour tests/mesure) ; zones/scores inchangés.
   - Stabilité pytrendline : identité en indices absolus (`bar_index + offset`) ; hors fenêtre commune ou dans `left_ctx` du bord gauche après glissement → exclus (artefact de fenêtre, documenté).
 
-- Doutes / points à vérifier par Claude :
-  - Faut-il exclure les pivots provisoires du fit des trendlines (T1f-2, fixtures golden assumées à changer) ?
-  - Profil `STRUCTURE_PYTRENDLINE` : 30–40 % des lignes touchent un pivot provisoire — seuil d'action ?
+- Doutes / points à vérifier par Claude : **validé** — décision Claude : exclure les pivots provisoires du fit pytrendline (T1f-2), sans seuil.
 
 - Non fait / hors périmètre :
-  - Exclusion des pivots provisoires / changement de comportement (T1f-2)
+  - Exclusion des pivots provisoires / changement de comportement → **T1f-2**
   - `StructureState` indicators / ChartObject / découpage `routes.py` (T1g)
+  - Mergé dans `main` après validation Claude.
 
 - Tests :
   - `test_structure_causality.py` → **18 passed**
