@@ -25,7 +25,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `cursor/t3-dsl-v3-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/18 (**draft**)
-- Commit(s) : `a767cc1` (feat), `8996a09` (handoff)
+- Commit(s) : `a767cc1` (feat), `8996a09` / `9d1bcb6` (handoff)
 
 ### Livré
 
@@ -48,6 +48,12 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 pytest tests/strategy_lab/ -q
 # 68 passed
 ```
+
+### CI Actions
+
+- **VERTE** (HEAD `9d1bcb6`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35852517274
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
 
 ### Revue Claude
 
