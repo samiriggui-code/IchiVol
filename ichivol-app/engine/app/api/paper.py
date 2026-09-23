@@ -88,7 +88,7 @@ def get_paper_portfolio_overview(code: str) -> dict:
 
     from app.db.models import PaperEquitySnapshot
     from app.paper.liquidation import liquidation_value
-    from app.paper.marks import mark_stale, resolve_marks
+    from app.paper.marks import OVERVIEW_FETCH_BUDGET_S, mark_stale, resolve_marks
 
     session = SessionLocal()
     try:
@@ -97,17 +97,35 @@ def get_paper_portfolio_overview(code: str) -> dict:
             raise HTTPException(status_code=404, detail="portfolio_not_found")
         positions = paper_engine.list_positions(session, portfolio_id=portfolio.id)
         opens = [p for p in positions if p.status == "OPEN"]
-        # Prefer each lot's own timeframe when fetching candle fallbacks.
+        # Prefer each lot's own timeframe. Never block Synthèse on Twelve Data waits.
         by_tf: dict[str, list[str]] = {}
         for p in opens:
             by_tf.setdefault(p.timeframe or "1h", []).append(p.symbol)
         marks_by_sym: dict = {}
+        t0 = time.monotonic()
         for tf, syms in by_tf.items():
-            marks_by_sym.update(resolve_marks(syms, timeframe=tf, allow_fetch=True))
-        # Also resolve any leftover symbols on 1h
+            remaining = OVERVIEW_FETCH_BUDGET_S - (time.monotonic() - t0)
+            marks_by_sym.update(
+                resolve_marks(
+                    syms,
+                    timeframe=tf,
+                    allow_fetch=True,
+                    fetch_budget_s=max(0.0, remaining),
+                    block_on_provider=False,
+                )
+            )
         leftover = {p.symbol for p in opens} - {s for s in marks_by_sym}
         if leftover:
-            marks_by_sym.update(resolve_marks(leftover, timeframe="1h", allow_fetch=True))
+            remaining = OVERVIEW_FETCH_BUDGET_S - (time.monotonic() - t0)
+            marks_by_sym.update(
+                resolve_marks(
+                    leftover,
+                    timeframe="1h",
+                    allow_fetch=True,
+                    fetch_budget_s=max(0.0, remaining),
+                    block_on_provider=False,
+                )
+            )
 
         rows: list[dict] = []
         invested = 0.0

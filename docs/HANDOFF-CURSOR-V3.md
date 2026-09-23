@@ -13,9 +13,52 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - **13 échecs** : 11× `tests/paper/test_engine.py` + 2× `tests/api/test_routes.py` (`open_paper_position`)
   - **1 skip** réseau Binance
   - **Aucune régression V3** (même compte avant/après)
-- **Règle de merge** : avec la base, tout échec **hors** de ces 13 = régression → **bloque le merge**.
+- **Règle de merge** : avec la base, **0 échec** attendu (T0-CI #14 mergé). Tout échec bloque le merge.
 - **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
-- **T2a** : ChartObject — **à merger** (PR #15) après rebase sur main post-#14 — **validé par Claude**.
+- **T2a** : ChartObject — **mergé** (PR #15) — **validé par Claude**.
+- **T0-BROKER** : PR #16 (draft) — corrections revue Claude en cours ; **pas de merge avant revalidation**.
+
+---
+
+## 2026-09-23 — T0-BROKER — Fidélité paper broker + corrections revue Claude
+
+- Branche : `v3/t0-broker-fidelity` (rebasée sur `main` après #14+#15)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/16 (draft) — **pas de merge avant revue Claude**
+- **Annule et remplace** le brief T0-UI : journal d’ordres + P&L réalisé déjà sur Synthèse — **non refaits**.
+- Workflow CI : **retiré** le commit `d80382f` (arrivé via #14 sur `main`).
+
+### Validé (inchangé)
+
+- reconcile + badge Comptabilité ; liquidation_value ; marks âge/péremption
+- financing idempotent ; pas de rétroactif avant 2026-09-23 ; réalisé de clôture déduit le financement sans double débit cash
+- tests FID_* jetables ; golden API ajouts seuls
+
+### Corrections revue Claude (cette itération)
+
+**A) SHORT PnL** — formule corrigée `(entry − exit) / entry` et `qty × (entry − exit)` :
+| Fichier | Occurrences |
+|---------|-------------|
+| `app/paper/broker.py` | `close_capital_position` realized/cash/`pnl_pct` ; `update_excursions` MFE/MAE ; helpers `short_pnl_pct` / `short_realized_currency` |
+| `app/paper/liquidation.py` | preview SHORT cash_delta / realized |
+| `app/paper/engine.py` | `_close_legacy` pnl_pct |
+| `app/paper/reconcile.py` | reconstruction cash SHORT + check **lecture seule** `short_pnl_legacy_formula` (CLOSED avant 2026-09-23, écart stocké − correct ; **aucune réécriture**) |
+
+Shadow / research_lab / evidence étaient déjà corrects — non touchés.
+
+**B) Financing** — `fee_profiles.FINANCING_*` : `(benchmark≈4.3% + markup±2.5%)/365×10000` bps/j (~1.86 long, ~0.49 short) ASSUMPTION 2026-09-23 ; CostsPanel affiche les taux.
+
+**C) Marks** — overview `block_on_provider=False` + budget 2 s ; `_try_acquire_credit_slot` Twelve Data ; test limiteur saturé < 3 s.
+
+**D) Isolation routes** — `test_open_paper_position_accepts_a_non_crypto_symbol` + garde baseline −5 % → monkeypatch `ensure_baseline_portfolio` vers portefeuille jetable.
+
+### Tests locaux (Postgres)
+
+- `tests/paper` + golden API + brokerage ledger : **verts**
+- `npm run build` : **OK**
+
+### Non fait
+
+- Merge #16 ; T2b attend revalidation Claude
 
 ---
 
@@ -157,7 +200,7 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
 ## 2026-09-23 — T2a — ChartObject (typed overlays from engine)
 
 - Branche : `v3/t2a-chart-objects`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/15 — **validé par Claude** (merge après rebase sur main post-#14)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/15 (**mergée**) — **validé par Claude**
 - Commit(s) : `3672f5d` (feat) ; `a41ef76` / `ad3f9a3` / `6b96c94` / `b9a9dd0` (handoff) ; `428c1f9` (fix detector window bars)
 - Base : `main` après merge PR #14 (T0-CI)
 
@@ -179,8 +222,6 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
   - `npm run build` → OK
 
 - Hors scope (T2b/T5) : outils dessin Claude, persistence USER/CLAUDE, ENTRY/STOP/TARGET
-
-- Non fait : merge ; T0-CI
 
 ---
 

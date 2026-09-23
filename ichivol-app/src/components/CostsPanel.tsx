@@ -28,7 +28,14 @@ export function CostsPanel({ costs }: { costs: PaperCosts }) {
     { label: 'Écart et glissement', hint: 'coût d’exécution, déjà inclus dans les prix', value: -costs.spread_slippage, cost: true },
     {
       label: 'Frais de détention',
-      hint: 'financement overnight CFD (ASSUMPTION) — 0 pour crypto spot',
+      hint:
+        costs.financing_bps_per_day_long != null
+          ? `overnight CFD ASSUMPTION — long ${Number(costs.financing_bps_per_day_long).toFixed(2)} bps/j` +
+            (costs.financing_bps_per_day_short != null
+              ? ` · short ${Number(costs.financing_bps_per_day_short).toFixed(2)} bps/j`
+              : '') +
+            ' · 0 crypto spot'
+          : 'financement overnight CFD (ASSUMPTION) — 0 pour crypto spot',
       value: -financing,
       cost: true,
     },

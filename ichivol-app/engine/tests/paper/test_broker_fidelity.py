@@ -219,3 +219,94 @@ def test_liquidation_value_below_equity_when_fees(session):
     liq, missing = liquidation_value(p, opens, {pos.symbol.upper(): mark})
     assert missing == []
     assert liq < equity
+
+
+def test_short_pnl_correct_percent_and_currency(session):
+    """SHORT 100→80 = +20%; 100→125 = −25% (not the reciprocal entry/exit−1 bug)."""
+    from app.paper.broker import short_pnl_pct, short_realized_currency
+
+    assert short_pnl_pct(100.0, 80.0) == pytest.approx(0.20)
+    assert short_pnl_pct(100.0, 125.0) == pytest.approx(-0.25)
+    assert short_realized_currency(2.0, 100.0, 80.0) == pytest.approx(40.0)
+    assert short_realized_currency(2.0, 100.0, 125.0) == pytest.approx(-50.0)
+
+    p = session.info["portfolio"]
+    p.strategy_profile = {**p.strategy_profile, "allow_short": True, "commission_bps": 0.0, "slippage_bps": 0.0, "spread_bps": 0.0}
+    session.flush()
+
+    pos = broker.open_capital_position(
+        session,
+        portfolio=p,
+        symbol="FIDSHORT1",
+        timeframe="1h",
+        source="test",
+        user_id=None,
+        direction="SHORT",
+        price=100.0,
+        decision="SELL",
+        stop_distance=5.0,
+        manual_notional=500.0,
+    )
+    assert pos is not None
+    session.flush()
+    # Unrealized at 80 before close
+    mark = 80.0
+    unrealized = float(pos.qty) * (float(pos.entry_price) - mark)
+    broker.close_capital_position(session, pos, price=80.0, reason="fidelity_short_win")
+    session.flush()
+    # Zero friction profile: exit_fill ≈ mid; realized ≈ unrealized (no exit fee, no financing)
+    assert pos.pnl_pct == pytest.approx(0.20, abs=1e-6)
+    assert float(pos.realized_pnl) == pytest.approx(unrealized, abs=0.5)  # tiny fee residual if any
+
+    p2 = session.info["portfolio"]
+    # second lot on same disposable
+    pos2 = broker.open_capital_position(
+        session,
+        portfolio=p2,
+        symbol="FIDSHORT2",
+        timeframe="1h",
+        source="test",
+        user_id=None,
+        direction="SHORT",
+        price=100.0,
+        decision="SELL",
+        stop_distance=5.0,
+        manual_notional=500.0,
+    )
+    assert pos2 is not None
+    session.flush()
+    broker.close_capital_position(session, pos2, price=125.0, reason="fidelity_short_loss")
+    session.flush()
+    assert pos2.pnl_pct == pytest.approx(-0.25, abs=1e-4)
+
+
+def test_short_close_realized_matches_unrealized_minus_exit_costs(session):
+    p = session.info["portfolio"]
+    p.strategy_profile = {**p.strategy_profile, "allow_short": True}
+    session.flush()
+    pos = broker.open_capital_position(
+        session,
+        portfolio=p,
+        symbol="FIDSHORT3",
+        timeframe="1h",
+        source="test",
+        user_id=None,
+        direction="SHORT",
+        price=100.0,
+        decision="SELL",
+        stop_distance=5.0,
+        manual_notional=400.0,
+    )
+    assert pos is not None and pos.qty
+    session.flush()
+    mark = 90.0
+    unrealized = float(pos.qty) * (float(pos.entry_price) - mark)
+    from app.paper.liquidation import preview_close_cash_delta
+
+    sim = preview_close_cash_delta(pos, mark_price=mark, profile=p.strategy_profile)
+    broker.close_capital_position(session, pos, price=mark, reason="fidelity_short_match")
+    session.flush()
+    # realized == price PnL − exit_fee (− financing 0) ; matches preview
+    assert float(pos.realized_pnl) == pytest.approx(sim["realized"], abs=1e-4)
+    # Mid-mark unrealized ignores exit friction; gap ≈ exit_fee + friction on fill.
+    assert float(pos.realized_pnl) <= unrealized + 1e-6

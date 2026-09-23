@@ -54,8 +54,12 @@ def compute_costs(
         b["traded"] += float(o.notional or 0.0)
 
     from app.paper.financing import financing_total_for_portfolio
+    from app.brokerage.fee_profiles import FINANCING_ASSUMPTION_META
+    from app.paper.broker import _profile
 
     financing = financing_total_for_portfolio(session, portfolio.id)
+    prof = _profile(portfolio)
+    fin_meta = dict(prof.get("financing_assumption") or FINANCING_ASSUMPTION_META)
 
     closed = [p for p in positions if p.status == "CLOSED" and p.realized_pnl is not None]
     wins = [float(p.realized_pnl) for p in closed if float(p.realized_pnl) > 0]
@@ -64,6 +68,8 @@ def compute_costs(
     net = equity - initial
     gross = net + commissions + friction + financing
     opens = [p for p in positions if p.status == "OPEN"]
+    long_bps = float(fin_meta.get("long_bps_per_day") or 0.0)
+    short_bps = float(fin_meta.get("short_bps_per_day") or 0.0)
     return {
         "currency": portfolio.currency,
         "initial_cash": initial,
@@ -72,6 +78,9 @@ def compute_costs(
         "commissions": commissions,
         "spread_slippage": friction,
         "financing": financing,
+        "financing_bps_per_day_long": long_bps,
+        "financing_bps_per_day_short": short_bps,
+        "financing_assumption": fin_meta,
         "total_costs": commissions + friction + financing,
         "net_result": net,
         "net_return_pct": (net / initial) if initial else None,
@@ -92,6 +101,7 @@ def compute_costs(
         "note": (
             "Frais de sortie des positions ouvertes non inclus (pas encore payés). "
             "Écarts et glissement sont déjà dans les prix d'exécution. "
-            "Frais de détention = financement overnight CFD (ASSUMPTION), 0 pour crypto spot."
+            f"Financement overnight CFD ASSUMPTION : long {long_bps:.2f} bps/j, "
+            f"short {short_bps:.2f} bps/j (0 pour crypto spot)."
         ),
     }

@@ -6,7 +6,7 @@ Does not mutate cash, positions, or the ledger. Each check returns
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Any
 
@@ -198,6 +198,9 @@ def reconcile_portfolio(session: Session, portfolio: PaperPortfolio) -> dict[str
         )
     )
 
+    legacy = _short_pnl_legacy_check(closed)
+    checks.append(legacy)
+
     anomalies = [c for c in checks if not c["ok"]]
     return {
         "portfolio_code": portfolio.code,
@@ -207,7 +210,80 @@ def reconcile_portfolio(session: Session, portfolio: PaperPortfolio) -> dict[str
         "equity": equity,
         "liquidation_value": liq,
         "cash": float(portfolio.cash),
+        "short_pnl_legacy": {
+            "positions": legacy.get("positions") or [],
+            "delta_total": legacy.get("delta"),
+            "details": legacy.get("expected"),
+        },
     }
+
+
+# Inclusive: CLOSED shorts exited strictly before this UTC date keep stored PnL;
+# reconcile reports legacy formula gap without rewriting history.
+SHORT_PNL_FIX_ACTIVATED_ON = date(2026, 9, 23)
+
+
+def _short_pnl_legacy_check(closed: list[PaperPosition]) -> dict[str, Any]:
+    """Read-only: CLOSED SHORT lots closed before the formula fix, with stored − correct Δ."""
+    from app.paper.broker import short_pnl_pct, short_realized_currency
+
+    details: list[dict[str, Any]] = []
+    total_delta = 0.0
+    ids: list[str] = []
+    for p in closed:
+        if p.direction != "SHORT" or p.exit_price is None or not p.entry_price:
+            continue
+        exit_t = p.exit_time
+        if exit_t is None:
+            continue
+        day = exit_t.date() if exit_t.tzinfo else exit_t.replace(tzinfo=timezone.utc).date()
+        if day >= SHORT_PNL_FIX_ACTIVATED_ON:
+            continue
+        correct_pct = short_pnl_pct(float(p.entry_price), float(p.exit_price))
+        correct_ccy = (
+            short_realized_currency(float(p.qty), float(p.entry_price), float(p.exit_price))
+            if p.qty
+            else None
+        )
+        stored_pct = float(p.pnl_pct) if p.pnl_pct is not None else None
+        stored_rpnl = float(p.realized_pnl) if p.realized_pnl is not None else None
+        # Compare currency PnL excluding fees when we can reconstruct from prices;
+        # report pct delta as primary signal of the reciprocal bug.
+        delta_pct = (stored_pct - correct_pct) if stored_pct is not None else None
+        delta_ccy = None
+        if stored_rpnl is not None and correct_ccy is not None:
+            # Stored realized includes fees/financing; compare gross price PnL only via pct.
+            delta_ccy = (
+                float(p.qty) * float(p.entry_price) * (stored_pct - correct_pct)
+                if p.qty and stored_pct is not None
+                else None
+            )
+        if delta_pct is None or abs(delta_pct) <= _FTOL:
+            continue
+        ids.append(p.id)
+        total_delta += float(delta_ccy or 0.0)
+        details.append(
+            {
+                "position_id": p.id,
+                "symbol": p.symbol,
+                "entry": float(p.entry_price),
+                "exit": float(p.exit_price),
+                "stored_pnl_pct": stored_pct,
+                "correct_pnl_pct": correct_pct,
+                "delta_pct": delta_pct,
+                "delta_currency_est": delta_ccy,
+                "exit_day": day.isoformat(),
+            }
+        )
+    return _check(
+        "short_pnl_legacy_formula",
+        # Informational: never rewrite history; do not fail the portfolio badge.
+        ok=True,
+        expected=details,
+        actual=f"{len(details)} CLOSED SHORT(s) pre-fix (stored − correct)",
+        delta=total_delta,
+        positions=ids,
+    )
 
 
 def _reconstruct_cash_from_orders(
@@ -217,6 +293,8 @@ def _reconstruct_cash_from_orders(
     positions: list[PaperPosition],
 ) -> float:
     """initial − Σ open (notional+fee) + Σ close cash_delta + Σ FINANCING."""
+    from app.paper.broker import short_realized_currency
+
     cash = float(portfolio.initial_cash)
     by_id = {p.id: p for p in positions}
     for o in sorted(orders, key=lambda x: x.created_at or datetime(1970, 1, 1, tzinfo=timezone.utc)):
@@ -230,17 +308,8 @@ def _reconstruct_cash_from_orders(
         if pos is not None and pos.direction == "SHORT" and pos.entry_price and o.filled_price:
             entry_notional = float(pos.notional or 0.0)
             exit_fill = float(o.filled_price)
-            realized = entry_notional * ((float(pos.entry_price) / exit_fill) - 1.0) - fee
-            # Financing already left cash via FINANCING legs; realized on position may
-            # include it — cash credit on short close is entry_notional + pnl − exit_fee
-            # without re-adding financing (already debited).
-            fin = 0.0
-            from app.paper.financing import financing_total_for_position
-
-            fin = financing_total_for_position(session, pos.id)
-            cash += entry_notional + realized  # realized here excludes financing
-            # If close_capital_position subtracts financing from realized/cash, adjust tests.
-            _ = fin
+            pnl = short_realized_currency(float(pos.qty or 0.0), float(pos.entry_price), exit_fill)
+            cash += entry_notional + pnl - fee
         else:
             cash += notional - fee
 

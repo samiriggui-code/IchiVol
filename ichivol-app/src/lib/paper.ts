@@ -324,6 +324,9 @@ export interface PaperCosts {
   commissions: number
   spread_slippage: number
   financing: number
+  financing_bps_per_day_long?: number
+  financing_bps_per_day_short?: number
+  financing_assumption?: Record<string, unknown>
   total_costs: number
   net_result: number
   net_return_pct: number | null

@@ -27,23 +27,30 @@ OTHER_MARKETS_FRICTION_BPS: dict[str, float] = {
 # Non-crypto markets are priced as CFDs / spread-only: no separate commission.
 COMMISSION_BPS_BY_SYMBOL: dict[str, float] = {s: 0.0 for s in OTHER_MARKETS_FRICTION_BPS}
 
-# Overnight financing (swap) ASSUMPTIONS — retail CFD order of magnitude, NOT verified against a
-# live broker. Crypto spot = 0. Source: typical multi-asset CFD overnight fee ~2–5 USD per 100k
-# notional/day ≈ 0.2–0.5 bps/day; we use 0.5 bps/day as a conservative ASSUMPTION (2026-09-23).
-# Verify against your broker's swap schedule before trusting multi-day PnL.
-FINANCING_BPS_PER_DAY_CFD_ASSUMED = 0.5
+# Overnight financing (swap) — ASSUMPTIONS documented in app.brokerage.fee_profiles.
+# Long CFD ≈ (benchmark + markup)/365 in bps (~1.86 bps/day). Crypto spot = 0.
+from app.brokerage.fee_profiles import (
+    FINANCING_ASSUMPTION_META,
+    FINANCING_BPS_PER_DAY_LONG_CFD_ASSUMED,
+    FINANCING_BPS_PER_DAY_SHORT_CFD_ASSUMED,
+)
+
+FINANCING_BPS_PER_DAY_CFD_ASSUMED = FINANCING_BPS_PER_DAY_LONG_CFD_ASSUMED
 FINANCING_BPS_PER_DAY_BY_SYMBOL: dict[str, float] = {
     **{s: 0.0 for s in CRYPTO_FRICTION_BPS},
-    **{s: FINANCING_BPS_PER_DAY_CFD_ASSUMED for s in OTHER_MARKETS_FRICTION_BPS},
+    **{s: FINANCING_BPS_PER_DAY_LONG_CFD_ASSUMED for s in OTHER_MARKETS_FRICTION_BPS},
 }
 
 
-def market_financing_bps_per_day(symbol: str) -> float:
+def market_financing_bps_per_day(symbol: str, *, direction: str = "LONG") -> float:
+    """Overnight financing bps/day for symbol×direction (ASSUMPTION via fee_profiles)."""
+    if symbol.endswith("USDT") or symbol in CRYPTO_FRICTION_BPS:
+        return 0.0
+    if direction == "SHORT":
+        return float(FINANCING_BPS_PER_DAY_SHORT_CFD_ASSUMED)
     if symbol in FINANCING_BPS_PER_DAY_BY_SYMBOL:
         return FINANCING_BPS_PER_DAY_BY_SYMBOL[symbol]
-    if symbol.endswith("USDT"):
-        return 0.0
-    return FINANCING_BPS_PER_DAY_CFD_ASSUMED
+    return float(FINANCING_BPS_PER_DAY_LONG_CFD_ASSUMED)
 
 BASELINE_PROFILE: dict[str, Any] = {
     "code": BASELINE_CODE,
@@ -66,7 +73,9 @@ BASELINE_PROFILE: dict[str, Any] = {
     "friction_bps_by_symbol": {**CRYPTO_FRICTION_BPS, **OTHER_MARKETS_FRICTION_BPS},
     "financing_bps_per_day_by_symbol": dict(FINANCING_BPS_PER_DAY_BY_SYMBOL),
     "financing_bps_per_day_crypto": 0.0,
-    "financing_bps_per_day_default": FINANCING_BPS_PER_DAY_CFD_ASSUMED,
+    "financing_bps_per_day_default": FINANCING_BPS_PER_DAY_LONG_CFD_ASSUMED,
+    "financing_bps_per_day_short_default": FINANCING_BPS_PER_DAY_SHORT_CFD_ASSUMED,
+    "financing_assumption": dict(FINANCING_ASSUMPTION_META),
     "slippage_bps": 3.0,
     "spread_bps": 2.0,
     # 2026-09-21 (user decision, from the research study): no short selling (shorts made most of the losses)

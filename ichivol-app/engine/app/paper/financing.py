@@ -30,14 +30,28 @@ logger = logging.getLogger(__name__)
 FINANCING_ACTIVATED_ON = date(2026, 9, 23)
 
 
-def financing_bps_for(profile: dict[str, Any], symbol: str) -> float:
+def financing_bps_for(profile: dict[str, Any], symbol: str, *, direction: str = "LONG") -> float:
     table = profile.get("financing_bps_per_day_by_symbol") or {}
+    if direction == "SHORT":
+        short_table = profile.get("financing_bps_per_day_short_by_symbol") or {}
+        if symbol in short_table:
+            return float(short_table[symbol])
+        return float(
+            profile.get(
+                "financing_bps_per_day_short_default",
+                market_financing_bps_per_day(symbol, direction="SHORT"),
+            )
+        )
     if symbol in table:
         return float(table[symbol])
     if symbol.endswith("USDT"):
         return float(profile.get("financing_bps_per_day_crypto", 0.0))
-    return float(profile.get("financing_bps_per_day_default", market_financing_bps_per_day(symbol)))
-
+    return float(
+        profile.get(
+            "financing_bps_per_day_default",
+            market_financing_bps_per_day(symbol, direction="LONG"),
+        )
+    )
 
 def _day_key(position_id: str, day: date) -> str:
     return f"financing:{position_id}:{day.isoformat()}"
@@ -76,14 +90,15 @@ def apply_daily_financing(
     )
 
     for pos in opens:
-        bps = financing_bps_for(profile, pos.symbol)
-        if bps <= 0:
+        bps = financing_bps_for(profile, pos.symbol, direction=pos.direction or "LONG")
+        if bps == 0:
             continue
         notional = float(pos.notional or 0.0)
         if notional <= 0:
             continue
+        # Positive bps = debit (client pays); negative = credit (short receives).
         charge = notional * (bps / 10_000.0)
-        if charge <= 0:
+        if charge == 0:
             continue
         key = _day_key(pos.id, day)
         existing = session.execute(
@@ -128,6 +143,7 @@ def apply_daily_financing(
                     "notional": notional,
                     "charge": charge,
                     "symbol": pos.symbol,
+                    "direction": pos.direction,
                 },
                 created_at=now,
             )

@@ -42,9 +42,11 @@ def preview_close_cash_delta(
         realized = proceeds - exit_fee - entry_notional - entry_fee
         cash_delta = proceeds - exit_fee
     else:
-        pnl_pct = (position.entry_price / exit_fill) - 1.0
-        realized = entry_notional * pnl_pct - exit_fee
-        cash_delta = entry_notional + realized
+        from app.paper.broker import short_realized_currency
+
+        pnl_currency = short_realized_currency(position.qty, position.entry_price, exit_fill)
+        realized = pnl_currency - exit_fee
+        cash_delta = entry_notional + pnl_currency - exit_fee
     return {
         "exit_fill": float(exit_fill),
         "exit_fee": float(exit_fee),
