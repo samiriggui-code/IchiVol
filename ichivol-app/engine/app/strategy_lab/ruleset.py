@@ -31,6 +31,7 @@ from typing import Any, Mapping
 
 from app.agents.types import Direction
 from app.strategy_lab.conditions import CONDITION_REGISTRY
+from app.strategy_lab.stop_trail import TrailSpec
 
 # Derived from CONDITION_REGISTRY (T3c) — keep name for optimization.py / api/rulesets.py.
 CONDITION_SCHEMA: dict[str, type] = {
@@ -67,17 +68,23 @@ class ConditionGroup:
 
 @dataclass(frozen=True)
 class ExitSpec:
-    """Optional lab exit beyond ATR stop/target (T3 slice 2).
+    """Optional lab exit beyond ATR stop/target (T3 slice 2 + T0-MANAGE-a).
 
     Empty / omitted ≡ today's ATR-only behaviour.
     ``condition_group`` None = no signal exit.
+    ``trail`` None = fixed stop at entry (legacy).
     """
 
     max_hold_bars: int | None = None
     condition_group: ConditionGroup | None = None
+    trail: TrailSpec | None = None
 
     def is_empty(self) -> bool:
-        return self.max_hold_bars is None and self.condition_group is None
+        return (
+            self.max_hold_bars is None
+            and self.condition_group is None
+            and (self.trail is None or self.trail.is_empty())
+        )
 
 
 @dataclass(frozen=True)
@@ -142,6 +149,13 @@ class Ruleset:
                     exit_payload["conditions"] = {"any": dict(eg.any_of)}
                 else:
                     exit_payload["conditions"] = {"all": dict(eg.all_of)}
+            if self.exit.trail is not None and not self.exit.trail.is_empty():
+                trail_payload: dict[str, Any] = {}
+                if self.exit.trail.breakeven_at_r is not None:
+                    trail_payload["breakeven_at_r"] = self.exit.trail.breakeven_at_r
+                if self.exit.trail.atr_trail_mult is not None:
+                    trail_payload["atr_trail_mult"] = self.exit.trail.atr_trail_mult
+                exit_payload["trail"] = trail_payload
             out["exit"] = exit_payload
         return out
 
@@ -221,7 +235,37 @@ def _parse_condition_group(conditions_raw: Mapping[str, Any]) -> ConditionGroup:
     return ConditionGroup(all_of=all_of, any_of={})
 
 
-_EXIT_KEYS = frozenset({"max_hold_bars", "conditions"})
+_EXIT_KEYS = frozenset({"max_hold_bars", "conditions", "trail"})
+_TRAIL_KEYS = frozenset({"breakeven_at_r", "atr_trail_mult"})
+
+
+def _parse_trail_spec(raw: Any) -> TrailSpec:
+    if not isinstance(raw, Mapping):
+        raise ValueError("ruleset.exit.trail must be an object")
+    if not raw:
+        raise ValueError("ruleset.exit.trail must set breakeven_at_r and/or atr_trail_mult")
+    keys = {str(k) for k in raw.keys()}
+    unknown = keys - _TRAIL_KEYS
+    if unknown:
+        raise ValueError(f"unknown ruleset.exit.trail keys: {sorted(unknown)}")
+
+    breakeven: float | None = None
+    if "breakeven_at_r" in raw:
+        be = raw["breakeven_at_r"]
+        if isinstance(be, bool) or not isinstance(be, (int, float)) or float(be) <= 0:
+            raise ValueError("ruleset.exit.trail.breakeven_at_r must be a number > 0")
+        breakeven = float(be)
+
+    atr_mult: float | None = None
+    if "atr_trail_mult" in raw:
+        am = raw["atr_trail_mult"]
+        if isinstance(am, bool) or not isinstance(am, (int, float)) or float(am) <= 0:
+            raise ValueError("ruleset.exit.trail.atr_trail_mult must be a number > 0")
+        atr_mult = float(am)
+
+    if breakeven is None and atr_mult is None:
+        raise ValueError("ruleset.exit.trail must set breakeven_at_r and/or atr_trail_mult")
+    return TrailSpec(breakeven_at_r=breakeven, atr_trail_mult=atr_mult)
 
 
 def _parse_exit_spec(raw: Any) -> ExitSpec:
@@ -256,9 +300,13 @@ def _parse_exit_spec(raw: Any) -> ExitSpec:
             raise ValueError("ruleset.exit.conditions must be a non-empty object")
         cond_group = _parse_condition_group(cond_raw)
 
-    if max_hold is None and cond_group is None:
+    trail: TrailSpec | None = None
+    if "trail" in raw:
+        trail = _parse_trail_spec(raw["trail"])
+
+    if max_hold is None and cond_group is None and trail is None:
         return ExitSpec()
-    return ExitSpec(max_hold_bars=max_hold, condition_group=cond_group)
+    return ExitSpec(max_hold_bars=max_hold, condition_group=cond_group, trail=trail)
 
 
 def parse_ruleset(raw: Mapping[str, Any]) -> Ruleset:

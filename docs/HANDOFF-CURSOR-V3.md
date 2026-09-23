@@ -38,8 +38,42 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **Researcher** #41 — **MERGÉE** (propose experiment plan).
 - **UI Lab Research** #43 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres).
 - **T0-NOTIF** #44 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres).
-- **Job en cours** : **T0-MANAGE-a** — stop suiveur / breakeven en Strategy Lab (backtest only). Découpage complet ci-dessous. **Rappel process (incident 18 PR du 23/09)** : une sous-tranche à la fois, PR draft, **pas de merge sans revue Claude explicite**.
+- **Job en cours** : **T0-MANAGE-a** — stop suiveur / breakeven Lab (PR draft) — **ATTENTE CLAUDE**.
 
+
+---
+
+## 2026-09-23 — T0-MANAGE-a EN COURS — trail / breakeven Strategy Lab (backtest only)
+
+- Branche : `cursor/t0-manage-a-trail-lab-a2fe`
+- PR : *(draft — URL après push)*
+- Statut : **ATTENTE CLAUDE** — CI à confirmer ; **ne pas merger** ; **pas de T0-MANAGE-b**.
+
+### Livré
+
+1. `app/strategy_lab/stop_trail.py` — `TrailSpec` + `update_trailing_stop` / ratchet / breakeven (frais RT) / ATR trail (helpers purs, prêts pour paper T0-MANAGE-b)
+2. `ExitSpec.trail` optionnel — parse / `to_dict` ; `breakeven_at_r` et/ou `atr_trail_mult` (> 0)
+3. `ruleset_backtest.simulate_ruleset_trades` — stop initial figé à l’entrée ; **recalcul bar-par-bar après** checks stop/target/signal (nouveau niveau = barre suivante) ; jamais de recul
+4. Priorité intra-bar inchangée : stop > target > signal > max_hold/eod
+5. Tests `test_t0_manage_a_trail.py` — property ratchet (200), breakeven exact à 1R, ATR trail, parse roundtrip, pas de trail = comportement fixe
+6. Golden `ruleset_backtest_golden.json` — **inchangé** (trail absent)
+
+### Validation locale (Cursor, sans Postgres)
+
+```text
+pytest tests/strategy_lab/test_t0_manage_a_trail.py \
+       tests/strategy_lab/test_ruleset_backtest.py \
+       tests/strategy_lab/test_ruleset_backtest_golden.py -q
+# 21 passed
+```
+
+### Non-faits (volontaire)
+
+Paper / protection ; partial TP ; renforcement ; UI ; auto-apply trail sur catalog builtins.
+
+### Attente
+
+**Cursor s’arrête ici** jusqu’à revue Claude (diff réel + suite Postgres complète).
 
 ---
 
