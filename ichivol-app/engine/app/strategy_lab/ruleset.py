@@ -31,6 +31,7 @@ from typing import Any, Mapping
 
 from app.agents.types import Direction
 from app.strategy_lab.conditions import CONDITION_REGISTRY
+from app.strategy_lab.partial_tp import PartialTpStep
 from app.strategy_lab.stop_trail import TrailSpec
 
 # Derived from CONDITION_REGISTRY (T3c) — keep name for optimization.py / api/rulesets.py.
@@ -68,22 +69,25 @@ class ConditionGroup:
 
 @dataclass(frozen=True)
 class ExitSpec:
-    """Optional lab exit beyond ATR stop/target (T3 slice 2 + T0-MANAGE-a).
+    """Optional lab exit beyond ATR stop/target (T3 + T0-MANAGE-a/c).
 
     Empty / omitted ≡ today's ATR-only behaviour.
     ``condition_group`` None = no signal exit.
     ``trail`` None = fixed stop at entry (legacy).
+    ``partial_tp`` empty = no scale-out (legacy single-fill exit).
     """
 
     max_hold_bars: int | None = None
     condition_group: ConditionGroup | None = None
     trail: TrailSpec | None = None
+    partial_tp: tuple[PartialTpStep, ...] = ()
 
     def is_empty(self) -> bool:
         return (
             self.max_hold_bars is None
             and self.condition_group is None
             and (self.trail is None or self.trail.is_empty())
+            and not self.partial_tp
         )
 
 
@@ -156,6 +160,11 @@ class Ruleset:
                 if self.exit.trail.atr_trail_mult is not None:
                     trail_payload["atr_trail_mult"] = self.exit.trail.atr_trail_mult
                 exit_payload["trail"] = trail_payload
+            if self.exit.partial_tp:
+                exit_payload["partial_tp"] = [
+                    {"r_multiple": s.r_multiple, "fraction": s.fraction}
+                    for s in self.exit.partial_tp
+                ]
             out["exit"] = exit_payload
         return out
 
@@ -235,8 +244,9 @@ def _parse_condition_group(conditions_raw: Mapping[str, Any]) -> ConditionGroup:
     return ConditionGroup(all_of=all_of, any_of={})
 
 
-_EXIT_KEYS = frozenset({"max_hold_bars", "conditions", "trail"})
+_EXIT_KEYS = frozenset({"max_hold_bars", "conditions", "trail", "partial_tp"})
 _TRAIL_KEYS = frozenset({"breakeven_at_r", "atr_trail_mult"})
+_PARTIAL_TP_KEYS = frozenset({"r_multiple", "fraction"})
 
 
 def _parse_trail_spec(raw: Any) -> TrailSpec:
@@ -266,6 +276,53 @@ def _parse_trail_spec(raw: Any) -> TrailSpec:
     if breakeven is None and atr_mult is None:
         raise ValueError("ruleset.exit.trail must set breakeven_at_r and/or atr_trail_mult")
     return TrailSpec(breakeven_at_r=breakeven, atr_trail_mult=atr_mult)
+
+
+def _parse_partial_tp(raw: Any) -> tuple[PartialTpStep, ...]:
+    if not isinstance(raw, list) or not raw:
+        raise ValueError("ruleset.exit.partial_tp must be a non-empty list")
+    steps: list[PartialTpStep] = []
+    prev_r = 0.0
+    frac_sum = 0.0
+    for i, item in enumerate(raw):
+        if not isinstance(item, Mapping):
+            raise ValueError(f"ruleset.exit.partial_tp[{i}] must be an object")
+        keys = {str(k) for k in item.keys()}
+        unknown = keys - _PARTIAL_TP_KEYS
+        if unknown:
+            raise ValueError(
+                f"unknown ruleset.exit.partial_tp[{i}] keys: {sorted(unknown)}"
+            )
+        if "r_multiple" not in item or "fraction" not in item:
+            raise ValueError(
+                f"ruleset.exit.partial_tp[{i}] requires r_multiple and fraction"
+            )
+        rm = item["r_multiple"]
+        fr = item["fraction"]
+        if isinstance(rm, bool) or not isinstance(rm, (int, float)) or float(rm) <= 0:
+            raise ValueError(
+                f"ruleset.exit.partial_tp[{i}].r_multiple must be a number > 0"
+            )
+        if isinstance(fr, bool) or not isinstance(fr, (int, float)):
+            raise ValueError(
+                f"ruleset.exit.partial_tp[{i}].fraction must be a number in ]0, 1["
+            )
+        r_multiple = float(rm)
+        fraction = float(fr)
+        if not (0.0 < fraction < 1.0):
+            raise ValueError(
+                f"ruleset.exit.partial_tp[{i}].fraction must be in ]0, 1["
+            )
+        if r_multiple <= prev_r:
+            raise ValueError(
+                "ruleset.exit.partial_tp r_multiple values must be strictly increasing"
+            )
+        prev_r = r_multiple
+        frac_sum += fraction
+        steps.append(PartialTpStep(r_multiple=r_multiple, fraction=fraction))
+    if frac_sum > 1.0 + 1e-12:
+        raise ValueError("ruleset.exit.partial_tp fractions must sum to <= 1")
+    return tuple(steps)
 
 
 def _parse_exit_spec(raw: Any) -> ExitSpec:
@@ -304,9 +361,23 @@ def _parse_exit_spec(raw: Any) -> ExitSpec:
     if "trail" in raw:
         trail = _parse_trail_spec(raw["trail"])
 
-    if max_hold is None and cond_group is None and trail is None:
+    partial_tp: tuple[PartialTpStep, ...] = ()
+    if "partial_tp" in raw:
+        partial_tp = _parse_partial_tp(raw["partial_tp"])
+
+    if (
+        max_hold is None
+        and cond_group is None
+        and trail is None
+        and not partial_tp
+    ):
         return ExitSpec()
-    return ExitSpec(max_hold_bars=max_hold, condition_group=cond_group, trail=trail)
+    return ExitSpec(
+        max_hold_bars=max_hold,
+        condition_group=cond_group,
+        trail=trail,
+        partial_tp=partial_tp,
+    )
 
 
 def parse_ruleset(raw: Mapping[str, Any]) -> Ruleset:
@@ -339,6 +410,14 @@ def parse_ruleset(raw: Mapping[str, Any]) -> Ruleset:
         raise ValueError("stop_atr and target_atr must be > 0")
 
     exit_spec = _parse_exit_spec(raw.get("exit"))
+    if exit_spec.partial_tp:
+        target_r = target_atr / stop_atr
+        for i, step in enumerate(exit_spec.partial_tp):
+            if step.r_multiple >= target_r - 1e-12:
+                raise ValueError(
+                    f"ruleset.exit.partial_tp[{i}].r_multiple must be < "
+                    f"target_atr/stop_atr ({target_r})"
+                )
 
     symbol = raw.get("symbol")
     timeframe = raw.get("timeframe")
