@@ -37,8 +37,27 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T5b** #35 — **MERGÉE** (profils poids + étude historique).
 - **T6** #36 — **MERGÉE** (AuditReport post-outcome).
 - **T7** #37 — **MERGÉE** (Monte Carlo / risk of ruin).
-- **Job en cours** : **aucun** — roadmap V3 **T1→T7 terminée** (observation-only pour T5–T7 ; pas de live score / auto-apply).
+- **Job en cours** : **T3d** — PR #39 draft — propose ruleset edit + condition catalog (ATTENTE CI).
 
+
+---
+
+## 2026-09-23 — T3d EN COURS — propose ruleset edit (NL→DSL contract)
+
+- Branche : `cursor/t3d-ruleset-propose-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/39 (**draft**)
+- Statut : **ATTENTE CI** — après close T1–T7.
+
+### Livré
+
+1. `propose_edit.py` — patch ops (`set_leaf`/`unset_leaf`/ATR/direction/exit) → `parse_ruleset`
+2. `condition_catalog()` exposé GET `/rulesets` + agent `list_condition_catalog`
+3. `POST /ruleset/propose` + agent `propose_ruleset_edit` — status toujours `proposed`
+4. Tests `test_propose_ruleset_edit.py` ; OpenAPI golden refresh
+
+### Non-faits
+
+LLM dans le moteur ; chat UI Lab ; écriture catalog builtins ; T3e MTF ; auto-apply live.
 
 ---
 

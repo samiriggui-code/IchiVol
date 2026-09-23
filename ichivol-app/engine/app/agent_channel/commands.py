@@ -807,6 +807,41 @@ def cmd_run_monte_carlo(args: dict) -> dict:
     return payload
 
 
+def cmd_list_condition_catalog(args: dict) -> dict:
+    """T3d — CONDITION_REGISTRY catalog for NL→DSL grounding (read-only)."""
+    from app.strategy_lab.propose_edit import condition_catalog
+
+    return {
+        "conditions": condition_catalog(),
+        "disclaimer": (
+            "Condition catalog for Lab / Copilot — does not change live strategy."
+        ),
+    }
+
+
+def cmd_propose_ruleset_edit(args: dict) -> dict:
+    """T3d — propose a validated ruleset patch/candidate (status=proposed only)."""
+    from app.strategy_lab.propose_edit import propose_ruleset_edit
+
+    base_ruleset_id = args.get("base_ruleset_id")
+    if base_ruleset_id is not None:
+        base_ruleset_id = str(base_ruleset_id)
+    base_ruleset = args.get("base_ruleset")
+    patch = args.get("patch")
+    patches = args.get("patches")
+    ruleset = args.get("ruleset")
+    try:
+        return propose_ruleset_edit(
+            base_ruleset_id=base_ruleset_id,
+            base_ruleset=base_ruleset if isinstance(base_ruleset, dict) else None,
+            patch=patch if isinstance(patch, dict) else None,
+            patches=patches if isinstance(patches, list) else None,
+            ruleset=ruleset if isinstance(ruleset, dict) else None,
+        )
+    except (TypeError, ValueError) as exc:
+        raise CommandError(str(exc)) from exc
+
+
 def cmd_filter_backtest_overlay(args: dict) -> dict:
     """T4b — backtest overlay with structured filters for Claude (read-only).
 
