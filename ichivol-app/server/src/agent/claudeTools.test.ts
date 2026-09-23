@@ -34,15 +34,17 @@ test('convertit un spec moteur en outil Claude (types + champs requis)', () => {
   assert.equal(tool.input_schema.properties.limit.type, 'integer')
 })
 
-test("n'expose que les outils lecture seule (et pas list_tools)", () => {
+test("n'expose que lecture seule + draw_*/delete (pas place_order ni list_tools)", () => {
   const tools = toolsFromEngineManifest([
     CONTEXT_SPEC,
     { ...CONTEXT_SPEC, name: 'place_order', read_only: false },
+    { ...CONTEXT_SPEC, name: 'draw_horizontal_line', read_only: false },
+    { ...CONTEXT_SPEC, name: 'delete_chart_object', read_only: false },
     { ...CONTEXT_SPEC, name: 'list_tools' },
   ])
   assert.deepEqual(
-    tools.map((t) => t.name),
-    ['get_symbol_context'],
+    tools.map((t) => t.name).sort(),
+    ['delete_chart_object', 'draw_horizontal_line', 'get_symbol_context'],
   )
 })
 

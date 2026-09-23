@@ -27,14 +27,16 @@ def get_agent_tools() -> dict:
 
 @router.get("/agent/capabilities")
 def get_agent_capabilities() -> dict:
-    """Stub-level capabilities descriptor (per brief: "stub OK"). No WRITE
-    tier in this pass -- paper trading stays reachable only through
-    `POST /paper/positions` directly (app/paper/engine.py), never through
-    this command channel, until a WRITE allowlist is explicitly asked for."""
+    """Capabilities descriptor. Chart-overlay WRITE (draw_*/delete_chart_object)
+    is enabled (T2b). Paper trading stays off this channel — only via
+    ``POST /paper/positions`` (app/paper/engine.py)."""
+    write_cmds = sorted(name for name, spec in TOOLS.items() if not spec.read_only)
     return {
         "version": _AGENT_CHANNEL_VERSION,
-        "read_only": True,
-        "write_tier_enabled": False,
+        "read_only": False,
+        "write_tier_enabled": True,
+        "write_scopes": ["chart_objects"],
+        "write_commands": write_cmds,
         "max_batch_items": _MAX_AGENT_BATCH_ITEMS,
         "commands": sorted(TOOLS.keys()),
     }

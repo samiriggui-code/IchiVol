@@ -1,8 +1,8 @@
 /**
  * Boucle d'outils Claude (Anthropic tool use) sur le canal agent du moteur.
  *
- * Claude choisit lui-même quelles commandes moteur appeler ; le moteur reste
- * seul juge (aucune commande d'écriture n'est exposée : allowlist READ only).
+ * Claude choisit lui-même quelles commandes moteur appeler. Lecture seule par
+ * défaut ; T2b autorise aussi les outils chart write (draw_* / delete_chart_object).
  * Module pur : `fetchImpl` et `execute` sont injectés pour tester sans réseau.
  */
 
@@ -48,6 +48,22 @@ export const SEARCH_KB_TOOL: AnthropicTool = {
   },
 }
 
+/** Chart-overlay writes (T2b). Paper / brokerage writes stay excluded. */
+export const CHART_WRITE_TOOL_NAMES = new Set([
+  'draw_horizontal_line',
+  'draw_trend_line',
+  'draw_ray',
+  'draw_zone',
+  'draw_rectangle',
+  'draw_channel',
+  'draw_marker',
+  'draw_text',
+  'draw_entry',
+  'draw_stop',
+  'draw_target',
+  'delete_chart_object',
+])
+
 /** Tronque un résultat d'outil : garde le contexte (et le coût) sous contrôle. */
 export const MAX_TOOL_RESULT_CHARS = 12_000
 
@@ -77,11 +93,15 @@ export function engineSpecToAnthropicTool(spec: EngineAgentToolSpec): AnthropicT
   }
 }
 
-/** Seuls les outils lecture seule sont exposés à Claude. */
+function isExposedToClaude(spec: EngineAgentToolSpec): boolean {
+  if (spec.name === 'list_tools') return false
+  if (spec.read_only) return true
+  return CHART_WRITE_TOOL_NAMES.has(spec.name)
+}
+
+/** Outils lecture seule + draw_* et delete_chart_object (T2b). Pas de paper write. */
 export function toolsFromEngineManifest(specs: EngineAgentToolSpec[]): AnthropicTool[] {
-  return specs
-    .filter((s) => s.read_only && s.name !== 'list_tools')
-    .map(engineSpecToAnthropicTool)
+  return specs.filter(isExposedToClaude).map(engineSpecToAnthropicTool)
 }
 
 export function truncateToolResult(text: string): string {
