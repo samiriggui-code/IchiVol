@@ -32,8 +32,9 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T0-METRICS-2 EN COURS — frais engine (flip / EOD / close)
 
 - Branche : `cursor/t0-metrics-2-engine-costs-a2fe`
-- PR : *(draft à créer)*
-- Statut : **EN COURS** → CI puis **ATTENTE CLAUDE**.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/24 (**draft**)
+- Commit(s) : `96e5696` (feat) ; `0126f9f` (handoff)
+- Statut : **ATTENTE CI** puis **ATTENTE CLAUDE**.
 
 ### Corrections `run_backtest`
 
