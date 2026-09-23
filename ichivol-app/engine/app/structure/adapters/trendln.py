@@ -48,6 +48,8 @@ def _extrema(
                     price=candles[j].high,
                     side=LevelSide.RESISTANCE,
                     quality=1.0,
+                    confirmed_bar=i,
+                    provisional=False,
                 )
             )
         if candles[j].low == min(c.low for c in window):
@@ -58,6 +60,8 @@ def _extrema(
                     price=candles[j].low,
                     side=LevelSide.SUPPORT,
                     quality=1.0,
+                    confirmed_bar=i,
+                    provisional=False,
                 )
             )
     return lows, highs

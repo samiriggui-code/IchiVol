@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Sequence
 
 from app.structure.params import StructureEngineParams
-from app.structure.types import DetectorSource, LevelSide, MarketStructure, PriceZone
+from app.structure.types import DetectorSource, LevelSide, MarketStructure, PivotPoint, PriceZone
 
 
 @dataclass
@@ -25,9 +25,12 @@ def build_consensus(
 ) -> MarketStructure:
     supports: list[PriceZone] = []
     resistances: list[PriceZone] = []
+    pivots: list[PivotPoint] = []
     for s in structures:
         supports.extend(s.support_zones)
         resistances.extend(s.resistance_zones)
+        # Propagate confirmation metadata from source pivots (T1f mark-only).
+        pivots.extend(s.pivots)
 
     merged_s = _cluster_zones(supports, LevelSide.SUPPORT, atr, params)
     merged_r = _cluster_zones(resistances, LevelSide.RESISTANCE, atr, params)
@@ -39,6 +42,7 @@ def build_consensus(
 
     return MarketStructure(
         source=DetectorSource.CONSENSUS,
+        pivots=tuple(pivots),
         support_zones=tuple(merged_s),
         resistance_zones=tuple(merged_r),
         structure_score=score,

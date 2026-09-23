@@ -32,13 +32,30 @@ def _pivots(candles: Sequence[Candle], lookback: int = 3) -> tuple[list[PivotPoi
     n = len(candles)
     lows: list[PivotPoint] = []
     highs: list[PivotPoint] = []
-    # Force first/last as anchors (pytrendline-style)
+    last = n - 1
+    # Force first/last as anchors (pytrendline-style) — provisional / repaint.
     if n >= 2:
         lows.append(
-            PivotPoint(0, candles[0].time, candles[0].low, LevelSide.SUPPORT, 0.5)
+            PivotPoint(
+                0,
+                candles[0].time,
+                candles[0].low,
+                LevelSide.SUPPORT,
+                0.5,
+                confirmed_bar=last,
+                provisional=True,
+            )
         )
         highs.append(
-            PivotPoint(0, candles[0].time, candles[0].high, LevelSide.RESISTANCE, 0.5)
+            PivotPoint(
+                0,
+                candles[0].time,
+                candles[0].high,
+                LevelSide.RESISTANCE,
+                0.5,
+                confirmed_bar=last,
+                provisional=True,
+            )
         )
     for i in range(n):
         j = i - lookback
@@ -46,19 +63,48 @@ def _pivots(candles: Sequence[Candle], lookback: int = 3) -> tuple[list[PivotPoi
             continue
         window = candles[j - lookback : j + lookback + 1]
         if candles[j].low == min(c.low for c in window):
-            lows.append(PivotPoint(j, candles[j].time, candles[j].low, LevelSide.SUPPORT))
+            lows.append(
+                PivotPoint(
+                    j,
+                    candles[j].time,
+                    candles[j].low,
+                    LevelSide.SUPPORT,
+                    confirmed_bar=i,
+                    provisional=False,
+                )
+            )
         if candles[j].high == max(c.high for c in window):
             highs.append(
-                PivotPoint(j, candles[j].time, candles[j].high, LevelSide.RESISTANCE)
+                PivotPoint(
+                    j,
+                    candles[j].time,
+                    candles[j].high,
+                    LevelSide.RESISTANCE,
+                    confirmed_bar=i,
+                    provisional=False,
+                )
             )
     if n >= 2:
-        last = n - 1
         lows.append(
-            PivotPoint(last, candles[last].time, candles[last].low, LevelSide.SUPPORT, 0.5)
+            PivotPoint(
+                last,
+                candles[last].time,
+                candles[last].low,
+                LevelSide.SUPPORT,
+                0.5,
+                confirmed_bar=last,
+                provisional=True,
+            )
         )
         highs.append(
             PivotPoint(
-                last, candles[last].time, candles[last].high, LevelSide.RESISTANCE, 0.5
+                last,
+                candles[last].time,
+                candles[last].high,
+                LevelSide.RESISTANCE,
+                0.5,
+                confirmed_bar=last,
+                provisional=True,
             )
         )
     # unique by bar

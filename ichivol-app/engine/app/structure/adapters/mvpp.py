@@ -103,6 +103,8 @@ def _causal_fractal_pivots(
                 side=side,
                 quality=quality,
                 is_high_volume=high_vol[j],
+                confirmed_bar=j + right,
+                provisional=False,
             )
         )
     # Dedup same bar
