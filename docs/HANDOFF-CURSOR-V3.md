@@ -21,7 +21,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T0-CI — Postgres Actions + diagnostic des 13 paper failures
 
 - Branche : `cursor/t0-ci-postgres-a2fe`
-- PR : draft à ouvrir depuis https://github.com/samiriggui-code/IchiVol/compare/main...cursor/t0-ci-postgres-a2fe?expand=1 — **ManagePullRequest indisponible dans ce subagent** (`gh` 403) ; branche poussée — **pas de merge avant revue Claude**
+- PR : https://github.com/samiriggui-code/IchiVol/pull/14 (draft) — **pas de merge avant revue Claude**
 - Commit(s) : `c7f13b9` (workflow + diagnostic handoff)
 
 ### Livré
