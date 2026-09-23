@@ -16,6 +16,42 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **Règle de merge** : avec la base, tout échec **hors** de ces 13 = régression → **bloque le merge**.
 - **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
 - **T2a** : ChartObject — **à merger** (PR #15) après rebase sur main post-#14 — **validé par Claude**.
+- **T3 slice 1** : composition `all` / `any` sur ruleset — draft PR (revue Claude quand dispo). Exit / risk / MTF **pas** dans cette PR.
+
+---
+
+## 2026-09-23 — T3 slice 1 — DSL v3 `all` / `any` (rétrocompat flat)
+
+- Branche : `cursor/t3-dsl-v3-a2fe`
+- PR : *(draft — lien à compléter après création)*
+- Commit(s) : à venir sur cette branche
+
+### Livré
+
+- `ConditionGroup` (`all_of` / `any_of`) dans `app/strategy_lab/ruleset.py`
+- Parse : flat `{key: val}` ≡ `all` ; forme nested `{"all":…,"any":…}` ; refuse le mix flat + clés composition
+- `to_dict()` : flat legacy si `all` seul (catalog / Perf DB inchangés)
+- `evaluator.bar_matches` : `(∀ all) ∧ (∃ any)` ; groupes vides = vacuous true
+- `optimization.apply_params` préserve `any_of` quand le base est composé
+- Tests : `test_ruleset.py` (+ `test_apply_params_preserves_any_of`)
+- README engine : ligne schema Rules Engine mise à jour
+
+### Non fait (tranches suivantes T3)
+
+- Exit rules / risk block / MTF dans le DSL
+- Nesting récursif `all`/`any` sous un groupe
+- Migration catalog built-ins vers `any` (volontairement flat)
+
+### Validation locale (Cursor, sans Postgres)
+
+```text
+pytest tests/strategy_lab/ -q
+# 62 passed
+```
+
+### Revue Claude
+
+Draft — **ne pas merger** avant revue. Suite Postgres complète quand Claude revient.
 
 ---
 

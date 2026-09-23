@@ -63,7 +63,7 @@ Pour chaque entrée d’une variante (`ICHIMOKU_ONLY` … `PIPELINE`), mesure le
 
 ### Rules Engine (Phase 2)
 
-- Schema : `app/strategy_lab/ruleset.py` (conditions AND, clés allowlistées)
+- Schema : `app/strategy_lab/ruleset.py` (conditions flat AND = legacy ; T3 : `all` / `any` ; clés allowlistées)
 - Features causales : `features.py` (Ichimoku / RVOL / structure / ATR / CMF / RSI)
 - Évaluateur rising-edge : `evaluator.py`
 - Catalog built-in : `catalog.py` (`IV_ICHIMOKU_RVOL_LONG_001`, ablation Ichimoku seul, +BOS, kumo breakout)

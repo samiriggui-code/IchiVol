@@ -168,10 +168,21 @@ def _condition_holds(
 
 
 def bar_matches(bar: FeatureBar, ruleset: Ruleset) -> bool:
-    return all(
-        _condition_holds(bar, key, value, ruleset.direction)
-        for key, value in ruleset.conditions.items()
-    )
+    """AND of ``all_of`` leaves (if any) and OR of ``any_of`` leaves (if any)."""
+    group = ruleset.condition_group
+    if group.all_of:
+        if not all(
+            _condition_holds(bar, key, value, ruleset.direction)
+            for key, value in group.all_of.items()
+        ):
+            return False
+    if group.any_of:
+        if not any(
+            _condition_holds(bar, key, value, ruleset.direction)
+            for key, value in group.any_of.items()
+        ):
+            return False
+    return bool(group.all_of or group.any_of)
 
 
 def extract_ruleset_signals(

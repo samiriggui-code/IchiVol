@@ -1,10 +1,20 @@
-﻿"""Declarative strategy ruleset (Strategy Lab Phase 2).
+﻿"""Declarative strategy ruleset (Strategy Lab Phase 2 + T3 DSL v3 slice 1).
 
 A ruleset is a versioned, testable hypothesis — not a live BUY score.
 
-Conditions are AND-combined. Unknown keys raise at parse time so typos
-cannot silently widen a study. Evaluation is causal: bar i only sees
-features derived from candles[0..i].
+T3 slice 1 — boolean composition:
+  - Legacy flat ``conditions: {key: value, ...}`` ≡ ``all`` (AND), unchanged.
+  - Additive nested form::
+
+        "conditions": {
+            "all": {"rvol_min": 1.5, "price_above_kumo": true},
+            "any": {"bos_bullish": true, "tk_cross_bullish": true}
+        }
+
+    Match = (all leaves hold, if any) AND (at least one ``any`` leaf holds, if any).
+
+Unknown leaf keys raise at parse time so typos cannot silently widen a study.
+Evaluation is causal: bar i only sees features derived from candles[0..i].
 """
 
 from __future__ import annotations
@@ -82,15 +92,32 @@ CONDITION_ENUMS: dict[str, frozenset[str]] = {
 }
 
 _ENTRY_MODES = frozenset({"next_open", "close_confirmation"})
+_COMPOSITION_KEYS = frozenset({"all", "any"})
 
 ConditionValue = bool | int | float | str
+
+
+@dataclass(frozen=True)
+class ConditionGroup:
+    """Boolean composition over leaf conditions (T3).
+
+    ``all_of`` empty → AND clause skipped (vacuous true).
+    ``any_of`` empty → OR clause skipped (vacuous true).
+    At least one group must be non-empty at parse time.
+    """
+
+    all_of: Mapping[str, ConditionValue] = field(default_factory=dict)
+    any_of: Mapping[str, ConditionValue] = field(default_factory=dict)
+
+    def is_legacy_flat(self) -> bool:
+        return bool(self.all_of) and not self.any_of
 
 
 @dataclass(frozen=True)
 class Ruleset:
     id: str
     direction: Direction
-    conditions: Mapping[str, ConditionValue]
+    condition_group: ConditionGroup
     entry: str = "next_open"
     stop_atr: float = 1.0
     target_atr: float = 2.0
@@ -102,7 +129,21 @@ class Ruleset:
     description: str = ""
     meta: Mapping[str, Any] = field(default_factory=dict)
 
+    @property
+    def conditions(self) -> Mapping[str, ConditionValue]:
+        """Legacy flat view = ``all_of`` leaves (catalog / ablation / optimizer)."""
+        return self.condition_group.all_of
+
     def to_dict(self) -> dict[str, Any]:
+        group = self.condition_group
+        if group.is_legacy_flat():
+            conditions: dict[str, Any] = dict(group.all_of)
+        elif group.all_of and group.any_of:
+            conditions = {"all": dict(group.all_of), "any": dict(group.any_of)}
+        elif group.any_of:
+            conditions = {"any": dict(group.any_of)}
+        else:
+            conditions = {"all": dict(group.all_of)}
         return {
             "id": self.id,
             "version": self.version,
@@ -110,12 +151,87 @@ class Ruleset:
             "symbol": self.symbol,
             "timeframe": self.timeframe,
             "description": self.description,
-            "conditions": dict(self.conditions),
+            "conditions": conditions,
             "entry": self.entry,
             "stop_atr": self.stop_atr,
             "target_atr": self.target_atr,
             "meta": dict(self.meta),
         }
+
+
+def _coerce_leaf(key_s: str, value: Any) -> ConditionValue:
+    if key_s not in CONDITION_SCHEMA:
+        known = ", ".join(sorted(CONDITION_SCHEMA))
+        raise ValueError(f"unknown condition {key_s!r}; known: {known}")
+    expected = CONDITION_SCHEMA[key_s]
+    if expected is bool:
+        if not isinstance(value, bool):
+            raise ValueError(f"condition {key_s} must be bool")
+        return value
+    if expected is int:
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ValueError(f"condition {key_s} must be int")
+        if value < 0:
+            raise ValueError(f"condition {key_s} must be >= 0")
+        return value
+    if expected is str:
+        if not isinstance(value, str):
+            raise ValueError(f"condition {key_s} must be str")
+        allowed = CONDITION_ENUMS.get(key_s)
+        upper = value.strip().upper()
+        if allowed is not None and upper not in allowed:
+            raise ValueError(f"condition {key_s} must be one of {sorted(allowed)}")
+        return upper
+    # float
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"condition {key_s} must be number")
+    return float(value)
+
+
+def _parse_leaf_map(raw: Any, *, label: str) -> dict[str, ConditionValue]:
+    if not isinstance(raw, Mapping):
+        raise ValueError(f"ruleset.conditions.{label} must be an object")
+    if not raw:
+        return {}
+    out: dict[str, ConditionValue] = {}
+    for key, value in raw.items():
+        key_s = str(key)
+        if key_s in _COMPOSITION_KEYS:
+            raise ValueError(
+                f"nested all/any under conditions.{label} is not supported yet"
+            )
+        out[key_s] = _coerce_leaf(key_s, value)
+    return out
+
+
+def _parse_condition_group(conditions_raw: Mapping[str, Any]) -> ConditionGroup:
+    keys = {str(k) for k in conditions_raw.keys()}
+    if keys & _COMPOSITION_KEYS:
+        leftover = keys - _COMPOSITION_KEYS
+        if leftover:
+            raise ValueError(
+                "cannot mix leaf conditions with all/any groups; "
+                f"unexpected keys: {sorted(leftover)}"
+            )
+        all_of = (
+            _parse_leaf_map(conditions_raw["all"], label="all")
+            if "all" in conditions_raw
+            else {}
+        )
+        any_of = (
+            _parse_leaf_map(conditions_raw["any"], label="any")
+            if "any" in conditions_raw
+            else {}
+        )
+        if not all_of and not any_of:
+            raise ValueError("ruleset.conditions all/any must include at least one leaf")
+        return ConditionGroup(all_of=all_of, any_of=any_of)
+
+    # Legacy flat AND.
+    all_of = _parse_leaf_map(conditions_raw, label="(flat)")
+    if not all_of:
+        raise ValueError("ruleset.conditions must be a non-empty object")
+    return ConditionGroup(all_of=all_of, any_of={})
 
 
 def parse_ruleset(raw: Mapping[str, Any]) -> Ruleset:
@@ -136,37 +252,7 @@ def parse_ruleset(raw: Mapping[str, Any]) -> Ruleset:
     if not isinstance(conditions_raw, Mapping) or not conditions_raw:
         raise ValueError("ruleset.conditions must be a non-empty object")
 
-    conditions: dict[str, ConditionValue] = {}
-    for key, value in conditions_raw.items():
-        key_s = str(key)
-        if key_s not in CONDITION_SCHEMA:
-            known = ", ".join(sorted(CONDITION_SCHEMA))
-            raise ValueError(f"unknown condition {key_s!r}; known: {known}")
-        expected = CONDITION_SCHEMA[key_s]
-        if expected is bool:
-            if not isinstance(value, bool):
-                raise ValueError(f"condition {key_s} must be bool")
-            conditions[key_s] = value
-        elif expected is int:
-            if isinstance(value, bool) or not isinstance(value, int):
-                raise ValueError(f"condition {key_s} must be int")
-            if value < 0:
-                raise ValueError(f"condition {key_s} must be >= 0")
-            conditions[key_s] = value
-        elif expected is str:
-            if not isinstance(value, str):
-                raise ValueError(f"condition {key_s} must be str")
-            allowed = CONDITION_ENUMS.get(key_s)
-            upper = value.strip().upper()
-            if allowed is not None and upper not in allowed:
-                raise ValueError(
-                    f"condition {key_s} must be one of {sorted(allowed)}"
-                )
-            conditions[key_s] = upper
-        else:  # float
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
-                raise ValueError(f"condition {key_s} must be number")
-            conditions[key_s] = float(value)
+    condition_group = _parse_condition_group(conditions_raw)
 
     entry = str(raw.get("entry") or "next_open")
     if entry not in _ENTRY_MODES:
@@ -182,7 +268,7 @@ def parse_ruleset(raw: Mapping[str, Any]) -> Ruleset:
     return Ruleset(
         id=rid,
         direction=direction,
-        conditions=conditions,
+        condition_group=condition_group,
         entry=entry,
         stop_atr=stop_atr,
         target_atr=target_atr,
