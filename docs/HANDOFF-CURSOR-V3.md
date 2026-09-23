@@ -10,7 +10,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T1c — Features Strategy Lab via REGISTRY (`compute_many`)
 
 - Branche : `v3/t1c-registry-features`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/8 (draft)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/8 (mergée) — **validé par Claude**
 - Commit(s) : `5b56470` (fixture golden **avant** refactor) ; `3550c0c` (registry + features + ratchet)
 
 - Livré :
@@ -31,14 +31,15 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - Warmup dépendant = `max(own, deps.warmup())`.
   - Fixture golden générée et commitée **avant** toute modification de `features.py` / registry deps.
 
-- Doutes / points à vérifier par Claude :
-  - Wrappers ne passent plus `ichi_params` à `compute_ichimoku_analytics` quand deps fournis (inutilisé si `ichi`/`atr` déjà là) — confirmer OK.
-  - `LocationParams.volume_profile` nested : overrides plats via API non testés ici (catalogue JSON OK via `asdict`).
+- Doutes / points à vérifier par Claude : aucun restant — **validé par Claude** (nested params corrigés).
 
+- Corrections revue Claude :
+  - `build_params` fusionne récursivement les dataclasses imbriquées ; clé inconnue → `InvalidParamsError` avec chemin (`location.volume_profile.foo`) ; API → 422.
+  - Endpoint series utilise `REGISTRY.compute` (résout deps location/wyckoff/analytics).
 - Non fait / reste à faire :
-  - Migration des autres modules (T1d + cliquet).
+  - Migration des autres modules → T1d.
   - CONDITION_SCHEMA (T3 DSL), structure unifiée, découpage `routes.py`.
-  - **Ne pas merger** avant revue Claude.
+  - Mergé dans `main` après validation Claude.
 
 ---
 

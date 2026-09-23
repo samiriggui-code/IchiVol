@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import fields as dc_fields
+from dataclasses import asdict, fields as dc_fields, is_dataclass
 from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Query
@@ -144,8 +144,16 @@ def get_indicator_series(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    states = definition.compute(candles, built)
+    states = REGISTRY.compute(indicator_id, candles, built)
     series = [serialize_state(s) for s in states[-int(limit) :]]
+
+    params_out: dict[str, Any] = {}
+    for f in dc_fields(built):
+        val = getattr(built, f.name)
+        if is_dataclass(val) and not isinstance(val, type):
+            params_out[f.name] = asdict(val)
+        else:
+            params_out[f.name] = val
 
     return {
         "indicator": indicator_id,
@@ -153,7 +161,7 @@ def get_indicator_series(
         "timeframe": timeframe,
         "provider": provider.id,
         "provider_symbol": provider_symbol,
-        "params": {f.name: getattr(built, f.name) for f in dc_fields(built)},
+        "params": params_out,
         "warmup": warmup,
         "primary_output": definition.primary_output,
         "series": series,

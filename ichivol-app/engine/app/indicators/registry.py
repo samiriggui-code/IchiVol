@@ -69,6 +69,80 @@ class DependencyCycleError(ValueError):
     """Raised when depends_on forms a cycle."""
 
 
+def _field_default(f) -> Any:
+    from dataclasses import MISSING
+
+    if f.default is not MISSING:
+        return f.default
+    if f.default_factory is not MISSING:  # type: ignore[comparison-overlap]
+        return f.default_factory()  # type: ignore[misc]
+    return MISSING
+
+
+def _nested_dataclass_type(field_obj, current: Any) -> type | None:
+    """Resolve nested params dataclass type from instance or annotation."""
+    if is_dataclass(current) and not isinstance(current, type):
+        return type(current)
+    ann = field_obj.type
+    if isinstance(ann, type) and is_dataclass(ann):
+        return ann
+    return None
+
+
+def _instantiate_params(
+    cls: type,
+    overrides: dict[str, Any],
+    *,
+    path: str,
+    base: Any | None,
+) -> Any:
+    """Build a Params dataclass, recursively merging nested dict overrides.
+
+    Nested dataclass fields: start from the field default (or ``base``), then
+    apply provided keys. Unknown nested keys raise ``InvalidParamsError`` with
+    a dotted path (e.g. ``location.volume_profile.foo``).
+    """
+    from dataclasses import MISSING
+
+    field_map = {f.name: f for f in fields(cls)}
+    known = set(field_map)
+    unknown = sorted(set(overrides) - known)
+    if unknown:
+        raise InvalidParamsError(
+            f"unknown params: {', '.join(f'{path}.{k}' for k in unknown)}"
+        )
+
+    if base is not None and is_dataclass(base) and not isinstance(base, type):
+        values: dict[str, Any] = {f.name: getattr(base, f.name) for f in fields(cls)}
+    else:
+        values = {}
+        for f in fields(cls):
+            default = _field_default(f)
+            if default is not MISSING:
+                values[f.name] = default
+
+    for key, value in overrides.items():
+        f = field_map[key]
+        current = values.get(key)
+        nested_cls = _nested_dataclass_type(f, current)
+        if nested_cls is not None and isinstance(value, dict):
+            values[key] = _instantiate_params(
+                nested_cls,
+                value,
+                path=f"{path}.{key}",
+                base=current if is_dataclass(current) and not isinstance(current, type) else None,
+            )
+        else:
+            values[key] = value
+
+    try:
+        return cls(**values)
+    except TypeError as exc:
+        raise InvalidParamsError(f"{path}: {exc}") from exc
+    except ValueError as exc:
+        raise InvalidParamsError(f"{path}: {exc}") from exc
+
+
 @dataclass(frozen=True)
 class IndicatorDefinition:
     id: str
@@ -118,19 +192,12 @@ class IndicatorDefinition:
         return [f.name for f in fields(states[0])]
 
     def build_params(self, overrides: dict[str, Any] | None = None) -> Any:
-        overrides = dict(overrides or {})
-        known = {f.name for f in fields(self.params_cls)}
-        unknown = sorted(set(overrides) - known)
-        if unknown:
-            raise InvalidParamsError(
-                f"unknown params for {self.id}: {', '.join(unknown)}"
-            )
-        try:
-            return self.params_cls(**overrides)
-        except TypeError as exc:
-            raise InvalidParamsError(str(exc)) from exc
-        except ValueError as exc:
-            raise InvalidParamsError(str(exc)) from exc
+        return _instantiate_params(
+            self.params_cls,
+            dict(overrides or {}),
+            path=self.id,
+            base=None,
+        )
 
     def _coerce_params(self, params: dict[str, Any] | Any | None) -> Any:
         if params is None:

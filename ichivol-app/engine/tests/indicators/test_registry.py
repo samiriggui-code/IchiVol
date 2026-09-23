@@ -71,6 +71,24 @@ def test_unknown_param_rejected():
         REGISTRY.get("atr").build_params({"not_a_real_param": 1})
 
 
+def test_nested_params_override_builds_dataclass():
+    built = REGISTRY.get("location").build_params(
+        {"volume_profile": {"num_bins": 10}, "vwap_window": 15}
+    )
+    assert built.vwap_window == 15
+    assert built.volume_profile.num_bins == 10
+    # Unspecified nested fields keep defaults
+    assert built.volume_profile.lookback == 100
+    candles = _make_candles(120)
+    states = REGISTRY.compute("location", candles, built)
+    assert len(states) == len(candles)
+
+
+def test_nested_params_unknown_key_raises():
+    with pytest.raises(InvalidParamsError, match=r"location\.volume_profile\.foo"):
+        REGISTRY.get("location").build_params({"volume_profile": {"foo": 1}})
+
+
 def test_ppo_fast_gt_slow_rejected():
     with pytest.raises(InvalidParamsError):
         REGISTRY.get("ppo").build_params({"fast": 30, "slow": 12})

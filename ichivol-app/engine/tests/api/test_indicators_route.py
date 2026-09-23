@@ -172,3 +172,36 @@ def test_ichimoku_projection_invalid_params_422(monkeypatch):
         params={"params": json.dumps({"senkouB": 52})},  # camelCase unknown
     )
     assert resp.status_code == 422
+
+
+def test_location_nested_unknown_param_422(monkeypatch):
+    monkeypatch.setattr(
+        "app.market_data.resolve.resolve_and_fetch",
+        lambda *a, **k: (_FakeProvider(), "X", _candles(120)),
+    )
+    resp = client.get(
+        "/api/engine/indicators/location/BTCUSDT",
+        params={"params": json.dumps({"volume_profile": {"foo": 1}})},
+    )
+    assert resp.status_code == 422
+    detail = resp.json()["detail"]
+    assert "location.volume_profile.foo" in detail
+
+
+def test_location_nested_valid_params_200(monkeypatch):
+    def fake_resolve(symbol: str, timeframe: str, limit: int = 300, default_provider: str = "binance"):
+        return _FakeProvider(), symbol, _candles(limit)
+
+    monkeypatch.setattr("app.market_data.resolve.resolve_and_fetch", fake_resolve)
+    resp = client.get(
+        "/api/engine/indicators/location/BTCUSDT",
+        params={
+            "timeframe": "1h",
+            "limit": 80,
+            "params": json.dumps({"volume_profile": {"num_bins": 10}}),
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["params"]["volume_profile"]["num_bins"] == 10
+    assert len(body["series"]) == 80
