@@ -19,6 +19,7 @@ from app.agents.types import Direction
 from app.db.models import (
     LedgerLeg,
     LedgerTransaction,
+    PaperEquitySnapshot,
     PaperJournalEvent,
     PaperOrder,
     PaperPortfolio,
@@ -41,6 +42,7 @@ pytestmark = pytest.mark.skipif(not DB_AVAILABLE, reason="ichivol_engine_dev Pos
 
 SYMBOL = "PAPERTEST"
 TIMEFRAME = "1h"
+# Match test_fwd_profiles: keep mark moves inside the stop/TP band (tp_r=2 → ±2×STOP).
 STOP = 2.0
 
 
@@ -56,6 +58,11 @@ def _purge_symbols(session, *symbols: str) -> None:
     if ids:
         session.query(PaperJournalEvent).filter(
             PaperJournalEvent.position_id.in_(ids)
+        ).delete(synchronize_session=False)
+        # Rejection journals are portfolio-scoped without a position_id.
+        session.query(PaperJournalEvent).filter(
+            PaperJournalEvent.portfolio_id.in_({p.portfolio_id for p in positions if p.portfolio_id}),
+            PaperJournalEvent.position_id.is_(None),
         ).delete(synchronize_session=False)
         tx_ids = [
             t.id
@@ -74,6 +81,20 @@ def _purge_symbols(session, *symbols: str) -> None:
         session.query(PaperPosition).filter(
             PaperPosition.id.in_(ids)
         ).delete(synchronize_session=False)
+    session.commit()
+
+
+def _restore_baseline(session, cash0: float | None, realized0: float | None) -> None:
+    """Undo cash/equity drift from capital opens so daily_loss_halt does not stick."""
+    if cash0 is None:
+        return
+    base = session.query(PaperPortfolio).filter_by(code=BASELINE_CODE).first()
+    if base is None:
+        return
+    session.query(PaperEquitySnapshot).filter_by(portfolio_id=base.id).delete()
+    base.cash = cash0
+    if realized0 is not None:
+        base.realized_pnl = realized0
     session.commit()
 
 
@@ -116,23 +137,39 @@ def _drop_portfolio(session, pf: PaperPortfolio) -> None:
     paper_gates.reset_run_memory()
 
 
+def _heal_baseline_if_halted(session) -> tuple[float | None, float | None]:
+    """Snapshot cash; if a prior run left daily_loss_halt, reset to initial_cash."""
+    from app.paper import broker as paper_broker
+
+    base = session.query(PaperPortfolio).filter_by(code=BASELINE_CODE).first()
+    if base is None:
+        return None, None
+    cash0, realized0 = base.cash, base.realized_pnl
+    eq = paper_broker.estimate_equity(session, base)
+    reason = paper_gates.entry_gate(
+        session, base, symbol="__heal__", timeframe="1h", price=100.0,
+        stop_distance=STOP, equity=eq,
+    )
+    if reason == "daily_loss_halt":
+        session.query(PaperEquitySnapshot).filter_by(portfolio_id=base.id).delete()
+        cash0 = float(base.initial_cash)
+        realized0 = 0.0
+        base.cash = cash0
+        base.realized_pnl = realized0
+        session.commit()
+    return cash0, realized0
+
+
 @pytest.fixture(autouse=True)
 def _session():
     session = SessionLocal()
-    base = session.query(PaperPortfolio).filter_by(code=BASELINE_CODE).first()
-    cash0 = base.cash if base is not None else None
-    realized0 = base.realized_pnl if base is not None else None
+    cash0, realized0 = _heal_baseline_if_halted(session)
     _purge_symbols(session, SYMBOL, f"{SYMBOL}2", f"{SYMBOL}_AUTO")
+    _restore_baseline(session, cash0, realized0)
     yield session
     session.rollback()
     _purge_symbols(session, SYMBOL, f"{SYMBOL}2", f"{SYMBOL}_AUTO")
-    if base is not None and cash0 is not None:
-        base = session.query(PaperPortfolio).filter_by(code=BASELINE_CODE).first()
-        if base is not None:
-            base.cash = cash0
-            if realized0 is not None:
-                base.realized_pnl = realized0
-            session.commit()
+    _restore_baseline(session, cash0, realized0)
     session.close()
     paper_gates.reset_run_memory()
 
@@ -171,7 +208,7 @@ def test_sync_position_holds_an_open_position_while_still_supported(_session):
 
     result = paper.sync_position(
         _session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
-        user_id=None, price=105.0, pipeline=_pipeline("BUY"), stop_distance=STOP,
+        user_id=None, price=100.5, pipeline=_pipeline("BUY"), stop_distance=STOP,
     )
     assert result is None  # nothing changed -- still open, untouched
 
@@ -197,13 +234,13 @@ def test_sync_position_closes_when_decision_downgrades_to_watch(_session):
 
         result = paper.sync_position(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
-            user_id=None, price=110.0, pipeline=_pipeline("WATCH"),
+            user_id=None, price=101.0, pipeline=_pipeline("WATCH"),
             stop_distance=STOP, portfolio=pf,
         )
         assert result is not None
         assert result.status == "CLOSED"
         assert result.exit_reason == "pipeline_downgraded"
-        assert result.pnl_pct > 0.05  # rose; friction keeps it below raw 0.10
+        assert result.pnl_pct > 0.0  # rose; friction keeps it below raw 0.01
     finally:
         _drop_portfolio(_session, pf)
 
@@ -217,7 +254,7 @@ def test_sync_position_closes_when_pipeline_direction_flips(_session):
 
     result = paper.sync_position(
         _session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
-        user_id=None, price=90.0, pipeline=_pipeline("SELL", Direction.SHORT),
+        user_id=None, price=99.0, pipeline=_pipeline("SELL", Direction.SHORT),
         stop_distance=STOP,
     )
     assert result is not None
@@ -242,15 +279,17 @@ def test_short_position_pnl_is_positive_when_price_falls(_session):
         assert opened is not None and opened.direction == "SHORT"
         _session.flush()
 
-        # exit_mode=direction: WATCH with LONG direction flips the short closed
+        # exit_mode=direction: WATCH with LONG direction flips the short closed.
+        # Stay inside the TP band (entry - 2×STOP ≈ 96) so stop/TP do not fire first.
         result = paper.sync_position(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
-            user_id=None, price=80.0, pipeline=_pipeline("WATCH", Direction.LONG),
+            user_id=None, price=98.0, pipeline=_pipeline("WATCH", Direction.LONG),
             stop_distance=STOP, portfolio=pf,
         )
         assert result is not None and result.status == "CLOSED"
         assert result.exit_reason == "direction_flipped"
-        assert result.pnl_pct == pytest.approx(0.25, abs=0.05)  # (100/80)-1 minus friction
+        assert result.pnl_pct > 0.0  # price fell; (100/98)-1 minus friction
+        assert result.pnl_pct == pytest.approx(0.02, abs=0.01)
     finally:
         _drop_portfolio(_session, pf)
 
@@ -314,10 +353,10 @@ def test_close_manually_closes_an_open_position(_session):
         pipeline=_pipeline("BUY"), stop_distance=STOP,
     )
     assert position is not None
-    closed = paper.close_manually(_session, position.id, price=120.0)
+    closed = paper.close_manually(_session, position.id, price=103.0)
     assert closed.status == "CLOSED"
     assert closed.exit_reason == "manual_close"
-    assert closed.pnl_pct == pytest.approx(0.20, abs=0.05)  # friction on entry/exit fills
+    assert closed.pnl_pct == pytest.approx(0.03, abs=0.02)  # friction on entry/exit fills
 
 
 def test_close_manually_returns_none_for_an_already_closed_position(_session):

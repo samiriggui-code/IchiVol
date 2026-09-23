@@ -459,6 +459,9 @@ def test_open_paper_position_opens_on_an_actionable_decision(monkeypatch):
     # otherwise sit in the *real* paper_positions table forever, skewing
     # GET /paper/performance's aggregate stats -- these tests share the
     # real ichivol_engine_dev DB, there's no separate test database.
+    from app.db.models import PaperPortfolio
+    from app.paper.strategy_profiles import BASELINE_CODE
+
     session = SessionLocal()
     try:
         pid = body["id"]
@@ -475,6 +478,10 @@ def test_open_paper_position_opens_on_an_actionable_decision(monkeypatch):
             ).delete(synchronize_session=False)
         session.query(PaperOrder).filter_by(position_id=pid).delete()
         session.query(PaperPosition).filter_by(id=pid).delete()
+        base = session.query(PaperPortfolio).filter_by(code=BASELINE_CODE).one_or_none()
+        if base is not None:
+            base.cash = base.initial_cash
+            base.realized_pnl = 0.0
         session.commit()
     finally:
         session.close()
@@ -589,6 +596,13 @@ def test_open_paper_position_accepts_a_non_crypto_symbol(monkeypatch):
             ).delete(synchronize_session=False)
         session.query(PaperOrder).filter_by(position_id=pid).delete()
         session.query(PaperPosition).filter_by(id=pid).delete()
+        from app.db.models import PaperPortfolio
+        from app.paper.strategy_profiles import BASELINE_CODE
+
+        base = session.query(PaperPortfolio).filter_by(code=BASELINE_CODE).one_or_none()
+        if base is not None:
+            base.cash = base.initial_cash
+            base.realized_pnl = 0.0
         session.commit()
     finally:
         session.close()
