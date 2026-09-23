@@ -29,7 +29,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **Event Intelligence audit** #26 — **MERGÉE** (doc).
 - **EventAnomalyDetector PHASE 5** #27 — **MERGÉE** (observation-only).
 - **Event Intelligence PHASE 6** #28 — **MERGÉE** (regime study + calibration ; Cursor solo, CI verte).
-- **Job en cours** : **Event Intelligence PHASE 7** — SymbolNews + correlate → `EVENT_MARKET` — branche `cursor/event-correlate-context-a2fe` (Cursor solo).
+- **Job en cours** : **Event Intelligence PHASE 7** — PR #29 draft — SymbolNews + correlate → `EVENT_MARKET` (Cursor solo ; ATTENTE CI).
 
 
 ---
@@ -37,8 +37,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — EVENT INTELLIGENCE PHASE 7 — correlate + SymbolNews
 
 - Branche : `cursor/event-correlate-context-a2fe`
-- PR : (draft)
-- Statut : **EN COURS** — Cursor solo (Claude absente jusqu’à 18:10).
+- PR : https://github.com/samiriggui-code/IchiVol/pull/29 (**draft**)
+- Statut : **ATTENTE CI** — Cursor solo (Claude absente jusqu’à 18:10) ; puis revue Claude.
 
 ### Livré
 
