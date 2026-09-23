@@ -47,7 +47,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — UI Lab Research (draft) — T5–T7 panels
 
 - Branche : `cursor/lab-ui-research-t5-t7-a2fe`
-- PR : (à venir)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/43 — draft
 - Statut : draft ; observation-only.
 
 ### Livré
