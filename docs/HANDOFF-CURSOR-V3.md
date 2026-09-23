@@ -157,6 +157,7 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
 
 - Branche : `v3/t2a-chart-objects`
 - PR : *(draft à créer par parent ManagePullRequest — ne pas merger)*
+- Commit(s) : `3672f5d`
 - Base : `main` @ `a19f924` (après merge PR #13 T1g)
 
 - Livré :
