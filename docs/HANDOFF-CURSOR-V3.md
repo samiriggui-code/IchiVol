@@ -37,9 +37,15 @@ Les helpers `_heal_baseline_if_halted` / `_restore_baseline` ne remettent **plus
 
 - `tests/paper/test_engine.py` + suite complète `tests` : PASS
 
+### CI Actions
+
+- **VERTE** : https://github.com/samiriggui-code/IchiVol/actions/runs/35843919501 (`3d0aa79`)
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
 ### Attente
 
-CI Actions verte sur ce commit → Claude revalide avec sa base (historique paper intact).
+Claude revalide avec sa base (historique paper intact).
 
 ---
 
