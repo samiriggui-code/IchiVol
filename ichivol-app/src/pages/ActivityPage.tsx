@@ -213,8 +213,8 @@ export function ActivityPage() {
           </p>
         </div>
         <div className="market-class-tabs">
-          <Link to="/app/backtests" className="ghost">
-            Lab backtests →
+          <Link to="/app/strategy-lab" className="ghost">
+            Strategy Lab →
           </Link>
           <button type="button" onClick={() => void load()} disabled={loading}>
             {loading ? '…' : 'Actualiser'}

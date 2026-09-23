@@ -369,7 +369,7 @@ export function OverviewPage() {
           </span>
         </article>
         <article className="panel overview-stat ov-pulse">
-          <span className="overview-stat-label muted">Backtests</span>
+          <span className="overview-stat-label muted">Strategy Lab</span>
           <strong className="mono">{summary ? fmtInt(summary.backtest.runs_total) : '—'}</strong>
           <span className="overview-stat-meta muted">
             {summary ? `dernier ${fmtWhen(summary.backtest.last_at)}` : '…'}
@@ -497,8 +497,8 @@ export function OverviewPage() {
                   ? ` · ${evidence.distinct_days} j d’historique`
                   : ''}
               </p>
-              <Link to="/app/backtests" className="overview-stat-link">
-                Backtests →
+              <Link to="/app/strategy-lab" className="overview-stat-link">
+                Strategy Lab →
               </Link>
             </div>
 

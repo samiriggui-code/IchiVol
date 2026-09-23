@@ -162,6 +162,7 @@ export interface StoredExperimentSummary {
   ruleset_id: string
   symbol: string
   timeframe: string
+  market_regime?: string
   number_of_trades: number
   win_rate: number | null
   profit_factor: number | null
@@ -226,18 +227,61 @@ export async function listStoredExperiments(opts?: {
   symbol?: string
   timeframe?: string
   ruleset_id?: string
+  market_regime?: string
   limit?: number
 }): Promise<{ experiments: StoredExperimentSummary[]; count: number }> {
   const params = new URLSearchParams()
   if (opts?.symbol) params.set('symbol', opts.symbol)
   if (opts?.timeframe) params.set('timeframe', opts.timeframe)
   if (opts?.ruleset_id) params.set('ruleset_id', opts.ruleset_id)
+  if (opts?.market_regime) params.set('market_regime', opts.market_regime)
   params.set('limit', String(opts?.limit ?? 20))
   const res = await fetch(`/api/engine/strategy-lab/experiments?${params}`, {
     credentials: 'include',
   })
   if (!res.ok) throw new Error(await parseError(res))
   return res.json() as Promise<{ experiments: StoredExperimentSummary[]; count: number }>
+}
+
+export async function getStoredExperiment(
+  experimentId: string,
+): Promise<StoredExperimentSummary & Record<string, unknown>> {
+  const res = await fetch(
+    `/api/engine/strategy-lab/experiments/${encodeURIComponent(experimentId)}`,
+    { credentials: 'include' },
+  )
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json() as Promise<StoredExperimentSummary & Record<string, unknown>>
+}
+
+/** Latest persisted run per ruleset_id (Performance DB — no live recompute). */
+export async function compareStoredRulesets(opts: {
+  symbol: string
+  timeframe?: string
+  ruleset_ids: string[]
+  market_regime?: string
+}): Promise<{
+  symbol: string
+  timeframe: string
+  market_regime: string
+  experiments: StoredExperimentSummary[]
+}> {
+  const params = new URLSearchParams({
+    symbol: opts.symbol,
+    timeframe: opts.timeframe ?? '1h',
+    ruleset_ids: opts.ruleset_ids.join(','),
+    market_regime: opts.market_regime ?? 'GLOBAL',
+  })
+  const res = await fetch(`/api/engine/strategy-lab/compare?${params}`, {
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json() as Promise<{
+    symbol: string
+    timeframe: string
+    market_regime: string
+    experiments: StoredExperimentSummary[]
+  }>
 }
 
 export interface AblationDelta {

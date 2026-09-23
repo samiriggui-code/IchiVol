@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { BacktestRunsList } from '../components/BacktestRunsPanel'
 import './BacktestsPage.css'
 import {
+  compareStoredRulesets,
   getAblation,
   getBacktestComparison,
   getBacktestEvidence,
@@ -47,6 +48,17 @@ const EXPERIMENT_LABELS: Record<ExperimentName, string> = {
 }
 
 const TIMEFRAMES = ['15m', '1h', '4h', '1d']
+
+type LabTab = 'compare' | 'regimes' | 'experiments' | 'live'
+
+const LAB_TABS: { id: LabTab; label: string }[] = [
+  { id: 'compare', label: 'Compare' },
+  { id: 'regimes', label: 'Regimes' },
+  { id: 'experiments', label: 'Experiments' },
+  { id: 'live', label: 'Live' },
+]
+
+const REGIME_FILTERS = ['ALL', 'GLOBAL', 'TRENDING', 'RANGING', 'HIGH_VOL', 'LOW_VOL', 'BULL', 'BEAR'] as const
 
 const CLASS_ORDER: EngineAssetClass[] = [
   'crypto',
@@ -94,6 +106,66 @@ function fmtWhen(iso: string | null): string {
   return `il y a ${Math.floor(ageSec / 86400)} j`
 }
 
+function StoredMetricsTable({
+  rows,
+  emptyHint,
+  showRegime = false,
+}: {
+  rows: StoredExperimentSummary[]
+  emptyHint: string
+  showRegime?: boolean
+}) {
+  if (rows.length === 0) {
+    return (
+      <div className="panel placeholder-page">
+        <p className="muted">{emptyHint}</p>
+      </div>
+    )
+  }
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Ruleset</th>
+            {showRegime && <th>Régime</th>}
+            <th>Trades</th>
+            <th>WR</th>
+            <th>PF</th>
+            <th>Expect.</th>
+            <th>Sharpe</th>
+            <th>DD</th>
+            <th>Quand</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((e) => (
+            <tr key={e.experiment_id}>
+              <td className="mono" style={{ fontSize: '0.8em' }}>
+                {e.ruleset_id}
+              </td>
+              {showRegime && (
+                <td className="mono" style={{ fontSize: '0.8em' }}>
+                  {e.market_regime ?? '—'}
+                </td>
+              )}
+              <td className="mono">{e.number_of_trades}</td>
+              <td className="mono">{fmtPct(e.win_rate)}</td>
+              <td className="mono">{fmtNum(e.profit_factor)}</td>
+              <td className={`mono ${toneClass(e.expectancy)}`}>{fmtPct(e.expectancy)}</td>
+              <td className="mono">{fmtNum(e.sharpe)}</td>
+              <td className="mono down">{fmtPct(e.max_drawdown)}</td>
+              <td className="mono" style={{ fontSize: '0.8em' }}>
+                {e.created_at ? fmtWhen(e.created_at) : '—'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 export function BacktestsPage() {
   const [instruments, setInstruments] = useState<EngineInstrument[]>([])
   const [universeError, setUniverseError] = useState<string | null>(null)
@@ -115,6 +187,11 @@ export function BacktestsPage() {
   const [walkForwardOpt, setWalkForwardOpt] = useState<WalkForwardOptResult | null>(null)
   const [evidence, setEvidence] = useState<BacktestEvidenceSummary | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [labTab, setLabTab] = useState<LabTab>('compare')
+  const [dbCompare, setDbCompare] = useState<StoredExperimentSummary[]>([])
+  const [dbLoading, setDbLoading] = useState(false)
+  const [dbError, setDbError] = useState<string | null>(null)
+  const [regimeFilter, setRegimeFilter] = useState<(typeof REGIME_FILTERS)[number]>('ALL')
 
   const visibleClasses = useMemo(() => {
     const present = new Set(
@@ -177,6 +254,58 @@ export function BacktestsPage() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (labTab === 'live') return
+    const sym = symbol.trim().toUpperCase()
+    if (!sym) return
+    let cancelled = false
+    setDbLoading(true)
+    setDbError(null)
+    const ids = rulesets.map((r) => r.id)
+    const tasks: Promise<void>[] = [
+      listStoredExperiments({
+        symbol: sym,
+        timeframe,
+        limit: 50,
+        market_regime: regimeFilter === 'ALL' ? undefined : regimeFilter,
+      })
+        .then((hist) => {
+          if (!cancelled) setStored(hist.experiments)
+        })
+        .catch((err: unknown) => {
+          if (!cancelled) {
+            setStored([])
+            setDbError(err instanceof Error ? err.message : String(err))
+          }
+        }),
+    ]
+    if (labTab === 'compare' && ids.length > 0) {
+      tasks.push(
+        compareStoredRulesets({
+          symbol: sym,
+          timeframe,
+          ruleset_ids: ids,
+          market_regime: 'GLOBAL',
+        })
+          .then((cmp) => {
+            if (!cancelled) setDbCompare(cmp.experiments)
+          })
+          .catch((err: unknown) => {
+            if (!cancelled) {
+              setDbCompare([])
+              setDbError(err instanceof Error ? err.message : String(err))
+            }
+          }),
+      )
+    }
+    Promise.allSettled(tasks).finally(() => {
+      if (!cancelled) setDbLoading(false)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [labTab, symbol, timeframe, rulesets, regimeFilter])
 
   function selectClass(next: EngineAssetClass) {
     setMarketClass(next)
@@ -262,11 +391,11 @@ export function BacktestsPage() {
     <div className="backtests-page">
       <header className="page-head market-head">
         <div className="market-head-copy">
-          <h1>Backtests</h1>
+          <h1>Strategy Lab</h1>
           <p className="muted">
-            Comparaison manuelle ponctuelle sur un symbole. Même univers que Marché. Seuils RVOL/ATR
-            depuis Settings. Le bouton <strong>Historique</strong> ouvre les backtests lancés
-            automatiquement chaque jour (preuve C1). Pas un conseil financier.
+            Chiffres depuis la Performance DB (expériences persistées). Onglet{' '}
+            <strong>Live</strong> = recalcul ponctuel (ne remplace pas la DB). Historique =
+            backtests auto C1. Pas un conseil financier.
           </p>
           {current && (
             <p className="muted">{CLASS_BLURBS[current.asset_class]}</p>
@@ -300,9 +429,115 @@ export function BacktestsPage() {
         </div>
       </header>
 
+      <div className="market-class-tabs" role="tablist" aria-label="Strategy Lab" style={{ marginBottom: '0.75rem' }}>
+        {LAB_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={labTab === tab.id}
+            className={labTab === tab.id ? 'is-active' : undefined}
+            onClick={() => setLabTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className={`bt-split${historyOpen ? ' is-open' : ''}`}>
         <div className="bt-main">
 
+      {labTab !== 'live' && (
+        <section className="panel">
+          <header className="panel-head">
+            <h2>
+              {labTab === 'compare'
+                ? 'Compare (DB)'
+                : labTab === 'regimes'
+                  ? 'Regimes (DB)'
+                  : 'Experiments (DB)'}
+            </h2>
+            <span className="panel-meta">
+              {symbol} · {timeframe}
+              {dbLoading ? ' · chargement…' : ''}
+            </span>
+          </header>
+          <form
+            className="settings-body controls"
+            onSubmit={(e) => {
+              e.preventDefault()
+            }}
+          >
+            <label>
+              Instrument
+              <select
+                value={symbol}
+                onChange={(e) => setSymbol(e.target.value)}
+                disabled={!classInstruments.length}
+              >
+                {classInstruments.map((inst) => (
+                  <option key={inst.id} value={inst.id}>
+                    {inst.label} · {inst.id}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Timeframe
+              <select value={timeframe} onChange={(e) => setTimeframe(e.target.value)}>
+                {TIMEFRAMES.map((tf) => (
+                  <option key={tf} value={tf}>
+                    {tf}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {(labTab === 'regimes' || labTab === 'experiments') && (
+              <label>
+                Régime
+                <select
+                  value={regimeFilter}
+                  onChange={(e) =>
+                    setRegimeFilter(e.target.value as (typeof REGIME_FILTERS)[number])
+                  }
+                >
+                  {REGIME_FILTERS.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </form>
+          {dbError && (
+            <p className="muted" style={{ padding: '0 1rem 0.75rem', color: 'var(--danger, #c44)' }}>
+              {friendlyBacktestError(dbError)}
+            </p>
+          )}
+          {universeError && (
+            <p className="muted" style={{ padding: '0 1rem 0.75rem' }}>
+              {universeError}
+            </p>
+          )}
+          {labTab === 'compare' && (
+            <StoredMetricsTable
+              rows={dbCompare}
+              emptyHint="Aucun run persisté pour ces rulesets (GLOBAL). Lance un Live avec persist, ou un event-study ruleset."
+            />
+          )}
+          {(labTab === 'regimes' || labTab === 'experiments') && (
+            <StoredMetricsTable
+              rows={stored}
+              showRegime
+              emptyHint="Aucune expérience en Performance DB pour ce filtre."
+            />
+          )}
+        </section>
+      )}
+
+      {labTab === 'live' && (
+      <>
       <section className="panel">
         <header className="panel-head">
           <h2>Comparaison manuelle</h2>
@@ -1059,6 +1294,8 @@ export function BacktestsPage() {
         <div className="panel placeholder-page">
           <p className="muted">Choisis un instrument et lance un backtest pour voir la comparaison.</p>
         </div>
+      )}
+      </>
       )}
         </div>
 

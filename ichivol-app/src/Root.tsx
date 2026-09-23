@@ -42,7 +42,8 @@ export function Root() {
             <Route path="paper" element={<PaperPage />} />
             <Route path="paper/tech" element={<Navigate to="/app/paper" replace />} />
             <Route path="activite" element={<ActivityPage />} />
-            <Route path="backtests" element={<BacktestsPage />} />
+            <Route path="strategy-lab" element={<BacktestsPage />} />
+            <Route path="backtests" element={<Navigate to="/app/strategy-lab" replace />} />
             <Route path="agent" element={<AgentPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="overview" replace />} />

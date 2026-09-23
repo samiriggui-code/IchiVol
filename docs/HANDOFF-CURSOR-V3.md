@@ -16,12 +16,76 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **Règle de merge** : avec la base, **0 échec** attendu (T0-CI #14 mergé). Tout échec bloque le merge.
 - **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
 - **T2a** : ChartObject — **mergé** (PR #15) — **validé par Claude**.
-- **T0-BROKER** : PR #16 — **MERGÉE**.
-- **T2b** : PR #17 — **MERGÉE**.
-- **T3** : PR #18 — CI / merge en cours (validée Claude).
-- **T0-UI** : PR #19 — après #18.
-- **Prochain job** : T2c user trade points (après 4 merges).
+- **T0-BROKER** #16 — **MERGÉE**.
+- **T2b** #17 — **MERGÉE**.
+- **T3** #18 — **MERGÉE**.
+- **T0-UI** #19 — CI / merge en cours.
+- **Prochain job** : T2c user ENTRY/STOP/TARGET.
 
+
+---
+
+## 2026-09-23 — EN COURS — merges Claude (#16→#19) puis T2c
+
+### Progression
+
+| PR | Statut |
+|----|--------|
+| #16 T0-BROKER | **MERGÉE** |
+| #17 T2b | **MERGÉE** |
+| #18 T3 | **MERGÉE** |
+| #19 T0-UI | merge main fait — **CI puis merge** (cette branche) |
+
+### Note T0-UI
+
+Pas T4 roadmap (T4 = backtest visuel WHY ENTERED/REJECTED/EXITED). Ceci = rename Strategy Lab + onglets DB.
+
+### Après #19
+
+Handoff « 4 merges done » sur main → T2c `cursor/t2c-user-trade-points-a2fe` → draft → **attendre Claude**.
+
+---
+
+
+---
+
+## 2026-09-23 — T0-UI — Strategy Lab (rename + onglets DB) (rename + onglets DB)
+
+- Branche : `cursor/t4-strategy-lab-ui-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/19 (**draft**)
+- Commit(s) : `9737a1f`
+
+### Note
+
+**Pas T4** de la feuille de route (T4 = backtest visuel WHY ENTERED/REJECTED/EXITED). Ceci = T0-UI.
+
+### Livré
+
+- Route `/app/strategy-lab` ; `/app/backtests` → redirect
+- Nav + Overview + Activité : label **Strategy Lab**
+- Onglets **Compare | Regimes | Experiments | Live**
+- Compare → `GET /strategy-lab/compare` (DB)
+- Regimes / Experiments → `listStoredExperiments` (+ filtre `market_regime`)
+- Live = ancien fan-out 7 recalculs (secondaire)
+- Clients : `compareStoredRulesets`, `getStoredExperiment`, `market_regime` sur list
+
+### Non fait
+
+- Rename fichier → `StrategyLabPage.tsx`
+- Détail experiment `{id}`
+- Masquer complètement Live / WF-opt par défaut
+
+### Validation locale
+
+```text
+./node_modules/.bin/tsc -b   # OK
+```
+
+### Revue Claude
+
+Draft — **ne pas merger** avant revue. Orthogonal à #16/#17/#18.
+
+---
 
 ---
 
