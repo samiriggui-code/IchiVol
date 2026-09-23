@@ -16,7 +16,42 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **Règle de merge** : avec la base, tout échec **hors** de ces 13 = régression → **bloque le merge**.
 - **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
 - **T2a** : ChartObject — **à merger** (PR #15) après rebase sur main post-#14 — **validé par Claude**.
-- **T3 slice 1** : composition `all` / `any` sur ruleset — draft PR (revue Claude quand dispo). Exit / risk / MTF **pas** dans cette PR.
+- **T3 slice 1** : composition `all` / `any` sur ruleset — draft PR #18 (revue Claude quand dispo).
+- **T3 slice 2** : `exit.max_hold_bars` + `exit.conditions` (même PR #18). Risk nesting / MTF **pas** encore.
+
+---
+
+## 2026-09-23 — T3 slice 2 — `exit` (max_hold + conditions signal)
+
+- Branche : `cursor/t3-dsl-v3-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/18 (**draft**)
+- Commit(s) : à venir après push
+
+### Livré
+
+- `ExitSpec` optionnel dans `ruleset.py` (`max_hold_bars`, `conditions` = même `ConditionGroup`)
+- ATR `stop_atr` / `target_atr` restent top-level ; refus de les mettre sous `exit`
+- Backtest : priorité `stop` > `target` > `signal` (fill = close) > `max_hold` / `eod`
+- `max_hold` : kwarg call-site gagne, sinon `ruleset.exit.max_hold_bars`
+- `evaluator.bar_matches_group` partagé entry/exit
+- Perf DB `exit_rule` : `atr_stop_target[+signal][+max_hold=N]`
+- Tests backtest + parse + `apply_params` préserve `exit`
+
+### Non fait
+
+- Nesting `risk{}` cosmétique
+- MTF / trailing / partials / `close_confirmation` entry wiring
+
+### Validation locale
+
+```text
+pytest tests/strategy_lab/ -q
+# 68 passed
+```
+
+### Revue Claude
+
+Même draft PR #18 — **ne pas merger** avant revue.
 
 ---
 
