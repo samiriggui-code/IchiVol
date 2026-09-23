@@ -46,9 +46,9 @@ def one_way_cost_log(commission_bps: float, slippage_bps: float) -> float:
 def round_trip_cost_log(commission_bps: float, slippage_bps: float) -> float:
     """Full round-trip fee in log space (entry + exit).
 
-    Matches ``ruleset_backtest._apply_hold_returns`` (``2 * cost``) and the
-    typical NEUTRAL→pos→NEUTRAL path in ``run_backtest`` (one ``one_way`` on
-    open, one on close). See T0-METRICS handoff for engine flip / EOD caveats.
+    Matches ``ruleset_backtest._apply_hold_returns`` (``2 * cost``) and a
+    complete NEUTRAL→pos→NEUTRAL (or flip) path in ``run_backtest`` after
+    T0-METRICS-2 (``net_v2``).
     """
     return 2.0 * one_way_cost_log(commission_bps, slippage_bps)
 
@@ -92,6 +92,12 @@ def run_backtest(
     choose using only candles[0..i] (causal). This function applies the
     one-bar execution delay on top; callers must not pre-shift it
     themselves.
+
+    Fee model (T0-METRICS-2 / ``net_v2``):
+    - Open from flat or close to flat: charge ``one_way`` on that bar.
+    - Flip long↔short: charge ``2 × one_way`` (exit + entry) on the flip bar.
+    - EOD force-close: append ``sign × log(last.close / last.open) − one_way``
+      so trade mark (``last.close``) and ``bar_returns`` share one price path.
     """
     n = len(candles)
     if len(desired_positions) != n:
@@ -100,8 +106,6 @@ def run_backtest(
         return BacktestResult(symbol, timeframe, n, [], [], [], commission_bps, slippage_bps)
 
     posn: list[Direction] = [Direction.NEUTRAL] + list(desired_positions[:-1])
-    # One-side fee charged on each position *change* (historically named
-    # round_trip_cost in earlier revisions — still one-way in practice).
     one_way = one_way_cost_log(commission_bps, slippage_bps)
 
     bar_returns: list[float] = []
@@ -120,13 +124,14 @@ def run_backtest(
         r = sign * market_logret
 
         if posn[i] != prev_posn:
-            r -= one_way
             closing = open_trade_direction is not None
             opening = posn[i] != Direction.NEUTRAL
+            # Flip = exit + entry on the same bar → two one-way fees.
+            if closing and opening:
+                r -= 2.0 * one_way
+            else:
+                r -= one_way
             if closing:
-                # Flip bar: a single one_way covers exit (+ entry of the next).
-                # Attribute that bar's fee to the *closed* trade; the new trade
-                # starts with open_cost_log=0 (entry fee already spent on flip).
                 trades.append(
                     Trade(
                         entry_time=open_trade_entry_time,
@@ -145,14 +150,23 @@ def run_backtest(
                 open_trade_direction = posn[i]
                 open_trade_entry_time = candles[i].time
                 open_trade_entry_price = candles[i].open
-                open_cost_log = 0.0 if closing else one_way
+                open_cost_log = one_way
 
         bar_returns.append(r)
         prev_posn = posn[i]
 
     if open_trade_direction is not None:
-        # EOD force-close: no exit fee is written into bar_returns (pre-existing).
+        # EOD force-close: extend last open→open leg to last.close and charge exit.
         last = candles[-1]
+        sign = _DIRECTION_SIGN[open_trade_direction]
+        if last.open > 0 and last.close > 0:
+            final_leg = sign * math.log(last.close / last.open) - one_way
+        else:
+            final_leg = -one_way
+        if bar_returns:
+            bar_returns[-1] += final_leg
+        else:
+            bar_returns.append(final_leg)
         trades.append(
             Trade(
                 entry_time=open_trade_entry_time,
@@ -162,7 +176,7 @@ def run_backtest(
                 exit_price=last.close,
                 log_return=math.log(last.close / open_trade_entry_price)
                 * _DIRECTION_SIGN[open_trade_direction],
-                cost_log=open_cost_log,
+                cost_log=open_cost_log + one_way,
             )
         )
 

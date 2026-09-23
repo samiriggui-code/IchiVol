@@ -38,7 +38,8 @@ def test_long_position_delayed_one_bar_and_force_closed_at_end():
     )
 
     cost = 8.0 / 10_000
-    expected = [0.0, 0.0, math.log(103 / 102) - cost, math.log(104 / 103)]
+    # Last bar: open→open hold, then EOD extends with open→close (=0 on flat) − exit fee
+    expected = [0.0, 0.0, math.log(103 / 102) - cost, math.log(104 / 103) - cost]
     assert result.bar_returns == pytest.approx(expected)
 
     assert len(result.trades) == 1
@@ -49,9 +50,9 @@ def test_long_position_delayed_one_bar_and_force_closed_at_end():
     assert trade.exit_time == 4  # force-closed at the very last candle
     assert trade.exit_price == 104  # close, not open, for the forced final exit
     assert trade.log_return == pytest.approx(math.log(104 / 102))
-    # EOD: only entry fee in bar_returns (no exit fee written)
-    assert trade.cost_log == pytest.approx(cost)
-    assert trade.net_log_return == pytest.approx(math.log(104 / 102) - cost)
+    # EOD: entry + exit fees
+    assert trade.cost_log == pytest.approx(2 * cost)
+    assert trade.net_log_return == pytest.approx(math.log(104 / 102) - 2 * cost)
 
 
 def test_position_closed_mid_series_when_signal_returns_to_neutral():

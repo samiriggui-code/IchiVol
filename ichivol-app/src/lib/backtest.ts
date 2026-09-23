@@ -31,7 +31,7 @@ export interface BacktestMetrics {
   win_rate_gross?: number | null
   profit_factor_gross?: number | null
   expectancy_gross?: number | null
-  /** "net_v1" for new runs; absent/null on older persisted rows = gross. */
+  /** "net_v1" (ruleset), "net_v2" (engine), absent/null = legacy gross. */
   metrics_basis?: string | null
 }
 
@@ -177,7 +177,7 @@ export interface StoredExperimentSummary {
   mean_mfe_atr: number | null
   mean_mae_atr: number | null
   created_at: string | null
-  /** "net_v1" or null/undefined (= legacy gross). */
+  /** "net_v1" (ruleset), "net_v2" (engine), null/undefined = legacy gross. */
   metrics_basis?: string | null
 }
 

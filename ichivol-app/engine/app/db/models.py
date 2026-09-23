@@ -448,7 +448,7 @@ class BacktestSnapshot(Base):
     profit_factor: Mapped[float | None] = mapped_column(Float, nullable=True)
     expectancy: Mapped[float | None] = mapped_column(Float, nullable=True)
 
-    # T0-METRICS: "net_v1" for new rows; NULL = legacy gross per-trade stats.
+    # T0-METRICS / T0-METRICS-2: "net_v1" (ruleset), "net_v2" (engine), NULL = legacy gross.
     metrics_basis: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     computed_at: Mapped[datetime] = mapped_column(
@@ -498,7 +498,7 @@ class StrategyLabExperiment(Base):
     cagr: Mapped[float | None] = mapped_column(Float, nullable=True)
     exposure: Mapped[float | None] = mapped_column(Float, nullable=True)
 
-    # T0-METRICS: "net_v1" for new rows; NULL = legacy gross per-trade stats.
+    # T0-METRICS / T0-METRICS-2: "net_v1" (ruleset), "net_v2" (engine), NULL = legacy gross.
     metrics_basis: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     mean_mfe_atr: Mapped[float | None] = mapped_column(Float, nullable=True)
