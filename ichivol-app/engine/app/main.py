@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.activity import router as activity_router
+from app.api.indicators import router as indicators_router
 from app.api.routes import router as engine_router
 from app.backtest.evidence import backtest_evidence_scheduler
 from app.config import settings
@@ -33,6 +34,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="IchiVol Engine", version="0.1.0", lifespan=lifespan)
 # Avant engine_router : /backtest/runs ne doit pas être avalée par /backtest/{symbol}.
 app.include_router(activity_router)
+app.include_router(indicators_router)
 app.include_router(engine_router)
 
 
