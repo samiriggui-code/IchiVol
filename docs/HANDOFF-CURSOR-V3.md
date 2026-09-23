@@ -23,8 +23,10 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T1f-2 — Plus de repaint dans pytrendline
 
 - Branche : `v3/t1f2-pytrendline-no-repaint`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/12 (draft) — **pas de merge avant revue Claude**
+- PR : https://github.com/samiriggui-code/IchiVol/pull/12 (mergée) — **validé par Claude**
 - Commit(s) : `81a5db1` (comportement + tests + golden legacy) ; `9831db9` (handoff PR #12)
+
+- **Note backtests** : les backtests du profil `STRUCTURE_PYTRENDLINE` faits **avant** la PR #12 ne sont **plus comparables** (le gate a changé avec l’exclusion des pivots provisoires).
 
 - Livré :
   - `StructureEngineParams.allow_provisional_anchors: bool = False` — `True` = ancien comportement (tests / A-B uniquement, jamais en profil live)
@@ -62,12 +64,13 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - Flag sur `StructureEngineParams` (pas un arg ad-hoc du seul adaptateur) pour que le gate / service héritent du défaut sûr.
   - `fit_pivot_bars` pour tester la non-mutation sans ambiguïté des `pivot_bars` (touches).
 
-- Doutes / points à vérifier par Claude : aucun bloquant.
+- Doutes / points à vérifier par Claude : **validé par Claude**.
 
 - Non fait / hors périmètre :
   - mvpp / trendln / consensus défaut
   - découpage `routes.py` (T1g)
   - T0-CI (branche séparée)
+  - Mergé dans `main` après validation Claude.
 
 - Tests :
   - `tests/structure/` → all green (causality + engines + gate + golden atr)

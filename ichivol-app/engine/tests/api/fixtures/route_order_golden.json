@@ -1,0 +1,380 @@
+[
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/backtest/runs",
+    "endpoint": "get_backtest_runs"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/backtest/coverage",
+    "endpoint": "get_backtest_coverage"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/activity/feed",
+    "endpoint": "get_activity_feed"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/activity/summary",
+    "endpoint": "get_activity_summary"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/evidence/outcomes",
+    "endpoint": "get_evidence_outcomes"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/indicators",
+    "endpoint": "list_indicators"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/indicators/ichimoku/{symbol}/projection",
+    "endpoint": "get_ichimoku_projection"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/indicators/{indicator_id}/{symbol}",
+    "endpoint": "get_indicator_series"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/universe",
+    "endpoint": "get_universe"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/ohlcv/{symbol}",
+    "endpoint": "get_ohlcv"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/structure/{symbol}",
+    "endpoint": "get_structure"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/context/news",
+    "endpoint": "get_context_news"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/context/calendar",
+    "endpoint": "get_context_calendar"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/context/{symbol}",
+    "endpoint": "get_context_indicators"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/screener",
+    "endpoint": "get_screener"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/decisions/{symbol}",
+    "endpoint": "get_decision"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/decisions/batch",
+    "endpoint": "get_decisions_batch"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/backtest/evidence",
+    "endpoint": "get_backtest_evidence"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/event-study/{symbol}",
+    "endpoint": "get_event_study"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/rulesets",
+    "endpoint": "get_rulesets"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/ruleset/event-study",
+    "endpoint": "post_ruleset_event_study"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/ruleset/{ruleset_id}/event-study",
+    "endpoint": "get_ruleset_event_study"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/strategy-lab/experiments",
+    "endpoint": "get_strategy_lab_experiments"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/strategy-lab/experiments/{experiment_id}",
+    "endpoint": "get_strategy_lab_experiment"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/strategy-lab/compare",
+    "endpoint": "get_strategy_lab_compare"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/strategy-lab/ablation",
+    "endpoint": "post_strategy_lab_ablation"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/strategy-lab/ablation",
+    "endpoint": "get_strategy_lab_ablation"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/strategy-lab/regime-slices",
+    "endpoint": "post_strategy_lab_regime_slices"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/strategy-lab/regime-slices",
+    "endpoint": "get_strategy_lab_regime_slices"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/strategy-lab/walk-forward",
+    "endpoint": "post_strategy_lab_walk_forward"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/strategy-lab/walk-forward",
+    "endpoint": "get_strategy_lab_walk_forward"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/strategy-lab/optimize",
+    "endpoint": "post_strategy_lab_optimize"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/strategy-lab/optimize",
+    "endpoint": "get_strategy_lab_optimize"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/strategy-lab/walk-forward-opt",
+    "endpoint": "post_strategy_lab_walk_forward_opt"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/strategy-lab/walk-forward-opt",
+    "endpoint": "get_strategy_lab_walk_forward_opt"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/backtest/{symbol}",
+    "endpoint": "get_backtest"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/correlations",
+    "endpoint": "get_correlations"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/paper/positions",
+    "endpoint": "list_paper_positions"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/paper/performance",
+    "endpoint": "get_paper_performance"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/paper/portfolios",
+    "endpoint": "get_paper_portfolios"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/paper/portfolios/{code}/overview",
+    "endpoint": "get_paper_portfolio_overview"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/paper/portfolios/{code}/activity",
+    "endpoint": "get_paper_portfolio_activity"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/paper/portfolios/{code}",
+    "endpoint": "get_paper_portfolio"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/shadow/stats",
+    "endpoint": "get_shadow_stats"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/shadow/positions",
+    "endpoint": "get_shadow_positions"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/paper/preview",
+    "endpoint": "preview_manual_paper_buy"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/paper/propose",
+    "endpoint": "propose_paper_trade"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/paper/positions",
+    "endpoint": "open_paper_position"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/paper/positions/{position_id}/close",
+    "endpoint": "close_paper_position"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/agent/tools",
+    "endpoint": "get_agent_tools"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/agent/capabilities",
+    "endpoint": "get_agent_capabilities"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/agent/command",
+    "endpoint": "post_agent_command"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/agent/batch",
+    "endpoint": "post_agent_batch"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/health",
+    "endpoint": "health"
+  }
+]
