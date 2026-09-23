@@ -40,9 +40,10 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ### CI / suite DB
 
-- CI Actions sur 1er push : **VERTE** (`72ef89d`, run `35849205234`)
-- Passe 2 : re-push → **attendre CI**
+- CI Actions passe 1 : **VERTE** (`72ef89d`, run `35849205234`)
+- CI Actions passe 2 : **VERTE** (`c5767a7`, run `35850222353`) — `pytest` + `frontend` success
 - **Suite Postgres complète** : **Claude à ~13:10** (Cursor note ici, ne bloque pas sur ça)
+- Passe 2 suite : refresh Market chart après `draw_*` / `delete_chart_object` (event bus)
 
 ### Toujours hors scope / dette assumée
 

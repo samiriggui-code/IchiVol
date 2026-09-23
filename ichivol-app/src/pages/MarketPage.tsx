@@ -13,6 +13,7 @@ import {
 import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
 import { displaySymbol } from '../lib/markets'
 import { getChartObjects, type ChartObject } from '../lib/chartObjects'
+import { onChartObjectsChanged } from '../lib/chartObjectsEvents'
 import { useMarketSnapshot } from '../lib/marketSnapshot'
 import {
   CLASS_BLURBS,
@@ -320,15 +321,21 @@ export function MarketPage() {
       return
     }
     let cancelled = false
-    getChartObjects(symbol, interval, 300)
-      .then((objs) => {
-        if (!cancelled) setChartObjects(objs)
-      })
-      .catch(() => {
-        // Overlay optionnel : le graphique reste utilisable sans.
-      })
+    const load = () => {
+      getChartObjects(symbol, interval, 300)
+        .then((objs) => {
+          if (!cancelled) setChartObjects(objs)
+        })
+        .catch(() => {
+          // Overlay optionnel : le graphique reste utilisable sans.
+        })
+    }
+    load()
+    // T2b: Copilot draw_*/delete → refetch overlays without remounting the page.
+    const off = onChartObjectsChanged(load)
     return () => {
       cancelled = true
+      off()
     }
   }, [symbol, interval, current])
 
