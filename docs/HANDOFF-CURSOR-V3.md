@@ -30,16 +30,39 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **EventAnomalyDetector PHASE 5** #27 — **MERGÉE** (observation-only).
 - **Event Intelligence PHASE 6** #28 — **MERGÉE** (regime study + calibration ; Cursor solo, CI verte).
 - **Event Intelligence PHASE 7** #29 — **MERGÉE** (SymbolNews + correlate → `EVENT_MARKET` ; Cursor solo, CI verte).
-- **Job en cours** : **T4c** — PR #31 draft — WHY ENTERED / REJECTED / EXITED (ATTENTE CI).
+- **T4c** #31 — **MERGÉE** (WHY ENTERED / REJECTED / EXITED).
+- **Job en cours** : **T4b** — filtre overlay structuré (agent + API) — branche `cursor/t4b-overlay-filter-a2fe`.
 
 
 ---
 
-## 2026-09-23 — T4c EN COURS — WHY ENTERED / REJECTED / EXITED
+## 2026-09-23 — T4b EN COURS — filtre overlay (Claude / API)
+
+- Branche : `cursor/t4b-overlay-filter-a2fe`
+- PR : (draft)
+- Statut : **EN COURS** — après merge T4c #31.
+
+### Livré
+
+1. `chart_objects/filter_trades.py` — filtres AND outcome / exit_reason / direction / why_entered_key
+2. API overlay étendue + `filters` echo + `n_trades_filtered`
+3. Agent read-only `filter_backtest_overlay`
+4. Sheet : selects Sortie / Sens (pas de chat NL)
+5. Tests unitaires + API
+
+### Non-faits
+
+Filtres régime ; T5 confluence ; chat NL dans le sheet ; changement fills/metrics.
+
+---
+
+## 2026-09-23 — T4c MERGÉ (#31) — WHY overlay
 
 - Branche : `cursor/t4c-why-overlay-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/31 (**draft**)
-- Statut : **ATTENTE CI** — reprise chantier V3 après EIL.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/31 — **MERGÉE**
+- Statut : CI verte ; merge Cursor.
+
+---
 
 ### Livré
 

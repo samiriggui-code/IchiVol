@@ -606,6 +606,60 @@ def cmd_get_event_context(args: dict) -> dict:
     return payload
 
 
+def cmd_filter_backtest_overlay(args: dict) -> dict:
+    """T4b — backtest overlay with structured filters for Claude (read-only).
+
+    Same payload as POST /strategy-lab/backtest-overlay. Does not change fills.
+    """
+    from app.api.backtest_overlay import build_backtest_overlay_payload
+    from app.strategy_lab.catalog import get_builtin_ruleset
+    from app.strategy_lab.ruleset import parse_ruleset
+
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = str(args.get("timeframe", "1h"))
+    limit = int(args.get("limit", 300))
+    outcome = str(args.get("outcome", "all"))
+    exit_reason = args.get("exit_reason")
+    if exit_reason is not None:
+        exit_reason = str(exit_reason)
+    direction = args.get("direction")
+    if direction is not None:
+        direction = str(direction)
+    why_entered_key = args.get("why_entered_key")
+    if why_entered_key is not None:
+        why_entered_key = str(why_entered_key).strip() or None
+    include_rejected = bool(args.get("include_rejected", True))
+
+    try:
+        if args.get("ruleset") is not None:
+            ruleset = parse_ruleset(args["ruleset"])
+        else:
+            ruleset = get_builtin_ruleset(_require_str(args, "ruleset_id"))
+        _prov, _sym, candles = resolve_and_fetch(symbol, timeframe, limit)
+    except (ValueError, ProviderNotWiredError) as exc:
+        raise CommandError(str(exc)) from exc
+
+    try:
+        return build_backtest_overlay_payload(
+            symbol=symbol,
+            timeframe=timeframe,
+            candles=candles,
+            ruleset=ruleset,
+            outcome=outcome,
+            exit_reason=exit_reason,
+            direction=direction,
+            why_entered_key=why_entered_key,
+            include_rejected=include_rejected,
+        )
+    except Exception as exc:
+        # HTTPException from validate → CommandError
+        from fastapi import HTTPException
+
+        if isinstance(exc, HTTPException):
+            raise CommandError(str(exc.detail)) from exc
+        raise
+
+
 def cmd_list_tools(_args: dict) -> dict:
     # Populated at module load time by registry.py (which imports this
     # module and appends `list_tools` itself once every spec is built) --

@@ -1,4 +1,4 @@
-"""T4a — POST /strategy-lab/backtest-overlay (ephemeral BACKTEST ChartObjects)."""
+"""T4a/T4b — POST /strategy-lab/backtest-overlay (ephemeral BACKTEST ChartObjects)."""
 
 from __future__ import annotations
 
@@ -7,6 +7,11 @@ from typing import Any, Literal
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
 
+from app.chart_objects.filter_trades import (
+    filter_rejected,
+    filter_trades,
+    validate_filter_args,
+)
 from app.chart_objects.from_backtest import (
     backtest_to_chart_objects,
     trade_outcome,
@@ -25,6 +30,8 @@ from app.strategy_lab.run_ruleset import _metrics_dict
 router = APIRouter(prefix=settings.engine_api_prefix, tags=["engine"])
 
 OutcomeFilter = Literal["all", "win", "loss"]
+ExitReasonFilter = Literal["stop", "target", "signal", "eod", "max_hold"]
+DirectionFilter = Literal["LONG", "SHORT", "long", "short"]
 
 
 class BacktestOverlayBody(BaseModel):
@@ -34,6 +41,11 @@ class BacktestOverlayBody(BaseModel):
     ruleset_id: str | None = None
     ruleset: dict[str, Any] | None = None
     outcome: OutcomeFilter = "all"
+    # T4b structured filters (AND with outcome)
+    exit_reason: ExitReasonFilter | None = None
+    direction: DirectionFilter | None = None
+    why_entered_key: str | None = None
+    include_rejected: bool = True
 
 
 def _resolve_ruleset(body: BacktestOverlayBody) -> Ruleset:
@@ -54,30 +66,25 @@ def _resolve_ruleset(body: BacktestOverlayBody) -> Ruleset:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.post("/strategy-lab/backtest-overlay")
-def post_backtest_overlay(
-    body: BacktestOverlayBody,
-    x_twelve_data_key: str | None = Header(default=None, alias="X-Twelve-Data-Key"),
+def build_backtest_overlay_payload(
+    *,
+    symbol: str,
+    timeframe: str,
+    candles: list,
+    ruleset: Ruleset,
+    outcome: str = "all",
+    exit_reason: str | None = None,
+    direction: str | None = None,
+    why_entered_key: str | None = None,
+    include_rejected: bool = True,
 ) -> dict[str, Any]:
-    """Run catalog/DSL ruleset backtest and return ephemeral BACKTEST ChartObjects.
-
-    Filter ``outcome`` applies to ``objects`` and ``trades``; ``counts`` is
-    always over the full trade set. No new backtest logic — wraps
-    ``run_ruleset_backtest_on_candles``.
-    """
-    ruleset = _resolve_ruleset(body)
-    symbol = body.symbol.strip().upper()
-    timeframe = body.timeframe.strip() or "1h"
-    if not symbol:
-        raise HTTPException(status_code=422, detail="symbol is required")
-
-    twelve_data.set_api_key_override(x_twelve_data_key)
+    """Shared by HTTP and agent — filter only, no new backtest logic."""
     try:
-        _provider, _psym, candles = resolve_and_fetch(symbol, timeframe, body.limit)
-    except ProviderNotWiredError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        validate_filter_args(
+            outcome=outcome, exit_reason=exit_reason, direction=direction
+        )
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     result = run_ruleset_backtest_on_candles(
         candles,
@@ -90,7 +97,7 @@ def post_backtest_overlay(
     for trade_id, detail in enumerate(result.details):
         ret_gross = trade_return_pct_gross(detail)
         ret_net = trade_return_pct_net(detail)
-        outcome = trade_outcome(ret_net)
+        oc = trade_outcome(ret_net)
         entry_i = detail.entry_index
         exit_i = detail.exit_index
         trades_full.append(
@@ -109,7 +116,7 @@ def post_backtest_overlay(
                 "return_pct_gross": ret_gross,
                 "return_pct_net": ret_net,
                 "r_multiple_gross": trade_r_multiple_gross(detail),
-                "outcome": outcome,
+                "outcome": oc,
                 "signal_index": detail.signal_index,
                 "why_entered": list(detail.why_entered),
                 "why_exited": list(detail.why_exited),
@@ -137,33 +144,95 @@ def post_backtest_overlay(
         "flat": sum(1 for t in trades_full if t["outcome"] == "flat"),
     }
 
-    filt = body.outcome
-    if filt == "all":
-        trades = trades_full
-        allowed_ids = None
+    trades = filter_trades(
+        trades_full,
+        outcome=outcome,
+        exit_reason=exit_reason,
+        direction=direction,
+        why_entered_key=why_entered_key,
+    )
+    allowed_ids = {t["trade_id"] for t in trades}
+
+    if include_rejected:
+        rejected = filter_rejected(
+            rejected_full,
+            direction=direction,
+            why_entered_key=why_entered_key,
+        )
     else:
-        trades = [t for t in trades_full if t["outcome"] == filt]
-        allowed_ids = {t["trade_id"] for t in trades}
+        rejected = []
+    rejected_ids = {r["rejected_id"] for r in rejected}
 
     objects = backtest_to_chart_objects(result, candles)
-    if allowed_ids is not None:
-        objects = [
-            o
-            for o in objects
-            if o.origin.get("kind") == "rejected"
-            or int(o.origin.get("trade_id", -1)) in allowed_ids
-        ]
+    objects = [
+        o
+        for o in objects
+        if (
+            o.origin.get("kind") == "rejected"
+            and int(o.origin.get("rejected_id", -1)) in rejected_ids
+        )
+        or (
+            o.origin.get("kind") != "rejected"
+            and int(o.origin.get("trade_id", -1)) in allowed_ids
+        )
+    ]
 
     return {
         "symbol": symbol,
         "timeframe": timeframe,
         "ruleset_id": ruleset.id,
-        "outcome_filter": filt,
+        "outcome_filter": outcome,
+        "filters": {
+            "outcome": outcome,
+            "exit_reason": exit_reason,
+            "direction": direction.upper() if direction else None,
+            "why_entered_key": why_entered_key,
+            "include_rejected": include_rejected,
+        },
         "objects": [o.to_dict() for o in objects],
         "trades": trades,
-        "rejected": rejected_full,
+        "rejected": rejected,
         "metrics": _metrics_dict(result.metrics),
         "counts": counts,
         "n_signals": result.n_signals,
         "n_skipped_in_position": result.n_skipped_in_position,
+        "n_trades_filtered": len(trades),
     }
+
+
+@router.post("/strategy-lab/backtest-overlay")
+def post_backtest_overlay(
+    body: BacktestOverlayBody,
+    x_twelve_data_key: str | None = Header(default=None, alias="X-Twelve-Data-Key"),
+) -> dict[str, Any]:
+    """Run catalog/DSL ruleset backtest and return ephemeral BACKTEST ChartObjects.
+
+    Filters (outcome / exit_reason / direction / why_entered_key) apply to
+    ``objects`` and ``trades``; ``counts`` is always over the full trade set.
+    No new backtest logic — wraps ``run_ruleset_backtest_on_candles``.
+    """
+    ruleset = _resolve_ruleset(body)
+    symbol = body.symbol.strip().upper()
+    timeframe = body.timeframe.strip() or "1h"
+    if not symbol:
+        raise HTTPException(status_code=422, detail="symbol is required")
+
+    twelve_data.set_api_key_override(x_twelve_data_key)
+    try:
+        _provider, _psym, candles = resolve_and_fetch(symbol, timeframe, body.limit)
+    except ProviderNotWiredError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    return build_backtest_overlay_payload(
+        symbol=symbol,
+        timeframe=timeframe,
+        candles=candles,
+        ruleset=ruleset,
+        outcome=body.outcome,
+        exit_reason=body.exit_reason,
+        direction=body.direction,
+        why_entered_key=(body.why_entered_key or None),
+        include_rejected=body.include_rejected,
+    )

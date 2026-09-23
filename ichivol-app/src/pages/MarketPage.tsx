@@ -126,6 +126,8 @@ export function MarketPage() {
   const [btSheetOpen, setBtSheetOpen] = useState(false)
   const [btRulesetId, setBtRulesetId] = useState<string | null>(null)
   const [btOutcome, setBtOutcome] = useState<BacktestOutcomeFilter>('all')
+  const [btExitReason, setBtExitReason] = useState<string | null>(null)
+  const [btDirection, setBtDirection] = useState<string | null>(null)
   const [btObjects, setBtObjects] = useState<ChartObject[]>([])
   const [btTrades, setBtTrades] = useState<BacktestOverlayTrade[]>([])
   const [btRejected, setBtRejected] = useState<BacktestRejectedSignal[]>([])
@@ -495,7 +497,11 @@ export function MarketPage() {
   }, [])
 
   const loadBacktestOverlay = useCallback(
-    async (outcome: BacktestOutcomeFilter = btOutcome) => {
+    async (
+      outcome: BacktestOutcomeFilter = btOutcome,
+      exitReason: string | null = btExitReason,
+      direction: string | null = btDirection,
+    ) => {
       if (!btRulesetId) return
       setBtLoading(true)
       setBtError(null)
@@ -506,6 +512,9 @@ export function MarketPage() {
           limit: 300,
           ruleset_id: btRulesetId,
           outcome,
+          exit_reason: exitReason,
+          direction,
+          include_rejected: true,
         })
         setBtObjects(res.objects)
         setBtTrades(res.trades)
@@ -518,15 +527,31 @@ export function MarketPage() {
         setBtLoading(false)
       }
     },
-    [btRulesetId, btOutcome, symbol, interval],
+    [btRulesetId, btOutcome, btExitReason, btDirection, symbol, interval],
   )
 
   const onBtOutcome = useCallback(
     (o: BacktestOutcomeFilter) => {
       setBtOutcome(o)
-      if (btActive) void loadBacktestOverlay(o)
+      if (btActive) void loadBacktestOverlay(o, btExitReason, btDirection)
     },
-    [btActive, loadBacktestOverlay],
+    [btActive, btExitReason, btDirection, loadBacktestOverlay],
+  )
+
+  const onBtExitReason = useCallback(
+    (v: string | null) => {
+      setBtExitReason(v)
+      if (btActive) void loadBacktestOverlay(btOutcome, v, btDirection)
+    },
+    [btActive, btOutcome, btDirection, loadBacktestOverlay],
+  )
+
+  const onBtDirection = useCallback(
+    (v: string | null) => {
+      setBtDirection(v)
+      if (btActive) void loadBacktestOverlay(btOutcome, btExitReason, v)
+    },
+    [btActive, btOutcome, btExitReason, loadBacktestOverlay],
   )
 
   const mergedChartObjects = useMemo(() => {
@@ -724,11 +749,15 @@ export function MarketPage() {
           counts={btCounts}
           trades={btTrades}
           rejected={btRejected}
+          exitReason={btExitReason}
+          direction={btDirection}
           loading={btLoading}
           error={btError}
           active={btActive}
           onSelectRuleset={setBtRulesetId}
           onOutcome={onBtOutcome}
+          onExitReason={onBtExitReason}
+          onDirection={onBtDirection}
           onShow={() => void loadBacktestOverlay(btOutcome)}
           onClear={clearBacktestOverlay}
           onClose={() => setBtSheetOpen(false)}

@@ -65,6 +65,10 @@ export async function postBacktestOverlay(input: {
   limit?: number
   ruleset_id: string
   outcome?: BacktestOutcomeFilter
+  exit_reason?: string | null
+  direction?: string | null
+  why_entered_key?: string | null
+  include_rejected?: boolean
 }): Promise<BacktestOverlayResult> {
   const res = await fetch('/api/engine/strategy-lab/backtest-overlay', {
     method: 'POST',
@@ -76,6 +80,10 @@ export async function postBacktestOverlay(input: {
       limit: input.limit ?? 300,
       ruleset_id: input.ruleset_id,
       outcome: input.outcome ?? 'all',
+      exit_reason: input.exit_reason || undefined,
+      direction: input.direction || undefined,
+      why_entered_key: input.why_entered_key || undefined,
+      include_rejected: input.include_rejected ?? true,
     }),
   })
   if (!res.ok) {
