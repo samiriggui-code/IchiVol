@@ -10,7 +10,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T1e — Fin de la migration REGISTRY (cliquet vide)
 
 - Branche : `v3/t1e-registry-remaining`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/10 (draft)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/10 (mergée) — **validé par Claude**
 - Commit(s) : `0227abf` (fixtures golden **avant** refactor) ; `a4497a9` (migration + cliquet vide)
 
 - Livré :
@@ -32,11 +32,11 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - experiments : adx/donchian/wyckoff aussi migrés (nécessité cliquet vide).
   - Cliquet : interdiction pure + scan récursif de tout `app/`.
 
-- Doutes / points à vérifier par Claude : aucun bloquant.
+- Doutes / points à vérifier par Claude : aucun restant — **validé par Claude**.
 
 - Non fait / reste à faire :
-  - découpage `routes.py`, structure unifiée / confirmed_at, CONDITION_SCHEMA
-  - **Ne pas merger** avant revue Claude.
+  - découpage `routes.py` (T1g), structure unifiée / confirmed_at (T1f), CONDITION_SCHEMA
+  - Mergé dans `main` après validation Claude.
 
 ---
 
