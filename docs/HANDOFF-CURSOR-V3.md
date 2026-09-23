@@ -24,7 +24,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## ## 2026-09-23 — EN COURS — exécution marche à suivre Claude
+## 2026-09-23 — EN COURS — exécution marche à suivre Claude
 
 Claude a validé #16/#17/#18 et accepté #19 (renommée **T0-UI**, pas T4 roadmap).  
 Cursor exécute l’ordre de merge puis démarre **T2c**.
