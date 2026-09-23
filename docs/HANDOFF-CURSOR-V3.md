@@ -22,8 +22,77 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-UI** #19 — **MERGÉE** (accepté Claude comme T0-UI, pas T4 roadmap).
 - **T2c** #20 — **MERGÉE** — **validé par Claude** (T2a+T2b+T2c = **T2 terminé**).
 - **T3c** #21 — **MERGÉE** — **validé par Claude** (registre conditions ; T3 phase close — T3d avec T5b, T3e plus tard).
-- **Job en cours** : **T4a** backtest overlay — correction net/brut ; puis **T0-METRICS** après merge.
+- **T4a** #22 — **MERGÉE** — **validé par Claude** (overlay + correction net).
+- **Job en cours** : **T0-METRICS** — stats par trade nettes de frais — branche `cursor/t0-metrics-net-a2fe`.
 
+
+---
+
+## 2026-09-23 — T0-METRICS EN COURS — stats par trade nettes de frais
+
+- Branche : `cursor/t0-metrics-net-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/23 (**draft**)
+- Commit(s) : `98eb8a7` (feat) ; `d90883f` (handoff PR)
+- Statut : **ATTENTE CLAUDE** — CI **VERTE** ; **ne pas merger** avant revue.
+
+### Livré
+
+1. `round_trip_cost_log` / `one_way_cost_log` dans `app/backtest/engine.py` (près de `Trade`) — T4a réutilise `Trade.net_log_return` (plus de formule locale)
+2. `Trade.cost_log` + propriété `net_log_return` ; `log_return` reste **brut**
+3. Rempli : `ruleset_backtest` = `2×cost` (comme `_apply_hold_returns`) ; `engine.run_backtest` = frais **réellement** écrits dans `bar_returns` (open / close / flip)
+4. `metrics.py` : WR / expectancy / PF sur **net** ; champs `*_gross` pour transparence
+5. Perf DB / snapshots : `metrics_basis="net_v1"` sur **nouveaux** enregistrements (pas de réécriture historique) ; UI Compare / Experiments / Perf DB : colonne **Base** (`net` vs `brut (ancien)`), alerte si mélange
+6. Tests : gagnant brut / perdant net → WR ; invariant Σ net == Σ bar_returns (ruleset + engine mid/EOD flat) ; écart EOD close≠open **documenté** (non corrigé)
+
+### Engine — invariant (vérif avant correction)
+
+| Cas | Σ net − Σ bars (naive 2×cost) | Avec `cost_log` exact |
+|-----|-------------------------------|------------------------|
+| Mid-close NEUTRAL→L→N | ~0 | OK (1e-9) |
+| EOD force-close, open=close | −1×one_way (sortie non tarifée dans bars) | OK si `cost_log`=entry only |
+| Flip L→S (1 fee pour close+open) | −2×one_way | OK si attribution flip → trade fermé |
+| EOD `last.close ≠ last.open` | écart ≈ `log(close/open)` | **ÉCHEC volontaire** — mark trade vs open-to-open ; **non corrigé** dans cette PR |
+
+### Tableau avant / après (seed 7, 600 bougies synthétiques, coûts 5+3 bps)
+
+| ruleset | n | WR brut | WR net | Exp brut | Exp net | PF brut | PF net | Δexp (bps) |
+|---------|---|--------|--------|----------|---------|---------|--------|------------|
+| `IV_EXP_A_KUMO_BO_001` | 15 | 33.33% | 33.33% | -0.43% | -0.59% | 0.8022 | 0.7408 | 15.9 |
+| `IV_ICHIMOKU_ONLY_LONG_001` | 8 | 12.50% | 12.50% | -1.89% | -2.05% | 0.3096 | 0.2876 | 15.7 |
+| `IV_EXP_B_KUMO_RVOL_001` | 7 | 28.57% | 28.57% | -1.23% | -1.39% | 0.4779 | 0.4373 | 15.8 |
+
+Aucun basculement WR sur ces fixtures (sorties ATR larges) ; expectancy surestimée d’~16 bps/trade (coût RT).
+
+### Goldens
+
+- `ruleset_backtest_golden.json` : **inchangé** (trades/indices/prix/raisons seulement — pas de métriques)
+- Aucune fixture golden de métriques WR/PF/expectancy à régénérer
+
+### Migration
+
+- `a7b8c9d0e1f2_metrics_basis_net_v1` — colonne `metrics_basis` nullable sur `strategy_lab_experiments` + `backtest_snapshots`
+
+### CI Actions
+
+- **VERTE** (HEAD `d90883f`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35864600608
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
+### Attente
+
+**Cursor s’arrête ici** jusqu’à la revue Claude.
+
+---
+
+## 2026-09-23 — T4a VALIDÉ par Claude — MERGÉ (#22)
+
+- Branche : `cursor/t4a-backtest-overlay-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/22 — **MERGÉE** `ad10720`
+- Statut : **validé par Claude** (net = log_return − 2×cost ; invariant Claude 6,5e-16 ; Postgres 0 échec).
+
+### Correction net (pré-merge)
+
+`return_pct_net` / `return_pct_gross` / `r_multiple_gross` ; outcome sur net ; front NET principal.
 
 ---
 
@@ -32,7 +101,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - Branche : `cursor/t4a-backtest-overlay-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/22 (**draft**)
 - Commit fix : `6627277` (feat initial `4d68375`)
-- Statut : **ATTENTE CLAUDE** — CI **VERTE** ; **ne pas merger** avant revalidation.
+- Statut : **supersédé** — validé + mergé (voir entrée ci-dessus).
 
 ### Correction demandée (brut étiqueté « net »)
 

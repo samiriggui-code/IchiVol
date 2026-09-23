@@ -38,6 +38,21 @@ from app.indicators.ichimoku import Candle
 _DIRECTION_SIGN = {Direction.LONG: 1.0, Direction.SHORT: -1.0, Direction.NEUTRAL: 0.0}
 
 
+def one_way_cost_log(commission_bps: float, slippage_bps: float) -> float:
+    """One-side fee in log space: ``(commission_bps + slippage_bps) / 10_000``."""
+    return (float(commission_bps) + float(slippage_bps)) / 10_000.0
+
+
+def round_trip_cost_log(commission_bps: float, slippage_bps: float) -> float:
+    """Full round-trip fee in log space (entry + exit).
+
+    Matches ``ruleset_backtest._apply_hold_returns`` (``2 * cost``) and the
+    typical NEUTRAL→pos→NEUTRAL path in ``run_backtest`` (one ``one_way`` on
+    open, one on close). See T0-METRICS handoff for engine flip / EOD caveats.
+    """
+    return 2.0 * one_way_cost_log(commission_bps, slippage_bps)
+
+
 @dataclass(frozen=True)
 class Trade:
     entry_time: int
@@ -45,7 +60,12 @@ class Trade:
     direction: Direction
     entry_price: float
     exit_price: float
-    log_return: float
+    log_return: float  # gross (prices only)
+    cost_log: float = 0.0  # log-space fees deducted in bar_returns for this trade
+
+    @property
+    def net_log_return(self) -> float:
+        return self.log_return - self.cost_log
 
 
 @dataclass(frozen=True)
@@ -80,13 +100,16 @@ def run_backtest(
         return BacktestResult(symbol, timeframe, n, [], [], [], commission_bps, slippage_bps)
 
     posn: list[Direction] = [Direction.NEUTRAL] + list(desired_positions[:-1])
-    round_trip_cost = (commission_bps + slippage_bps) / 10_000
+    # One-side fee charged on each position *change* (historically named
+    # round_trip_cost in earlier revisions — still one-way in practice).
+    one_way = one_way_cost_log(commission_bps, slippage_bps)
 
     bar_returns: list[float] = []
     trades: list[Trade] = []
     open_trade_direction: Direction | None = None
     open_trade_entry_time: int | None = None
     open_trade_entry_price: float | None = None
+    open_cost_log = 0.0  # fees already applied in bar_returns for the open trade
     prev_posn = Direction.NEUTRAL  # posn[0] is always NEUTRAL by construction above
 
     for i in range(n - 1):
@@ -97,8 +120,13 @@ def run_backtest(
         r = sign * market_logret
 
         if posn[i] != prev_posn:
-            r -= round_trip_cost
-            if open_trade_direction is not None:
+            r -= one_way
+            closing = open_trade_direction is not None
+            opening = posn[i] != Direction.NEUTRAL
+            if closing:
+                # Flip bar: a single one_way covers exit (+ entry of the next).
+                # Attribute that bar's fee to the *closed* trade; the new trade
+                # starts with open_cost_log=0 (entry fee already spent on flip).
                 trades.append(
                     Trade(
                         entry_time=open_trade_entry_time,
@@ -108,18 +136,22 @@ def run_backtest(
                         exit_price=candles[i].open,
                         log_return=math.log(candles[i].open / open_trade_entry_price)
                         * _DIRECTION_SIGN[open_trade_direction],
+                        cost_log=open_cost_log + one_way,
                     )
                 )
                 open_trade_direction = None
-            if posn[i] != Direction.NEUTRAL:
+                open_cost_log = 0.0
+            if opening:
                 open_trade_direction = posn[i]
                 open_trade_entry_time = candles[i].time
                 open_trade_entry_price = candles[i].open
+                open_cost_log = 0.0 if closing else one_way
 
         bar_returns.append(r)
         prev_posn = posn[i]
 
     if open_trade_direction is not None:
+        # EOD force-close: no exit fee is written into bar_returns (pre-existing).
         last = candles[-1]
         trades.append(
             Trade(
@@ -130,6 +162,7 @@ def run_backtest(
                 exit_price=last.close,
                 log_return=math.log(last.close / open_trade_entry_price)
                 * _DIRECTION_SIGN[open_trade_direction],
+                cost_log=open_cost_log,
             )
         )
 

@@ -28,6 +28,11 @@ export interface BacktestMetrics {
   profit_factor: number | null
   expectancy: number | null
   exposure: number
+  win_rate_gross?: number | null
+  profit_factor_gross?: number | null
+  expectancy_gross?: number | null
+  /** "net_v1" for new runs; absent/null on older persisted rows = gross. */
+  metrics_basis?: string | null
 }
 
 export interface BacktestRunDetail {
@@ -172,6 +177,8 @@ export interface StoredExperimentSummary {
   mean_mfe_atr: number | null
   mean_mae_atr: number | null
   created_at: string | null
+  /** "net_v1" or null/undefined (= legacy gross). */
+  metrics_basis?: string | null
 }
 
 export interface RulesetStudyResult {
