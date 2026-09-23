@@ -38,6 +38,8 @@ import {
   type VolumePoint,
 } from '../lib/types'
 
+export type ChartPickPoint = { time: number; price: number }
+
 interface Props {
   candles: Candle[]
   symbol: string
@@ -46,6 +48,9 @@ interface Props {
   onLive?: (live: { bias: 'bull' | 'bear' | 'neutral'; rvol: number }) => void
   /** ChartObjects moteur (zones / trendlines / markers) — couche Structure. */
   chartObjects?: ChartObject[] | null
+  /** T2c: when true, chart clicks emit onPickPoint (mark-trade mode). */
+  pickMode?: boolean
+  onPickPoint?: (point: ChartPickPoint) => void
 }
 
 type SeriesBag = {
@@ -261,7 +266,16 @@ function renderChartObjects(
   })
 }
 
-export function PriceChart({ candles, symbol, timeframe, onSignals, onLive, chartObjects }: Props) {
+export function PriceChart({
+  candles,
+  symbol,
+  timeframe,
+  onSignals,
+  onLive,
+  chartObjects,
+  pickMode = false,
+  onPickPoint,
+}: Props) {
   const priceLinesRef = useRef<IPriceLine[]>([])
   const trendSeriesRef = useRef<ISeriesApi<'Line'>[]>([])
   const structureMarkersRef = useRef<SeriesMarker<Time>[]>([])
@@ -273,6 +287,8 @@ export function PriceChart({ candles, symbol, timeframe, onSignals, onLive, char
   const hoverMapRef = useRef<Map<number, HoverPoint>>(new Map())
   const signalsCacheRef = useRef<Signal[]>([])
   const layersRef = useRef<LayerVis>(DEFAULT_LAYERS)
+  const pickModeRef = useRef(pickMode)
+  const onPickPointRef = useRef(onPickPoint)
   const [colors, setColors] = useState<ChartColors>(() => readChartColors())
   const [layers, setLayers] = useState<LayerVis>(DEFAULT_LAYERS)
   const [overlayError, setOverlayError] = useState<string | null>(null)
@@ -281,6 +297,12 @@ export function PriceChart({ candles, symbol, timeframe, onSignals, onLive, char
   useEffect(() => {
     layersRef.current = layers
   }, [layers])
+  useEffect(() => {
+    pickModeRef.current = pickMode
+  }, [pickMode])
+  useEffect(() => {
+    onPickPointRef.current = onPickPoint
+  }, [onPickPoint])
   const [tip, setTip] = useState<TipState>({
     visible: false,
     x: 0,
@@ -341,6 +363,10 @@ export function PriceChart({ candles, symbol, timeframe, onSignals, onLive, char
     setColors(initialColors)
 
     const onMove = (param: MouseEventParams<Time>) => {
+      if (pickModeRef.current) {
+        setTip((prev) => (prev.visible ? { ...prev, visible: false, point: null } : prev))
+        return
+      }
       if (
         !param.point ||
         !param.time ||
@@ -377,6 +403,17 @@ export function PriceChart({ candles, symbol, timeframe, onSignals, onLive, char
 
     chart.subscribeCrosshairMove(onMove)
 
+    const onClick = (param: MouseEventParams<Time>) => {
+      if (!pickModeRef.current || !onPickPointRef.current) return
+      if (!param.point || !param.time || !seriesRef.current) return
+      const unix = timeToUnix(param.time)
+      if (unix == null) return
+      const price = seriesRef.current.candle.coordinateToPrice(param.point.y)
+      if (price == null || Number.isNaN(price)) return
+      onPickPointRef.current({ time: unix, price: Number(price) })
+    }
+    chart.subscribeClick(onClick)
+
     const onThemeChange = () => {
       const next = readChartColors()
       applyChartTheme(chart, seriesBag, next)
@@ -398,6 +435,7 @@ export function PriceChart({ candles, symbol, timeframe, onSignals, onLive, char
     return () => {
       window.removeEventListener(THEME_CHANGE_EVENT, onThemeChange)
       chart.unsubscribeCrosshairMove(onMove)
+      chart.unsubscribeClick(onClick)
       ro.disconnect()
       chart.remove()
       chartRef.current = null
@@ -569,7 +607,7 @@ export function PriceChart({ candles, symbol, timeframe, onSignals, onLive, char
   const legend = buildLegend(colors)
 
   return (
-    <div className="chart-wrap" ref={wrapRef}>
+    <div className={`chart-wrap${pickMode ? ' is-pick-mode' : ''}`} ref={wrapRef}>
       <div className="chart-legend" role="toolbar" aria-label="Couches du graphique">
         {legend.map((item) => (
           <button

@@ -4,7 +4,7 @@ import { resolveTwelveDataKeyForUser } from '../settings/resolve.js'
 
 /**
  * Thin passthrough to the Python engine (ichivol-app/engine).
- * Forwards GET/POST; injects session `user_id` on paper routes so the front
+ * Forwards GET/POST/DELETE; injects session `user_id` on paper routes so the front
  * cannot spoof another user's portfolio.
  */
 export async function proxyToEngine(req: Request, res: Response): Promise<void> {

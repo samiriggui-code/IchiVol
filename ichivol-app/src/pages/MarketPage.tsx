@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { BiasPanel } from '../components/BiasPanel'
-import { PriceChart } from '../components/PriceChart'
+import { MarkTradeSheet, type MarkTradeStep } from '../components/MarkTradeSheet'
+import { PriceChart, type ChartPickPoint } from '../components/PriceChart'
 import { Screener } from '../components/Screener'
 import { INTERVALS } from '../lib/binance'
 import {
@@ -12,8 +13,12 @@ import {
 } from '../lib/decisions'
 import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
 import { displaySymbol } from '../lib/markets'
-import { getChartObjects, type ChartObject } from '../lib/chartObjects'
-import { onChartObjectsChanged } from '../lib/chartObjectsEvents'
+import {
+  getChartObjects,
+  postUserTradePoint,
+  type ChartObject,
+} from '../lib/chartObjects'
+import { notifyChartObjectsChanged, onChartObjectsChanged } from '../lib/chartObjectsEvents'
 import { useMarketSnapshot } from '../lib/marketSnapshot'
 import {
   CLASS_BLURBS,
@@ -31,6 +36,14 @@ import {
 } from '../lib/types'
 
 const ENGINE_TIMEFRAMES = new Set<Interval>(['15m', '1h', '4h', '1d'])
+const MARK_STEPS: MarkTradeStep[] = ['entry', 'stop', 'target']
+
+function newSetupId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID()
+  }
+  return `setup-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+}
 
 const CLASS_ORDER: EngineAssetClass[] = [
   'crypto',
@@ -89,6 +102,17 @@ export function MarketPage() {
   const [engineDetail, setEngineDetail] = useState<DecisionDetail | null>(null)
   const [engineLoading, setEngineLoading] = useState(false)
   const [engineError, setEngineError] = useState<string | null>(null)
+
+  // T2c — Marquer un trade (ENTRY → STOP → TARGET)
+  const [markOpen, setMarkOpen] = useState(false)
+  const [markStep, setMarkStep] = useState<MarkTradeStep>('entry')
+  const [markSide, setMarkSide] = useState<'LONG' | 'SHORT'>('LONG')
+  const [markSetupId, setMarkSetupId] = useState<string | null>(null)
+  const [markPlaced, setMarkPlaced] = useState<
+    Partial<Record<MarkTradeStep, { price: number; time: number }>>
+  >({})
+  const [markSaving, setMarkSaving] = useState(false)
+  const [markError, setMarkError] = useState<string | null>(null)
 
   const classInstruments = useMemo(
     () => instruments.filter((i) => i.asset_class === marketClass),
@@ -370,8 +394,70 @@ export function MarketPage() {
         ? 'Binance Vision'
         : chartProvider ?? '—'
 
+  const canMarkTrade =
+    Boolean(current?.wired) &&
+    current?.provider !== 'twelve_data' &&
+    ENGINE_TIMEFRAMES.has(interval) &&
+    candles.length > 0
+
+  const startMarkTrade = useCallback(() => {
+    setMarkSetupId(newSetupId())
+    setMarkStep('entry')
+    setMarkSide('LONG')
+    setMarkPlaced({})
+    setMarkError(null)
+    setMarkSaving(false)
+    setMarkOpen(true)
+  }, [])
+
+  const cancelMarkTrade = useCallback(() => {
+    setMarkOpen(false)
+    setMarkError(null)
+    setMarkSaving(false)
+  }, [])
+
+  const onPickPoint = useCallback(
+    async (point: ChartPickPoint) => {
+      if (!markOpen || markSaving || !markSetupId) return
+      const step = markStep
+      setMarkSaving(true)
+      setMarkError(null)
+      try {
+        await postUserTradePoint(symbol, {
+          type: step,
+          timeframe: interval,
+          price: point.price,
+          time: point.time,
+          side: markSide,
+          label: step === 'entry' ? 'Entry' : step === 'stop' ? 'Stop' : 'Target',
+          setup_id: markSetupId,
+          as_of: point.time,
+        })
+        setMarkPlaced((prev) => ({ ...prev, [step]: point }))
+        notifyChartObjectsChanged({ tool: `user_${step}`, ok: true })
+        const idx = MARK_STEPS.indexOf(step)
+        if (idx >= 0 && idx < MARK_STEPS.length - 1) {
+          setMarkStep(MARK_STEPS[idx + 1]!)
+        } else {
+          setMarkOpen(false)
+        }
+      } catch (err: unknown) {
+        setMarkError(err instanceof Error ? err.message : 'Échec enregistrement')
+      } finally {
+        setMarkSaving(false)
+      }
+    },
+    [markOpen, markSaving, markSetupId, markStep, markSide, symbol, interval],
+  )
+
+  // Reset mark mode when symbol / TF changes.
+  useEffect(() => {
+    if (markOpen) cancelMarkTrade()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol, interval])
+
   return (
-    <div className="market-page">
+    <div className={`market-page${markOpen ? ' is-mark-trade' : ''}`}>
       <header className="market-head">
         <div className="market-head-copy">
           <h1>Marché</h1>
@@ -458,6 +544,19 @@ export function MarketPage() {
               </span>
               <button
                 type="button"
+                className={markOpen ? 'is-active' : 'ghost'}
+                disabled={!canMarkTrade || markSaving}
+                title={
+                  canMarkTrade
+                    ? 'Poser ENTRY / STOP / TARGET sur le graphique'
+                    : 'Disponible sur symboles moteur (hors Twelve Data)'
+                }
+                onClick={() => (markOpen ? cancelMarkTrade() : startMarkTrade())}
+              >
+                {markOpen ? 'Annuler marquage' : 'Marquer un trade'}
+              </button>
+              <button
+                type="button"
                 className="side-toggle"
                 aria-expanded={sideOpen}
                 aria-controls="side-panel"
@@ -475,6 +574,8 @@ export function MarketPage() {
             onSignals={setSignals}
             onLive={setChartLive}
             chartObjects={chartObjects}
+            pickMode={markOpen}
+            onPickPoint={onPickPoint}
           />
           <div className="tf-group tf-group--chart" role="group" aria-label="Timeframe">
             {INTERVALS.map((tf) => (
@@ -512,6 +613,19 @@ export function MarketPage() {
           />
         </aside>
       </main>
+
+      {markOpen ? (
+        <MarkTradeSheet
+          symbolLabel={current?.label ?? displaySymbol(symbol)}
+          step={markStep}
+          side={markSide}
+          saving={markSaving}
+          error={markError}
+          placed={markPlaced}
+          onSideChange={setMarkSide}
+          onCancel={cancelMarkTrade}
+        />
+      ) : null}
     </div>
   )
 }

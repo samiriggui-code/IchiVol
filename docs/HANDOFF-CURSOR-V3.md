@@ -28,7 +28,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T2c EN COURS — USER trade points (ENTRY/STOP/TARGET)
 
 - Branche : `cursor/t2c-user-trade-points-a2fe`
-- PR : (draft — lien dès ouverture)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/20 (**draft**)
 - Statut : **EN COURS** — Cursor implémente ; **ne pas merger** avant revue Claude.
 
 ### Contexte
@@ -43,6 +43,20 @@ Job demandé par Claude : POST/DELETE chart-objects **source=user** + mode UI «
 3. **Node** : proxy `DELETE /api/engine/*` (auth)
 4. **Front** : client write + mode « Marquer un trade » sur Marché (tap chart → ENTRY → STOP → TARGET)
 5. Tests + goldens OpenAPI / `route_order` (additions)
+
+### Livré (impl)
+
+- `app/chart_objects/user_write.py` + routes POST/DELETE
+- `tests/chart_objects/test_t2c_user_write.py` (5 tests)
+- Front : `MarkTradeSheet`, `PriceChart` pickMode, bouton Marché
+- Node DELETE proxy
+
+### Validation locale
+
+```text
+pytest tests/chart_objects/test_t2c_user_write.py tests/api/test_api_surface_golden.py -q
+# PASS
+```
 
 ### Hors scope
 
