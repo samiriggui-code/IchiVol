@@ -23,8 +23,62 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T2c** #20 — **MERGÉE** — **validé par Claude** (T2a+T2b+T2c = **T2 terminé**).
 - **T3c** #21 — **MERGÉE** — **validé par Claude** (registre conditions ; T3 phase close — T3d avec T5b, T3e plus tard).
 - **T4a** #22 — **MERGÉE** — **validé par Claude** (overlay + correction net).
-- **Job en cours** : **T0-METRICS** — stats par trade nettes de frais — branche `cursor/t0-metrics-net-a2fe`.
+- **T0-METRICS** #23 — **MERGÉE** — **validé par Claude** (stats nettes ; `cost_log` / `net_v1`).
+- **Job en cours** : **T0-METRICS-2** — comptabilité `backtest/engine.py` — branche `cursor/t0-metrics-2-engine-costs-a2fe`.
 
+
+---
+
+## 2026-09-23 — T0-METRICS-2 EN COURS — frais engine (flip / EOD / close)
+
+- Branche : `cursor/t0-metrics-2-engine-costs-a2fe`
+- PR : *(draft à créer)*
+- Statut : **EN COURS** → CI puis **ATTENTE CLAUDE**.
+
+### Corrections `run_backtest`
+
+1. **Flip** L↔S : `r -= 2 × one_way` ; attribution `one_way` sortie (trade fermé) + `one_way` entrée (nouveau)
+2. **EOD** : frais de sortie prélevés dans `bar_returns` + `cost_log`
+3. **EOD prix unique** : dernière barre ajoute `sign × log(last.close / last.open)` puis frais sortie ; trade reste @ `last.close` (pas l’option open — aligne les deux comptabilités sur le mark close)
+
+### Tests
+
+- Invariant 1e-9 : mid-close, EOD close≠open, flip L→S / S→L, flips enchaînés
+- Propriété : 200 séquences aléatoires NEUTRAL/LONG/SHORT
+- Ancien test « gap documenté » **supprimé** (remplacé par preuve d’égalité)
+
+### `metrics_basis`
+
+- `run_backtest` / experiments / evidence / agent cmd → **`net_v2`**
+- `ruleset_backtest` reste **`net_v1`** (inchangé ; golden trades identique)
+- UI : labels distincts ; alerte si mélange brut / v1 / v2
+
+### Impact (bougies synthétiques seed 42, 500 bars, coûts 5+3 bps)
+
+| experiment | n | flips | eod | tot avant→après | dd avant→après | WR avant→après | Exp avant→après |
+|------------|---|-------|-----|-----------------|----------------|----------------|-----------------|
+| `ICHIMOKU_ONLY` | 40 | 6 | 1 | -28.32% → -28.94% | 32.25% → 32.57% | 5.00% → 5.00% | -0.83% → -0.85% |
+| `ICHIMOKU_RVOL_ENTRY_GATE` | 31 | 0 | 1 | -24.57% → -24.86% | 29.90% → 29.90% | 3.23% → 3.23% | -0.91% → -0.91% |
+| `PIPELINE` | 5 | 0 | 0 | -2.22% → -2.22% | 3.17% → 3.17% | 20.00% → 20.00% | -0.44% → -0.44% |
+
+Baisses voulues (trop optimiste avant). PIPELINE inchangé ici (0 flip, 0 EOD). Directions / décisions inchangées.
+
+### Goldens
+
+- `ruleset_backtest_golden.json` : **inchangé**
+- Pas de golden métriques experiments à régénérer
+
+### Attente
+
+CI verte → handoff lien → **ATTENTE Claude**.
+
+---
+
+## 2026-09-23 — T0-METRICS VALIDÉ par Claude — MERGÉ (#23)
+
+- Branche : `cursor/t0-metrics-net-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/23 — **MERGÉE** `7d74fa1`
+- Statut : **validé par Claude** (WR/exp/PF nets ; `*_gross` ; invariant ; `metrics_basis=net_v1` ; alembic unique).
 
 ---
 
