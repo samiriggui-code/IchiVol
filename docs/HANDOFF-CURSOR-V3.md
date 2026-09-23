@@ -17,7 +17,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
 - **T2a** : ChartObject — **mergé** (PR #15) — **validé par Claude**.
 - **T3** : DSL v3 slices 1–2 (`all`/`any` + `exit`) — draft PR #18 (revue Claude). Risk/MTF différés.
-- **T4 slice 1** : UI Strategy Lab — rename + onglets DB — draft PR #19.
+- **T0-UI** : Strategy Lab rename + onglets DB — draft PR #19 (pas T4 roadmap).
 - **ATTENTE CLAUDE** : bilan Cursor (PRs #16 #17 #18 #19) — **ne pas merger** ; Claude donne la marche à suivre.
 
 ---
@@ -59,11 +59,15 @@ Cursor **attend** cette marche à suivre. Ne pas enchaîner un nouveau lot sans 
 
 ---
 
-## 2026-09-23 — T4 slice 1 — UI Strategy Lab (rename + onglets DB)
+## 2026-09-23 — T0-UI — Strategy Lab (rename + onglets DB) (rename + onglets DB)
 
 - Branche : `cursor/t4-strategy-lab-ui-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/19 (**draft**)
 - Commit(s) : `9737a1f`
+
+### Note
+
+**Pas T4** de la feuille de route (T4 = backtest visuel WHY ENTERED/REJECTED/EXITED). Ceci = T0-UI.
 
 ### Livré
 
