@@ -15,6 +15,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy.exc import OperationalError
 
 from app.agents.types import Direction
+from app.api import paper as paper_routes
+from app.api import paper_orders as paper_orders_routes
 from app.api import routes
 from app.brokerage import persistence as ledger_db
 from app.db.models import (
@@ -57,6 +59,9 @@ def client(monkeypatch):
         s.commit()
     snap = (pf.id, pf.cash, pf.realized_pnl)
     monkeypatch.setattr(routes, "scan_symbol", lambda *a, **k: _row())
+
+    monkeypatch.setattr(paper_routes, "scan_symbol", lambda *a, **k: _row())
+    monkeypatch.setattr(paper_orders_routes, "scan_symbol", lambda *a, **k: _row())
     # tests/api/conftest-independent: TestClient without lifespan (no background threads)
     yield TestClient(app), pf.id, s
     s.rollback()
@@ -142,6 +147,9 @@ def test_simultaneous_double_click_creates_one_position(client):
 def test_refusal_shows_reason_and_leaves_account_untouched(client, monkeypatch):
     c, pid, _ = client
     monkeypatch.setattr(routes, "scan_symbol", lambda *a, **k: _row(decision="NO_TRADE"))
+
+    monkeypatch.setattr(paper_routes, "scan_symbol", lambda *a, **k: _row(decision="NO_TRADE"))
+    monkeypatch.setattr(paper_orders_routes, "scan_symbol", lambda *a, **k: _row(decision="NO_TRADE"))
     before = _state(pid)
     r = _post(c)
     assert r.status_code == 422 and "not_actionable" in r.json()["detail"]  # motif exploitable par l'UI
@@ -185,6 +193,10 @@ def test_stale_signal_refused_with_reason_and_no_effect(client, monkeypatch):
         return r
 
     monkeypatch.setattr(routes, "scan_symbol", stale_row)
+
+
+    monkeypatch.setattr(paper_routes, "scan_symbol", stale_row)
+    monkeypatch.setattr(paper_orders_routes, "scan_symbol", stale_row)
     before = _state(pid)
     r = _post(c)
     assert r.status_code == 422 and "stale_data" in r.json()["detail"]
