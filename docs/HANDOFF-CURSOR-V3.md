@@ -38,8 +38,20 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **Researcher** #41 — **MERGÉE** (propose experiment plan).
 - **UI Lab Research** #43 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres).
 - **T0-NOTIF** #44 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres).
-- **Job en cours** : **T0-MANAGE-a** — stop suiveur / breakeven Lab (PR draft) — **ATTENTE CLAUDE**.
+- **T0-MANAGE-a** #45 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres — diff réel + no-lookahead vérifié bar par bar).
+- **Job en cours** : **T0-MANAGE-b** — stop suiveur / breakeven **paper** (brancher sur `app/paper/protection.py`, après validation Lab). Voir découpage complet plus bas.
 
+
+---
+
+## 2026-09-23 — T0-MANAGE-a MERGÉ (#45) — revue Claude en local
+
+- Branche : `cursor/t0-manage-a-trail-lab-a2fe` — PR https://github.com/samiriggui-code/IchiVol/pull/45 — **MERGÉE** `e6118c7`
+- **Revue** : diff réel relu (`stop_trail.py`, `ruleset.py`, `ruleset_backtest.py`) — confirmé aucun lookahead : le stop vérifié à la barre `j` vient de la mise à jour calculée à la barre `j-1` (jamais la barre courante en avance) ; ratchet appliqué via `max`/`min` strict (LONG ne recule jamais à la baisse, SHORT jamais à la hausse) ; breakeven couvre bien le round-trip de frais ; validation de parse stricte (clés inconnues rejetées, `bool` rejeté comme nombre, valeurs ≤ 0 rejetées).
+- `pytest tests/strategy_lab/test_t0_manage_a_trail.py tests/strategy_lab/test_ruleset_backtest.py tests/strategy_lab/test_ruleset_backtest_golden.py tests/strategy_lab/test_ruleset.py` : 33/33 OK
+- `pytest tests/strategy_lab tests/api` (suite large) : mêmes 2 échecs préexistants liés aux données réelles de `ichivol_engine_dev` (pas de régression, cf. note baseline en haut de ce fichier)
+- Golden `ruleset_backtest_golden.json` inchangé (trail absent partout dans le catalogue actuel) — confirmé.
+- **Prochain job : T0-MANAGE-b** (paper) — voir spec ci-dessous.
 
 ---
 

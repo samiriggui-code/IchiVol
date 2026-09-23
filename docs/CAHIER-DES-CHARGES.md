@@ -158,7 +158,7 @@ Il n’existe **pas** de jalon nommé « V2+ » dans ce CDC. L’ordre est stric
 - [x] **Researcher — propose experiment plan** (2026-09-23) — AuditReport → steps Lab (`proposed` ; jamais auto-run). PR #41.
 - [x] **UI Lab Research** (2026-09-23) — onglet Strategy Lab pour T5b/T6/T7/Researcher (observation only). PR #43.
 - [x] **T0-NOTIF — alertes push téléphone** (2026-09-23) — Web Push VAPID + watcher positions (target/stop/accel/flip) ; informatif only. PR #44.
-- [ ] **T0-MANAGE-a — stop suiveur/breakeven (Lab)** (2026-09-23) — `ExitSpec.trail` ; stop mobile bar-par-bar, ratchet unidirectionnel, no lookahead ; backtest only. Découpage complet : `docs/HANDOFF-CURSOR-V3.md`.
+- [x] **T0-MANAGE-a — stop suiveur/breakeven (Lab)** (2026-09-23) — `ExitSpec.trail` ; stop mobile bar-par-bar, ratchet unidirectionnel, no lookahead ; backtest only. Découpage complet : `docs/HANDOFF-CURSOR-V3.md`.
 - [ ] **T0-MANAGE-b — stop suiveur/breakeven (paper)** — brancher sur `app/paper/protection.py`, après validation T0-MANAGE-a.
 - [ ] **T0-MANAGE-c — prise de profit partielle (Lab)** — `ExitSpec.partial_tp`, `Trade` multi-fill.
 - [ ] **T0-MANAGE-d — prise de profit partielle (paper)** — `paper_partial_exits`, après validation T0-MANAGE-c.
