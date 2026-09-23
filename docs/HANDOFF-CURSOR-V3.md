@@ -37,7 +37,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T5b** #35 — **MERGÉE** (profils poids + étude historique).
 - **T6** #36 — **MERGÉE** (AuditReport post-outcome).
 - **T7** #37 — **MERGÉE** (Monte Carlo / risk of ruin).
-- **Job en cours** : **T3d** — propose ruleset edit + condition catalog (branche `cursor/t3d-ruleset-propose-a2fe`).
+- **Job en cours** : **T3d** — PR #39 draft — propose ruleset edit + condition catalog (ATTENTE CI).
 
 
 ---
@@ -45,8 +45,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T3d EN COURS — propose ruleset edit (NL→DSL contract)
 
 - Branche : `cursor/t3d-ruleset-propose-a2fe`
-- PR : *(draft à ouvrir)*
-- Statut : **EN COURS** — après close T1–T7.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/39 (**draft**)
+- Statut : **ATTENTE CI** — après close T1–T7.
 
 ### Livré
 
