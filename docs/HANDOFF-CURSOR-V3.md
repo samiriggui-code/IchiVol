@@ -30,12 +30,20 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T4a EN COURS — backtest visuel (trades sur chart)
 
 - Branche : `cursor/t4a-backtest-overlay-a2fe` (Claude : `v3/t4a-backtest-overlay`)
-- PR : (draft — lien dès ouverture)
-- Statut : **EN COURS** — **ne pas merger** avant revue Claude.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/22 (**draft**)
+- Commit(s) : `4d68375`
+- Statut : **ATTENTE CLAUDE** — **ne pas merger** avant revue.
 
 ### Objectif
 
 Lancer une stratégie catalogue sur un symbole → trades sur le chart ; filtre Tous / Gagnants / Perdants.
+
+### Livré
+
+1. `chart_objects/from_backtest.py` — 4 objets/trade (ENTRY/STOP/TARGET/MARKER), `source=backtest`, `origin` complet
+2. `POST /api/engine/strategy-lab/backtest-overlay` — filtre outcome serveur ; counts globaux
+3. Front Marché : bouton Backtest + sheet (catalogue, Afficher/Effacer, filtre, détail trade) ; objets BACKTEST en plus des overlays existants
+4. Tests parité golden seeds ; OpenAPI/route_order ajouts seuls
 
 ### Hors scope
 
