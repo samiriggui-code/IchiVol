@@ -49,9 +49,9 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Multi-tenant `user_id` sur overlays (global symbol/tf) — dette connue, pas T2b
 - Rectangle/channel rendu générique riche — partiel
-- Refresh chart auto après tool_use Copilot (poll / event) — pas encore
 - STRATEGY/BACKTEST store — T4
 - Suite DB paper/brokerage complète — **Claude 13:10**
+- Refresh Market après draw : **fait** (`chartObjectsEvents` bus) sur ce push
 
 ---
 
