@@ -34,16 +34,35 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T4b** #32 — **MERGÉE** (filtres overlay structurés).
 - **T4d** #33 — **MERGÉE** (filtre régime overlay).
 - **T5a** #34 — **MERGÉE** (family weights observation-only).
-- **Job en cours** : **T5b** — PR #35 draft — profils poids + étude historique (ATTENTE CI).
+- **T5b** #35 — **MERGÉE** (profils poids + étude historique).
+- **Job en cours** : **T6** — AuditReport post-outcome (branche `cursor/t6-auditor-report-a2fe`).
 
 
 ---
 
-## 2026-09-23 — T5b EN COURS — profils poids backtestables
+## 2026-09-23 — T6 EN COURS — AuditReport (Claude Auditor scaffolding)
+
+- Branche : `cursor/t6-auditor-report-a2fe`
+- PR : *(draft à ouvrir)*
+- Statut : **EN COURS** — après merge #35.
+
+### Livré
+
+1. `app/auditor/` — `AuditReport` + `AuditHypothesis` (`proposed` only)
+2. `build_audit_report_from_trade` depuis `RulesetTradeDetail` (WHY + net)
+3. Agent `build_audit_report`
+
+### Non-faits
+
+Auto-apply hypothèses ; Researcher loop ; T7 Monte Carlo ; UI.
+
+---
+
+## 2026-09-23 — T5b MERGÉ (#35) — profils poids backtestables
 
 - Branche : `cursor/t5b-weight-profiles-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/35 (**draft**)
-- Statut : **ATTENTE CI** — après merge #34.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/35 — **MERGÉE** `bacd7bf`
+- Statut : CI verte ; merge Cursor.
 
 ### Livré
 
