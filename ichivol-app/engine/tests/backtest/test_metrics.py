@@ -1,3 +1,5 @@
+"""T0-METRICS — update unit metrics tests for net / gross split."""
+
 from __future__ import annotations
 
 import math
@@ -62,10 +64,11 @@ def test_max_drawdown_detects_a_known_peak_to_trough():
 
 
 def test_win_rate_profit_factor_and_expectancy_from_trades():
+    # cost_log=0 → net == gross (legacy unit behaviour)
     trades = [
-        Trade(0, 1, Direction.LONG, 100, 110, math.log(110 / 100)),  # win +10%
-        Trade(1, 2, Direction.LONG, 110, 99, math.log(99 / 110)),  # loss -10%
-        Trade(2, 3, Direction.LONG, 99, 108.9, math.log(108.9 / 99)),  # win +10%
+        Trade(0, 1, Direction.LONG, 100, 110, math.log(110 / 100), cost_log=0.0),
+        Trade(1, 2, Direction.LONG, 110, 99, math.log(99 / 110), cost_log=0.0),
+        Trade(2, 3, Direction.LONG, 99, 108.9, math.log(108.9 / 99), cost_log=0.0),
     ]
     bar_returns = [0.0, 0.0, 0.0]
     posn = [Direction.LONG] * 3
@@ -74,14 +77,16 @@ def test_win_rate_profit_factor_and_expectancy_from_trades():
 
     assert metrics.num_trades == 3
     assert metrics.win_rate == pytest.approx(2 / 3)
+    assert metrics.win_rate_gross == pytest.approx(2 / 3)
     assert metrics.profit_factor > 1.0  # two +10% wins vs one -10% loss
     assert metrics.expectancy == pytest.approx(
         sum(math.exp(t.log_return) - 1 for t in trades) / 3
     )
+    assert metrics.expectancy_gross == metrics.expectancy
 
 
 def test_all_losing_trades_has_zero_profit_factor_not_a_crash():
-    trades = [Trade(0, 1, Direction.LONG, 100, 90, math.log(90 / 100))]
+    trades = [Trade(0, 1, Direction.LONG, 100, 90, math.log(90 / 100), cost_log=0.0)]
     result = _result([0.0], [Direction.LONG], trades)
     metrics = compute_metrics(result)
     assert metrics.profit_factor == 0.0 or metrics.profit_factor == pytest.approx(0.0)

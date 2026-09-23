@@ -86,14 +86,10 @@ def post_backtest_overlay(
         timeframe=timeframe,
     )
 
-    commission_bps = float(result.backtest.commission_bps)
-    slippage_bps = float(result.backtest.slippage_bps)
     trades_full: list[dict[str, Any]] = []
     for trade_id, detail in enumerate(result.details):
         ret_gross = trade_return_pct_gross(detail)
-        ret_net = trade_return_pct_net(
-            detail, commission_bps=commission_bps, slippage_bps=slippage_bps
-        )
+        ret_net = trade_return_pct_net(detail)
         outcome = trade_outcome(ret_net)
         entry_i = detail.entry_index
         exit_i = detail.exit_index

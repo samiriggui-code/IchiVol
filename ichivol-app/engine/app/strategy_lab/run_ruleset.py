@@ -38,6 +38,12 @@ def _metrics_dict(m: Metrics) -> dict:
         "profit_factor": m.profit_factor if m.profit_factor != float("inf") else None,
         "expectancy": m.expectancy,
         "exposure": m.exposure,
+        "win_rate_gross": m.win_rate_gross,
+        "profit_factor_gross": (
+            m.profit_factor_gross if m.profit_factor_gross != float("inf") else None
+        ),
+        "expectancy_gross": m.expectancy_gross,
+        "metrics_basis": "net_v1",
     }
 
 

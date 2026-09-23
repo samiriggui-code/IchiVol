@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from typing import Sequence
 
 from app.agents.types import Direction
-from app.backtest.engine import BacktestResult, Trade
+from app.backtest.engine import BacktestResult, Trade, round_trip_cost_log
 from app.backtest.metrics import Metrics, compute_metrics
 from app.indicators.atr import AtrState
 from app.indicators.ichimoku import Candle
@@ -232,6 +232,8 @@ def simulate_ruleset_trades(
                     entry_price=entry_price,
                     exit_price=exit_price,
                     log_return=_SIGN[direction] * math.log(exit_price / entry_price),
+                    # Exact same 2×cost deducted across bars in _apply_hold_returns.
+                    cost_log=round_trip_cost_log(commission_bps, slippage_bps),
                 ),
                 exit_reason=exit_reason,
                 stop_price=stop,

@@ -11,7 +11,6 @@ from app.agents.types import Direction
 from app.backtest.engine import Trade
 from app.chart_objects.from_backtest import (
     backtest_to_chart_objects,
-    round_trip_cost_log,
     trade_outcome,
     trade_return_pct_gross,
     trade_return_pct_net,
@@ -204,12 +203,16 @@ def test_trade_outcome_helpers():
 def test_gross_win_net_loss_outcome():
     """+5 bps price move with 16 bps round-trip cost → gross win, net loss.
 
-    Default costs: commission_bps=5, slippage_bps=3 → cost=0.0008,
-    round-trip 2*cost=0.0016 (16 bps) — same as ``_apply_hold_returns``.
+    cost_log filled like ruleset_backtest (2 × one_way).
     """
+    from app.backtest.engine import round_trip_cost_log
+
     entry = 100.0
     exit_px = 100.0 * math.exp(0.0005)  # +5 bps log move
     log_return = math.log(exit_px / entry)
+    commission_bps, slippage_bps = 5.0, 3.0
+    cost_log = round_trip_cost_log(commission_bps, slippage_bps)
+    assert cost_log == pytest.approx(0.0016)
     detail = RulesetTradeDetail(
         trade=Trade(
             entry_time=1,
@@ -218,6 +221,7 @@ def test_gross_win_net_loss_outcome():
             entry_price=entry,
             exit_price=exit_px,
             log_return=log_return,
+            cost_log=cost_log,
         ),
         exit_reason="target",
         stop_price=99.0,
@@ -227,17 +231,11 @@ def test_gross_win_net_loss_outcome():
         entry_index=1,
         exit_index=2,
     )
-    commission_bps, slippage_bps = 5.0, 3.0
-    assert round_trip_cost_log(commission_bps, slippage_bps) == pytest.approx(0.0016)
 
     gross = trade_return_pct_gross(detail)
-    net = trade_return_pct_net(
-        detail, commission_bps=commission_bps, slippage_bps=slippage_bps
-    )
+    net = trade_return_pct_net(detail)
     assert gross > 0
     assert net < 0
     assert trade_outcome(gross) == "win"
     assert trade_outcome(net) == "loss"
-    # Formula: exp(log_return - 2*cost) - 1
-    cost = (commission_bps + slippage_bps) / 10_000
-    assert net == pytest.approx(math.exp(log_return - 2 * cost) - 1.0)
+    assert net == pytest.approx(math.exp(log_return - cost_log) - 1.0)

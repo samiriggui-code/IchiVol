@@ -140,6 +140,12 @@ def metrics_dict(m: Metrics) -> dict:
         "profit_factor": m.profit_factor if m.profit_factor != float("inf") else None,
         "expectancy": m.expectancy,
         "exposure": m.exposure,
+        "win_rate_gross": m.win_rate_gross,
+        "profit_factor_gross": (
+            m.profit_factor_gross if m.profit_factor_gross != float("inf") else None
+        ),
+        "expectancy_gross": m.expectancy_gross,
+        "metrics_basis": "net_v1",
     }
 
 
@@ -158,6 +164,8 @@ def backtest_dict(result: BacktestResult) -> dict:
                 "entry_price": t.entry_price,
                 "exit_price": t.exit_price,
                 "pnl_pct": math.exp(t.log_return) - 1,
+                "pnl_pct_net": math.exp(t.net_log_return) - 1,
+                "cost_log": t.cost_log,
             }
             for t in result.trades
         ],

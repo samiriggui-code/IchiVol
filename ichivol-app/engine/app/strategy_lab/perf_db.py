@@ -17,6 +17,7 @@ from app.strategy_lab.event_study import event_study_dict
 from app.strategy_lab.run_ruleset import RulesetStudyResult
 
 ENGINE_VERSION = "strategy_lab_v1"
+METRICS_BASIS_NET_V1 = "net_v1"
 
 
 def _exit_rule_label(rs) -> str:
@@ -112,6 +113,7 @@ def save_experiment(
             study.symbol, study.timeframe, study.n_bars, start, end
         ),
         engine_version=engine_version,
+        metrics_basis=METRICS_BASIS_NET_V1 if bt is not None else None,
     )
     session.add(row)
     session.commit()
@@ -158,6 +160,7 @@ def experiment_dict(row: StrategyLabExperiment) -> dict:
         "parameters": row.parameters_json,
         "dataset_version": row.dataset_version,
         "engine_version": row.engine_version,
+        "metrics_basis": row.metrics_basis,  # None = legacy gross; "net_v1" = net of fees
         "created_at": row.created_at.isoformat() if row.created_at else None,
     }
 

@@ -106,6 +106,10 @@ function fmtWhen(iso: string | null): string {
   return `il y a ${Math.floor(ageSec / 86400)} j`
 }
 
+function metricsBasisLabel(basis: string | null | undefined): string {
+  return basis === 'net_v1' ? 'net' : 'brut (ancien)'
+}
+
 function StoredMetricsTable({
   rows,
   emptyHint,
@@ -122,13 +126,21 @@ function StoredMetricsTable({
       </div>
     )
   }
+  const bases = new Set(rows.map((r) => (r.metrics_basis === 'net_v1' ? 'net' : 'gross')))
+  const mixed = bases.size > 1
   return (
     <div className="table-wrap">
+      {mixed ? (
+        <p className="muted" style={{ padding: '0.5rem 1rem 0', color: 'var(--danger, #c44)' }}>
+          Attention : mélange brut (ancien) et net — ne pas comparer côte à côte sans le dire.
+        </p>
+      ) : null}
       <table>
         <thead>
           <tr>
             <th>Ruleset</th>
             {showRegime && <th>Régime</th>}
+            <th>Base</th>
             <th>Trades</th>
             <th>WR</th>
             <th>PF</th>
@@ -149,6 +161,9 @@ function StoredMetricsTable({
                   {e.market_regime ?? '—'}
                 </td>
               )}
+              <td className="mono" style={{ fontSize: '0.75em' }}>
+                {metricsBasisLabel(e.metrics_basis)}
+              </td>
               <td className="mono">{e.number_of_trades}</td>
               <td className="mono">{fmtPct(e.win_rate)}</td>
               <td className="mono">{fmtNum(e.profit_factor)}</td>
@@ -1251,13 +1266,16 @@ export function BacktestsPage() {
           </header>
           <p className="muted" style={{ padding: '0 1rem 0.75rem' }}>
             Runs persistés (`strategy_lab_experiments`) — évite de tout recalculer. Ablation :
-            compare les rulesets sur le même symbole/TF.
+            compare les rulesets sur le même symbole/TF. Nouveaux runs = métriques{' '}
+            <strong>nettes de frais</strong> (`metrics_basis=net_v1`) ; anciens ={' '}
+            <em>brut (ancien)</em> — ne pas comparer sans le dire.
           </p>
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
                   <th>Ruleset</th>
+                  <th>Base</th>
                   <th>Trades</th>
                   <th>WR</th>
                   <th>PF</th>
@@ -1272,6 +1290,9 @@ export function BacktestsPage() {
                   <tr key={e.experiment_id}>
                     <td className="mono" style={{ fontSize: '0.8em' }}>
                       {e.ruleset_id}
+                    </td>
+                    <td className="mono" style={{ fontSize: '0.75em' }}>
+                      {metricsBasisLabel(e.metrics_basis)}
                     </td>
                     <td className="mono">{e.number_of_trades}</td>
                     <td className="mono">{fmtPct(e.win_rate)}</td>

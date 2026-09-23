@@ -5,6 +5,10 @@ _research/backtestbot's Sharpe calculation does (`sqrt(252)` regardless of
 whether the strategy trades 4h or 1d bars, a bug flagged in that repo's
 analysis) -- `PERIODS_PER_YEAR` is looked up from the actual timeframe of
 the backtest.
+
+T0-METRICS: win_rate / expectancy / profit_factor are **net of fees**
+(``Trade.net_log_return``). Gross counterparts are exposed as ``*_gross``
+for transparency. ``total_return`` / max DD stay on ``bar_returns`` (already net).
 """
 
 from __future__ import annotations
@@ -37,6 +41,9 @@ class Metrics:
     profit_factor: float | None
     expectancy: float | None
     exposure: float
+    win_rate_gross: float | None = None
+    profit_factor_gross: float | None = None
+    expectancy_gross: float | None = None
 
 
 def _max_drawdown(bar_returns: list[float]) -> float:
@@ -49,6 +56,25 @@ def _max_drawdown(bar_returns: list[float]) -> float:
         if peak > 0:
             max_dd = max(max_dd, (peak - equity) / peak)
     return max_dd
+
+
+def _trade_stats(pnls: list[float]) -> tuple[float | None, float | None, float | None]:
+    """win_rate, profit_factor, expectancy from a list of simple returns."""
+    n = len(pnls)
+    if n == 0:
+        return None, None, None
+    wins = [p for p in pnls if p > 0]
+    losses = [p for p in pnls if p <= 0]
+    win_rate = len(wins) / n
+    expectancy = statistics.mean(pnls)
+    gross_profit = sum(wins)
+    gross_loss = abs(sum(losses))
+    profit_factor = (
+        (gross_profit / gross_loss)
+        if gross_loss > 0
+        else (math.inf if gross_profit > 0 else None)
+    )
+    return win_rate, profit_factor, expectancy
 
 
 def compute_metrics(result: BacktestResult) -> Metrics:
@@ -84,21 +110,11 @@ def compute_metrics(result: BacktestResult) -> Metrics:
 
     max_dd = _max_drawdown(bar_returns)
 
-    trade_pnls = [math.exp(t.log_return) - 1 for t in result.trades]
-    num_trades = len(trade_pnls)
-    win_rate = None
-    profit_factor = None
-    expectancy = None
-    if num_trades > 0:
-        wins = [p for p in trade_pnls if p > 0]
-        losses = [p for p in trade_pnls if p <= 0]
-        win_rate = len(wins) / num_trades
-        expectancy = statistics.mean(trade_pnls)
-        gross_profit = sum(wins)
-        gross_loss = abs(sum(losses))
-        profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (
-            math.inf if gross_profit > 0 else None
-        )
+    trade_pnls_net = [math.exp(t.net_log_return) - 1 for t in result.trades]
+    trade_pnls_gross = [math.exp(t.log_return) - 1 for t in result.trades]
+    num_trades = len(trade_pnls_net)
+    win_rate, profit_factor, expectancy = _trade_stats(trade_pnls_net)
+    win_rate_gross, profit_factor_gross, expectancy_gross = _trade_stats(trade_pnls_gross)
 
     exposure = sum(1 for p in result.posn if p != Direction.NEUTRAL) / n
 
@@ -114,4 +130,7 @@ def compute_metrics(result: BacktestResult) -> Metrics:
         profit_factor=profit_factor,
         expectancy=expectancy,
         exposure=exposure,
+        win_rate_gross=win_rate_gross,
+        profit_factor_gross=profit_factor_gross,
+        expectancy_gross=expectancy_gross,
     )
