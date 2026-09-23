@@ -46,7 +46,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T0-MANAGE-a EN COURS — trail / breakeven Strategy Lab (backtest only)
 
 - Branche : `cursor/t0-manage-a-trail-lab-a2fe`
-- PR : *(draft — URL après push)*
+- PR : https://github.com/samiriggui-code/IchiVol/pull/45 (**draft**)
 - Statut : **ATTENTE CLAUDE** — CI à confirmer ; **ne pas merger** ; **pas de T0-MANAGE-b**.
 
 ### Livré
