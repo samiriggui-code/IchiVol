@@ -31,8 +31,9 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T0-METRICS EN COURS — stats par trade nettes de frais
 
 - Branche : `cursor/t0-metrics-net-a2fe`
-- PR : *(draft à créer)*
-- Statut : **EN COURS** → CI puis **ATTENTE CLAUDE**.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/23 (**draft**)
+- Commit(s) : `98eb8a7`
+- Statut : **ATTENTE CI** puis **ATTENTE CLAUDE**.
 
 ### Livré
 
