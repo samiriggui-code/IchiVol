@@ -17,6 +17,44 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
 - **T2a** : ChartObject — **mergé** (PR #15) — **validé par Claude**.
 - **T0-BROKER** : PR #16 (draft) — **CI Actions VERTE** (`5965b55`, run `35847816190`) ; **pas de merge avant revalidation Claude**.
+- **ATTENTE CLAUDE** : bilan Cursor (PRs #16 #17 #18 #19) — **ne pas merger** ; Claude donne la marche à suivre.
+
+---
+
+## 2026-09-23 — ATTENTE CLAUDE — bilan Cursor pendant ton absence
+
+**Cursor s’arrête ici.** Pas de nouveau code tant que Claude n’a pas revu et donné la marche à suivre.
+
+Contexte : Claude indisponible (restriction puis revue reportée). Cursor a continué seul sur des drafts. **Aucun merge** de ces PRs sans validation Claude.
+
+### File d’attente (drafts — à revoir)
+
+| PR | Sujet | Branche | Head | CI Actions |
+|----|--------|---------|------|------------|
+| [#16](https://github.com/samiriggui-code/IchiVol/pull/16) | T0-BROKER fidélité (reconcile, marks, financing) | `v3/t0-broker-fidelity` | `f904951` | VERTE [35849205949](https://github.com/samiriggui-code/IchiVol/actions/runs/35849205949) |
+| [#17](https://github.com/samiriggui-code/IchiVol/pull/17) | T2b agent draw_* + store USER/CLAUDE (+ passe 2 durcissement) | `cursor/t2b-agent-draw-a2fe` | `3ece878` | VERTE (voir entrée T2b) |
+| [#18](https://github.com/samiriggui-code/IchiVol/pull/18) | T3 DSL v3 slice 1+2 (`all`/`any` + `exit`) | `cursor/t3-dsl-v3-a2fe` | `8973a42` | VERTE [35852790018](https://github.com/samiriggui-code/IchiVol/actions/runs/35852790018) |
+| [#19](https://github.com/samiriggui-code/IchiVol/pull/19) | T4 UI Strategy Lab (rename + onglets DB) | `cursor/t4-strategy-lab-ui-a2fe` | `8eec800` | (voir check Actions sur la PR) |
+
+### Déjà sur `main` (validé avant / pendant)
+
+- T0-CI #14, T2a #15 — mergés, validés Claude.
+
+### Ce que Cursor a tranché seul (à confirmer ou corriger)
+
+1. **T3** : slices `all`/`any` + `exit` livrés ; **pas** de `risk{}` cosmétique ni MTF (FeatureBar mono-TF — trop gros). Suite T3 DSL = revue #18 puis décision Claude.
+2. **T4** démarré (UI) pendant que #16/#17/#18 attendent — orthogonal moteur. DB-first Compare/Regimes/Experiments ; Live = ancien recalcul.
+3. **T2b** : passe 2 après critique « trop rapide vs T1 » (force source=claude, points schema, front render, refresh chart).
+
+### Demandé à Claude
+
+1. Suite **Postgres complète** sur #16 et #17 (et #18/#19 si pertinent) — Cursor n’a pas de Postgres local.
+2. Revue des 4 drafts : merge / rebase / redo / kill.
+3. **Marche à suivre** pour Cursor (ordre des lots, quoi ne pas toucher).
+
+### Règle
+
+Cursor **attend** cette marche à suivre. Ne pas enchaîner un nouveau lot sans consignes Claude.
 
 ---
 
