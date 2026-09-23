@@ -30,72 +30,17 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping
 
 from app.agents.types import Direction
+from app.strategy_lab.conditions import CONDITION_REGISTRY
 
-# Known condition keys → expected Python type (bool / int / float / str).
+# Derived from CONDITION_REGISTRY (T3c) — keep name for optimization.py / api/rulesets.py.
 CONDITION_SCHEMA: dict[str, type] = {
-    "price_above_kumo": bool,
-    "price_below_kumo": bool,
-    "tenkan_above_kijun": bool,
-    "tenkan_below_kijun": bool,
-    "tk_cross_bullish": bool,
-    "tk_cross_bearish": bool,
-    "tk_cross_age_max": int,
-    "kumo_breakout_bullish": bool,
-    "kumo_breakout_bearish": bool,
-    "rvol_min": float,
-    "rvol_max": float,
-    "bos_bullish": bool,
-    "bos_bearish": bool,
-    "structure_bias_bullish": bool,
-    "structure_bias_bearish": bool,
-    "atr_percentile_min": float,
-    "atr_percentile_max": float,
-    "atr_expansion": bool,
-    "cmf_min": float,
-    "cmf_max": float,
-    "rsi_min": float,
-    "rsi_max": float,
-    # Ichimoku Analytics (research — Lab only)
-    "kijun_slope": str,  # RISING | FLAT | FALLING
-    "price_kijun_distance_atr_min": float,
-    "price_kijun_distance_atr_max": float,
-    "kijun_break_bullish": bool,
-    "kijun_break_bearish": bool,
-    "kijun_retest": bool,
-    "kijun_bounce": bool,
-    "kumo_orientation": str,  # BULLISH | BEARISH
-    "kumo_twist_age_max": int,
-    "kumo_thickness_atr_min": float,
-    "kumo_thickness_atr_max": float,
-    # T-EXP experimental (Lab only)
-    "ppo_above_signal": bool,
-    "ppo_below_signal": bool,
-    "ppo_above_zero": bool,
-    "ppo_below_zero": bool,
-    "ppo_histogram_rising": bool,
-    "ppo_histogram_falling": bool,
-    "ppo_signal_cross_bullish": bool,
-    "ppo_signal_cross_bearish": bool,
-    "ppo_cross_age_max": int,  # bars since last signal cross in trade direction
-    "ppo_min": float,
-    "ppo_max": float,
-    "ppo_momentum": str,  # STRONG_BULLISH | BULLISH | NEUTRAL | BEARISH | STRONG_BEARISH
-    "best_cloud_trend": str,  # BULLISH | BEARISH | NEUTRAL
-    "best_cloud_bullish": bool,
-    "best_cloud_bearish": bool,
-    "best_cloud_inside": bool,
-    "best_cloud_cross_bullish": bool,
-    "best_cloud_cross_bearish": bool,
-    "best_cloud_cross_age_max": int,  # bars since last cross in trade direction
+    k: spec.value_type for k, spec in CONDITION_REGISTRY.items()
 }
 
 CONDITION_ENUMS: dict[str, frozenset[str]] = {
-    "kijun_slope": frozenset({"RISING", "FLAT", "FALLING"}),
-    "kumo_orientation": frozenset({"BULLISH", "BEARISH"}),
-    "ppo_momentum": frozenset(
-        {"STRONG_BULLISH", "BULLISH", "NEUTRAL", "BEARISH", "STRONG_BEARISH"}
-    ),
-    "best_cloud_trend": frozenset({"BULLISH", "BEARISH", "NEUTRAL"}),
+    k: frozenset(spec.allowed_values)
+    for k, spec in CONDITION_REGISTRY.items()
+    if spec.allowed_values is not None
 }
 
 _ENTRY_MODES = frozenset({"next_open", "close_confirmation"})
