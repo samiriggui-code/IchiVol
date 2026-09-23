@@ -30,7 +30,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **EventAnomalyDetector PHASE 5** #27 — **MERGÉE** (observation-only).
 - **Event Intelligence PHASE 6** #28 — **MERGÉE** (regime study + calibration ; Cursor solo, CI verte).
 - **Event Intelligence PHASE 7** #29 — **MERGÉE** (SymbolNews + correlate → `EVENT_MARKET` ; Cursor solo, CI verte).
-- **Job en cours** : **T4c** — WHY ENTERED / REJECTED / EXITED sur overlay backtest — branche `cursor/t4c-why-overlay-a2fe`.
+- **Job en cours** : **T4c** — PR #31 draft — WHY ENTERED / REJECTED / EXITED (ATTENTE CI).
 
 
 ---
@@ -38,8 +38,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T4c EN COURS — WHY ENTERED / REJECTED / EXITED
 
 - Branche : `cursor/t4c-why-overlay-a2fe`
-- PR : (draft)
-- Statut : **EN COURS** — reprise chantier V3 après EIL.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/31 (**draft**)
+- Statut : **ATTENTE CI** — reprise chantier V3 après EIL.
 
 ### Livré
 
