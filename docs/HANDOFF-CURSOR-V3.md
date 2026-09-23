@@ -40,8 +40,44 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-NOTIF** #44 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres).
 - **T0-MANAGE-a** #45 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres — diff réel + no-lookahead vérifié bar par bar).
 - **T0-MANAGE-b** #46 — **MERGÉE** (validé par Claude — watermark, gate legacy/auto et isolation des tests vérifiés ; 2 réserves non bloquantes notées).
-- **Job en cours** : **T0-MANAGE-c** — prise de profit partielle **Strategy Lab** (backtest only). Voir découpage détaillé plus bas.
+- **Job en cours** : **T0-MANAGE-c** — prise de profit partielle **Strategy Lab** — PR draft (voir entrée ci-dessous). **Pas de merge / pas de T0-MANAGE-d** avant revue Claude.
 
+
+---
+
+## 2026-09-23 — T0-MANAGE-c EN COURS — partial TP Strategy Lab (backtest only)
+
+- Branche : `cursor/t0-manage-c-partial-tp-lab-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/47 (**draft**)
+- Statut : **ATTENTE CLAUDE** — CI à confirmer ; **ne pas merger** ; **pas de T0-MANAGE-d**.
+
+### Livré
+
+1. `app/strategy_lab/partial_tp.py` — `PartialTpStep` / `PartialExit` + niveaux R / VWAP / `log_return_from_vwap`
+2. `ExitSpec.partial_tp` — parse strict (#45+) : `]0,1[`, somme ≤ 1, R strictement croissants, chaque R `< target_atr/stop_atr`, `bool`/clés inconnues rejetés
+3. `ruleset_backtest.simulate_ruleset_trades` — priorité **stop > partials > target > signal > trail** ; `Trade` agrégé via VWAP ; `RulesetTradeDetail.partial_exits`
+4. `_apply_fills_hold_returns` — chemin taille-pondéré + frais `cost×fraction` par fill ; **résidu de Jensen** (Σ f·log vs log(VWAP)) absorbé sur la dernière barre de sortie pour tenir T0-METRICS-2
+5. Tests `test_t0_manage_c_partial_tp.py` — parse, VWAP≠weighted-log, stop>partial, partial>target même barre, **invariant Σ net == Σ bars** avec partiels, golden inchangé
+
+### Non-fait
+
+- Paper (T0-MANAGE-d) ; renforcement ; UI ; builtins catalog
+
+### Tests locaux (Cursor)
+
+```text
+pytest tests/strategy_lab/test_t0_manage_c_partial_tp.py \
+       tests/strategy_lab/test_t0_manage_a_trail.py \
+       tests/strategy_lab/test_ruleset_backtest.py \
+       tests/strategy_lab/test_ruleset_backtest_golden.py \
+       tests/backtest/test_t0_metrics_net.py \
+       tests/strategy_lab/test_ruleset.py -q
+# 55 passed
+```
+
+### Note revue (réconciliation corr. 1 ↔ 3)
+
+`Trade.log_return = sign·log(VWAP/entry)` (corr. Claude #1). Le chemin barre taille-pondéré somme naturellement Σ f·log (Jensen). Le delta est soaké sur la barre de sortie finale — invariant 1e-9 tenu ; les barres intermédiaires restent size-weighted.
 
 ---
 
