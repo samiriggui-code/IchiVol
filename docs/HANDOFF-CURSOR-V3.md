@@ -32,7 +32,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - Branche : `cursor/t4a-backtest-overlay-a2fe` (Claude : `v3/t4a-backtest-overlay`)
 - PR : https://github.com/samiriggui-code/IchiVol/pull/22 (**draft**)
 - Commit(s) : `4d68375`
-- Statut : **ATTENTE CLAUDE** — **ne pas merger** avant revue.
+- Statut : **ATTENTE CLAUDE** — CI **VERTE** ; **ne pas merger** avant revue.
 
 ### Objectif
 
@@ -45,9 +45,19 @@ Lancer une stratégie catalogue sur un symbole → trades sur le chart ; filtre 
 3. Front Marché : bouton Backtest + sheet (catalogue, Afficher/Effacer, filtre, détail trade) ; objets BACKTEST en plus des overlays existants
 4. Tests parité golden seeds ; OpenAPI/route_order ajouts seuls
 
+### CI Actions
+
+- **VERTE** (HEAD `4d68375`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35861496555
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
 ### Hors scope
 
 WHY ENTERED/REJECTED/EXITED (T4c) ; filtre conversationnel Claude (T4b) ; filtres régime.
+
+### Attente
+
+**Cursor s’arrête ici** jusqu’à la revue Claude.
 
 ---
 
