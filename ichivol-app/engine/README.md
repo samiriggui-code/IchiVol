@@ -63,11 +63,11 @@ Pour chaque entrée d’une variante (`ICHIMOKU_ONLY` … `PIPELINE`), mesure le
 
 ### Rules Engine (Phase 2)
 
-- Schema : `app/strategy_lab/ruleset.py` (conditions AND, clés allowlistées)
+- Schema : `app/strategy_lab/ruleset.py` (conditions flat AND = legacy ; T3 : `all` / `any` ; optionnel `exit.max_hold_bars` + `exit.conditions` ; clés allowlistées)
 - Features causales : `features.py` (Ichimoku / RVOL / structure / ATR / CMF / RSI)
 - Évaluateur rising-edge : `evaluator.py`
 - Catalog built-in : `catalog.py` (`IV_ICHIMOKU_RVOL_LONG_001`, ablation Ichimoku seul, +BOS, kumo breakout)
-- Run : `run_ruleset.py` → Event Study **+** ATR SL/TP backtest (`ruleset_backtest.py`)
+- Run : `run_ruleset.py` → Event Study **+** ATR SL/TP backtest (`ruleset_backtest.py` ; priorité `stop` > `target` > `signal` > `max_hold`/`eod`)
 - HTTP : `GET /rulesets`, `GET /ruleset/{id}/event-study?symbol=…`, `POST /ruleset/event-study`
 - Agent : `list_rulesets`, `run_ruleset_event_study`
 

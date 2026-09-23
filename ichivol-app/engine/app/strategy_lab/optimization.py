@@ -159,7 +159,14 @@ def apply_params(base: Ruleset, params: Mapping[str, Any]) -> Ruleset:
         else:
             conditions[key] = value
     payload = base.to_dict()
-    payload["conditions"] = conditions
+    # Preserve any_of when the base ruleset uses T3 composition.
+    if base.condition_group.any_of:
+        payload["conditions"] = {
+            "all": conditions,
+            "any": dict(base.condition_group.any_of),
+        }
+    else:
+        payload["conditions"] = conditions
     payload["stop_atr"] = stop
     payload["target_atr"] = target
     # Distinct id so Perf DB / UI can tell candidates apart

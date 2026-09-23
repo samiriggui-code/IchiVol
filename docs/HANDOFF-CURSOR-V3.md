@@ -16,11 +16,152 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **Règle de merge** : avec la base, **0 échec** attendu (T0-CI #14 mergé). Tout échec bloque le merge.
 - **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
 - **T2a** : ChartObject — **mergé** (PR #15) — **validé par Claude**.
-- **T0-BROKER** : PR #16 — **MERGÉE** (validée Claude).
-- **T2b** : PR #17 — CI verte post-rebase `e9c7ad2` — **merge en cours**.
-- **T3** : PR #18 — validée Claude — merge après #17.
-- **T0-UI** : PR #19 (ex-« T4 UI ») — acceptée Claude — merge après #18.
-- **Prochain job** : T2c user trade points (après les 4 merges).
+- **T0-BROKER** : PR #16 — **MERGÉE**.
+- **T2b** : PR #17 — **MERGÉE**.
+- **T3** : PR #18 — CI / merge en cours (validée Claude).
+- **T0-UI** : PR #19 — après #18.
+- **Prochain job** : T2c user trade points (après 4 merges).
+
+
+---
+
+## 2026-09-23 — EN COURS — merges Claude (#16→#19) puis T2c
+
+### Progression
+
+| PR | Statut |
+|----|--------|
+| #16 T0-BROKER | **MERGÉE** |
+| #17 T2b | **MERGÉE** |
+| #18 T3 | rebase/merge main fait — **CI puis merge** (cette branche) |
+| #19 T0-UI | après #18 |
+
+### Checks #18 ⊕ main (#16+#17)
+
+- Conflit handoff résolu ; README auto-merge
+- `alembic heads` : une seule (`f6a7b8c9d0e1`)
+- Fixture golden backtest conservée
+
+### Après #18+#19
+
+Handoff « 4 merges done » → T2c (USER ENTRY/STOP/TARGET) → draft → attendre Claude.
+
+---
+
+
+---
+
+## 2026-09-23 — T3 correction Claude — golden backtest builtins
+
+- Branche : `cursor/t3-dsl-v3-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/18 (**draft**)
+- Commit(s) : 
+
+### Correctif demandé
+
+Preuve que le **résultat** backtest des builtins est inchangé vs `main` (pas seulement le parse).
+
+### Livré
+
+- Fixture `tests/strategy_lab/fixtures/ruleset_backtest_golden.json` générée sur **`main` af0006d** (pre-T3) — seeds 7/42, 300 bars, tous `list_builtin_rulesets()`
+- `test_ruleset_backtest_golden.py` — égalité stricte trades (entry/exit index, prix, raison, stop/target)
+
+### Validation locale
+
+```text
+pytest tests/strategy_lab/test_ruleset_backtest_golden.py -q   # PASS
+```
+
+### CI Actions
+
+- **VERTE** (HEAD `8c301c6`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35855152500
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
+### Revue Claude
+
+**Revalidation demandée** avant merge. Pas de nouveau lot.
+
+---
+
+---
+
+## 2026-09-23 — T3 slice 2 — `exit` (max_hold + conditions signal)
+
+- Branche : `cursor/t3-dsl-v3-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/18 (**draft**)
+- Commit(s) : `a767cc1` (feat), `8996a09` / `9d1bcb6` (handoff)
+
+### Livré
+
+- `ExitSpec` optionnel dans `ruleset.py` (`max_hold_bars`, `conditions` = même `ConditionGroup`)
+- ATR `stop_atr` / `target_atr` restent top-level ; refus de les mettre sous `exit`
+- Backtest : priorité `stop` > `target` > `signal` (fill = close) > `max_hold` / `eod`
+- `max_hold` : kwarg call-site gagne, sinon `ruleset.exit.max_hold_bars`
+- `evaluator.bar_matches_group` partagé entry/exit
+- Perf DB `exit_rule` : `atr_stop_target[+signal][+max_hold=N]`
+- Tests backtest + parse + `apply_params` préserve `exit`
+
+### Non fait
+
+- Nesting `risk{}` cosmétique
+- MTF / trailing / partials / `close_confirmation` entry wiring
+
+### Validation locale
+
+```text
+pytest tests/strategy_lab/ -q
+# 68 passed
+```
+
+### CI Actions
+
+- **VERTE** (HEAD `9d1bcb6`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35852517274
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
+### Revue Claude
+
+Même draft PR #18 — **ne pas merger** avant revue.
+
+---
+
+---
+
+## 2026-09-23 — T3 slice 1 — DSL v3 `all` / `any` (rétrocompat flat)
+
+- Branche : `cursor/t3-dsl-v3-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/18 (**draft**)
+- Commit(s) : `ff0fc50`
+
+### Livré
+
+- `ConditionGroup` (`all_of` / `any_of`) dans `app/strategy_lab/ruleset.py`
+- Parse : flat `{key: val}` ≡ `all` ; forme nested `{"all":…,"any":…}` ; refuse le mix flat + clés composition
+- `to_dict()` : flat legacy si `all` seul (catalog / Perf DB inchangés)
+- `evaluator.bar_matches` : `(∀ all) ∧ (∃ any)` ; groupes vides = vacuous true
+- `optimization.apply_params` préserve `any_of` quand le base est composé
+- Tests : `test_ruleset.py` (+ `test_apply_params_preserves_any_of`)
+- README engine : ligne schema Rules Engine mise à jour
+
+### Non fait (tranches suivantes T3)
+
+- Exit rules / risk block / MTF dans le DSL
+- Nesting récursif `all`/`any` sous un groupe
+- Migration catalog built-ins vers `any` (volontairement flat)
+
+### Validation locale (Cursor, sans Postgres)
+
+```text
+pytest tests/strategy_lab/ -q
+# 62 passed
+```
+
+### Revue Claude
+
+Draft — **ne pas merger** avant revue. Suite Postgres complète quand Claude revient.
+
+---
 
 ---
 

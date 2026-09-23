@@ -72,6 +72,28 @@ def test_expand_and_apply_params():
     assert rs.stop_atr == 1.5
 
 
+def test_apply_params_preserves_any_of():
+    base = parse_ruleset(
+        {
+            "id": "IV_OPT_ANY",
+            "direction": "LONG",
+            "conditions": {
+                "all": {"rvol_min": 1.1},
+                "any": {"bos_bullish": True, "tk_cross_bullish": True},
+            },
+            "stop_atr": 1.0,
+            "target_atr": 2.0,
+        }
+    )
+    rs = apply_params(base, {"rvol_min": 2.0, "stop_atr": 1.5})
+    assert rs.condition_group.all_of["rvol_min"] == 2.0
+    assert rs.condition_group.any_of == {
+        "bos_bullish": True,
+        "tk_cross_bullish": True,
+    }
+    assert rs.stop_atr == 1.5
+
+
 def test_optimize_ranks_candidates():
     report = run_optimize_on_candles(
         _series(500),
