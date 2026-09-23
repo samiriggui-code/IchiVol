@@ -76,26 +76,6 @@ SymbolNews, EventClassifier, `EVENT_MARKET`, changement de gates, UI.
 
 ---
 
-## 2026-09-23 — EVENT INTELLIGENCE PHASE 6 — regime study + calibration (archive draft)
-
-- Branche : `cursor/event-regime-study-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/28 (**draft**)
-- Statut : **ATTENTE CI** — Cursor solo (Claude absente jusqu’à 18:10) ; puis revue Claude.
-
-### Livré
-
-1. `app/events/regime_study.py` — event-study PIPELINE stratifié par `NORMAL_MARKET` / `UNKNOWN_EVENT` (MFE/MAE, horizons, deltas observés)
-2. `app/events/calibrate.py` — quantiles causaux → suggestions p99 **sans** muter les seuils live
-3. Agent read-only : `run_anomaly_regime_study`, `calibrate_anomaly_thresholds`
-4. Tests `tests/events/test_regime_study.py`
-5. CDC PHASE 6 coché ; PHASE 7 (news/correlate) ouvert
-
-### Non-faits
-
-SymbolNews, EventClassifier, `EVENT_MARKET`, changement de gates, UI.
-
----
-
 ## 2026-09-23 — EVENT INTELLIGENCE PHASE 5 — Anomaly Detector (observation-only)
 
 - Branche : `cursor/event-anomaly-detector-a2fe`
