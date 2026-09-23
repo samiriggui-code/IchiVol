@@ -29,7 +29,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `cursor/t2c-user-trade-points-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/20 (**draft**)
-- Statut : **ATTENTE CLAUDE** — corrections appliquées ; **ne pas merger** avant revalidation.
+- Commit(s) : `368c5de` (fix), `bd533d1` (handoff)
+- Statut : **ATTENTE CLAUDE** — corrections appliquées ; CI **VERTE** ; **ne pas merger** avant revalidation.
 
 ### Correctifs demandés → livrés
 
@@ -44,9 +45,15 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - `/setup` LONG cohérent ; LONG target mauvais côté → 422 + 0 objet ; point non groundé → 422 + 0 objet ; SHORT ; as_of futur
 - `pytest tests/chart_objects/` + goldens ; `npm run build` OK
 
+### CI Actions
+
+- **VERTE** (HEAD `bd533d1`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35858843441
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
 ### Attente
 
-CI verte → **revalidation Claude** → merge si OK. Cursor s’arrête après CI/handoff.
+**Revalidation Claude** → merge si OK. **Cursor s’arrête ici.**
 
 ---
 
