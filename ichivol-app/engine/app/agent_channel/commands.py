@@ -628,6 +628,9 @@ def cmd_filter_backtest_overlay(args: dict) -> dict:
     why_entered_key = args.get("why_entered_key")
     if why_entered_key is not None:
         why_entered_key = str(why_entered_key).strip() or None
+    regime_label = args.get("regime_label")
+    if regime_label is not None:
+        regime_label = str(regime_label).strip() or None
     include_rejected = bool(args.get("include_rejected", True))
 
     try:
@@ -649,6 +652,7 @@ def cmd_filter_backtest_overlay(args: dict) -> dict:
             exit_reason=exit_reason,
             direction=direction,
             why_entered_key=why_entered_key,
+            regime_label=regime_label,
             include_rejected=include_rejected,
         )
     except Exception as exc:

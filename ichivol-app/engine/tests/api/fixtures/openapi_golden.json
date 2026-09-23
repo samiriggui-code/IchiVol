@@ -172,6 +172,27 @@
             "title": "Outcome",
             "type": "string"
           },
+          "regime_label": {
+            "anyOf": [
+              {
+                "enum": [
+                  "TRENDING",
+                  "RANGING",
+                  "HIGH_VOLATILITY",
+                  "LOW_VOLATILITY",
+                  "NORMAL_VOLATILITY",
+                  "BULL",
+                  "BEAR",
+                  "SIDEWAYS"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regime Label"
+          },
           "ruleset": {
             "anyOf": [
               {

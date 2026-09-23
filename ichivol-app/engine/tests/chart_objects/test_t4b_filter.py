@@ -63,3 +63,17 @@ def test_why_key_requires_passed_true():
 def test_validate_rejects_bad_exit_reason():
     with pytest.raises(ValueError, match="exit_reason"):
         validate_filter_args(exit_reason="magic")
+
+
+def test_regime_label_filter():
+    trades = [
+        _t(trade_id=0, regime_labels=["TRENDING", "BULL"]),
+        _t(trade_id=1, regime_labels=["RANGING", "SIDEWAYS"]),
+    ]
+    out = filter_trades(trades, regime_label="TRENDING")
+    assert [t["trade_id"] for t in out] == [0]
+
+
+def test_validate_rejects_bad_regime():
+    with pytest.raises(ValueError, match="regime_label"):
+        validate_filter_args(regime_label="MOON")
