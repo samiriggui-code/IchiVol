@@ -20,6 +20,62 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-23 — T1f-2 — Plus de repaint dans pytrendline
+
+- Branche : `v3/t1f2-pytrendline-no-repaint`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/12 (draft) — **pas de merge avant revue Claude**
+- Commit(s) : `81a5db1` (comportement + tests + golden legacy + handoff)
+
+- Livré :
+  - `StructureEngineParams.allow_provisional_anchors: bool = False` — `True` = ancien comportement (tests / A-B uniquement, jamais en profil live)
+  - `pytrendline._detect_side` : fit uniquement sur pivots `provisional=False` (sauf flag) ; pas de repli sur les ancres si trop peu de fractals confirmés
+  - Ancres première/dernière toujours présentes dans `MarketStructure.pivots` (marking T1f)
+  - `TrendlineSegment.fit_pivot_bars` — paire d’ancres du fit (non exposée API)
+  - Tests : (c) inversé (lignes = pivots confirmés) ; stabilité des lignes (identique ou disparue, jamais mutée) ; golden `allow_provisional_anchors=True`
+
+- Fixtures :
+  - **Aucune fixture existante ne dépendait de pytrendline** (consensus défaut / baseline inchangés).
+  - **Ajout** : `tests/structure/fixtures/pytrendline_provisional_anchors_golden.json` — capture de l’ancien comportement (`allow_provisional_anchors=True`) pour seeds 7 & 42 :
+    | seed | lignes | zones |
+    |------|--------|-------|
+    | 7 | 10 | 10 |
+    | 42 | 10 | 10 |
+  - `git diff main -- '**/fixtures/*'` hors ce fichier → vide
+
+- Mesure d’impact (synthétique 300 barres ; BTCUSDT 1h : **pas de cache**, Binance HTTP 451) :
+
+  | seed | lignes avant → après | zones avant → après | composition lignes |
+  |------|----------------------|---------------------|--------------------|
+  | 7 | 10 → 10 (plafond `max_lines_per_side`) | 10 → 10 | 7 partagées, 3 seules-avant, 3 seules-après ; mids zones ≠ |
+  | 42 | 10 → 10 | 10 → 10 | 6 partagées, 4 / 4 ; mids zones ≠ |
+
+  Gate `STRUCTURE_PYTRENDLINE` sur 12 fenêtres `t∈{80..300}` (BUY+SELL) :
+
+  | seed | BUY acceptés avant → après | BUY bloqués | SELL acceptés | SELL bloqués |
+  |------|----------------------------|-------------|---------------|--------------|
+  | 7 | 5 → **4** | 7 → **8** | 5 → **7** | 7 → **5** |
+  | 42 | 6 → **9** | 6 → **3** | 1 → **4** | 11 → **8** |
+
+  → Le gate change bien (zones dérivées des lignes). Consensus défaut (mvpp+trendln) et `ICHIVOL_BASELINE_V1` non touchés.
+
+- Choix faits :
+  - Flag sur `StructureEngineParams` (pas un arg ad-hoc du seul adaptateur) pour que le gate / service héritent du défaut sûr.
+  - `fit_pivot_bars` pour tester la non-mutation sans ambiguïté des `pivot_bars` (touches).
+
+- Doutes / points à vérifier par Claude : aucun bloquant.
+
+- Non fait / hors périmètre :
+  - mvpp / trendln / consensus défaut
+  - découpage `routes.py` (T1g)
+  - T0-CI (branche séparée)
+
+- Tests :
+  - `tests/structure/` → all green (causality + engines + gate + golden atr)
+  - suite complète **sans Postgres** (Cursor) → **4 failed** connexion DB connus ; fixtures hors nouveau golden inchangées
+  - revue Claude avec base : baseline **13** échecs paper/api ; tout écart = régression
+
+---
+
 ## 2026-09-23 — T1f — Pivots confirmés + repaint mesuré (mark-only)
 
 - Branche : `v3/t1f-pivot-confirmation`
