@@ -9,6 +9,7 @@ import {
   type AgentLivePayload,
   type AgentMode,
 } from '../lib/agent'
+import { isChartMutatingTool, notifyChartObjectsChanged } from '../lib/chartObjectsEvents'
 import { useAgentSession } from '../lib/agentSession'
 import type { MarketSnapshot } from '../lib/marketSnapshot'
 import { proposePaperTrade, type OrderIntent } from '../lib/paper'
@@ -303,7 +304,12 @@ export function AgentPanel({ snapshot }: Props) {
             setLiveText('')
             setLiveTool(name)
           },
-          onToolEnd: () => setLiveTool(null),
+          onToolEnd: (name, ok) => {
+            setLiveTool(null)
+            if (ok && isChartMutatingTool(name)) {
+              notifyChartObjectsChanged({ tool: name, ok })
+            }
+          },
         },
       )
       if (gen !== getChatGeneration()) return

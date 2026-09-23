@@ -106,6 +106,19 @@ def _journal(
     )
 
 
+
+def short_pnl_pct(entry_price: float, exit_fill: float) -> float:
+    """SHORT return: (entry − exit) / entry. Never use entry/exit − 1 (overstates gains)."""
+    if not entry_price:
+        return 0.0
+    return (entry_price - exit_fill) / entry_price
+
+
+def short_realized_currency(qty: float, entry_price: float, exit_fill: float) -> float:
+    """SHORT P&L in quote currency before fees: qty × (entry − exit)."""
+    return float(qty) * (float(entry_price) - float(exit_fill))
+
+
 def open_capital_position(
     session: Session,
     *,
@@ -338,15 +351,19 @@ def close_capital_position(
             }
         exit_fee = _commission(profile, position.qty * exit_fill, position.qty, position.symbol)
         entry_notional = position.notional or 0.0
+        from app.paper.financing import financing_total_for_position
+
+        financing_paid = financing_total_for_position(session, position.id)
         if position.direction == "LONG":
             proceeds = position.qty * exit_fill
-            realized = proceeds - exit_fee - entry_notional - (position.entry_fee or 0.0)
+            realized = proceeds - exit_fee - entry_notional - (position.entry_fee or 0.0) - financing_paid
             portfolio.cash += proceeds - exit_fee
         else:
-            pnl_pct_local = (position.entry_price / exit_fill) - 1.0
-            realized = entry_notional * pnl_pct_local - exit_fee
-            # Return reserved short margin + PnL
-            portfolio.cash += entry_notional + realized
+            # Correct SHORT return (entry − exit) / entry — NOT entry/exit − 1.
+            pnl_currency = short_realized_currency(position.qty, position.entry_price, exit_fill)
+            realized = pnl_currency - exit_fee - financing_paid
+            # Return reserved short margin + PnL (financing already left cash day by day)
+            portfolio.cash += entry_notional + pnl_currency - exit_fee
         portfolio.realized_pnl += realized
         portfolio.updated_at = now
         cash_delta = portfolio.cash - cash_before
@@ -401,7 +418,7 @@ def close_capital_position(
     position.pnl_pct = (
         (exit_fill / position.entry_price) - 1.0
         if position.direction == "LONG"
-        else (position.entry_price / exit_fill) - 1.0
+        else short_pnl_pct(position.entry_price, exit_fill)
     )
     position.updated_at = now
 
@@ -449,8 +466,9 @@ def update_excursions(position: PaperPosition, price: float) -> None:
         fav = (position.highest_price_seen / position.entry_price) - 1.0
         adv = (position.lowest_price_seen / position.entry_price) - 1.0
     else:
-        fav = (position.entry_price / position.lowest_price_seen) - 1.0
-        adv = (position.entry_price / position.highest_price_seen) - 1.0
+        # SHORT: favourable when price falls, adverse when it rises (vs entry).
+        fav = short_pnl_pct(position.entry_price, position.lowest_price_seen)
+        adv = short_pnl_pct(position.entry_price, position.highest_price_seen)
 
     position.mfe_pct = max(position.mfe_pct or 0.0, fav)
     position.mae_pct = min(position.mae_pct or 0.0, adv)

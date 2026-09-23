@@ -118,10 +118,12 @@ def _close_legacy(position: PaperPosition, *, price: float, reason: str) -> None
     position.exit_time = datetime.now(timezone.utc)
     position.exit_price = price
     position.exit_reason = reason
+    from app.paper.broker import short_pnl_pct
+
     position.pnl_pct = (
         (price / position.entry_price) - 1.0
         if position.direction == "LONG"
-        else (position.entry_price / price) - 1.0
+        else short_pnl_pct(position.entry_price, price)
     )
 
 

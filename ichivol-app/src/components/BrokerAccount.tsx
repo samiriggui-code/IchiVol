@@ -15,6 +15,8 @@ function valuationLabel(status: ValuationStatus | null | undefined): string {
       return 'Cours indisponible'
     case 'missing_notional':
       return 'Coût manquant'
+    case 'stale_mark':
+      return 'Cours périmé'
     case 'priced':
       return 'Valorisée'
     case null:
@@ -34,9 +36,24 @@ function marketValue(p: PaperOverviewPosition): number | null {
 }
 
 function isIncomplete(p: PaperOverviewPosition): boolean {
-  if (p.valuation_status != null) return p.valuation_status !== 'priced'
+  if (p.valuation_status != null) {
+    return p.valuation_status !== 'priced' && p.valuation_status !== 'stale_mark'
+  }
   // Compat si l’engine n’expose pas encore valuation_status
   return p.qty == null || p.current_price == null || p.notional == null
+}
+
+function isStaleMark(p: PaperOverviewPosition): boolean {
+  return p.mark_stale === true || p.valuation_status === 'stale_mark'
+}
+
+/** Human-readable age of the mark used for valuation. */
+function formatMarkAge(ageS: number | null | undefined): string | null {
+  if (ageS == null || !Number.isFinite(ageS) || ageS < 0) return null
+  if (ageS < 60) return `${Math.round(ageS)} s`
+  if (ageS < 3600) return `${Math.round(ageS / 60)} min`
+  if (ageS < 86400) return `${(ageS / 3600).toFixed(1)} h`
+  return `${(ageS / 86400).toFixed(1)} j`
 }
 
 type SymbolGroup = {
@@ -169,6 +186,23 @@ function GroupCard({
             {' '}
             · {multi ? `${group.lots.length} lots` : group.lots[0].timeframe}
           </span>
+          {group.lots.some(isStaleMark) && (
+            <span className="invest-stale-badge" title="Cours de valorisation périmé">
+              {' '}
+              · Cours périmé
+            </span>
+          )}
+          {(() => {
+            const age = formatMarkAge(
+              Math.max(...group.lots.map((p) => p.mark_age_s ?? -1)),
+            )
+            return age ? (
+              <span className="muted" title="Âge du cours de valorisation">
+                {' '}
+                · mark {age}
+              </span>
+            ) : null
+          })()}
         </div>
         <span className={`invest-card-dir is-${group.direction.toLowerCase()}`}>{dir.title}</span>
       </header>
@@ -372,20 +406,33 @@ export function BrokerAccount({ overview }: { overview: PaperOverview }) {
   const openFees = a.open_entry_fees ?? 0
   const realizedPlus = a.realized_plus_unrealized ?? a.realized_pnl + a.unrealized_pnl
   const showReconcile = openFees > 0.005 || Math.abs(realizedPlus - a.total_pnl) > 0.005
+  const liquidation = a.liquidation_value
+  const staleOpen = a.stale_open ?? 0
 
   return (
     <div className="broker-account">
       <div className="broker-equity-row">
         <div className="broker-equity">
-          <span className="context-label">Valeur totale du compte</span>
+          <span className="context-label">Equity (valeur de marché)</span>
           <strong className="broker-equity-value">{eur(a.equity)}</strong>
           <span className={`broker-equity-delta ${tone(a.total_pnl)}`}>
             {signedEur(a.total_pnl)} ({pct(totalPct, 2)}) depuis la création · capital{' '}
             {eur(a.initial_cash, 0)}
           </span>
+          {liquidation != null && (
+            <p className="broker-liquidation" title="Cash après clôture de toutes les lignes au cours actuel, frais de sortie inclus">
+              <span className="context-label">Valeur si tout est clôturé maintenant</span>
+              <strong className="mono">{eur(liquidation)}</strong>
+            </p>
+          )}
+          {staleOpen > 0 && (
+            <p className="broker-stale-hint" role="status">
+              {staleOpen} cours périmé{staleOpen > 1 ? 's' : ''} — valorisation indicative
+            </p>
+          )}
           <p className="muted broker-equity-hint">
-            Liquidités + coût des positions + latent mark-to-market. Période de perf = depuis le
-            capital initial (pas la date de maj logicielle).
+            Liquidités + coût des positions + latent mark-to-market. La valeur de clôture déduit les
+            frais de sortie estimés. Période de perf = depuis le capital initial.
           </p>
         </div>
         <div className="context-grid broker-equity-stats">
@@ -493,8 +540,11 @@ export function BrokerPositions({
                   <td>
                     <strong>{assetName(p.symbol)}</strong>
                     <span className="muted"> · {p.timeframe}</span>
-                    {isIncomplete(p) && (
+                    {(isIncomplete(p) || isStaleMark(p)) && (
                       <span className="muted"> · {valuationLabel(p.valuation_status)}</span>
+                    )}
+                    {formatMarkAge(p.mark_age_s) && (
+                      <span className="muted"> · mark {formatMarkAge(p.mark_age_s)}</span>
                     )}
                   </td>
                   <td>{directionWords(p.direction).title}</td>

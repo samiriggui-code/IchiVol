@@ -554,6 +554,41 @@ class SignalEvidenceRecord(Base):
     )
 
 
+class ChartObjectOverlay(Base):
+    """Persisted USER / CLAUDE chart overlay (T2b).
+
+    ENGINE overlays stay ephemeral (recomputed from structure). STRATEGY /
+    BACKTEST persist later (T4/T5). Primary key is the deterministic
+    ChartObject id (24-char hex fingerprint).
+    """
+
+    __tablename__ = "chart_object_overlays"
+
+    id: Mapped[str] = mapped_column(String(24), primary_key=True)
+    type: Mapped[str] = mapped_column(String(32))
+    source: Mapped[str] = mapped_column(String(16), index=True)
+    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    timeframe: Mapped[str] = mapped_column(String(8), index=True)
+    points: Mapped[list] = mapped_column(JSON, default=list)
+    price_low: Mapped[float | None] = mapped_column(Float, nullable=True)
+    price_high: Mapped[float | None] = mapped_column(Float, nullable=True)
+    side: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    label: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    as_of: Mapped[int] = mapped_column(Integer)
+    origin: Mapped[dict] = mapped_column(JSON, default=dict)
+    subtype: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
 class LedgerTransaction(Base):
     """Append-only accounting event for a virtual account. ``key`` is the
     idempotency key: re-posting the same event never duplicates it."""

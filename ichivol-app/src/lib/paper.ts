@@ -302,7 +302,7 @@ export async function getShadowStats(portfolioCode?: string): Promise<ShadowStat
   return res.json() as Promise<ShadowStats>
 }
 
-export type ValuationStatus = 'priced' | 'missing_qty' | 'missing_mark' | 'missing_notional'
+export type ValuationStatus = 'priced' | 'stale_mark' | 'missing_qty' | 'missing_mark' | 'missing_notional'
 
 export interface PaperOverviewPosition extends PaperPosition {
   current_price: number | null
@@ -311,6 +311,9 @@ export interface PaperOverviewPosition extends PaperPosition {
   price_as_of?: number
   market_value?: number | null
   valuation_status?: ValuationStatus | null
+  mark_source?: string | null
+  mark_age_s?: number | null
+  mark_stale?: boolean | null
 }
 
 export interface PaperCosts {
@@ -320,6 +323,10 @@ export interface PaperCosts {
   gross_result: number
   commissions: number
   spread_slippage: number
+  financing: number
+  financing_bps_per_day_long?: number
+  financing_bps_per_day_short?: number
+  financing_assumption?: Record<string, unknown>
   total_costs: number
   net_result: number
   net_return_pct: number | null
@@ -368,6 +375,7 @@ export interface PaperOverview {
     unrealized_pnl: number
     realized_pnl: number
     equity: number
+    liquidation_value?: number
     total_pnl: number
     day_change: number | null
     open_entry_fees?: number
@@ -375,6 +383,7 @@ export interface PaperOverview {
     pnl_explained?: number
     priced_positions: number
     incomplete_open?: number
+    stale_open?: number
     open_positions: number
   }
   positions: PaperOverviewPosition[]
@@ -383,12 +392,39 @@ export interface PaperOverview {
   progress?: PaperProgress
 }
 
+export interface PaperReconcileCheck {
+  name: string
+  ok: boolean
+  expected: unknown
+  actual: unknown
+  delta: unknown
+  positions: string[]
+}
+
+export interface PaperReconcileReport {
+  portfolio_code: string
+  ok: boolean
+  anomaly_count: number
+  checks: PaperReconcileCheck[]
+  equity: number
+  liquidation_value: number
+  cash: number
+}
+
 export async function getPaperOverview(code = 'ICHIVOL_BASELINE_V1'): Promise<PaperOverview> {
   const res = await fetch(`/api/engine/paper/portfolios/${encodeURIComponent(code)}/overview`, {
     credentials: 'include',
   })
   if (!res.ok) throw new Error(await parseError(res))
   return res.json() as Promise<PaperOverview>
+}
+
+export async function getPaperReconcile(code = 'ICHIVOL_BASELINE_V1'): Promise<PaperReconcileReport> {
+  const res = await fetch(`/api/engine/paper/portfolios/${encodeURIComponent(code)}/reconcile`, {
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json() as Promise<PaperReconcileReport>
 }
 
 export interface PaperOrderRow {

@@ -1,0 +1,569 @@
+{
+  "seed_42": {
+    "IV_EXP_A_KUMO_BO_001": {
+      "n_signals": 13,
+      "n_skipped_in_position": 4,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 90,
+          "entry_price": 103.44989699350191,
+          "exit_index": 114,
+          "exit_price": 107.47738993529056,
+          "exit_reason": "target",
+          "signal_index": 89,
+          "stop_price": 101.43615052260758,
+          "target_price": 107.47738993529056
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 145,
+          "entry_price": 105.35301580181756,
+          "exit_index": 151,
+          "exit_price": 103.4471996856374,
+          "exit_reason": "stop",
+          "signal_index": 144,
+          "stop_price": 103.4471996856374,
+          "target_price": 109.16464803417789
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 167,
+          "entry_price": 105.4357397793751,
+          "exit_index": 180,
+          "exit_price": 103.76015014855065,
+          "exit_reason": "stop",
+          "signal_index": 166,
+          "stop_price": 103.76015014855065,
+          "target_price": 108.786919041024
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 182,
+          "entry_price": 105.80371812532859,
+          "exit_index": 193,
+          "exit_price": 103.65075605715757,
+          "exit_reason": "stop",
+          "signal_index": 181,
+          "stop_price": 103.65075605715757,
+          "target_price": 110.10964226167061
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 195,
+          "entry_price": 105.46081904875466,
+          "exit_index": 207,
+          "exit_price": 109.29775196400497,
+          "exit_reason": "target",
+          "signal_index": 194,
+          "stop_price": 103.5423525911295,
+          "target_price": 109.29775196400497
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 232,
+          "entry_price": 106.30443518722316,
+          "exit_index": 238,
+          "exit_price": 109.90203014238479,
+          "exit_reason": "target",
+          "signal_index": 231,
+          "stop_price": 104.50563770964236,
+          "target_price": 109.90203014238479
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 281,
+          "entry_price": 108.13651260177978,
+          "exit_index": 283,
+          "exit_price": 106.61973682816217,
+          "exit_reason": "stop",
+          "signal_index": 280,
+          "stop_price": 106.61973682816217,
+          "target_price": 111.17006414901499
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 286,
+          "entry_price": 107.82711555707904,
+          "exit_index": 287,
+          "exit_price": 106.2981515260397,
+          "exit_reason": "stop",
+          "signal_index": 285,
+          "stop_price": 106.2981515260397,
+          "target_price": 110.88504361915773
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 292,
+          "entry_price": 106.831323222777,
+          "exit_index": 292,
+          "exit_price": 105.38509143969357,
+          "exit_reason": "stop",
+          "signal_index": 291,
+          "stop_price": 105.38509143969357,
+          "target_price": 109.72378678894385
+        }
+      ]
+    },
+    "IV_EXP_BESTCLOUD_ICHI_RVOL_001": {
+      "n_signals": 1,
+      "n_skipped_in_position": 0,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 206,
+          "entry_price": 107.1141320220778,
+          "exit_index": 212,
+          "exit_price": 110.9783729516933,
+          "exit_reason": "target",
+          "signal_index": 205,
+          "stop_price": 105.18201155727004,
+          "target_price": 110.9783729516933
+        }
+      ]
+    },
+    "IV_EXP_B_KUMO_RVOL_001": {
+      "n_signals": 2,
+      "n_skipped_in_position": 0,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 184,
+          "entry_price": 105.67263150854274,
+          "exit_index": 193,
+          "exit_price": 103.49474341172049,
+          "exit_reason": "stop",
+          "signal_index": 183,
+          "stop_price": 103.49474341172049,
+          "target_price": 110.02840770218722
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 238,
+          "entry_price": 108.01070765090329,
+          "exit_index": 245,
+          "exit_price": 106.13531681035755,
+          "exit_reason": "stop",
+          "signal_index": 237,
+          "stop_price": 106.13531681035755,
+          "target_price": 111.76148933199475
+        }
+      ]
+    },
+    "IV_EXP_C_KUMO_RVOL_KIJUN_SLOPE_001": {
+      "n_signals": 0,
+      "n_skipped_in_position": 0,
+      "trades": []
+    },
+    "IV_EXP_D_KUMO_RVOL_KIJUN_DIST_001": {
+      "n_signals": 0,
+      "n_skipped_in_position": 0,
+      "trades": []
+    },
+    "IV_EXP_E_KUMO_RVOL_RETEST_001": {
+      "n_signals": 0,
+      "n_skipped_in_position": 0,
+      "trades": []
+    },
+    "IV_EXP_F_TK_KUMO_RVOL_001": {
+      "n_signals": 0,
+      "n_skipped_in_position": 0,
+      "trades": []
+    },
+    "IV_EXP_G_TK_AGE_001": {
+      "n_signals": 0,
+      "n_skipped_in_position": 0,
+      "trades": []
+    },
+    "IV_EXP_PPO_BESTCLOUD_ICHI_RVOL_BOS_001": {
+      "n_signals": 0,
+      "n_skipped_in_position": 0,
+      "trades": []
+    },
+    "IV_EXP_PPO_ICHI_RVOL_001": {
+      "n_signals": 1,
+      "n_skipped_in_position": 0,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 206,
+          "entry_price": 107.1141320220778,
+          "exit_index": 212,
+          "exit_price": 110.9783729516933,
+          "exit_reason": "target",
+          "signal_index": 205,
+          "stop_price": 105.18201155727004,
+          "target_price": 110.9783729516933
+        }
+      ]
+    },
+    "IV_ICHIMOKU_ONLY_LONG_001": {
+      "n_signals": 3,
+      "n_skipped_in_position": 1,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 170,
+          "entry_price": 107.69381908261978,
+          "exit_index": 172,
+          "exit_price": 105.93581733974767,
+          "exit_reason": "stop",
+          "signal_index": 169,
+          "stop_price": 105.93581733974767,
+          "target_price": 111.20982256836402
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 203,
+          "entry_price": 106.28731476796408,
+          "exit_index": 210,
+          "exit_price": 109.95076545396479,
+          "exit_reason": "target",
+          "signal_index": 202,
+          "stop_price": 104.45558942496372,
+          "target_price": 109.95076545396479
+        }
+      ]
+    },
+    "IV_ICHIMOKU_RVOL_BOS_LONG_001": {
+      "n_signals": 0,
+      "n_skipped_in_position": 0,
+      "trades": []
+    },
+    "IV_ICHIMOKU_RVOL_LONG_001": {
+      "n_signals": 1,
+      "n_skipped_in_position": 0,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 206,
+          "entry_price": 107.1141320220778,
+          "exit_index": 212,
+          "exit_price": 110.9783729516933,
+          "exit_reason": "target",
+          "signal_index": 205,
+          "stop_price": 105.18201155727004,
+          "target_price": 110.9783729516933
+        }
+      ]
+    },
+    "IV_KUMO_BREAKOUT_RVOL_LONG_001": {
+      "n_signals": 2,
+      "n_skipped_in_position": 0,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 184,
+          "entry_price": 105.67263150854274,
+          "exit_index": 193,
+          "exit_price": 103.49474341172049,
+          "exit_reason": "stop",
+          "signal_index": 183,
+          "stop_price": 103.49474341172049,
+          "target_price": 110.02840770218722
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 238,
+          "entry_price": 108.01070765090329,
+          "exit_index": 245,
+          "exit_price": 106.13531681035755,
+          "exit_reason": "stop",
+          "signal_index": 237,
+          "stop_price": 106.13531681035755,
+          "target_price": 111.76148933199475
+        }
+      ]
+    }
+  },
+  "seed_7": {
+    "IV_EXP_A_KUMO_BO_001": {
+      "n_signals": 4,
+      "n_skipped_in_position": 0,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 218,
+          "entry_price": 61.79660403536871,
+          "exit_index": 219,
+          "exit_price": 59.71476839055251,
+          "exit_reason": "stop",
+          "signal_index": 217,
+          "stop_price": 59.71476839055251,
+          "target_price": 65.96027532500112
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 235,
+          "entry_price": 60.231312412884456,
+          "exit_index": 237,
+          "exit_price": 63.07543407806816,
+          "exit_reason": "target",
+          "signal_index": 234,
+          "stop_price": 58.8092515802926,
+          "target_price": 63.07543407806816
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 243,
+          "entry_price": 60.23955464716439,
+          "exit_index": 244,
+          "exit_price": 58.48444749589995,
+          "exit_reason": "stop",
+          "signal_index": 242,
+          "stop_price": 58.48444749589995,
+          "target_price": 63.74976894969327
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 252,
+          "entry_price": 60.56500494612082,
+          "exit_index": 270,
+          "exit_price": 58.87509326811701,
+          "exit_reason": "stop",
+          "signal_index": 251,
+          "stop_price": 58.87509326811701,
+          "target_price": 63.94482830212845
+        }
+      ]
+    },
+    "IV_EXP_BESTCLOUD_ICHI_RVOL_001": {
+      "n_signals": 2,
+      "n_skipped_in_position": 1,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 258,
+          "entry_price": 60.856647869216964,
+          "exit_index": 269,
+          "exit_price": 59.17949587312224,
+          "exit_reason": "stop",
+          "signal_index": 257,
+          "stop_price": 59.17949587312224,
+          "target_price": 64.2109518614064
+        }
+      ]
+    },
+    "IV_EXP_B_KUMO_RVOL_001": {
+      "n_signals": 2,
+      "n_skipped_in_position": 0,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 218,
+          "entry_price": 61.79660403536871,
+          "exit_index": 219,
+          "exit_price": 59.71476839055251,
+          "exit_reason": "stop",
+          "signal_index": 217,
+          "stop_price": 59.71476839055251,
+          "target_price": 65.96027532500112
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 252,
+          "entry_price": 60.56500494612082,
+          "exit_index": 270,
+          "exit_price": 58.87509326811701,
+          "exit_reason": "stop",
+          "signal_index": 251,
+          "stop_price": 58.87509326811701,
+          "target_price": 63.94482830212845
+        }
+      ]
+    },
+    "IV_EXP_C_KUMO_RVOL_KIJUN_SLOPE_001": {
+      "n_signals": 0,
+      "n_skipped_in_position": 0,
+      "trades": []
+    },
+    "IV_EXP_D_KUMO_RVOL_KIJUN_DIST_001": {
+      "n_signals": 0,
+      "n_skipped_in_position": 0,
+      "trades": []
+    },
+    "IV_EXP_E_KUMO_RVOL_RETEST_001": {
+      "n_signals": 0,
+      "n_skipped_in_position": 0,
+      "trades": []
+    },
+    "IV_EXP_F_TK_KUMO_RVOL_001": {
+      "n_signals": 2,
+      "n_skipped_in_position": 0,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 218,
+          "entry_price": 61.79660403536871,
+          "exit_index": 219,
+          "exit_price": 59.71476839055251,
+          "exit_reason": "stop",
+          "signal_index": 217,
+          "stop_price": 59.71476839055251,
+          "target_price": 65.96027532500112
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 258,
+          "entry_price": 60.856647869216964,
+          "exit_index": 269,
+          "exit_price": 59.17949587312224,
+          "exit_reason": "stop",
+          "signal_index": 257,
+          "stop_price": 59.17949587312224,
+          "target_price": 64.2109518614064
+        }
+      ]
+    },
+    "IV_EXP_G_TK_AGE_001": {
+      "n_signals": 2,
+      "n_skipped_in_position": 0,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 218,
+          "entry_price": 61.79660403536871,
+          "exit_index": 219,
+          "exit_price": 59.71476839055251,
+          "exit_reason": "stop",
+          "signal_index": 217,
+          "stop_price": 59.71476839055251,
+          "target_price": 65.96027532500112
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 258,
+          "entry_price": 60.856647869216964,
+          "exit_index": 269,
+          "exit_price": 59.17949587312224,
+          "exit_reason": "stop",
+          "signal_index": 257,
+          "stop_price": 59.17949587312224,
+          "target_price": 64.2109518614064
+        }
+      ]
+    },
+    "IV_EXP_PPO_BESTCLOUD_ICHI_RVOL_BOS_001": {
+      "n_signals": 0,
+      "n_skipped_in_position": 0,
+      "trades": []
+    },
+    "IV_EXP_PPO_ICHI_RVOL_001": {
+      "n_signals": 1,
+      "n_skipped_in_position": 0,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 218,
+          "entry_price": 61.79660403536871,
+          "exit_index": 219,
+          "exit_price": 59.71476839055251,
+          "exit_reason": "stop",
+          "signal_index": 217,
+          "stop_price": 59.71476839055251,
+          "target_price": 65.96027532500112
+        }
+      ]
+    },
+    "IV_ICHIMOKU_ONLY_LONG_001": {
+      "n_signals": 3,
+      "n_skipped_in_position": 0,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 218,
+          "entry_price": 61.79660403536871,
+          "exit_index": 219,
+          "exit_price": 59.71476839055251,
+          "exit_reason": "stop",
+          "signal_index": 217,
+          "stop_price": 59.71476839055251,
+          "target_price": 65.96027532500112
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 236,
+          "entry_price": 61.509815852527716,
+          "exit_index": 239,
+          "exit_price": 60.01571803919704,
+          "exit_reason": "stop",
+          "signal_index": 235,
+          "stop_price": 60.01571803919704,
+          "target_price": 64.49801147918906
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 258,
+          "entry_price": 60.856647869216964,
+          "exit_index": 269,
+          "exit_price": 59.17949587312224,
+          "exit_reason": "stop",
+          "signal_index": 257,
+          "stop_price": 59.17949587312224,
+          "target_price": 64.2109518614064
+        }
+      ]
+    },
+    "IV_ICHIMOKU_RVOL_BOS_LONG_001": {
+      "n_signals": 0,
+      "n_skipped_in_position": 0,
+      "trades": []
+    },
+    "IV_ICHIMOKU_RVOL_LONG_001": {
+      "n_signals": 3,
+      "n_skipped_in_position": 1,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 218,
+          "entry_price": 61.79660403536871,
+          "exit_index": 219,
+          "exit_price": 59.71476839055251,
+          "exit_reason": "stop",
+          "signal_index": 217,
+          "stop_price": 59.71476839055251,
+          "target_price": 65.96027532500112
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 258,
+          "entry_price": 60.856647869216964,
+          "exit_index": 269,
+          "exit_price": 59.17949587312224,
+          "exit_reason": "stop",
+          "signal_index": 257,
+          "stop_price": 59.17949587312224,
+          "target_price": 64.2109518614064
+        }
+      ]
+    },
+    "IV_KUMO_BREAKOUT_RVOL_LONG_001": {
+      "n_signals": 2,
+      "n_skipped_in_position": 0,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 218,
+          "entry_price": 61.79660403536871,
+          "exit_index": 219,
+          "exit_price": 59.71476839055251,
+          "exit_reason": "stop",
+          "signal_index": 217,
+          "stop_price": 59.71476839055251,
+          "target_price": 65.96027532500112
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 252,
+          "entry_price": 60.56500494612082,
+          "exit_index": 270,
+          "exit_price": 58.87509326811701,
+          "exit_reason": "stop",
+          "signal_index": 251,
+          "stop_price": 58.87509326811701,
+          "target_price": 63.94482830212845
+        }
+      ]
+    }
+  }
+}

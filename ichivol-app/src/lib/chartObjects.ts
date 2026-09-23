@@ -48,12 +48,12 @@ export interface ChartObjectsResponse {
   provider_symbol?: string | null
 }
 
-/** Fetch ENGINE chart objects for the Structure layer (zones / trendlines / markers). */
+/** Fetch chart objects. Default includes ENGINE + persisted USER/CLAUDE (T2b). */
 export async function getChartObjects(
   symbol: string,
   timeframe: string,
   limit = 300,
-  sources: ChartObjectSource[] = ['engine'],
+  sources: ChartObjectSource[] = ['engine', 'user', 'claude'],
 ): Promise<ChartObject[]> {
   const q = new URLSearchParams({
     timeframe,
@@ -90,40 +90,74 @@ export function chartObjectZones(objects: ChartObject[]): Array<{
     }))
 }
 
-/** Trendlines usable by PriceChart (visual parity with StructureOverlay.trendlines). */
+/** Horizontal / entry / stop / target → single price lines. */
+export function chartObjectPriceLevels(objects: ChartObject[]): Array<{
+  price: number
+  label: string
+  kind: 'horizontal_line' | 'entry' | 'stop' | 'target'
+  side: string | null
+}> {
+  const kinds = new Set(['horizontal_line', 'entry', 'stop', 'target'])
+  return objects
+    .filter((o) => kinds.has(o.type) && o.points.length === 1)
+    .map((o) => ({
+      price: o.points[0]!.price,
+      label: o.label ?? o.type,
+      kind: o.type as 'horizontal_line' | 'entry' | 'stop' | 'target',
+      side: o.side,
+    }))
+}
+
+/** Trendlines + rays usable by PriceChart. */
 export function chartObjectTrendlines(objects: ChartObject[]): Array<{
   side: 'support' | 'resistance'
   start_time: number
   end_time: number
   start_price: number
   end_price: number
+  ray: boolean
 }> {
   return objects
-    .filter((o) => o.type === 'trend_line' && o.points.length === 2)
+    .filter((o) => (o.type === 'trend_line' || o.type === 'ray') && o.points.length === 2)
     .map((o) => ({
       side: (o.side === 'resistance' ? 'resistance' : 'support') as 'support' | 'resistance',
       start_time: o.points[0]!.time,
       end_time: o.points[1]!.time,
       start_price: o.points[0]!.price,
       end_price: o.points[1]!.price,
+      ray: o.type === 'ray',
     }))
 }
 
-/** Breakout (and other) markers — one point each. */
+/** Breakout / entry-like markers + text annotations — one point each. */
 export function chartObjectMarkers(objects: ChartObject[]): Array<{
   time: number
   price: number
   side: string | null
   label: string
   confirmed: boolean
+  shape: 'circle' | 'arrowUp' | 'arrowDown' | 'square'
 }> {
   return objects
-    .filter((o) => o.type === 'marker' && o.points.length === 1)
-    .map((o) => ({
-      time: o.points[0]!.time,
-      price: o.points[0]!.price,
-      side: o.side,
-      label: o.label ?? 'BO',
-      confirmed: Boolean(o.origin?.confirmed ?? true),
-    }))
+    .filter(
+      (o) =>
+        (o.type === 'marker' || o.type === 'text' || o.type === 'entry') &&
+        o.points.length === 1,
+    )
+    .map((o) => {
+      let shape: 'circle' | 'arrowUp' | 'arrowDown' | 'square' = 'circle'
+      if (o.type === 'entry') {
+        shape = o.side === 'SHORT' ? 'arrowDown' : 'arrowUp'
+      } else if (o.type === 'text') {
+        shape = 'square'
+      }
+      return {
+        time: o.points[0]!.time,
+        price: o.points[0]!.price,
+        side: o.side,
+        label: o.label ?? (o.type === 'entry' ? 'IN' : 'BO'),
+        confirmed: Boolean(o.origin?.confirmed ?? true),
+        shape,
+      }
+    })
 }

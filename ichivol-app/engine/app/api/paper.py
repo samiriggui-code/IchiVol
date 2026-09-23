@@ -80,13 +80,15 @@ def get_paper_portfolios() -> dict:
 @router_before_shadow.get("/paper/portfolios/{code}/overview")
 def get_paper_portfolio_overview(code: str) -> dict:
     """Broker-style account view: cash / invested / unrealized P&L, open positions
-    marked to the last screener price, and the equity curve. Read-only.
+    marked to screener cache or last candle, equity + liquidation_value. Read-only.
     """
     from datetime import datetime, timedelta, timezone
 
     from sqlalchemy import select
 
     from app.db.models import PaperEquitySnapshot
+    from app.paper.liquidation import liquidation_value
+    from app.paper.marks import OVERVIEW_FETCH_BUDGET_S, mark_stale, resolve_marks
 
     session = SessionLocal()
     try:
@@ -94,13 +96,44 @@ def get_paper_portfolio_overview(code: str) -> dict:
         if portfolio is None:
             raise HTTPException(status_code=404, detail="portfolio_not_found")
         positions = paper_engine.list_positions(session, portfolio_id=portfolio.id)
-        marks = _latest_marks()
+        opens = [p for p in positions if p.status == "OPEN"]
+        # Prefer each lot's own timeframe. Never block Synthèse on Twelve Data waits.
+        by_tf: dict[str, list[str]] = {}
+        for p in opens:
+            by_tf.setdefault(p.timeframe or "1h", []).append(p.symbol)
+        marks_by_sym: dict = {}
+        t0 = time.monotonic()
+        for tf, syms in by_tf.items():
+            remaining = OVERVIEW_FETCH_BUDGET_S - (time.monotonic() - t0)
+            marks_by_sym.update(
+                resolve_marks(
+                    syms,
+                    timeframe=tf,
+                    allow_fetch=True,
+                    fetch_budget_s=max(0.0, remaining),
+                    block_on_provider=False,
+                )
+            )
+        leftover = {p.symbol for p in opens} - {s for s in marks_by_sym}
+        if leftover:
+            remaining = OVERVIEW_FETCH_BUDGET_S - (time.monotonic() - t0)
+            marks_by_sym.update(
+                resolve_marks(
+                    leftover,
+                    timeframe="1h",
+                    allow_fetch=True,
+                    fetch_budget_s=max(0.0, remaining),
+                    block_on_provider=False,
+                )
+            )
 
         rows: list[dict] = []
         invested = 0.0
         unrealized = 0.0
         open_entry_fees = 0.0
         incomplete_open = 0
+        stale_open = 0
+        mark_px: dict[str, float] = {}
         for p in positions:
             d = _paper_position_dict(p)
             d["current_price"] = None
@@ -108,14 +141,18 @@ def get_paper_portfolio_overview(code: str) -> dict:
             d["unrealized_pct"] = None
             d["market_value"] = None
             d["valuation_status"] = None
+            d["mark_source"] = None
+            d["mark_age_s"] = None
+            d["mark_stale"] = None
             if p.status == "OPEN":
                 invested += p.notional or 0.0
                 open_entry_fees += float(p.entry_fee or 0.0)
-                mark = marks.get(p.symbol)
+                mark = marks_by_sym.get(p.symbol.upper())
+                now_s = time.time()
                 if p.qty is None:
                     d["valuation_status"] = "missing_qty"
                     incomplete_open += 1
-                elif mark is None:
+                elif mark is None or mark.source == "missing":
                     d["valuation_status"] = "missing_mark"
                     incomplete_open += 1
                 elif p.notional is None:
@@ -123,13 +160,21 @@ def get_paper_portfolio_overview(code: str) -> dict:
                     incomplete_open += 1
                 else:
                     d["valuation_status"] = "priced"
-                if mark is not None and p.entry_price:
-                    price = mark[0]
+                    mark_px[p.symbol.upper()] = mark.price
+                if mark is not None and mark.source != "missing" and p.entry_price:
+                    price = mark.price
                     move = (price - p.entry_price) / p.entry_price
                     d["current_price"] = price
-                    d["price_as_of"] = mark[1]
+                    d["price_as_of"] = mark.as_of
+                    d["mark_source"] = mark.source
+                    d["mark_age_s"] = max(0.0, now_s - float(mark.as_of))
+                    stale = mark_stale(mark, p.timeframe or "1h", now=now_s)
+                    d["mark_stale"] = stale
+                    if stale:
+                        stale_open += 1
+                        if d["valuation_status"] == "priced":
+                            d["valuation_status"] = "stale_mark"
                     d["unrealized_pct"] = move if p.direction == "LONG" else -move
-                    # € P&L only for capital-sized positions (legacy ones have no qty)
                     if p.qty:
                         gain = (
                             p.qty * (price - p.entry_price)
@@ -142,6 +187,7 @@ def get_paper_portfolio_overview(code: str) -> dict:
             rows.append(d)
 
         equity = portfolio.cash + invested + unrealized
+        liq, _missing_liq = liquidation_value(portfolio, opens, mark_px)
         realized = float(portfolio.realized_pnl or 0.0)
         total_pnl = equity - portfolio.initial_cash
         snaps = (
@@ -169,7 +215,9 @@ def get_paper_portfolio_overview(code: str) -> dict:
             None,
         )
         open_n = sum(1 for r in rows if r["status"] == "OPEN")
-        priced_n = sum(1 for r in rows if r["status"] == "OPEN" and r["valuation_status"] == "priced")
+        priced_n = sum(
+            1 for r in rows if r["status"] == "OPEN" and r["valuation_status"] in ("priced", "stale_mark")
+        )
         return {
             "portfolio": _portfolio_dict(portfolio),
             "account": {
@@ -179,14 +227,15 @@ def get_paper_portfolio_overview(code: str) -> dict:
                 "unrealized_pnl": unrealized,
                 "realized_pnl": realized,
                 "equity": equity,
+                "liquidation_value": liq,
                 "total_pnl": total_pnl,
                 "day_change": (equity - ref) if ref is not None else None,
                 "open_entry_fees": open_entry_fees,
                 "realized_plus_unrealized": realized + unrealized,
-                # Entry fees on OPEN lots hit cash immediately but enter realized only on close.
                 "pnl_explained": realized + unrealized - open_entry_fees,
                 "priced_positions": priced_n,
                 "incomplete_open": incomplete_open,
+                "stale_open": stale_open,
                 "open_positions": open_n,
             },
             "positions": rows[:200],
@@ -194,6 +243,21 @@ def get_paper_portfolio_overview(code: str) -> dict:
             "costs": compute_costs(session, portfolio, equity=equity),
             "progress": compute_progress(session, portfolio, equity=equity),
         }
+    finally:
+        session.close()
+
+
+@router_before_shadow.get("/paper/portfolios/{code}/reconcile")
+def get_paper_portfolio_reconcile(code: str) -> dict:
+    """Read-only fidelity audit of cash / ledger / orders / marks (T0-BROKER)."""
+    from app.paper.reconcile import reconcile_portfolio
+
+    session = SessionLocal()
+    try:
+        portfolio = get_portfolio_by_code(session, code)
+        if portfolio is None:
+            raise HTTPException(status_code=404, detail="portfolio_not_found")
+        return reconcile_portfolio(session, portfolio)
     finally:
         session.close()
 
