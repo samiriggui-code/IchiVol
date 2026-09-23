@@ -28,12 +28,55 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-CALC** #25 — **MERGÉE** — intégrée par Cursor (Claude indisponible jusqu’à 18:10 ; CI verte ; brief Claude respecté).
 - **Event Intelligence audit** #26 — **MERGÉE** (doc).
 - **EventAnomalyDetector PHASE 5** #27 — **MERGÉE** (observation-only).
-- **Job en cours** : **Event Intelligence PHASE 6** — regime study + calibration harness — branche `cursor/event-regime-study-a2fe` (Cursor solo).
+- **Event Intelligence PHASE 6** #28 — **MERGÉE** (regime study + calibration ; Cursor solo, CI verte).
+- **Job en cours** : **Event Intelligence PHASE 7** — SymbolNews + correlate → `EVENT_MARKET` — branche `cursor/event-correlate-context-a2fe` (Cursor solo).
 
 
 ---
 
-## 2026-09-23 — EVENT INTELLIGENCE PHASE 6 — regime study + calibration
+## 2026-09-23 — EVENT INTELLIGENCE PHASE 7 — correlate + SymbolNews
+
+- Branche : `cursor/event-correlate-context-a2fe`
+- PR : (draft)
+- Statut : **EN COURS** — Cursor solo (Claude absente jusqu’à 18:10).
+
+### Livré
+
+1. Types : `EventCategory`, `ExternalEventRef`, `EventContextBundle`
+2. `app/events/news.py` — SymbolNews causal (`published_at ≤ T` + relevance symbole)
+3. `app/events/classifier.py` — taxonomie heuristique (jamais BUY/SELL)
+4. `app/events/macro.py` — calendar → candidats causals
+5. `app/events/correlate.py` — match → `EVENT_MARKET` si confidence ≥ seuil ; sinon `UNKNOWN_EVENT`
+6. Branchement observation-only `scan_symbol` + serializers `event_context` ; agent `get_event_context`
+7. Tests anti-lookahead news future / lag / weak match
+
+### Non-faits
+
+Promotion seuils live (walk-forward), FinBERT, CorporateEventProvider scrapers, UI, changement de gates pipeline.
+
+---
+
+## 2026-09-23 — EVENT INTELLIGENCE PHASE 6 — regime study + calibration → MAIN
+
+- Branche : `cursor/event-regime-study-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/28 — **MERGÉE**
+- Statut : CI verte ; merge Cursor (Claude absente).
+
+### Livré
+
+1. `app/events/regime_study.py` — event-study PIPELINE stratifié par `NORMAL_MARKET` / `UNKNOWN_EVENT` (MFE/MAE, horizons, deltas observés)
+2. `app/events/calibrate.py` — quantiles causaux → suggestions p99 **sans** muter les seuils live
+3. Agent read-only : `run_anomaly_regime_study`, `calibrate_anomaly_thresholds`
+4. Tests `tests/events/test_regime_study.py`
+5. CDC PHASE 6 coché
+
+### Non-faits (ouverts en PHASE 7)
+
+SymbolNews, EventClassifier, `EVENT_MARKET`, changement de gates, UI.
+
+---
+
+## 2026-09-23 — EVENT INTELLIGENCE PHASE 6 — regime study + calibration (archive draft)
 
 - Branche : `cursor/event-regime-study-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/28 (**draft**)

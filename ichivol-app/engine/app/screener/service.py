@@ -22,7 +22,7 @@ from app.decision.pipeline import PipelineResult, build_pipeline
 from app.evidence.catalog import build_in_window_catalog
 from app.evidence.context import SignalContext, build_signal_context
 from app.evidence.engine import EvidenceEngine, EvidenceReport
-from app.events.types import MarketAnomalyObservation
+from app.events.types import EventContextBundle, MarketAnomalyObservation
 from app.indicators.atr import AtrParams, AtrState
 from app.indicators.ichimoku import Candle, IchimokuParams
 from app.indicators.location import LocationParams
@@ -134,6 +134,8 @@ class ScreenerRow:
     """See app/screener/timing.py: closed bar used, computation time, live price, lateness."""
     market_anomaly: MarketAnomalyObservation | None = None
     """EventAnomalyDetector observation (EVENT ≠ SIGNAL). Never votes BUY/SELL."""
+    event_context: EventContextBundle | None = None
+    """PHASE 7: anomaly + causal news/calendar matches. Never votes BUY/SELL."""
 
 
 def scan_symbol(
@@ -237,8 +239,9 @@ def scan_symbol(
         extra_invalidation=decision.invalidation,
     )
 
-    # Event Intelligence PHASE 5 — observation only (never mutates pipeline/decision).
+    # Event Intelligence PHASE 5–7 — observation only (never mutates pipeline/decision).
     from app.events.anomaly import detect_anomaly
+    from app.events.context import build_event_context
 
     rvol_val = rvol_output.metadata.get("rvol")
     rvol_f = float(rvol_val) if rvol_val is not None else None
@@ -250,6 +253,12 @@ def scan_symbol(
         rvol=rvol_f,
         atr=atr_f,
     )
+    event_context = None
+    try:
+        event_context = build_event_context(market_anomaly)
+        market_anomaly = event_context.anomaly
+    except Exception:
+        logger.exception("event_context failed for %s — leaving anomaly-only", symbol)
 
     return ScreenerRow(
         symbol=symbol,
@@ -273,6 +282,7 @@ def scan_symbol(
         context=context,
         evidence=evidence,
         market_anomaly=market_anomaly,
+        event_context=event_context,
     )
 
 def scan_watchlist(
