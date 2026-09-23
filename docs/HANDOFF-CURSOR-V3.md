@@ -43,6 +43,12 @@ Preuve que le **résultat** backtest des builtins est inchangé vs `main` (pas s
 pytest tests/strategy_lab/test_ruleset_backtest_golden.py -q   # PASS
 ```
 
+### CI Actions
+
+- **VERTE** (HEAD `8c301c6`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35855152500
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
 ### Revue Claude
 
 **Revalidation demandée** avant merge. Pas de nouveau lot.
