@@ -206,6 +206,13 @@
     "methods": [
       "POST"
     ],
+    "path": "/api/engine/strategy-lab/backtest-overlay",
+    "endpoint": "post_backtest_overlay"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
     "path": "/api/engine/strategy-lab/walk-forward",
     "endpoint": "post_strategy_lab_walk_forward"
   },

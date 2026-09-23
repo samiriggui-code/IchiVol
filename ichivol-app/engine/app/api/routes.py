@@ -12,6 +12,7 @@ from fastapi import APIRouter
 
 from app.api import agent as agent_routes
 from app.api import backtest as backtest_routes
+from app.api import backtest_overlay as backtest_overlay_routes
 from app.api import chart_objects as chart_objects_routes
 from app.api import context as context_routes
 from app.api import decisions as decisions_routes
@@ -29,6 +30,7 @@ router = APIRouter()
 
 # Original order of routes formerly defined in this module (see T1g golden).
 # T2a: chart_objects appended at the end of engine routes (before /health on main).
+# T4a: backtest-overlay after strategy-lab (additions only in route_order golden).
 for _sub in (
     market_routes.router_head,
     context_routes.router,
@@ -37,6 +39,7 @@ for _sub in (
     backtest_routes.router_evidence,
     rulesets_routes.router,
     strategy_lab_routes.router,
+    backtest_overlay_routes.router,
     strategy_lab_wf_routes.router,
     backtest_routes.router_symbol,
     market_routes.router_correlations,

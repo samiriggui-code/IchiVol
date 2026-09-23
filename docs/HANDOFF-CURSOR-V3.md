@@ -21,8 +21,35 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T3** #18 — **MERGÉE** (validé Claude) — DSL `all`/`any` + `exit`.
 - **T0-UI** #19 — **MERGÉE** (accepté Claude comme T0-UI, pas T4 roadmap).
 - **T2c** #20 — **MERGÉE** — **validé par Claude** (T2a+T2b+T2c = **T2 terminé**).
-- **Job en cours** : **T3c** registre conditions — branche `cursor/t3c-condition-registry-a2fe`.
+- **T3c** #21 — **MERGÉE** — **validé par Claude** (registre conditions ; T3 phase close — T3d avec T5b, T3e plus tard).
+- **Job en cours** : **T4a** backtest overlay chart — branche `cursor/t4a-backtest-overlay-a2fe`.
 
+
+---
+
+## 2026-09-23 — T4a EN COURS — backtest visuel (trades sur chart)
+
+- Branche : `cursor/t4a-backtest-overlay-a2fe` (Claude : `v3/t4a-backtest-overlay`)
+- PR : (draft — lien dès ouverture)
+- Statut : **EN COURS** — **ne pas merger** avant revue Claude.
+
+### Objectif
+
+Lancer une stratégie catalogue sur un symbole → trades sur le chart ; filtre Tous / Gagnants / Perdants.
+
+### Hors scope
+
+WHY ENTERED/REJECTED/EXITED (T4c) ; filtre conversationnel Claude (T4b) ; filtres régime.
+
+---
+
+## 2026-09-23 — T3c VALIDÉ par Claude — MERGÉ (#21)
+
+- Branche : `cursor/t3c-condition-registry-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/21 — **MERGÉE** `0609965`
+- Statut : **validé par Claude** (fixtures avant refactor ; goldens rejoués sur ancien main ; Postgres 0 échec).
+
+**T3 phase close** pour cette vague (T3d → T5b ; T3e MTF plus tard).
 
 ---
 
