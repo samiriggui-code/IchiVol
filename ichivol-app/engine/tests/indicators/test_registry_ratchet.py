@@ -33,7 +33,7 @@ def _scan_direct_callers() -> dict[str, set[str]]:
     found: dict[str, set[str]] = {}
     for path in _APP.rglob("*.py"):
         try:
-            rel = str(path.relative_to(_APP))
+            rel = path.relative_to(_APP).as_posix()
         except ValueError:
             continue
         if rel.startswith("indicators/") or rel == "indicators":
