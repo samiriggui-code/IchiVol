@@ -93,7 +93,15 @@ def resolve_paper_partial_tp(
     if position.stop_price is None or position.entry_price is None or not position.qty:
         return None
     initial_stop = float(raw.get("initial_stop", position.stop_price))
-    initial_qty = float(raw.get("initial_qty", position.qty))
+    # Prefer frozen blob, then column, then current remaining (open, no partials yet).
+    if "initial_qty" in raw and raw["initial_qty"] is not None:
+        initial_qty = float(raw["initial_qty"])
+    else:
+        col = getattr(position, "initial_qty", None)
+        if col is not None:
+            initial_qty = float(col)
+        else:
+            initial_qty = float(position.qty)
     if initial_qty <= 0:
         return None
     return PaperPartialTpConfig(
@@ -124,6 +132,11 @@ def freeze_partial_tp_anchor(
     if "initial_qty" not in blob:
         blob["initial_qty"] = config.initial_qty
         changed = True
+    if getattr(position, "initial_qty", None) is None:
+        try:
+            position.initial_qty = config.initial_qty
+        except AttributeError:
+            pass
     if changed:
         sig[PARTIAL_TP_KEY] = blob
         position.entry_signal = sig

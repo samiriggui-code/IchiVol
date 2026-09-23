@@ -279,6 +279,7 @@ class PaperPosition(Base):
     pnl_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     qty: Mapped[float | None] = mapped_column(Float, nullable=True)
+    initial_qty: Mapped[float | None] = mapped_column(Float, nullable=True)
     notional: Mapped[float | None] = mapped_column(Float, nullable=True)
     stop_price: Mapped[float | None] = mapped_column(Float, nullable=True)
     take_profit_price: Mapped[float | None] = mapped_column(Float, nullable=True)

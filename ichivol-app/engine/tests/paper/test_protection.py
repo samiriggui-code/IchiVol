@@ -508,7 +508,8 @@ def test_partial_tp_scales_qty_then_final_close_settles_remainder(session):
     rep2 = next(r for r in run_protection_cycle(session, klines_fn=k2, trades_fn=t2, now=now2) if r["id"] == pos.id)
     assert rep2["status"] == "closed"
     assert pos.status == "CLOSED"
-    assert float(pos.qty) == pytest.approx(0.0)
+    assert float(pos.initial_qty) == pytest.approx(initial_qty)
+    assert float(pos.qty) == pytest.approx(initial_qty)  # restored entry size after CLOSE
     assert session.query(PaperPartialExit).filter_by(position_id=pos.id).count() == 1
     # Cumulative realized includes the partial slice plus the final remainder.
     assert float(pos.realized_pnl) == pytest.approx(

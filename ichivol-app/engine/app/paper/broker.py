@@ -217,6 +217,7 @@ def open_capital_position(
         entry_decision=decision,
         entry_signal=signal or {},
         qty=sized.qty,
+        initial_qty=sized.qty,
         notional=sized.notional,
         stop_price=sized.stop_price,
         take_profit_price=sized.take_profit_price,
@@ -425,8 +426,14 @@ def close_capital_position(
         if position.direction == "LONG"
         else short_pnl_pct(position.entry_price, exit_fill)
     )
-    position.qty = 0.0
-    position.notional = 0.0
+    # Restore qty to the stable entry size so fee/ledger consumers that read
+    # pos.qty after CLOSE keep a fixed reference (T0-METRICS / T0-MANAGE-d).
+    # While OPEN, qty means remaining; initial_qty never shrinks.
+    entry_qty = float(position.initial_qty) if position.initial_qty is not None else float(position.qty or 0.0)
+    if position.initial_qty is None and entry_qty > 0:
+        position.initial_qty = entry_qty
+    position.qty = entry_qty
+    position.notional = float(position.entry_price or 0.0) * entry_qty if entry_qty else 0.0
     position.updated_at = now
 
     if portfolio is not None:
@@ -505,6 +512,11 @@ def partial_close_capital_position(
     )
     seq = (existing[-1].seq + 1) if existing else 1
     key = f"partial:{position.id}:{seq}"
+
+    # Ensure a stable entry-size reference before qty shrinks.
+    if position.initial_qty is None:
+        prior_sold = sum(float(e.qty or 0.0) for e in existing)
+        position.initial_qty = remaining + prior_sold
 
     # Idempotent replay
     prior = session.execute(
@@ -637,8 +649,10 @@ def partial_close_capital_position(
 
     if new_qty <= 1e-12:
         # Exact scale-out of remainder via partial steps — finalize as CLOSED.
-        position.qty = 0.0
-        position.notional = 0.0
+        # Restore qty to initial_qty (never leave a CLOSED lot with qty=0).
+        entry_qty = float(position.initial_qty) if position.initial_qty is not None else 0.0
+        position.qty = entry_qty
+        position.notional = float(position.entry_price or 0.0) * entry_qty if entry_qty else 0.0
         position.status = "CLOSED"
         position.exit_time = now
         position.exit_price = exit_fill
