@@ -17,8 +17,9 @@ import {
   type UTCTimestamp,
 } from 'lightweight-charts'
 import { type ChartColors, readChartColors } from '../lib/chartColors'
-import { computeIchimoku, projectedSpans } from '../lib/ichimoku'
-import { biasFromIchi, computeVolumePulse, signalLabel } from '../lib/signals'
+import { fetchChartOverlays } from '../lib/engineIndicators'
+import { getSettings } from '../lib/settings'
+import { biasFromIchi, buildVolumePulse, signalLabel } from '../lib/signals'
 import type { StructureOverlay } from '../lib/structure'
 import { THEME_CHANGE_EVENT } from '../lib/theme'
 import {
@@ -26,13 +27,17 @@ import {
   DEFAULT_VOL,
   type Candle,
   type IchimokuPoint,
+  type Interval,
   type Signal,
   type VolumePoint,
 } from '../lib/types'
 
 interface Props {
   candles: Candle[]
+  symbol: string
+  timeframe: Interval | string
   onSignals?: (signals: Signal[]) => void
+  onLive?: (live: { bias: 'bull' | 'bear' | 'neutral'; rvol: number }) => void
   /** Zones S/R + trendlines calculées par le moteur (pas par le navigateur). */
   structure?: StructureOverlay | null
 }
@@ -164,7 +169,7 @@ function applyChartTheme(chart: IChartApi, series: SeriesBag, colors: ChartColor
   series.spanB.applyOptions({ color: colors.spanB })
 }
 
-export function PriceChart({ candles, onSignals, structure }: Props) {
+export function PriceChart({ candles, symbol, timeframe, onSignals, onLive, structure }: Props) {
   const priceLinesRef = useRef<IPriceLine[]>([])
   const trendSeriesRef = useRef<ISeriesApi<'Line'>[]>([])
   const hostRef = useRef<HTMLDivElement>(null)
@@ -177,6 +182,8 @@ export function PriceChart({ candles, onSignals, structure }: Props) {
   const layersRef = useRef<LayerVis>(DEFAULT_LAYERS)
   const [colors, setColors] = useState<ChartColors>(() => readChartColors())
   const [layers, setLayers] = useState<LayerVis>(DEFAULT_LAYERS)
+  const [overlayError, setOverlayError] = useState<string | null>(null)
+  const [overlaysReady, setOverlaysReady] = useState(false)
 
   useEffect(() => {
     layersRef.current = layers
@@ -310,31 +317,13 @@ export function PriceChart({ candles, onSignals, structure }: Props) {
   useEffect(() => {
     const chart = chartRef.current
     const series = seriesRef.current
-    if (!chart || !series || candles.length === 0) return
+    if (!chart || !series || candles.length === 0 || !symbol) return
 
-    const ichi = computeIchimoku(candles, DEFAULT_ICHI)
-    const proj = projectedSpans(candles, DEFAULT_ICHI)
-    const { volumes, signals } = computeVolumePulse(candles, DEFAULT_ICHI, DEFAULT_VOL)
-    onSignals?.(signals)
+    let cancelled = false
+    setOverlaysReady(false)
+    setOverlayError(null)
 
-    const bySignal = new Map(signals.map((s) => [s.time, s]))
-    const map = new Map<number, HoverPoint>()
-    for (let i = 0; i < candles.length; i++) {
-      const c = candles[i]
-      const ip = ichi[i]
-      const vp = volumes[i]
-      map.set(c.time, {
-        time: c.time,
-        candle: c,
-        ichi: ip,
-        volume: vp,
-        signal: bySignal.get(c.time) ?? null,
-        bias: biasFromIchi(ip.aboveCloud, ip.belowCloud),
-      })
-    }
-    hoverMapRef.current = map
-    signalsCacheRef.current = signals
-
+    // Prix seul immédiatement — overlays après réponse moteur.
     series.candle.setData(
       candles.map((c) => ({
         time: ts(c.time),
@@ -344,27 +333,96 @@ export function PriceChart({ candles, onSignals, structure }: Props) {
         close: c.close,
       })),
     )
-    series.tenkan.setData(asLine(ichi.map((p) => ({ time: p.time, value: p.tenkan }))))
-    series.kijun.setData(asLine(ichi.map((p) => ({ time: p.time, value: p.kijun }))))
-    series.spanA.setData(asLine(proj.map((p) => ({ time: p.time, value: p.senkouA }))))
-    series.spanB.setData(asLine(proj.map((p) => ({ time: p.time, value: p.senkouB }))))
+    series.tenkan.setData([])
+    series.kijun.setData([])
+    series.spanA.setData([])
+    series.spanB.setData([])
     series.volume.setData(
-      volumes.map((v) => ({ time: ts(v.time), value: v.volume, color: v.color })),
+      candles.map((c) => ({ time: ts(c.time), value: c.volume, color: colors.weak })),
     )
     chart.timeScale().fitContent()
-  }, [candles, onSignals])
+
+    void (async () => {
+      try {
+        const settings = await getSettings().catch(() => null)
+        const ichiParams = { ...DEFAULT_ICHI, ...(settings?.ichimokuParams ?? {}) }
+        const volParams = { ...DEFAULT_VOL, ...(settings?.volumeParams ?? {}) }
+        const { ichi, rvol, projection } = await fetchChartOverlays(
+          symbol,
+          timeframe,
+          candles,
+          ichiParams,
+          volParams,
+        )
+        if (cancelled) return
+
+        const { volumes, signals } = buildVolumePulse(candles, ichi, rvol)
+        onSignals?.(signals)
+
+        const bySignal = new Map(signals.map((s) => [s.time, s]))
+        const map = new Map<number, HoverPoint>()
+        const ichiByTime = new Map(ichi.map((p) => [p.time, p]))
+        const volByTime = new Map(volumes.map((v) => [v.time, v]))
+        for (const c of candles) {
+          const ip = ichiByTime.get(c.time)
+          const vp = volByTime.get(c.time)
+          if (!ip || !vp) continue
+          map.set(c.time, {
+            time: c.time,
+            candle: c,
+            ichi: ip,
+            volume: vp,
+            signal: bySignal.get(c.time) ?? null,
+            bias: biasFromIchi(ip.aboveCloud, ip.belowCloud),
+          })
+        }
+        hoverMapRef.current = map
+        signalsCacheRef.current = signals
+
+        series.tenkan.setData(asLine(ichi.map((p) => ({ time: p.time, value: p.tenkan }))))
+        series.kijun.setData(asLine(ichi.map((p) => ({ time: p.time, value: p.kijun }))))
+        series.spanA.setData(asLine(projection.map((p) => ({ time: p.time, value: p.senkouA }))))
+        series.spanB.setData(asLine(projection.map((p) => ({ time: p.time, value: p.senkouB }))))
+        series.volume.setData(
+          volumes.map((v) => ({ time: ts(v.time), value: v.volume, color: v.color })),
+        )
+
+        const lastIchi = ichi[ichi.length - 1]
+        const lastVol = volumes[volumes.length - 1]
+        if (lastIchi) {
+          onLive?.({
+            bias: biasFromIchi(lastIchi.aboveCloud, lastIchi.belowCloud),
+            rvol: lastVol?.rvol ?? 0,
+          })
+        }
+        setOverlaysReady(true)
+      } catch (err: unknown) {
+        if (cancelled) return
+        const msg = err instanceof Error ? err.message : 'Overlays moteur indisponibles'
+        setOverlayError(msg)
+        setOverlaysReady(false)
+        onSignals?.([])
+        onLive?.({ bias: 'neutral', rvol: 0 })
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [candles, symbol, timeframe, onSignals, onLive, colors.weak])
 
   useEffect(() => {
     const series = seriesRef.current
     if (!series) return
+    const showOverlays = overlaysReady && !overlayError
     series.candle.applyOptions({ visible: layers.candles })
-    series.tenkan.applyOptions({ visible: layers.tenkan })
-    series.kijun.applyOptions({ visible: layers.kijun })
-    series.spanA.applyOptions({ visible: layers.spanA })
-    series.spanB.applyOptions({ visible: layers.spanB })
+    series.tenkan.applyOptions({ visible: showOverlays && layers.tenkan })
+    series.kijun.applyOptions({ visible: showOverlays && layers.kijun })
+    series.spanA.applyOptions({ visible: showOverlays && layers.spanA })
+    series.spanB.applyOptions({ visible: showOverlays && layers.spanB })
     series.volume.applyOptions({ visible: layers.volume })
 
-    const markers: SeriesMarker<Time>[] = layers.signals
+    const markers: SeriesMarker<Time>[] = layers.signals && showOverlays
       ? signalsCacheRef.current.map((s) => {
           const isLong = s.kind === 'tk_long' || s.kind === 'brk_long'
           return {
@@ -377,7 +435,7 @@ export function PriceChart({ candles, onSignals, structure }: Props) {
         })
       : []
     markersRef.current?.setMarkers(markers)
-  }, [layers, candles, colors])
+  }, [layers, candles, colors, overlaysReady, overlayError])
 
   // Overlays moteur : zones = 2 lignes de prix (bas/haut), trendlines = séries à 2 points.
   useEffect(() => {
@@ -456,6 +514,16 @@ export function PriceChart({ candles, onSignals, structure }: Props) {
         ))}
         <span className="legend-hint">Clique pour afficher / masquer</span>
       </div>
+      {overlayError && (
+        <p className="muted chart-overlay-msg" role="status">
+          Prix seul — overlays moteur indisponibles ({overlayError})
+        </p>
+      )}
+      {!overlayError && !overlaysReady && candles.length > 0 && (
+        <p className="muted chart-overlay-msg" role="status">
+          Chargement des overlays moteur…
+        </p>
+      )}
       <div className="chart-host" ref={hostRef} />
       {tip.visible && p && (
         <div

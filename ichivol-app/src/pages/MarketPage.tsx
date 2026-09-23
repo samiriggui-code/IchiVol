@@ -11,11 +11,9 @@ import {
   type ScreenerDecisionRow,
 } from '../lib/decisions'
 import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
-import { computeIchimoku } from '../lib/ichimoku'
 import { displaySymbol } from '../lib/markets'
 import { getEngineStructure, type StructureOverlay } from '../lib/structure'
 import { useMarketSnapshot } from '../lib/marketSnapshot'
-import { biasFromIchi, computeVolumePulse } from '../lib/signals'
 import {
   CLASS_BLURBS,
   CLASS_LABELS,
@@ -25,8 +23,6 @@ import {
   type EngineInstrument,
 } from '../lib/universe'
 import {
-  DEFAULT_ICHI,
-  DEFAULT_VOL,
   type Candle,
   type Interval,
   type ScreenerRow,
@@ -79,6 +75,10 @@ export function MarketPage() {
   const [chartProvider, setChartProvider] = useState<string | null>(null)
   const [structure, setStructure] = useState<StructureOverlay | null>(null)
   const [signals, setSignals] = useState<Signal[]>([])
+  const [chartLive, setChartLive] = useState<{
+    bias: 'bull' | 'bear' | 'neutral'
+    rvol: number
+  }>({ bias: 'neutral', rvol: 0 })
   const [rows, setRows] = useState<ScreenerRow[]>([])
   const [chartLoading, setChartLoading] = useState(false)
   const [scanLoading, setScanLoading] = useState(false)
@@ -168,6 +168,8 @@ export function MarketPage() {
   const loadChart = useCallback(async (sym: string, tf: Interval) => {
     setChartLoading(true)
     setError(null)
+    setSignals([])
+    setChartLive({ bias: 'neutral', rvol: 0 })
     try {
       const res = await getEngineOhlcv(sym, tf, 300)
       setCandles(res.candles)
@@ -335,18 +337,14 @@ export function MarketPage() {
     void runClassScan(interval, classInstruments)
   }, [interval, marketClass, classInstruments, runClassScan])
 
-  const live = useMemo(() => {
-    if (!candles.length) return { bias: 'neutral' as const, rvol: 0, price: null as number | null }
-    const ichi = computeIchimoku(candles, DEFAULT_ICHI)
-    const { volumes } = computeVolumePulse(candles, DEFAULT_ICHI, DEFAULT_VOL)
-    const last = ichi[ichi.length - 1]
-    const lastVol = volumes[volumes.length - 1]
-    return {
-      bias: biasFromIchi(last.aboveCloud, last.belowCloud),
-      rvol: lastVol?.rvol ?? 0,
-      price: candles[candles.length - 1]?.close ?? null,
-    }
-  }, [candles])
+  const live = useMemo(
+    () => ({
+      bias: chartLive.bias,
+      rvol: chartLive.rvol,
+      price: candles.length ? (candles[candles.length - 1]?.close ?? null) : null,
+    }),
+    [candles, chartLive],
+  )
 
   const enginePipeline = useMemo(
     () => (engineDetail ? pipelineFromDecisionDetail(engineDetail) : null),
@@ -463,7 +461,14 @@ export function MarketPage() {
               </button>
             </div>
           </header>
-          <PriceChart candles={candles} onSignals={setSignals} structure={structure} />
+          <PriceChart
+            candles={candles}
+            symbol={symbol}
+            timeframe={interval}
+            onSignals={setSignals}
+            onLive={setChartLive}
+            structure={structure}
+          />
           <div className="tf-group tf-group--chart" role="group" aria-label="Timeframe">
             {INTERVALS.map((tf) => (
               <button

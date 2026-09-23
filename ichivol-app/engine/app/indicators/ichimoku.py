@@ -296,3 +296,49 @@ def compute_ichimoku(
         )
 
     return out
+
+
+def compute_projected_kumo(
+    candles: Sequence[Candle],
+    params: IchimokuParams = IchimokuParams(),
+) -> list[dict[str, float | int | None]]:
+    """Forward Senkou A/B for chart display at i+displacement.
+
+    Display only — never used by features, signals, decision or backtest.
+
+    Reuses ``_donchian_mid`` (same raw spans as ``compute_ichimoku``). When
+    candle ``i+d`` exists, ``time_projected`` is that bar's time; otherwise
+    it extrapolates from the last bar using the median step.
+    """
+    n = len(candles)
+    if n == 0:
+        return []
+    d = params.displacement
+    last_time = candles[-1].time
+    if n >= 2:
+        step = max(1, candles[-1].time - candles[-2].time)
+    else:
+        step = 3600
+
+    out: list[dict[str, float | int | None]] = []
+    for i in range(n):
+        tenkan = _donchian_mid(candles, i, params.tenkan)
+        kijun = _donchian_mid(candles, i, params.kijun)
+        sa = (tenkan + kijun) / 2 if tenkan is not None and kijun is not None else None
+        sb = _donchian_mid(candles, i, params.senkou_b)
+        if sa is None or sb is None:
+            continue
+        if i + d < n:
+            time_projected = candles[i + d].time
+        else:
+            # Extrapolate past the last closed bar (k = 1..d beyond end).
+            k = i + d - n + 1
+            time_projected = last_time + k * step
+        out.append(
+            {
+                "time_projected": time_projected,
+                "senkou_a": sa,
+                "senkou_b": sb,
+            }
+        )
+    return out

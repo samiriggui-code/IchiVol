@@ -1101,7 +1101,11 @@ button, select { font: inherit; color: inherit; }
   min-height: 360px;
   width: 100%;
 }
-.chart-host { flex: 1; min-height: 0; width: 100%; }
+.chart-overlay-msg {
+  margin: 0;
+  padding: 0.15rem 0.65rem 0.35rem;
+  font-size: 0.62rem;
+}
 
 .chart-legend {
   display: flex;

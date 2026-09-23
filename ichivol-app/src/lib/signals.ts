@@ -1,41 +1,37 @@
 import { readChartColors } from './chartColors'
-import { computeIchimoku } from './ichimoku'
+import type { EngineRvolState } from './engineIndicators'
 import {
   type Candle,
-  type IchimokuParams,
+  type IchimokuPoint,
   type Signal,
   type SignalKind,
-  type VolumeParams,
   type VolumePoint,
 } from './types'
 
-export function computeVolumePulse(
+/**
+ * Couleurs volume + marqueurs de signaux à partir des séries moteur
+ * (plus de recalcul Ichimoku / RVOL ici).
+ */
+export function buildVolumePulse(
   candles: Candle[],
-  ichiParams: IchimokuParams,
-  volParams: VolumeParams,
+  ichi: IchimokuPoint[],
+  rvolSeries: EngineRvolState[],
 ): { volumes: VolumePoint[]; signals: Signal[] } {
-  const ichi = computeIchimoku(candles, ichiParams)
-  const { rvolLen, rvolConfirm, spikeMult } = volParams
-  const volumes: VolumePoint[] = []
-  const signals: Signal[] = []
   const colors = readChartColors()
+  const ichiByTime = new Map(ichi.map((p) => [p.time, p]))
+  const rvolByTime = new Map(rvolSeries.map((r) => [r.time, r]))
 
-  for (let i = 0; i < candles.length; i++) {
-    const c = candles[i]
-    const ip = ichi[i]
-    let sum = 0
-    let count = 0
-    for (let j = Math.max(0, i - rvolLen + 1); j <= i; j++) {
-      sum += candles[j].volume
-      count++
-    }
-    const volAvg = count > 0 ? sum / count : 0
-    const rvol = volAvg > 0 ? c.volume / volAvg : 0
-    const confirmed = rvol >= rvolConfirm
-    const spike = rvol >= spikeMult
+  const volumes: VolumePoint[] = []
+  for (const c of candles) {
+    const ip = ichiByTime.get(c.time)
+    const rv = rvolByTime.get(c.time)
+    const rvol = rv?.rvol ?? 0
+    const confirmed = rv?.confirmed ?? false
+    const spike = rv?.spike ?? false
+    const volAvg = rv?.avg_volume ?? 0
 
     let color: string = colors.weak
-    if (c.volume >= volAvg) {
+    if (ip && c.volume >= volAvg) {
       if (ip.aboveCloud) color = spike ? colors.bull : `${colors.bull}99`
       else if (ip.belowCloud) color = spike ? colors.bear : `${colors.bear}99`
       else color = spike ? colors.neutral : `${colors.neutral}99`
@@ -52,13 +48,15 @@ export function computeVolumePulse(
     })
   }
 
+  const signals: Signal[] = []
   for (let i = 1; i < candles.length; i++) {
     const v = volumes[i]
     if (!v.confirmed) continue
-    const ip = ichi[i]
-    const prev = ichi[i - 1]
     const c = candles[i]
     const pc = candles[i - 1]
+    const ip = ichiByTime.get(c.time)
+    const prev = ichiByTime.get(pc.time)
+    if (!ip || !prev) continue
 
     const tkUp =
       ip.tenkan != null &&
