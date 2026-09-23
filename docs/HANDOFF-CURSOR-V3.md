@@ -25,7 +25,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `cursor/t3-dsl-v3-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/18 (**draft**)
-- Commit(s) : `a767cc1`
+- Commit(s) : `a767cc1` (feat), `8996a09` (handoff)
 
 ### Livré
 
