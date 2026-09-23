@@ -47,6 +47,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - Invariant 1e-9 : mid-close, EOD close≠open, flip L→S / S→L, flips enchaînés
 - Propriété : 200 séquences aléatoires NEUTRAL/LONG/SHORT
 - Ancien test « gap documenté » **supprimé** (remplacé par preuve d’égalité)
+- Lookahead truncation : compare `bar_returns[:-1]` (la dernière barre peut porter le mark-to-close EOD — artefact de fin de série, pas un lookahead)
 
 ### `metrics_basis`
 
