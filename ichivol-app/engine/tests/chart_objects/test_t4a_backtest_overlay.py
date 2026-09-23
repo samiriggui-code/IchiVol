@@ -7,11 +7,22 @@ import math
 import pytest
 from fastapi.testclient import TestClient
 
-from app.chart_objects.from_backtest import backtest_to_chart_objects, trade_outcome
+from app.agents.types import Direction
+from app.backtest.engine import Trade
+from app.chart_objects.from_backtest import (
+    backtest_to_chart_objects,
+    round_trip_cost_log,
+    trade_outcome,
+    trade_return_pct_gross,
+    trade_return_pct_net,
+)
 from app.chart_objects.types import ChartObjectSource, ChartObjectType
 from app.main import app
 from app.strategy_lab.catalog import get_builtin_ruleset
-from app.strategy_lab.ruleset_backtest import run_ruleset_backtest_on_candles
+from app.strategy_lab.ruleset_backtest import (
+    RulesetTradeDetail,
+    run_ruleset_backtest_on_candles,
+)
 from tests.indicators.test_ichimoku_lookahead import _make_candles
 
 client = TestClient(app)
@@ -61,6 +72,11 @@ def test_overlay_trades_match_backtest_parity(seed: int, ruleset_id: str):
         assert by_type[ChartObjectType.ENTRY].origin["exit_index"] == detail.exit_index
         assert by_type[ChartObjectType.ENTRY].origin["exit_reason"] == detail.exit_reason
         assert by_type[ChartObjectType.ENTRY].origin["signal_index"] == detail.signal_index
+        # Net outcome (not gross)
+        origin = by_type[ChartObjectType.ENTRY].origin
+        assert "return_pct_net" in origin and "return_pct_gross" in origin
+        assert "r_multiple_gross" in origin
+        assert origin["outcome"] == trade_outcome(origin["return_pct_net"])
 
 
 @pytest.mark.parametrize("seed", [7, 42])
@@ -106,6 +122,11 @@ def test_api_outcome_loss_filter(monkeypatch):
     all_body = all_resp.json()
     counts = all_body["counts"]
     assert counts["total"] == len(all_body["trades"])
+    for t in all_body["trades"]:
+        assert "return_pct_net" in t and "return_pct_gross" in t
+        assert "r_multiple_gross" in t
+        assert "return_pct" not in t
+        assert "r_multiple" not in t
 
     loss_resp = client.post(
         "/api/engine/strategy-lab/backtest-overlay",
@@ -121,7 +142,7 @@ def test_api_outcome_loss_filter(monkeypatch):
     loss_body = loss_resp.json()
     assert loss_body["counts"] == counts  # counts unchanged
     assert all(t["outcome"] == "loss" for t in loss_body["trades"])
-    assert all(t["return_pct"] < 0 for t in loss_body["trades"])
+    assert all(t["return_pct_net"] < 0 for t in loss_body["trades"])
     for o in loss_body["objects"]:
         assert o["origin"]["outcome"] == "loss"
     # 4 objects per filtered trade
@@ -178,4 +199,45 @@ def test_trade_outcome_helpers():
     assert trade_outcome(0.01) == "win"
     assert trade_outcome(-0.01) == "loss"
     assert trade_outcome(0.0) == "flat"
-    assert math.isclose(math.exp(0.0) - 1.0, 0.0)
+
+
+def test_gross_win_net_loss_outcome():
+    """+5 bps price move with 16 bps round-trip cost → gross win, net loss.
+
+    Default costs: commission_bps=5, slippage_bps=3 → cost=0.0008,
+    round-trip 2*cost=0.0016 (16 bps) — same as ``_apply_hold_returns``.
+    """
+    entry = 100.0
+    exit_px = 100.0 * math.exp(0.0005)  # +5 bps log move
+    log_return = math.log(exit_px / entry)
+    detail = RulesetTradeDetail(
+        trade=Trade(
+            entry_time=1,
+            exit_time=2,
+            direction=Direction.LONG,
+            entry_price=entry,
+            exit_price=exit_px,
+            log_return=log_return,
+        ),
+        exit_reason="target",
+        stop_price=99.0,
+        target_price=exit_px,
+        atr_at_signal=1.0,
+        signal_index=0,
+        entry_index=1,
+        exit_index=2,
+    )
+    commission_bps, slippage_bps = 5.0, 3.0
+    assert round_trip_cost_log(commission_bps, slippage_bps) == pytest.approx(0.0016)
+
+    gross = trade_return_pct_gross(detail)
+    net = trade_return_pct_net(
+        detail, commission_bps=commission_bps, slippage_bps=slippage_bps
+    )
+    assert gross > 0
+    assert net < 0
+    assert trade_outcome(gross) == "win"
+    assert trade_outcome(net) == "loss"
+    # Formula: exp(log_return - 2*cost) - 1
+    cost = (commission_bps + slippage_bps) / 10_000
+    assert net == pytest.approx(math.exp(log_return - 2 * cost) - 1.0)

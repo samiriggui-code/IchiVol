@@ -19,13 +19,43 @@ from app.indicators.ichimoku import Candle
 from app.strategy_lab.ruleset_backtest import RulesetBacktestResult, RulesetTradeDetail
 
 
-def trade_return_pct(detail: RulesetTradeDetail) -> float:
-    """Net simple return from the trade's ``log_return`` (as backtest stores it)."""
+def round_trip_cost_log(commission_bps: float, slippage_bps: float) -> float:
+    """Log-space round-trip cost matching ``ruleset_backtest._apply_hold_returns``.
+
+    ``cost = (commission_bps + slippage_bps) / 10_000`` (see
+    ``simulate_ruleset_trades``). Hold returns deduct ``cost`` on the entry bar
+    and ``cost`` on the exit bar — i.e. ``2 * cost`` total — including the
+    same-bar exit path ``… - 2 * cost`` (``_apply_hold_returns`` lines 105,
+    119–126, 132).
+    """
+    cost = (float(commission_bps) + float(slippage_bps)) / 10_000.0
+    return 2.0 * cost
+
+
+def trade_return_pct_gross(detail: RulesetTradeDetail) -> float:
+    """Gross simple return from ``Trade.log_return`` (prices only, no fees)."""
     return float(math.exp(detail.trade.log_return) - 1.0)
 
 
-def trade_r_multiple(detail: RulesetTradeDetail) -> float:
-    """R from net price move vs stop distance (prices from the backtest trade)."""
+def trade_return_pct_net(
+    detail: RulesetTradeDetail,
+    *,
+    commission_bps: float,
+    slippage_bps: float,
+) -> float:
+    """Net simple return after the same round-trip cost as bar_returns.
+
+    ``exp(log_return - 2 * cost) - 1`` with
+    ``cost = (commission_bps + slippage_bps) / 10_000``.
+    """
+    net_log = detail.trade.log_return - round_trip_cost_log(
+        commission_bps, slippage_bps
+    )
+    return float(math.exp(net_log) - 1.0)
+
+
+def trade_r_multiple_gross(detail: RulesetTradeDetail) -> float:
+    """R from gross price move vs stop distance (prices only)."""
     entry = float(detail.trade.entry_price)
     exit_px = float(detail.trade.exit_price)
     stop = float(detail.stop_price)
@@ -59,6 +89,8 @@ def backtest_to_chart_objects(
     timeframe = result.timeframe or ""
     ruleset_id = result.ruleset.id
     ruleset_version = result.ruleset.version
+    commission_bps = float(result.backtest.commission_bps)
+    slippage_bps = float(result.backtest.slippage_bps)
     out: list[ChartObject] = []
 
     for trade_id, detail in enumerate(result.details):
@@ -72,17 +104,21 @@ def backtest_to_chart_objects(
         exit_time = int(candles[exit_i].time)
         direction = detail.trade.direction
         side = direction.value  # LONG | SHORT
-        ret = trade_return_pct(detail)
-        r_mult = trade_r_multiple(detail)
-        outcome = trade_outcome(ret)
+        ret_gross = trade_return_pct_gross(detail)
+        ret_net = trade_return_pct_net(
+            detail, commission_bps=commission_bps, slippage_bps=slippage_bps
+        )
+        r_mult = trade_r_multiple_gross(detail)
+        outcome = trade_outcome(ret_net)
         origin_base = {
             "ruleset_id": ruleset_id,
             "ruleset_version": ruleset_version,
             "trade_id": trade_id,
             "direction": side,
             "exit_reason": detail.exit_reason,
-            "return_pct": ret,
-            "r_multiple": r_mult,
+            "return_pct_gross": ret_gross,
+            "return_pct_net": ret_net,
+            "r_multiple_gross": r_mult,
             "outcome": outcome,
             "signal_index": detail.signal_index,
             "entry_index": detail.entry_index,

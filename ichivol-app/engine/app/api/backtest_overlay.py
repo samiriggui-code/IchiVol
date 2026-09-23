@@ -10,8 +10,9 @@ from pydantic import BaseModel, Field
 from app.chart_objects.from_backtest import (
     backtest_to_chart_objects,
     trade_outcome,
-    trade_r_multiple,
-    trade_return_pct,
+    trade_r_multiple_gross,
+    trade_return_pct_gross,
+    trade_return_pct_net,
 )
 from app.config import settings
 from app.market_data import twelve_data
@@ -85,10 +86,15 @@ def post_backtest_overlay(
         timeframe=timeframe,
     )
 
+    commission_bps = float(result.backtest.commission_bps)
+    slippage_bps = float(result.backtest.slippage_bps)
     trades_full: list[dict[str, Any]] = []
     for trade_id, detail in enumerate(result.details):
-        ret = trade_return_pct(detail)
-        outcome = trade_outcome(ret)
+        ret_gross = trade_return_pct_gross(detail)
+        ret_net = trade_return_pct_net(
+            detail, commission_bps=commission_bps, slippage_bps=slippage_bps
+        )
+        outcome = trade_outcome(ret_net)
         entry_i = detail.entry_index
         exit_i = detail.exit_index
         trades_full.append(
@@ -104,8 +110,9 @@ def post_backtest_overlay(
                 "entry_price": detail.trade.entry_price,
                 "exit_price": detail.trade.exit_price,
                 "exit_reason": detail.exit_reason,
-                "return_pct": ret,
-                "r_multiple": trade_r_multiple(detail),
+                "return_pct_gross": ret_gross,
+                "return_pct_net": ret_net,
+                "r_multiple_gross": trade_r_multiple_gross(detail),
                 "outcome": outcome,
             }
         )

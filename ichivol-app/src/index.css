@@ -4260,6 +4260,17 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 .bt-out--win { color: var(--bull, #3d9a6a); }
 .bt-out--loss { color: var(--bear, #c45c5c); }
 .bt-out--flat { color: var(--muted-foreground, #888); }
+.bt-ret {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  line-height: 1.2;
+}
+.bt-ret-gross {
+  font-size: 0.65rem;
+  font-weight: 400;
+}
 .backtest-trade-detail {
   border-top: 1px solid var(--border, rgba(128, 128, 128, 0.3));
   padding-top: 0.5rem;

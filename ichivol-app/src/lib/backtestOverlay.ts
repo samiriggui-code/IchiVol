@@ -13,8 +13,9 @@ export interface BacktestOverlayTrade {
   entry_price: number
   exit_price: number
   exit_reason: string
-  return_pct: number
-  r_multiple: number
+  return_pct_gross: number
+  return_pct_net: number
+  r_multiple_gross: number
   outcome: 'win' | 'loss' | 'flat'
 }
 

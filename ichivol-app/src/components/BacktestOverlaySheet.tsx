@@ -163,7 +163,10 @@ export function BacktestOverlaySheet({
                     <span>
                       #{t.trade_id} · {t.direction} · {t.exit_reason}
                     </span>
-                    <span className="mono">{fmtPct(t.return_pct)}</span>
+                    <span className="mono bt-ret">
+                      <span className={`bt-out--${t.outcome}`}>{fmtPct(t.return_pct_net)}</span>
+                      <span className="muted bt-ret-gross">brut {fmtPct(t.return_pct_gross)}</span>
+                    </span>
                   </button>
                 </li>
               ))}
@@ -202,12 +205,18 @@ export function BacktestOverlaySheet({
                   <dd>{detail.exit_reason}</dd>
                 </div>
                 <div>
-                  <dt>R</dt>
-                  <dd className="mono">{detail.r_multiple.toFixed(2)}</dd>
+                  <dt>R (brut)</dt>
+                  <dd className="mono">{detail.r_multiple_gross.toFixed(2)}</dd>
                 </div>
                 <div>
-                  <dt>Rendement</dt>
-                  <dd className={`mono bt-out--${detail.outcome}`}>{fmtPct(detail.return_pct)}</dd>
+                  <dt>Rendement net</dt>
+                  <dd className={`mono bt-out--${detail.outcome}`}>
+                    {fmtPct(detail.return_pct_net)}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Rendement brut</dt>
+                  <dd className="mono muted">{fmtPct(detail.return_pct_gross)}</dd>
                 </div>
               </dl>
             </div>
