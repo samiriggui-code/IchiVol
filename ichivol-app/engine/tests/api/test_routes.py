@@ -4,6 +4,10 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import OperationalError
 
+from app.api import decisions as decisions_routes
+from app.api import market as market_routes
+from app.api import paper as paper_routes
+from app.api import paper_orders as paper_orders_routes
 from app.api import routes
 from app.db.session import engine as db_engine
 from app.indicators.ichimoku import Candle
@@ -413,6 +417,11 @@ def test_open_paper_position_opens_on_an_actionable_decision(monkeypatch):
     )
     monkeypatch.setattr(routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
 
+    monkeypatch.setattr(decisions_routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
+
+    monkeypatch.setattr(paper_routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
+    monkeypatch.setattr(paper_orders_routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
+
     resp = client.post(
         "/api/engine/paper/positions", params={"symbol": "BTCUSDT", "user_id": "test-user-routes"}
     )
@@ -479,6 +488,13 @@ def test_open_paper_position_accepts_rvol_and_atr_threshold_overrides(monkeypatc
 
     monkeypatch.setattr(routes, "scan_symbol", _fake_scan_symbol)
 
+
+    monkeypatch.setattr(decisions_routes, "scan_symbol", _fake_scan_symbol)
+
+
+    monkeypatch.setattr(paper_routes, "scan_symbol", _fake_scan_symbol)
+    monkeypatch.setattr(paper_orders_routes, "scan_symbol", _fake_scan_symbol)
+
     resp = client.post(
         "/api/engine/paper/positions",
         params={
@@ -510,6 +526,11 @@ def test_open_paper_position_accepts_a_non_crypto_symbol(monkeypatch):
         candles=[], ichimoku=None, rvol=None, decision=None, pipeline=fake_pipeline,
     )
     monkeypatch.setattr(routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
+
+    monkeypatch.setattr(decisions_routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
+
+    monkeypatch.setattr(paper_routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
+    monkeypatch.setattr(paper_orders_routes, "scan_symbol", lambda symbol, timeframe="1h", **k: fake_row)
 
     resp = client.post(
         "/api/engine/paper/positions", params={"symbol": "GBPUSD", "user_id": "test-user-routes"}
@@ -577,6 +598,13 @@ def test_decisions_batch_returns_one_result_per_item_in_request_order(monkeypatc
 
     monkeypatch.setattr(routes, "scan_symbol", fake_scan_symbol)
 
+
+    monkeypatch.setattr(decisions_routes, "scan_symbol", fake_scan_symbol)
+
+
+    monkeypatch.setattr(paper_routes, "scan_symbol", fake_scan_symbol)
+    monkeypatch.setattr(paper_orders_routes, "scan_symbol", fake_scan_symbol)
+
     resp = client.post(
         "/api/engine/decisions/batch",
         json={
@@ -636,6 +664,9 @@ def test_correlations_endpoint_defaults_to_the_watchlist_and_forwards_to_the_eng
 
     monkeypatch.setattr(routes, "compute_correlation_matrix", fake_compute)
 
+
+    monkeypatch.setattr(market_routes, "compute_correlation_matrix", fake_compute)
+
     resp = client.get("/api/engine/correlations")
     assert resp.status_code == 200
     body = resp.json()
@@ -663,6 +694,9 @@ def test_correlations_endpoint_accepts_explicit_symbols_and_method(monkeypatch):
         )
 
     monkeypatch.setattr(routes, "compute_correlation_matrix", fake_compute)
+
+
+    monkeypatch.setattr(market_routes, "compute_correlation_matrix", fake_compute)
 
     resp = client.get(
         "/api/engine/correlations",

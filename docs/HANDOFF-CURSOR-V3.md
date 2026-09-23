@@ -20,11 +20,44 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-23 — T1g — Découpage de `api/routes.py` (zéro changement de comportement)
+
+- Branche : `v3/t1g-split-routes`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/13 (draft) — **pas de merge avant revue Claude**
+- Commit(s) : `d58adca` (golden OpenAPI + ordre des routes **avant** refactor) ; `67ae482` (découpage)
+
+- Livré :
+  - Modules domaine : `market.py`, `context.py`, `decisions.py`, `backtest.py`, `rulesets.py`, `strategy_lab.py` + `strategy_lab_wf.py`, `paper.py` + `paper_orders.py`, `agent.py`, `common.py`
+  - `routes.py` = agrégateur qui `include_router` **dans l’ordre d’origine** (main.py inchangé)
+  - Fragments de routers là où le domaine n’est pas contigu (market head/screener/correlations ; paper before/after shadow ; backtest evidence/symbol/shadow)
+  - Tags inchangés (`["engine"]`) ; helpers partagés dans `common.py`
+  - Golden : `tests/api/fixtures/openapi_golden.json`, `route_order_golden.json` + `test_api_surface_golden.py`
+
+- Monkeypatch mis à jour (cible déplacée, comportement inchangé) :
+  - `tests/api/test_routes.py` — `scan_symbol` aussi sur `decisions` / `paper` / `paper_orders` ; `compute_correlation_matrix` aussi sur `market`
+  - `tests/api/test_open_flow.py` — `scan_symbol` aussi sur `paper` / `paper_orders`
+  - `test_structure_line_dict.py` — toujours via réexport `routes._line_dict`
+
+- Fixtures : seuls les 2 nouveaux golden API ajoutés ; `git diff main -- '**/fixtures/*'` hors ceux-là → vide
+
+- Lignes `app/api/` (tous ≤ ~400) : routes 46, agent 92, context 90, common 185, decisions 155, rulesets 145, backtest 171, strategy_lab 208, strategy_lab_wf 240, paper 269, paper_orders 232, market 268
+
+- Tests :
+  - `test_api_surface_golden` → vert (OpenAPI + ordre)
+  - `tests/api/` → seuls les **2** `open_paper_position` connus (baseline 13, DB dispo ici) ; pas de nouvelle régression
+  - Claude avec Postgres : baseline **13** échecs
+
+- Non fait : T0-CI (branche parallèle `cursor/t0-ci-postgres-a2fe`) ; T2 ChartObject
+
+---
+
 ## 2026-09-23 — T1f-2 — Plus de repaint dans pytrendline
 
 - Branche : `v3/t1f2-pytrendline-no-repaint`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/12 (draft) — **pas de merge avant revue Claude**
+- PR : https://github.com/samiriggui-code/IchiVol/pull/12 (mergée) — **validé par Claude**
 - Commit(s) : `81a5db1` (comportement + tests + golden legacy) ; `9831db9` (handoff PR #12)
+
+- **Note backtests** : les backtests du profil `STRUCTURE_PYTRENDLINE` faits **avant** la PR #12 ne sont **plus comparables** (le gate a changé avec l’exclusion des pivots provisoires).
 
 - Livré :
   - `StructureEngineParams.allow_provisional_anchors: bool = False` — `True` = ancien comportement (tests / A-B uniquement, jamais en profil live)
@@ -62,12 +95,13 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - Flag sur `StructureEngineParams` (pas un arg ad-hoc du seul adaptateur) pour que le gate / service héritent du défaut sûr.
   - `fit_pivot_bars` pour tester la non-mutation sans ambiguïté des `pivot_bars` (touches).
 
-- Doutes / points à vérifier par Claude : aucun bloquant.
+- Doutes / points à vérifier par Claude : **validé par Claude**.
 
 - Non fait / hors périmètre :
   - mvpp / trendln / consensus défaut
   - découpage `routes.py` (T1g)
   - T0-CI (branche séparée)
+  - Mergé dans `main` après validation Claude.
 
 - Tests :
   - `tests/structure/` → all green (causality + engines + gate + golden atr)
