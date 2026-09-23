@@ -13,9 +13,42 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - **13 échecs** : 11× `tests/paper/test_engine.py` + 2× `tests/api/test_routes.py` (`open_paper_position`)
   - **1 skip** réseau Binance
   - **Aucune régression V3** (même compte avant/après)
-- **Règle de merge** : avec la base, tout échec **hors** de ces 13 = régression → **bloque le merge**.
+- **Règle de merge** : avec la base, **0 échec** attendu (T0-CI #14 mergé). Tout échec bloque le merge.
 - **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
-- **T2a** : ChartObject — **à merger** (PR #15) après rebase sur main post-#14 — **validé par Claude**.
+- **T2a** : ChartObject — **mergé** (PR #15) — **validé par Claude**.
+- **T0-BROKER** : PR #16 (draft) — CI verte ; **pas de merge avant revalidation Claude**.
+- **T2b** : agent draw_* + get_structure — PR draft ci-dessous ; **pas de merge avant revue Claude**.
+
+---
+
+## 2026-09-23 — T2b — Agent draw_* + get_structure + store USER/CLAUDE
+
+- Branche : `cursor/t2b-agent-draw-a2fe`
+- PR : _(draft — lien après create)_ — **pas de merge avant revue Claude**
+- Base : `main` (post-#14+#15)
+
+### Livré
+
+1. **Persistance** `chart_object_overlays` (alembic `f6a7b8c9d0e1`) + `ChartObjectOverlay` model + `app/chart_objects/store.py` (upsert / soft-delete / list). Sources persistables : `user` | `claude` only.
+2. **Collect** `collect_chart_objects` — merge ENGINE (structure) + store ; `GET /chart-objects/{symbol}` l’utilise.
+3. **Agent channel** :
+   - READ : `get_structure`, `get_chart_objects`
+   - WRITE (chart only) : `draw_horizontal_line|trend_line|ray|zone|rectangle|channel|marker|text|entry|stop|target`, `delete_chart_object`
+   - `/agent/capabilities` : `write_tier_enabled=true`, `write_scopes=["chart_objects"]` — **paper toujours hors canal**
+4. **Copilot** : `claudeTools.ts` expose lecture seule **+** allowlist `CHART_WRITE_TOOL_NAMES` (pas `place_order`).
+5. **Structure payload** partagé HTTP / agent (`app/structure/payload.py`).
+
+### Tests locaux
+
+- `tests/chart_objects` + agent channel + chart-objects route + OpenAPI golden : **PASS**
+- `claudeTools.test.ts` : **PASS**
+- `npm run build` : **OK**
+
+### Hors scope
+
+- STRATEGY / BACKTEST persistence (T4)
+- Visual Strategy Builder (T5)
+- Merge #16 / T3+
 
 ---
 
