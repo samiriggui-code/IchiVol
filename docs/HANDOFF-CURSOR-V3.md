@@ -7,6 +7,54 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-23 — T1f — Pivots confirmés + repaint mesuré (mark-only)
+
+- Branche : `v3/t1f-pivot-confirmation`
+- PR : *(draft — lien à compléter)* — **pas de merge avant revue Claude**
+- Commit(s) : `37ac28f` (métadonnées + adaptateurs + tests de causalité)
+
+- Livré :
+  - `PivotPoint.confirmed_bar` / `PivotPoint.provisional` (optionnels, défauts `None` / `False`)
+  - Remplissage adaptateurs : mvpp `j+right` ; trendln `i` ; pytrendline fractals `i`, ancres première/dernière `provisional=True` + `confirmed_bar=last` ; consensus propage les pivots sources
+  - `tests/structure/test_structure_causality.py` — (a) `confirmed_bar <= t-1` ; (b) stabilité non-provisoire (fenêtre commune + exclusion left-lookback pour pytrendline `max_bars=150`) ; (c) preuve de repaint pytrendline (ancre provisoire absente à `t+1`)
+  - API `/structure` : toujours `pivot_count` seulement — **pas** d'exposition des nouveaux champs
+  - `git diff main -- '**/fixtures/*'` → vide
+
+- Mesure d'impact (2 seeds synthétiques 300 barres ; BTCUSDT 1h cache/live indisponible ici — Binance 451) :
+
+  | Jeu | Trendlines pytrendline avec ≥1 pivot provisoire | Consensus trendlines (objet) | Zones consensus (avec pyt) liées à une ligne provisoire |
+  |-----|-----------------------------------------------|------------------------------|---------------------------------------------------------|
+  | seed 7 | **3/10 (30 %)** | **0** (consensus ne porte pas de trendlines) | 1/4 zones à source PYTRENDLINE (25 % de ces zones) ; 3/30 lignes union détecteurs (10 %) |
+  | seed 42 | **4/10 (40 %)** | **0** | 4/7 zones pyt (57 %) ; 4/30 lignes union (13 %) |
+
+  - Consensus **par défaut** (mvpp+trendln, sans pyt) : aucun pivot provisoire → 0 % d'impact provisoire.
+  - Profils paper : `STRUCTURE_PYTRENDLINE` utilise `structure_detectors=["pytrendline"]` → zones gate potentiellement contaminées ; consensus multi-détecteurs avec `include_pytrendline` aussi.
+
+- Gate / breakouts (`structure/gate.py`, `service.detect_market_structure`) :
+  - **Oui** : le gate et les breakouts utilisent les **zones consensus** (pas les pivots ni les trendlines directement).
+  - Les zones pytrendline sont dérivées de `line.price_at(last_bar)` — donc une ligne ancrée sur un pivot provisoire **peut** déplacer une zone opposante du gate quand pyt est inclus.
+  - Baseline `ICHIVOL_BASELINE_V1` : `structure_filter=None` → pas d'impact.
+
+- Choix faits :
+  - Mark-only : aucun changement de fit / seuils / exclusion de pivots.
+  - Consensus : propage `pivots` des sources (pour tests/mesure) ; zones/scores inchangés.
+  - Stabilité pytrendline : identité en indices absolus (`bar_index + offset`) ; hors fenêtre commune ou dans `left_ctx` du bord gauche après glissement → exclus (artefact de fenêtre, documenté).
+
+- Doutes / points à vérifier par Claude :
+  - Faut-il exclure les pivots provisoires du fit des trendlines (T1f-2, fixtures golden assumées à changer) ?
+  - Profil `STRUCTURE_PYTRENDLINE` : 30–40 % des lignes touchent un pivot provisoire — seuil d'action ?
+
+- Non fait / hors périmètre :
+  - Exclusion des pivots provisoires / changement de comportement (T1f-2)
+  - `StructureState` indicators / ChartObject / découpage `routes.py` (T1g)
+
+- Tests :
+  - `test_structure_causality.py` → **18 passed**
+  - suite `tests/structure/` → all green
+  - suite complète → **4 failed** Postgres connus uniquement ; fixtures inchangées
+
+---
+
 ## 2026-09-23 — T1e — Fin de la migration REGISTRY (cliquet vide)
 
 - Branche : `v3/t1e-registry-remaining`
