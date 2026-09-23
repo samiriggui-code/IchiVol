@@ -842,6 +842,29 @@ def cmd_propose_ruleset_edit(args: dict) -> dict:
         raise CommandError(str(exc)) from exc
 
 
+def cmd_propose_experiment_plan(args: dict) -> dict:
+    """Researcher — AuditReport hypotheses → Lab tool plan (proposed only).
+
+    Does not run studies or write Perf DB. Human/Claude executes steps.
+    """
+    from app.researcher import propose_experiment_plan
+
+    report = args.get("audit_report")
+    if not isinstance(report, dict):
+        raise CommandError("missing_or_invalid_arg: audit_report object required")
+    hypothesis_ids = args.get("hypothesis_ids")
+    if hypothesis_ids is not None and not isinstance(hypothesis_ids, list):
+        raise CommandError("hypothesis_ids must be a list of str")
+    try:
+        plan = propose_experiment_plan(
+            report,
+            hypothesis_ids=[str(x) for x in hypothesis_ids] if hypothesis_ids else None,
+        )
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+    return plan.to_dict()
+
+
 def cmd_filter_backtest_overlay(args: dict) -> dict:
     """T4b — backtest overlay with structured filters for Claude (read-only).
 

@@ -39,6 +39,7 @@ from app.agent_channel.commands import (
     cmd_run_monte_carlo,
     cmd_list_condition_catalog,
     cmd_propose_ruleset_edit,
+    cmd_propose_experiment_plan,
     cmd_filter_backtest_overlay,
     cmd_get_news,
     cmd_get_structure,
@@ -416,6 +417,16 @@ TOOLS: dict[str, ToolSpec] = {
                 "ruleset": "object, candidat complet optionnel",
             },
             cmd_propose_ruleset_edit,
+        ),
+        ToolSpec(
+            "propose_experiment_plan",
+            "Researcher — plan Lab depuis AuditReport (steps agent, status=proposed, jamais auto-run).",
+            True,
+            {
+                "audit_report": "object, requis — payload build_audit_report",
+                "hypothesis_ids": "list[str], optionnel — filtre",
+            },
+            cmd_propose_experiment_plan,
         ),
         ToolSpec(
             "filter_backtest_overlay",
