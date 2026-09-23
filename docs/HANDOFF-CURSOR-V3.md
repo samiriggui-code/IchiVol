@@ -37,27 +37,28 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T5b** #35 — **MERGÉE** (profils poids + étude historique).
 - **T6** #36 — **MERGÉE** (AuditReport post-outcome).
 - **T7** #37 — **MERGÉE** (Monte Carlo / risk of ruin).
-- **Job en cours** : **T3d** — PR #39 draft — propose ruleset edit + condition catalog (ATTENTE CI).
+- **T3d** #39 — **MERGÉE** (propose ruleset edit + condition catalog).
+- **Job en cours** : **aucun** — T1–T7 + T3d clos ; suite = T3e MTF / Researcher / UI Lab.
 
 
 ---
 
-## 2026-09-23 — T3d EN COURS — propose ruleset edit (NL→DSL contract)
+## 2026-09-23 — T3d MERGÉ (#39) — propose ruleset edit
 
 - Branche : `cursor/t3d-ruleset-propose-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/39 (**draft**)
-- Statut : **ATTENTE CI** — après close T1–T7.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/39 — **MERGÉE** `80508c1`
+- Statut : CI verte ; merge Cursor.
 
 ### Livré
 
-1. `propose_edit.py` — patch ops (`set_leaf`/`unset_leaf`/ATR/direction/exit) → `parse_ruleset`
-2. `condition_catalog()` exposé GET `/rulesets` + agent `list_condition_catalog`
-3. `POST /ruleset/propose` + agent `propose_ruleset_edit` — status toujours `proposed`
-4. Tests `test_propose_ruleset_edit.py` ; OpenAPI golden refresh
+1. `propose_edit.py` — patch ops → `parse_ruleset` ; status toujours `proposed`
+2. Catalogue conditions GET `/rulesets` + `list_condition_catalog`
+3. `POST /ruleset/propose` + agent `propose_ruleset_edit`
+4. OpenAPI golden refresh
 
 ### Non-faits
 
-LLM dans le moteur ; chat UI Lab ; écriture catalog builtins ; T3e MTF ; auto-apply live.
+Chat UI ; LLM moteur ; T3e MTF ; auto-apply catalog.
 
 ---
 
