@@ -36,16 +36,17 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T5a** #34 — **MERGÉE** (family weights observation-only).
 - **T5b** #35 — **MERGÉE** (profils poids + étude historique).
 - **T6** #36 — **MERGÉE** (AuditReport post-outcome).
-- **Job en cours** : **T7** — PR #37 draft — Monte Carlo / risk of ruin (ATTENTE CI).
+- **T7** #37 — **MERGÉE** (Monte Carlo / risk of ruin).
+- **Job en cours** : **aucun** — roadmap V3 **T1→T7 terminée** (observation-only pour T5–T7 ; pas de live score / auto-apply).
 
 
 ---
 
-## 2026-09-23 — T7 EN COURS — Monte Carlo / risk of ruin
+## 2026-09-23 — T7 MERGÉ (#37) — Monte Carlo / risk of ruin → V3 T1–T7 DONE
 
 - Branche : `cursor/t7-monte-carlo-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/37 (**draft**)
-- Statut : **ATTENTE CI** — après merge #36.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/37 — **MERGÉE** `dacbfe0`
+- Statut : CI verte ; merge Cursor. **Roadmap V3 T1→T7 close.**
 
 ### Livré
 
@@ -54,9 +55,9 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 3. Gate `min_trades` (défaut 20) → `sufficient=false` sinon
 4. Agent `run_monte_carlo`
 
-### Non-faits
+### Hors roadmap T (ouverts plus tard)
 
-UI Strategy Lab ; auto-sizing live ; Researcher loop.
+T3d chat NL / éditeur conversationnel ; T3e MTF DSL ; Researcher loop (auto Experiment) ; UI Lab pour T5–T7 ; poids en live score.
 
 ---
 
