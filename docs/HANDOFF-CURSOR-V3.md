@@ -36,7 +36,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T5a** #34 — **MERGÉE** (family weights observation-only).
 - **T5b** #35 — **MERGÉE** (profils poids + étude historique).
 - **T6** #36 — **MERGÉE** (AuditReport post-outcome).
-- **Job en cours** : **T7** — Monte Carlo / risk of ruin (branche `cursor/t7-monte-carlo-a2fe`).
+- **Job en cours** : **T7** — PR #37 draft — Monte Carlo / risk of ruin (ATTENTE CI).
 
 
 ---
@@ -44,8 +44,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T7 EN COURS — Monte Carlo / risk of ruin
 
 - Branche : `cursor/t7-monte-carlo-a2fe`
-- PR : *(draft à ouvrir)*
-- Statut : **EN COURS** — après merge #36.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/37 (**draft**)
+- Statut : **ATTENTE CI** — après merge #36.
 
 ### Livré
 
