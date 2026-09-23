@@ -35,6 +35,7 @@ from app.agent_channel.commands import (
     cmd_list_family_weight_profiles,
     cmd_compare_family_weights,
     cmd_run_family_weights_study,
+    cmd_build_audit_report,
     cmd_filter_backtest_overlay,
     cmd_get_news,
     cmd_get_structure,
@@ -361,6 +362,20 @@ TOOLS: dict[str, ToolSpec] = {
                 "sample_limit": "int, défaut 20",
             },
             cmd_run_family_weights_study,
+        ),
+        ToolSpec(
+            "build_audit_report",
+            "T6 — AuditReport post-outcome d'un trade ruleset (hypothèses proposed only, jamais appliquées).",
+            True,
+            {
+                "symbol": "str, requis",
+                "ruleset_id": "str, built-in si pas de ruleset",
+                "ruleset": "object, optionnel",
+                "trade_index": "int, défaut 0",
+                "timeframe": "str, défaut '1h'",
+                "limit": "int, défaut 300",
+            },
+            cmd_build_audit_report,
         ),
         ToolSpec(
             "filter_backtest_overlay",

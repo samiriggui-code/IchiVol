@@ -697,6 +697,53 @@ def cmd_run_family_weights_study(args: dict) -> dict:
     return report.to_dict()
 
 
+def cmd_build_audit_report(args: dict) -> dict:
+    """T6 — post-outcome AuditReport for one ruleset backtest trade.
+
+    Read-only. Hypotheses stay ``proposed`` — never applied to prod strategy.
+    """
+    from app.auditor import build_audit_report_from_trade
+    from app.strategy_lab.catalog import get_builtin_ruleset
+    from app.strategy_lab.ruleset import parse_ruleset
+    from app.strategy_lab.ruleset_backtest import run_ruleset_backtest_on_candles
+
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = str(args.get("timeframe", "1h"))
+    limit = int(args.get("limit", 300))
+    trade_index = int(args.get("trade_index", 0))
+    ruleset_id = args.get("ruleset_id")
+    ruleset_raw = args.get("ruleset")
+    if ruleset_raw is not None:
+        ruleset = parse_ruleset(ruleset_raw)
+        rid = getattr(ruleset, "id", None)
+    elif ruleset_id:
+        ruleset = get_builtin_ruleset(str(ruleset_id))
+        rid = str(ruleset_id)
+    else:
+        raise CommandError("missing_or_invalid_arg: ruleset_id or ruleset required")
+    try:
+        _prov, _sym, candles = resolve_and_fetch(symbol, timeframe, limit)
+    except (ValueError, ProviderNotWiredError) as exc:
+        raise CommandError(str(exc)) from exc
+    result = run_ruleset_backtest_on_candles(candles, ruleset, symbol=symbol, timeframe=timeframe)
+    if not result.details:
+        raise CommandError("no_trades: ruleset produced zero trades on this window")
+    if trade_index < 0 or trade_index >= len(result.details):
+        raise CommandError(
+            f"trade_index_out_of_range: {trade_index} (n={len(result.details)})"
+        )
+    report = build_audit_report_from_trade(
+        result.details[trade_index],
+        symbol=symbol,
+        timeframe=timeframe,
+        ruleset_id=rid,
+        trade_index=trade_index,
+    )
+    payload = report.to_dict()
+    payload["n_trades"] = len(result.details)
+    return payload
+
+
 def cmd_filter_backtest_overlay(args: dict) -> dict:
     """T4b — backtest overlay with structured filters for Claude (read-only).
 
