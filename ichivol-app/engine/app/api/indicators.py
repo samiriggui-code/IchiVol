@@ -34,8 +34,13 @@ def get_ichimoku_projection(
     x_twelve_data_key: str | None = Header(default=None, alias="X-Twelve-Data-Key"),
 ) -> dict[str, Any]:
     """Forward Kumo spans for chart display only (not a decision feature)."""
-    from app.indicators.ichimoku import IchimokuParams, compute_projected_kumo
+    from app.indicators.ichimoku import compute_projected_kumo
     from app.market_data.resolve import ProviderNotWiredError, resolve_and_fetch
+
+    try:
+        definition = REGISTRY.get("ichimoku")
+    except UnknownIndicatorError as exc:
+        raise HTTPException(status_code=404, detail=f"unknown_indicator: ichimoku") from exc
 
     overrides: dict[str, Any] = {}
     if params:
@@ -47,17 +52,12 @@ def get_ichimoku_projection(
             raise HTTPException(status_code=422, detail="params must be a JSON object")
         overrides = parsed
 
-    known = {f.name for f in dc_fields(IchimokuParams)}
-    unknown = sorted(set(overrides) - known)
-    if unknown:
-        raise HTTPException(status_code=422, detail=f"unknown params: {', '.join(unknown)}")
     try:
-        built = IchimokuParams(**overrides)
-    except (TypeError, ValueError) as exc:
+        built = definition.build_params(overrides)
+    except InvalidParamsError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    # Need enough history for senkou_b + room to verify display shift.
-    warmup = int(built.senkou_b) + int(built.displacement)
+    warmup = definition.warmup(built)
     fetch_limit = max(1, int(limit) + warmup)
 
     twelve_data.set_api_key_override(x_twelve_data_key)
@@ -70,9 +70,15 @@ def get_ichimoku_projection(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    # Use the same trailing window the series endpoint would expose.
+    # Compute on the full fetch (incl. warmup), then keep points that land on
+    # or after the visible window start — plus extrapolated bars beyond the end.
     window = candles[-int(limit) :] if len(candles) > int(limit) else candles
-    projection = compute_projected_kumo(window, built)
+    window_start = window[0].time if window else 0
+    projection = [
+        p
+        for p in compute_projected_kumo(candles, built)
+        if int(p["time_projected"]) >= window_start
+    ]
 
     return {
         "indicator": "ichimoku",
@@ -83,6 +89,7 @@ def get_ichimoku_projection(
         "provider_symbol": provider_symbol,
         "params": {f.name: getattr(built, f.name) for f in dc_fields(built)},
         "displacement": built.displacement,
+        "warmup": warmup,
         "projection": projection,
         "note": "display_only",
     }

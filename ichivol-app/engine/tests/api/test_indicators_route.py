@@ -130,3 +130,45 @@ def test_indicator_limit_bounds_422():
             params={"limit": bad},
         )
         assert resp.status_code == 422, bad
+
+
+def test_ichimoku_projection_keeps_warmup_for_window_start(monkeypatch):
+    """Projection must compute on fetch (limit+warmup), not on candles[-limit:]."""
+    limit = 300
+    warmup = REGISTRY.get("ichimoku").warmup()
+    captured: dict = {}
+
+    def fake_resolve(symbol: str, timeframe: str, limit: int = 300, default_provider: str = "binance"):
+        captured["limit"] = limit
+        return _FakeProvider(), symbol, _candles(limit)
+
+    monkeypatch.setattr("app.market_data.resolve.resolve_and_fetch", fake_resolve)
+
+    resp = client.get(
+        "/api/engine/indicators/ichimoku/BTCUSDT/projection",
+        params={"timeframe": "1h", "limit": limit},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert captured["limit"] == limit + warmup
+    assert body["kind"] == "projection"
+    assert body["note"] == "display_only"
+    assert body["warmup"] == warmup
+    proj = body["projection"]
+    assert proj
+    # First visible candle time = time of candle at index warmup in the fetch
+    # (fetch length = limit+warmup; window = last `limit` candles).
+    window_start = 1_700_000_000 + warmup * 3600
+    assert proj[0]["time_projected"] == window_start
+
+
+def test_ichimoku_projection_invalid_params_422(monkeypatch):
+    monkeypatch.setattr(
+        "app.market_data.resolve.resolve_and_fetch",
+        lambda *a, **k: (_FakeProvider(), "X", _candles(100)),
+    )
+    resp = client.get(
+        "/api/engine/indicators/ichimoku/BTCUSDT/projection",
+        params={"params": json.dumps({"senkouB": 52})},  # camelCase unknown
+    )
+    assert resp.status_code == 422

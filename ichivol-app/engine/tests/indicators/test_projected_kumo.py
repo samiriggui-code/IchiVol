@@ -67,3 +67,26 @@ def test_projected_kumo_never_imported_by_decision_paths():
                 if isinstance(node, ast.Name) and node.id == "compute_projected_kumo":
                     offenders.append(str(path.relative_to(_ENGINE_APP.parent)))
     assert offenders == [], f"display-only import leak: {offenders}"
+
+
+def test_projection_window_uses_warmup_history():
+    """Compute on full series, keep points landing on/after visible window start.
+
+    With 600 candles and limit=300, the first projected time must equal the
+    first candle of candles[-300:] (warmup must not be discarded before compute).
+    """
+    candles = _make_candles(600)
+    limit = 300
+    params = IchimokuParams()
+    window = candles[-limit:]
+    window_start = window[0].time
+
+    full = compute_projected_kumo(candles, params)
+    filtered = [p for p in full if int(p["time_projected"]) >= window_start]
+
+    assert filtered, "expected projected points for the visible window"
+    assert int(filtered[0]["time_projected"]) == window_start
+
+    # Contrast: computing only on the truncated window loses early cloud.
+    truncated = compute_projected_kumo(window, params)
+    assert int(truncated[0]["time_projected"]) > window_start

@@ -10,43 +10,40 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T1b — Front servi par le moteur (Ichimoku / RVOL / kumo projeté)
 
 - Branche : `v3/t1b-front-engine-indicators`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/7 (draft)
-- Commit(s) : `25e2249` (code T1b) ; docs handoff `417da25`…`ff15533`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/7 (prête — hors draft, en attente revalidation Claude)
+- Commit(s) : `25e2249` (code initial) ; handoff `417da25`… ; corrections revue Claude (warmup projection + chikou + REGISTRY params) sur ce push
 
 - Livré :
   - `docs/HANDOFF-CURSOR-V3.md` — canal handoff V3 (entrée T1 + T1b)
   - `ichivol-app/engine/app/indicators/ichimoku.py` — `compute_projected_kumo` (display-only ; ne touche pas `IchimokuState` / `compute_ichimoku`)
-  - `ichivol-app/engine/app/api/indicators.py` — `GET /indicators/ichimoku/{symbol}/projection`
-  - `ichivol-app/engine/tests/indicators/test_projected_kumo.py` — égalité projection ↔ senkou affiché à `i+d` + garde d’import
-  - `ichivol-app/src/lib/engineIndicators.ts` — `getIndicatorSeries`, `getIchimokuProjection`, mapping snake_case → types chart
-  - `ichivol-app/src/lib/signals.ts` — `buildVolumePulse` (couleurs / signaux depuis séries moteur ; plus de RVOL local)
+  - `ichivol-app/engine/app/api/indicators.py` — `GET /indicators/ichimoku/{symbol}/projection` : compute sur **tout** le fetch `limit+warmup`, filtre `time_projected >= window[0].time` ; params via `REGISTRY.get("ichimoku").build_params` / `.warmup`
+  - `ichivol-app/engine/tests/indicators/test_projected_kumo.py` — égalité i+d, garde import, **warmup fenêtre** (600→limit 300 → 1er `time_projected` = début fenêtre)
+  - `ichivol-app/engine/tests/api/test_indicators_route.py` — projection garde warmup + params 422 via registry
+  - `ichivol-app/src/lib/engineIndicators.ts` — client registry ; `mapEngineIchimokuToPoints` sans repli `closeByTime` (chikou=`null` si idx absent)
+  - `ichivol-app/src/lib/signals.ts` — `buildVolumePulse` depuis séries moteur
   - `ichivol-app/src/components/PriceChart.tsx` — overlays async moteur ; prix seul si erreur
-  - `ichivol-app/src/pages/MarketPage.tsx` — props `symbol`/`timeframe`/`onLive` ; plus de `computeIchimoku`
+  - `ichivol-app/src/pages/MarketPage.tsx` — props `symbol`/`timeframe`/`onLive`
   - `ichivol-app/src/index.css` — message discret overlays
-  - `ichivol-app/src/lib/ichimoku.ts` — **supprimé** (grep `computeIchimoku|donchianMid` vide dans `src/`)
+  - `ichivol-app/src/lib/ichimoku.ts` — **supprimé**
 
-- Tests :
-  - `cd ichivol-app/engine && .venv/bin/python -m pytest tests/indicators/test_projected_kumo.py tests/api/test_indicators_route.py -q` → **9 passed**
-  - `cd ichivol-app/engine && .venv/bin/python -m pytest -q` → **4 failed** (Postgres connus, connexion refusée `127.0.0.1:5432`) : `test_backtest_evidence_route_*` ×2, `test_persist_and_attach_outcome`, `test_propose_intent_blocked_when_watch`
-  - `cd ichivol-app && npm run build` → **OK** (`tsc -b && vite build`)
-  - `grep -rn "computeIchimoku\|donchianMid" ichivol-app/src` → vide
+- Tests (après corrections revue) :
+  - `cd ichivol-app/engine && .venv/bin/python -m pytest tests/indicators tests/api/test_indicators_route.py -q` → **tous OK** (169 passed au dernier run)
+  - `cd ichivol-app && npm run build` → **OK**
+  - Échecs Postgres connus hors scope (suite complète) : inchangés
 
 - Choix faits :
-  - Nuage futur via helper séparé + endpoint dédié (pas de changement de `compute_ichimoku`) pour ne pas casser lookahead / features.
-  - Span A/B du chart = série **projection** (temps `i+d` / extrapolé) ; tenkan/kijun/cloudTop/Bot et flags cloud viennent des states ichimoku ; RVOL de l’indicateur `rvol`.
-  - Chikou = close décalé `displacement` **côté front uniquement** (affichage).
-  - Params Settings → JSON moteur : `senkouB`→`senkou_b`, `rvolLen`→`primary_window`.
-  - En erreur overlay : pas de repli sur calcul local (prix + message discret).
+  - Nuage futur via helper séparé + endpoint dédié (pas de changement de `compute_ichimoku`).
+  - Warmup : ne pas tronquer avant `compute_projected_kumo` — sinon ~`senkou_b` barres sans nuage en tête de fenêtre.
+  - Params projection alignés sur l’endpoint series (`InvalidParamsError` → 422).
+  - Chikou affichage uniquement ; pas de fallback close non décalé.
 
 - Doutes / points à vérifier par Claude :
-  - Alignement exact chikou affichage vs ancienne `ichimoku.ts` (décalage index).
-  - Volume histogramme pendant chargement : volumes bruts gris, puis couleurs moteur — OK produit ?
-  - Auth : le front passe par `/api/engine/*` (proxy Express `requireAuth`) ; la démo handoff a frappé le moteur en direct.
+  - Revalidation des 3 corrections (warmup, chikou, REGISTRY) avant merge.
+  - Smoke Marché BTCUSDT 1h authentifié (nuage à droite de la dernière bougie).
 
 - Non fait / reste à faire :
   - Structure unifiée, découpage `routes.py`, `ChartObject` (hors périmètre T1b).
-  - Sortir la PR du draft + merge après validation Claude.
-  - Vérifier en app authentifiée (Marché BTCUSDT 1h) que le nuage projeté s’affiche à droite de la dernière bougie.
+  - **Ne pas merger** tant que Claude n’a pas revalidé.
 
 ---
 

@@ -114,7 +114,6 @@ export function mapEngineIchimokuToPoints(
   candles: Candle[],
   displacement: number,
 ): IchimokuPoint[] {
-  const closeByTime = new Map(candles.map((c) => [c.time, c.close]))
   const timeIndex = new Map(candles.map((c, i) => [c.time, i]))
 
   return states.map((s) => {
@@ -123,9 +122,6 @@ export function mapEngineIchimokuToPoints(
     if (idx != null) {
       const src = idx + displacement
       if (src < candles.length) chikou = candles[src].close
-    } else {
-      // fallback: same time key
-      chikou = closeByTime.get(s.time) ?? null
     }
     const pvk = s.price_vs_kumo
     return {
