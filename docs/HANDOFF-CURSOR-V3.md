@@ -123,7 +123,7 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
 ## 2026-09-23 — T1g — Découpage de `api/routes.py` (zéro changement de comportement)
 
 - Branche : `v3/t1g-split-routes`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/13 (draft) — **pas de merge avant revue Claude**
+- PR : https://github.com/samiriggui-code/IchiVol/pull/13 (mergée) — **validé par Claude**
 - Commit(s) : `d58adca` (golden OpenAPI + ordre des routes **avant** refactor) ; `67ae482` (découpage)
 
 - Livré :
@@ -147,7 +147,7 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
   - `tests/api/` → seuls les **2** `open_paper_position` connus (baseline 13, DB dispo ici) ; pas de nouvelle régression
   - Claude avec Postgres : baseline **13** échecs
 
-- Non fait : T0-CI (branche parallèle `cursor/t0-ci-postgres-a2fe`) ; T2 ChartObject
+- Non fait à l’époque : T0-CI (branche parallèle) ; T2 ChartObject — **T1 terminé** (T1→T1g).
 
 ---
 

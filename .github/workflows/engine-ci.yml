@@ -1,7 +1,6 @@
-# Full engine suite with Postgres 16 — honest CI (no xfail whitelist).
-# Baseline on main (Claude, 2026-09-23): 13 known paper/api failures + 1 Binance skip.
-# CI is expected red until a T0-CI follow-up rewrites those tests; any *new*
-# failure beyond that baseline is a regression.
+# Full engine suite with Postgres 16 + frontend build — honest CI (no xfail).
+# Paper/API tests aligned to the 2026-09-21 baseline (ATR stop, long-only,
+# exit_mode=direction). Binance skip remains when data-api is unreachable.
 
 name: Engine CI
 
