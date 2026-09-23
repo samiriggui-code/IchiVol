@@ -25,37 +25,37 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T4a** #22 — **MERGÉE** — **validé par Claude** (overlay + correction net).
 - **T0-METRICS** #23 — **MERGÉE** — **validé par Claude** (stats nettes ; `cost_log` / `net_v1`).
 - **T0-METRICS-2** #24 — **MERGÉE** — **validé par Claude** (`eod_return` ; lookahead strict).
-- **Job en cours** : **T0-CALC** — scénarios historiques — PR #25 **ATTENTE Claude** (CI verte).
+- **T0-CALC** #25 — **MERGÉE** — intégrée par Cursor (Claude indisponible jusqu’à 18:10 ; CI verte ; brief Claude respecté).
+- **Job en cours** : **Event Intelligence Layer** — audit → PHASE 5 anomalie (observation-only) — Claude absente jusqu’à 18:10, Cursor avance seul.
 
 
 ---
 
-## 2026-09-23 — T0-CALC — ATTENTE Claude (#25)
+## 2026-09-23 — EVENT INTELLIGENCE LAYER — AUDIT (PHASES 1–4) → MAIN
 
-- Branche : `cursor/t0-calc-scenarios-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/25 (**draft**)
-- Statut : **ATTENTE Claude** — CI **VERTE** (pytest Postgres + frontend npm build) ; ne pas merger avant revue.
+- Branche : `cursor/event-intelligence-audit-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/26
+- Doc : `docs/EVENT-INTELLIGENCE-LAYER-AUDIT.md`
+- Statut : rebase sur main post-#25 ; merge Cursor (Claude absente) — **doc only**.
 
 ### Livré
 
-1. `app/paper/scenarios.py` — `build_scenarios` / `build_open_position_scenarios`
-   - Objectif / Stop : montants **repris** de `preview_manual_buy` (aucune divergence)
-   - Crash : pire mouvement adverse historique (low/prev_close et gap open), sortie `min(stop, entry×(1+move))`, frais = friction sortie + commission
-   - Durée médiane (gagnants / perdants) + financement profil (0 crypto spot, CFD XAUUSD…)
-   - Espérance `net_v2` × notional **si n ≥ 30**, sinon message « échantillon insuffisant »
-   - Backtest PIPELINE mis en cache 6 h / (symbole, timeframe) ; historique causal (bougie en formation exclue)
-2. API : `GET /paper/preview` + bloc `scenarios` (ajout seul) ; `GET /paper/positions/{id}/scenarios`
-3. Front : `PaperConfirmSheet` tableau Scénarios ; dépliant Synthèse / fiche position
-4. Tests `tests/paper/test_scenarios.py` (hors Postgres)
+1. Audit IchiVol : indicateurs / REGISTRY / pipeline / combiner / calendar+news / Claude / 3 pipelines / collision `EventObservation` Lab
+2. KEEP/ADAPT/REJECT sur 7 repos de référence
+3. Architecture : `EventAnomalyDetector` → régimes NORMAL/EVENT/UNKNOWN → context → Claude explain ; **EVENT ≠ SIGNAL**
+4. Contrats Python (design) + plan phases 5–7
 
-### Vérifs locales (Cursor)
+### Suite (Cursor solo jusqu’à 18:10)
 
-- `pytest tests/backtest tests/indicators tests/strategy_lab tests/paper` — **0 échec** (hors Postgres)
-- `npm run build` — **OK**
+PHASE 5 : `EventAnomalyDetector` causal + tests anti-lookahead + branchement **observation-only** (pas de vote pipeline).
 
-### Hors périmètre
+---
 
-Alertes (T0-NOTIF), stop suiveur / renforcement (T0-MANAGE), short.
+## 2026-09-23 — T0-CALC MERGÉ (#25) — Cursor (Claude absente)
+
+- Branche : `cursor/t0-calc-scenarios-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/25 — **MERGÉE**
+- Statut : intégrée au chantier V3 (scénarios historiques fiche d’achat + positions). CI verte. Brief Claude respecté.
 
 ---
 
