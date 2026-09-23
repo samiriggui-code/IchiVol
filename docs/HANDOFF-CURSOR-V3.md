@@ -27,8 +27,29 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-METRICS-2** #24 — **MERGÉE** — **validé par Claude** (`eod_return` ; lookahead strict).
 - **T0-CALC** #25 — **MERGÉE** — intégrée par Cursor (Claude indisponible jusqu’à 18:10 ; CI verte ; brief Claude respecté).
 - **Event Intelligence audit** #26 — **MERGÉE** (doc).
-- **Job en cours** : **Event Intelligence PHASE 5** — `EventAnomalyDetector` observation-only — branche `cursor/event-anomaly-detector-a2fe` (Cursor solo jusqu’à 18:10).
+- **EventAnomalyDetector PHASE 5** #27 — **MERGÉE** (observation-only).
+- **Job en cours** : **Event Intelligence PHASE 6** — regime study + calibration harness — branche `cursor/event-regime-study-a2fe` (Cursor solo).
 
+
+---
+
+## 2026-09-23 — EVENT INTELLIGENCE PHASE 6 — regime study + calibration
+
+- Branche : `cursor/event-regime-study-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/28 (**draft**)
+- Statut : **ATTENTE CI** — Cursor solo (Claude absente jusqu’à 18:10) ; puis revue Claude.
+
+### Livré
+
+1. `app/events/regime_study.py` — event-study PIPELINE stratifié par `NORMAL_MARKET` / `UNKNOWN_EVENT` (MFE/MAE, horizons, deltas observés)
+2. `app/events/calibrate.py` — quantiles causaux → suggestions p99 **sans** muter les seuils live
+3. Agent read-only : `run_anomaly_regime_study`, `calibrate_anomaly_thresholds`
+4. Tests `tests/events/test_regime_study.py`
+5. CDC PHASE 6 coché ; PHASE 7 (news/correlate) ouvert
+
+### Non-faits
+
+SymbolNews, EventClassifier, `EVENT_MARKET`, changement de gates, UI.
 
 ---
 

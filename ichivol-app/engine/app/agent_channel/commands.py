@@ -243,6 +243,53 @@ def cmd_run_event_study(args: dict) -> dict:
     return event_study_dict(result, include_events=include_events)
 
 
+def cmd_run_anomaly_regime_study(args: dict) -> dict:
+    """Event study stratified by EventAnomaly regime — research only, never votes."""
+    from app.events.regime_study import anomaly_regime_study_dict, run_anomaly_regime_study
+
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = str(args.get("timeframe", "1h"))
+    limit = int(args.get("limit", 1000))
+    horizons_arg = args.get("horizons", [1, 3, 5, 10])
+    if isinstance(horizons_arg, str):
+        horizons = tuple(int(x.strip()) for x in horizons_arg.split(",") if x.strip())
+    else:
+        horizons = tuple(int(x) for x in horizons_arg)
+    r_multiple = float(args.get("r_multiple", 1.0))
+    min_signals = int(args.get("min_signals", 5))
+    try:
+        report = run_anomaly_regime_study(
+            symbol,
+            timeframe=timeframe,
+            limit=limit,
+            horizons=horizons,
+            r_multiple=r_multiple,
+            min_signals=min_signals,
+        )
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+    return anomaly_regime_study_dict(report)
+
+
+def cmd_calibrate_anomaly_thresholds(args: dict) -> dict:
+    """Suggest p99 anomaly gates from causal history — does not change live thresholds."""
+    from app.events.calibrate import calibrate_anomaly_thresholds, calibration_report_dict
+    from app.indicators.registry import REGISTRY
+
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = str(args.get("timeframe", "1h"))
+    limit = int(args.get("limit", 1000))
+    try:
+        _prov, _sym, candles = resolve_and_fetch(symbol, timeframe, limit)
+    except (ValueError, ProviderNotWiredError) as exc:
+        raise CommandError(str(exc)) from exc
+    atr_states = REGISTRY.compute("atr", candles)
+    report = calibrate_anomaly_thresholds(
+        candles, atr_states, symbol=symbol, timeframe=timeframe
+    )
+    return calibration_report_dict(report)
+
+
 def cmd_list_rulesets(_args: dict) -> dict:
     return {"rulesets": [r.to_dict() for r in list_builtin_rulesets()]}
 
