@@ -3,9 +3,15 @@
 Rising-edge only: a signal fires when all conditions become true on bar i
 after being false (or incomplete) on bar i-1. This avoids counting the same
 setup on every bar of a multi-bar regime as separate hypotheses.
+
+T4c — ``explain_group`` traces each leaf (pass/fail) for WHY ENTERED/EXITED
+without changing match semantics.
 """
 
 from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+from typing import Any
 
 from app.agents.types import Direction
 from app.strategy_lab.conditions import CONDITION_REGISTRY
@@ -23,6 +29,55 @@ def _condition_holds(
     if spec is None:
         return False
     return spec.holds(bar, expected, direction)
+
+
+@dataclass(frozen=True)
+class ConditionLeafTrace:
+    """One ruleset leaf evaluated on a bar — explainability only."""
+
+    key: str
+    clause: str  # "all" | "any"
+    expected: Any
+    passed: bool
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def explain_group(
+    bar: FeatureBar,
+    group: ConditionGroup,
+    direction: Direction,
+) -> tuple[ConditionLeafTrace, ...]:
+    """Per-leaf pass/fail for ``all_of`` then ``any_of``. Does not change match logic."""
+    traces: list[ConditionLeafTrace] = []
+    for key, value in group.all_of.items():
+        traces.append(
+            ConditionLeafTrace(
+                key=key,
+                clause="all",
+                expected=value,
+                passed=_condition_holds(bar, key, value, direction),
+            )
+        )
+    for key, value in group.any_of.items():
+        traces.append(
+            ConditionLeafTrace(
+                key=key,
+                clause="any",
+                expected=value,
+                passed=_condition_holds(bar, key, value, direction),
+            )
+        )
+    return tuple(traces)
+
+
+def explain_group_dicts(
+    bar: FeatureBar,
+    group: ConditionGroup,
+    direction: Direction,
+) -> tuple[dict[str, Any], ...]:
+    return tuple(t.to_dict() for t in explain_group(bar, group, direction))
 
 
 def bar_matches_group(

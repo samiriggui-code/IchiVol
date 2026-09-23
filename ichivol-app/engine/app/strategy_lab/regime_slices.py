@@ -125,7 +125,7 @@ def _study_from_signals(
         n_bars=len(features.candles),
     )
 
-    details, posn, bar_returns, skipped = simulate_ruleset_trades(
+    details, posn, bar_returns, skipped, _rejected = simulate_ruleset_trades(
         features.candles,
         features.atr,
         signals,

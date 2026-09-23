@@ -41,7 +41,7 @@ def test_long_hits_target_before_stop():
         _c(2, 102, 121, 100, 118),
         _c(3, 118, 119, 117, 118),
     ]
-    details, _posn, _rets, skipped = simulate_ruleset_trades(
+    details, _posn, _rets, skipped, _rej = simulate_ruleset_trades(
         candles,
         _atr(4, 10.0),
         [(0, Direction.LONG)],
@@ -63,7 +63,7 @@ def test_long_stop_wins_when_both_touched():
         _c(0, 100, 100, 100, 100),
         _c(1, 100, 120, 90, 100),
     ]
-    details, _, _, _ = simulate_ruleset_trades(
+    details, _, _, _, _ = simulate_ruleset_trades(
         candles,
         _atr(2, 10.0),
         [(0, Direction.LONG)],
@@ -84,7 +84,7 @@ def test_skips_signal_while_in_position():
         _c(3, 100, 101, 99, 100),
         _c(4, 100, 130, 99, 120),
     ]
-    details, _, _, skipped = simulate_ruleset_trades(
+    details, _, _, skipped, _rej = simulate_ruleset_trades(
         candles,
         _atr(5, 10.0),
         [(0, Direction.LONG), (1, Direction.LONG), (2, Direction.LONG)],
@@ -102,7 +102,7 @@ def test_short_hits_target():
         _c(0, 100, 100, 100, 100),
         _c(1, 100, 105, 80, 85),
     ]
-    details, _, _, _ = simulate_ruleset_trades(
+    details, _, _, _, _ = simulate_ruleset_trades(
         candles,
         _atr(2, 10.0),
         [(0, Direction.SHORT)],
@@ -194,7 +194,7 @@ def test_max_hold_from_ruleset_exit():
         }
     )
     # Wide ATR levels so max_hold wins; use simulate with hold from resolve path
-    details, _, _, _ = simulate_ruleset_trades(
+    details, _, _, _, _ = simulate_ruleset_trades(
         candles,
         _atr(6, 1.0),
         [(0, Direction.LONG)],
@@ -268,7 +268,7 @@ def test_signal_exit_at_close_when_condition_hits():
             "exit": {"conditions": {"tk_cross_bearish": True}},
         }
     )
-    details, _, _, _ = simulate_ruleset_trades(
+    details, _, _, _, _ = simulate_ruleset_trades(
         candles,
         _atr(4, 1.0),
         [(0, Direction.LONG)],
@@ -342,7 +342,7 @@ def test_stop_beats_signal_same_bar():
             "exit": {"conditions": {"tk_cross_bearish": True}},
         }
     )
-    details, _, _, _ = simulate_ruleset_trades(
+    details, _, _, _, _ = simulate_ruleset_trades(
         candles,
         _atr(2, 10.0),
         [(0, Direction.LONG)],

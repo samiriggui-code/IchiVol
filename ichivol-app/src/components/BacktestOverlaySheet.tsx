@@ -4,6 +4,8 @@ import type {
   BacktestOutcomeFilter,
   BacktestOverlayCounts,
   BacktestOverlayTrade,
+  BacktestRejectedSignal,
+  ConditionLeafTrace,
 } from '../lib/backtestOverlay'
 
 function fmtPct(n: number): string {
@@ -14,8 +16,35 @@ function fmtPx(n: number): string {
   return n.toLocaleString(undefined, { maximumFractionDigits: 6 })
 }
 
+function WhyList({ title, leaves }: { title: string; leaves?: ConditionLeafTrace[] }) {
+  if (!leaves || leaves.length === 0) {
+    return (
+      <div className="bt-why-block">
+        <h3>{title}</h3>
+        <p className="muted">—</p>
+      </div>
+    )
+  }
+  return (
+    <div className="bt-why-block">
+      <h3>{title}</h3>
+      <ul className="bt-why-list">
+        {leaves.map((leaf, i) => (
+          <li key={`${leaf.key}-${leaf.clause}-${i}`} className={leaf.passed ? 'ok' : 'fail'}>
+            <span className="bt-why-clause">{leaf.clause}</span>
+            <span className="mono">
+              {leaf.key}={String(leaf.expected)}
+            </span>
+            <span aria-label={leaf.passed ? 'ok' : 'fail'}>{leaf.passed ? '✓' : '✗'}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 /**
- * T4a sheet — pick a catalog ruleset, Afficher / Effacer, filter win/loss, tap trade detail.
+ * T4a/T4c sheet — ruleset overlay + WHY ENTERED / EXITED / REJECTED.
  */
 export function BacktestOverlaySheet({
   symbolLabel,
@@ -23,6 +52,7 @@ export function BacktestOverlaySheet({
   outcome,
   counts,
   trades,
+  rejected = [],
   loading,
   error,
   active,
@@ -37,6 +67,7 @@ export function BacktestOverlaySheet({
   outcome: BacktestOutcomeFilter
   counts: BacktestOverlayCounts | null
   trades: BacktestOverlayTrade[]
+  rejected?: BacktestRejectedSignal[]
   loading?: boolean
   error?: string | null
   active: boolean
@@ -49,6 +80,7 @@ export function BacktestOverlaySheet({
   const [rulesets, setRulesets] = useState<RulesetSummary[]>([])
   const [listErr, setListErr] = useState<string | null>(null)
   const [detail, setDetail] = useState<BacktestOverlayTrade | null>(null)
+  const [rejDetail, setRejDetail] = useState<BacktestRejectedSignal | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -67,13 +99,15 @@ export function BacktestOverlaySheet({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (detail) setDetail(null)
-        else onClose()
+        if (detail || rejDetail) {
+          setDetail(null)
+          setRejDetail(null)
+        } else onClose()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose, detail])
+  }, [onClose, detail, rejDetail])
 
   return (
     <div className="mark-trade-backdrop" role="presentation">
@@ -158,7 +192,13 @@ export function BacktestOverlaySheet({
             <ul className="backtest-trade-list" aria-label="Trades">
               {trades.map((t) => (
                 <li key={t.trade_id}>
-                  <button type="button" onClick={() => setDetail(t)}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRejDetail(null)
+                      setDetail(t)
+                    }}
+                  >
                     <span className={`bt-out bt-out--${t.outcome}`}>{t.outcome}</span>
                     <span>
                       #{t.trade_id} · {t.direction} · {t.exit_reason}
@@ -175,9 +215,35 @@ export function BacktestOverlaySheet({
             <p className="muted mark-trade-hint">Aucun trade pour ce filtre.</p>
           ) : (
             <p className="muted mark-trade-hint">
-              Affiche les trades sur le chart (ENTRY / STOP / TARGET + sortie).
+              Affiche les trades sur le chart (ENTRY / STOP / TARGET + sortie) et le WHY.
             </p>
           )}
+
+          {active && rejected.length > 0 ? (
+            <>
+              <p className="muted mark-trade-hint">
+                Rejetés (déjà en position) : {rejected.length}
+              </p>
+              <ul className="backtest-trade-list" aria-label="Signaux rejetés">
+                {rejected.map((r) => (
+                  <li key={r.rejected_id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDetail(null)
+                        setRejDetail(r)
+                      }}
+                    >
+                      <span className="bt-out bt-out--flat">rej</span>
+                      <span>
+                        sig#{r.signal_index} · {r.direction} · {r.reason}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
 
           {detail ? (
             <div className="backtest-trade-detail" role="region" aria-label="Détail trade">
@@ -219,6 +285,48 @@ export function BacktestOverlaySheet({
                   <dd className="mono muted">{fmtPct(detail.return_pct_gross)}</dd>
                 </div>
               </dl>
+              <WhyList title="WHY ENTERED" leaves={detail.why_entered} />
+              <WhyList
+                title={`WHY EXITED (${detail.exit_reason})`}
+                leaves={
+                  detail.exit_reason === 'signal'
+                    ? detail.why_exited
+                    : detail.why_exited && detail.why_exited.length > 0
+                      ? detail.why_exited
+                      : undefined
+                }
+              />
+              {detail.exit_reason !== 'signal' ? (
+                <p className="muted mark-trade-hint">
+                  Sortie {detail.exit_reason} — pas de conditions DSL (stop/target/eod/max_hold).
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {rejDetail ? (
+            <div className="backtest-trade-detail" role="region" aria-label="Détail rejeté">
+              <header>
+                <strong>Rejeté #{rejDetail.rejected_id}</strong>
+                <button type="button" className="ghost" onClick={() => setRejDetail(null)}>
+                  ×
+                </button>
+              </header>
+              <dl>
+                <div>
+                  <dt>Raison</dt>
+                  <dd>{rejDetail.reason}</dd>
+                </div>
+                <div>
+                  <dt>Sens</dt>
+                  <dd>{rejDetail.direction}</dd>
+                </div>
+                <div>
+                  <dt>Signal bar</dt>
+                  <dd className="mono">{rejDetail.signal_index}</dd>
+                </div>
+              </dl>
+              <WhyList title="WHY aurait entré" leaves={rejDetail.why_entered} />
             </div>
           ) : null}
         </div>

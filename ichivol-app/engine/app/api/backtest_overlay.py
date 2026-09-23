@@ -110,8 +110,25 @@ def post_backtest_overlay(
                 "return_pct_net": ret_net,
                 "r_multiple_gross": trade_r_multiple_gross(detail),
                 "outcome": outcome,
+                "signal_index": detail.signal_index,
+                "why_entered": list(detail.why_entered),
+                "why_exited": list(detail.why_exited),
             }
         )
+
+    rejected_full = [
+        {
+            "rejected_id": i,
+            "signal_index": r.signal_index,
+            "signal_time": int(candles[r.signal_index].time)
+            if 0 <= r.signal_index < len(candles)
+            else None,
+            "direction": r.direction.value,
+            "reason": r.reason,
+            "why_entered": list(r.why_entered),
+        }
+        for i, r in enumerate(result.rejected)
+    ]
 
     counts = {
         "total": len(trades_full),
@@ -133,7 +150,8 @@ def post_backtest_overlay(
         objects = [
             o
             for o in objects
-            if int(o.origin.get("trade_id", -1)) in allowed_ids
+            if o.origin.get("kind") == "rejected"
+            or int(o.origin.get("trade_id", -1)) in allowed_ids
         ]
 
     return {
@@ -143,6 +161,7 @@ def post_backtest_overlay(
         "outcome_filter": filt,
         "objects": [o.to_dict() for o in objects],
         "trades": trades,
+        "rejected": rejected_full,
         "metrics": _metrics_dict(result.metrics),
         "counts": counts,
         "n_signals": result.n_signals,

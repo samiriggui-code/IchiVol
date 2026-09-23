@@ -1,9 +1,16 @@
-/** T4a — POST /strategy-lab/backtest-overlay client. */
+/** T4a/T4c — POST /strategy-lab/backtest-overlay client. */
 
 import type { ChartObject } from './chartObjects'
 import type { BacktestMetrics } from './backtest'
 
 export type BacktestOutcomeFilter = 'all' | 'win' | 'loss'
+
+export interface ConditionLeafTrace {
+  key: string
+  clause: 'all' | 'any' | string
+  expected: unknown
+  passed: boolean
+}
 
 export interface BacktestOverlayTrade {
   trade_id: number
@@ -17,6 +24,18 @@ export interface BacktestOverlayTrade {
   return_pct_net: number
   r_multiple_gross: number
   outcome: 'win' | 'loss' | 'flat'
+  signal_index?: number
+  why_entered?: ConditionLeafTrace[]
+  why_exited?: ConditionLeafTrace[]
+}
+
+export interface BacktestRejectedSignal {
+  rejected_id: number
+  signal_index: number
+  signal_time: number | null
+  direction: string
+  reason: string
+  why_entered: ConditionLeafTrace[]
 }
 
 export interface BacktestOverlayCounts {
@@ -33,6 +52,7 @@ export interface BacktestOverlayResult {
   outcome_filter: BacktestOutcomeFilter
   objects: ChartObject[]
   trades: BacktestOverlayTrade[]
+  rejected: BacktestRejectedSignal[]
   metrics: BacktestMetrics
   counts: BacktestOverlayCounts
   n_signals: number

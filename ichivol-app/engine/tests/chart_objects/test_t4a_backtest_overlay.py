@@ -43,9 +43,12 @@ def test_overlay_trades_match_backtest_parity(seed: int, ruleset_id: str):
     )
     objects = backtest_to_chart_objects(result, candles)
 
-    assert len(objects) == 4 * len(result.details)
+    trade_objects = [o for o in objects if o.origin.get("kind") != "rejected"]
+    rejected_objects = [o for o in objects if o.origin.get("kind") == "rejected"]
+    assert len(trade_objects) == 4 * len(result.details)
+    assert len(rejected_objects) == len(result.rejected)
     for trade_id, detail in enumerate(result.details):
-        trade_objs = [o for o in objects if o.origin.get("trade_id") == trade_id]
+        trade_objs = [o for o in trade_objects if o.origin.get("trade_id") == trade_id]
         assert len(trade_objs) == 4
         by_type = {o.type: o for o in trade_objs}
         assert set(by_type) == {
@@ -71,6 +74,8 @@ def test_overlay_trades_match_backtest_parity(seed: int, ruleset_id: str):
         assert by_type[ChartObjectType.ENTRY].origin["exit_index"] == detail.exit_index
         assert by_type[ChartObjectType.ENTRY].origin["exit_reason"] == detail.exit_reason
         assert by_type[ChartObjectType.ENTRY].origin["signal_index"] == detail.signal_index
+        assert "why_entered" in by_type[ChartObjectType.ENTRY].origin
+        assert "why_exited" in by_type[ChartObjectType.ENTRY].origin
         # Net outcome (not gross)
         origin = by_type[ChartObjectType.ENTRY].origin
         assert "return_pct_net" in origin and "return_pct_gross" in origin
