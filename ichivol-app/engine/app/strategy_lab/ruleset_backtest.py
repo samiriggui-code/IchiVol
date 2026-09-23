@@ -28,6 +28,7 @@ from app.strategy_lab.evaluator import (
 )
 from app.strategy_lab.features import FeatureBar, FeatureSeries, build_feature_series
 from app.strategy_lab.ruleset import ConditionGroup, Ruleset, parse_ruleset
+from app.strategy_lab.stop_trail import TrailSpec, update_trailing_stop
 
 _SIGN = {Direction.LONG: 1.0, Direction.SHORT: -1.0, Direction.NEUTRAL: 0.0}
 
@@ -175,6 +176,7 @@ def simulate_ruleset_trades(
     exit_group: ConditionGroup | None = None,
     feature_bars: Sequence[FeatureBar] | None = None,
     entry_group: ConditionGroup | None = None,
+    trail: TrailSpec | None = None,
 ) -> tuple[
     list[RulesetTradeDetail],
     list[Direction],
@@ -225,7 +227,10 @@ def simulate_ruleset_trades(
         entry_price = candles[entry_index].open
         if entry_price <= 0:
             continue
-        stop, target = _levels(direction, entry_price, atr_val, stop_atr, target_atr)
+        initial_stop, target = _levels(
+            direction, entry_price, atr_val, stop_atr, target_atr
+        )
+        stop = initial_stop
 
         hold_end = n - 1
         if max_hold_bars is not None and max_hold_bars > 0:
@@ -260,6 +265,22 @@ def simulate_ruleset_trades(
                 for k in range(j + 1, hold_end + 1):
                     posn[k] = Direction.NEUTRAL
                 break
+
+            # Trail update after exit checks — new stop applies from next bar.
+            bar_atr = atr_states[j].atr if j < len(atr_states) else None
+            stop = update_trailing_stop(
+                direction,
+                stop,
+                entry=entry_price,
+                initial_stop=initial_stop,
+                high=candles[j].high,
+                low=candles[j].low,
+                close=candles[j].close,
+                atr=bar_atr if bar_atr is not None else atr_val,
+                trail=trail,
+                commission_bps=commission_bps,
+                slippage_bps=slippage_bps,
+            )
 
         _apply_hold_returns(
             bar_returns,
@@ -336,6 +357,7 @@ def run_ruleset_backtest_on_features(
         # Always pass bars so T4c WHY traces are available (match logic unchanged).
         feature_bars=features.bars,
         entry_group=ruleset.condition_group,
+        trail=ruleset.exit.trail,
     )
     backtest = BacktestResult(
         symbol=symbol,
