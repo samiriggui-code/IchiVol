@@ -35,9 +35,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — EVENT INTELLIGENCE PHASE 5 — Anomaly Detector (observation-only)
 
 - Branche : `cursor/event-anomaly-detector-a2fe`
-- PR : (draft)
-- Statut : **EN COURS / ATTENTE CI** — Cursor solo (Claude absente jusqu’à 18:10).
-
+- PR : https://github.com/samiriggui-code/IchiVol/pull/27 (**draft**)
+- Statut : **ATTENTE CI** — Cursor solo (Claude absente jusqu’à 18:10).
 ### Livré
 
 1. `app/events/` — `detect_anomaly` causal (past-only z-scores, range/gap vs ATR, RVOL)
