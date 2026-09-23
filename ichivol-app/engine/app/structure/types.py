@@ -44,6 +44,9 @@ class TrendlineSegment:
     score: float
     source: DetectorSource
     pivot_bars: tuple[int, ...] = ()
+    """Bars that touch the line (tolerance), not necessarily the fit anchors."""
+    fit_pivot_bars: tuple[int, ...] = ()
+    """The two (or more) pivot bar indices used to define slope/intercept."""
 
     def price_at(self, bar_index: int) -> float:
         return self.slope * bar_index + self.intercept

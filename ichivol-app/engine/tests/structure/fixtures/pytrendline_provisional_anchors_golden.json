@@ -1,0 +1,552 @@
+{
+  "seed_42": {
+    "meta_bars": 150,
+    "n_pivots": 32,
+    "n_provisional_pivots": 4,
+    "resistance_trendlines": [
+      {
+        "end_bar": 149,
+        "intercept": 161.73464781118332,
+        "pivot_bars": [
+          130,
+          135,
+          138,
+          139,
+          140,
+          143,
+          147,
+          149
+        ],
+        "score": 30127.423152955158,
+        "side": "resistance",
+        "slope": -0.08931594220602865,
+        "start_bar": 130,
+        "touch_count": 8
+      },
+      {
+        "end_bar": 136,
+        "intercept": 125.07334115283905,
+        "pivot_bars": [
+          104,
+          126,
+          129,
+          131,
+          132,
+          136
+        ],
+        "score": 9707.925843752035,
+        "side": "resistance",
+        "slope": 0.1852837179975273,
+        "start_bar": 104,
+        "touch_count": 6
+      },
+      {
+        "end_bar": 66,
+        "intercept": 120.6845783811979,
+        "pivot_bars": [
+          49,
+          57,
+          61,
+          63,
+          65,
+          66
+        ],
+        "score": 5943.094505337129,
+        "side": "resistance",
+        "slope": 0.33120014642822787,
+        "start_bar": 49,
+        "touch_count": 6
+      },
+      {
+        "end_bar": 136,
+        "intercept": 115.62712728125845,
+        "pivot_bars": [
+          119,
+          124,
+          127,
+          128,
+          136
+        ],
+        "score": 4890.470734958467,
+        "side": "resistance",
+        "slope": 0.25474117293562,
+        "start_bar": 119,
+        "touch_count": 5
+      },
+      {
+        "end_bar": 136,
+        "intercept": 127.12459819118766,
+        "pivot_bars": [
+          100,
+          129,
+          131,
+          132,
+          136
+        ],
+        "score": 3392.26552165666,
+        "side": "resistance",
+        "slope": 0.1702009456567287,
+        "start_bar": 100,
+        "touch_count": 5
+      }
+    ],
+    "resistance_zones": [
+      {
+        "high": 149.1159538615427,
+        "low": 147.73719098342744,
+        "mid": 148.42657242248507,
+        "score": 30127.423152955158,
+        "side": "resistance",
+        "touch_count": 8
+      },
+      {
+        "high": 153.36999657352825,
+        "low": 151.991233695413,
+        "mid": 152.68061513447063,
+        "score": 9707.925843752035,
+        "side": "resistance",
+        "touch_count": 6
+      },
+      {
+        "high": 170.72278163806146,
+        "low": 169.3440187599462,
+        "mid": 170.03340019900384,
+        "score": 5943.094505337129,
+        "side": "resistance",
+        "touch_count": 6
+      },
+      {
+        "high": 154.27294348772347,
+        "low": 152.8941806096082,
+        "mid": 153.58356204866584,
+        "score": 4890.470734958467,
+        "side": "resistance",
+        "touch_count": 5
+      },
+      {
+        "high": 153.17392053309786,
+        "low": 151.7951576549826,
+        "mid": 152.48453909404023,
+        "score": 3392.26552165666,
+        "side": "resistance",
+        "touch_count": 5
+      }
+    ],
+    "structure_score": 10.0,
+    "support_trendlines": [
+      {
+        "end_bar": 110,
+        "intercept": 126.11753126504921,
+        "pivot_bars": [
+          43,
+          44,
+          110
+        ],
+        "score": 23378.724201228284,
+        "side": "support",
+        "slope": 0.12317569457513218,
+        "start_bar": 43,
+        "touch_count": 3
+      },
+      {
+        "end_bar": 149,
+        "intercept": 125.76466835531218,
+        "pivot_bars": [
+          43,
+          44,
+          149
+        ],
+        "score": 21689.05379184725,
+        "side": "support",
+        "slope": 0.13138180875506308,
+        "start_bar": 43,
+        "touch_count": 3
+      },
+      {
+        "end_bar": 149,
+        "intercept": 128.9846787868185,
+        "pivot_bars": [
+          75,
+          78,
+          80,
+          108,
+          111,
+          112,
+          149
+        ],
+        "score": 12511.722820550143,
+        "side": "support",
+        "slope": 0.10977100048991993,
+        "start_bar": 75,
+        "touch_count": 7
+      },
+      {
+        "end_bar": 10,
+        "intercept": 125.01544186862617,
+        "pivot_bars": [
+          0,
+          1,
+          3,
+          4,
+          9,
+          10
+        ],
+        "score": 7554.886245840362,
+        "side": "support",
+        "slope": -0.0514230913754119,
+        "start_bar": 0,
+        "touch_count": 6
+      },
+      {
+        "end_bar": 44,
+        "intercept": 127.15301753639358,
+        "pivot_bars": [
+          23,
+          32,
+          38,
+          43,
+          44
+        ],
+        "score": 6302.568566330924,
+        "side": "support",
+        "slope": 0.09982916168865283,
+        "start_bar": 23,
+        "touch_count": 5
+      }
+    ],
+    "support_zones": [
+      {
+        "high": 145.16009119580153,
+        "low": 143.78132831768627,
+        "mid": 144.4707097567439,
+        "score": 23378.724201228284,
+        "side": "support",
+        "touch_count": 3
+      },
+      {
+        "high": 146.0299392988742,
+        "low": 144.65117642075896,
+        "mid": 145.34055785981658,
+        "score": 21689.05379184725,
+        "side": "support",
+        "touch_count": 3
+      },
+      {
+        "high": 146.0299392988742,
+        "low": 144.65117642075896,
+        "mid": 145.34055785981658,
+        "score": 12511.722820550143,
+        "side": "support",
+        "touch_count": 7
+      },
+      {
+        "high": 118.04278269274742,
+        "low": 116.66401981463217,
+        "mid": 117.3534012536898,
+        "score": 7554.886245840362,
+        "side": "support",
+        "touch_count": 6
+      },
+      {
+        "high": 142.71694406706047,
+        "low": 141.3381811889452,
+        "mid": 142.02756262800284,
+        "score": 6302.568566330924,
+        "side": "support",
+        "touch_count": 5
+      }
+    ]
+  },
+  "seed_7": {
+    "meta_bars": 150,
+    "n_pivots": 31,
+    "n_provisional_pivots": 4,
+    "resistance_trendlines": [
+      {
+        "end_bar": 111,
+        "intercept": 94.8396121919584,
+        "pivot_bars": [
+          0,
+          4,
+          28,
+          30,
+          31,
+          103,
+          108,
+          111
+        ],
+        "score": 77128.77757883524,
+        "side": "resistance",
+        "slope": 0.13412926457647784,
+        "start_bar": 0,
+        "touch_count": 8
+      },
+      {
+        "end_bar": 115,
+        "intercept": 94.8396121919584,
+        "pivot_bars": [
+          0,
+          4,
+          28,
+          30,
+          31,
+          87,
+          105,
+          106,
+          115
+        ],
+        "score": 50787.576580537934,
+        "side": "resistance",
+        "slope": 0.13703156110253015,
+        "start_bar": 0,
+        "touch_count": 9
+      },
+      {
+        "end_bar": 115,
+        "intercept": 94.8396121919584,
+        "pivot_bars": [
+          0,
+          4,
+          28,
+          30,
+          31,
+          87,
+          105,
+          106,
+          115
+        ],
+        "score": 48808.76980851526,
+        "side": "resistance",
+        "slope": 0.13772489919635428,
+        "start_bar": 0,
+        "touch_count": 9
+      },
+      {
+        "end_bar": 115,
+        "intercept": 94.92271418331563,
+        "pivot_bars": [
+          4,
+          28,
+          30,
+          31,
+          87,
+          105,
+          106,
+          115
+        ],
+        "score": 47313.46890768491,
+        "side": "resistance",
+        "slope": 0.1362475800519902,
+        "start_bar": 4,
+        "touch_count": 8
+      },
+      {
+        "end_bar": 115,
+        "intercept": 94.92052503757094,
+        "pivot_bars": [
+          4,
+          28,
+          30,
+          31,
+          87,
+          105,
+          106,
+          115
+        ],
+        "score": 44266.21784601667,
+        "side": "resistance",
+        "slope": 0.13679486648816416,
+        "start_bar": 4,
+        "touch_count": 8
+      }
+    ],
+    "resistance_zones": [
+      {
+        "high": 115.57750241149601,
+        "low": 114.07224281621116,
+        "mid": 114.82487261385359,
+        "score": 77128.77757883524,
+        "side": "resistance",
+        "touch_count": 8
+      },
+      {
+        "high": 116.00994459387782,
+        "low": 114.50468499859296,
+        "mid": 115.25731479623539,
+        "score": 50787.576580537934,
+        "side": "resistance",
+        "touch_count": 9
+      },
+      {
+        "high": 116.11325196985761,
+        "low": 114.60799237457276,
+        "mid": 115.36062217221519,
+        "score": 48808.76980851526,
+        "side": "resistance",
+        "touch_count": 9
+      },
+      {
+        "high": 115.9762334087046,
+        "low": 114.47097381341975,
+        "mid": 115.22360361106217,
+        "score": 47313.46890768491,
+        "side": "resistance",
+        "touch_count": 8
+      },
+      {
+        "high": 116.05558994194983,
+        "low": 114.55033034666498,
+        "mid": 115.3029601443074,
+        "score": 44266.21784601667,
+        "side": "resistance",
+        "touch_count": 8
+      }
+    ],
+    "structure_score": 10.0,
+    "support_trendlines": [
+      {
+        "end_bar": 57,
+        "intercept": 90.80008479682246,
+        "pivot_bars": [
+          9,
+          10,
+          12,
+          40,
+          41,
+          44,
+          46,
+          56,
+          57
+        ],
+        "score": 36865.53755119533,
+        "side": "support",
+        "slope": 0.08936484541006084,
+        "start_bar": 9,
+        "touch_count": 9
+      },
+      {
+        "end_bar": 138,
+        "intercept": 91.03209788563301,
+        "pivot_bars": [
+          62,
+          65,
+          72,
+          75,
+          76,
+          133,
+          134,
+          136,
+          138
+        ],
+        "score": 29304.428611563413,
+        "side": "support",
+        "slope": 0.09770610279201618,
+        "start_bar": 62,
+        "touch_count": 9
+      },
+      {
+        "end_bar": 137,
+        "intercept": 90.74516469071553,
+        "pivot_bars": [
+          9,
+          10,
+          12,
+          22,
+          40,
+          41,
+          44,
+          46,
+          49,
+          56,
+          65,
+          132,
+          135,
+          137
+        ],
+        "score": 24005.374786343316,
+        "side": "support",
+        "slope": 0.09546707942194324,
+        "start_bar": 9,
+        "touch_count": 14
+      },
+      {
+        "end_bar": 137,
+        "intercept": 92.23598854580638,
+        "pivot_bars": [
+          72,
+          73,
+          75,
+          76,
+          132,
+          135,
+          137
+        ],
+        "score": 17123.69994790387,
+        "side": "support",
+        "slope": 0.08417295930761858,
+        "start_bar": 72,
+        "touch_count": 7
+      },
+      {
+        "end_bar": 137,
+        "intercept": 91.54801253342674,
+        "pivot_bars": [
+          62,
+          65,
+          75,
+          76,
+          132,
+          135,
+          137
+        ],
+        "score": 17087.660722757057,
+        "side": "support",
+        "slope": 0.0893848987953431,
+        "start_bar": 62,
+        "touch_count": 7
+      }
+    ],
+    "support_zones": [
+      {
+        "high": 104.86807656056395,
+        "low": 103.3628169652791,
+        "mid": 104.11544676292152,
+        "score": 36865.53755119533,
+        "side": "support",
+        "touch_count": 9
+      },
+      {
+        "high": 106.34293699928584,
+        "low": 104.83767740400098,
+        "mid": 105.59030720164341,
+        "score": 29304.428611563413,
+        "side": "support",
+        "touch_count": 9
+      },
+      {
+        "high": 105.7223893222275,
+        "low": 104.21712972694264,
+        "mid": 104.96975952458507,
+        "score": 24005.374786343316,
+        "side": "support",
+        "touch_count": 14
+      },
+      {
+        "high": 105.53038928028397,
+        "low": 104.02512968499911,
+        "mid": 104.77775948264154,
+        "score": 17123.69994790387,
+        "side": "support",
+        "touch_count": 7
+      },
+      {
+        "high": 105.61899225157529,
+        "low": 104.11373265629044,
+        "mid": 104.86636245393287,
+        "score": 17087.660722757057,
+        "side": "support",
+        "touch_count": 7
+      }
+    ]
+  }
+}

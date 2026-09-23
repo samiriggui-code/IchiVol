@@ -128,17 +128,23 @@ def _detect_side(
     atr: float | None,
     params: StructureEngineParams,
 ) -> tuple[list[TrendlineSegment], list[dict]]:
-    if len(pivots) < 2:
+    # T1f-2: provisional first/last anchors stay in MarketStructure.pivots for
+    # marking, but do not fit lines unless allow_provisional_anchors=True.
+    if params.allow_provisional_anchors:
+        fit_pivots = list(pivots)
+    else:
+        fit_pivots = [p for p in pivots if not p.provisional]
+    if len(fit_pivots) < 2:
         return [], []
-    tol = touch_tolerance(atr, params.max_pt_error_atr_mult, pivots[0].price)
-    breakout_tol = touch_tolerance(atr, params.breakout_atr_mult, pivots[0].price)
+    tol = touch_tolerance(atr, params.max_pt_error_atr_mult, fit_pivots[0].price)
+    breakout_tol = touch_tolerance(atr, params.breakout_atr_mult, fit_pivots[0].price)
     n = len(candles)
     lines: list[TrendlineSegment] = []
     breakouts: list[dict] = []
 
-    for a in range(len(pivots)):
-        for b in range(a + 1, len(pivots)):
-            p0, p1 = pivots[a], pivots[b]
+    for a in range(len(fit_pivots)):
+        for b in range(a + 1, len(fit_pivots)):
+            p0, p1 = fit_pivots[a], fit_pivots[b]
             if p1.bar_index <= p0.bar_index:
                 continue
             slope = (p1.price - p0.price) / (p1.bar_index - p0.bar_index)
@@ -191,6 +197,7 @@ def _detect_side(
                     score=score,
                     source=DetectorSource.PYTRENDLINE,
                     pivot_bars=tuple(point_idxs),
+                    fit_pivot_bars=(p0.bar_index, p1.bar_index),
                 )
             )
 
@@ -261,6 +268,7 @@ class PyTrendlineStructureAdapter:
                 "bars": len(series),
                 "atr": atr_val,
                 "offline_only": params.pytrendline_offline_only,
+                "allow_provisional_anchors": params.allow_provisional_anchors,
                 "breakouts": (sup_bo + res_bo)[:20],
                 "implementation": "clean_room_offline_capped",
             },

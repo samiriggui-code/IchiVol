@@ -34,6 +34,12 @@ class StructureEngineParams:
     pytrendline_offline_only: bool = True
     breakout_atr_mult: float = 0.15
     max_pt_error_atr_mult: float = 0.12
+    allow_provisional_anchors: bool = False
+    """If True, first/last window anchors may fit trendlines (legacy repaint).
+
+    Default False (T1f-2): only confirmed fractals fit lines. Never enable in
+    live paper profiles — tests / A-B comparison only.
+    """
 
     # Consensus
     consensus_atr_mult: float = 0.5

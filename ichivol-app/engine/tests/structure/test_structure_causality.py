@@ -1,8 +1,10 @@
-"""T1f — pivot confirmation causality / stability tests (measure & mark only)."""
+"""T1f / T1f-2 — pivot confirmation causality and pytrendline no-repaint."""
 
 from __future__ import annotations
 
+import json
 import random
+from pathlib import Path
 
 import pytest
 
@@ -14,12 +16,13 @@ from app.structure.adapters import (
 )
 from app.structure.consensus import build_consensus
 from app.structure.params import StructureEngineParams
-from app.structure.types import LevelSide, MarketStructure, PivotPoint
+from app.structure.types import LevelSide, MarketStructure, PivotPoint, TrendlineSegment
 
 
 SEEDS = (7, 42)
 CHECK_TS = (80, 120, 160, 200, 250)
 STABILITY_KS = (1, 5, 20)
+_GOLDEN = Path(__file__).resolve().parent / "fixtures" / "pytrendline_provisional_anchors_golden.json"
 
 
 def _make_candles(n: int, seed: int) -> list[Candle]:
@@ -40,13 +43,16 @@ def _make_candles(n: int, seed: int) -> list[Candle]:
     return out
 
 
-def _params() -> StructureEngineParams:
-    return StructureEngineParams(
+def _params(**overrides) -> StructureEngineParams:
+    base = dict(
         window_bars=300,
         pytrendline_max_bars=150,
         pytrendline_offline_only=False,
         min_detectors_agree=1,
+        allow_provisional_anchors=False,
     )
+    base.update(overrides)
+    return StructureEngineParams(**base)
 
 
 def _snapshot_mvpp(candles: list[Candle], params: StructureEngineParams) -> MarketStructure:
@@ -63,7 +69,6 @@ def _snapshot_pytrendline(candles: list[Candle], params: StructureEngineParams) 
 
 def _snapshot_consensus(candles: list[Candle], params: StructureEngineParams) -> MarketStructure:
     # Default production consensus (detect_market_structure): mvpp + trendln.
-    # Both share window_bars=300 so bar_index stays aligned without pytrendline's 150-bar slide.
     parts = [
         _snapshot_mvpp(candles, params),
         _snapshot_trendln(candles, params),
@@ -74,7 +79,6 @@ def _snapshot_consensus(candles: list[Candle], params: StructureEngineParams) ->
 ADAPTERS = {
     "mvpp": (_snapshot_mvpp, 300),
     "trendln": (_snapshot_trendln, 300),
-    # pytrendline windows via pytrendline_max_bars (150); common-window remap below.
     "pytrendline": (_snapshot_pytrendline, 150),
     "consensus": (_snapshot_consensus, 300),
 }
@@ -86,6 +90,33 @@ def _window_offset(n_input: int, max_bars: int) -> int:
 
 def _abs_key(p: PivotPoint, offset: int) -> tuple[int, float, LevelSide]:
     return (p.bar_index + offset, p.price, p.side)
+
+
+def _lines(ms: MarketStructure) -> list[TrendlineSegment]:
+    return list(ms.support_trendlines) + list(ms.resistance_trendlines)
+
+
+def _line_fit_from_confirmed(line: TrendlineSegment, pivots: tuple[PivotPoint, ...]) -> bool:
+    """True iff some pair of non-provisional same-side pivots reproduces the line."""
+    confirmed = [p for p in pivots if not p.provisional and p.side == line.side]
+    for i, p0 in enumerate(confirmed):
+        for p1 in confirmed[i + 1 :]:
+            if p1.bar_index == p0.bar_index:
+                continue
+            slope = (p1.price - p0.price) / (p1.bar_index - p0.bar_index)
+            intercept = p0.price - slope * p0.bar_index
+            if abs(slope - line.slope) < 1e-12 and abs(intercept - line.intercept) < 1e-9:
+                return True
+    return False
+
+
+def _abs_line_id(line: TrendlineSegment, offset: int) -> tuple:
+    """Identity for stability: side + slope + absolute touch bars."""
+    return (
+        line.side.value,
+        round(line.slope, 12),
+        tuple(sorted(b + offset for b in line.pivot_bars)),
+    )
 
 
 @pytest.mark.parametrize("adapter_name", list(ADAPTERS))
@@ -118,12 +149,11 @@ def test_non_provisional_pivots_are_stable(adapter_name: str, seed: int):
     candles = _make_candles(300, seed)
     params = _params()
     snap_fn, max_bars = ADAPTERS[adapter_name]
-    # Fractal / extrema left-context required inside the windowed series.
     left_ctx = {
         "mvpp": params.fractal_left,
         "trendln": params.extrema_lookback,
-        "pytrendline": 3,  # _pivots(..., lookback=3)
-        "consensus": 0,  # mvpp+trendln only; no slide for t<=250 with window_bars=300
+        "pytrendline": 3,
+        "consensus": 0,
     }[adapter_name]
     for t in CHECK_TS:
         if t + max(STABILITY_KS) > len(candles):
@@ -138,7 +168,6 @@ def test_non_provisional_pivots_are_stable(adapter_name: str, seed: int):
             off_k = _window_offset(t + k, max_bars)
             win_lo_k = off_k
             win_hi_k = t + k - 1
-            # Common absolute bars present in both detector windows.
             common_lo = max(win_lo_t, win_lo_k)
             common_hi = min(win_hi_t, win_hi_k)
             later = {_abs_key(p, off_k) for p in snap_k.pivots}
@@ -146,7 +175,6 @@ def test_non_provisional_pivots_are_stable(adapter_name: str, seed: int):
                 abs_i = p.bar_index + off_t
                 if abs_i < common_lo or abs_i > common_hi:
                     continue
-                # Need full left lookback inside the later windowed series.
                 if abs_i < common_lo + left_ctx:
                     continue
                 key = _abs_key(p, off_t)
@@ -158,29 +186,105 @@ def test_non_provisional_pivots_are_stable(adapter_name: str, seed: int):
 
 
 @pytest.mark.parametrize("seed", SEEDS)
-def test_pytrendline_provisional_anchors_repaint(seed: int):
-    """(c) Documents current pytrendline repaint: a provisional anchor at t vanishes at t+1."""
+def test_pytrendline_trendlines_use_only_confirmed_pivots(seed: int):
+    """(c) Default: every pytrendline trendline is fit from non-provisional pivots only."""
     candles = _make_candles(300, seed)
-    params = _params()
-    found = False
+    params = _params(allow_provisional_anchors=False)
+    for t in CHECK_TS:
+        snap = _snapshot_pytrendline(candles[:t], params)
+        for line in _lines(snap):
+            assert _line_fit_from_confirmed(line, snap.pivots), (
+                f"seed={seed} t={t}: line slope={line.slope} not reproducible "
+                f"from confirmed pivots alone (provisional anchors must not fit)"
+            )
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_pytrendline_trendline_stability_no_mutation(seed: int):
+    """Line present at t whose fit pivots remain in window at t+1 is identical or gone — never mutated.
+
+    Identity = (side, absolute fit_pivot_bars). Same fit pair ⇒ same slope; a different
+    slope with the same fit pair is impossible unless prices changed (forbidden for
+    confirmed fractals). Disappearance is allowed (breakout / invalidation / top-N drop).
+    """
+    candles = _make_candles(300, seed)
+    params = _params(allow_provisional_anchors=False)
+    max_bars = params.pytrendline_max_bars
     for t in CHECK_TS:
         if t + 1 > len(candles):
             continue
         snap_t = _snapshot_pytrendline(candles[:t], params)
-        snap_next = _snapshot_pytrendline(candles[: t + 1], params)
-        off_t = _window_offset(t, params.pytrendline_max_bars)
-        off_n = _window_offset(t + 1, params.pytrendline_max_bars)
-        later = {_abs_key(p, off_n) for p in snap_next.pivots}
-        for p in snap_t.pivots:
-            if not p.provisional:
+        snap_n = _snapshot_pytrendline(candles[: t + 1], params)
+        off_t = _window_offset(t, max_bars)
+        off_n = _window_offset(t + 1, max_bars)
+        win_lo_n = off_n
+        win_hi_n = t
+        later_by_fit: dict[tuple, list[TrendlineSegment]] = {}
+        for ln in _lines(snap_n):
+            if len(ln.fit_pivot_bars) < 2:
                 continue
-            key = _abs_key(p, off_t)
-            if key not in later:
-                found = True
-                break
-        if found:
-            break
-    assert found, (
-        "expected at least one provisional pytrendline anchor to disappear "
-        f"between t and t+1 (seed={seed}); behaviour under test is current repaint"
-    )
+            key = (ln.side.value, tuple(sorted(b + off_n for b in ln.fit_pivot_bars)))
+            later_by_fit.setdefault(key, []).append(ln)
+
+        for ln in _lines(snap_t):
+            if len(ln.fit_pivot_bars) < 2:
+                continue
+            abs_fit = tuple(sorted(b + off_t for b in ln.fit_pivot_bars))
+            if abs_fit[0] < win_lo_n or abs_fit[-1] > win_hi_n:
+                continue
+            key = (ln.side.value, abs_fit)
+            matches = later_by_fit.get(key, [])
+            if not matches:
+                # Disappeared: breakout / invalidation / ranking — documented OK.
+                continue
+            for m in matches:
+                assert abs(m.slope - ln.slope) < 1e-12, (
+                    f"seed={seed} t={t}: trendline mutated slope "
+                    f"{ln.slope} -> {m.slope} for fit_pivots {abs_fit}"
+                )
+                # Intercept is window-relative; only comparable when offsets match.
+                if off_t == off_n:
+                    assert abs(m.intercept - ln.intercept) < 1e-9
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_allow_provisional_anchors_matches_legacy_golden(seed: int):
+    """allow_provisional_anchors=True reproduces pre-T1f-2 pytrendline fixtures."""
+    candles = _make_candles(300, seed)
+    params = _params(allow_provisional_anchors=True)
+    ms = _snapshot_pytrendline(candles, params)
+    golden = json.loads(_GOLDEN.read_text())[f"seed_{seed}"]
+
+    def line_dict(ln: TrendlineSegment) -> dict:
+        return {
+            "side": ln.side.value,
+            "slope": ln.slope,
+            "intercept": ln.intercept,
+            "start_bar": ln.start_bar,
+            "end_bar": ln.end_bar,
+            "touch_count": ln.touch_count,
+            "score": ln.score,
+            "pivot_bars": list(ln.pivot_bars),
+        }
+
+    def zone_dict(z) -> dict:
+        return {
+            "side": z.side.value,
+            "low": z.low,
+            "high": z.high,
+            "mid": z.mid,
+            "score": z.score,
+            "touch_count": z.touch_count,
+        }
+
+    actual = {
+        "structure_score": ms.structure_score,
+        "n_pivots": len(ms.pivots),
+        "n_provisional_pivots": sum(1 for p in ms.pivots if p.provisional),
+        "support_trendlines": [line_dict(x) for x in ms.support_trendlines],
+        "resistance_trendlines": [line_dict(x) for x in ms.resistance_trendlines],
+        "support_zones": [zone_dict(x) for x in ms.support_zones],
+        "resistance_zones": [zone_dict(x) for x in ms.resistance_zones],
+        "meta_bars": ms.meta.get("bars"),
+    }
+    assert actual == golden
