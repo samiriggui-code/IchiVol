@@ -14,7 +14,32 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - **1 skip** réseau Binance
   - **Aucune régression V3** (même compte avant/après)
 - **Règle de merge** : avec la base, tout échec **hors** de ces 13 = régression → **bloque le merge**.
-- **T0-CI** : diagnostic + greening livrés — CI Actions **verte** (run ci-dessous) ; revue Claude avec sa base ensuite.
+- **T0-CI** : greening + correctif isolation baseline (entrée ci-dessous) — **pas de merge avant revalidation Claude**.
+
+---
+
+## 2026-09-23 — T0-CI — isolation baseline (revue Claude PR #14)
+
+- Branche : `cursor/t0-ci-postgres-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/14 (draft) — **pas de merge avant revalidation Claude**
+- Commit(s) : *(à pinner après push)*
+
+### Correctif
+
+Les helpers `_heal_baseline_if_halted` / `_restore_baseline` ne remettent **plus** le cash à `initial_cash` ni ne vident toutes les `PaperEquitySnapshot` de la baseline.
+
+- Capture en début de test : cash, `realized_pnl`, ids de snapshots existants
+- En fin : ne supprime QUE les snapshots créés pendant le test ; restaure cash / realized capturés
+- Opens qui ont besoin d’un livre propre → portefeuille **jetable** (profil baseline copié) ; `open_user_confirmed(..., portfolio=)` optionnel
+- Garde module : snapshot « historique » 2020-01-01 inséré avant la suite `test_engine` → doit survivre à tous les tests
+
+### Validation locale
+
+- `tests/paper/test_engine.py` + suite complète `tests` : PASS
+
+### Attente
+
+CI Actions verte sur ce commit → Claude revalide avec sa base (historique paper intact).
 
 ---
 
