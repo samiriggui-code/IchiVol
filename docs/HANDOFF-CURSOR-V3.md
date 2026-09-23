@@ -38,8 +38,25 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T6** #36 — **MERGÉE** (AuditReport post-outcome).
 - **T7** #37 — **MERGÉE** (Monte Carlo / risk of ruin).
 - **T3d** #39 — **MERGÉE** (propose ruleset edit + condition catalog).
-- **Job en cours** : **aucun** — T1–T7 + T3d clos ; suite = T3e MTF / Researcher / UI Lab.
+- **Job en cours** : **Researcher** — PR #41 draft — propose experiment plan (ATTENTE CI).
 
+
+---
+
+## 2026-09-23 — RESEARCHER EN COURS — propose experiment plan
+
+- Branche : `cursor/researcher-propose-experiment-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/41 (**draft**)
+- Statut : **ATTENTE CI** — après T3d.
+
+### Livré
+
+1. `app/researcher/` — `propose_experiment_plan(AuditReport)` → steps Lab (`proposed`)
+2. Agent `propose_experiment_plan` — jamais auto-run / Perf DB
+
+### Non-faits
+
+Exécution auto des steps ; UI ; T3e MTF.
 
 ---
 
