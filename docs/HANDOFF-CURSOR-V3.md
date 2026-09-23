@@ -22,7 +22,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `cursor/t0-ci-postgres-a2fe`
 - PR : _(draft — lien à compléter après create)_ — **pas de merge avant revue Claude**
-- Commit(s) : workflow `.github/workflows/engine-ci.yml` + cette entrée handoff
+- Commit(s) : `c7f13b9` (workflow + diagnostic handoff)
 
 ### Livré
 
