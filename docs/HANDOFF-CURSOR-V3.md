@@ -22,6 +22,33 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-23 — T3 correction Claude — golden backtest builtins
+
+- Branche : `cursor/t3-dsl-v3-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/18 (**draft**)
+- Commit(s) : à venir
+
+### Correctif demandé
+
+Preuve que le **résultat** backtest des builtins est inchangé vs `main` (pas seulement le parse).
+
+### Livré
+
+- Fixture `tests/strategy_lab/fixtures/ruleset_backtest_golden.json` générée sur **`main` af0006d** (pre-T3) — seeds 7/42, 300 bars, tous `list_builtin_rulesets()`
+- `test_ruleset_backtest_golden.py` — égalité stricte trades (entry/exit index, prix, raison, stop/target)
+
+### Validation locale
+
+```text
+pytest tests/strategy_lab/test_ruleset_backtest_golden.py -q   # PASS
+```
+
+### Revue Claude
+
+**Revalidation demandée** avant merge. Pas de nouveau lot.
+
+---
+
 ## 2026-09-23 — ATTENTE CLAUDE — bilan Cursor pendant ton absence
 
 **Cursor s’arrête ici.** Pas de nouveau code tant que Claude n’a pas revu et donné la marche à suivre.
