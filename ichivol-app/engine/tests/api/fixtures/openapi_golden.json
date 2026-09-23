@@ -1099,6 +1099,51 @@
         ]
       }
     },
+    "/api/engine/chart-objects/item/{object_id}": {
+      "delete": {
+        "description": "Soft-delete a USER chart overlay. Does not delete CLAUDE/ENGINE objects.",
+        "operationId": "delete_user_chart_object_route_api_engine_chart_objects_item__object_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "object_id",
+            "required": true,
+            "schema": {
+              "title": "Object Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete User Chart Object Route Api Engine Chart Objects Item  Object Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete User Chart Object Route",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
     "/api/engine/chart-objects/{symbol}": {
       "get": {
         "description": "Typed chart overlays: ENGINE from structure; USER/CLAUDE from store (T2b).\n\nSTRATEGY / BACKTEST sources return empty until T4/T5. No real orders.",
@@ -1199,6 +1244,150 @@
           }
         },
         "summary": "Get Chart Objects",
+        "tags": [
+          "engine"
+        ]
+      },
+      "post": {
+        "description": "Persist a USER trade point (entry|stop|target). Source is always forced to user.\n\nOptional ``setup_id`` groups ENTRY/STOP/TARGET of one mark-trade session.\nPoints are grounded against real OHLCV (same rules as agent draw_*).\nPrefer ``POST \u2026/setup`` for atomic triple writes from the UI.",
+        "operationId": "post_user_chart_object_api_engine_chart_objects__symbol__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Twelve-Data-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Twelve-Data-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post User Chart Object Api Engine Chart Objects  Symbol  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post User Chart Object",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/chart-objects/{symbol}/setup": {
+      "post": {
+        "description": "Persist ENTRY+STOP+TARGET as one atomic USER setup (T2c).\n\nDirection is deduced from stop vs entry. All three points are grounded then\nwritten in a single transaction (all-or-nothing).",
+        "operationId": "post_user_chart_object_setup_api_engine_chart_objects__symbol__setup_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Twelve-Data-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Twelve-Data-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post User Chart Object Setup Api Engine Chart Objects  Symbol  Setup Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post User Chart Object Setup",
         "tags": [
           "engine"
         ]

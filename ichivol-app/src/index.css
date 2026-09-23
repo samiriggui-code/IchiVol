@@ -4013,3 +4013,179 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 .progress-checks .is-ko { color: var(--bear); }
 .progress-checks .is-wait { color: var(--muted, #888); }
 .progress-note { font-size: 0.75rem; margin: 0; }
+
+/* --- T2c : Marquer un trade (ENTRY / STOP / TARGET) --- */
+.chart-wrap.is-pick-mode {
+  cursor: crosshair;
+  outline: 1px solid color-mix(in srgb, var(--bull, #3d9a6a) 45%, transparent);
+  outline-offset: -1px;
+}
+.chart-wrap.is-pick-mode .chart-host {
+  cursor: crosshair;
+}
+
+.mark-trade-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: transparent;
+}
+.mark-trade-sheet {
+  pointer-events: auto;
+  width: min(420px, 100%);
+  max-height: min(42vh, 360px);
+  margin: 0;
+  border-radius: 12px 12px 0 0;
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.35));
+  border-bottom: 0;
+  background: var(--surface, var(--background, #111));
+  box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.28);
+  display: flex;
+  flex-direction: column;
+}
+.mark-trade-head {
+  align-items: flex-start;
+}
+.mark-trade-eyebrow {
+  margin: 0 0 0.1rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.mark-trade-body {
+  padding: 0 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.mark-trade-side {
+  display: flex;
+  gap: 0.4rem;
+}
+.mark-trade-side button {
+  flex: 1;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.4));
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+}
+.mark-trade-side button.is-on {
+  border-color: var(--bull, #3d9a6a);
+  font-weight: 700;
+}
+.mark-trade-side button:last-child.is-on {
+  border-color: var(--bear, #c45c5c);
+}
+.mark-trade-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+.mark-trade-steps li {
+  display: grid;
+  grid-template-columns: 1.4rem 1fr auto;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+.mark-trade-steps li.is-current {
+  border-color: color-mix(in srgb, var(--bull, #3d9a6a) 55%, transparent);
+  background: color-mix(in srgb, var(--bull, #3d9a6a) 10%, transparent);
+}
+.mark-trade-steps li.is-done {
+  color: var(--muted-foreground, #888);
+}
+.mark-trade-step-idx {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.mark-trade-step-val {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+}
+.mark-trade-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted-foreground, #888);
+}
+.mark-trade-hint.is-pulse {
+  animation: mark-trade-pulse 0.9s ease;
+}
+@keyframes mark-trade-pulse {
+  0% { opacity: 0.35; transform: translateY(2px); }
+  100% { opacity: 1; transform: none; }
+}
+
+.mark-trade-direction {
+  margin: 0;
+  font-size: 0.82rem;
+}
+.mark-trade-direction.is-bad {
+  color: var(--bear, #c45c5c);
+}
+.mark-trade-metrics {
+  margin: 0;
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+}
+.mark-trade-metrics > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.mark-trade-metrics dt {
+  color: var(--muted-foreground, #888);
+}
+.mark-trade-metrics dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.mark-trade-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+.mark-trade-validate {
+  font-weight: 700;
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--bull, #3d9a6a);
+  background: color-mix(in srgb, var(--bull, #3d9a6a) 18%, transparent);
+  color: inherit;
+}
+.mark-trade-validate:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (min-width: 981px) {
+  .mark-trade-backdrop {
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding: 0 0 1rem 1rem;
+  }
+  .mark-trade-sheet {
+    border-radius: 10px;
+    border-bottom: 1px solid var(--border, rgba(128, 128, 128, 0.35));
+    max-height: 320px;
+  }
+}
+
+.market-page.is-mark-trade .panel-head-actions .is-active {
+  border-color: var(--bull, #3d9a6a);
+  font-weight: 700;
+}

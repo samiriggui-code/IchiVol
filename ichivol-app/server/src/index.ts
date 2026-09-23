@@ -66,6 +66,7 @@ app.get('/api/agent/threads/:id', requireAuth, handleGetAgentThread)
 
 app.get('/api/engine/*', requireAuth, proxyToEngine)
 app.post('/api/engine/*', requireAuth, proxyToEngine)
+app.delete('/api/engine/*', requireAuth, proxyToEngine)
 
 app.listen(config.port, () => {
   console.log(`IchiVol agent server on http://localhost:${config.port} (provider: ${config.llmProvider})`)

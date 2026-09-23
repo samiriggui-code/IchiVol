@@ -1,4 +1,4 @@
-/** Client for GET /api/engine/chart-objects/{symbol} (T2a ChartObject). */
+/** Client for GET/POST/DELETE /api/engine/chart-objects (T2a read + T2c USER write). */
 
 export type ChartObjectType =
   | 'horizontal_line'
@@ -14,6 +14,8 @@ export type ChartObjectType =
   | 'target'
 
 export type ChartObjectSource = 'user' | 'engine' | 'claude' | 'strategy' | 'backtest'
+
+export type UserTradePointType = 'entry' | 'stop' | 'target'
 
 export interface ChartPoint {
   time: number
@@ -48,6 +50,18 @@ export interface ChartObjectsResponse {
   provider_symbol?: string | null
 }
 
+export interface UserTradePointInput {
+  type: UserTradePointType
+  timeframe: string
+  price: number
+  time: number
+  side?: 'LONG' | 'SHORT' | null
+  label?: string | null
+  setup_id?: string
+  as_of?: number
+  limit?: number
+}
+
 /** Fetch chart objects. Default includes ENGINE + persisted USER/CLAUDE (T2b). */
 export async function getChartObjects(
   symbol: string,
@@ -69,6 +83,74 @@ export async function getChartObjects(
   }
   const data = (await res.json()) as ChartObjectsResponse
   return data.objects ?? []
+}
+
+/** Persist a USER ENTRY/STOP/TARGET (T2c unitary — prefer postUserTradeSetup). */
+export async function postUserTradePoint(
+  symbol: string,
+  input: UserTradePointInput,
+): Promise<ChartObject> {
+  const res = await fetch(`/api/engine/chart-objects/${encodeURIComponent(symbol)}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { detail?: string } | null
+    throw new Error(body?.detail ?? `Erreur ${res.status}`)
+  }
+  const data = (await res.json()) as { object: ChartObject }
+  return data.object
+}
+
+export interface UserTradeSetupInput {
+  timeframe: string
+  entry: ChartPoint
+  stop: ChartPoint
+  target: ChartPoint
+  setup_id?: string
+  limit?: number
+}
+
+export interface UserTradeSetupResult {
+  setup_id: string
+  direction: 'long' | 'short'
+  upserted: boolean
+  objects: ChartObject[]
+}
+
+/** Atomic USER setup: ENTRY+STOP+TARGET in one transaction (T2c). */
+export async function postUserTradeSetup(
+  symbol: string,
+  input: UserTradeSetupInput,
+): Promise<UserTradeSetupResult> {
+  const res = await fetch(
+    `/api/engine/chart-objects/${encodeURIComponent(symbol)}/setup`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { detail?: string } | null
+    throw new Error(body?.detail ?? `Erreur ${res.status}`)
+  }
+  return (await res.json()) as UserTradeSetupResult
+}
+
+/** Soft-delete a USER overlay (T2c). */
+export async function deleteUserChartObject(objectId: string): Promise<void> {
+  const res = await fetch(
+    `/api/engine/chart-objects/item/${encodeURIComponent(objectId)}`,
+    { method: 'DELETE', credentials: 'include' },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { detail?: string } | null
+    throw new Error(body?.detail ?? `Erreur ${res.status}`)
+  }
 }
 
 /** Zones usable by PriceChart (visual parity with former StructureOverlay.zones). */

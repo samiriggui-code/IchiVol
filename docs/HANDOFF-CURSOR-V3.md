@@ -16,36 +16,123 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **Règle de merge** : avec la base, **0 échec** attendu (T0-CI #14 mergé). Tout échec bloque le merge.
 - **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
 - **T2a** : ChartObject — **mergé** (PR #15) — **validé par Claude**.
-- **T0-BROKER** #16 — **MERGÉE**.
-- **T2b** #17 — **MERGÉE**.
-- **T3** #18 — **MERGÉE**.
-- **T0-UI** #19 — CI / merge en cours.
-- **Prochain job** : T2c user ENTRY/STOP/TARGET.
+- **T0-BROKER** #16 — **MERGÉE** (validé Claude).
+- **T2b** #17 — **MERGÉE** (validé Claude).
+- **T3** #18 — **MERGÉE** (validé Claude).
+- **T0-UI** #19 — **MERGÉE** (accepté Claude comme T0-UI, pas T4 roadmap).
+- **Job en cours** : **T2c** PR #20 — corrections revue Claude (setup atomique) — **ATTENTE revalidation**.
 
 
 ---
 
-## 2026-09-23 — EN COURS — merges Claude (#16→#19) puis T2c
+## 2026-09-23 — T2c corrections revue Claude — setup atomique + as_of
 
-### Progression
+- Branche : `cursor/t2c-user-trade-points-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/20 (**draft**)
+- Commit(s) : `368c5de` (fix), `bd533d1` (handoff)
+- Statut : **ATTENTE CLAUDE** — corrections appliquées ; CI **VERTE** ; **ne pas merger** avant revalidation.
 
-| PR | Statut |
-|----|--------|
-| #16 T0-BROKER | **MERGÉE** |
-| #17 T2b | **MERGÉE** |
-| #18 T3 | **MERGÉE** |
-| #19 T0-UI | merge main fait — **CI puis merge** (cette branche) |
+### Correctifs demandés → livrés
 
-### Note T0-UI
+1. **Setup atomique** — taps en mémoire → récap Valider/Annuler ; Annuler = 0 écriture ; Valider = `POST /chart-objects/{symbol}/setup` (3 points, 1 transaction). POST unitaire conservé.
+2. **Sens déduit** — `stop < entry` → long ; `stop > entry` → short ; géométrie serveur LONG `stop < entry < target` / SHORT inverse ; `origin.direction` sur les 3 ; Valider désactivé côté front si incohérent.
+3. **Ratio R** — distances stop/cible (prix + %) + R = |Δtarget|/|Δstop| (0,01) dans `MarkTradeSheet`.
+4. **Twelve Data** — exclusion `canMarkTrade` / fetch overlays retirée. Raison initiale : économie crédits (GET chart-objects refetch OHLCV). Claude : cache 90s + grounding OK → bouton visible ; erreur claire à la validation.
+5. **as_of grounding** — `assert_object_grounded` vérifie `obj.as_of` sur la série (ou marge projetée). Test : `draw_zone` agent sans points + `as_of` futur → rejeté.
 
-Pas T4 roadmap (T4 = backtest visuel WHY ENTERED/REJECTED/EXITED). Ceci = rename Strategy Lab + onglets DB.
+### Tests
 
-### Après #19
+- `/setup` LONG cohérent ; LONG target mauvais côté → 422 + 0 objet ; point non groundé → 422 + 0 objet ; SHORT ; as_of futur
+- `pytest tests/chart_objects/` + goldens ; `npm run build` OK
 
-Handoff « 4 merges done » sur main → T2c `cursor/t2c-user-trade-points-a2fe` → draft → **attendre Claude**.
+### CI Actions
+
+- **VERTE** (HEAD `bd533d1`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35858843441
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
+### Attente
+
+**Revalidation Claude** → merge si OK. **Cursor s’arrête ici.**
 
 ---
 
+## 2026-09-23 — T2c EN COURS — USER trade points (ENTRY/STOP/TARGET)
+
+- Branche : `cursor/t2c-user-trade-points-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/20 (**draft**)
+- Commit(s) : `4606c03` (feat T2c), `e49696c` (handoff ATTENTE)
+- Statut : *(supersédé — voir corrections revue Claude ci-dessus)*
+
+### Contexte
+
+Les 4 merges (#16→#19) sont **faits** sur `main` (`2b0bd96`).  
+Job demandé par Claude : POST/DELETE chart-objects **source=user** + mode UI « Marquer un trade » (mobile-friendly).
+
+### Périmètre T2c (cette PR)
+
+1. **API** `POST /api/engine/chart-objects/{symbol}` — force `source=user` ; types **entry|stop|target** uniquement ; grounding OHLCV (même helper T2b) ; `setup_id` dans `origin` (+ `subtype=setup:…` pour ids stables)
+2. **API** `DELETE /api/engine/chart-objects/item/{object_id}` — soft-delete **USER only** (ne touche pas CLAUDE)
+3. **Node** : proxy `DELETE /api/engine/*` (auth)
+4. **Front** : client write + mode « Marquer un trade » sur Marché (tap chart → ENTRY → STOP → TARGET)
+5. Tests + goldens OpenAPI / `route_order` (additions)
+
+### Livré (impl)
+
+- `app/chart_objects/user_write.py` + routes POST/DELETE
+- `tests/chart_objects/test_t2c_user_write.py` (5 tests)
+- Front : `MarkTradeSheet`, `PriceChart` pickMode, bouton Marché
+- Node DELETE proxy
+
+### Validation locale
+
+```text
+pytest tests/chart_objects/ -q   # 37 passed
+tsc -b                           # OK
+```
+
+### CI Actions
+
+- **VERTE** (HEAD `e49696c`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35857843322
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
+### Hors scope
+
+- T4 visual WHY (roadmap)
+- Draw palette complète USER (zones/trendlines…)
+- Colonne `setup_id` dédiée (pas de migration — JSON `origin`)
+- Multi-user ownership sur overlays
+
+### Attente Claude
+
+Draft → handoff à jour → **revue** (suite Postgres complète sur `main` + ce diff) → marche à suivre.
+
+**Cursor s’arrête ici** jusqu’à la revue Claude.
+
+---
+
+## 2026-09-23 — BILAN — 4 merges done (#16→#19) → T2c
+
+### Merges exécutés (ordre Claude)
+
+| # | PR | Sujet | Merged SHA / note |
+|---|-----|--------|-------------------|
+| 1 | [#16](https://github.com/samiriggui-code/IchiVol/pull/16) | T0-BROKER fidélité | `2670f96` → main |
+| 2 | [#17](https://github.com/samiriggui-code/IchiVol/pull/17) | T2b agent draw + grounding | `b500944` |
+| 3 | [#18](https://github.com/samiriggui-code/IchiVol/pull/18) | T3 DSL v3 `all`/`any` + `exit` + golden | `b0c9584` |
+| 4 | [#19](https://github.com/samiriggui-code/IchiVol/pull/19) | **T0-UI** Strategy Lab (pas T4 roadmap) | `2b0bd96` |
+
+`main` HEAD post-merges : **`2b0bd96`**.
+
+### Note naming
+
+#19 = **T0-UI** (rename + onglets DB). Roadmap **T4** = backtest visuel WHY — **pas commencé**.
+
+### Suite
+
+Branche T2c ouverte ; détail dans l’entrée **T2c EN COURS** ci-dessus.  
+**Claude** : relancer suite Postgres complète sur `main` `2b0bd96` (baseline 0 échec attendu post T0-CI).
 
 ---
 

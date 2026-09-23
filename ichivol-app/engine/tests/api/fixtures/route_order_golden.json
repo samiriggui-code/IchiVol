@@ -386,6 +386,27 @@
   },
   {
     "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/chart-objects/{symbol}/setup",
+    "endpoint": "post_user_chart_object_setup"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/chart-objects/{symbol}",
+    "endpoint": "post_user_chart_object"
+  },
+  {
+    "methods": [
+      "DELETE"
+    ],
+    "path": "/api/engine/chart-objects/item/{object_id}",
+    "endpoint": "delete_user_chart_object_route"
+  },
+  {
+    "methods": [
       "GET"
     ],
     "path": "/api/engine/health",

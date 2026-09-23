@@ -77,3 +77,7 @@ def assert_object_grounded(
         check_price(float(obj.price_low), "price_low")
     if obj.price_high is not None:
         check_price(float(obj.price_high), "price_high")
+
+    # as_of itself must sit on the series (or projected margin) — blocks
+    # e.g. draw_zone with empty points + future as_of.
+    check_time(int(obj.as_of), "as_of")
