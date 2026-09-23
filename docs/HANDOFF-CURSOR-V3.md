@@ -10,8 +10,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T1f — Pivots confirmés + repaint mesuré (mark-only)
 
 - Branche : `v3/t1f-pivot-confirmation`
-- PR : *(draft — lien à compléter)* — **pas de merge avant revue Claude**
-- Commit(s) : `37ac28f` (métadonnées + adaptateurs + tests de causalité)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/11 (draft) — **pas de merge avant revue Claude**
+- Commit(s) : `37ac28f` (métadonnées + adaptateurs + tests de causalité) ; `74a0c8f` (rapport handoff)
 
 - Livré :
   - `PivotPoint.confirmed_bar` / `PivotPoint.provisional` (optionnels, défauts `None` / `False`)
