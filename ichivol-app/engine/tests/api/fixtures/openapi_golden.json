@@ -3127,6 +3127,51 @@
         ]
       }
     },
+    "/api/engine/paper/positions/{position_id}/scenarios": {
+      "get": {
+        "description": "Historical scenarios for an OPEN paper lot (from mark + from entry). Read-only.",
+        "operationId": "paper_position_scenarios_api_engine_paper_positions__position_id__scenarios_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "position_id",
+            "required": true,
+            "schema": {
+              "title": "Position Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Paper Position Scenarios Api Engine Paper Positions  Position Id  Scenarios Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Paper Position Scenarios",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
     "/api/engine/paper/preview": {
       "get": {
         "description": "What a user-chosen buy would cost, risk and do to the portfolio. Read-only, never opens anything.",

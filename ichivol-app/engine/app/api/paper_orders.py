@@ -75,6 +75,7 @@ def preview_manual_paper_buy(
 ) -> dict:
     """What a user-chosen buy would cost, risk and do to the portfolio. Read-only, never opens anything."""
     from app.paper.manual import preview_manual_buy
+    from app.paper.scenarios import build_scenarios
 
     try:
         row = scan_symbol(symbol.upper(), timeframe=timeframe)
@@ -82,8 +83,77 @@ def preview_manual_paper_buy(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     session = SessionLocal()
     try:
-        return preview_manual_buy(
+        preview = preview_manual_buy(
             session, row, notional=notional, stop_pct=stop_pct, take_profit_r=take_profit_r, portfolio_code=portfolio_code
+        )
+        # T0-CALC: scenarios block is additive — existing preview fields untouched.
+        try:
+            from app.paper.manual import paper_broker_get_portfolio
+
+            portfolio = paper_broker_get_portfolio(session, portfolio_code)
+            profile = portfolio.strategy_profile or {}
+            order = preview["order"]
+            outcomes = preview["outcomes"]
+            preview["scenarios"] = build_scenarios(
+                preview["symbol"],
+                preview["timeframe"],
+                float(order["entry_fill"]),
+                float(order["qty"]),
+                float(order["stop_price"]),
+                float(order["take_profit_price"]),
+                profile,
+                net_gain_if_target=float(outcomes["net_gain_if_target"]),
+                net_loss_if_stop=float(outcomes["net_loss_if_stop"]),
+                invested=float(order["notional"]),
+                equity=float(preview["portfolio"]["equity"]),
+                entry_fee=float(preview["costs"]["commission_entry"]),
+                direction=preview.get("direction") or "LONG",
+            )
+        except Exception:  # noqa: BLE001 — preview must still return without scenarios
+            preview["scenarios"] = None
+        return preview
+    finally:
+        session.close()
+
+
+@router_after_shadow.get("/paper/positions/{position_id}/scenarios")
+def paper_position_scenarios(position_id: str) -> dict:
+    """Historical scenarios for an OPEN paper lot (from mark + from entry). Read-only."""
+    from app.paper import financing as paper_financing
+    from app.paper.broker import _profile, estimate_equity
+    from app.paper.marks import resolve_marks
+    from app.paper.scenarios import build_open_position_scenarios
+
+    session = SessionLocal()
+    try:
+        position = paper_engine.get_position(session, position_id)
+        if position is None:
+            raise HTTPException(status_code=404, detail="position_not_found")
+        if position.status != "OPEN":
+            raise HTTPException(status_code=409, detail="position_not_open")
+        if not position.qty or position.qty <= 0:
+            raise HTTPException(status_code=422, detail="position_incomplete")
+
+        from app.db.models import PaperPortfolio
+
+        portfolio = session.get(PaperPortfolio, position.portfolio_id)
+        if portfolio is None:
+            raise HTTPException(status_code=404, detail="portfolio_not_found")
+
+        marks = resolve_marks([position.symbol], timeframe=position.timeframe or "1h")
+        mark = marks.get(position.symbol.upper())
+        if mark is None or mark.source == "missing" or mark.price <= 0:
+            raise HTTPException(status_code=422, detail="mark_unavailable")
+
+        profile = _profile(portfolio)
+        equity = estimate_equity(session, portfolio)
+        paid = paper_financing.financing_total_for_position(session, position.id)
+        return build_open_position_scenarios(
+            position,
+            mark_price=float(mark.price),
+            profile=profile,
+            equity=float(equity),
+            financing_paid=float(paid),
         )
     finally:
         session.close()

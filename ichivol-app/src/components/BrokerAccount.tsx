@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { PaperOverview, PaperOverviewPosition, ValuationStatus } from '../lib/paper'
 import { assetName, directionWords, eur, pct, price, signedEur } from '../lib/tradeStory'
+import { PositionScenariosDisclosure } from './ScenariosPanel'
 
 function tone(v: number | null | undefined): string {
   if (v == null || v === 0) return ''
@@ -125,11 +126,13 @@ function LotRow({
   onSelect,
   onClose,
   closingId,
+  scenarios,
 }: {
   p: PaperOverviewPosition
   onSelect: (p: PaperOverviewPosition) => void
   onClose?: (id: string) => void
   closingId?: string | null
+  scenarios?: boolean
 }) {
   const value = marketValue(p)
   return (
@@ -154,6 +157,7 @@ function LotRow({
           Clôturer…
         </button>
       )}
+      {scenarios && <PositionScenariosDisclosure positionId={p.id} />}
     </li>
   )
 }
@@ -257,6 +261,7 @@ function GroupCard({
           )
         )}
       </footer>
+      {!multi && <PositionScenariosDisclosure positionId={primary.id} />}
       {multi && lotsOpen && (
         <ul className="invest-lots" aria-label={`Lots ${assetName(group.symbol)}`}>
           {group.lots.map((p) => (
@@ -266,6 +271,7 @@ function GroupCard({
               onSelect={onSelect}
               onClose={onClose}
               closingId={closingId}
+              scenarios
             />
           ))}
         </ul>

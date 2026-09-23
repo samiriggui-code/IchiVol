@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PositionChart } from './PositionChart'
+import { PositionScenariosDisclosure } from './ScenariosPanel'
 import { getDecisionDetail, type DecisionDetail } from '../lib/decisions'
 import type { PaperPosition } from '../lib/paper'
 import {
@@ -157,6 +158,8 @@ export function PaperTradeSheet({
               <dd>{holdingLabel(p.entry_time, p.exit_time)}</dd>
             </div>
           </dl>
+
+          {open && <PositionScenariosDisclosure positionId={p.id} />}
 
           <h3 className="subhead">Le marché maintenant</h3>
           {marketErr && <p className="muted">Données de marché indisponibles pour le moment.</p>}

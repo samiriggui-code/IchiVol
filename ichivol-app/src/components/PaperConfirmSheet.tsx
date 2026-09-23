@@ -9,6 +9,7 @@ import {
   type OrderIntent,
 } from '../lib/paper'
 import { eur, price as fmtPrice, signedEur } from '../lib/tradeStory'
+import { ScenariosPanel } from './ScenariosPanel'
 
 const AMOUNT_CHIPS = [100, 250, 500, 1000]
 const STOP_CHIPS = [0.01, 0.02, 0.03, 0.05]
@@ -269,6 +270,8 @@ export function PaperConfirmSheet({
                   <span className="muted mono">@ {fmtPrice(preview.order.stop_price)} · frais inclus</span>
                 </div>
               </div>
+
+              <ScenariosPanel scenarios={preview.scenarios} variant="preview" />
 
               <dl className="propose-stats paper-confirm-stats">
                 <div>

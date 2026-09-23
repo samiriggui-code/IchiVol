@@ -24,8 +24,47 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T3c** #21 — **MERGÉE** — **validé par Claude** (registre conditions ; T3 phase close — T3d avec T5b, T3e plus tard).
 - **T4a** #22 — **MERGÉE** — **validé par Claude** (overlay + correction net).
 - **T0-METRICS** #23 — **MERGÉE** — **validé par Claude** (stats nettes ; `cost_log` / `net_v1`).
-- **Job en cours** : **T0-METRICS-2** — comptabilité `backtest/engine.py` — branche `cursor/t0-metrics-2-engine-costs-a2fe`.
+- **T0-METRICS-2** #24 — **MERGÉE** — **validé par Claude** (`eod_return` ; lookahead strict).
+- **Job en cours** : **T0-CALC** — scénarios historiques — PR #25 **ATTENTE Claude** (CI verte).
 
+
+---
+
+## 2026-09-23 — T0-CALC — ATTENTE Claude (#25)
+
+- Branche : `cursor/t0-calc-scenarios-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/25 (**draft**)
+- Statut : **ATTENTE Claude** — CI **VERTE** (pytest Postgres + frontend npm build) ; ne pas merger avant revue.
+
+### Livré
+
+1. `app/paper/scenarios.py` — `build_scenarios` / `build_open_position_scenarios`
+   - Objectif / Stop : montants **repris** de `preview_manual_buy` (aucune divergence)
+   - Crash : pire mouvement adverse historique (low/prev_close et gap open), sortie `min(stop, entry×(1+move))`, frais = friction sortie + commission
+   - Durée médiane (gagnants / perdants) + financement profil (0 crypto spot, CFD XAUUSD…)
+   - Espérance `net_v2` × notional **si n ≥ 30**, sinon message « échantillon insuffisant »
+   - Backtest PIPELINE mis en cache 6 h / (symbole, timeframe) ; historique causal (bougie en formation exclue)
+2. API : `GET /paper/preview` + bloc `scenarios` (ajout seul) ; `GET /paper/positions/{id}/scenarios`
+3. Front : `PaperConfirmSheet` tableau Scénarios ; dépliant Synthèse / fiche position
+4. Tests `tests/paper/test_scenarios.py` (hors Postgres)
+
+### Vérifs locales (Cursor)
+
+- `pytest tests/backtest tests/indicators tests/strategy_lab tests/paper` — **0 échec** (hors Postgres)
+- `npm run build` — **OK**
+
+### Hors périmètre
+
+Alertes (T0-NOTIF), stop suiveur / renforcement (T0-MANAGE), short.
+
+---
+
+## 2026-09-23 — T0-METRICS-2 VALIDÉ par Claude — MERGÉ (#24)
+
+- Branche : `cursor/t0-metrics-2-engine-costs-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/24 — **MERGÉE** `351dbe9`
+- Statut : **validé par Claude** (`eod_return` séparé de `bar_returns` ; `test_engine_lookahead.py` **identique à main** ; 300 séquences aléatoires ; suite Postgres 0 échec).
+- Remarque Claude : ne jamais affaiblir un test de non-fuite — corriger le code, pas le test.
 
 ---
 

@@ -3999,6 +3999,53 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 .banner.warn { border-left: 3px solid #d9a400; background: rgba(217, 164, 0, 0.1); padding: 0.5rem 0.75rem; border-radius: 6px; margin-bottom: 0.5rem; font-size: 0.85rem; }
 @media (max-width: 520px) { .order-outcomes { grid-template-columns: 1fr; } }
 
+/* T0-CALC — scénarios historiques */
+.scenarios-panel {
+  margin: 0.75rem 0;
+  padding: 0.65rem 0;
+  border-top: 1px solid var(--border, rgba(128, 128, 128, 0.25));
+}
+.scenarios-panel.is-compact { margin: 0.4rem 0; padding: 0.4rem 0; }
+.scenarios-disclaimer {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+.scenarios-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.scenarios-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.scenarios-table th,
+.scenarios-table td {
+  text-align: right;
+  padding: 0.35rem 0.4rem;
+  border-bottom: 1px solid var(--border, rgba(128, 128, 128, 0.2));
+  white-space: nowrap;
+}
+.scenarios-table th[scope='col']:first-child,
+.scenarios-table th[scope='row'] {
+  text-align: left;
+}
+.scenarios-row.is-target th,
+.scenarios-row.is-target td { color: var(--bull); }
+.scenarios-row.is-stop th,
+.scenarios-row.is-stop td { color: #c9782c; }
+.scenarios-row.is-crash th,
+.scenarios-row.is-crash td { color: var(--bear); }
+.scenarios-meta {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.55rem 0 0;
+  font-size: 0.78rem;
+}
+.scenarios-meta dt { color: var(--muted-foreground, #888); font-weight: 500; }
+.scenarios-meta dd { margin: 0.1rem 0 0; }
+.scenarios-disclosure { margin-top: 0.35rem; width: 100%; }
+.scenarios-disclosure-toggle { font-size: 0.8rem; }
+.scenarios-disclosure-body { margin-top: 0.35rem; }
+
 
 /* --- Synthèse : progression du test --- */
 .progress-panel { display: flex; flex-direction: column; gap: 0.75rem; }

@@ -339,6 +339,13 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/paper/positions/{position_id}/scenarios",
+    "endpoint": "paper_position_scenarios"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/paper/propose",
     "endpoint": "propose_paper_trade"
   },
