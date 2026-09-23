@@ -187,6 +187,116 @@ export interface ManualPreview {
     open_risk_after: number
     open_risk_cap: number | null
   }
+  /** T0-CALC — scénarios historiques (ajout seulement). */
+  scenarios?: PaperScenarios | null
+}
+
+export interface ScenarioRow {
+  label: string
+  net_eur: number
+  pct_of_invested: number | null
+  pct_of_equity: number | null
+  exit_price?: number
+  reference?: {
+    move: number
+    date: string | null
+    kind: string | null
+    value: number | null
+    candle_time: number
+  } | null
+}
+
+export interface ScenarioHoldBucket {
+  median_bars: number | null
+  median_hours: number | null
+  median_days: number | null
+  n: number
+}
+
+export interface PaperScenarios {
+  disclaimer: string
+  target: ScenarioRow
+  stop: ScenarioRow
+  crash: ScenarioRow
+  holding: {
+    all: ScenarioHoldBucket | null
+    winners: ScenarioHoldBucket | null
+    losers: ScenarioHoldBucket | null
+    financing_eur_median: number
+    financing_bps_per_day: number
+    error?: string | null
+  }
+  expectancy: {
+    available: boolean
+    n: number
+    message: string | null
+    expectancy_per_trade: number | null
+    expectancy_eur: number | null
+    win_rate_net: number | null
+  }
+  backtest_window: {
+    from: string | null
+    to: string | null
+    n_bars: number
+    metrics_basis: string
+  }
+  history_bars?: number
+  history_to?: string | null
+  mark?: { price: number }
+  from_entry?: { target: ScenarioRow; stop: ScenarioRow; crash: ScenarioRow }
+  from_mark?: {
+    close_now: {
+      exit_price: number
+      net_eur_from_entry: number
+      net_eur_from_mark: number
+      cash_delta: number
+      exit_fee?: number
+    }
+    target: {
+      exit_price: number
+      net_eur_from_entry: number
+      net_eur_from_mark: number
+      pct_of_invested: number | null
+      pct_of_equity: number | null
+      cash_delta: number
+    }
+    stop: {
+      exit_price: number
+      net_eur_from_entry: number
+      net_eur_from_mark: number
+      pct_of_invested: number | null
+      pct_of_equity: number | null
+      cash_delta: number
+    }
+    crash: {
+      exit_price: number
+      net_eur_from_entry: number
+      net_eur_from_mark: number
+      pct_of_invested: number | null
+      pct_of_equity: number | null
+      cash_delta: number
+      reference?: ScenarioRow['reference']
+    }
+  }
+  elapsed?: {
+    hours: number
+    days: number
+    median_hours: number | null
+    vs_median_ratio: number | null
+  }
+  financing?: {
+    paid_eur: number
+    estimated_remaining_to_median_eur: number
+    estimated_total_to_median_eur: number
+    bps_per_day: number
+  }
+  liquidation_close_now?: {
+    exit_price: number
+    net_eur_from_entry: number
+    net_eur_from_mark: number
+    cash_delta: number
+    exit_fee?: number
+  }
 }
 
 /** Aperçu d'un achat choisi par l'utilisateur : coûts, gain/perte nets, effet sur le portefeuille. Ne place rien. */
@@ -206,6 +316,19 @@ export async function previewPaperBuy(
   const res = await fetch(`/api/engine/paper/preview?${params}`, { credentials: 'include', signal })
   if (!res.ok) throw new Error(await parseError(res))
   return res.json() as Promise<ManualPreview>
+}
+
+/** Scénarios historiques pour une position paper OUVERTE (T0-CALC). */
+export async function fetchPositionScenarios(
+  positionId: string,
+  signal?: AbortSignal,
+): Promise<PaperScenarios> {
+  const res = await fetch(`/api/engine/paper/positions/${encodeURIComponent(positionId)}/scenarios`, {
+    credentials: 'include',
+    signal,
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json() as Promise<PaperScenarios>
 }
 
 export async function openPaperPosition(
