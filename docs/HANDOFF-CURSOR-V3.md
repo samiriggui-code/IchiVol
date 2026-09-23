@@ -20,6 +20,37 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-23 — T1g — Découpage de `api/routes.py` (zéro changement de comportement)
+
+- Branche : `v3/t1g-split-routes`
+- PR : *(draft — lien à compléter)* — **pas de merge avant revue Claude**
+- Commit(s) : `d58adca` (golden OpenAPI + ordre des routes **avant** refactor) ; *(split à compléter)*
+
+- Livré :
+  - Modules domaine : `market.py`, `context.py`, `decisions.py`, `backtest.py`, `rulesets.py`, `strategy_lab.py` + `strategy_lab_wf.py`, `paper.py` + `paper_orders.py`, `agent.py`, `common.py`
+  - `routes.py` = agrégateur qui `include_router` **dans l’ordre d’origine** (main.py inchangé)
+  - Fragments de routers là où le domaine n’est pas contigu (market head/screener/correlations ; paper before/after shadow ; backtest evidence/symbol/shadow)
+  - Tags inchangés (`["engine"]`) ; helpers partagés dans `common.py`
+  - Golden : `tests/api/fixtures/openapi_golden.json`, `route_order_golden.json` + `test_api_surface_golden.py`
+
+- Monkeypatch mis à jour (cible déplacée, comportement inchangé) :
+  - `tests/api/test_routes.py` — `scan_symbol` aussi sur `decisions` / `paper` / `paper_orders` ; `compute_correlation_matrix` aussi sur `market`
+  - `tests/api/test_open_flow.py` — `scan_symbol` aussi sur `paper` / `paper_orders`
+  - `test_structure_line_dict.py` — toujours via réexport `routes._line_dict`
+
+- Fixtures : seuls les 2 nouveaux golden API ajoutés ; `git diff main -- '**/fixtures/*'` hors ceux-là → vide
+
+- Lignes `app/api/` (tous ≤ ~400) : routes 46, agent 92, context 90, common 185, decisions 155, rulesets 145, backtest 171, strategy_lab 208, strategy_lab_wf 240, paper 269, paper_orders 232, market 268
+
+- Tests :
+  - `test_api_surface_golden` → vert (OpenAPI + ordre)
+  - `tests/api/` → seuls les **2** `open_paper_position` connus (baseline 13, DB dispo ici) ; pas de nouvelle régression
+  - Claude avec Postgres : baseline **13** échecs
+
+- Non fait : T0-CI (branche parallèle `cursor/t0-ci-postgres-a2fe`) ; T2 ChartObject
+
+---
+
 ## 2026-09-23 — T1f-2 — Plus de repaint dans pytrendline
 
 - Branche : `v3/t1f2-pytrendline-no-repaint`
