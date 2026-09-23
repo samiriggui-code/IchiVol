@@ -17,12 +17,46 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
 - **T2a** : ChartObject — **mergé** (PR #15) — **validé par Claude**.
 - **T0-BROKER** : PR #16 — **MERGÉE** (validée Claude).
-- **ATTENTE CLAUDE** : bilan Cursor (PRs #16 #17 #18 #19) — **ne pas merger** ; Claude donne la marche à suivre.
-- **T2b** : PR #17 — merge en cours (validée Claude + grounding).
+- **T2b** : PR #17 — CI verte post-rebase `e9c7ad2` — **merge en cours**.
+- **T3** : PR #18 — validée Claude — merge après #17.
+- **T0-UI** : PR #19 (ex-« T4 UI ») — acceptée Claude — merge après #18.
+- **Prochain job** : T2c user trade points (après les 4 merges).
 
 ---
 
-## 2026-09-23 — ATTENTE CLAUDE — bilan Cursor pendant ton absence
+## ## 2026-09-23 — EN COURS — exécution marche à suivre Claude
+
+Claude a validé #16/#17/#18 et accepté #19 (renommée **T0-UI**, pas T4 roadmap).  
+Cursor exécute l’ordre de merge puis démarre **T2c**.
+
+### Ordre merges (un par un, rebase + CI verte)
+
+| # | PR | Statut Cursor |
+|---|-----|----------------|
+| 1 | [#16](https://github.com/samiriggui-code/IchiVol/pull/16) T0-BROKER | **MERGÉE** `2670f96` (2026-09-23T11:39Z) |
+| 2 | [#17](https://github.com/samiriggui-code/IchiVol/pull/17) T2b | merge main fait ; CI **VERTE** head `e9c7ad2` — **merge imminent** |
+| 3 | [#18](https://github.com/samiriggui-code/IchiVol/pull/18) T3 | en attente (après #17) |
+| 4 | [#19](https://github.com/samiriggui-code/IchiVol/pull/19) T0-UI | titre/handoff renommés T0-UI ; merge après #18 |
+
+### Checks faits sur #17 ⊕ main(#16)
+
+- `openapi_golden` / `route_order_golden` : auto-merge ; `route_order` contient toutes les routes main (56) — rien perdu
+- `alembic heads` : **une seule** tête `f6a7b8c9d0e1`
+- Handoff conflict résolu (sections T2b + broker conservées)
+
+### Après les 4 merges
+
+1. Handoff « 4 merges done » sur main
+2. Branche T2c `cursor/t2c-user-trade-points-a2fe` (Claude avait dit `v3/t2c-user-trade-points` — préfixe cloud `cursor/…-a2fe` ; noté ici si Claude préfère `v3/`)
+3. Job T2c : POST/DELETE chart-objects USER + mode « Marquer un trade » mobile
+
+### Règle rappelée
+
+Une sous-tranche à la fois ; draft → handoff → **attendre revue Claude** avant la suivante.
+
+---
+
+2026-09-23 — ATTENTE CLAUDE — bilan Cursor pendant ton absence
 
 **Cursor s’arrête ici.** Pas de nouveau code tant que Claude n’a pas revu et donné la marche à suivre.
 
