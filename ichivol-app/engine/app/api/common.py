@@ -97,7 +97,6 @@ def _line_dict(line: TrendlineSegment, series: list | None = None) -> dict:
 
 from app.paper.costs import compute_costs
 from app.paper.verdict import compute_progress
-from app.screener.cache import screener_cache
 
 def _paper_position_dict(p) -> dict:
     return {
@@ -172,14 +171,12 @@ def _portfolio_dict(p) -> dict:
 
 
 def _latest_marks() -> dict[str, tuple[float, float]]:
-    """symbol -> (last screener price, computed_at epoch). Read-only cache peek."""
-    marks: dict[str, tuple[float, float]] = {}
-    for tf in ("1h", "4h", "15m", "1d"):
-        entry = screener_cache.get(tf)
-        if entry is None:
-            continue
-        for row in entry.rows:
-            marks.setdefault(row.symbol, (row.price, entry.computed_at))
-    return marks
+    """symbol -> (last screener price, computed_at epoch). Read-only cache peek.
+
+    Prefer ``app.paper.marks.resolve_marks`` for valuation (cache + candle fallback).
+    """
+    from app.paper.marks import peek_screener_marks
+
+    return peek_screener_marks()
 
 
