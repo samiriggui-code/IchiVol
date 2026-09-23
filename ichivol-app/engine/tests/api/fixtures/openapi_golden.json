@@ -426,6 +426,75 @@
         "title": "RegimeSlicesBody",
         "type": "object"
       },
+      "RulesetProposeBody": {
+        "description": "T3d \u2014 propose a ruleset edit for Lab review (never auto-applied).",
+        "properties": {
+          "base_ruleset": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Ruleset"
+          },
+          "base_ruleset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Ruleset Id"
+          },
+          "patch": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patch"
+          },
+          "patches": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patches"
+          },
+          "ruleset": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ruleset"
+          }
+        },
+        "title": "RulesetProposeBody",
+        "type": "object"
+      },
       "RulesetStudyBody": {
         "properties": {
           "horizons": {
@@ -3566,6 +3635,50 @@
           }
         },
         "summary": "Post Ruleset Event Study",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/ruleset/propose": {
+      "post": {
+        "description": "T3d \u2014 validate a candidate/patch; returns status=proposed only.",
+        "operationId": "post_ruleset_propose_api_engine_ruleset_propose_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RulesetProposeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Ruleset Propose Api Engine Ruleset Propose Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Ruleset Propose",
         "tags": [
           "engine"
         ]

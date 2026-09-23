@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.config import settings
 from app.strategy_lab.catalog import get_builtin_ruleset, list_builtin_rulesets
 from app.strategy_lab.perf_db import persist_study_result
+from app.strategy_lab.propose_edit import condition_catalog, propose_ruleset_edit
 from app.strategy_lab.ruleset import CONDITION_SCHEMA, parse_ruleset
 from app.strategy_lab.run_ruleset import ruleset_study_dict, run_ruleset_event_study
 
@@ -19,7 +22,34 @@ def get_rulesets() -> dict:
     return {
         "rulesets": [r.to_dict() for r in list_builtin_rulesets()],
         "condition_keys": sorted(CONDITION_SCHEMA.keys()),
+        # T3d — full catalog for Copilot / Lab NL→DSL (additive).
+        "conditions": condition_catalog(),
     }
+
+
+class RulesetProposeBody(BaseModel):
+    """T3d — propose a ruleset edit for Lab review (never auto-applied)."""
+
+    base_ruleset_id: str | None = None
+    base_ruleset: dict[str, Any] | None = None
+    patch: dict[str, Any] | None = None
+    patches: list[dict[str, Any]] | None = None
+    ruleset: dict[str, Any] | None = None
+
+
+@router.post("/ruleset/propose")
+def post_ruleset_propose(body: RulesetProposeBody) -> dict:
+    """T3d — validate a candidate/patch; returns status=proposed only."""
+    try:
+        return propose_ruleset_edit(
+            base_ruleset_id=body.base_ruleset_id,
+            base_ruleset=body.base_ruleset,
+            patch=body.patch,
+            patches=body.patches,
+            ruleset=body.ruleset,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 class RulesetStudyBody(BaseModel):
