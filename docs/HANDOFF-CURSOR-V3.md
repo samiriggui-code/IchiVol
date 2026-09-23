@@ -156,9 +156,9 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
 ## 2026-09-23 — T2a — ChartObject (typed overlays from engine)
 
 - Branche : `v3/t2a-chart-objects`
-- PR : *(draft à créer par parent ManagePullRequest — ne pas merger)*
-- Commit(s) : `3672f5d`
-- Base : `main` @ `a19f924` (après merge PR #13 T1g)
+- PR : *(draft — CreatePullRequest via ManagePullRequest avec `skip_branch_prefix_check=true`, `branch_name=v3/t2a-chart-objects`, `base_branch=main`, `draft=true` — ne pas merger)*
+- Commit(s) : `3672f5d` (feat) ; `a41ef76` / `ad3f9a3` (handoff)
+- Base : `main` @ `a19f924` (après merge PR #13 T1g — **validé / mergé**)
 
 - Livré :
   - Modèle `app/chart_objects/types.py` — `ChartObject` frozen, id déterministe (sha256[:24] de type/source/symbol/tf/coords arrondis/subtype), validation par type, `to_dict`/`from_dict`
