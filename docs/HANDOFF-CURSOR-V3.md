@@ -18,10 +18,70 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T2a** : ChartObject — **mergé** (PR #15) — **validé par Claude**.
 - **T0-BROKER** #16 — **MERGÉE** (validé Claude).
 - **T2b** #17 — **MERGÉE** (validé Claude).
-- **T3** #18 — **MERGÉE** (validé Claude).
+- **T3** #18 — **MERGÉE** (validé Claude) — DSL `all`/`any` + `exit`.
 - **T0-UI** #19 — **MERGÉE** (accepté Claude comme T0-UI, pas T4 roadmap).
-- **Job en cours** : **T2c** PR #20 — corrections revue Claude (setup atomique) — **ATTENTE revalidation**.
+- **T2c** #20 — **MERGÉE** — **validé par Claude** (T2a+T2b+T2c = **T2 terminé**).
+- **Job en cours** : **T3c** registre conditions — branche `cursor/t3c-condition-registry-a2fe`.
 
+
+---
+
+## 2026-09-23 — T3c EN COURS — registre conditions + CONDITION_SCHEMA dérivé
+
+- Branche : `cursor/t3c-condition-registry-a2fe` (Claude : `v3/t3c-condition-registry` — préfixe cloud `cursor/…-a2fe`)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/21 (**draft**)
+- Commit(s) : `0545826` (fixtures **avant** refactor) ; `51834cd` (registre) ; `1ad9588` (handoff PR)
+- Statut : **ATTENTE CLAUDE** — CI **VERTE** ; **ne pas merger** avant revue.
+
+### Objectif
+
+Une condition DSL = une déclaration (`ConditionSpec`) ; `CONDITION_SCHEMA` et `_condition_holds` dérivés du registre.
+
+### Livré
+
+1. Fixtures pré-refactor : `condition_schema_golden.json`, `condition_eval_golden.json` + tests égalité stricte
+2. `app/strategy_lab/conditions.py` — `ConditionSpec` + `CONDITION_REGISTRY` (copie exacte des expressions `_condition_holds`)
+3. `CONDITION_SCHEMA` / `CONDITION_ENUMS` dérivés ; evaluator dispatch via registre ; cliquet AST `key == "…"`
+4. Contrats : indicator_id ∈ REGISTRY ∪ {structure,derived} ; pas de doublons ; test « une déclaration »
+5. `ruleset_backtest_golden` **inchangé** ; OpenAPI **inchangé**
+
+### Note validation `allowed_values`
+
+`CONDITION_ENUMS` **existait déjà** avant T3c (même valeurs). Déplacé sur `ConditionSpec.allowed_values` → dérivation. **Aucun builtin ne viole** les enums (re-parse catalog OK). Pas de correction catalog.
+
+### CI Actions
+
+- **VERTE** (HEAD `1ad9588`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35860079478
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
+### Arbitrages T3 (Claude — à respecter)
+
+- **T3b StrategyCompiler** : **non** — `ruleset_backtest` exécute déjà le DSL ; pas de couche compilation.
+- **MTF DSL** → **T3e** (features multi-TF absentes ; ne bloque pas T4/T5).
+- **`risk{}` cosmétique** : **abandonné** — `stop_atr` / `target_atr` restent top-level.
+
+### Hors scope T3c
+
+Nouvelles conditions ; MTF (T3e) ; éditeur conversationnel (T3d).
+
+### Attente
+
+**Cursor s’arrête ici** jusqu’à la revue Claude.
+
+---
+
+## 2026-09-23 — T2c VALIDÉ par Claude — MERGÉ (#20)
+
+- Branche : `cursor/t2c-user-trade-points-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/20 — **MERGÉE** `7e7cac7`
+- Statut : **validé par Claude** (5 corrections OK ; Postgres 0 échec ; golden ajouts seuls).
+
+### Livré (rappel)
+
+`POST …/setup` atomique + grounding ; sens déduit ; R UI ; Twelve Data OK (cache 90s partagé OHLCV) ; `as_of` groundé.
+
+**T2 terminé** (T2a + T2b + T2c).
 
 ---
 
