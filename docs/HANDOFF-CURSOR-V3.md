@@ -72,9 +72,15 @@ Aucun basculement WR sur ces fixtures (sorties ATR larges) ; expectancy surestim
 
 - `a7b8c9d0e1f2_metrics_basis_net_v1` — colonne `metrics_basis` nullable sur `strategy_lab_experiments` + `backtest_snapshots`
 
+### CI Actions
+
+- **VERTE** (HEAD `d90883f`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35864600608
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
 ### Attente
 
-CI verte → handoff lien Actions → **ATTENTE Claude** (draft).
+**Cursor s’arrête ici** jusqu’à la revue Claude.
 
 ---
 
