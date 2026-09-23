@@ -33,16 +33,36 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T4c** #31 — **MERGÉE** (WHY ENTERED / REJECTED / EXITED).
 - **T4b** #32 — **MERGÉE** (filtres overlay structurés).
 - **T4d** #33 — **MERGÉE** (filtre régime overlay).
-- **Job en cours** : **T5a** — PR #34 draft — family weights observation-only (ATTENTE CI).
+- **T5a** #34 — **MERGÉE** (family weights observation-only).
+- **Job en cours** : **T5b** — profils poids + étude historique (branche `cursor/t5b-weight-profiles-a2fe`).
 
 
 ---
 
-## 2026-09-23 — T5a EN COURS — family weights observation-only
+## 2026-09-23 — T5b EN COURS — profils poids backtestables
+
+- Branche : `cursor/t5b-weight-profiles-a2fe`
+- PR : *(draft à ouvrir)*
+- Statut : **EN COURS** — après merge #34.
+
+### Livré
+
+1. Catalogue `FamilyWeightProfile` (balanced / direction_heavy / participation_heavy / structure_heavy)
+2. `compare_family_weight_profiles(pipeline)` — table observation
+3. `run_family_weights_study` — BUY/SELL pipeline bars × forward log returns (causal)
+4. Agent : `list_family_weight_profiles`, `compare_family_weights`, `run_family_weights_study`
+
+### Non-faits
+
+Aucun poids en live score ; T6 Auditor ; T7 Monte Carlo ; chat NL / T3d.
+
+---
+
+## 2026-09-23 — T5a MERGÉ (#34) — family weights observation-only
 
 - Branche : `cursor/t5a-family-weights-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/34 (**draft**)
-- Statut : **ATTENTE CI** — après merge #33.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/34 — **MERGÉE** `c8c2bc7`
+- Statut : CI verte ; merge Cursor.
 
 ### Livré
 
