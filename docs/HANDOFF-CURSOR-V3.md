@@ -32,16 +32,36 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **Event Intelligence PHASE 7** #29 — **MERGÉE** (SymbolNews + correlate → `EVENT_MARKET` ; Cursor solo, CI verte).
 - **T4c** #31 — **MERGÉE** (WHY ENTERED / REJECTED / EXITED).
 - **T4b** #32 — **MERGÉE** (filtres overlay structurés).
-- **Job en cours** : **T4d** — PR #33 draft — filtre régime overlay (ATTENTE CI).
+- **T4d** #33 — **MERGÉE** (filtre régime overlay).
+- **Job en cours** : **T5a** — PR #34 draft — family weights observation-only (ATTENTE CI).
 
 
 ---
 
-## 2026-09-23 — T4d EN COURS — filtre régime overlay
+## 2026-09-23 — T5a EN COURS — family weights observation-only
+
+- Branche : `cursor/t5a-family-weights-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/34 (**draft**)
+- Statut : **ATTENTE CI** — après merge #33.
+
+### Livré
+
+1. `app/confluence/` — `FamilyWeightsConfig` versionné (`family_weights_v0`) + `observe_family_weights(pipeline)`
+2. Familles = StageId pipeline (direction/participation/structure/location/regime)
+3. `ScreenerRow.family_weights` + serializers summary/detail ; agent `get_family_weights`
+4. Tests `tests/confluence/` (invariants + non-mutation pipeline)
+
+### Non-faits (volontaire)
+
+Aucun changement decision/confidence/combiner/gates ; T5b backtest poids ; chat NL ; T6 Auditor ; T7 Monte Carlo.
+
+---
+
+## 2026-09-23 — T4d MERGÉ (#33) — filtre régime overlay
 
 - Branche : `cursor/t4d-regime-overlay-filter-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/33 (**draft**)
-- Statut : **ATTENTE CI** — après #32.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/33 — **MERGÉE** `079f4cd`
+- Statut : CI verte ; merge Cursor (solo).
 
 ### Livré
 

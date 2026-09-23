@@ -79,6 +79,15 @@ def summary_dict(row: ScreenerRow) -> dict:
             "confidence": anomaly["confidence"],
             "feature_version": anomaly["feature_version"],
         }
+    from app.confluence.observe import family_weights_observation_dict
+
+    fw = family_weights_observation_dict(getattr(row, "family_weights", None))
+    if fw is not None:
+        # Slim summary: version + support only (detail has full breakdown).
+        body["family_weights"] = {
+            "version": fw["version"],
+            "weighted_support": fw["weighted_support"],
+        }
     return body
 
 
@@ -130,6 +139,11 @@ def detail_dict(row: ScreenerRow) -> dict:
             "matches": ec["matches"],
             "disclaimer": ec["disclaimer"],
         }
+    from app.confluence.observe import family_weights_observation_dict
+
+    fw = family_weights_observation_dict(getattr(row, "family_weights", None))
+    if fw is not None:
+        body["family_weights"] = fw
     if row.context is not None:
         body["context"] = row.context.to_dict()
     if row.evidence is not None:
