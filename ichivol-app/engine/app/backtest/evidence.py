@@ -98,7 +98,7 @@ def _snapshot_row(symbol: str, timeframe: str, experiment_name: str, exp) -> Bac
         win_rate=m.win_rate,
         profit_factor=m.profit_factor if m.profit_factor != float("inf") else None,
         expectancy=m.expectancy,
-        metrics_basis="net_v1",
+        metrics_basis="net_v2",
     )
 
 

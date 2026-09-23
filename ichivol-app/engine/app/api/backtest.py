@@ -119,7 +119,7 @@ def get_backtest(
         "timeframe": timeframe,
         "experiments": {
             name: {
-                "metrics": metrics_dict(exp.metrics),
+                "metrics": metrics_dict(exp.metrics, metrics_basis="net_v2"),
                 "backtest": backtest_dict(exp.backtest),
             }
             for name, exp in results.items()

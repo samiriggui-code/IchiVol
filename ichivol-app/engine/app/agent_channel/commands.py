@@ -207,7 +207,10 @@ def cmd_run_backtest(args: dict) -> dict:
         "symbol": symbol,
         "timeframe": timeframe,
         "experiments": {
-            name: {"metrics": metrics_dict(exp.metrics), "backtest": backtest_dict(exp.backtest)}
+            name: {
+                "metrics": metrics_dict(exp.metrics, metrics_basis="net_v2"),
+                "backtest": backtest_dict(exp.backtest),
+            }
             for name, exp in results.items()
         },
     }

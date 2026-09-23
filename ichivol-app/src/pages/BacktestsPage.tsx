@@ -107,7 +107,15 @@ function fmtWhen(iso: string | null): string {
 }
 
 function metricsBasisLabel(basis: string | null | undefined): string {
-  return basis === 'net_v1' ? 'net' : 'brut (ancien)'
+  if (basis === 'net_v2') return 'net (engine v2)'
+  if (basis === 'net_v1') return 'net (ruleset v1)'
+  return 'brut (ancien)'
+}
+
+function metricsBasisBucket(basis: string | null | undefined): string {
+  if (basis === 'net_v2') return 'net_v2'
+  if (basis === 'net_v1') return 'net_v1'
+  return 'gross'
 }
 
 function StoredMetricsTable({
@@ -126,13 +134,14 @@ function StoredMetricsTable({
       </div>
     )
   }
-  const bases = new Set(rows.map((r) => (r.metrics_basis === 'net_v1' ? 'net' : 'gross')))
+  const bases = new Set(rows.map((r) => metricsBasisBucket(r.metrics_basis)))
   const mixed = bases.size > 1
   return (
     <div className="table-wrap">
       {mixed ? (
         <p className="muted" style={{ padding: '0.5rem 1rem 0', color: 'var(--danger, #c44)' }}>
-          Attention : mélange brut (ancien) et net — ne pas comparer côte à côte sans le dire.
+          Attention : bases différentes (brut / net_v1 / net_v2) — ne pas comparer côte à côte
+          sans le dire.
         </p>
       ) : null}
       <table>
@@ -1266,9 +1275,9 @@ export function BacktestsPage() {
           </header>
           <p className="muted" style={{ padding: '0 1rem 0.75rem' }}>
             Runs persistés (`strategy_lab_experiments`) — évite de tout recalculer. Ablation :
-            compare les rulesets sur le même symbole/TF. Nouveaux runs = métriques{' '}
-            <strong>nettes de frais</strong> (`metrics_basis=net_v1`) ; anciens ={' '}
-            <em>brut (ancien)</em> — ne pas comparer sans le dire.
+            compare les rulesets sur le même symbole/TF. Bases :{' '}
+            <strong>net_v1</strong> (ruleset), <strong>net_v2</strong> (engine/pipeline),{' '}
+            <em>brut (ancien)</em> — ne jamais comparer sans le dire.
           </p>
           <div className="table-wrap">
             <table>

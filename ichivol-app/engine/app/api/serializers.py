@@ -127,7 +127,7 @@ def detail_dict(row: ScreenerRow) -> dict:
     return body
 
 
-def metrics_dict(m: Metrics) -> dict:
+def metrics_dict(m: Metrics, *, metrics_basis: str = "net_v1") -> dict:
     return {
         "n_bars": m.n_bars,
         "total_return": m.total_return,
@@ -145,7 +145,7 @@ def metrics_dict(m: Metrics) -> dict:
             m.profit_factor_gross if m.profit_factor_gross != float("inf") else None
         ),
         "expectancy_gross": m.expectancy_gross,
-        "metrics_basis": "net_v1",
+        "metrics_basis": metrics_basis,
     }
 
 
@@ -156,6 +156,7 @@ def backtest_dict(result: BacktestResult) -> dict:
         "n_bars": result.n_bars,
         "commission_bps": result.commission_bps,
         "slippage_bps": result.slippage_bps,
+        "eod_return": result.eod_return,
         "trades": [
             {
                 "entry_time": t.entry_time,

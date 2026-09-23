@@ -95,8 +95,7 @@ def test_ruleset_invariant_sum_net_log_eq_sum_bar_returns():
 
 
 def test_engine_invariant_mid_close_and_eod_flat():
-    """When open==close path matches trade marks, invariant holds with cost_log."""
-    # Mid-series close
+    """Mid-close and EOD flat OHLC — full round-trip cost on each trade."""
     opens = [100, 101, 102, 103, 104, 105]
     desired = [
         Direction.NEUTRAL,
@@ -110,11 +109,9 @@ def test_engine_invariant_mid_close_and_eod_flat():
         _flat(opens), desired, commission_bps=5.0, slippage_bps=3.0
     )
     assert sum(t.net_log_return for t in r.trades) == pytest.approx(
-        sum(r.bar_returns), abs=1e-9
+        sum(r.bar_returns) + r.eod_return, abs=1e-9
     )
 
-    # EOD force-close with flat OHLC (close == open) — exit fee absent in bars;
-    # cost_log only counts fees actually written → invariant holds.
     opens2 = [100, 101, 102, 103, 104]
     desired2 = [
         Direction.NEUTRAL,
@@ -127,38 +124,10 @@ def test_engine_invariant_mid_close_and_eod_flat():
         _flat(opens2), desired2, commission_bps=5.0, slippage_bps=3.0
     )
     assert len(r2.trades) == 1
-    assert r2.trades[0].cost_log == pytest.approx(one_way_cost_log(5.0, 3.0))
+    assert r2.trades[0].cost_log == pytest.approx(2 * one_way_cost_log(5.0, 3.0))
     assert sum(t.net_log_return for t in r2.trades) == pytest.approx(
-        sum(r2.bar_returns), abs=1e-9
+        sum(r2.bar_returns) + r2.eod_return, abs=1e-9
     )
-
-
-def test_engine_eod_close_ne_open_invariant_gap_documented():
-    """Pre-existing: EOD mark uses last.close but bar_returns stop at open-to-open.
-
-    Documented in handoff — not fixed in T0-METRICS. Invariant fails by the
-    close−open log move (fees aside).
-    """
-    candles = [
-        Candle(time=i, open=o, high=o + 1, low=o - 1, close=c, volume=1.0)
-        for i, (o, c) in enumerate(
-            [(100.0, 100.0), (101.0, 101.0), (102.0, 102.0), (103.0, 103.0), (104.0, 110.0)]
-        )
-    ]
-    desired = [
-        Direction.NEUTRAL,
-        Direction.LONG,
-        Direction.LONG,
-        Direction.LONG,
-        Direction.LONG,
-    ]
-    r = run_backtest(candles, desired, commission_bps=5.0, slippage_bps=3.0)
-    sum_net = sum(t.net_log_return for t in r.trades)
-    sum_bars = sum(r.bar_returns)
-    gap = sum_net - sum_bars
-    # Gap ≈ log(110/104) — the close vs last-open mark difference.
-    assert gap == pytest.approx(math.log(110 / 104), abs=1e-9)
-    assert abs(gap) > 1e-9  # deliberately out of invariant tolerance
 
 
 @pytest.mark.parametrize("seed", [7, 42])
