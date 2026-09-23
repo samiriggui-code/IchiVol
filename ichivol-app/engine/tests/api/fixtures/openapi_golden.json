@@ -3413,6 +3413,61 @@
         ]
       }
     },
+    "/api/engine/paper/positions/{position_id}/proximity": {
+      "get": {
+        "description": "T0-NOTIF \u2014 remaining fraction to stop/target (same geometry as scenarios). Read-only.",
+        "operationId": "paper_position_proximity_api_engine_paper_positions__position_id__proximity_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "position_id",
+            "required": true,
+            "schema": {
+              "title": "Position Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "near_pct",
+            "required": false,
+            "schema": {
+              "default": 0.2,
+              "title": "Near Pct",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Paper Position Proximity Api Engine Paper Positions  Position Id  Proximity Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Paper Position Proximity",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
     "/api/engine/paper/positions/{position_id}/scenarios": {
       "get": {
         "description": "Historical scenarios for an OPEN paper lot (from mark + from entry). Read-only.",

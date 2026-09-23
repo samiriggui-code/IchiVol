@@ -18,6 +18,7 @@ model User {
   setting       Setting?
   decisions     Decision[]
   notifications Notification[]
+  pushSubscriptions PushSubscription[]
   agentThreads  AgentThread[]
   agentActions  AgentAction[]
   auditLogs     AuditLog[]
@@ -40,6 +41,8 @@ model Setting {
   /// Clés LLM chiffrées, une par fournisseur : { anthropic: enc, openrouter: enc, ... }
   llmKeysEnc      Json?
   twelveDataApiKeyEnc String?
+  /// T0-NOTIF — prefs alertes push (JSON) ; jamais d'ordre auto
+  pushAlertPrefs  Json?
   updatedAt       DateTime @updatedAt
 
   @@map("settings")
@@ -80,6 +83,7 @@ model Notification {
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// journal_confirm | pipeline_change | system_alert | system_digest
+  /// | position_target_near | position_stop_near | position_accel | position_direction_flip
   kind      String
   title     String
   body      String
@@ -90,6 +94,23 @@ model Notification {
   @@index([userId, createdAt])
   @@index([userId, readAt])
   @@map("notifications")
+}
+
+/// T0-NOTIF — Web Push subscriptions (VAPID). One row per (user, endpoint).
+model PushSubscription {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint   String
+  p256dh     String
+  auth       String
+  userAgent  String?
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@unique([userId, endpoint])
+  @@index([userId])
+  @@map("push_subscriptions")
 }
 
 /// Conversation Copilot persistée (E4 / audit P3).

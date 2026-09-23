@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { PaperCloseConfirmSheet } from '../components/PaperCloseConfirmSheet'
 import { PaperTradeSheet } from '../components/PaperTradeSheet'
 import {
@@ -229,6 +229,7 @@ function PositionsTable({
 }
 
 export function PaperPage() {
+  const [searchParams] = useSearchParams()
   const [tab, setTab] = useState<PaperSource>('user_confirmed')
   const [mineCache, setMineCache] = useState<PaperPosition[]>([])
   const [autoCache, setAutoCache] = useState<PaperPosition[]>([])
@@ -271,6 +272,29 @@ export function PaperPage() {
   useEffect(() => {
     void reload()
   }, [reload])
+
+  // T0-NOTIF deep link: /app/paper?position=&symbol=
+  useEffect(() => {
+    if (loading) return
+    const positionId = searchParams.get('position')
+    const symbol = searchParams.get('symbol')?.toUpperCase()
+    const pool = [...mineCache, ...autoCache]
+    if (positionId) {
+      const hit = pool.find((p) => p.id === positionId)
+      if (hit) {
+        setTab(hit.source === 'auto_watchlist' ? 'auto_watchlist' : 'user_confirmed')
+        setSheetPos(hit)
+      }
+      return
+    }
+    if (symbol) {
+      const hit = pool.find((p) => p.symbol.toUpperCase() === symbol && p.status === 'OPEN')
+      if (hit) {
+        setTab(hit.source === 'auto_watchlist' ? 'auto_watchlist' : 'user_confirmed')
+        setSheetPos(hit)
+      }
+    }
+  }, [loading, searchParams, mineCache, autoCache])
 
   const positions = tab === 'user_confirmed' ? mineCache : autoCache
 

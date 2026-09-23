@@ -23,7 +23,7 @@ function fmtWhen(iso: string): string {
 function kindMeta(kind: NotificationKind | string): {
   icon: string
   label: string
-  tone: 'journal' | 'pipeline' | 'system' | 'default'
+  tone: 'journal' | 'pipeline' | 'system' | 'position' | 'default'
 } {
   switch (kind) {
     case 'journal_confirm':
@@ -34,6 +34,11 @@ function kindMeta(kind: NotificationKind | string): {
       return { icon: 'shield-cross', label: 'Système', tone: 'system' }
     case 'system_digest':
       return { icon: 'chart-line', label: 'Résumé', tone: 'system' }
+    case 'position_target_near':
+    case 'position_stop_near':
+    case 'position_accel':
+    case 'position_direction_flip':
+      return { icon: 'notification', label: 'Position', tone: 'position' }
     default:
       return { icon: 'notification-bing', label: 'Info', tone: 'default' }
   }
@@ -121,7 +126,24 @@ export function NotificationBell({ onOpen }: { onOpen?: () => void }) {
     }
 
     const symbol = payloadSymbol(n)
+    const positionId =
+      typeof n.payload?.positionId === 'string' ? n.payload.positionId : null
     setOpen(false)
+    if (
+      positionId ||
+      n.kind === 'position_target_near' ||
+      n.kind === 'position_stop_near' ||
+      n.kind === 'position_accel' ||
+      n.kind === 'position_direction_flip'
+    ) {
+      const q = new URLSearchParams()
+      if (symbol) q.set('symbol', symbol)
+      if (positionId) q.set('position', positionId)
+      const interval = payloadInterval(n)
+      if (interval) q.set('interval', interval)
+      navigate(`/app/paper?${q.toString()}`)
+      return
+    }
     if (symbol) {
       const interval = payloadInterval(n)
       const q = new URLSearchParams({ symbol })

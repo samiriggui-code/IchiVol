@@ -24,6 +24,11 @@ export interface Config {
   alertEmailTo: string | undefined
   digestIntervalMs: number
   watchdogIntervalMs: number
+  vapid: {
+    publicKey: string | undefined
+    privateKey: string | undefined
+    subject: string
+  }
 }
 
 function readProvider(value: string | undefined): ProviderName {
@@ -61,4 +66,9 @@ export const config: Config = {
   // Digest quotidien par défaut ; watchdog santé toutes les 5 min.
   digestIntervalMs: Number(process.env.DIGEST_INTERVAL_MS) || 24 * 60 * 60 * 1000,
   watchdogIntervalMs: Number(process.env.WATCHDOG_INTERVAL_MS) || 5 * 60 * 1000,
+  vapid: {
+    publicKey: process.env.VAPID_PUBLIC_KEY,
+    privateKey: process.env.VAPID_PRIVATE_KEY,
+    subject: process.env.VAPID_SUBJECT || 'mailto:admin@ichivol.local',
+  },
 }

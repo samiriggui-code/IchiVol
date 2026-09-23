@@ -23,6 +23,12 @@ import {
 import { startDigestJob } from './notifications/digest.js'
 import { startSystemWatchdog } from './notifications/systemWatchdog.js'
 import { startJournalWatchJob } from './notifications/watch.js'
+import { startPositionWatchJob } from './notifications/positionWatch.js'
+import {
+  handlePushSubscribe,
+  handlePushUnsubscribe,
+  handlePushVapidPublic,
+} from './notifications/pushRoute.js'
 import { handleHealth } from './routes/health.js'
 import { handleGetSettings, handleLlmTest, handlePatchSettings } from './settings/route.js'
 import {
@@ -58,6 +64,9 @@ app.delete('/api/watchlist/:symbol', requireAuth, handleDeleteWatchlistItem)
 app.get('/api/notifications', requireAuth, handleListNotifications)
 app.post('/api/notifications/read-all', requireAuth, handleReadAllNotifications)
 app.post('/api/notifications/:id/read', requireAuth, handleReadNotification)
+app.get('/api/notifications/push-vapid-public', requireAuth, handlePushVapidPublic)
+app.post('/api/notifications/push-subscribe', requireAuth, handlePushSubscribe)
+app.delete('/api/notifications/push-subscribe', requireAuth, handlePushUnsubscribe)
 
 app.post('/api/agent/chat', requireAuth, handleAgentChat)
 app.post('/api/agent/actions/confirm', requireAuth, handleConfirmAgentAction)
@@ -73,4 +82,5 @@ app.listen(config.port, () => {
   startJournalWatchJob()
   startSystemWatchdog()
   startDigestJob()
+  startPositionWatchJob()
 })
