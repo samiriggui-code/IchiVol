@@ -16,11 +16,16 @@ import {
   type Time,
   type UTCTimestamp,
 } from 'lightweight-charts'
+import {
+  chartObjectMarkers,
+  chartObjectTrendlines,
+  chartObjectZones,
+  type ChartObject,
+} from '../lib/chartObjects'
 import { type ChartColors, readChartColors } from '../lib/chartColors'
 import { fetchChartOverlays } from '../lib/engineIndicators'
 import { getSettings } from '../lib/settings'
 import { biasFromIchi, buildVolumePulse, signalLabel } from '../lib/signals'
-import type { StructureOverlay } from '../lib/structure'
 import { THEME_CHANGE_EVENT } from '../lib/theme'
 import {
   DEFAULT_ICHI,
@@ -38,8 +43,8 @@ interface Props {
   timeframe: Interval | string
   onSignals?: (signals: Signal[]) => void
   onLive?: (live: { bias: 'bull' | 'bear' | 'neutral'; rvol: number }) => void
-  /** Zones S/R + trendlines calculées par le moteur (pas par le navigateur). */
-  structure?: StructureOverlay | null
+  /** ChartObjects moteur (zones / trendlines / markers) — couche Structure. */
+  chartObjects?: ChartObject[] | null
 }
 
 type SeriesBag = {
@@ -169,9 +174,80 @@ function applyChartTheme(chart: IChartApi, series: SeriesBag, colors: ChartColor
   series.spanB.applyOptions({ color: colors.spanB })
 }
 
-export function PriceChart({ candles, symbol, timeframe, onSignals, onLive, structure }: Props) {
+/** Render ENGINE ChartObjects with visual parity to the former Structure overlay. */
+function renderChartObjects(
+  chart: IChartApi | null,
+  series: SeriesBag | null,
+  priceLinesRef: { current: IPriceLine[] },
+  trendSeriesRef: { current: ISeriesApi<'Line'>[] },
+  objects: ChartObject[] | null | undefined,
+  show: boolean,
+  colors: ChartColors,
+): SeriesMarker<Time>[] {
+  if (!chart || !series) return []
+
+  for (const pl of priceLinesRef.current) series.candle.removePriceLine(pl)
+  priceLinesRef.current = []
+  for (const ts_ of trendSeriesRef.current) chart.removeSeries(ts_)
+  trendSeriesRef.current = []
+
+  if (!objects || !show) return []
+
+  for (const z of chartObjectZones(objects)) {
+    const color = z.side === 'support' ? colors.bull : colors.bear
+    const label = z.label || `${z.side === 'support' ? 'S' : 'R'} ×${z.touch_count}`
+    for (const [price, title] of [[z.high, label], [z.low, '']] as const) {
+      priceLinesRef.current.push(
+        series.candle.createPriceLine({
+          price,
+          color: `${color}b3`,
+          lineWidth: 1,
+          lineStyle: LineStyle.Dotted,
+          axisLabelVisible: title !== '',
+          title,
+        }),
+      )
+    }
+  }
+
+  for (const t of chartObjectTrendlines(objects)) {
+    const color = t.side === 'support' ? colors.bull : colors.bear
+    const line = chart.addSeries(
+      LineSeries,
+      {
+        color,
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        lastValueVisible: false,
+        priceLineVisible: false,
+        crosshairMarkerVisible: false,
+      },
+      0,
+    )
+    line.setData([
+      { time: ts(t.start_time), value: t.start_price },
+      { time: ts(t.end_time), value: t.end_price },
+    ])
+    trendSeriesRef.current.push(line)
+  }
+
+  // MARKER (breakouts): circle markers — merged with volume signals by caller.
+  return chartObjectMarkers(objects).map((m) => {
+    const bullish = m.side === 'resistance' // break above resistance
+    return {
+      time: ts(m.time),
+      position: bullish ? ('belowBar' as const) : ('aboveBar' as const),
+      color: bullish ? colors.bull : colors.bear,
+      shape: 'circle' as const,
+      text: m.label,
+    }
+  })
+}
+
+export function PriceChart({ candles, symbol, timeframe, onSignals, onLive, chartObjects }: Props) {
   const priceLinesRef = useRef<IPriceLine[]>([])
   const trendSeriesRef = useRef<ISeriesApi<'Line'>[]>([])
+  const structureMarkersRef = useRef<SeriesMarker<Time>[]>([])
   const hostRef = useRef<HTMLDivElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -422,72 +498,54 @@ export function PriceChart({ candles, symbol, timeframe, onSignals, onLive, stru
     series.spanB.applyOptions({ visible: showOverlays && layers.spanB })
     series.volume.applyOptions({ visible: layers.volume })
 
-    const markers: SeriesMarker<Time>[] = layers.signals && showOverlays
-      ? signalsCacheRef.current.map((s) => {
-          const isLong = s.kind === 'tk_long' || s.kind === 'brk_long'
-          return {
-            time: ts(s.time),
-            position: isLong ? 'belowBar' : 'aboveBar',
-            color: isLong ? colors.bull : colors.bear,
-            shape: isLong ? 'arrowUp' : 'arrowDown',
-            text: isLong ? 'VOL↑' : 'VOL↓',
-          }
-        })
-      : []
+    const markers: SeriesMarker<Time>[] = [
+      ...(layers.signals && showOverlays
+        ? signalsCacheRef.current.map((s) => {
+            const isLong = s.kind === 'tk_long' || s.kind === 'brk_long'
+            return {
+              time: ts(s.time),
+              position: isLong ? ('belowBar' as const) : ('aboveBar' as const),
+              color: isLong ? colors.bull : colors.bear,
+              shape: isLong ? ('arrowUp' as const) : ('arrowDown' as const),
+              text: isLong ? 'VOL↑' : 'VOL↓',
+            }
+          })
+        : []),
+      ...(layers.structure ? structureMarkersRef.current : []),
+    ]
     markersRef.current?.setMarkers(markers)
-  }, [layers, candles, colors, overlaysReady, overlayError])
+  }, [layers, candles, colors, overlaysReady, overlayError, chartObjects])
 
-  // Overlays moteur : zones = 2 lignes de prix (bas/haut), trendlines = séries à 2 points.
+  // Overlays moteur via ChartObjects : zones = 2 price lines, trendlines = 2-point series.
   useEffect(() => {
-    const chart = chartRef.current
-    const series = seriesRef.current
-    if (!chart || !series) return
-
-    for (const pl of priceLinesRef.current) series.candle.removePriceLine(pl)
-    priceLinesRef.current = []
-    for (const ts_ of trendSeriesRef.current) chart.removeSeries(ts_)
-    trendSeriesRef.current = []
-
-    if (!structure || !layers.structure) return
-
-    for (const z of structure.zones) {
-      const color = z.side === 'support' ? colors.bull : colors.bear
-      const label = `${z.side === 'support' ? 'S' : 'R'} ×${z.touch_count}`
-      for (const [price, title] of [[z.high, label], [z.low, '']] as const) {
-        priceLinesRef.current.push(
-          series.candle.createPriceLine({
-            price,
-            color: `${color}b3`,
-            lineWidth: 1,
-            lineStyle: LineStyle.Dotted,
-            axisLabelVisible: title !== '',
-            title,
-          }),
-        )
-      }
-    }
-
-    for (const t of structure.trendlines) {
-      const color = t.side === 'support' ? colors.bull : colors.bear
-      const line = chart.addSeries(
-        LineSeries,
-        {
-          color,
-          lineWidth: 1,
-          lineStyle: LineStyle.Dashed,
-          lastValueVisible: false,
-          priceLineVisible: false,
-          crosshairMarkerVisible: false,
-        },
-        0,
-      )
-      line.setData([
-        { time: ts(t.start_time), value: t.start_price },
-        { time: ts(t.end_time), value: t.end_price },
-      ])
-      trendSeriesRef.current.push(line)
-    }
-  }, [structure, layers.structure, colors, candles])
+    structureMarkersRef.current = renderChartObjects(
+      chartRef.current,
+      seriesRef.current,
+      priceLinesRef,
+      trendSeriesRef,
+      chartObjects,
+      layers.structure,
+      colors,
+    )
+    const showOverlays = overlaysReady && !overlayError
+    const volMarkers: SeriesMarker<Time>[] =
+      layers.signals && showOverlays
+        ? signalsCacheRef.current.map((s) => {
+            const isLong = s.kind === 'tk_long' || s.kind === 'brk_long'
+            return {
+              time: ts(s.time),
+              position: isLong ? ('belowBar' as const) : ('aboveBar' as const),
+              color: isLong ? colors.bull : colors.bear,
+              shape: isLong ? ('arrowUp' as const) : ('arrowDown' as const),
+              text: isLong ? 'VOL↑' : 'VOL↓',
+            }
+          })
+        : []
+    markersRef.current?.setMarkers([
+      ...volMarkers,
+      ...(layers.structure ? structureMarkersRef.current : []),
+    ])
+  }, [chartObjects, layers.structure, layers.signals, colors, candles, overlaysReady, overlayError])
 
   const p = tip.point
   const up = p ? p.candle.close >= p.candle.open : false

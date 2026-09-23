@@ -12,7 +12,7 @@ import {
 } from '../lib/decisions'
 import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
 import { displaySymbol } from '../lib/markets'
-import { getEngineStructure, type StructureOverlay } from '../lib/structure'
+import { getChartObjects, type ChartObject } from '../lib/chartObjects'
 import { useMarketSnapshot } from '../lib/marketSnapshot'
 import {
   CLASS_BLURBS,
@@ -73,7 +73,7 @@ export function MarketPage() {
   const [interval, setInterval] = useState<Interval>('1h')
   const [candles, setCandles] = useState<Candle[]>([])
   const [chartProvider, setChartProvider] = useState<string | null>(null)
-  const [structure, setStructure] = useState<StructureOverlay | null>(null)
+  const [chartObjects, setChartObjects] = useState<ChartObject[] | null>(null)
   const [signals, setSignals] = useState<Signal[]>([])
   const [chartLive, setChartLive] = useState<{
     bias: 'bull' | 'bear' | 'neutral'
@@ -314,18 +314,18 @@ export function MarketPage() {
   }, [symbol, interval, current, loadChart])
 
   useEffect(() => {
-    setStructure(null)
-    // Twelve Data (actions) : budget de crédits serré, /structure refetche les bougies.
+    setChartObjects(null)
+    // Twelve Data (actions) : budget de crédits serré, /chart-objects refetche les bougies.
     if (!current?.wired || current.provider === 'twelve_data' || !ENGINE_TIMEFRAMES.has(interval)) {
       return
     }
     let cancelled = false
-    getEngineStructure(symbol, interval, 300)
-      .then((s) => {
-        if (!cancelled) setStructure(s)
+    getChartObjects(symbol, interval, 300)
+      .then((objs) => {
+        if (!cancelled) setChartObjects(objs)
       })
       .catch(() => {
-        // La structure est un overlay optionnel : le graphique reste utilisable sans.
+        // Overlay optionnel : le graphique reste utilisable sans.
       })
     return () => {
       cancelled = true
@@ -467,7 +467,7 @@ export function MarketPage() {
             timeframe={interval}
             onSignals={setSignals}
             onLive={setChartLive}
-            structure={structure}
+            chartObjects={chartObjects}
           />
           <div className="tf-group tf-group--chart" role="group" aria-label="Timeframe">
             {INTERVALS.map((tf) => (

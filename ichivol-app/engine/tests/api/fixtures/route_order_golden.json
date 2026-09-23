@@ -374,6 +374,13 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/chart-objects/{symbol}",
+    "endpoint": "get_chart_objects"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/health",
     "endpoint": "health"
   }

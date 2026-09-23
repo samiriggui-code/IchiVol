@@ -153,6 +153,32 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
 
 ---
 
+## 2026-09-23 — T2a — ChartObject (typed overlays from engine)
+
+- Branche : `v3/t2a-chart-objects`
+- PR : *(draft à créer par parent ManagePullRequest — ne pas merger)*
+- Base : `main` @ `a19f924` (après merge PR #13 T1g)
+
+- Livré :
+  - Modèle `app/chart_objects/types.py` — `ChartObject` frozen, id déterministe (sha256[:24] de type/source/symbol/tf/coords arrondis/subtype), validation par type, `to_dict`/`from_dict`
+  - Producteur `from_structure.py` — sélection **identique** à `structure.ts` `toStructureOverlay` (MAX_ZONES=3, MAX_TRENDLINES=2, score desc, lignes drawable seulement) ; zones consensus → ZONE ; trendlines détecteurs → TREND_LINE ; breakouts → MARKER
+  - Confiance : `clamp(score / max_score_pool, 0, 1)` (docstring)
+  - API `GET /api/engine/chart-objects/{symbol}?timeframe=&limit=&sources=engine` — router dédié `api/chart_objects.py`, branché en fin d’agrégateur `routes.py` ; sources non-ENGINE → liste vide (pas d’erreur)
+  - Front : `src/lib/chartObjects.ts` + `PriceChart.renderChartObjects` (ZONE = 2 price lines pointillées « S/R ×n », TREND_LINE = LineSeries dashed, MARKER = circle) ; `MarketPage` appelle `getChartObjects` ; `toStructureOverlay` / `getEngineStructure` retirés
+  - Goldens OpenAPI + `route_order` : **ajouts seuls** (`/chart-objects/{symbol}`)
+
+- Tests :
+  - `tests/chart_objects/` — round-trip, validation, id stable, sélection parity seeds 7 & 42, causalité `as_of`
+  - `tests/api/test_chart_objects_route.py` — ENGINE OK ; user/claude → `objects=[]`
+  - `test_api_surface_golden` → vert
+  - `npm run build` → OK
+
+- Hors scope (T2b/T5) : outils dessin Claude, persistence USER/CLAUDE, ENTRY/STOP/TARGET
+
+- Non fait : merge ; T0-CI
+
+---
+
 ## 2026-09-23 — T1g — Découpage de `api/routes.py` (zéro changement de comportement)
 
 - Branche : `v3/t1g-split-routes`
