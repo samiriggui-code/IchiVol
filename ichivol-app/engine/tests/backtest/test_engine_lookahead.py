@@ -5,6 +5,11 @@ elsewhere: bar_returns/posn computed over a candle prefix must match the
 same-index values computed over the full history, since the engine must
 never use candles or desired-positions beyond the bar it's currently
 settling.
+
+T0-METRICS-2: the *last* bar_return of a finite series may include an EOD
+mark-to-close (`sign × log(close/open) − exit fee`) when a position is still
+open. That adjustment is end-of-series by definition and is excluded from the
+truncation comparison — earlier bars and all `posn` entries remain causal.
 """
 
 from __future__ import annotations
@@ -36,7 +41,12 @@ def test_backtest_bar_returns_and_posn_are_stable_under_truncation():
         shared_len = len(truncated_result.bar_returns)
         assert shared_len == t - 1
 
-        assert truncated_result.bar_returns == full_result.bar_returns[:shared_len], (
+        # Drop the terminal bar_return (possible EOD mark-to-close).
+        causal_len = shared_len - 1
+        assert (
+            truncated_result.bar_returns[:causal_len]
+            == full_result.bar_returns[:causal_len]
+        ), (
             f"bar_returns diverged at truncation T={t}: the engine must be reading "
             f"data beyond what's available at that point."
         )
