@@ -14,8 +14,43 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - **1 skip** réseau Binance
   - **Aucune régression V3** (même compte avant/après)
 - **Règle de merge** : avec la base, tout échec **hors** de ces 13 = régression → **bloque le merge**.
-- **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
-- **T2a** : ChartObject — **à merger** (PR #15) après rebase sur main post-#14 — **validé par Claude**.
+- **T3 slice 1** : composition `all` / `any` — draft PR #18 (revue Claude).
+- **T3 slice 2** : `exit` — même PR #18. Risk/MTF différés (MTF = bridge FeatureBar, pas sugar).
+- **T4 slice 1** : UI Strategy Lab — rename + onglets DB — draft (cette branche).
+
+---
+
+## 2026-09-23 — T4 slice 1 — UI Strategy Lab (rename + onglets DB)
+
+- Branche : `cursor/t4-strategy-lab-ui-a2fe`
+- PR : *(draft — lien après création)*
+- Commit(s) : à venir
+
+### Livré
+
+- Route `/app/strategy-lab` ; `/app/backtests` → redirect
+- Nav + Overview + Activité : label **Strategy Lab**
+- Onglets **Compare | Regimes | Experiments | Live**
+- Compare → `GET /strategy-lab/compare` (DB)
+- Regimes / Experiments → `listStoredExperiments` (+ filtre `market_regime`)
+- Live = ancien fan-out 7 recalculs (secondaire)
+- Clients : `compareStoredRulesets`, `getStoredExperiment`, `market_regime` sur list
+
+### Non fait
+
+- Rename fichier → `StrategyLabPage.tsx`
+- Détail experiment `{id}`
+- Masquer complètement Live / WF-opt par défaut
+
+### Validation locale
+
+```text
+./node_modules/.bin/tsc -b   # OK
+```
+
+### Revue Claude
+
+Draft — **ne pas merger** avant revue. Orthogonal à #16/#17/#18.
 
 ---
 

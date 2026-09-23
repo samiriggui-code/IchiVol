@@ -44,7 +44,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/app/synthese', label: 'Synthèse', Icon: IconSynthese },
   { to: '/app/activite', label: 'Activité', Icon: IconActivity },
   { to: '/app/paper', label: 'Paper', Icon: IconPaper },
-  { to: '/app/backtests', label: 'Backtests', Icon: IconBacktests },
+  { to: '/app/strategy-lab', label: 'Strategy Lab', Icon: IconBacktests },
   { to: '/app/agent', label: 'Copilot', Icon: IconChat },
   { to: '/app/settings', label: 'Paramètres', Icon: IconSettings },
 ]
