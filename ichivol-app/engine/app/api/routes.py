@@ -21,6 +21,7 @@ from app.api import paper as paper_routes
 from app.api import paper_orders as paper_orders_routes
 from app.api import rulesets as rulesets_routes
 from app.api import strategy_lab as strategy_lab_routes
+from app.api import strategy_lab_research as strategy_lab_research_routes
 from app.api import strategy_lab_wf as strategy_lab_wf_routes
 from app.api.common import _line_dict, _zone_dict  # noqa: F401 — re-export for tests
 from app.correlation.engine import compute_correlation_matrix  # noqa: F401 — monkeypatch target
@@ -41,6 +42,8 @@ for _sub in (
     strategy_lab_routes.router,
     backtest_overlay_routes.router,
     strategy_lab_wf_routes.router,
+    # UI Lab Research — T5b/T6/T7/Researcher HTTP (observation only; additive).
+    strategy_lab_research_routes.router,
     backtest_routes.router_symbol,
     market_routes.router_correlations,
     paper_routes.router_before_shadow,

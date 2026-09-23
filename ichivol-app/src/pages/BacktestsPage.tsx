@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { BacktestRunsList } from '../components/BacktestRunsPanel'
+import { LabResearchPanel } from '../components/LabResearchPanel'
 import './BacktestsPage.css'
 import {
   compareStoredRulesets,
@@ -49,13 +50,14 @@ const EXPERIMENT_LABELS: Record<ExperimentName, string> = {
 
 const TIMEFRAMES = ['15m', '1h', '4h', '1d']
 
-type LabTab = 'compare' | 'regimes' | 'experiments' | 'live'
+type LabTab = 'compare' | 'regimes' | 'experiments' | 'live' | 'research'
 
 const LAB_TABS: { id: LabTab; label: string }[] = [
   { id: 'compare', label: 'Compare' },
   { id: 'regimes', label: 'Regimes' },
   { id: 'experiments', label: 'Experiments' },
   { id: 'live', label: 'Live' },
+  { id: 'research', label: 'Research' },
 ]
 
 const REGIME_FILTERS = ['ALL', 'GLOBAL', 'TRENDING', 'RANGING', 'HIGH_VOL', 'LOW_VOL', 'BULL', 'BEAR'] as const
@@ -280,7 +282,7 @@ export function BacktestsPage() {
   }, [])
 
   useEffect(() => {
-    if (labTab === 'live') return
+    if (labTab === 'live' || labTab === 'research') return
     const sym = symbol.trim().toUpperCase()
     if (!sym) return
     let cancelled = false
@@ -418,8 +420,8 @@ export function BacktestsPage() {
           <h1>Strategy Lab</h1>
           <p className="muted">
             Chiffres depuis la Performance DB (expériences persistées). Onglet{' '}
-            <strong>Live</strong> = recalcul ponctuel (ne remplace pas la DB). Historique =
-            backtests auto C1. Pas un conseil financier.
+            <strong>Live</strong> = recalcul ponctuel ; <strong>Research</strong> = T5–T7 /
+            Researcher (observation only). Pas un conseil financier.
           </p>
           {current && (
             <p className="muted">{CLASS_BLURBS[current.asset_class]}</p>
@@ -471,7 +473,7 @@ export function BacktestsPage() {
       <div className={`bt-split${historyOpen ? ' is-open' : ''}`}>
         <div className="bt-main">
 
-      {labTab !== 'live' && (
+      {labTab !== 'live' && labTab !== 'research' && (
         <section className="panel">
           <header className="panel-head">
             <h2>
@@ -558,6 +560,22 @@ export function BacktestsPage() {
             />
           )}
         </section>
+      )}
+
+      {labTab === 'research' && (
+        <LabResearchPanel
+          symbol={symbol}
+          setSymbol={setSymbol}
+          timeframe={timeframe}
+          setTimeframe={setTimeframe}
+          rulesetId={rulesetId}
+          setRulesetId={setRulesetId}
+          limit={limit}
+          setLimit={setLimit}
+          classInstruments={classInstruments}
+          rulesets={rulesets}
+          universeError={universeError}
+        />
       )}
 
       {labTab === 'live' && (

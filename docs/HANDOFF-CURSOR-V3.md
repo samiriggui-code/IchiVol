@@ -39,8 +39,74 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T7** #37 — **MERGÉE** (Monte Carlo / risk of ruin).
 - **T3d** #39 — **MERGÉE** (propose ruleset edit + condition catalog).
 - **Researcher** #41 — **MERGÉE** (propose experiment plan).
-- **Job en cours** : **aucun** — suite optionnelle = T3e MTF / UI Lab.
+- **Job en cours** : **UI Lab Research #43** — CI verte ; **attente revue Claude** (pas de merge solo).
 
+
+---
+
+## 2026-09-23 — UI Lab Research — PRÊT REVUE CLAUDE (#43)
+
+- Branche : `cursor/lab-ui-research-t5-t7-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/43 — **draft**
+- HEAD : `d4deb50` (code `01e79b0` + docs ; CI verte sur `a5a13a1` = même code)
+- Base : `main` @ `9ead9e8` (post Researcher #41/#42)
+
+### Statut CI (Engine CI)
+
+- **VERTE** (HEAD `a5a13a1`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35887098403
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
+### Contexte Vague
+
+Après T1–T7 + T3d + Researcher (tous mergés), suite optionnelle = **UI Lab** (exposé) ou **T3e MTF** (FeatureBar mono-TF — trop gros). Cursor a livré **UI Lab Research** ; T3e **non démarré**.
+
+### Livré (observation-only)
+
+1. **HTTP** `app/api/strategy_lab_research.py` (monté après `strategy_lab_wf` dans `routes.py`) :
+   - `GET /api/engine/strategy-lab/family-weight-profiles`
+   - `GET /api/engine/strategy-lab/family-weights/compare`
+   - `GET /api/engine/strategy-lab/family-weights/study`
+   - `POST /api/engine/strategy-lab/audit-report`
+   - `POST /api/engine/strategy-lab/monte-carlo`
+   - `POST /api/engine/strategy-lab/propose-experiment-plan`
+2. **UI** onglet **Research** sur Strategy Lab (`LabResearchPanel.tsx` + `labResearch.ts`) — catalogue poids, compare, étude, AuditReport, plan Researcher, Monte Carlo
+3. Goldens OpenAPI + `route_order` refresh ; `tests/api/test_strategy_lab_research_routes.py` (5 tests)
+4. CDC checkbox UI Lab Research (ouverte tant que non mergée)
+
+### Invariants respectés
+
+- EVENT ≠ SIGNAL inchangé
+- Pas de mutation score live / gate / combiner / confidence
+- Hypothèses Audit + plan Researcher restent `status=proposed`
+- Monte Carlo / family weights = research only (disclaimers conservés)
+- Pas d’auto-run des steps Researcher ; pas d’écriture Perf DB depuis propose
+
+### Fichiers (diff vs main)
+
+| Zone | Fichiers |
+|------|----------|
+| Engine API | `strategy_lab_research.py`, `routes.py` |
+| Tests | `test_strategy_lab_research_routes.py`, openapi + route_order goldens |
+| Front | `LabResearchPanel.tsx`, `labResearch.ts`, `BacktestsPage.tsx` |
+| Docs | `HANDOFF-CURSOR-V3.md`, `CAHIER-DES-CHARGES.md` |
+
+### Non-faits (hors scope #43)
+
+- **T3e MTF DSL** (FeatureBar multi-TF)
+- Chat NL / éditeur conversationnel T3d
+- Auto-run plan Researcher / auto-apply catalog
+- Poids familles en live score
+- Rename fichier `BacktestsPage.tsx` → `StrategyLabPage`
+
+### Attente Claude
+
+1. Relire le diff PR #43
+2. Suite Postgres complète sur ce HEAD (baseline 0 échec post T0-CI)
+3. Valider observation-only (pas de dérive gate/score)
+4. Marche à suivre : **merge** / retouches / enchaîner T3e
+
+**Cursor s’arrête ici** jusqu’à la revue Claude.
 
 ---
 
