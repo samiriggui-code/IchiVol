@@ -9,11 +9,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - **Claude** (revue) : PostgreSQL 16 `ichivol_engine_dev`, migrations alembic appliquées → lance la suite **complète** (paper, backtest evidence, brokerage, market_data inclus).
 - **Cursor** (implémentation) : **pas** d’install Postgres local ; suite sans base comme d’habitude ; reporter les résultats dans le handoff. Les échecs liés à la base sont détectés / renvoyés par Claude.
-- **Baseline avec base** (mesurée par Claude, identique sur `main` `fe5b28f` = V3 jusqu’à T1e et sur `8a26a97` = avant V3) :
-  - **13 échecs** : 11× `tests/paper/test_engine.py` + 2× `tests/api/test_routes.py` (`open_paper_position`)
-  - **1 skip** réseau Binance
-  - **Aucune régression V3** (même compte avant/après)
-- **Règle de merge** : avec la base, **0 échec** attendu (T0-CI #14 mergé). Tout échec bloque le merge.
+- **Baseline avec base propre** (référence courante, post T0-CI #14) : **0 échec, 1 skip** réseau Binance. Toute base **non vierge** (ex. `ichivol_engine_dev` local avec de l'historique réel de paper trading) peut faire échouer des tests qui supposent un état propre (`test_account_identity_after_refresh`, `test_open_paper_position_reports_no_atr_stop_honestly`, `test_protection.py`, `test_overview_marks_budget` timing) — **vérifier contre `main` avant merge** avant de conclure à une régression, ne pas comparer à cette baseline si la base contient déjà des données.
+- **Règle de merge** : avec une base propre, **0 échec** attendu. Tout échec **nouveau par rapport à `main`** bloque le merge.
 - **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
 - **T2a** : ChartObject — **mergé** (PR #15) — **validé par Claude**.
 - **T0-BROKER** #16 — **MERGÉE** (validé Claude).
