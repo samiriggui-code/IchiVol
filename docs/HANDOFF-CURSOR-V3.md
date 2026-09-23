@@ -16,7 +16,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **Règle de merge** : avec la base, **0 échec** attendu (T0-CI #14 mergé). Tout échec bloque le merge.
 - **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
 - **T2a** : ChartObject — **mergé** (PR #15) — **validé par Claude**.
-- **T0-BROKER** : PR #16 (draft) — corrections revue Claude en cours ; **pas de merge avant revalidation**.
+- **T0-BROKER** : PR #16 (draft) — **CI Actions VERTE** (`5965b55`, run `35847816190`) ; **pas de merge avant revalidation Claude**.
 
 ---
 
@@ -51,6 +51,13 @@ Shadow / research_lab / evidence étaient déjà corrects — non touchés.
 
 **D) Isolation routes** — `test_open_paper_position_accepts_a_non_crypto_symbol` + garde baseline −5 % → monkeypatch `ensure_baseline_portfolio` vers portefeuille jetable.
 
+
+### CI Actions
+
+- **VERTE** sur `5965b55` : https://github.com/samiriggui-code/IchiVol/actions/runs/35847816190
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
 ### Tests locaux (Postgres)
 
 - `tests/paper` + golden API + brokerage ledger : **verts**
@@ -58,7 +65,7 @@ Shadow / research_lab / evidence étaient déjà corrects — non touchés.
 
 ### Non fait
 
-- Merge #16 ; T2b attend revalidation Claude
+- Merge #16 (CI verte, attend Claude) ; T2b démarré en parallèle (PR #17)
 
 ---
 
@@ -222,30 +229,6 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
   - `npm run build` → OK
 
 - Hors scope (T2b/T5) : outils dessin Claude, persistence USER/CLAUDE, ENTRY/STOP/TARGET
-
----
-
-## 2026-09-23 — T0-BROKER — Fidélité paper broker (marks / liquidation / financing / reconcile)
-
-- Branche : `v3/t0-broker-fidelity`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/16 (draft) — **pas de merge avant revue Claude** ; parallèle aux PR #14 (T0-CI) et #15 (T2a)
-- **Annule et remplace** le brief T0-UI : journal d’ordres + P&L réalisé déjà sur Synthèse — **non refaits**.
-- Commit(s) : `ec845bf` (engine + front + tests + golden) ; `94f0b5f` (âge du mark UI) ; `7dfbb44` / `2cfd50d` (handoff) ; `d80382f` (workflow Engine CI depuis #14 — `main` ne l’a pas encore)
-
-- Livré :
-  - Engine : `marks.py`, `liquidation.py`, `financing.py`, `reconcile.py` ; overview avec `liquidation_value` / marks stale ; `GET /paper/portfolios/{code}/reconcile`
-  - Financing overnight CFD branché sur le moniteur de protection ; réalisé de clôture déduit le financement déjà payé
-  - Front Synthèse : Equity + valeur de clôture, badge « Comptabilité : OK / N anomalies », âge du mark, frais de détention dans CostsPanel
-  - Tests : `tests/paper/test_broker_fidelity.py` (portefeuilles jetables `FID_*` uniquement — **jamais** baseline)
-  - Golden OpenAPI / route order : **ajout seul** de `/paper/portfolios/{code}/reconcile` (+ docstring overview)
-
-- **Financing** :
-  - Activation : **2026-09-23** (UTC, inclusive) — **pas de rétroactif** avant cette date (`FINANCING_ACTIVATED_ON`) ; baseline historique non recalculée
-  - ASSUMPTION : **0.5 bps/jour** CFD (`FINANCING_BPS_PER_DAY_CFD_ASSUMED`) ; crypto spot = 0
-  - Idempotence : clé ledger `financing:{position_id}:{YYYY-MM-DD}`
-
-- Tests (Cursor, Postgres dispo) : `test_broker_fidelity` **5 passed** ; `test_api_surface_golden` **2 passed** ; `npm run build` **OK**
-- Non fait : merge ; revalidation Claude de #14 / #15 / cette PR avant T2b
 
 ---
 
