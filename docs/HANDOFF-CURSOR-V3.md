@@ -39,8 +39,34 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **UI Lab Research** #43 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres).
 - **T0-NOTIF** #44 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres).
 - **T0-MANAGE-a** #45 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres — diff réel + no-lookahead vérifié bar par bar).
-- **Job en cours** : **T0-MANAGE-b** — stop suiveur / breakeven **paper** — PR draft (voir entrée ci-dessous). **Pas de merge / pas de T0-MANAGE-c** avant revue Claude.
+- **T0-MANAGE-b** #46 — **MERGÉE** (validé par Claude — watermark, gate legacy/auto et isolation des tests vérifiés ; 2 réserves non bloquantes notées).
+- **Job en cours** : **T0-MANAGE-c** — prise de profit partielle **Strategy Lab** (backtest only). Voir découpage détaillé plus bas.
 
+
+---
+
+## 2026-09-23 — T0-MANAGE-b MERGÉ (#46) — revue Claude en local
+
+- Branche : `cursor/t0-manage-b-trail-paper-a2fe` — PR #46 — **MERGÉE** `93003a1`
+
+### Vérifié (diff réel, pas le résumé)
+
+1. **Chemin de calcul unique respecté** — `protection.py` appelle `stop_trail.update_trailing_stop`, aucune réimplémentation parallèle de la logique de trail. C'était le point de vigilance n°1 du brief.
+2. **No-lookahead** — même contrat qu'en Lab : check de sortie au stop courant *puis* ratchet ; le nouveau niveau ne s'applique qu'à la barre suivante.
+3. **Watermark** — piège correctement évité : sur le chemin trail le watermark avance **toujours** (`if trail_cfg is not None or …`). Sans ça, un scan ultérieur rejouerait des barres déjà passées contre un stop déjà remonté et **inventerait de faux stop hits**. C'est le bug non évident de cette tranche, il est traité et documenté dans le code.
+4. **Gate** — `trail_cfg = None if legacy else …` + `source == user_confirmed` + config `protection_trail` explicite : ni les lots `auto_watchlist`, ni les positions legacy, ni l'historique reconstruit ne peuvent être trailés. Test dédié pour chacun.
+5. **Ratchet doublement garanti** — `update_trailing_stop` (max/min) *et* garde défensive dans `_persist_trail_stop` avant écriture DB.
+6. **Aucun test affaibli** — les modifications de tests existants sont des corrections d'**isolation** (`assert [r["status"] for r in rep] == ["closed"]` → lookup par `position.id`), pas des assouplissements : la même exigence sémantique est conservée, seule la portée est correctement limitée à la position du test. Effet de bord bénéfique : les 4 faux échecs `test_protection.py` sur base non vierge disparaissent (7 → 3 échecs sur la suite large en local).
+
+### Tests (local, Postgres)
+
+- `tests/paper/test_protection.py` : 16/16 OK
+- `tests/paper tests/api tests/strategy_lab` : 3 échecs, tous préexistants et connus (`test_account_identity_after_refresh`, `test_open_paper_position_reports_no_atr_stop_honestly`, `test_overview_marks_budget` timing) — aucun nouveau vs `main`.
+
+### Réserves non bloquantes (à traiter plus tard, pas de retouche demandée maintenant)
+
+1. **`atr_ref` par défaut = distance au stop, pas l'ATR.** Dans `resolve_paper_trail`, quand `atr_ref` n'est pas fourni : `atr_ref = abs(entry_price - initial_stop)`. Or le stop initial vaut `stop_atr × ATR`. Avec `stop_atr = 2.0`, un `atr_trail_mult: 1.5` traîne donc en réalité à **3× ATR**, pas 1,5×. Pas dangereux (stop plus large = jamais de clôture prématurée) mais l'intention exprimée n'est pas celle appliquée. À résoudre en passant l'ATR réel, ou en documentant explicitement que le multiplicateur est relatif au risque initial et non à l'ATR.
+2. **Parse plus permissif qu'en Lab.** `_parse_trail_raw` n'écarte pas `bool` (`breakeven_at_r: true` → `1.0`) et ignore les clés inconnues, alors que `_parse_trail_spec` (Lab, #45) rejette les deux. Chemin interne, risque faible, mais deux portes d'entrée pour la même config devraient valider pareil.
 
 ---
 
