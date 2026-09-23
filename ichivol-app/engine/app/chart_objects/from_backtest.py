@@ -98,6 +98,9 @@ def backtest_to_chart_objects(
             "entry_index": detail.entry_index,
             "exit_index": detail.exit_index,
             "via": "backtest_overlay",
+            # T4c WHY (explainability only)
+            "why_entered": list(detail.why_entered),
+            "why_exited": list(detail.why_exited),
         }
 
         def _obj(
@@ -155,6 +158,38 @@ def backtest_to_chart_objects(
                 price=detail.trade.exit_price,
                 label=detail.exit_reason,
                 kind="exit",
+            )
+        )
+
+    # T4c — rejected rising-edge signals (in_position) as MARKER at signal bar.
+    for rej_id, rej in enumerate(result.rejected):
+        si = rej.signal_index
+        if si < 0 or si >= len(candles):
+            continue
+        t = int(candles[si].time)
+        px = float(candles[si].close)
+        out.append(
+            ChartObject(
+                type=ChartObjectType.MARKER,
+                source=ChartObjectSource.BACKTEST,
+                symbol=symbol,
+                timeframe=timeframe,
+                points=(ChartPoint(time=t, price=px),),
+                as_of=as_of,
+                side=rej.direction.value,
+                label="rejected",
+                subtype=f"bt:{ruleset_id}:rej:{rej_id}",
+                origin={
+                    "ruleset_id": ruleset_id,
+                    "ruleset_version": ruleset_version,
+                    "rejected_id": rej_id,
+                    "signal_index": si,
+                    "direction": rej.direction.value,
+                    "reason": rej.reason,
+                    "why_entered": list(rej.why_entered),
+                    "via": "backtest_overlay",
+                    "kind": "rejected",
+                },
             )
         )
 

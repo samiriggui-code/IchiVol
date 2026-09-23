@@ -30,8 +30,28 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **EventAnomalyDetector PHASE 5** #27 — **MERGÉE** (observation-only).
 - **Event Intelligence PHASE 6** #28 — **MERGÉE** (regime study + calibration ; Cursor solo, CI verte).
 - **Event Intelligence PHASE 7** #29 — **MERGÉE** (SymbolNews + correlate → `EVENT_MARKET` ; Cursor solo, CI verte).
-- **Job en cours** : aucun chantier code ouvert — EIL observation complete (#26–#29). Suite optionnelle : seuils live / FinBERT / UI / corporate (après Claude ~18:10).
+- **Job en cours** : **T4c** — PR #31 draft — WHY ENTERED / REJECTED / EXITED (ATTENTE CI).
 
+
+---
+
+## 2026-09-23 — T4c EN COURS — WHY ENTERED / REJECTED / EXITED
+
+- Branche : `cursor/t4c-why-overlay-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/31 (**draft**)
+- Statut : **ATTENTE CI** — reprise chantier V3 après EIL.
+
+### Livré
+
+1. `evaluator.explain_group` — trace pass/fail par feuille (`all`/`any`) sans changer le match
+2. `RulesetTradeDetail.why_entered` / `why_exited` ; `RejectedSignal` + `RulesetBacktestResult.rejected`
+3. Overlay API : `why_*` sur trades + liste `rejected` ; markers chart `kind=rejected`
+4. UI sheet : détail WHY ENTERED / EXITED + liste rejetés
+5. Tests `test_t4c_why.py` + parity T4a (golden backtest **inchangé**)
+
+### Non-faits
+
+T4b filtre conversationnel ; filtres régime ; T5 confluence ; aucun changement de fills/metrics.
 
 ---
 

@@ -21,7 +21,11 @@ from app.backtest.metrics import Metrics, compute_metrics
 from app.indicators.atr import AtrState
 from app.indicators.ichimoku import Candle
 from app.market_data.resolve import resolve_and_fetch
-from app.strategy_lab.evaluator import bar_matches_group, extract_ruleset_signals
+from app.strategy_lab.evaluator import (
+    bar_matches_group,
+    explain_group_dicts,
+    extract_ruleset_signals,
+)
 from app.strategy_lab.features import FeatureBar, FeatureSeries, build_feature_series
 from app.strategy_lab.ruleset import ConditionGroup, Ruleset, parse_ruleset
 
@@ -38,6 +42,19 @@ class RulesetTradeDetail:
     signal_index: int
     entry_index: int
     exit_index: int
+    # T4c — explainability only (empty when feature_bars unavailable).
+    why_entered: tuple[dict, ...] = ()
+    why_exited: tuple[dict, ...] = ()
+
+
+@dataclass(frozen=True)
+class RejectedSignal:
+    """Rising-edge signal skipped because a position was already open (T4c)."""
+
+    signal_index: int
+    direction: Direction
+    reason: str  # currently only "in_position"
+    why_entered: tuple[dict, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -50,6 +67,7 @@ class RulesetBacktestResult:
     details: list[RulesetTradeDetail]
     n_signals: int
     n_skipped_in_position: int
+    rejected: tuple[RejectedSignal, ...] = ()
 
 
 def _levels(
@@ -133,6 +151,17 @@ def _apply_hold_returns(
             bar_returns[j] = r
 
 
+def _why_at(
+    feature_bars: Sequence[FeatureBar] | None,
+    index: int,
+    group: ConditionGroup | None,
+    direction: Direction,
+) -> tuple[dict, ...]:
+    if feature_bars is None or group is None or index < 0 or index >= len(feature_bars):
+        return ()
+    return explain_group_dicts(feature_bars[index], group, direction)
+
+
 def simulate_ruleset_trades(
     candles: Sequence[Candle],
     atr_states: Sequence[AtrState],
@@ -145,10 +174,17 @@ def simulate_ruleset_trades(
     max_hold_bars: int | None = None,
     exit_group: ConditionGroup | None = None,
     feature_bars: Sequence[FeatureBar] | None = None,
-) -> tuple[list[RulesetTradeDetail], list[Direction], list[float], int]:
+    entry_group: ConditionGroup | None = None,
+) -> tuple[
+    list[RulesetTradeDetail],
+    list[Direction],
+    list[float],
+    int,
+    list[RejectedSignal],
+]:
     n = len(candles)
     if n < 2:
-        return [], [Direction.NEUTRAL] * n, [], 0
+        return [], [Direction.NEUTRAL] * n, [], 0, []
 
     if exit_group is not None:
         if feature_bars is None or len(feature_bars) != n:
@@ -160,12 +196,23 @@ def simulate_ruleset_trades(
     posn = [Direction.NEUTRAL] * n
     bar_returns = [0.0] * (n - 1)
     details: list[RulesetTradeDetail] = []
+    rejected: list[RejectedSignal] = []
     skipped = 0
     busy_until = -1
 
     for signal_index, direction in signals:
         if signal_index <= busy_until:
             skipped += 1
+            rejected.append(
+                RejectedSignal(
+                    signal_index=signal_index,
+                    direction=direction,
+                    reason="in_position",
+                    why_entered=_why_at(
+                        feature_bars, signal_index, entry_group, direction
+                    ),
+                )
+            )
             continue
 
         entry_index = signal_index + 1
@@ -187,6 +234,7 @@ def simulate_ruleset_trades(
         exit_index = hold_end
         exit_price = candles[hold_end].close
         exit_reason = "eod" if hold_end == n - 1 else "max_hold"
+        why_exited: tuple[dict, ...] = ()
 
         for j in range(entry_index, hold_end + 1):
             posn[j] = direction
@@ -208,6 +256,7 @@ def simulate_ruleset_trades(
                 exit_index = j
                 exit_price = candles[j].close
                 exit_reason = "signal"
+                why_exited = _why_at(feature_bars, j, exit_group, direction)
                 for k in range(j + 1, hold_end + 1):
                     posn[k] = Direction.NEUTRAL
                 break
@@ -242,11 +291,15 @@ def simulate_ruleset_trades(
                 signal_index=signal_index,
                 entry_index=entry_index,
                 exit_index=exit_index,
+                why_entered=_why_at(
+                    feature_bars, signal_index, entry_group, direction
+                ),
+                why_exited=why_exited,
             )
         )
         busy_until = exit_index
 
-    return details, posn, bar_returns, skipped
+    return details, posn, bar_returns, skipped, rejected
 
 
 def _resolve_max_hold(
@@ -270,7 +323,7 @@ def run_ruleset_backtest_on_features(
 ) -> RulesetBacktestResult:
     signals = extract_ruleset_signals(features, ruleset, rising_edge=True)
     exit_group = ruleset.exit.condition_group
-    details, posn, bar_returns, skipped = simulate_ruleset_trades(
+    details, posn, bar_returns, skipped, rejected = simulate_ruleset_trades(
         features.candles,
         features.atr,
         signals,
@@ -280,7 +333,9 @@ def run_ruleset_backtest_on_features(
         slippage_bps=slippage_bps,
         max_hold_bars=_resolve_max_hold(ruleset, max_hold_bars),
         exit_group=exit_group,
-        feature_bars=features.bars if exit_group is not None else None,
+        # Always pass bars so T4c WHY traces are available (match logic unchanged).
+        feature_bars=features.bars,
+        entry_group=ruleset.condition_group,
     )
     backtest = BacktestResult(
         symbol=symbol,
@@ -301,6 +356,7 @@ def run_ruleset_backtest_on_features(
         details=details,
         n_signals=len(signals),
         n_skipped_in_position=skipped,
+        rejected=tuple(rejected),
     )
 
 

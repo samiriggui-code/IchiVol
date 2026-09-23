@@ -26,6 +26,7 @@ import {
   type BacktestOutcomeFilter,
   type BacktestOverlayCounts,
   type BacktestOverlayTrade,
+  type BacktestRejectedSignal,
 } from '../lib/backtestOverlay'
 import { useMarketSnapshot } from '../lib/marketSnapshot'
 import {
@@ -127,6 +128,7 @@ export function MarketPage() {
   const [btOutcome, setBtOutcome] = useState<BacktestOutcomeFilter>('all')
   const [btObjects, setBtObjects] = useState<ChartObject[]>([])
   const [btTrades, setBtTrades] = useState<BacktestOverlayTrade[]>([])
+  const [btRejected, setBtRejected] = useState<BacktestRejectedSignal[]>([])
   const [btCounts, setBtCounts] = useState<BacktestOverlayCounts | null>(null)
   const [btActive, setBtActive] = useState(false)
   const [btLoading, setBtLoading] = useState(false)
@@ -476,6 +478,7 @@ export function MarketPage() {
     if (markOpen) cancelMarkTrade()
     setBtObjects([])
     setBtTrades([])
+    setBtRejected([])
     setBtCounts(null)
     setBtActive(false)
     setBtError(null)
@@ -485,6 +488,7 @@ export function MarketPage() {
   const clearBacktestOverlay = useCallback(() => {
     setBtObjects([])
     setBtTrades([])
+    setBtRejected([])
     setBtCounts(null)
     setBtActive(false)
     setBtError(null)
@@ -505,6 +509,7 @@ export function MarketPage() {
         })
         setBtObjects(res.objects)
         setBtTrades(res.trades)
+        setBtRejected(res.rejected ?? [])
         setBtCounts(res.counts)
         setBtActive(true)
       } catch (err: unknown) {
@@ -718,6 +723,7 @@ export function MarketPage() {
           outcome={btOutcome}
           counts={btCounts}
           trades={btTrades}
+          rejected={btRejected}
           loading={btLoading}
           error={btError}
           active={btActive}
