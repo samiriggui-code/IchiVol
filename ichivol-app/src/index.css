@@ -4189,3 +4189,108 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
   border-color: var(--bull, #3d9a6a);
   font-weight: 700;
 }
+
+/* --- T4a : Backtest overlay sheet --- */
+.backtest-overlay-sheet {
+  max-height: min(70vh, 520px);
+}
+.backtest-overlay-select {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--muted-foreground, #888);
+}
+.backtest-overlay-select select {
+  font-size: 0.85rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.4));
+  background: var(--surface, transparent);
+  color: inherit;
+}
+.backtest-outcome-toggle {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+.backtest-outcome-toggle button {
+  flex: 1;
+  min-width: 5rem;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: 6px;
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.4));
+  background: transparent;
+  color: inherit;
+}
+.backtest-outcome-toggle button.is-on {
+  border-color: var(--bull, #3d9a6a);
+  font-weight: 700;
+}
+.backtest-trade-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+  max-height: 10rem;
+  overflow: auto;
+}
+.backtest-trade-list button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.45rem;
+  align-items: center;
+  text-align: left;
+  font-size: 0.78rem;
+  padding: 0.4rem 0.45rem;
+  border-radius: 6px;
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.25));
+  background: transparent;
+  color: inherit;
+}
+.bt-out {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.bt-out--win { color: var(--bull, #3d9a6a); }
+.bt-out--loss { color: var(--bear, #c45c5c); }
+.bt-out--flat { color: var(--muted-foreground, #888); }
+.bt-ret {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  line-height: 1.2;
+}
+.bt-ret-gross {
+  font-size: 0.65rem;
+  font-weight: 400;
+}
+.backtest-trade-detail {
+  border-top: 1px solid var(--border, rgba(128, 128, 128, 0.3));
+  padding-top: 0.5rem;
+}
+.backtest-trade-detail header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+.backtest-trade-detail dl {
+  margin: 0;
+  display: grid;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+}
+.backtest-trade-detail dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.backtest-trade-detail dt { color: var(--muted-foreground, #888); }
+.backtest-trade-detail dd { margin: 0; }

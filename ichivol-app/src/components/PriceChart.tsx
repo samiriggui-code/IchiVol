@@ -256,10 +256,14 @@ function renderChartObjects(
 
   return chartObjectMarkers(objects).map((m) => {
     const bullish = m.side === 'resistance' || m.side === 'LONG'
+    let color = bullish ? colors.bull : colors.bear
+    if (m.outcome === 'win') color = colors.bull
+    else if (m.outcome === 'loss') color = colors.bear
+    else if (m.outcome === 'flat') color = colors.muted
     return {
       time: ts(m.time),
       position: bullish ? ('belowBar' as const) : ('aboveBar' as const),
-      color: bullish ? colors.bull : colors.bear,
+      color,
       shape: m.shape,
       text: m.label,
     }

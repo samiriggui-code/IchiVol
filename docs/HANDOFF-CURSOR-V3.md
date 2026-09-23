@@ -21,8 +21,86 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T3** #18 — **MERGÉE** (validé Claude) — DSL `all`/`any` + `exit`.
 - **T0-UI** #19 — **MERGÉE** (accepté Claude comme T0-UI, pas T4 roadmap).
 - **T2c** #20 — **MERGÉE** — **validé par Claude** (T2a+T2b+T2c = **T2 terminé**).
-- **Job en cours** : **T3c** registre conditions — branche `cursor/t3c-condition-registry-a2fe`.
+- **T3c** #21 — **MERGÉE** — **validé par Claude** (registre conditions ; T3 phase close — T3d avec T5b, T3e plus tard).
+- **Job en cours** : **T4a** backtest overlay — correction net/brut ; puis **T0-METRICS** après merge.
 
+
+---
+
+## 2026-09-23 — T4a CORRECTION NET — ATTENTE Claude (revalidation)
+
+- Branche : `cursor/t4a-backtest-overlay-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/22 (**draft**)
+- Commit fix : `6627277` (feat initial `4d68375`)
+- Statut : **ATTENTE CLAUDE** — CI **VERTE** ; **ne pas merger** avant revalidation.
+
+### Correction demandée (brut étiqueté « net »)
+
+`Trade.log_return` = brut (`sign × log(exit/entry)`). Les coûts ne sont déduits que dans `bar_returns` via `_apply_hold_returns` :
+- même barre : `… − 2 * cost` (l.105)
+- entrée : `r -= cost` (l.119–120) ; sortie : `− cost` (l.124–126) ; cas limite l.132
+→ aller-retour = **`2 × cost`**, `cost = (commission_bps + slippage_bps) / 10_000`.
+
+### Livré (fix)
+
+1. `return_pct_net = exp(log_return − 2×cost) − 1` ; `return_pct_gross = exp(log_return) − 1`
+2. `outcome` sur **net** ; `r_multiple_gross` (prix vs stop)
+3. Origin + `trades` exposent les deux ; front : **NET** principal, brut secondaire
+4. Test : +5 bps brut / 16 bps RT (5+3 commission/slippage) → `outcome=loss`
+
+### CI Actions
+
+- **VERTE** (HEAD `6627277`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35862821454
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
+### Suite après merge
+
+**T0-METRICS** — stats par trade nettes de frais (`cost_log` / `net_log_return` / `*_gross` / `metrics_basis`).
+
+### Attente
+
+**Cursor s’arrête ici** jusqu’à revalidation Claude → merge → puis T0-METRICS.
+
+---
+
+## 2026-09-23 — T4a EN COURS — backtest visuel (trades sur chart)
+
+- Branche : `cursor/t4a-backtest-overlay-a2fe` (Claude : `v3/t4a-backtest-overlay`)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/22 (**draft**)
+- Commit(s) : `4d68375`
+- Statut : **supersédé** par correction net `6627277` (ci-dessus).
+
+### Objectif
+
+Lancer une stratégie catalogue sur un symbole → trades sur le chart ; filtre Tous / Gagnants / Perdants.
+
+### Livré
+
+1. `chart_objects/from_backtest.py` — 4 objets/trade (ENTRY/STOP/TARGET/MARKER), `source=backtest`, `origin` complet
+2. `POST /api/engine/strategy-lab/backtest-overlay` — filtre outcome serveur ; counts globaux
+3. Front Marché : bouton Backtest + sheet (catalogue, Afficher/Effacer, filtre, détail trade) ; objets BACKTEST en plus des overlays existants
+4. Tests parité golden seeds ; OpenAPI/route_order ajouts seuls
+
+### CI Actions
+
+- **VERTE** (HEAD `4d68375`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35861496555
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
+### Hors scope
+
+WHY ENTERED/REJECTED/EXITED (T4c) ; filtre conversationnel Claude (T4b) ; filtres régime.
+
+---
+
+## 2026-09-23 — T3c VALIDÉ par Claude — MERGÉ (#21)
+
+- Branche : `cursor/t3c-condition-registry-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/21 — **MERGÉE** `0609965`
+- Statut : **validé par Claude** (fixtures avant refactor ; goldens rejoués sur ancien main ; Postgres 0 échec).
+
+**T3 phase close** pour cette vague (T3d → T5b ; T3e MTF plus tard).
 
 ---
 

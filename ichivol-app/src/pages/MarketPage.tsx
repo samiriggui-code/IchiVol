@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { BiasPanel } from '../components/BiasPanel'
+import { BacktestOverlaySheet } from '../components/BacktestOverlaySheet'
 import { MarkTradeSheet, type MarkTradeStep } from '../components/MarkTradeSheet'
 import { PriceChart, type ChartPickPoint } from '../components/PriceChart'
 import { Screener } from '../components/Screener'
@@ -20,6 +21,12 @@ import {
   type UserTradePointType,
 } from '../lib/chartObjects'
 import { notifyChartObjectsChanged, onChartObjectsChanged } from '../lib/chartObjectsEvents'
+import {
+  postBacktestOverlay,
+  type BacktestOutcomeFilter,
+  type BacktestOverlayCounts,
+  type BacktestOverlayTrade,
+} from '../lib/backtestOverlay'
 import { useMarketSnapshot } from '../lib/marketSnapshot'
 import {
   CLASS_BLURBS,
@@ -113,6 +120,17 @@ export function MarketPage() {
   >({})
   const [markSaving, setMarkSaving] = useState(false)
   const [markError, setMarkError] = useState<string | null>(null)
+
+  // T4a — Backtest overlay (ephemeral BACKTEST objects layered on ENGINE/USER/CLAUDE)
+  const [btSheetOpen, setBtSheetOpen] = useState(false)
+  const [btRulesetId, setBtRulesetId] = useState<string | null>(null)
+  const [btOutcome, setBtOutcome] = useState<BacktestOutcomeFilter>('all')
+  const [btObjects, setBtObjects] = useState<ChartObject[]>([])
+  const [btTrades, setBtTrades] = useState<BacktestOverlayTrade[]>([])
+  const [btCounts, setBtCounts] = useState<BacktestOverlayCounts | null>(null)
+  const [btActive, setBtActive] = useState(false)
+  const [btLoading, setBtLoading] = useState(false)
+  const [btError, setBtError] = useState<string | null>(null)
 
   const classInstruments = useMemo(
     () => instruments.filter((i) => i.asset_class === marketClass),
@@ -453,14 +471,69 @@ export function MarketPage() {
     }
   }, [markSetupId, markPlaced, symbol, interval, cancelMarkTrade])
 
-  // Reset mark mode when symbol / TF changes.
+  // Reset mark mode + backtest overlay when symbol / TF changes.
   useEffect(() => {
     if (markOpen) cancelMarkTrade()
+    setBtObjects([])
+    setBtTrades([])
+    setBtCounts(null)
+    setBtActive(false)
+    setBtError(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, interval])
 
+  const clearBacktestOverlay = useCallback(() => {
+    setBtObjects([])
+    setBtTrades([])
+    setBtCounts(null)
+    setBtActive(false)
+    setBtError(null)
+  }, [])
+
+  const loadBacktestOverlay = useCallback(
+    async (outcome: BacktestOutcomeFilter = btOutcome) => {
+      if (!btRulesetId) return
+      setBtLoading(true)
+      setBtError(null)
+      try {
+        const res = await postBacktestOverlay({
+          symbol,
+          timeframe: interval,
+          limit: 300,
+          ruleset_id: btRulesetId,
+          outcome,
+        })
+        setBtObjects(res.objects)
+        setBtTrades(res.trades)
+        setBtCounts(res.counts)
+        setBtActive(true)
+      } catch (err: unknown) {
+        setBtError(err instanceof Error ? err.message : 'Échec backtest')
+      } finally {
+        setBtLoading(false)
+      }
+    },
+    [btRulesetId, btOutcome, symbol, interval],
+  )
+
+  const onBtOutcome = useCallback(
+    (o: BacktestOutcomeFilter) => {
+      setBtOutcome(o)
+      if (btActive) void loadBacktestOverlay(o)
+    },
+    [btActive, loadBacktestOverlay],
+  )
+
+  const mergedChartObjects = useMemo(() => {
+    const base = chartObjects ?? []
+    if (!btObjects.length) return chartObjects
+    return [...base, ...btObjects]
+  }, [chartObjects, btObjects])
+
   return (
-    <div className={`market-page${markOpen ? ' is-mark-trade' : ''}`}>
+    <div
+      className={`market-page${markOpen ? ' is-mark-trade' : ''}${btSheetOpen ? ' is-backtest-overlay' : ''}`}
+    >
       <header className="market-head">
         <div className="market-head-copy">
           <h1>Marché</h1>
@@ -560,6 +633,15 @@ export function MarketPage() {
               </button>
               <button
                 type="button"
+                className={btSheetOpen || btActive ? 'is-active' : 'ghost'}
+                disabled={!canMarkTrade || btLoading}
+                title="Afficher les trades d’une stratégie catalogue sur le chart"
+                onClick={() => setBtSheetOpen((o) => !o)}
+              >
+                Backtest
+              </button>
+              <button
+                type="button"
                 className="side-toggle"
                 aria-expanded={sideOpen}
                 aria-controls="side-panel"
@@ -576,7 +658,7 @@ export function MarketPage() {
             timeframe={interval}
             onSignals={setSignals}
             onLive={setChartLive}
-            chartObjects={chartObjects}
+            chartObjects={mergedChartObjects}
             pickMode={markOpen && markStep !== 'review'}
             onPickPoint={onPickPoint}
           />
@@ -626,6 +708,24 @@ export function MarketPage() {
           placed={markPlaced}
           onCancel={cancelMarkTrade}
           onValidate={() => void validateMarkTrade()}
+        />
+      ) : null}
+
+      {btSheetOpen ? (
+        <BacktestOverlaySheet
+          symbolLabel={current?.label ?? displaySymbol(symbol)}
+          selectedRulesetId={btRulesetId}
+          outcome={btOutcome}
+          counts={btCounts}
+          trades={btTrades}
+          loading={btLoading}
+          error={btError}
+          active={btActive}
+          onSelectRuleset={setBtRulesetId}
+          onOutcome={onBtOutcome}
+          onShow={() => void loadBacktestOverlay(btOutcome)}
+          onClear={clearBacktestOverlay}
+          onClose={() => setBtSheetOpen(false)}
         />
       ) : null}
     </div>

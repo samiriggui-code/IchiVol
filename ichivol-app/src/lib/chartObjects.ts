@@ -219,6 +219,8 @@ export function chartObjectMarkers(objects: ChartObject[]): Array<{
   label: string
   confirmed: boolean
   shape: 'circle' | 'arrowUp' | 'arrowDown' | 'square'
+  /** T4a: win|loss|flat for BACKTEST exit markers (null otherwise). */
+  outcome: 'win' | 'loss' | 'flat' | null
 }> {
   return objects
     .filter(
@@ -233,6 +235,12 @@ export function chartObjectMarkers(objects: ChartObject[]): Array<{
       } else if (o.type === 'text') {
         shape = 'square'
       }
+      const rawOutcome = o.origin?.outcome
+      const outcome =
+        o.source === 'backtest' &&
+        (rawOutcome === 'win' || rawOutcome === 'loss' || rawOutcome === 'flat')
+          ? rawOutcome
+          : null
       return {
         time: o.points[0]!.time,
         price: o.points[0]!.price,
@@ -240,6 +248,7 @@ export function chartObjectMarkers(objects: ChartObject[]): Array<{
         label: o.label ?? (o.type === 'entry' ? 'IN' : 'BO'),
         confirmed: Boolean(o.origin?.confirmed ?? true),
         shape,
+        outcome,
       }
     })
 }
