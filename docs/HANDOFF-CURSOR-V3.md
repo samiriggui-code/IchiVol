@@ -10,8 +10,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T1c — Features Strategy Lab via REGISTRY (`compute_many`)
 
 - Branche : `v3/t1c-registry-features`
-- PR : (draft — lien après ouverture)
-- Commit(s) : `5b56470` (fixture golden **avant** refactor) ; refactor registry + features + ratchet (ce push)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/8 (draft)
+- Commit(s) : `5b56470` (fixture golden **avant** refactor) ; `3550c0c` (registry + features + ratchet)
 
 - Livré :
   - `ichivol-app/engine/app/indicators/registry.py` — `depends_on`, `compute_many` (topo + dédup + cycle), enregistrement `ichimoku_analytics` / `location` / `wyckoff` ; `oi_funding` hors registry (docstring)
@@ -22,7 +22,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - `ichivol-app/engine/tests/indicators/test_registry.py` — compute_many / cycle / warmup deps ; `test_no_lookahead` couvre les 3 nouveaux via `REGISTRY.compute`
 
 - Tests :
-  - `pytest tests/indicators tests/strategy_lab tests/api/test_indicators_route.py` → **234 passed, 1 skipped**
+  - `pytest tests/indicators tests/strategy_lab tests/api/test_indicators_route.py` → **237 passed, 1 skipped**
   - suite complète → **4 failed** Postgres connus uniquement
 
 - Choix faits :
