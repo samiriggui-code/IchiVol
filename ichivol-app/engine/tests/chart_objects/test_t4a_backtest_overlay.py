@@ -153,6 +153,42 @@ def test_api_outcome_loss_filter(monkeypatch):
     assert len(loss_body["objects"]) == 4 * len(loss_body["trades"])
 
 
+def test_api_exit_reason_and_direction_filters(monkeypatch):
+    candles = _make_candles(300, seed=7)
+
+    def fake_resolve(symbol, timeframe, limit):
+        class P:
+            id = "test"
+
+        return P(), symbol, candles[:limit]
+
+    monkeypatch.setattr(
+        "app.api.backtest_overlay.resolve_and_fetch", fake_resolve
+    )
+    resp = client.post(
+        "/api/engine/strategy-lab/backtest-overlay",
+        json={
+            "symbol": "T4BTC",
+            "timeframe": "1h",
+            "limit": 300,
+            "ruleset_id": "IV_EXP_A_KUMO_BO_001",
+            "outcome": "all",
+            "exit_reason": "stop",
+            "direction": "LONG",
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert "filters" in body
+    assert body["filters"]["exit_reason"] == "stop"
+    for t in body["trades"]:
+        assert t["exit_reason"] == "stop"
+        assert t["direction"] == "LONG"
+    assert body["n_trades_filtered"] == len(body["trades"])
+    # counts still full set
+    assert body["counts"]["total"] >= len(body["trades"])
+
+
 def test_api_unknown_ruleset_404(monkeypatch):
     candles = _make_candles(80, seed=1)
 

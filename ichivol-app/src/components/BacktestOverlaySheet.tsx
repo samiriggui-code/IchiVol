@@ -53,11 +53,15 @@ export function BacktestOverlaySheet({
   counts,
   trades,
   rejected = [],
+  exitReason = null,
+  direction = null,
   loading,
   error,
   active,
   onSelectRuleset,
   onOutcome,
+  onExitReason,
+  onDirection,
   onShow,
   onClear,
   onClose,
@@ -68,11 +72,15 @@ export function BacktestOverlaySheet({
   counts: BacktestOverlayCounts | null
   trades: BacktestOverlayTrade[]
   rejected?: BacktestRejectedSignal[]
+  exitReason?: string | null
+  direction?: string | null
   loading?: boolean
   error?: string | null
   active: boolean
   onSelectRuleset: (id: string) => void
   onOutcome: (o: BacktestOutcomeFilter) => void
+  onExitReason: (v: string | null) => void
+  onDirection: (v: string | null) => void
   onShow: () => void
   onClear: () => void
   onClose: () => void
@@ -181,6 +189,36 @@ export function BacktestOverlaySheet({
               ))}
             </div>
           ) : null}
+
+          <div className="backtest-overlay-filters" aria-label="Filtres T4b">
+            <label className="backtest-overlay-select">
+              Sortie
+              <select
+                value={exitReason ?? ''}
+                onChange={(e) => onExitReason(e.target.value || null)}
+                disabled={loading}
+              >
+                <option value="">Toutes</option>
+                <option value="stop">stop</option>
+                <option value="target">target</option>
+                <option value="signal">signal</option>
+                <option value="eod">eod</option>
+                <option value="max_hold">max_hold</option>
+              </select>
+            </label>
+            <label className="backtest-overlay-select">
+              Sens
+              <select
+                value={direction ?? ''}
+                onChange={(e) => onDirection(e.target.value || null)}
+                disabled={loading}
+              >
+                <option value="">Tous</option>
+                <option value="LONG">LONG</option>
+                <option value="SHORT">SHORT</option>
+              </select>
+            </label>
+          </div>
 
           {listErr || error ? (
             <div className="banner error" role="alert">
