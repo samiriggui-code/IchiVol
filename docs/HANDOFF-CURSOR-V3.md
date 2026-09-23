@@ -33,7 +33,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T0-CALC EN COURS — calculateur de scénarios
 
 - Branche : `cursor/t0-calc-scenarios-a2fe`
-- PR : (draft)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/25 (**draft**)
 - Statut : **ATTENTE CI** puis **ATTENTE Claude**.
 
 ### Livré
