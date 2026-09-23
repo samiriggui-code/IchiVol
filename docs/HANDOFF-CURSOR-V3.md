@@ -48,7 +48,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `cursor/lab-ui-research-t5-t7-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/43 — **draft**
-- HEAD : `a5a13a1`
+- HEAD : `d4deb50` (code `01e79b0` + docs ; CI verte sur `a5a13a1` = même code)
 - Base : `main` @ `9ead9e8` (post Researcher #41/#42)
 
 ### Statut CI (Engine CI)
