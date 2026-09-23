@@ -29,16 +29,17 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **Event Intelligence audit** #26 — **MERGÉE** (doc).
 - **EventAnomalyDetector PHASE 5** #27 — **MERGÉE** (observation-only).
 - **Event Intelligence PHASE 6** #28 — **MERGÉE** (regime study + calibration ; Cursor solo, CI verte).
-- **Job en cours** : **Event Intelligence PHASE 7** — PR #29 draft — SymbolNews + correlate → `EVENT_MARKET` (Cursor solo ; ATTENTE CI).
+- **Event Intelligence PHASE 7** #29 — **MERGÉE** (SymbolNews + correlate → `EVENT_MARKET` ; Cursor solo, CI verte).
+- **Job en cours** : aucun chantier code ouvert — EIL observation complete (#26–#29). Suite optionnelle : seuils live / FinBERT / UI / corporate (après Claude ~18:10).
 
 
 ---
 
-## 2026-09-23 — EVENT INTELLIGENCE PHASE 7 — correlate + SymbolNews
+## 2026-09-23 — EVENT INTELLIGENCE PHASE 7 — correlate + SymbolNews → MAIN
 
 - Branche : `cursor/event-correlate-context-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/29 (**draft**)
-- Statut : **ATTENTE CI** — Cursor solo (Claude absente jusqu’à 18:10) ; puis revue Claude.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/29 — **MERGÉE**
+- Statut : CI verte ; merge Cursor (Claude absente). EIL phases 1–7 observation **terminées**.
 
 ### Livré
 
@@ -50,7 +51,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 6. Branchement observation-only `scan_symbol` + serializers `event_context` ; agent `get_event_context`
 7. Tests anti-lookahead news future / lag / weak match
 
-### Non-faits
+### Non-faits (hors EIL observation)
 
 Promotion seuils live (walk-forward), FinBERT, CorporateEventProvider scrapers, UI, changement de gates pipeline.
 
