@@ -14,17 +14,20 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - **1 skip** réseau Binance
   - **Aucune régression V3** (même compte avant/après)
 - **Règle de merge** : avec la base, tout échec **hors** de ces 13 = régression → **bloque le merge**.
-- **T0-CI** : diagnostic + workflow Actions livrés ; **greening des 13 en cours** (entrée ci-dessous) — **ne pas marquer CI vert tant que Actions n’a pas confirmé**.
+- **T0-CI** : diagnostic + greening livrés — CI Actions **verte** (run ci-dessous) ; revue Claude avec sa base ensuite.
 
 ---
 
 ## 2026-09-23 — T0-CI greening — rewrite 13 paper/API tests + honest 422 + frontend job
 
 - Branche : `cursor/t0-ci-postgres-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/14 (draft) — **pas de merge avant revue Claude / Actions vert**
-- Commit(s) : `28929be` (13 tests + honest 422 + frontend job), `b1e5773` (baseline heal + handoff)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/14 (draft) — **pas de merge avant revue Claude**
+- Commit(s) : `28929be` (13 tests + honest 422 + frontend job), `b1e5773` (baseline heal), `8aa8f9e` (handoff SHAs)
+- **CI Actions VERTE** : https://github.com/samiriggui-code/IchiVol/actions/runs/35841290882
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
 
-### Livré (cette passe)
+### Livré
 
 1. **13 tests réécrits** pour le profil baseline 2026-09-21 (`require_atr_stop`, `allow_short=False`, `exit_mode=direction`) :
    - `tests/paper/test_engine.py` — `stop_distance`, portefeuilles jetables (`exit_mode=decision` / `allow_short`), `direction_flipped`, ATR stub sur rows auto, heal `daily_loss_halt`
@@ -32,15 +35,14 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 2. **422 honnête** dans `app/api/paper_orders.py` : `no_atr_stop` / `short_not_allowed` / gates au lieu du faux message WATCH ; test `test_open_paper_position_reports_no_atr_stop_honestly`
 3. **CI** `.github/workflows/engine-ci.yml` : job `frontend-build` (`npm ci` + `npm run build` sous `ichivol-app`)
 
-### Validation locale (Cursor, Postgres 16 dispo)
+### Validation
 
-- **14/14** ciblés (11 engine + 2 open_paper + 1 no_atr_stop) : **PASS** (rejoué 2×)
-- WATCH refusal (`test_open_flow`) toujours `not_actionable` : **PASS**
-- **CI Actions** : pas encore confirmé vert sur cette passe — statut à relire sur la PR
+- Locale Cursor (Postgres 16) : 16/16 ciblés PASS ; suite complète `tests` PASS
+- GitHub Actions run `35841290882` sur `8aa8f9e` : **2/2 jobs verts**
 
-### Hors scope / suite
+### Hors scope
 
-- Ne pas merger tant que le job `pytest (Postgres 16)` Actions n’est pas vert
+- Merge après revue Claude (rejoue avec sa base)
 - Skip Binance inchangé
 
 ---
