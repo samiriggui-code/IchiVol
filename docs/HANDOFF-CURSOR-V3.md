@@ -16,39 +16,66 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **Règle de merge** : avec la base, **0 échec** attendu (T0-CI #14 mergé). Tout échec bloque le merge.
 - **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
 - **T2a** : ChartObject — **mergé** (PR #15) — **validé par Claude**.
-- **T0-BROKER** : PR #16 (draft) — CI verte ; **pas de merge avant revalidation Claude**.
-- **T2b** : agent draw_* + get_structure — PR draft ci-dessous ; **pas de merge avant revue Claude**.
+- **T0-BROKER** : PR #16 (draft) — **CI Actions VERTE** (`5965b55`) ; **pas de merge avant revalidation Claude**.
+- **T2b** : PR #17 (draft) — CI verte puis **passe 2 durcissement** (voir entrée) ; **pas de merge avant revue Claude**.
+- **Suite DB complète** (#16 + #17) : **à rejouer par Claude à partir de ~13:10** (restriction levée) — Cursor ne la relance pas.
 
 ---
 
-## 2026-09-23 — T2b — Agent draw_* + get_structure + store USER/CLAUDE
+## 2026-09-23 — T2b passe 2 — durcissement (suite critique pass 1 trop léger)
+
+- Branche : `cursor/t2b-agent-draw-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/17 (draft)
+- **Contexte** : le 1er push T2b (~10 min) livrait un squelette backend après T2a déjà mergé. Trop rapide vs découpage Claude sur T1 — **trous réels** (source=user impersonable, schema `points` = string[], front ne chargeait que `engine`, rendu sans horizontal/entry/stop, README stale).
+
+### Correctifs passe 2
+
+1. Agent `draw_*` **force `source=claude`** ; refuse `user` / `engine`
+2. `delete_chart_object` **claude-only** (ne touche pas USER)
+3. `get_chart_objects` défaut = HTTP (`engine`) — passer `user,claude` explicitement
+4. Copilot : `points` → `array<{time,price}>` (plus `string[]`)
+5. Front : `getChartObjects` défaut `engine,user,claude` ; PriceChart rend horizontal/entry/stop/target + ray/text
+6. Tests : isolation USER, merge HTTP, parity `get_structure`↔HTTP, trend_line points, schema TS
+7. `engine/README.md` section agent mise à jour (WRITE chart scopes)
+
+### CI / suite DB
+
+- CI Actions sur 1er push : **VERTE** (`72ef89d`, run `35849205234`)
+- Passe 2 : re-push → **attendre CI**
+- **Suite Postgres complète** : **Claude à ~13:10** (Cursor note ici, ne bloque pas sur ça)
+
+### Toujours hors scope / dette assumée
+
+- Multi-tenant `user_id` sur overlays (global symbol/tf) — dette connue, pas T2b
+- Rectangle/channel rendu générique riche — partiel
+- Refresh chart auto après tool_use Copilot (poll / event) — pas encore
+- STRATEGY/BACKTEST store — T4
+- Suite DB paper/brokerage complète — **Claude 13:10**
+
+---
+
+## 2026-09-23 — T2b — Agent draw_* + get_structure + store USER/CLAUDE (passe 1)
 
 - Branche : `cursor/t2b-agent-draw-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/17 (draft) — **pas de merge avant revue Claude**
 - Base : `main` (post-#14+#15)
+- **Note auto-critique** : squelette trop mince — voir **passe 2** ci-dessus. T2a (#15) couvrait déjà modèle + GET + rendu Structure ; T2b = store + agent + fil Copilot, pas « tout T2 en 10 min ».
 
-### Livré
+### Livré (passe 1)
 
-1. **Persistance** `chart_object_overlays` (alembic `f6a7b8c9d0e1`) + `ChartObjectOverlay` model + `app/chart_objects/store.py` (upsert / soft-delete / list). Sources persistables : `user` | `claude` only.
-2. **Collect** `collect_chart_objects` — merge ENGINE (structure) + store ; `GET /chart-objects/{symbol}` l’utilise.
-3. **Agent channel** :
-   - READ : `get_structure`, `get_chart_objects`
-   - WRITE (chart only) : `draw_horizontal_line|trend_line|ray|zone|rectangle|channel|marker|text|entry|stop|target`, `delete_chart_object`
-   - `/agent/capabilities` : `write_tier_enabled=true`, `write_scopes=["chart_objects"]` — **paper toujours hors canal**
-4. **Copilot** : `claudeTools.ts` expose lecture seule **+** allowlist `CHART_WRITE_TOOL_NAMES` (pas `place_order`).
-5. **Structure payload** partagé HTTP / agent (`app/structure/payload.py`).
+1. **Persistance** `chart_object_overlays` (alembic `f6a7b8c9d0e1`) + store
+2. **Collect** merge ENGINE + store sur `GET /chart-objects`
+3. Agent : `get_structure`, `get_chart_objects`, `draw_*`, `delete_chart_object` + capabilities write chart
+4. Copilot allowlist chart write
+5. `structure/payload.py` partagé
 
-### Tests locaux
+### Tests locaux (passe 1)
 
-- `tests/chart_objects` + agent channel + chart-objects route + OpenAPI golden : **PASS**
-- `claudeTools.test.ts` : **PASS**
-- `npm run build` : **OK**
+- chart_objects + agent + OpenAPI + build : PASS ; CI verte ensuite
 
 ### Hors scope
 
-- STRATEGY / BACKTEST persistence (T4)
-- Visual Strategy Builder (T5)
-- Merge #16 / T3+
+- STRATEGY / BACKTEST (T4) ; VSB (T5) ; merge #16 ; T3+
 
 ---
 
