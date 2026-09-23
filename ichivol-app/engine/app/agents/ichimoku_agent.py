@@ -26,8 +26,8 @@ from app.indicators.ichimoku import (
     IchimokuParams,
     IchimokuState,
     PriceVsKumo,
-    compute_ichimoku,
 )
+from app.indicators.registry import REGISTRY
 
 from .types import Direction, StrategyAgentOutput
 
@@ -139,5 +139,5 @@ def analyze(
     candles: Sequence[Candle],
     params: IchimokuParams = IchimokuParams(),
 ) -> list[StrategyAgentOutput]:
-    states = compute_ichimoku(candles, params)
+    states = REGISTRY.compute("ichimoku", candles, params)
     return [state_to_agent_output(s) for s in states]

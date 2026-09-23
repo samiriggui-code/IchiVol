@@ -21,17 +21,13 @@ _APP = Path(__file__).resolve().parents[2] / "app"
 # has a direct call — the test fails both on new offenders and on stale entries.
 ALLOWED_DIRECT_CALLERS: frozenset[str] = frozenset(
     {
-        "screener/service.py",
-        "backtest/experiments.py",
-        "synthetic/validation.py",
-        "context/gate.py",
+        # T1e remaining bypasses (live/backtest/lab/API glue):
         "api/routes.py",
-        "evidence/catalog.py",
-        "structure/atr_utils.py",
-        "agents/ichimoku_agent.py",
-        "agents/rvol_agent.py",
         "agent_channel/commands.py",
+        "backtest/experiments.py",
         "strategy_lab/regime.py",
+        "synthetic/validation.py",
+        "structure/atr_utils.py",
     }
 )
 

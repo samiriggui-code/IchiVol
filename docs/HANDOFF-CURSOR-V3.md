@@ -7,6 +7,41 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-23 — T1d — Chemin live via le REGISTRY
+
+- Branche : `v3/t1d-live-path-registry`
+- PR : (draft — lien après ouverture)
+- Commit(s) : `89caa75` (fixtures golden **avant** refactor) ; migration + ratchet (ce push)
+
+- Livré :
+  - `ichivol-app/engine/app/screener/service.py` — `REGISTRY.compute_many` (structure/atr/location/cvd/adx/donchian) ; `compute_oi_funding` reste direct
+  - `ichivol-app/engine/app/context/gate.py` — `compute_many` pour atr/rsi/cmf/obv selon le profil
+  - `ichivol-app/engine/app/evidence/catalog.py` — `compute_many` structure+atr
+  - `ichivol-app/engine/app/agents/ichimoku_agent.py` — `REGISTRY.compute("ichimoku")`
+  - `ichivol-app/engine/app/agents/rvol_agent.py` — `REGISTRY.compute("rvol")`
+  - fixtures golden (seeds 7 & 42) sous `tests/{screener,context,evidence,agents}/fixtures/`
+  - tests d'égalité stricte + `ALLOWED_DIRECT_CALLERS` réduit aux 6 modules T1e
+
+- Tests :
+  - suites indicators/strategy_lab/screener/context/evidence/agents + indicators_route (hors persistence Postgres) → OK
+  - suite complète → **4 failed** Postgres connus uniquement
+  - cliquet ratchet vert (5 modules retirés)
+
+- Choix faits :
+  - Screener : cvd/adx/donchian aussi via `compute_many` (sinon le module resterait dans le cliquet).
+  - Gate : un seul `compute_many` des indicateurs demandés par le profil.
+  - Signatures publiques / seuils inchangés.
+
+- Doutes / points à vérifier par Claude :
+  - Screener a aussi migré cvd/adx/donchian (nécessité cliquet) — OK vs brief qui ne citait que structure/atr/location ?
+
+- Non fait / reste à faire :
+  - T1e : api/routes, agent_channel, backtest/experiments, strategy_lab/regime, synthetic/validation, structure/atr_utils
+  - CONDITION_SCHEMA, structure unifiée
+  - **Ne pas merger** avant revue Claude.
+
+---
+
 ## 2026-09-23 — T1c — Features Strategy Lab via REGISTRY (`compute_many`)
 
 - Branche : `v3/t1c-registry-features`
@@ -22,7 +57,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - `ichivol-app/engine/tests/indicators/test_registry.py` — compute_many / cycle / warmup deps ; `test_no_lookahead` couvre les 3 nouveaux via `REGISTRY.compute`
 
 - Tests :
-  - `pytest tests/indicators tests/strategy_lab tests/api/test_indicators_route.py` → **237 passed, 1 skipped**
+  - `pytest tests/indicators tests/strategy_lab tests/api/test_indicators_route.py` → **241 passed, 1 skipped**
   - suite complète → **4 failed** Postgres connus uniquement
 
 - Choix faits :

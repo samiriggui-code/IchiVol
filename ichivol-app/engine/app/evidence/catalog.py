@@ -13,10 +13,11 @@ from app.agents import ichimoku_agent, rvol_agent
 from app.agents.types import Direction
 from app.decision.pipeline import build_pipeline
 from app.evidence.context import SignalContext, build_signal_context
-from app.indicators.atr import AtrParams, compute_atr
+from app.indicators.atr import AtrParams
 from app.indicators.ichimoku import Candle, IchimokuParams
+from app.indicators.registry import REGISTRY
 from app.indicators.rvol import RvolParams
-from app.indicators.structure import StructureParams, compute_structure
+from app.indicators.structure import StructureParams
 
 
 def build_in_window_catalog(
@@ -47,8 +48,16 @@ def build_in_window_catalog(
     # Precompute full series once; slice states by index (causal by construction).
     ichi_series = ichimoku_agent.analyze(list(candles), ichi_params)
     rvol_series = rvol_agent.analyze(list(candles), rvol_params)
-    structure_series = compute_structure(candles, structure_params)
-    atr_series = compute_atr(candles, atr_params)
+    computed = REGISTRY.compute_many(
+        ["structure", "atr"],
+        candles,
+        params_by_id={
+            "structure": structure_params,
+            "atr": atr_params,
+        },
+    )
+    structure_series = computed["structure"]
+    atr_series = computed["atr"]
 
     for i in range(min_bars, n - 2, max(1, step)):
         ichi = ichi_series[i]

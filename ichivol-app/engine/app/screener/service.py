@@ -22,15 +22,13 @@ from app.decision.pipeline import PipelineResult, build_pipeline
 from app.evidence.catalog import build_in_window_catalog
 from app.evidence.context import SignalContext, build_signal_context
 from app.evidence.engine import EvidenceEngine, EvidenceReport
-from app.indicators.adx import compute_adx
-from app.indicators.atr import AtrParams, AtrState, compute_atr
-from app.indicators.cvd import compute_cvd
-from app.indicators.donchian import DonchianParams, compute_donchian
+from app.indicators.atr import AtrParams, AtrState
 from app.indicators.ichimoku import Candle, IchimokuParams
-from app.indicators.location import LocationParams, compute_location
+from app.indicators.location import LocationParams
 from app.indicators.oi_funding import OiFundingState, compute_oi_funding
+from app.indicators.registry import REGISTRY
 from app.indicators.rvol import RvolParams
-from app.indicators.structure import StructureParams, compute_structure
+from app.indicators.structure import StructureParams
 from app.market_data import binance_futures
 from app.market_data.accumulator import fetch_with_accumulation, needs_accumulation
 from app.market_data.resolve import resolve_and_fetch
@@ -159,13 +157,22 @@ def scan_symbol(
     rvol_output = rvol_agent.analyze(candles, rvol_params)[-1]
     decision = combine_ichimoku_rvol(ichimoku_output, rvol_output)
 
-    structure_states = compute_structure(candles, structure_params)
+    computed = REGISTRY.compute_many(
+        ["structure", "atr", "location", "cvd", "adx", "donchian"],
+        candles,
+        params_by_id={
+            "structure": structure_params,
+            "atr": atr_params,
+            "location": location_params,
+        },
+    )
+    structure_states = computed["structure"]
     structure_state = structure_states[-1]
-    atr_state = compute_atr(candles, atr_params)[-1]
-    location_state = compute_location(candles, structure_states, location_params)[-1]
-    cvd_state = compute_cvd(candles)[-1]
-    adx_state = compute_adx(candles)[-1]
-    donchian_state = compute_donchian(candles)[-1]
+    atr_state = computed["atr"][-1]
+    location_state = computed["location"][-1]
+    cvd_state = computed["cvd"][-1]
+    adx_state = computed["adx"][-1]
+    donchian_state = computed["donchian"][-1]
     oi_funding_state = _oi_funding_state(provider.id, symbol, provider_symbol, timeframe, candles)
     # Twelve Data free tier: skip MTF second fetch (saves 1 credit per decision).
     mtf_direction = (

@@ -20,7 +20,8 @@ from __future__ import annotations
 from typing import Sequence
 
 from app.indicators.ichimoku import Candle
-from app.indicators.rvol import AnomalyLevel, RvolParams, RvolState, compute_rvol
+from app.indicators.registry import REGISTRY
+from app.indicators.rvol import AnomalyLevel, RvolParams, RvolState
 
 from .types import Direction, StrategyAgentOutput
 
@@ -87,5 +88,5 @@ def analyze(
     candles: Sequence[Candle],
     params: RvolParams = RvolParams(),
 ) -> list[StrategyAgentOutput]:
-    states = compute_rvol(candles, params)
+    states = REGISTRY.compute("rvol", candles, params)
     return [state_to_agent_output(s) for s in states]

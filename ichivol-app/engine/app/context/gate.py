@@ -9,11 +9,12 @@ from dataclasses import dataclass, replace
 from typing import Any, Sequence
 
 from app.decision.pipeline import PipelineResult, StageId, StageStatus
-from app.indicators.atr import VolatilityRegime, compute_atr
-from app.indicators.cmf import CmfBias, compute_cmf
+from app.indicators.atr import VolatilityRegime
+from app.indicators.cmf import CmfBias
 from app.indicators.ichimoku import Candle
-from app.indicators.obv import ObvBias, compute_obv
-from app.indicators.rsi import RsiBias, RsiParams, compute_rsi
+from app.indicators.obv import ObvBias
+from app.indicators.registry import REGISTRY
+from app.indicators.rsi import RsiBias, RsiParams
 
 
 @dataclass(frozen=True)
@@ -49,8 +50,27 @@ def apply_context_gate(
     payload: dict[str, Any] = {}
     reasons: list[str] = []
 
+    ids: list[str] = []
+    params_by_id: dict[str, Any] = {}
+    rsi_params = RsiParams(
+        overbought=float(profile.get("rsi_overbought", 70.0)),
+        oversold=float(profile.get("rsi_oversold", 30.0)),
+        mid=float(profile.get("rsi_mid", 50.0)),
+    )
     if want_regime:
-        atr_states = compute_atr(candles)
+        ids.append("atr")
+    if want_rsi:
+        ids.append("rsi")
+        params_by_id["rsi"] = rsi_params
+    if want_cmf:
+        ids.append("cmf")
+    if want_obv:
+        ids.append("obv")
+
+    computed = REGISTRY.compute_many(ids, candles, params_by_id) if ids else {}
+
+    if want_regime:
+        atr_states = computed["atr"]
         atr = atr_states[-1] if atr_states else None
         if atr is not None:
             payload["atr_regime"] = atr.regime.value
@@ -59,12 +79,7 @@ def apply_context_gate(
                 reasons.append(f"regime_{atr.regime.value.lower()}")
 
     if want_rsi:
-        rsi_params = RsiParams(
-            overbought=float(profile.get("rsi_overbought", 70.0)),
-            oversold=float(profile.get("rsi_oversold", 30.0)),
-            mid=float(profile.get("rsi_mid", 50.0)),
-        )
-        rsi_state = compute_rsi(candles, rsi_params)[-1]
+        rsi_state = computed["rsi"][-1]
         payload["rsi"] = rsi_state.rsi
         payload["rsi_bias"] = rsi_state.bias.value
         if rsi_state.rsi is not None:
@@ -79,7 +94,7 @@ def apply_context_gate(
                     reasons.append("rsi_not_aligned_short")
 
     if want_cmf:
-        cmf_state = compute_cmf(candles)[-1]
+        cmf_state = computed["cmf"][-1]
         payload["cmf"] = cmf_state.cmf
         payload["cmf_bias"] = cmf_state.bias.value
         if cmf_state.bias != CmfBias.UNKNOWN:
@@ -89,7 +104,7 @@ def apply_context_gate(
                 reasons.append("cmf_positive_block_short")
 
     if want_obv:
-        obv_state = compute_obv(candles)[-1]
+        obv_state = computed["obv"][-1]
         payload["obv"] = obv_state.obv
         payload["obv_bias"] = obv_state.bias.value
         payload["obv_slope"] = obv_state.slope
