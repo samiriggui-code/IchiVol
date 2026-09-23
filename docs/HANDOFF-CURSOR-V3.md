@@ -48,7 +48,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T0-MANAGE-c EN COURS — partial TP Strategy Lab (backtest only)
 
 - Branche : `cursor/t0-manage-c-partial-tp-lab-a2fe`
-- PR : *(à compléter après `gh pr create --draft`)*
+- PR : https://github.com/samiriggui-code/IchiVol/pull/47 (**draft**)
 - Statut : **ATTENTE CLAUDE** — CI à confirmer ; **ne pas merger** ; **pas de T0-MANAGE-d**.
 
 ### Livré
