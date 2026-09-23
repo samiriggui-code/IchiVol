@@ -512,14 +512,19 @@ def open_user_confirmed(
     signal_extra: dict[str, Any] | None = None,
     manual_notional: float | None = None,
     take_profit_r: float | None = None,
+    portfolio: PaperPortfolio | None = None,
 ) -> tuple[PaperPosition | None, bool]:
     """Open a user-confirmed paper lot.
 
     Returns ``(position, created)``. ``created=False`` means an open lot on
-    this symbol already existed in the baseline portfolio — idempotent lock,
+    this symbol already existed in the target portfolio — idempotent lock,
     no second notional spent.
+
+    ``portfolio`` defaults to the baseline account; tests that need a clean
+    (non-halted) book should pass a disposable clone instead of mutating baseline.
     """
-    portfolio = ensure_baseline_portfolio(session)
+    if portfolio is None:
+        portfolio = ensure_baseline_portfolio(session)
     _lock_symbol(session, portfolio.id, symbol)
     existing_any = _get_open_by_symbol(
         session, symbol=symbol, portfolio_id=portfolio.id, for_update=True
@@ -528,7 +533,12 @@ def open_user_confirmed(
         return existing_any, False
 
     existing = _get_open_position(
-        session, symbol=symbol, timeframe=timeframe, source="user_confirmed", user_id=user_id
+        session,
+        symbol=symbol,
+        timeframe=timeframe,
+        source="user_confirmed",
+        user_id=user_id,
+        portfolio_id=portfolio.id,
     )
     if existing is not None:
         return existing, False
