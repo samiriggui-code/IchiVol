@@ -11,9 +11,10 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `v3/t1b-front-engine-indicators`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/7 (draft)
-- Commit(s) : `25e2249` (+ ce commit handoff)
+- Commit(s) : `25e2249` (code T1b), `417da25` (ce handoff)
 
 - Livré :
+  - `docs/HANDOFF-CURSOR-V3.md` — canal handoff V3 (entrée T1 + T1b)
   - `ichivol-app/engine/app/indicators/ichimoku.py` — `compute_projected_kumo` (display-only ; ne touche pas `IchimokuState` / `compute_ichimoku`)
   - `ichivol-app/engine/app/api/indicators.py` — `GET /indicators/ichimoku/{symbol}/projection`
   - `ichivol-app/engine/tests/indicators/test_projected_kumo.py` — égalité projection ↔ senkou affiché à `i+d` + garde d’import
