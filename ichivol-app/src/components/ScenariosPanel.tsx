@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import { eur, pct, signedEur } from '../lib/tradeStory'
-import type { PaperScenarios } from '../lib/paper'
+import { fetchPositionScenarios, type PaperScenarios } from '../lib/paper'
 
 function fmtPctOf(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(v)) return '—'
@@ -213,8 +213,7 @@ export function PositionScenariosDisclosure({ positionId }: { positionId: string
     let alive = true
     setLoading(true)
     setErr(null)
-    import('../lib/paper')
-      .then(({ fetchPositionScenarios }) => fetchPositionScenarios(positionId))
+    fetchPositionScenarios(positionId)
       .then((s) => {
         if (alive) setScenarios(s)
       })
