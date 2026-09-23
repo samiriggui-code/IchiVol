@@ -48,6 +48,12 @@ Avant persist agent `draw_*` : vérifier times/prices contre OHLCV réel (`resol
 pytest tests/chart_objects/ -q   # PASS
 ```
 
+### CI Actions
+
+- **VERTE** (HEAD `9601274`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35855150230
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
 ### Revue Claude
 
 **Revalidation demandée** avant merge.
