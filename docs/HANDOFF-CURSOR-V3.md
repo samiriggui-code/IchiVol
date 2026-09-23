@@ -20,8 +20,33 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T2b** #17 — **MERGÉE** (validé Claude).
 - **T3** #18 — **MERGÉE** (validé Claude).
 - **T0-UI** #19 — **MERGÉE** (accepté Claude comme T0-UI, pas T4 roadmap).
-- **Job en cours** : **T2c** user ENTRY/STOP/TARGET — branche `cursor/t2c-user-trade-points-a2fe`.
+- **Job en cours** : **T2c** PR #20 — corrections revue Claude (setup atomique) — **ATTENTE revalidation**.
 
+
+---
+
+## 2026-09-23 — T2c corrections revue Claude — setup atomique + as_of
+
+- Branche : `cursor/t2c-user-trade-points-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/20 (**draft**)
+- Statut : **ATTENTE CLAUDE** — corrections appliquées ; **ne pas merger** avant revalidation.
+
+### Correctifs demandés → livrés
+
+1. **Setup atomique** — taps en mémoire → récap Valider/Annuler ; Annuler = 0 écriture ; Valider = `POST /chart-objects/{symbol}/setup` (3 points, 1 transaction). POST unitaire conservé.
+2. **Sens déduit** — `stop < entry` → long ; `stop > entry` → short ; géométrie serveur LONG `stop < entry < target` / SHORT inverse ; `origin.direction` sur les 3 ; Valider désactivé côté front si incohérent.
+3. **Ratio R** — distances stop/cible (prix + %) + R = |Δtarget|/|Δstop| (0,01) dans `MarkTradeSheet`.
+4. **Twelve Data** — exclusion `canMarkTrade` / fetch overlays retirée. Raison initiale : économie crédits (GET chart-objects refetch OHLCV). Claude : cache 90s + grounding OK → bouton visible ; erreur claire à la validation.
+5. **as_of grounding** — `assert_object_grounded` vérifie `obj.as_of` sur la série (ou marge projetée). Test : `draw_zone` agent sans points + `as_of` futur → rejeté.
+
+### Tests
+
+- `/setup` LONG cohérent ; LONG target mauvais côté → 422 + 0 objet ; point non groundé → 422 + 0 objet ; SHORT ; as_of futur
+- `pytest tests/chart_objects/` + goldens ; `npm run build` OK
+
+### Attente
+
+CI verte → **revalidation Claude** → merge si OK. Cursor s’arrête après CI/handoff.
 
 ---
 
@@ -30,7 +55,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - Branche : `cursor/t2c-user-trade-points-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/20 (**draft**)
 - Commit(s) : `4606c03` (feat T2c), `e49696c` (handoff ATTENTE)
-- Statut : **ATTENTE CLAUDE** — impl done ; CI **VERTE** ; **ne pas merger** avant revue.
+- Statut : *(supersédé — voir corrections revue Claude ci-dessus)*
 
 ### Contexte
 
@@ -77,6 +102,8 @@ tsc -b                           # OK
 Draft → handoff à jour → **revue** (suite Postgres complète sur `main` + ce diff) → marche à suivre.
 
 **Cursor s’arrête ici** jusqu’à la revue Claude.
+
+---
 
 ## 2026-09-23 — BILAN — 4 merges done (#16→#19) → T2c
 
