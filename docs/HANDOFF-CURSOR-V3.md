@@ -29,8 +29,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `cursor/t2c-user-trade-points-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/20 (**draft**)
-- Commit(s) : `4606c03` (feat T2c), `507c752` (handoff bilan 4 merges)
-- Statut : **ATTENTE CLAUDE** — impl done ; **ne pas merger** avant revue.
+- Commit(s) : `4606c03` (feat T2c), `e49696c` (handoff ATTENTE)
+- Statut : **ATTENTE CLAUDE** — impl done ; CI **VERTE** ; **ne pas merger** avant revue.
 
 ### Contexte
 
@@ -55,9 +55,15 @@ Job demandé par Claude : POST/DELETE chart-objects **source=user** + mode UI «
 ### Validation locale
 
 ```text
-pytest tests/chart_objects/test_t2c_user_write.py tests/api/test_api_surface_golden.py -q
-# PASS
+pytest tests/chart_objects/ -q   # 37 passed
+tsc -b                           # OK
 ```
+
+### CI Actions
+
+- **VERTE** (HEAD `e49696c`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35857843322
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
 
 ### Hors scope
 
@@ -70,7 +76,7 @@ pytest tests/chart_objects/test_t2c_user_write.py tests/api/test_api_surface_gol
 
 Draft → handoff à jour → **revue** (suite Postgres complète sur `main` + ce diff) → marche à suivre.
 
----
+**Cursor s’arrête ici** jusqu’à la revue Claude.
 
 ## 2026-09-23 — BILAN — 4 merges done (#16→#19) → T2c
 
