@@ -33,29 +33,49 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `cursor/t0-metrics-2-engine-costs-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/24 (**draft**)
-- Commit(s) : `96e5696` (feat) ; `0126f9f` (handoff)
+- Commit(s) : `96e5696` (feat) ; fix `eod_return` (voir HEAD)
 - Statut : **ATTENTE CI** puis **ATTENTE CLAUDE**.
 
 ### Corrections `run_backtest`
 
-1. **Flip** L↔S : `r -= 2 × one_way` ; attribution `one_way` sortie (trade fermé) + `one_way` entrée (nouveau)
-2. **EOD** : frais de sortie prélevés dans `bar_returns` + `cost_log`
-3. **EOD prix unique** : dernière barre ajoute `sign × log(last.close / last.open)` puis frais sortie ; trade reste @ `last.close` (pas l’option open — aligne les deux comptabilités sur le mark close)
+1. **Flip** L↔S : `r -= 2 × one_way` ; attribution `one_way` sortie + `one_way` entrée
+2. **EOD** : frais de sortie + mark-to-close dans **`BacktestResult.eod_return`** (pas dans `bar_returns`)
+3. **Prix unique EOD** : trade @ `last.close` ; `eod_return = sign × log(last.close/last.open) − one_way`
+4. **`bar_returns` strictement open→open** — propriété de troncature restaurée (test lookahead **inchangé**)
+
+### Comptabilité
+
+- Invariant : `Σ net_log_return(trades) == Σ bar_returns + eod_return` (1e-9)
+- `metrics.total_return = exp(Σ bars + eod) − 1` ; max DD inclut un dernier point d’equity avec `eod_return`
+
+### Consommateurs de `bar_returns` / total / equity (audit)
+
+| Consommateur | Chemin | Inclut `eod_return` ? |
+|--------------|--------|------------------------|
+| `compute_metrics` | `metrics.py` | **oui** (total_return + max_dd) |
+| `experiments.compare` | via `compute_metrics` | oui |
+| `evidence._snapshot_row` | via `exp.metrics` | oui |
+| walk-forward / regime_slices / ruleset_backtest | `compute_metrics` (ruleset `eod_return=0`) | N/A ruleset |
+| `serializers.backtest_dict` | expose `eod_return` | champ API |
+| `serializers.metrics_dict` / UI | `metrics.total_return` | oui (via metrics) |
+| Front BacktestsPage | `metrics.total_return` only | oui |
+
+Aucun autre lecteur direct de `bar_returns` pour un total equity hors `compute_metrics`.
 
 ### Tests
 
 - Invariant 1e-9 : mid-close, EOD close≠open, flip L→S / S→L, flips enchaînés
-- Propriété : 200 séquences aléatoires NEUTRAL/LONG/SHORT
-- Ancien test « gap documenté » **supprimé** (remplacé par preuve d’égalité)
-- Lookahead truncation : compare `bar_returns[:-1]` (la dernière barre peut porter le mark-to-close EOD — artefact de fin de série, pas un lookahead)
+- Propriété : 200 séquences aléatoires
+- Lookahead truncation : **strict** (aucune exclusion de barre)
+- Local : `pytest tests/backtest tests/indicators tests/strategy_lab` — **0 échec**
 
 ### `metrics_basis`
 
-- `run_backtest` / experiments / evidence / agent cmd → **`net_v2`**
-- `ruleset_backtest` reste **`net_v1`** (inchangé ; golden trades identique)
+- Engine / experiments / evidence / agent cmd → **`net_v2`**
+- `ruleset_backtest` reste **`net_v1`**
 - UI : labels distincts ; alerte si mélange brut / v1 / v2
 
-### Impact (bougies synthétiques seed 42, 500 bars, coûts 5+3 bps)
+### Impact (bougies synthétiques seed 42, 500 bars, coûts 5+3 bps) — confirmé après `eod_return`
 
 | experiment | n | flips | eod | tot avant→après | dd avant→après | WR avant→après | Exp avant→après |
 |------------|---|-------|-----|-----------------|----------------|----------------|-----------------|
@@ -63,16 +83,13 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 | `ICHIMOKU_RVOL_ENTRY_GATE` | 31 | 0 | 1 | -24.57% → -24.86% | 29.90% → 29.90% | 3.23% → 3.23% | -0.91% → -0.91% |
 | `PIPELINE` | 5 | 0 | 0 | -2.22% → -2.22% | 3.17% → 3.17% | 20.00% → 20.00% | -0.44% → -0.44% |
 
-Baisses voulues (trop optimiste avant). PIPELINE inchangé ici (0 flip, 0 EOD). Directions / décisions inchangées.
-
 ### Goldens
 
 - `ruleset_backtest_golden.json` : **inchangé**
-- Pas de golden métriques experiments à régénérer
 
 ### Attente
 
-CI verte → handoff lien → **ATTENTE Claude**.
+CI verte → **ATTENTE Claude**.
 
 ---
 
