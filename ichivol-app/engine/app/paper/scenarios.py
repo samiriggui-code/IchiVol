@@ -383,6 +383,82 @@ def build_scenarios(
     }
 
 
+def level_remaining_frac(
+    *,
+    entry: float,
+    mark: float,
+    level: float,
+) -> float | None:
+    """Fraction of |entry−level| still remaining to reach ``level`` from ``mark``.
+
+    Used by T0-NOTIF target/stop proximity (same geometry as scenarios levels).
+    Returns:
+      - ``0.0`` when mark has reached or passed the level (in the entry→level sense)
+      - ``1.0`` when mark is still at entry (or beyond entry away from level)
+      - ``None`` when entry≈level (degenerate)
+    """
+    span = abs(float(level) - float(entry))
+    if span < 1e-12:
+        return None
+    # Project mark onto the entry→level axis: 0 at entry, 1 at level.
+    # remaining = 1 − clamp(progress, 0, 1)
+    progress = (float(mark) - float(entry)) / (float(level) - float(entry))
+    if progress >= 1.0:
+        return 0.0
+    if progress <= 0.0:
+        return 1.0
+    return float(1.0 - progress)
+
+
+def proximity_bands(
+    remaining: float | None,
+    *,
+    near_pct: float = 0.20,
+) -> dict[str, Any]:
+    """Quantize remaining fraction into alert bands for dedup (20 / 10 / 5 %)."""
+    if remaining is None:
+        return {
+            "remaining_frac": None,
+            "near": False,
+            "band": None,
+            "near_threshold": float(near_pct),
+        }
+    r = float(remaining)
+    near = r <= float(near_pct) + 1e-12
+    band: str | None = None
+    if r <= 0.05 + 1e-12:
+        band = "5"
+    elif r <= 0.10 + 1e-12:
+        band = "10"
+    elif r <= float(near_pct) + 1e-12:
+        band = str(int(round(float(near_pct) * 100)))
+    return {
+        "remaining_frac": r,
+        "near": near,
+        "band": band,
+        "near_threshold": float(near_pct),
+    }
+
+
+def compute_level_proximity(
+    *,
+    entry: float,
+    mark: float,
+    stop: float,
+    target: float,
+    near_pct: float = 0.20,
+) -> dict[str, Any]:
+    """Pure proximity for open lots — shared by scenarios payload and T0-NOTIF."""
+    rem_t = level_remaining_frac(entry=entry, mark=mark, level=target)
+    rem_s = level_remaining_frac(entry=entry, mark=mark, level=stop)
+    return {
+        "mark": float(mark),
+        "entry": float(entry),
+        "target": proximity_bands(rem_t, near_pct=near_pct) | {"level": float(target)},
+        "stop": proximity_bands(rem_s, near_pct=near_pct) | {"level": float(stop)},
+    }
+
+
 def build_open_position_scenarios(
     position: Any,
     *,
@@ -485,6 +561,13 @@ def build_open_position_scenarios(
                 else None
             ),
         },
+        # T0-NOTIF — same geometry as entry/stop/target levels (no divergent formula).
+        "proximity": compute_level_proximity(
+            entry=entry,
+            mark=float(mark_price),
+            stop=stop,
+            target=target,
+        ),
     }
 
     now_ts = time.time() if now is None else float(now)

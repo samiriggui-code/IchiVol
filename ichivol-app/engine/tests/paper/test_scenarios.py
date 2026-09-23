@@ -350,3 +350,13 @@ def test_causality_history_excludes_forming_bar_in_reference():
     )
     assert scen["crash"]["reference"]["candle_time"] == 200
     assert scen["crash"]["reference"]["move"] == pytest.approx(-0.20)
+
+
+def test_level_proximity_near_target_band():
+    from app.paper.scenarios import compute_level_proximity, level_remaining_frac
+
+    assert abs(level_remaining_frac(entry=100.0, mark=108.0, level=110.0) - 0.2) < 1e-9
+    prox = compute_level_proximity(entry=100.0, mark=108.0, stop=90.0, target=110.0, near_pct=0.2)
+    assert prox["target"]["near"] is True
+    assert prox["target"]["band"] == "20"
+    assert prox["stop"]["near"] is False

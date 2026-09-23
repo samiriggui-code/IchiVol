@@ -159,6 +159,65 @@ def paper_position_scenarios(position_id: str) -> dict:
         session.close()
 
 
+@router_after_shadow.get("/paper/positions/{position_id}/proximity")
+def paper_position_proximity(position_id: str, near_pct: float = 0.20) -> dict:
+    """T0-NOTIF — remaining fraction to stop/target (same geometry as scenarios). Read-only."""
+    from app.paper.marks import resolve_marks
+    from app.paper.scenarios import compute_level_proximity
+
+    if near_pct <= 0 or near_pct > 1:
+        raise HTTPException(status_code=422, detail="near_pct must be in (0, 1]")
+
+    session = SessionLocal()
+    try:
+        position = paper_engine.get_position(session, position_id)
+        if position is None:
+            raise HTTPException(status_code=404, detail="position_not_found")
+        if position.status != "OPEN":
+            raise HTTPException(status_code=409, detail="position_not_open")
+
+        marks = resolve_marks(
+            [position.symbol],
+            timeframe=position.timeframe or "1h",
+            allow_fetch=True,
+            fetch_budget_s=1.5,
+            block_on_provider=False,
+        )
+        mark = marks.get(position.symbol.upper())
+        if mark is None or mark.source == "missing" or mark.price <= 0:
+            raise HTTPException(status_code=422, detail="mark_unavailable")
+
+        entry = float(position.entry_price)
+        stop = (
+            float(position.stop_price)
+            if position.stop_price is not None
+            else entry * 0.98
+        )
+        target = (
+            float(position.take_profit_price)
+            if position.take_profit_price is not None
+            else entry * 1.04
+        )
+        prox = compute_level_proximity(
+            entry=entry,
+            mark=float(mark.price),
+            stop=stop,
+            target=target,
+            near_pct=float(near_pct),
+        )
+        return {
+            "position_id": position.id,
+            "symbol": position.symbol,
+            "timeframe": position.timeframe,
+            "direction": position.direction,
+            "user_id": position.user_id,
+            "mark_source": mark.source,
+            "proximity": prox,
+        }
+    finally:
+        session.close()
+
+
 @router_after_shadow.get("/paper/propose")
 def propose_paper_trade(
     symbol: str,

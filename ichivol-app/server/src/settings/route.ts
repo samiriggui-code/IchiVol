@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express'
+import { Prisma } from '@prisma/client'
 import { type ProviderName } from '../config.js'
 import { db } from '../db.js'
 import { testLlmConnection } from './llmTest.js'
@@ -7,6 +8,7 @@ import { effectiveEncKeys, withKey } from './llmKeys.js'
 import { getOrCreateSetting, resolveLlmForUser, toPublicSettings } from './resolve.js'
 import { encryptSecret } from './secrets.js'
 import type { SettingsPatch } from './types.js'
+import { parsePushAlertPrefs } from '../notifications/pushPrefs.js'
 
 const PROVIDERS = new Set<ProviderName>(['anthropic', 'openai', 'openrouter'])
 const SOURCES = new Set(['binance', 'bybit', 'okx'])
@@ -66,6 +68,42 @@ function parsePatch(body: unknown): { ok: true; data: SettingsPatch } | { ok: fa
     }
     data.volumeParams = raw.volumeParams as Record<string, number>
   }
+  if ('pushAlertPrefs' in raw) {
+    if (!raw.pushAlertPrefs || typeof raw.pushAlertPrefs !== 'object' || Array.isArray(raw.pushAlertPrefs)) {
+      return { ok: false, error: 'pushAlertPrefs invalide' }
+    }
+    const p = raw.pushAlertPrefs as Record<string, unknown>
+    const prefs: NonNullable<SettingsPatch['pushAlertPrefs']> = {}
+    if ('enabled' in p) {
+      if (typeof p.enabled !== 'boolean') return { ok: false, error: 'pushAlertPrefs.enabled invalide' }
+      prefs.enabled = p.enabled
+    }
+    if ('targetStop' in p) {
+      if (typeof p.targetStop !== 'boolean') return { ok: false, error: 'pushAlertPrefs.targetStop invalide' }
+      prefs.targetStop = p.targetStop
+    }
+    if ('accel' in p) {
+      if (typeof p.accel !== 'boolean') return { ok: false, error: 'pushAlertPrefs.accel invalide' }
+      prefs.accel = p.accel
+    }
+    if ('directionFlip' in p) {
+      if (typeof p.directionFlip !== 'boolean') return { ok: false, error: 'pushAlertPrefs.directionFlip invalide' }
+      prefs.directionFlip = p.directionFlip
+    }
+    if ('nearPct' in p) {
+      if (typeof p.nearPct !== 'number' || !(p.nearPct > 0 && p.nearPct <= 1)) {
+        return { ok: false, error: 'pushAlertPrefs.nearPct doit être dans (0, 1]' }
+      }
+      prefs.nearPct = p.nearPct
+    }
+    if ('cooldownMin' in p) {
+      if (typeof p.cooldownMin !== 'number' || p.cooldownMin < 1 || p.cooldownMin > 24 * 60) {
+        return { ok: false, error: 'pushAlertPrefs.cooldownMin invalide' }
+      }
+      prefs.cooldownMin = Math.floor(p.cooldownMin)
+    }
+    data.pushAlertPrefs = prefs
+  }
 
   return { ok: true, data }
 }
@@ -106,6 +144,7 @@ export async function handlePatchSettings(req: Request, res: Response): Promise<
     activeSources?: string[]
     ichimokuParams?: Record<string, number>
     volumeParams?: Record<string, number>
+    pushAlertPrefs?: Prisma.InputJsonValue
   } = {}
 
   const { data } = parsed
@@ -115,7 +154,13 @@ export async function handlePatchSettings(req: Request, res: Response): Promise<
   if (data.activeSources !== undefined) update.activeSources = data.activeSources
   if (data.ichimokuParams !== undefined) update.ichimokuParams = data.ichimokuParams
   if (data.volumeParams !== undefined) update.volumeParams = data.volumeParams
-
+  if (data.pushAlertPrefs !== undefined) {
+    const merged = parsePushAlertPrefs({
+      ...parsePushAlertPrefs(current.pushAlertPrefs),
+      ...data.pushAlertPrefs,
+    })
+    update.pushAlertPrefs = merged as unknown as Prisma.InputJsonValue
+  }
   // Une clé par fournisseur : la clé saisie va au fournisseur choisi dans ce
   // même enregistrement (sinon l'actif) et ne touche jamais celles des autres.
   // L'ancienne clé unique est rattachée à son fournisseur puis retirée, pour

@@ -74,6 +74,14 @@ export interface AppSettings {
   llmConnections?: LlmConnection[]
   llmModels?: Record<LlmProvider, LlmModelOption[]>
   twelveDataApiKeySet: boolean
+  pushAlertPrefs?: {
+    enabled: boolean
+    targetStop: boolean
+    accel: boolean
+    directionFlip: boolean
+    nearPct: number
+    cooldownMin: number
+  }
 }
 
 export interface SettingsPatch {
@@ -89,6 +97,7 @@ export interface SettingsPatch {
    * Twelve Data key for AAPL/TSLA requests only -- forex/metal/index/energy
    * are already free via biquote, see docs/MARKET-DATA-STRATEGY.md. */
   twelveDataApiKey?: string
+  pushAlertPrefs?: Partial<NonNullable<AppSettings['pushAlertPrefs']>>
 }
 
 export interface LlmTestResult {

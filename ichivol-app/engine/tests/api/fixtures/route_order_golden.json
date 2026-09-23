@@ -353,6 +353,13 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/paper/positions/{position_id}/proximity",
+    "endpoint": "paper_position_proximity"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/paper/propose",
     "endpoint": "propose_paper_trade"
   },

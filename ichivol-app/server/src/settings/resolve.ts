@@ -1,6 +1,7 @@
 import type { Setting } from '@prisma/client'
 import { config, type ProviderName } from '../config.js'
 import { db } from '../db.js'
+import { parsePushAlertPrefs } from '../notifications/pushPrefs.js'
 import { effectiveEncKeys, keySource, LLM_PROVIDERS } from './llmKeys.js'
 import { DEFAULT_LLM_MODELS } from './models.js'
 import { decryptSecret } from './secrets.js'
@@ -97,6 +98,7 @@ export function toPublicSettings(row: Setting): SettingsPublic {
     llmReady,
     llmConnections,
     twelveDataApiKeySet: Boolean(row.twelveDataApiKeyEnc),
+    pushAlertPrefs: parsePushAlertPrefs(row.pushAlertPrefs),
   }
 }
 

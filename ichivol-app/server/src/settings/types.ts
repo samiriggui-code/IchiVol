@@ -23,6 +23,15 @@ export interface SettingsPublic {
   /** Tous les providers avec statut de clé (pour la table Settings). */
   llmConnections: LlmConnectionPublic[]
   twelveDataApiKeySet: boolean
+  /** T0-NOTIF */
+  pushAlertPrefs: {
+    enabled: boolean
+    targetStop: boolean
+    accel: boolean
+    directionFlip: boolean
+    nearPct: number
+    cooldownMin: number
+  }
 }
 
 export interface SettingsPatch {
@@ -38,4 +47,12 @@ export interface SettingsPatch {
    * TWELVE_DATA_API_KEY (engine/.env) for this user's equity requests only
    * (AAPL/TSLA -- forex/metal/index/energy are free via biquote already). */
   twelveDataApiKey?: string
+  pushAlertPrefs?: {
+    enabled?: boolean
+    targetStop?: boolean
+    accel?: boolean
+    directionFlip?: boolean
+    nearPct?: number
+    cooldownMin?: number
+  }
 }
