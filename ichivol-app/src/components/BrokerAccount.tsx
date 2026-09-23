@@ -47,6 +47,15 @@ function isStaleMark(p: PaperOverviewPosition): boolean {
   return p.mark_stale === true || p.valuation_status === 'stale_mark'
 }
 
+/** Human-readable age of the mark used for valuation. */
+function formatMarkAge(ageS: number | null | undefined): string | null {
+  if (ageS == null || !Number.isFinite(ageS) || ageS < 0) return null
+  if (ageS < 60) return `${Math.round(ageS)} s`
+  if (ageS < 3600) return `${Math.round(ageS / 60)} min`
+  if (ageS < 86400) return `${(ageS / 3600).toFixed(1)} h`
+  return `${(ageS / 86400).toFixed(1)} j`
+}
+
 type SymbolGroup = {
   key: string
   symbol: string
@@ -183,6 +192,17 @@ function GroupCard({
               · Cours périmé
             </span>
           )}
+          {(() => {
+            const age = formatMarkAge(
+              Math.max(...group.lots.map((p) => p.mark_age_s ?? -1)),
+            )
+            return age ? (
+              <span className="muted" title="Âge du cours de valorisation">
+                {' '}
+                · mark {age}
+              </span>
+            ) : null
+          })()}
         </div>
         <span className={`invest-card-dir is-${group.direction.toLowerCase()}`}>{dir.title}</span>
       </header>
@@ -522,6 +542,9 @@ export function BrokerPositions({
                     <span className="muted"> · {p.timeframe}</span>
                     {(isIncomplete(p) || isStaleMark(p)) && (
                       <span className="muted"> · {valuationLabel(p.valuation_status)}</span>
+                    )}
+                    {formatMarkAge(p.mark_age_s) && (
+                      <span className="muted"> · mark {formatMarkAge(p.mark_age_s)}</span>
                     )}
                   </td>
                   <td>{directionWords(p.direction).title}</td>
