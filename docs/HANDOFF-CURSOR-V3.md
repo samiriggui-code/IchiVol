@@ -36,7 +36,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `cursor/event-anomaly-detector-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/27 (**draft**)
-- Statut : **ATTENTE CI** — Cursor solo (Claude absente jusqu’à 18:10).
+- Statut : **ATTENTE Claude** — CI **VERTE** ; Cursor solo jusqu’à 18:10 puis revue.
 ### Livré
 
 1. `app/events/` — `detect_anomaly` causal (past-only z-scores, range/gap vs ATR, RVOL)
