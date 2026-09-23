@@ -19,6 +19,16 @@ from app.strategy_lab.run_ruleset import RulesetStudyResult
 ENGINE_VERSION = "strategy_lab_v1"
 
 
+def _exit_rule_label(rs) -> str:
+    """Compact exit description for Perf DB (additive; ATR always present)."""
+    parts = ["atr_stop_target"]
+    if rs.exit.condition_group is not None:
+        parts.append("signal")
+    if rs.exit.max_hold_bars is not None:
+        parts.append(f"max_hold={rs.exit.max_hold_bars}")
+    return "+".join(parts)
+
+
 def _dataset_version(symbol: str, timeframe: str, n_bars: int, start: int | None, end: int | None) -> str:
     return f"{symbol}:{timeframe}:bars={n_bars}:t={start or 0}-{end or 0}"
 
@@ -73,7 +83,7 @@ def save_experiment(
         date_range_end=end,
         rules_json=rs.to_dict(),
         entry_rule=rs.entry,
-        exit_rule="atr_stop_target",
+        exit_rule=_exit_rule_label(rs),
         stop_rule=f"{rs.stop_atr}*ATR",
         target_rule=f"{rs.target_atr}*ATR",
         n_bars=study.n_bars,

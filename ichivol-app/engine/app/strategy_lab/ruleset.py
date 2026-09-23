@@ -1,4 +1,4 @@
-﻿"""Declarative strategy ruleset (Strategy Lab Phase 2 + T3 DSL v3 slice 1).
+﻿"""Declarative strategy ruleset (Strategy Lab Phase 2 + T3 DSL v3).
 
 A ruleset is a versioned, testable hypothesis — not a live BUY score.
 
@@ -12,6 +12,13 @@ T3 slice 1 — boolean composition:
         }
 
     Match = (all leaves hold, if any) AND (at least one ``any`` leaf holds, if any).
+
+T3 slice 2 — optional ``exit`` block (ATR SL/TP stay top-level)::
+
+    "exit": {
+        "max_hold_bars": 48,
+        "conditions": {"any": {"tk_cross_bearish": true}}
+    }
 
 Unknown leaf keys raise at parse time so typos cannot silently widen a study.
 Evaluation is causal: bar i only sees features derived from candles[0..i].
@@ -114,6 +121,21 @@ class ConditionGroup:
 
 
 @dataclass(frozen=True)
+class ExitSpec:
+    """Optional lab exit beyond ATR stop/target (T3 slice 2).
+
+    Empty / omitted ≡ today's ATR-only behaviour.
+    ``condition_group`` None = no signal exit.
+    """
+
+    max_hold_bars: int | None = None
+    condition_group: ConditionGroup | None = None
+
+    def is_empty(self) -> bool:
+        return self.max_hold_bars is None and self.condition_group is None
+
+
+@dataclass(frozen=True)
 class Ruleset:
     id: str
     direction: Direction
@@ -121,6 +143,7 @@ class Ruleset:
     entry: str = "next_open"
     stop_atr: float = 1.0
     target_atr: float = 2.0
+    exit: ExitSpec = field(default_factory=ExitSpec)
     symbol: str | None = None
     """Optional intended symbol (documentation / validation hint)."""
     timeframe: str | None = None
@@ -144,7 +167,7 @@ class Ruleset:
             conditions = {"any": dict(group.any_of)}
         else:
             conditions = {"all": dict(group.all_of)}
-        return {
+        out: dict[str, Any] = {
             "id": self.id,
             "version": self.version,
             "direction": self.direction.value,
@@ -157,6 +180,25 @@ class Ruleset:
             "target_atr": self.target_atr,
             "meta": dict(self.meta),
         }
+        if not self.exit.is_empty():
+            exit_payload: dict[str, Any] = {}
+            if self.exit.max_hold_bars is not None:
+                exit_payload["max_hold_bars"] = self.exit.max_hold_bars
+            if self.exit.condition_group is not None:
+                eg = self.exit.condition_group
+                if eg.is_legacy_flat():
+                    exit_payload["conditions"] = dict(eg.all_of)
+                elif eg.all_of and eg.any_of:
+                    exit_payload["conditions"] = {
+                        "all": dict(eg.all_of),
+                        "any": dict(eg.any_of),
+                    }
+                elif eg.any_of:
+                    exit_payload["conditions"] = {"any": dict(eg.any_of)}
+                else:
+                    exit_payload["conditions"] = {"all": dict(eg.all_of)}
+            out["exit"] = exit_payload
+        return out
 
 
 def _coerce_leaf(key_s: str, value: Any) -> ConditionValue:
@@ -234,6 +276,46 @@ def _parse_condition_group(conditions_raw: Mapping[str, Any]) -> ConditionGroup:
     return ConditionGroup(all_of=all_of, any_of={})
 
 
+_EXIT_KEYS = frozenset({"max_hold_bars", "conditions"})
+
+
+def _parse_exit_spec(raw: Any) -> ExitSpec:
+    if raw is None:
+        return ExitSpec()
+    if not isinstance(raw, Mapping):
+        raise ValueError("ruleset.exit must be an object")
+    if not raw:
+        return ExitSpec()
+    # ATR levels stay top-level — reject dual source before generic unknown.
+    for banned in ("stop_atr", "target_atr"):
+        if banned in raw:
+            raise ValueError(
+                f"ruleset.exit must not contain {banned}; keep it top-level"
+            )
+    keys = {str(k) for k in raw.keys()}
+    unknown = keys - _EXIT_KEYS
+    if unknown:
+        raise ValueError(f"unknown ruleset.exit keys: {sorted(unknown)}")
+
+    max_hold: int | None = None
+    if "max_hold_bars" in raw:
+        mh = raw["max_hold_bars"]
+        if isinstance(mh, bool) or not isinstance(mh, int) or mh < 1:
+            raise ValueError("ruleset.exit.max_hold_bars must be an int >= 1")
+        max_hold = mh
+
+    cond_group: ConditionGroup | None = None
+    if "conditions" in raw:
+        cond_raw = raw["conditions"]
+        if not isinstance(cond_raw, Mapping) or not cond_raw:
+            raise ValueError("ruleset.exit.conditions must be a non-empty object")
+        cond_group = _parse_condition_group(cond_raw)
+
+    if max_hold is None and cond_group is None:
+        return ExitSpec()
+    return ExitSpec(max_hold_bars=max_hold, condition_group=cond_group)
+
+
 def parse_ruleset(raw: Mapping[str, Any]) -> Ruleset:
     """Parse and validate a ruleset dict. Raises ValueError on bad input."""
     rid = str(raw.get("id") or "").strip()
@@ -263,6 +345,8 @@ def parse_ruleset(raw: Mapping[str, Any]) -> Ruleset:
     if stop_atr <= 0 or target_atr <= 0:
         raise ValueError("stop_atr and target_atr must be > 0")
 
+    exit_spec = _parse_exit_spec(raw.get("exit"))
+
     symbol = raw.get("symbol")
     timeframe = raw.get("timeframe")
     return Ruleset(
@@ -272,6 +356,7 @@ def parse_ruleset(raw: Mapping[str, Any]) -> Ruleset:
         entry=entry,
         stop_atr=stop_atr,
         target_atr=target_atr,
+        exit=exit_spec,
         symbol=str(symbol).upper() if symbol else None,
         timeframe=str(timeframe) if timeframe else None,
         version=str(raw.get("version") or "1"),

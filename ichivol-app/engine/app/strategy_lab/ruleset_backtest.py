@@ -1,11 +1,12 @@
-"""Ruleset backtester — Phase 3 Strategy Lab.
+"""Ruleset backtester — Phase 3 Strategy Lab (+ T3 exit conditions).
 
 Rising-edge ruleset signals → enter at next open → exit at ATR stop/target
-(or end of series / max hold). One position at a time. Conservative
-intra-bar: if both stop and target are touched in the same candle, stop wins.
+(or optional exit.conditions signal, end of series / max hold). One position
+at a time. Conservative intra-bar priority:
+``stop`` > ``target`` > ``signal`` > ``max_hold`` / ``eod``.
 
 Produces a standard BacktestResult so compute_metrics() stays unchanged.
-Exit fills are price-level (stop/target), not open-of-flip.
+Exit fills: stop/target at price levels; signal exit at bar close.
 """
 
 from __future__ import annotations
@@ -20,9 +21,9 @@ from app.backtest.metrics import Metrics, compute_metrics
 from app.indicators.atr import AtrState
 from app.indicators.ichimoku import Candle
 from app.market_data.resolve import resolve_and_fetch
-from app.strategy_lab.evaluator import extract_ruleset_signals
-from app.strategy_lab.features import FeatureSeries, build_feature_series
-from app.strategy_lab.ruleset import Ruleset, parse_ruleset
+from app.strategy_lab.evaluator import bar_matches_group, extract_ruleset_signals
+from app.strategy_lab.features import FeatureBar, FeatureSeries, build_feature_series
+from app.strategy_lab.ruleset import ConditionGroup, Ruleset, parse_ruleset
 
 _SIGN = {Direction.LONG: 1.0, Direction.SHORT: -1.0, Direction.NEUTRAL: 0.0}
 
@@ -30,7 +31,7 @@ _SIGN = {Direction.LONG: 1.0, Direction.SHORT: -1.0, Direction.NEUTRAL: 0.0}
 @dataclass(frozen=True)
 class RulesetTradeDetail:
     trade: Trade
-    exit_reason: str  # stop | target | eod | max_hold
+    exit_reason: str  # stop | target | signal | eod | max_hold
     stop_price: float
     target_price: float
     atr_at_signal: float
@@ -142,10 +143,18 @@ def simulate_ruleset_trades(
     commission_bps: float = 5.0,
     slippage_bps: float = 3.0,
     max_hold_bars: int | None = None,
+    exit_group: ConditionGroup | None = None,
+    feature_bars: Sequence[FeatureBar] | None = None,
 ) -> tuple[list[RulesetTradeDetail], list[Direction], list[float], int]:
     n = len(candles)
     if n < 2:
         return [], [Direction.NEUTRAL] * n, [], 0
+
+    if exit_group is not None:
+        if feature_bars is None or len(feature_bars) != n:
+            raise ValueError(
+                "feature_bars (len == candles) required when exit_group is set"
+            )
 
     cost = (commission_bps + slippage_bps) / 10_000
     posn = [Direction.NEUTRAL] * n
@@ -184,15 +193,24 @@ def simulate_ruleset_trades(
             hit = _hit_stop_or_target(
                 direction, candles[j].high, candles[j].low, stop, target
             )
-            if hit is None:
-                continue
-            exit_index = j
-            exit_price = stop if hit == "stop" else target
-            exit_reason = hit
-            # Clear posn after exit bar
-            for k in range(j + 1, hold_end + 1):
-                posn[k] = Direction.NEUTRAL
-            break
+            if hit is not None:
+                exit_index = j
+                exit_price = stop if hit == "stop" else target
+                exit_reason = hit
+                for k in range(j + 1, hold_end + 1):
+                    posn[k] = Direction.NEUTRAL
+                break
+            if (
+                exit_group is not None
+                and feature_bars is not None
+                and bar_matches_group(feature_bars[j], exit_group, direction)
+            ):
+                exit_index = j
+                exit_price = candles[j].close
+                exit_reason = "signal"
+                for k in range(j + 1, hold_end + 1):
+                    posn[k] = Direction.NEUTRAL
+                break
 
         _apply_hold_returns(
             bar_returns,
@@ -229,6 +247,15 @@ def simulate_ruleset_trades(
     return details, posn, bar_returns, skipped
 
 
+def _resolve_max_hold(
+    ruleset: Ruleset, max_hold_bars: int | None
+) -> int | None:
+    """Call-site override wins; else ruleset.exit.max_hold_bars."""
+    if max_hold_bars is not None:
+        return max_hold_bars
+    return ruleset.exit.max_hold_bars
+
+
 def run_ruleset_backtest_on_features(
     features: FeatureSeries,
     ruleset: Ruleset,
@@ -240,6 +267,7 @@ def run_ruleset_backtest_on_features(
     max_hold_bars: int | None = None,
 ) -> RulesetBacktestResult:
     signals = extract_ruleset_signals(features, ruleset, rising_edge=True)
+    exit_group = ruleset.exit.condition_group
     details, posn, bar_returns, skipped = simulate_ruleset_trades(
         features.candles,
         features.atr,
@@ -248,7 +276,9 @@ def run_ruleset_backtest_on_features(
         target_atr=float(ruleset.target_atr),
         commission_bps=commission_bps,
         slippage_bps=slippage_bps,
-        max_hold_bars=max_hold_bars,
+        max_hold_bars=_resolve_max_hold(ruleset, max_hold_bars),
+        exit_group=exit_group,
+        feature_bars=features.bars if exit_group is not None else None,
     )
     backtest = BacktestResult(
         symbol=symbol,
