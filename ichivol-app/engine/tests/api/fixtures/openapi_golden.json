@@ -113,6 +113,57 @@
         "title": "AgentCommandRequest",
         "type": "object"
       },
+      "AuditReportBody": {
+        "properties": {
+          "limit": {
+            "default": 300,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "ruleset": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ruleset"
+          },
+          "ruleset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ruleset Id"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "timeframe": {
+            "default": "1h",
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "trade_index": {
+            "default": 0,
+            "title": "Trade Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "title": "AuditReportBody",
+        "type": "object"
+      },
       "BacktestOverlayBody": {
         "properties": {
           "direction": {
@@ -292,6 +343,72 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "MonteCarloBody": {
+        "properties": {
+          "limit": {
+            "default": 1000,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "min_trades": {
+            "default": 20,
+            "title": "Min Trades",
+            "type": "integer"
+          },
+          "n_paths": {
+            "default": 1000,
+            "title": "N Paths",
+            "type": "integer"
+          },
+          "ruin_floor": {
+            "default": 0.5,
+            "title": "Ruin Floor",
+            "type": "number"
+          },
+          "ruleset": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ruleset"
+          },
+          "ruleset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ruleset Id"
+          },
+          "seed": {
+            "default": 42,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "timeframe": {
+            "default": "1h",
+            "title": "Timeframe",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "title": "MonteCarloBody",
+        "type": "object"
+      },
       "OptimizeBody": {
         "properties": {
           "grid": {
@@ -372,6 +489,34 @@
           "symbol"
         ],
         "title": "OptimizeBody",
+        "type": "object"
+      },
+      "ProposeExperimentPlanBody": {
+        "properties": {
+          "audit_report": {
+            "additionalProperties": true,
+            "title": "Audit Report",
+            "type": "object"
+          },
+          "hypothesis_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hypothesis Ids"
+          }
+        },
+        "required": [
+          "audit_report"
+        ],
+        "title": "ProposeExperimentPlanBody",
         "type": "object"
       },
       "RegimeSlicesBody": {
@@ -4256,6 +4401,50 @@
         ]
       }
     },
+    "/api/engine/strategy-lab/audit-report": {
+      "post": {
+        "description": "T6 \u2014 post-outcome AuditReport for one ruleset trade (hypotheses proposed).",
+        "operationId": "post_audit_report_api_engine_strategy_lab_audit_report_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuditReportBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Audit Report Api Engine Strategy Lab Audit Report Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Audit Report",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
     "/api/engine/strategy-lab/backtest-overlay": {
       "post": {
         "description": "Run catalog/DSL ruleset backtest and return ephemeral BACKTEST ChartObjects.\n\nFilters (outcome / exit_reason / direction / why_entered_key) apply to\n``objects`` and ``trades``; ``counts`` is always over the full trade set.\nNo new backtest logic \u2014 wraps ``run_ruleset_backtest_on_candles``.",
@@ -4557,6 +4746,224 @@
         ]
       }
     },
+    "/api/engine/strategy-lab/family-weight-profiles": {
+      "get": {
+        "description": "T5b \u2014 named family-weight profile catalog (read-only).",
+        "operationId": "get_family_weight_profiles_api_engine_strategy_lab_family_weight_profiles_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Family Weight Profiles Api Engine Strategy Lab Family Weight Profiles Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Family Weight Profiles",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/strategy-lab/family-weights/compare": {
+      "get": {
+        "description": "T5b \u2014 compare all weight profiles on the live pipeline (observation).",
+        "operationId": "get_family_weights_compare_api_engine_strategy_lab_family_weights_compare_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 300,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Family Weights Compare Api Engine Strategy Lab Family Weights Compare Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Family Weights Compare",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/strategy-lab/family-weights/study": {
+      "get": {
+        "description": "T5b \u2014 historical profile study on BUY/SELL pipeline bars (observation).",
+        "operationId": "get_family_weights_study_api_engine_strategy_lab_family_weights_study_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "step",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "title": "Step",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sample_limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "title": "Sample Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Family Weights Study Api Engine Strategy Lab Family Weights Study Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Family Weights Study",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/strategy-lab/monte-carlo": {
+      "post": {
+        "description": "T7 \u2014 bootstrap Monte Carlo / risk-of-ruin (research only).",
+        "operationId": "post_monte_carlo_api_engine_strategy_lab_monte_carlo_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonteCarloBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Monte Carlo Api Engine Strategy Lab Monte Carlo Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Monte Carlo",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
     "/api/engine/strategy-lab/optimize": {
       "get": {
         "operationId": "get_strategy_lab_optimize_api_engine_strategy_lab_optimize_get",
@@ -4708,6 +5115,50 @@
           }
         },
         "summary": "Post Strategy Lab Optimize",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/strategy-lab/propose-experiment-plan": {
+      "post": {
+        "description": "Researcher \u2014 AuditReport \u2192 Lab steps (status=proposed; never auto-run).",
+        "operationId": "post_propose_experiment_plan_api_engine_strategy_lab_propose_experiment_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposeExperimentPlanBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Propose Experiment Plan Api Engine Strategy Lab Propose Experiment Plan Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Propose Experiment Plan",
         "tags": [
           "engine"
         ]

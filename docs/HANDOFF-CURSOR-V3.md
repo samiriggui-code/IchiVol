@@ -39,8 +39,26 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T7** #37 — **MERGÉE** (Monte Carlo / risk of ruin).
 - **T3d** #39 — **MERGÉE** (propose ruleset edit + condition catalog).
 - **Researcher** #41 — **MERGÉE** (propose experiment plan).
-- **Job en cours** : **aucun** — suite optionnelle = T3e MTF / UI Lab.
+- **Job en cours** : **UI Lab Research** (T5b/T6/T7/Researcher panels) — branche `cursor/lab-ui-research-t5-t7-a2fe`.
 
+
+---
+
+## 2026-09-23 — UI Lab Research (draft) — T5–T7 panels
+
+- Branche : `cursor/lab-ui-research-t5-t7-a2fe`
+- PR : (à venir)
+- Statut : draft ; observation-only.
+
+### Livré
+
+1. HTTP thin wrappers : `GET /strategy-lab/family-weight-profiles`, `.../family-weights/compare|study`, `POST /strategy-lab/audit-report`, `monte-carlo`, `propose-experiment-plan`
+2. Onglet **Research** Strategy Lab — compare poids, étude, AuditReport, plan Researcher, Monte Carlo
+3. OpenAPI + route_order goldens refresh ; tests API dédiés
+
+### Non-faits
+
+T3e MTF DSL ; chat NL T3d ; auto-run plan ; poids en live score ; rename fichier `BacktestsPage`.
 
 ---
 

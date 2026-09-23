@@ -262,6 +262,48 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/strategy-lab/family-weight-profiles",
+    "endpoint": "get_family_weight_profiles"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/strategy-lab/family-weights/compare",
+    "endpoint": "get_family_weights_compare"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/strategy-lab/family-weights/study",
+    "endpoint": "get_family_weights_study"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/strategy-lab/audit-report",
+    "endpoint": "post_audit_report"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/strategy-lab/monte-carlo",
+    "endpoint": "post_monte_carlo"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/strategy-lab/propose-experiment-plan",
+    "endpoint": "post_propose_experiment_plan"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/backtest/{symbol}",
     "endpoint": "get_backtest"
   },
