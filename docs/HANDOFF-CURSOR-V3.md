@@ -188,7 +188,7 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
 
 - Branche : `v3/t0-broker-fidelity`
 - PR : **draft à ouvrir** — **pas de merge avant revue Claude**
-- Commit(s) : voir SHA poussé sur la branche
+- Commit(s) : `ec845bf` (engine + front Synthèse + tests + golden reconcile)
 
 - Livré :
   - Engine : `marks.py`, `liquidation.py`, `financing.py`, `reconcile.py` ; overview avec `liquidation_value` / marks stale ; `GET /paper/portfolios/{code}/reconcile`
@@ -202,7 +202,7 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
   - ASSUMPTION : **0.5 bps/jour** CFD (`FINANCING_BPS_PER_DAY_CFD_ASSUMED`) ; crypto spot = 0
   - Idempotence : clé ledger `financing:{position_id}:{YYYY-MM-DD}`
 
-- Tests (Cursor, Postgres dispo ici) : `test_broker_fidelity` + `test_api_surface_golden` — à confirmer dans le commit
+- Tests (Cursor, Postgres dispo) : `test_broker_fidelity` **5 passed** ; `test_api_surface_golden` **2 passed** ; `npm run build` **OK**
 - Non fait : merge ; T0-CI (branche parallèle) ; ne pas toucher `/workspace` t0-ci / t2a
 
 ---
