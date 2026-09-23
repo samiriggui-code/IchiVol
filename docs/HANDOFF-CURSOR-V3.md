@@ -50,7 +50,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T0-MANAGE-d EN COURS — partial TP paper
 
 - Branche : `cursor/t0-manage-d-partial-tp-paper-a2fe`
-- PR : *(à compléter après `gh pr create --draft`)*
+- PR : https://github.com/samiriggui-code/IchiVol/pull/48 (**draft**)
 - Statut : **ATTENTE CLAUDE** — CI à confirmer ; **ne pas merger** ; **pas de T0-MANAGE-e**.
 
 ### Livré
