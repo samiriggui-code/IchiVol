@@ -632,6 +632,71 @@ def cmd_get_family_weights(args: dict) -> dict:
     }
 
 
+def cmd_list_family_weight_profiles(args: dict) -> dict:
+    """T5b — list named family-weight profiles (read-only catalog)."""
+    from app.confluence.profiles import list_family_weight_profiles
+
+    profiles = [
+        {
+            "id": p.id,
+            "label": p.label,
+            "description": p.description,
+            "version": p.config.version,
+            "weights": dict(p.config.weights),
+        }
+        for p in list_family_weight_profiles()
+    ]
+    return {
+        "profiles": profiles,
+        "disclaimer": (
+            "Family weight profiles — observation / Lab only; "
+            "not applied as live decision scores."
+        ),
+    }
+
+
+def cmd_compare_family_weights(args: dict) -> dict:
+    """T5b — compare all weight profiles on the live pipeline (observation)."""
+    from app.confluence.compare import compare_family_weight_profiles
+
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = str(args.get("timeframe", "1h"))
+    limit = int(args.get("limit", 300))
+    try:
+        row = scan_symbol(symbol, timeframe=timeframe, limit=limit)
+    except (ValueError, ProviderNotWiredError) as exc:
+        raise CommandError(str(exc)) from exc
+    payload = compare_family_weight_profiles(row.pipeline)
+    payload["symbol"] = row.symbol
+    payload["timeframe"] = row.timeframe
+    payload["decision"] = row.decision.decision
+    payload["confidence"] = row.decision.confidence
+    return payload
+
+
+def cmd_run_family_weights_study(args: dict) -> dict:
+    """T5b — historical profile study on BUY/SELL pipeline bars (observation)."""
+    from app.confluence.study import run_family_weights_study
+
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = str(args.get("timeframe", "1h"))
+    limit = int(args.get("limit", 500))
+    step = int(args.get("step", 1))
+    sample_limit = int(args.get("sample_limit", 20))
+    try:
+        _prov, _sym, candles = resolve_and_fetch(symbol, timeframe, limit)
+    except (ValueError, ProviderNotWiredError) as exc:
+        raise CommandError(str(exc)) from exc
+    report = run_family_weights_study(
+        candles,
+        symbol=symbol,
+        timeframe=timeframe,
+        step=step,
+        sample_limit=sample_limit,
+    )
+    return report.to_dict()
+
+
 def cmd_filter_backtest_overlay(args: dict) -> dict:
     """T4b — backtest overlay with structured filters for Claude (read-only).
 
