@@ -160,7 +160,7 @@ Il n’existe **pas** de jalon nommé « V2+ » dans ce CDC. L’ordre est stric
 - [x] **T0-NOTIF — alertes push téléphone** (2026-09-23) — Web Push VAPID + watcher positions (target/stop/accel/flip) ; informatif only. PR #44.
 - [x] **T0-MANAGE-a — stop suiveur/breakeven (Lab)** (2026-09-23) — `ExitSpec.trail` ; stop mobile bar-par-bar, ratchet unidirectionnel, no lookahead ; backtest only. Découpage complet : `docs/HANDOFF-CURSOR-V3.md`.
 - [x] **T0-MANAGE-b — stop suiveur/breakeven (paper)** (2026-09-23) — `protection_trail.py` ; gate `user_confirmed` + config explicite, legacy exclu, watermark toujours avancé. PR #46.
-- [ ] **T0-MANAGE-c — prise de profit partielle (Lab)** — `ExitSpec.partial_tp`, `Trade` multi-fill.
+- [x] **T0-MANAGE-c — prise de profit partielle (Lab)** (2026-09-23) — `partial_tp.py` ; `Trade` agrégé via VWAP, invariant 1e-9 tenu. Dette : DD surestimé sur rulesets à partiels (résidu Jensen, croît en vol²). PR #47.
 - [ ] **T0-MANAGE-d — prise de profit partielle (paper)** — `paper_partial_exits`, après validation T0-MANAGE-c.
 - [ ] **T0-MANAGE-e — renforcement/pyramiding (Lab)** — invariant risque total ≤ risque initial.
 - [ ] **T0-MANAGE-f — renforcement (paper)** — `app/paper/broker.py`, après validation T0-MANAGE-e.

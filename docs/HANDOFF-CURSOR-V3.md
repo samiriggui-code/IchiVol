@@ -40,8 +40,53 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-NOTIF** #44 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres).
 - **T0-MANAGE-a** #45 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres — diff réel + no-lookahead vérifié bar par bar).
 - **T0-MANAGE-b** #46 — **MERGÉE** (validé par Claude — watermark, gate legacy/auto et isolation des tests vérifiés ; 2 réserves non bloquantes notées).
-- **Job en cours** : **T0-MANAGE-c** — prise de profit partielle **Strategy Lab** — PR draft (voir entrée ci-dessous). **Pas de merge / pas de T0-MANAGE-d** avant revue Claude.
+- **T0-MANAGE-c** #47 — **MERGÉE** (validé par Claude — invariant 1e-9 revérifié indépendamment ; **résidu de Jensen mesuré et non borné, voir entrée dédiée**).
+- **Job en cours** : **T0-MANAGE-d** — prise de profit partielle **paper**. Voir découpage détaillé plus bas.
+- ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol² (jusqu'à ~2,2 % par trade à 10 % de volatilité). **Ne pas comparer un ruleset avec partiels à un ruleset sans partiels sur le drawdown** avant correction — le total de performance, lui, est exact.
 
+
+---
+
+## 2026-09-23 — T0-MANAGE-c MERGÉ (#47) — revue Claude en local
+
+- Branche : `cursor/t0-manage-c-partial-tp-lab-a2fe` — PR #47 — **MERGÉE** `6116850`
+
+### Les 3 corrections demandées sont en place
+
+1. `Trade.log_return = sign × log(VWAP/entry)` via `partial_tp.log_return_from_vwap` — plus de somme pondérée de logs. `exit_price` = VWAP : les deux champs restent mutuellement cohérents pour T4a et `compute_metrics`.
+2. Priorité `stop > partiels (R croissant) > target > signal` — commentée dans le code, conservatisme du stop préservé. `mfe_r` n'utilise que le high/low de la barre courante (pas de lookahead). `take = min(step.fraction, remaining)` empêche de sur-clôturer.
+3. Frais et taille : chaque fill est décomposé en sous-trade de fraction `f` de l'entrée jusqu'à sa propre sortie, ce qui fait émerger naturellement **et** la pondération de taille après chaque partiel **et** les frais corrects (Σ frais d'entrée = `cost`, Σ frais de sortie = `cost`).
+
+### Invariant — vérifié indépendamment (pas seulement via le test de Cursor)
+
+Sonde maison sur 9 combinaisons (3 configs de paliers × volatilités 2/5/10 %, 12 seeds chacune) :
+
+**pire écart `Σ net_log_return(trades)` vs `Σ bar_returns + eod_return` = 4,44e-16** — soit ~7 ordres de grandeur sous le seuil de 1e-9 exigé. L'invariant T0-METRICS-2 tient réellement.
+
+### Le résidu de Jensen : accepté, mais mesuré — et il n'est pas borné
+
+La tension signalée par Cursor est **réelle**, pas un artefact : un P&L à exposition variable ne peut pas être représenté exactement comme une somme de log-returns pondérés (les logs ne s'additionnent que pour une taille constante). Le total correct est `log(VWAP/entry)` ; le chemin barre-par-barre somme à `Σ f·log`. L'écart est soaké sur la barre de sortie finale.
+
+C'est défendable : le **total est exact** (donc `metrics.total_return`, qui est une somme, est juste), seule la **répartition intra-trade** est approximée. Et l'erreur va dans le sens conservateur (equity intra-trade lue trop basse, donc DD surestimé, jamais sous-estimé).
+
+**Mais la magnitude n'avait pas été chiffrée.** Mesurée :
+
+| volatilité/barre | résidu par trade |
+|---|---|
+| 2 % | 5–8 bps |
+| 5 % | 26–47 bps |
+| 10 % | **115–224 bps** |
+
+Il croît en vol², sans borne. À 10 % de volatilité par barre — banal en crypto — c'est jusqu'à **2,24 % déplacés sur une seule barre**.
+
+**Conséquence concrète à ne pas oublier** : un ruleset sans partiels a un résidu **nul**. Comparer son drawdown à celui d'un ruleset avec partiels, c'est comparer une mesure exacte à une mesure biaisée à la hausse. Or le Strategy Lab sert précisément à ce type de comparaison, et l'argument produit du PIPELINE repose justement sur le drawdown (30,1 % → 5,1 %). Les partiels seraient donc pénalisés sur le DD par un artefact comptable, pas par leur comportement réel.
+
+**Pas bloquant ici** (Lab only, rien de live ne consomme ça, totaux exacts), mais à corriger avant tout arbitrage partiels vs non-partiels sur le drawdown. Piste la moins invasive : répartir le résidu au prorata sur les barres de la dernière jambe au lieu de le concentrer sur une seule — le total reste exact et le pic disparaît, sans toucher à la propriété de troncature open→open de #24.
+
+### Tests (local, Postgres)
+
+- `tests/strategy_lab` : 108/108 OK (golden `ruleset_backtest_golden.json` inchangé)
+- `tests/api tests/paper tests/backtest` : 3 échecs, tous préexistants et connus — aucun nouveau vs `main`
 
 ---
 
