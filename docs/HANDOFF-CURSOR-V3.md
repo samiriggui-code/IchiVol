@@ -11,7 +11,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `v3/t1f-pivot-confirmation`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/11 (draft) — **pas de merge avant revue Claude**
-- Commit(s) : `37ac28f` (métadonnées + adaptateurs + tests de causalité) ; `74a0c8f` (rapport handoff)
+- Commit(s) : `37ac28f` (métadonnées + adaptateurs + tests de causalité) ; `74a0c8f` / `c1ff782` (rapport handoff + lien PR)
 
 - Livré :
   - `PivotPoint.confirmed_bar` / `PivotPoint.provisional` (optionnels, défauts `None` / `False`)
