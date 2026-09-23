@@ -2,6 +2,13 @@
 
 Wraps existing ``compute_*`` functions without rewriting formulas. Live,
 backtest, replay and agent tooling must all go through ``REGISTRY``.
+
+Dependency-aware indicators (``depends_on``) receive
+``compute_fn(candles, params, deps)`` where ``deps`` maps dependency id →
+state list. Leaf indicators keep ``compute_fn(candles, params)``.
+
+OI / funding (`oi_funding`) stays **outside** this registry: it consumes
+external futures streams, not OHLCV candles alone.
 """
 
 from __future__ import annotations
@@ -17,13 +24,20 @@ from app.indicators.cmf import CmfParams, compute_cmf
 from app.indicators.cvd import CvdParams, compute_cvd
 from app.indicators.donchian import DonchianParams, compute_donchian
 from app.indicators.ichimoku import Candle, IchimokuParams, compute_ichimoku
+from app.indicators.ichimoku_analytics import (
+    IchimokuAnalyticsParams,
+    compute_ichimoku_analytics,
+)
+from app.indicators.location import LocationParams, compute_location
 from app.indicators.obv import ObvParams, compute_obv
 from app.indicators.ppo import PpoParams, compute_ppo
 from app.indicators.rsi import RsiParams, compute_rsi
 from app.indicators.rvol import RvolParams, compute_rvol
 from app.indicators.structure import StructureParams, compute_structure
+from app.indicators.wyckoff import WyckoffParams, compute_wyckoff
 
-ComputeFn = Callable[[Sequence[Candle], Any], list[Any]]
+# Leaf: (candles, params) → states ; dependent: (candles, params, deps) → states
+ComputeFn = Callable[..., list[Any]]
 WarmupFn = Callable[[Any], int]
 
 
@@ -51,6 +65,10 @@ class InvalidParamsError(ValueError):
     """Raised when params overrides are unknown or fail validation."""
 
 
+class DependencyCycleError(ValueError):
+    """Raised when depends_on forms a cycle."""
+
+
 @dataclass(frozen=True)
 class IndicatorDefinition:
     id: str
@@ -63,6 +81,7 @@ class IndicatorDefinition:
     visualization: Visualization
     description: str = ""
     tags: tuple[str, ...] = ()
+    depends_on: tuple[str, ...] = ()
 
     def parameters(self) -> list[dict[str, Any]]:
         """Describe Params dataclass fields (name, type, default)."""
@@ -76,6 +95,8 @@ class IndicatorDefinition:
                 default = f.default_factory()  # type: ignore[misc]
             else:
                 default = None
+            if is_dataclass(default) and not isinstance(default, type):
+                default = asdict(default)
             type_name = f.type if isinstance(f.type, str) else getattr(f.type, "__name__", str(f.type))
             out.append({"name": f.name, "type": type_name, "default": default})
         return out
@@ -85,7 +106,13 @@ class IndicatorDefinition:
         probe = [
             Candle(time=0, open=1.0, high=1.0, low=1.0, close=1.0, volume=1.0),
         ]
-        states = self.compute_fn(probe, self.params_cls())
+        if self.depends_on:
+            # Resolve via the global registry once it is fully built.
+            import app.indicators.registry as reg_mod
+
+            states = reg_mod.REGISTRY.compute(self.id, probe)
+        else:
+            states = self.compute_fn(probe, self.params_cls())
         if not states:
             return []
         return [f.name for f in fields(states[0])]
@@ -105,35 +132,44 @@ class IndicatorDefinition:
         except ValueError as exc:
             raise InvalidParamsError(str(exc)) from exc
 
+    def _coerce_params(self, params: dict[str, Any] | Any | None) -> Any:
+        if params is None:
+            return self.params_cls()
+        if is_dataclass(params) and not isinstance(params, type):
+            return params
+        if isinstance(params, dict):
+            return self.build_params(params)
+        raise InvalidParamsError(
+            f"params must be dict, {self.params_cls.__name__}, or None"
+        )
+
     def compute(
         self,
         candles: Sequence[Candle],
         params: dict[str, Any] | Any | None = None,
+        deps: dict[str, list[Any]] | None = None,
     ) -> list[Any]:
-        if params is None:
-            built = self.params_cls()
-        elif is_dataclass(params) and not isinstance(params, type):
-            built = params
-        elif isinstance(params, dict):
-            built = self.build_params(params)
-        else:
-            raise InvalidParamsError(
-                f"params must be dict, {self.params_cls.__name__}, or None"
-            )
+        built = self._coerce_params(params)
+        if self.depends_on:
+            if deps is None:
+                raise InvalidParamsError(
+                    f"{self.id} requires deps={list(self.depends_on)}; "
+                    "use REGISTRY.compute / compute_many"
+                )
+            return self.compute_fn(candles, built, deps)
         return self.compute_fn(candles, built)
 
+    def own_warmup(self, params: dict[str, Any] | Any | None = None) -> int:
+        return int(self.warmup_fn(self._coerce_params(params)))
+
     def warmup(self, params: dict[str, Any] | Any | None = None) -> int:
-        if params is None:
-            built = self.params_cls()
-        elif is_dataclass(params) and not isinstance(params, type):
-            built = params
-        elif isinstance(params, dict):
-            built = self.build_params(params)
-        else:
-            raise InvalidParamsError(
-                f"params must be dict, {self.params_cls.__name__}, or None"
-            )
-        return int(self.warmup_fn(built))
+        own = self.own_warmup(params)
+        if not self.depends_on:
+            return own
+        import app.indicators.registry as reg_mod
+
+        dep_warmups = [reg_mod.REGISTRY.get(d).warmup() for d in self.depends_on]
+        return max([own, *dep_warmups])
 
     def describe(self) -> dict[str, Any]:
         return {
@@ -144,6 +180,7 @@ class IndicatorDefinition:
             "visualization": self.visualization.value,
             "description": self.description,
             "tags": list(self.tags),
+            "depends_on": list(self.depends_on),
             "parameters": self.parameters(),
             "outputs": self.outputs(),
             "warmup_default": self.warmup(),
@@ -160,6 +197,35 @@ def serialize_state(state: Any) -> dict[str, Any]:
         else:
             out[key] = value
     return out
+
+
+def _compute_ichimoku_analytics_reg(
+    candles: Sequence[Candle],
+    params: IchimokuAnalyticsParams,
+    deps: dict[str, list[Any]],
+) -> list[Any]:
+    return compute_ichimoku_analytics(
+        candles,
+        ichi=deps["ichimoku"],
+        atr=deps["atr"],
+        params=params,
+    )
+
+
+def _compute_location_reg(
+    candles: Sequence[Candle],
+    params: LocationParams,
+    deps: dict[str, list[Any]],
+) -> list[Any]:
+    return compute_location(candles, deps["structure"], params)
+
+
+def _compute_wyckoff_reg(
+    candles: Sequence[Candle],
+    params: WyckoffParams,
+    deps: dict[str, list[Any]],
+) -> list[Any]:
+    return compute_wyckoff(candles, deps["donchian"], params)
 
 
 class IndicatorRegistry:
@@ -196,7 +262,84 @@ class IndicatorRegistry:
         candles: Sequence[Candle],
         params: dict[str, Any] | Any | None = None,
     ) -> list[Any]:
-        return self.get(indicator_id).compute(candles, params)
+        definition = self.get(indicator_id)
+        if definition.depends_on:
+            params_by_id = {indicator_id: params} if params is not None else None
+            return self.compute_many([indicator_id], candles, params_by_id)[indicator_id]
+        return definition.compute(candles, params)
+
+    def compute_many(
+        self,
+        ids: Sequence[str],
+        candles: Sequence[Candle],
+        params_by_id: dict[str, Any] | None = None,
+    ) -> dict[str, list[Any]]:
+        """Compute indicators once each, resolving ``depends_on`` topologically.
+
+        ``params_by_id`` maps indicator id → params dataclass or override dict.
+        Missing ids use that indicator's default params.
+        """
+        params_by_id = dict(params_by_id or {})
+        order = self._topo_order(ids)
+        results: dict[str, list[Any]] = {}
+        for iid in order:
+            definition = self.get(iid)
+            built = definition._coerce_params(params_by_id.get(iid))
+            if definition.depends_on:
+                missing = [d for d in definition.depends_on if d not in results]
+                if missing:
+                    raise RuntimeError(f"{iid}: missing deps {missing} after topo sort")
+                deps = {d: results[d] for d in definition.depends_on}
+                results[iid] = definition.compute_fn(candles, built, deps)
+            else:
+                results[iid] = definition.compute_fn(candles, built)
+        # Return requested ids only (deps used internally stay available if requested).
+        return {iid: results[iid] for iid in ids}
+
+    def _topo_order(self, ids: Sequence[str]) -> list[str]:
+        """Return dependency-first order covering ``ids`` and their transitive deps."""
+        needed: set[str] = set()
+        visiting: set[str] = set()
+
+        def _collect(iid: str) -> None:
+            if iid in needed:
+                return
+            if iid in visiting:
+                raise DependencyCycleError(
+                    f"depends_on cycle involving: {iid}"
+                )
+            visiting.add(iid)
+            definition = self.get(iid)
+            for dep in definition.depends_on:
+                _collect(dep)
+            visiting.remove(iid)
+            needed.add(iid)
+
+        for iid in ids:
+            _collect(iid)
+
+        # Kahn: edges dep → dependent
+        incoming: dict[str, int] = {i: 0 for i in needed}
+        children: dict[str, list[str]] = {i: [] for i in needed}
+        for iid in needed:
+            for dep in self.get(iid).depends_on:
+                children[dep].append(iid)
+                incoming[iid] += 1
+
+        queue = sorted(i for i, n in incoming.items() if n == 0)
+        order: list[str] = []
+        while queue:
+            node = queue.pop(0)
+            order.append(node)
+            for child in children[node]:
+                incoming[child] -= 1
+                if incoming[child] == 0:
+                    queue.append(child)
+                    queue.sort()
+        if len(order) != len(needed):
+            cyclic = sorted(needed - set(order))
+            raise DependencyCycleError(f"depends_on cycle among: {', '.join(cyclic)}")
+        return order
 
     def catalog(self) -> list[dict[str, Any]]:
         return [d.describe() for d in self.all()]
@@ -363,6 +506,48 @@ def _build_registry() -> IndicatorRegistry:
             description="Swing HH/HL bias + BOS (live pipeline)",
         )
     )
+    reg.register(
+        IndicatorDefinition(
+            id="ichimoku_analytics",
+            name="Ichimoku Analytics",
+            category=IndicatorCategory.TREND,
+            params_cls=IchimokuAnalyticsParams,
+            compute_fn=_compute_ichimoku_analytics_reg,
+            warmup_fn=lambda p: max(int(p.slope_lookback), int(p.retest_max_bars_after_break)),
+            primary_output="kijun_slope_state",
+            visualization=Visualization.NONE,
+            description="Kijun/Kumo research layer (Lab); depends on ichimoku+atr",
+            depends_on=("ichimoku", "atr"),
+        )
+    )
+    reg.register(
+        IndicatorDefinition(
+            id="location",
+            name="Location (VP / VWAP)",
+            category=IndicatorCategory.LEVELS,
+            params_cls=LocationParams,
+            compute_fn=_compute_location_reg,
+            warmup_fn=lambda p: max(int(p.vwap_window), int(p.volume_profile.lookback)),
+            primary_output="poc",
+            visualization=Visualization.NONE,
+            description="Volume profile + VWAP/AVWAP location; depends on structure",
+            depends_on=("structure",),
+        )
+    )
+    reg.register(
+        IndicatorDefinition(
+            id="wyckoff",
+            name="Wyckoff Spring / Upthrust",
+            category=IndicatorCategory.STRUCTURE,
+            params_cls=WyckoffParams,
+            compute_fn=_compute_wyckoff_reg,
+            warmup_fn=lambda p: int(p.volume_lookback),
+            primary_output="phase",
+            visualization=Visualization.NONE,
+            description="Wyckoff phase from Donchian + volume climax; depends on donchian",
+            depends_on=("donchian",),
+        )
+    )
     return reg
 
 
@@ -371,6 +556,7 @@ REGISTRY = _build_registry()
 # Re-export for callers that need replace/json helpers in tests
 __all__ = [
     "REGISTRY",
+    "DependencyCycleError",
     "IndicatorCategory",
     "IndicatorDefinition",
     "IndicatorRegistry",

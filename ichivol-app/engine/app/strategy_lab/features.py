@@ -10,14 +10,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Sequence
 
-from app.indicators.atr import AtrParams, AtrState, compute_atr
-from app.indicators.cmf import CmfParams, CmfState, compute_cmf
+from app.indicators.atr import AtrParams, AtrState
+from app.indicators.cmf import CmfParams, CmfState
 from app.indicators.ichimoku import (
     CrossState,
     IchimokuParams,
     IchimokuState,
     PriceVsKumo,
-    compute_ichimoku,
 )
 from app.indicators.ichimoku import Candle
 from app.indicators.ichimoku_analytics import (
@@ -26,23 +25,21 @@ from app.indicators.ichimoku_analytics import (
     IchimokuAnalyticsState,
     KumoOrientation,
     SlopeState,
-    compute_ichimoku_analytics,
 )
-from app.indicators.rsi import RsiParams, RsiState, compute_rsi
+from app.indicators.registry import REGISTRY
+from app.indicators.rsi import RsiParams, RsiState
 from app.indicators.best_cloud import (
     BestCloudParams,
     BestCloudState,
     CloudCross,
-    compute_best_cloud,
 )
-from app.indicators.ppo import PpoCross, PpoParams, PpoState, compute_ppo
-from app.indicators.rvol import RvolParams, RvolState, compute_rvol
+from app.indicators.ppo import PpoCross, PpoParams, PpoState
+from app.indicators.rvol import RvolParams, RvolState
 from app.indicators.structure import (
     BosEvent,
     StructureBias,
     StructureParams,
     StructureState,
-    compute_structure,
 )
 
 
@@ -179,21 +176,40 @@ def build_feature_series(
     ppo_params: PpoParams = PpoParams(),
     best_cloud_params: BestCloudParams = BestCloudParams(),
 ) -> FeatureSeries:
-    ichi = compute_ichimoku(candles, ichi_params)
-    rvol = compute_rvol(candles, rvol_params)
-    structure = compute_structure(candles, structure_params)
-    atr = compute_atr(candles, atr_params)
-    cmf = compute_cmf(candles, cmf_params)
-    rsi = compute_rsi(candles, rsi_params)
-    ppo = compute_ppo(candles, ppo_params)
-    best_cloud = compute_best_cloud(candles, best_cloud_params)
-    analytics = compute_ichimoku_analytics(
+    computed = REGISTRY.compute_many(
+        [
+            "ichimoku",
+            "rvol",
+            "structure",
+            "atr",
+            "cmf",
+            "rsi",
+            "ppo",
+            "best_cloud",
+            "ichimoku_analytics",
+        ],
         candles,
-        ichi=ichi,
-        atr=atr,
-        ichi_params=ichi_params,
-        params=analytics_params,
+        params_by_id={
+            "ichimoku": ichi_params,
+            "rvol": rvol_params,
+            "structure": structure_params,
+            "atr": atr_params,
+            "cmf": cmf_params,
+            "rsi": rsi_params,
+            "ppo": ppo_params,
+            "best_cloud": best_cloud_params,
+            "ichimoku_analytics": analytics_params,
+        },
     )
+    ichi = computed["ichimoku"]
+    rvol = computed["rvol"]
+    structure = computed["structure"]
+    atr = computed["atr"]
+    cmf = computed["cmf"]
+    rsi = computed["rsi"]
+    ppo = computed["ppo"]
+    best_cloud = computed["best_cloud"]
+    analytics = computed["ichimoku_analytics"]
 
     bars: list[FeatureBar] = []
     for i, c in enumerate(candles):

@@ -154,3 +154,69 @@ def test_negative_control_leaky_indicator_fails_lookahead_check():
     t = 40
     truncated = leaky.compute(candles[:t])
     assert truncated[-1] != full[t - 1]
+
+
+def test_compute_many_resolves_deps_once():
+    candles = _make_candles(60)
+    out = REGISTRY.compute_many(
+        ["ichimoku_analytics", "ichimoku", "atr"],
+        candles,
+    )
+    assert set(out) == {"ichimoku_analytics", "ichimoku", "atr"}
+    assert out["ichimoku_analytics"] == REGISTRY.compute("ichimoku_analytics", candles)
+
+
+def test_compute_many_cycle_raises():
+    from app.indicators.registry import DependencyCycleError
+
+    local = IndicatorRegistry()
+
+    @dataclass(frozen=True)
+    class _P:
+        x: int = 1
+
+    def _leaf(candles, params):
+        return []
+
+    def _a(candles, params, deps):
+        return []
+
+    def _b(candles, params, deps):
+        return []
+
+    local.register(
+        IndicatorDefinition(
+            id="a",
+            name="A",
+            category=IndicatorCategory.TREND,
+            params_cls=_P,
+            compute_fn=_a,
+            warmup_fn=lambda p: 1,
+            primary_output="x",
+            visualization=Visualization.NONE,
+            depends_on=("b",),
+        )
+    )
+    local.register(
+        IndicatorDefinition(
+            id="b",
+            name="B",
+            category=IndicatorCategory.TREND,
+            params_cls=_P,
+            compute_fn=_b,
+            warmup_fn=lambda p: 1,
+            primary_output="x",
+            visualization=Visualization.NONE,
+            depends_on=("a",),
+        )
+    )
+    with pytest.raises(DependencyCycleError):
+        local.compute_many(["a"], [])
+
+
+def test_dependent_warmup_includes_deps():
+    analytics_w = REGISTRY.get("ichimoku_analytics").warmup()
+    assert analytics_w >= REGISTRY.get("ichimoku").warmup()
+    assert analytics_w >= REGISTRY.get("atr").warmup()
+    assert REGISTRY.get("location").warmup() >= REGISTRY.get("structure").warmup()
+    assert REGISTRY.get("wyckoff").warmup() >= REGISTRY.get("donchian").warmup()

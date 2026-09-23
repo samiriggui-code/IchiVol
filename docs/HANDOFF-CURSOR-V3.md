@@ -7,6 +7,41 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-23 — T1c — Features Strategy Lab via REGISTRY (`compute_many`)
+
+- Branche : `v3/t1c-registry-features`
+- PR : (draft — lien après ouverture)
+- Commit(s) : `5b56470` (fixture golden **avant** refactor) ; refactor registry + features + ratchet (ce push)
+
+- Livré :
+  - `ichivol-app/engine/app/indicators/registry.py` — `depends_on`, `compute_many` (topo + dédup + cycle), enregistrement `ichimoku_analytics` / `location` / `wyckoff` ; `oi_funding` hors registry (docstring)
+  - `ichivol-app/engine/app/strategy_lab/features.py` — un seul `REGISTRY.compute_many(...)` ; signatures / `FeatureBar` inchangés
+  - `ichivol-app/engine/tests/strategy_lab/fixtures/features_golden.json` — FeatureBars seeds 7 & 42 (300 barres), commit **avant** le refactor
+  - `ichivol-app/engine/tests/strategy_lab/test_features_golden.py` — égalité stricte vs fixture
+  - `ichivol-app/engine/tests/indicators/test_registry_ratchet.py` — cliquet `ALLOWED_DIRECT_CALLERS` (features.py absent)
+  - `ichivol-app/engine/tests/indicators/test_registry.py` — compute_many / cycle / warmup deps ; `test_no_lookahead` couvre les 3 nouveaux via `REGISTRY.compute`
+
+- Tests :
+  - `pytest tests/indicators tests/strategy_lab tests/api/test_indicators_route.py` → **234 passed, 1 skipped**
+  - suite complète → **4 failed** Postgres connus uniquement
+
+- Choix faits :
+  - Wrappers registry pour analytics/location/wyckoff : `compute_fn(candles, params, deps)` ; analytics reçoit `ichi`/`atr` déjà calculés (pas de double compute).
+  - `REGISTRY.compute(id)` sur un indicateur dépendant délègue à `compute_many` pour résoudre les deps.
+  - Warmup dépendant = `max(own, deps.warmup())`.
+  - Fixture golden générée et commitée **avant** toute modification de `features.py` / registry deps.
+
+- Doutes / points à vérifier par Claude :
+  - Wrappers ne passent plus `ichi_params` à `compute_ichimoku_analytics` quand deps fournis (inutilisé si `ichi`/`atr` déjà là) — confirmer OK.
+  - `LocationParams.volume_profile` nested : overrides plats via API non testés ici (catalogue JSON OK via `asdict`).
+
+- Non fait / reste à faire :
+  - Migration des autres modules (T1d + cliquet).
+  - CONDITION_SCHEMA (T3 DSL), structure unifiée, découpage `routes.py`.
+  - **Ne pas merger** avant revue Claude.
+
+---
+
 ## 2026-09-23 — T1b — Front servi par le moteur (Ichimoku / RVOL / kumo projeté)
 
 - Branche : `v3/t1b-front-engine-indicators`
