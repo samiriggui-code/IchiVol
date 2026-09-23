@@ -1099,6 +1099,111 @@
         ]
       }
     },
+    "/api/engine/chart-objects/{symbol}": {
+      "get": {
+        "description": "Typed chart overlays derived from Market Structure (ENGINE source).\n\nNon-engine sources requested in ``sources`` return no objects (empty list\ncontribution) until T2b/T5 persistence lands. No real orders \u2014 analysis only.",
+        "operationId": "get_chart_objects_api_engine_chart_objects__symbol__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 300,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Comma-separated ChartObjectSource values (engine,user,claude,strategy,backtest)",
+            "in": "query",
+            "name": "sources",
+            "required": false,
+            "schema": {
+              "default": "engine",
+              "description": "Comma-separated ChartObjectSource values (engine,user,claude,strategy,backtest)",
+              "title": "Sources",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_pytrendline",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Pytrendline",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Twelve-Data-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Twelve-Data-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Chart Objects Api Engine Chart Objects  Symbol  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Chart Objects",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
     "/api/engine/context/calendar": {
       "get": {
         "description": "Read-only macro economic calendar, this week (CDC \"adapters context\",\nV3, opt-in) -- free/keyless community feed, never wired into the\ndecision pipeline (see app/context/calendar.py). Degrades to an empty\nlist on any upstream failure, never a 502.",
