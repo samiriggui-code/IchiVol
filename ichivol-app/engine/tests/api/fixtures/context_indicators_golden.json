@@ -1,0 +1,52 @@
+{
+  "seed_42": {
+    "atr": {
+      "regime": "NORMAL",
+      "suggested_stop_distance": 2.414880330396602,
+      "value": 1.6099202202644014
+    },
+    "cmf": {
+      "bias": "NEUTRAL",
+      "value": 0.03343357871690008
+    },
+    "last_close": 102.70217018023119,
+    "obv": {
+      "bias": "FALLING",
+      "slope": -157.19864060574565,
+      "value": -859.0227653657029
+    },
+    "provider": "binance",
+    "provider_symbol": "BTCUSDT",
+    "rsi": {
+      "bias": "BEARISH",
+      "value": 36.11100514789127
+    },
+    "symbol": "BTCUSDT",
+    "timeframe": "1h"
+  },
+  "seed_7": {
+    "atr": {
+      "regime": "NORMAL",
+      "suggested_stop_distance": 2.5272281536711727,
+      "value": 1.6848187691141152
+    },
+    "cmf": {
+      "bias": "NEGATIVE",
+      "value": -0.12541415663799352
+    },
+    "last_close": 53.47744713478903,
+    "obv": {
+      "bias": "FALLING",
+      "slope": -38.933324620716306,
+      "value": -24822.90946946362
+    },
+    "provider": "binance",
+    "provider_symbol": "BTCUSDT",
+    "rsi": {
+      "bias": "BEARISH",
+      "value": 42.32623386342478
+    },
+    "symbol": "BTCUSDT",
+    "timeframe": "1h"
+  }
+}

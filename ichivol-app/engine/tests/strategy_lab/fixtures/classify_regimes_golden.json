@@ -1,0 +1,3006 @@
+{
+  "seed_42": [
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "UNKNOWN"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    }
+  ],
+  "seed_7": [
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "UNKNOWN"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "UNKNOWN",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "UNKNOWN",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "UNKNOWN",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BULL",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "HIGH_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "SIDEWAYS",
+      "structure": "RANGING",
+      "volatility": "LOW_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    },
+    {
+      "direction": "BEAR",
+      "structure": "TRENDING",
+      "volatility": "NORMAL_VOLATILITY"
+    }
+  ]
+}

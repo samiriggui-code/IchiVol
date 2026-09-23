@@ -1,0 +1,36 @@
+{
+  "seed_42": {
+    "anomaly_level": "LOW",
+    "avg_volume": 503.82651549962964,
+    "confirmed": false,
+    "percentile": 0.08,
+    "provider": "binance",
+    "rvol": 0.193019977101577,
+    "rvol10": 0.17533404892130613,
+    "rvol20": 0.193019977101577,
+    "rvol5": 0.15938679381097112,
+    "spike": false,
+    "symbol": "BTCUSDT",
+    "time": 299,
+    "timeframe": "1h",
+    "vol_accel": -0.17424716236965654,
+    "volume": 97.24858248490584
+  },
+  "seed_7": {
+    "anomaly_level": "SIGNIFICANT",
+    "avg_volume": 567.3926313874033,
+    "confirmed": true,
+    "percentile": 0.83,
+    "provider": "binance",
+    "rvol": 1.531768829003358,
+    "rvol10": 1.1773699690587518,
+    "rvol20": 1.531768829003358,
+    "rvol5": 1.2748060634354044,
+    "spike": false,
+    "symbol": "BTCUSDT",
+    "time": 299,
+    "timeframe": "1h",
+    "vol_accel": -0.16775557819331388,
+    "volume": 869.1143465654167
+  }
+}

@@ -1,0 +1,2406 @@
+{
+  "seed_42": [
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "LONG"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "LONG"
+    },
+    {
+      "decision": "BUY",
+      "direction": "LONG"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "LONG"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "BUY",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "LONG"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "LONG"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "LONG"
+    },
+    {
+      "decision": "BUY",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "BUY",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "BUY",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "BUY",
+      "direction": "LONG"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "LONG"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "LONG"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "LONG"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    }
+  ],
+  "seed_7": [
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "NEUTRAL"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "LONG"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "WATCH",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "NO_TRADE",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    },
+    {
+      "decision": "SELL",
+      "direction": "SHORT"
+    }
+  ]
+}
