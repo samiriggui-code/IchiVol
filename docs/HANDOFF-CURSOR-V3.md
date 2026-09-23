@@ -7,6 +7,39 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-23 — T1e — Fin de la migration REGISTRY (cliquet vide)
+
+- Branche : `v3/t1e-registry-remaining`
+- PR : (draft — lien après ouverture)
+- Commit(s) : `f345e17` (fixtures golden **avant** refactor) ; migration + cliquet vide (ce push)
+
+- Livré :
+  - `app/api/routes.py` — `GET /context/{symbol}` via `REGISTRY.compute_many(rsi/cmf/obv/atr)`
+  - `app/agent_channel/commands.py` — `REGISTRY.compute` ichimoku/rvol (`compute_correlation_matrix` inchangé)
+  - `app/backtest/experiments.py` — `compute_many` structure/atr/location/cvd/adx/donchian/wyckoff
+  - `app/strategy_lab/regime.py` — `compute_many` adx+atr
+  - `app/synthetic/validation.py` — `compute_many` structure/atr/location/adx
+  - `app/structure/atr_utils.py` — `REGISTRY.compute("atr")`
+  - fixtures golden + tests d'égalité stricte
+  - `test_registry_ratchet.py` — `ALLOWED_DIRECT_CALLERS = ∅` ; scan de tout `app/` hors `indicators/` ; exceptions documentées pour `compute_oi_funding` / `compute_projected_kumo`
+
+- Tests :
+  - golden + cliquet OK ; suites indicators/strategy_lab/backtest/synthetic/structure/api (hors evidence route Postgres) → **339 passed**, 23 skipped
+  - suite complète → **4 failed** Postgres connus
+  - `grep compute_<id>(` hors `app/indicators/` → vide
+
+- Choix faits :
+  - experiments : adx/donchian/wyckoff aussi migrés (nécessité cliquet vide).
+  - Cliquet : interdiction pure + scan récursif de tout `app/`.
+
+- Doutes / points à vérifier par Claude : aucun bloquant.
+
+- Non fait / reste à faire :
+  - découpage `routes.py`, structure unifiée / confirmed_at, CONDITION_SCHEMA
+  - **Ne pas merger** avant revue Claude.
+
+---
+
 ## 2026-09-23 — T1d — Chemin live via le REGISTRY
 
 - Branche : `v3/t1d-live-path-registry`

@@ -22,10 +22,8 @@ from app.context.calendar import fetch_calendar_events
 from app.context.news import fetch_news
 from app.correlation.engine import compute_correlation_matrix
 from app.db.session import SessionLocal
-from app.indicators.atr import AtrParams, compute_atr
-from app.indicators.cmf import compute_cmf
-from app.indicators.obv import compute_obv
-from app.indicators.rsi import compute_rsi
+from app.indicators.atr import AtrParams
+from app.indicators.registry import REGISTRY
 from app.indicators.rvol import RvolParams
 from app.market_data import twelve_data
 from app.paper import engine as paper_engine
@@ -423,10 +421,11 @@ def get_context_indicators(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    rsi = compute_rsi(candles)[-1]
-    cmf = compute_cmf(candles)[-1]
-    obv = compute_obv(candles)[-1]
-    atr = compute_atr(candles)[-1]
+    computed = REGISTRY.compute_many(["rsi", "cmf", "obv", "atr"], candles)
+    rsi = computed["rsi"][-1]
+    cmf = computed["cmf"][-1]
+    obv = computed["obv"][-1]
+    atr = computed["atr"][-1]
     return {
         "symbol": symbol.upper(),
         "timeframe": timeframe,

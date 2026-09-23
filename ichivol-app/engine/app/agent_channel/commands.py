@@ -1,8 +1,8 @@
 """Agent command channel -- READ v1 (docs/HANDOFF-* agent channel brief,
 2026-09-16): a small set of named, allowlisted commands that wrap ALREADY
 EXISTING, already-tested engine functionality (scan_symbol, scan_watchlist,
-experiments.compare, compute_correlation_matrix, compute_ichimoku,
-compute_rvol) behind a uniform `{cmd, args} -> {ok, data|error}` calling
+experiments.compare, compute_correlation_matrix, REGISTRY ichimoku/rvol)
+behind a uniform `{cmd, args} -> {ok, data|error}` calling
 convention, instead of one HTTP route per capability.
 
 Zero LLM here, zero new decision logic: every handler below is a thin
@@ -30,8 +30,8 @@ from app.context.news import fetch_news
 from app.correlation.engine import compute_correlation_matrix
 from app.db.session import SessionLocal
 from app.indicators.atr import AtrParams
-from app.indicators.ichimoku import compute_ichimoku
-from app.indicators.rvol import RvolParams, compute_rvol
+from app.indicators.registry import REGISTRY
+from app.indicators.rvol import RvolParams
 from app.market_data.resolve import resolve_and_fetch
 from app.screener.cache import screener_cache
 from app.screener.persistence import persist_scan
@@ -460,7 +460,7 @@ def cmd_calculate_ichimoku(args: dict) -> dict:
     if len(candles) < 2:
         raise CommandError(f"not enough candles returned for {symbol} {timeframe}")
 
-    state = compute_ichimoku(candles)[-1]
+    state = REGISTRY.compute("ichimoku", candles)[-1]
     return {"symbol": symbol, "timeframe": timeframe, "provider": provider.id, **_state_to_dict(state)}
 
 
@@ -476,7 +476,7 @@ def cmd_calculate_rvol(args: dict) -> dict:
     if len(candles) < 2:
         raise CommandError(f"not enough candles returned for {symbol} {timeframe}")
 
-    state = compute_rvol(candles)[-1]
+    state = REGISTRY.compute("rvol", candles)[-1]
     return {"symbol": symbol, "timeframe": timeframe, "provider": provider.id, **_state_to_dict(state)}
 
 

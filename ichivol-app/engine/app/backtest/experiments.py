@@ -49,15 +49,16 @@ from app.backtest.engine import (
 from app.backtest.metrics import Metrics, compute_metrics
 from app.decision.combiner import combine_ichimoku_rvol
 from app.decision.pipeline import build_pipeline
-from app.indicators.adx import AdxParams, AdxState, compute_adx
-from app.indicators.atr import AtrParams, AtrState, compute_atr
-from app.indicators.cvd import CvdState, compute_cvd
-from app.indicators.donchian import DonchianParams, DonchianState, compute_donchian
+from app.indicators.adx import AdxParams, AdxState
+from app.indicators.atr import AtrParams, AtrState
+from app.indicators.cvd import CvdState
+from app.indicators.donchian import DonchianParams, DonchianState
 from app.indicators.ichimoku import Candle, IchimokuParams
-from app.indicators.location import LocationParams, LocationState, compute_location
+from app.indicators.location import LocationParams, LocationState
+from app.indicators.registry import REGISTRY
 from app.indicators.rvol import RvolParams
-from app.indicators.structure import StructureParams, StructureState, compute_structure
-from app.indicators.wyckoff import WyckoffParams, WyckoffPhase, WyckoffState, compute_wyckoff
+from app.indicators.structure import StructureParams, StructureState
+from app.indicators.wyckoff import WyckoffParams, WyckoffPhase, WyckoffState
 from app.market_data.accumulator import fetch_with_accumulation, needs_accumulation
 from app.market_data.resolve import resolve_and_fetch
 from app.market_data.timeframes import HIGHER_TIMEFRAME, TF_SECONDS
@@ -268,13 +269,25 @@ def prepare_variants(
 
     ichi_outputs = ichimoku_agent.analyze(candles, ichi_params)
     rvol_outputs = rvol_agent.analyze(candles, rvol_params)
-    structure_states = compute_structure(candles, structure_params)
-    atr_states = compute_atr(candles, atr_params)
-    location_states = compute_location(candles, structure_states, location_params)
-    cvd_states = compute_cvd(candles)
-    adx_states = compute_adx(candles, adx_params)
-    donchian_states = compute_donchian(candles, donchian_params)
-    wyckoff_states = compute_wyckoff(candles, donchian_states, wyckoff_params)
+    computed = REGISTRY.compute_many(
+        ["structure", "atr", "location", "cvd", "adx", "donchian", "wyckoff"],
+        candles,
+        params_by_id={
+            "structure": structure_params,
+            "atr": atr_params,
+            "location": location_params,
+            "adx": adx_params,
+            "donchian": donchian_params,
+            "wyckoff": wyckoff_params,
+        },
+    )
+    structure_states = computed["structure"]
+    atr_states = computed["atr"]
+    location_states = computed["location"]
+    cvd_states = computed["cvd"]
+    adx_states = computed["adx"]
+    donchian_states = computed["donchian"]
+    wyckoff_states = computed["wyckoff"]
 
     mtf_directions: list[Direction | None] = [None] * len(candles)
     higher_tf = HIGHER_TIMEFRAME.get(timeframe)

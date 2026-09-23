@@ -18,11 +18,8 @@ from dataclasses import dataclass
 
 from app.agents import ichimoku_agent, rvol_agent
 from app.decision.pipeline import PipelineResult, build_pipeline
-from app.indicators.adx import compute_adx
-from app.indicators.atr import compute_atr
 from app.indicators.ichimoku import Candle
-from app.indicators.location import compute_location
-from app.indicators.structure import compute_structure
+from app.indicators.registry import REGISTRY
 from app.synthetic.ground_truth import GroundTruth
 from app.synthetic.scenarios import ALL_SCENARIOS, Scenario
 
@@ -30,10 +27,14 @@ from app.synthetic.scenarios import ALL_SCENARIOS, Scenario
 def run_pipeline_over_candles(candles: list[Candle]) -> list[PipelineResult]:
     ichi_outputs = ichimoku_agent.analyze(candles)
     rvol_outputs = rvol_agent.analyze(candles)
-    structure_states = compute_structure(candles)
-    atr_states = compute_atr(candles)
-    location_states = compute_location(candles, structure_states)
-    adx_states = compute_adx(candles)
+    computed = REGISTRY.compute_many(
+        ["structure", "atr", "location", "adx"],
+        candles,
+    )
+    structure_states = computed["structure"]
+    atr_states = computed["atr"]
+    location_states = computed["location"]
+    adx_states = computed["adx"]
 
     return [
         build_pipeline(

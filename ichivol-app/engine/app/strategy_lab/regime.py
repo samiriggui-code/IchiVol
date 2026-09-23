@@ -14,9 +14,10 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Sequence
 
-from app.indicators.adx import AdxParams, TrendStrength, compute_adx
-from app.indicators.atr import AtrParams, VolatilityRegime, compute_atr
+from app.indicators.adx import AdxParams, TrendStrength
+from app.indicators.atr import AtrParams, VolatilityRegime
 from app.indicators.ichimoku import Candle
+from app.indicators.registry import REGISTRY
 
 
 class StructureRegime(str, Enum):
@@ -99,8 +100,13 @@ def classify_regimes(
     adx_params: AdxParams = AdxParams(),
     atr_params: AtrParams = AtrParams(),
 ) -> list[RegimeTags]:
-    adx = compute_adx(candles, adx_params)
-    atr = compute_atr(candles, atr_params)
+    computed = REGISTRY.compute_many(
+        ["adx", "atr"],
+        candles,
+        params_by_id={"adx": adx_params, "atr": atr_params},
+    )
+    adx = computed["adx"]
+    atr = computed["atr"]
     if len(adx) != len(candles) or len(atr) != len(candles):
         raise ValueError("regime series length mismatch")
     out: list[RegimeTags] = []

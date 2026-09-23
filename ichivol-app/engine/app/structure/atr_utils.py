@@ -4,14 +4,15 @@ from __future__ import annotations
 
 from typing import Sequence
 
-from app.indicators.atr import AtrParams, compute_atr
+from app.indicators.atr import AtrParams
 from app.indicators.ichimoku import Candle
+from app.indicators.registry import REGISTRY
 
 
 def last_atr(candles: Sequence[Candle], period: int = 14) -> float | None:
     if len(candles) < 2:
         return None
-    states = compute_atr(candles, AtrParams(period=period))
+    states = REGISTRY.compute("atr", candles, AtrParams(period=period))
     for state in reversed(states):
         if state.atr is not None and state.atr > 0:
             return float(state.atr)
