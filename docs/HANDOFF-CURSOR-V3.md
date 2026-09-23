@@ -189,7 +189,7 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
 - Branche : `v3/t0-broker-fidelity`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/16 (draft) — **pas de merge avant revue Claude** ; parallèle aux PR #14 (T0-CI) et #15 (T2a)
 - **Annule et remplace** le brief T0-UI : journal d’ordres + P&L réalisé déjà sur Synthèse — **non refaits**.
-- Commit(s) : `ec845bf` (engine + front + tests + golden) ; `94f0b5f` (âge du mark UI) ; `7dfbb44` (handoff)
+- Commit(s) : `ec845bf` (engine + front + tests + golden) ; `94f0b5f` (âge du mark UI) ; `7dfbb44` / `2cfd50d` (handoff) ; `d80382f` (workflow Engine CI depuis #14 — `main` ne l’a pas encore)
 
 - Livré :
   - Engine : `marks.py`, `liquidation.py`, `financing.py`, `reconcile.py` ; overview avec `liquidation_value` / marks stale ; `GET /paper/portfolios/{code}/reconcile`
