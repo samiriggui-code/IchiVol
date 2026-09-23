@@ -23,6 +23,37 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-23 — T2b correction Claude — grounding anti-hallucination
+
+- Branche : `cursor/t2b-agent-draw-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/17 (**draft**)
+- Commit(s) : à venir
+
+### Correctif demandé
+
+Avant persist agent `draw_*` : vérifier times/prices contre OHLCV réel (`resolve_and_fetch`).
+
+### Livré
+
+- `app/chart_objects/grounding.py` — `assert_object_grounded`
+  - time ∈ timestamps série, ou `[last, last+5 bars]` si `origin.projected`
+  - price ∈ `[min(low)*0.5, max(high)*1.5]` sur 300 dernières bougies
+  - `price_low` / `price_high` (ZONE) idem
+- `_draw_and_persist` appelle grounding → `CommandError("point_not_grounded: …")`
+- Tests : `test_grounding.py` (prix 100×, futur hors proj, zone OK, structure OK)
+
+### Validation locale
+
+```text
+pytest tests/chart_objects/ -q   # PASS
+```
+
+### Revue Claude
+
+**Revalidation demandée** avant merge.
+
+---
+
 ## 2026-09-23 — ATTENTE CLAUDE — bilan Cursor pendant ton absence
 
 **Cursor s’arrête ici.** Pas de nouveau code tant que Claude n’a pas revu et donné la marche à suivre.

@@ -27,6 +27,7 @@ from app.api.serializers import backtest_dict, detail_dict, metrics_dict, risk_d
 from app.backtest import experiments
 from app.chart_objects.collect import collect_chart_objects
 from app.chart_objects.draw import build_from_draw_args
+from app.chart_objects.grounding import assert_object_grounded
 from app.chart_objects.store import soft_delete_chart_object, upsert_chart_object
 from app.chart_objects.types import ChartObjectType
 from app.context.calendar import fetch_calendar_events
@@ -578,6 +579,18 @@ def _draw_and_persist(obj_type_value: str, args: dict) -> dict:
         obj_type = ChartObjectType(obj_type_value)
         # Agent channel always stamps source=claude (no USER impersonation).
         obj = build_from_draw_args(obj_type, args, agent_channel=True)
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+
+    # Anti-hallucination: times/prices must sit on the real OHLCV series.
+    limit = int(args.get("limit") or 500)
+    if limit < 50 or limit > 5000:
+        limit = 500
+    try:
+        _provider, _psym, candles = resolve_and_fetch(obj.symbol, obj.timeframe, limit)
+        assert_object_grounded(obj, candles)
+    except ProviderNotWiredError as exc:
+        raise CommandError(str(exc)) from exc
     except ValueError as exc:
         raise CommandError(str(exc)) from exc
 

@@ -113,6 +113,7 @@ def test_agent_draw_horizontal_and_get_chart_objects(monkeypatch):
 
     monkeypatch.setattr("app.chart_objects.collect.resolve_and_fetch", fake_resolve)
     monkeypatch.setattr("app.structure.payload.resolve_and_fetch", fake_resolve)
+    monkeypatch.setattr("app.agent_channel.commands.resolve_and_fetch", fake_resolve)
 
     draw = client.post(
         "/api/engine/agent/command",
@@ -168,6 +169,7 @@ def test_agent_get_structure(monkeypatch):
 
     monkeypatch.setattr("app.chart_objects.collect.resolve_and_fetch", fake_resolve)
     monkeypatch.setattr("app.structure.payload.resolve_and_fetch", fake_resolve)
+    monkeypatch.setattr("app.agent_channel.commands.resolve_and_fetch", fake_resolve)
     resp = client.post(
         "/api/engine/agent/command",
         json={"cmd": "get_structure", "args": {"symbol": "BTCUSDT", "limit": 120}},
@@ -221,6 +223,7 @@ def test_http_merges_engine_and_claude(monkeypatch):
         return P(), symbol, candles[:limit]
 
     monkeypatch.setattr("app.chart_objects.collect.resolve_and_fetch", fake_resolve)
+    monkeypatch.setattr("app.agent_channel.commands.resolve_and_fetch", fake_resolve)
 
     draw = client.post(
         "/api/engine/agent/command",
@@ -257,6 +260,7 @@ def test_get_structure_parity_with_http(monkeypatch):
         return P(), symbol, candles[:limit]
 
     monkeypatch.setattr("app.structure.payload.resolve_and_fetch", fake_resolve)
+    monkeypatch.setattr("app.agent_channel.commands.resolve_and_fetch", fake_resolve)
     http = client.get("/api/engine/structure/BTCUSDT?timeframe=1h&limit=120")
     agent = client.post(
         "/api/engine/agent/command",
@@ -311,7 +315,16 @@ def test_delete_does_not_touch_user_overlay():
         session.close()
 
 
-def test_draw_trend_line_with_points():
+def test_draw_trend_line_with_points(monkeypatch):
+    candles = _candles()
+
+    def fake_resolve(symbol, timeframe, limit):
+        class P:
+            id = "test"
+
+        return P(), symbol, candles[:limit]
+
+    monkeypatch.setattr("app.agent_channel.commands.resolve_and_fetch", fake_resolve)
     resp = client.post(
         "/api/engine/agent/command",
         json={
@@ -320,8 +333,8 @@ def test_draw_trend_line_with_points():
                 "symbol": "T2BTC",
                 "timeframe": "1h",
                 "points": [
-                    {"time": 1_700_000_000, "price": 100.0},
-                    {"time": 1_700_003_600, "price": 110.0},
+                    {"time": candles[0].time, "price": candles[0].close},
+                    {"time": candles[10].time, "price": candles[10].close},
                 ],
             },
         },
