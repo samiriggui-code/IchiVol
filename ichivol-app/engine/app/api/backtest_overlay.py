@@ -8,6 +8,7 @@ from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from app.chart_objects.filter_trades import (
+    REGIME_LABELS,
     filter_rejected,
     filter_trades,
     validate_filter_args,
@@ -23,6 +24,7 @@ from app.config import settings
 from app.market_data import twelve_data
 from app.market_data.resolve import ProviderNotWiredError, resolve_and_fetch
 from app.strategy_lab.catalog import get_builtin_ruleset
+from app.strategy_lab.regime import classify_regimes
 from app.strategy_lab.ruleset import Ruleset, parse_ruleset
 from app.strategy_lab.ruleset_backtest import run_ruleset_backtest_on_candles
 from app.strategy_lab.run_ruleset import _metrics_dict
@@ -32,6 +34,16 @@ router = APIRouter(prefix=settings.engine_api_prefix, tags=["engine"])
 OutcomeFilter = Literal["all", "win", "loss"]
 ExitReasonFilter = Literal["stop", "target", "signal", "eod", "max_hold"]
 DirectionFilter = Literal["LONG", "SHORT", "long", "short"]
+RegimeLabelFilter = Literal[
+    "TRENDING",
+    "RANGING",
+    "HIGH_VOLATILITY",
+    "LOW_VOLATILITY",
+    "NORMAL_VOLATILITY",
+    "BULL",
+    "BEAR",
+    "SIDEWAYS",
+]
 
 
 class BacktestOverlayBody(BaseModel):
@@ -45,6 +57,8 @@ class BacktestOverlayBody(BaseModel):
     exit_reason: ExitReasonFilter | None = None
     direction: DirectionFilter | None = None
     why_entered_key: str | None = None
+    # T4d — Lab regime tag at signal bar
+    regime_label: RegimeLabelFilter | None = None
     include_rejected: bool = True
 
 
@@ -76,12 +90,16 @@ def build_backtest_overlay_payload(
     exit_reason: str | None = None,
     direction: str | None = None,
     why_entered_key: str | None = None,
+    regime_label: str | None = None,
     include_rejected: bool = True,
 ) -> dict[str, Any]:
     """Shared by HTTP and agent — filter only, no new backtest logic."""
     try:
         validate_filter_args(
-            outcome=outcome, exit_reason=exit_reason, direction=direction
+            outcome=outcome,
+            exit_reason=exit_reason,
+            direction=direction,
+            regime_label=regime_label,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -92,6 +110,13 @@ def build_backtest_overlay_payload(
         symbol=symbol,
         timeframe=timeframe,
     )
+    # T4d — causal regime tags at signal bar (research only).
+    regimes = classify_regimes(candles)
+
+    def _labels_at(idx: int) -> list[str]:
+        if idx < 0 or idx >= len(regimes):
+            return []
+        return list(regimes[idx].labels())
 
     trades_full: list[dict[str, Any]] = []
     for trade_id, detail in enumerate(result.details):
@@ -120,6 +145,7 @@ def build_backtest_overlay_payload(
                 "signal_index": detail.signal_index,
                 "why_entered": list(detail.why_entered),
                 "why_exited": list(detail.why_exited),
+                "regime_labels": _labels_at(detail.signal_index),
             }
         )
 
@@ -133,6 +159,7 @@ def build_backtest_overlay_payload(
             "direction": r.direction.value,
             "reason": r.reason,
             "why_entered": list(r.why_entered),
+            "regime_labels": _labels_at(r.signal_index),
         }
         for i, r in enumerate(result.rejected)
     ]
@@ -150,6 +177,7 @@ def build_backtest_overlay_payload(
         exit_reason=exit_reason,
         direction=direction,
         why_entered_key=why_entered_key,
+        regime_label=regime_label,
     )
     allowed_ids = {t["trade_id"] for t in trades}
 
@@ -158,6 +186,7 @@ def build_backtest_overlay_payload(
             rejected_full,
             direction=direction,
             why_entered_key=why_entered_key,
+            regime_label=regime_label,
         )
     else:
         rejected = []
@@ -187,8 +216,10 @@ def build_backtest_overlay_payload(
             "exit_reason": exit_reason,
             "direction": direction.upper() if direction else None,
             "why_entered_key": why_entered_key,
+            "regime_label": regime_label,
             "include_rejected": include_rejected,
         },
+        "regime_labels_available": sorted(REGIME_LABELS),
         "objects": [o.to_dict() for o in objects],
         "trades": trades,
         "rejected": rejected,
@@ -234,5 +265,6 @@ def post_backtest_overlay(
         exit_reason=body.exit_reason,
         direction=body.direction,
         why_entered_key=(body.why_entered_key or None),
+        regime_label=body.regime_label,
         include_rejected=body.include_rejected,
     )

@@ -27,6 +27,7 @@ export interface BacktestOverlayTrade {
   signal_index?: number
   why_entered?: ConditionLeafTrace[]
   why_exited?: ConditionLeafTrace[]
+  regime_labels?: string[]
 }
 
 export interface BacktestRejectedSignal {
@@ -68,6 +69,7 @@ export async function postBacktestOverlay(input: {
   exit_reason?: string | null
   direction?: string | null
   why_entered_key?: string | null
+  regime_label?: string | null
   include_rejected?: boolean
 }): Promise<BacktestOverlayResult> {
   const res = await fetch('/api/engine/strategy-lab/backtest-overlay', {
@@ -83,6 +85,7 @@ export async function postBacktestOverlay(input: {
       exit_reason: input.exit_reason || undefined,
       direction: input.direction || undefined,
       why_entered_key: input.why_entered_key || undefined,
+      regime_label: input.regime_label || undefined,
       include_rejected: input.include_rejected ?? true,
     }),
   })

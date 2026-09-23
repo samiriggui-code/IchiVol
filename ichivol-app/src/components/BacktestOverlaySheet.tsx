@@ -55,6 +55,7 @@ export function BacktestOverlaySheet({
   rejected = [],
   exitReason = null,
   direction = null,
+  regimeLabel = null,
   loading,
   error,
   active,
@@ -62,6 +63,7 @@ export function BacktestOverlaySheet({
   onOutcome,
   onExitReason,
   onDirection,
+  onRegimeLabel,
   onShow,
   onClear,
   onClose,
@@ -74,6 +76,7 @@ export function BacktestOverlaySheet({
   rejected?: BacktestRejectedSignal[]
   exitReason?: string | null
   direction?: string | null
+  regimeLabel?: string | null
   loading?: boolean
   error?: string | null
   active: boolean
@@ -81,6 +84,7 @@ export function BacktestOverlaySheet({
   onOutcome: (o: BacktestOutcomeFilter) => void
   onExitReason: (v: string | null) => void
   onDirection: (v: string | null) => void
+  onRegimeLabel: (v: string | null) => void
   onShow: () => void
   onClear: () => void
   onClose: () => void
@@ -218,6 +222,24 @@ export function BacktestOverlaySheet({
                 <option value="SHORT">SHORT</option>
               </select>
             </label>
+            <label className="backtest-overlay-select">
+              Régime
+              <select
+                value={regimeLabel ?? ''}
+                onChange={(e) => onRegimeLabel(e.target.value || null)}
+                disabled={loading}
+              >
+                <option value="">Tous</option>
+                <option value="TRENDING">TRENDING</option>
+                <option value="RANGING">RANGING</option>
+                <option value="BULL">BULL</option>
+                <option value="BEAR">BEAR</option>
+                <option value="SIDEWAYS">SIDEWAYS</option>
+                <option value="HIGH_VOLATILITY">HIGH_VOL</option>
+                <option value="LOW_VOLATILITY">LOW_VOL</option>
+                <option value="NORMAL_VOLATILITY">NORMAL_VOL</option>
+              </select>
+            </label>
           </div>
 
           {listErr || error ? (
@@ -240,6 +262,9 @@ export function BacktestOverlaySheet({
                     <span className={`bt-out bt-out--${t.outcome}`}>{t.outcome}</span>
                     <span>
                       #{t.trade_id} · {t.direction} · {t.exit_reason}
+                      {t.regime_labels?.length
+                        ? ` · ${t.regime_labels.slice(0, 2).join('/')}`
+                        : ''}
                     </span>
                     <span className="mono bt-ret">
                       <span className={`bt-out--${t.outcome}`}>{fmtPct(t.return_pct_net)}</span>

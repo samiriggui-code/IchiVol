@@ -330,6 +330,7 @@ TOOLS: dict[str, ToolSpec] = {
                 "exit_reason": "stop|target|signal|eod|max_hold, optionnel",
                 "direction": "LONG|SHORT, optionnel",
                 "why_entered_key": "str, feuille WHY passée à l'entrée, optionnel",
+                "regime_label": "TRENDING|RANGING|HIGH_VOLATILITY|…, optionnel (T4d)",
                 "include_rejected": "bool, défaut true",
             },
             cmd_filter_backtest_overlay,

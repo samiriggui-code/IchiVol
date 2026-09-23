@@ -31,16 +31,37 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **Event Intelligence PHASE 6** #28 — **MERGÉE** (regime study + calibration ; Cursor solo, CI verte).
 - **Event Intelligence PHASE 7** #29 — **MERGÉE** (SymbolNews + correlate → `EVENT_MARKET` ; Cursor solo, CI verte).
 - **T4c** #31 — **MERGÉE** (WHY ENTERED / REJECTED / EXITED).
-- **Job en cours** : **T4b** — PR #32 draft — filtre overlay (ATTENTE CI).
+- **T4b** #32 — **MERGÉE** (filtres overlay structurés).
+- **Job en cours** : **T4d** — PR #33 draft — filtre régime overlay (ATTENTE CI).
 
 
 ---
 
-## 2026-09-23 — T4b EN COURS — filtre overlay (Claude / API)
+## 2026-09-23 — T4d EN COURS — filtre régime overlay
+
+- Branche : `cursor/t4d-regime-overlay-filter-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/33 (**draft**)
+- Statut : **ATTENTE CI** — après #32.
+
+### Livré
+
+1. `regime_labels` au signal bar (`classify_regimes`) sur trades / rejected
+2. Filtre AND `regime_label` (TRENDING/RANGING/BULL/…) API + agent + sheet
+3. OpenAPI golden refresh
+
+### Non-faits
+
+T5a family weights ; chat NL ; changement fills.
+
+---
+
+## 2026-09-23 — T4b MERGÉ (#32) — filtre overlay
 
 - Branche : `cursor/t4b-overlay-filter-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/32 (**draft**)
-- Statut : **ATTENTE CI** — après merge T4c #31.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/32 — **MERGÉE**
+- Statut : CI verte (OpenAPI golden fix) ; merge Cursor.
+
+---
 
 ### Livré
 
