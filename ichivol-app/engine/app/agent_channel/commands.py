@@ -750,6 +750,63 @@ def cmd_build_audit_report(args: dict) -> dict:
     return payload
 
 
+def cmd_run_monte_carlo(args: dict) -> dict:
+    """T7 — bootstrap Monte Carlo / risk-of-ruin on ruleset net trade returns.
+
+    Research only. Requires enough trades (min_trades, default 20).
+    """
+    import math
+
+    from app.risk.monte_carlo import run_monte_carlo
+    from app.strategy_lab.catalog import get_builtin_ruleset
+    from app.strategy_lab.ruleset import parse_ruleset
+    from app.strategy_lab.ruleset_backtest import run_ruleset_backtest_on_candles
+
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = str(args.get("timeframe", "1h"))
+    limit = int(args.get("limit", 1000))
+    n_paths = int(args.get("n_paths", 1000))
+    seed = int(args.get("seed", 42))
+    ruin_floor = float(args.get("ruin_floor", 0.5))
+    min_trades = int(args.get("min_trades", 20))
+    ruleset_id = args.get("ruleset_id")
+    ruleset_raw = args.get("ruleset")
+    if ruleset_raw is not None:
+        try:
+            ruleset = parse_ruleset(ruleset_raw)
+        except (TypeError, ValueError) as exc:
+            raise CommandError(f"invalid_ruleset: {exc}") from exc
+        rid = getattr(ruleset, "id", None)
+    elif ruleset_id:
+        try:
+            ruleset = get_builtin_ruleset(str(ruleset_id))
+        except ValueError as exc:
+            raise CommandError(str(exc)) from exc
+        rid = str(ruleset_id)
+    else:
+        raise CommandError("missing_or_invalid_arg: ruleset_id or ruleset required")
+    try:
+        _prov, _sym, candles = resolve_and_fetch(symbol, timeframe, limit)
+    except (ValueError, ProviderNotWiredError) as exc:
+        raise CommandError(str(exc)) from exc
+    result = run_ruleset_backtest_on_candles(
+        candles, ruleset, symbol=symbol, timeframe=timeframe
+    )
+    net_rets = [math.exp(d.trade.net_log_return) - 1.0 for d in result.details]
+    report = run_monte_carlo(
+        net_rets,
+        n_paths=n_paths,
+        seed=seed,
+        ruin_floor=ruin_floor,
+        min_trades=min_trades,
+    )
+    payload = report.to_dict()
+    payload["symbol"] = symbol
+    payload["timeframe"] = timeframe
+    payload["ruleset_id"] = rid
+    return payload
+
+
 def cmd_filter_backtest_overlay(args: dict) -> dict:
     """T4b — backtest overlay with structured filters for Claude (read-only).
 

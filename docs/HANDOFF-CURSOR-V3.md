@@ -35,16 +35,36 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T4d** #33 — **MERGÉE** (filtre régime overlay).
 - **T5a** #34 — **MERGÉE** (family weights observation-only).
 - **T5b** #35 — **MERGÉE** (profils poids + étude historique).
-- **Job en cours** : **T6** — PR #36 draft — AuditReport post-outcome (ATTENTE CI).
+- **T6** #36 — **MERGÉE** (AuditReport post-outcome).
+- **Job en cours** : **T7** — PR #37 draft — Monte Carlo / risk of ruin (ATTENTE CI).
 
 
 ---
 
-## 2026-09-23 — T6 EN COURS — AuditReport (Claude Auditor scaffolding)
+## 2026-09-23 — T7 EN COURS — Monte Carlo / risk of ruin
+
+- Branche : `cursor/t7-monte-carlo-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/37 (**draft**)
+- Statut : **ATTENTE CI** — après merge #36.
+
+### Livré
+
+1. `app/risk/monte_carlo.py` — bootstrap net trade returns → equity paths
+2. `risk_of_ruin` (equity ≤ ruin_floor) ; percentiles final equity / max DD
+3. Gate `min_trades` (défaut 20) → `sufficient=false` sinon
+4. Agent `run_monte_carlo`
+
+### Non-faits
+
+UI Strategy Lab ; auto-sizing live ; Researcher loop.
+
+---
+
+## 2026-09-23 — T6 MERGÉ (#36) — AuditReport
 
 - Branche : `cursor/t6-auditor-report-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/36 (**draft**)
-- Statut : **ATTENTE CI** — après merge #35.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/36 — **MERGÉE** `a2591bf`
+- Statut : CI verte ; merge Cursor.
 
 ### Livré
 
@@ -54,7 +74,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ### Non-faits
 
-Auto-apply hypothèses ; Researcher loop ; T7 Monte Carlo ; UI.
+Auto-apply hypothèses ; Researcher loop ; UI.
 
 ---
 
