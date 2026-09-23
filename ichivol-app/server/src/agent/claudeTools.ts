@@ -74,6 +74,21 @@ function jsonSchemaFor(argSpec: string): Record<string, unknown> {
   if (head === 'float') return { type: 'number', description: spec }
   if (head === 'bool') return { type: 'boolean', description: spec }
   if (head.startsWith('list[int]')) return { type: 'array', items: { type: 'integer' }, description: spec }
+  // ChartObject points: list[{time,price}] — must be objects, not strings.
+  if (/list\[\{.*time.*price/i.test(spec) || /list\[\{time,price\}\]/i.test(spec)) {
+    return {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          time: { type: 'integer', description: 'unix seconds' },
+          price: { type: 'number' },
+        },
+        required: ['time', 'price'],
+      },
+      description: spec,
+    }
+  }
   if (head.startsWith('list')) return { type: 'array', items: { type: 'string' }, description: spec }
   if (head === 'object') return { type: 'object', description: spec }
   return { type: 'string', description: spec }

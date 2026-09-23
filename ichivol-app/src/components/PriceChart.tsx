@@ -18,6 +18,7 @@ import {
 } from 'lightweight-charts'
 import {
   chartObjectMarkers,
+  chartObjectPriceLevels,
   chartObjectTrendlines,
   chartObjectZones,
   type ChartObject,
@@ -174,7 +175,7 @@ function applyChartTheme(chart: IChartApi, series: SeriesBag, colors: ChartColor
   series.spanB.applyOptions({ color: colors.spanB })
 }
 
-/** Render ENGINE ChartObjects with visual parity to the former Structure overlay. */
+/** Render ChartObjects (ENGINE + USER/CLAUDE) with Structure visual parity + T2b levels. */
 function renderChartObjects(
   chart: IChartApi | null,
   series: SeriesBag | null,
@@ -210,6 +211,23 @@ function renderChartObjects(
     }
   }
 
+  for (const lvl of chartObjectPriceLevels(objects)) {
+    let color = colors.muted
+    if (lvl.kind === 'entry') color = colors.bull
+    else if (lvl.kind === 'stop') color = colors.bear
+    else if (lvl.kind === 'target') color = colors.bull
+    priceLinesRef.current.push(
+      series.candle.createPriceLine({
+        price: lvl.price,
+        color: `${color}cc`,
+        lineWidth: lvl.kind === 'horizontal_line' ? 1 : 2,
+        lineStyle: lvl.kind === 'stop' ? LineStyle.Dashed : LineStyle.Solid,
+        axisLabelVisible: true,
+        title: lvl.label,
+      }),
+    )
+  }
+
   for (const t of chartObjectTrendlines(objects)) {
     const color = t.side === 'support' ? colors.bull : colors.bear
     const line = chart.addSeries(
@@ -217,7 +235,7 @@ function renderChartObjects(
       {
         color,
         lineWidth: 1,
-        lineStyle: LineStyle.Dashed,
+        lineStyle: t.ray ? LineStyle.Solid : LineStyle.Dashed,
         lastValueVisible: false,
         priceLineVisible: false,
         crosshairMarkerVisible: false,
@@ -231,14 +249,13 @@ function renderChartObjects(
     trendSeriesRef.current.push(line)
   }
 
-  // MARKER (breakouts): circle markers — merged with volume signals by caller.
   return chartObjectMarkers(objects).map((m) => {
-    const bullish = m.side === 'resistance' // break above resistance
+    const bullish = m.side === 'resistance' || m.side === 'LONG'
     return {
       time: ts(m.time),
       position: bullish ? ('belowBar' as const) : ('aboveBar' as const),
       color: bullish ? colors.bull : colors.bear,
-      shape: 'circle' as const,
+      shape: m.shape,
       text: m.label,
     }
   })

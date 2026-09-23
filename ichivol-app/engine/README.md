@@ -308,36 +308,31 @@ Depuis le 2026-09-16, chaque ligne inclut aussi `risk` (`{atr, regime, suggested
 | ETHUSDT 1h (1000 bougies) | Sharpe -1.86, dd 27.5% | Sharpe -5.75 | Sharpe -2.91 | Sharpe -8.63, dd **19.1%** |
 | BTCUSDT 4h (1000 bougies) | Sharpe 0.30, dd 22.1% | Sharpe -0.15 | Sharpe 0.12 | Sharpe -4.73, dd 26.2% |
 
-## Agent command channel (READ v1, livré 2026-09-16)
+## Agent command channel (READ + chart WRITE T2b)
 
-`app/agent_channel/` -- un canal de commandes nommées pour un agent (Claude ou tout autre appelant programmatique), séparé du Copilot LLM (`ichivol-app/server/src/agent/`) : zéro LLM ici, zéro nouvelle logique de décision, juste un habillage uniforme `{cmd, args} -> {ok, data|error}` par-dessus des fonctions déjà existantes et déjà testées (`scan_symbol`, `scan_watchlist`, `experiments.compare`, `compute_correlation_matrix`, `compute_ichimoku`, `compute_rvol`).
+`app/agent_channel/` -- canal de commandes `{cmd, args} -> {ok, data|error}` par-dessus des fonctions moteur déjà testées. Zéro LLM ici.
 
 ```
-GET  /api/engine/agent/tools                 -- introspection (identique à la commande list_tools)
-GET  /api/engine/agent/capabilities          -- stub : version, read_only, write_tier_enabled, max_batch_items
-POST /api/engine/agent/command  {cmd, args}  -- une commande
-POST /api/engine/agent/batch    {commands}   -- jusqu'à 20, concurrent, ordre stable (même pattern que /decisions/batch)
+GET  /api/engine/agent/tools
+GET  /api/engine/agent/capabilities   -- version, write_tier_enabled, write_scopes, write_commands
+POST /api/engine/agent/command  {cmd, args}
+POST /api/engine/agent/batch    {commands}   -- max 20, concurrent, ordre stable
 ```
 
-Allowlist v1 (9 commandes, toutes read-only, `app/agent_channel/registry.py::TOOLS`) :
+**WRITE scope (T2b)** : `write_tier_enabled: true`, `write_scopes: ["chart_objects"]` — uniquement `draw_*` + `delete_chart_object` (source **forcée** `claude`). Paper trading reste **hors canal** (`POST /paper/positions` only).
 
-| Commande | Wrap de | Payload |
-|---|---|---|
-| `scan_market` | cache screener | identique à `GET /screener` |
-| `get_symbol_context` | `scan_symbol` + `persist_scan` optionnel | identique à `GET /decisions/{symbol}` |
-| `detect_signal` | `scan_symbol` | verdict condensé (decision/direction/stages/risk), pas le détail combiner legacy |
-| `compare_timeframes` | `scan_symbol` × N timeframes | un résumé par timeframe, une erreur n'en sabote pas une autre |
-| `run_backtest` | `experiments.compare` | identique à `GET /backtest/{symbol}` |
-| `get_correlations` | `compute_correlation_matrix` | identique à `GET /correlations` |
-| `calculate_ichimoku` | `compute_ichimoku` | état brut (tenkan/kijun/cloud/score), pas de décision |
-| `calculate_rvol` | `compute_rvol` | état brut (rvol/anomaly_level/confirmed), pas de décision |
-| `list_tools` | ce même registre | identique à `GET /agent/tools` |
+Commandes chart (T2b) :
 
-Un `cmd` inconnu, un arg manquant/invalide, ou une erreur métier (historique insuffisant, symbole inconnu) ne renvoient jamais un 500 -- toujours `{"ok": false, "cmd": ..., "error": "..."}`, exactement comme `POST /decisions/batch` isole déjà un symbole en échec. `GET /decisions/{symbol}` persiste par défaut (`persist=true`) ; `get_symbol_context` par défaut **ne persiste pas** (`persist=false`) -- un appelant du canal de commandes est censé explorer plus librement qu'un humain qui clique dans l'UI, pas remplir l'historique d'audit à chaque sonde.
+| Commande | Rôle |
+|---|---|
+| `get_structure` | identique à `GET /structure/{symbol}` |
+| `get_chart_objects` | identique à `GET /chart-objects/{symbol}` (défaut `sources=engine`) |
+| `draw_*` | upsert overlay CLAUDE (`horizontal_line`, `trend_line`, `ray`, `zone`, `rectangle`, `channel`, `marker`, `text`, `entry`, `stop`, `target`) |
+| `delete_chart_object` | soft-delete **claude only** |
 
-**WRITE (paper trading) explicitement hors scope de ce lot** (`write_tier_enabled: false` dans `/agent/capabilities`) -- ouvrir/fermer une position papier reste uniquement `POST /paper/positions` (app/paper/engine.py), jamais via ce canal, tant qu'une allowlist WRITE n'est pas explicitement demandée. Pas de front, pas de Copilot ici : Cursor branche son propre client sur ce contrat en parallèle.
+Overlays USER/CLAUDE : table `chart_object_overlays` (alembic `f6a7b8c9d0e1`). ENGINE reste éphémère (recalcul structure).
 
-Les helpers de sérialisation (`pipeline_dict`/`risk_dict`/`summary_dict`/`detail_dict`/`metrics_dict`/`backtest_dict`) ont été extraits de `app/api/routes.py` vers `app/api/serializers.py` pendant ce chantier, pour que les routes HTTP et le canal de commandes construisent des payloads identiques sans que l'un importe l'autre -- pas un changement de comportement, juste où vivent ces fonctions.
+Les helpers de sérialisation (`pipeline_dict`/…) vivent dans `app/api/serializers.py` pour que HTTP et le canal partagent les mêmes payloads.
 
 ## Adapters contexte (V3, opt-in, livré 2026-09-16)
 

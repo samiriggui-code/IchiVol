@@ -25,7 +25,19 @@ def _require_points(raw: Any, n: int | None = None) -> tuple[ChartPoint, ...]:
     return tuple(points)
 
 
-def _parse_source(raw: Any) -> ChartObjectSource:
+def _parse_source(raw: Any, *, agent_forced_claude: bool = False) -> ChartObjectSource:
+    """Resolve persistable source.
+
+    Agent draw_* always persists as CLAUDE (``agent_forced_claude=True``).
+    USER is reserved for a future UI write path — not impersonable via agent.
+    """
+    if agent_forced_claude:
+        if raw not in (None, "", "claude", ChartObjectSource.CLAUDE):
+            raise ValueError(
+                "agent draw_* always uses source=claude "
+                "(USER overlays require a dedicated UI path)"
+            )
+        return ChartObjectSource.CLAUDE
     if raw is None or raw == "":
         return ChartObjectSource.CLAUDE
     try:
@@ -45,8 +57,16 @@ def _as_of_from_args(args: dict, points: tuple[ChartPoint, ...]) -> int:
     raise ValueError("as_of is required when points are empty")
 
 
-def build_from_draw_args(obj_type: ChartObjectType, args: dict) -> ChartObject:
-    """Validate agent args and return a ChartObject ready to persist."""
+def build_from_draw_args(
+    obj_type: ChartObjectType,
+    args: dict,
+    *,
+    agent_channel: bool = True,
+) -> ChartObject:
+    """Validate agent args and return a ChartObject ready to persist.
+
+    When ``agent_channel=True`` (default), source is forced to CLAUDE.
+    """
     symbol = str(args.get("symbol") or "").strip().upper()
     timeframe = str(args.get("timeframe") or "1h").strip()
     if not symbol:
@@ -54,7 +74,7 @@ def build_from_draw_args(obj_type: ChartObjectType, args: dict) -> ChartObject:
     if not timeframe:
         raise ValueError("timeframe is required")
 
-    source = _parse_source(args.get("source"))
+    source = _parse_source(args.get("source"), agent_forced_claude=agent_channel)
     label = args.get("label")
     side = args.get("side")
     subtype = args.get("subtype")

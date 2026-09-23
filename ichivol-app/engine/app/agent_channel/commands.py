@@ -549,11 +549,15 @@ def cmd_get_structure(args: dict) -> dict:
 
 
 def cmd_get_chart_objects(args: dict) -> dict:
-    """Same payload as GET /chart-objects/{symbol} (ENGINE + USER/CLAUDE store)."""
+    """Same payload as GET /chart-objects/{symbol} (ENGINE + USER/CLAUDE store).
+
+    Default sources match HTTP: ``engine`` only. Pass ``sources`` explicitly
+    to include persisted overlays (e.g. ``engine,user,claude``).
+    """
     symbol = _require_str(args, "symbol").upper()
     timeframe = args.get("timeframe", "1h")
     limit = int(args.get("limit", 300))
-    sources = args.get("sources", "engine,user,claude")
+    sources = args.get("sources", "engine")
     include_pytrendline = bool(args.get("include_pytrendline", False))
     try:
         return collect_chart_objects(
@@ -572,7 +576,8 @@ def cmd_get_chart_objects(args: dict) -> dict:
 def _draw_and_persist(obj_type_value: str, args: dict) -> dict:
     try:
         obj_type = ChartObjectType(obj_type_value)
-        obj = build_from_draw_args(obj_type, args)
+        # Agent channel always stamps source=claude (no USER impersonation).
+        obj = build_from_draw_args(obj_type, args, agent_channel=True)
     except ValueError as exc:
         raise CommandError(str(exc)) from exc
 
@@ -636,17 +641,21 @@ def cmd_draw_target(args: dict) -> dict:
 
 
 def cmd_delete_chart_object(args: dict) -> dict:
+    """Soft-delete a CLAUDE overlay. USER deletes are not allowed via agent."""
     object_id = _require_str(args, "id")
-    source = args.get("source")
-    if source is not None:
-        source = str(source).strip().lower()
+    # Agent may only delete its own overlays (source=claude).
+    source = "claude"
+    if args.get("source") not in (None, "", "claude"):
+        raise CommandError(
+            "agent delete_chart_object only deletes source=claude overlays"
+        )
     session = SessionLocal()
     try:
         deleted = soft_delete_chart_object(session, object_id, source=source)
         session.commit()
         if not deleted:
-            raise CommandError(f"not_found: chart object {object_id!r}")
-        return {"id": object_id, "deleted": True}
+            raise CommandError(f"not_found: chart object {object_id!r} (claude)")
+        return {"id": object_id, "deleted": True, "source": source}
     except CommandError:
         session.rollback()
         raise
