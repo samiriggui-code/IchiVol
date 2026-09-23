@@ -16,8 +16,119 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **Règle de merge** : avec la base, **0 échec** attendu (T0-CI #14 mergé). Tout échec bloque le merge.
 - **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
 - **T2a** : ChartObject — **mergé** (PR #15) — **validé par Claude**.
-- **T0-BROKER** : PR #16 (draft) — **CI Actions VERTE** (`5965b55`, run `35847816190`) ; **pas de merge avant revalidation Claude**.
-- **ATTENTE CLAUDE** : bilan Cursor (PRs #16 #17 #18 #19) — **ne pas merger** ; Claude donne la marche à suivre.
+- **T0-BROKER** : PR #16 — **MERGÉE** (validée Claude).
+- **T2b** : PR #17 — CI verte post-rebase `e9c7ad2` — **merge en cours**.
+- **T3** : PR #18 — validée Claude — merge après #17.
+- **T0-UI** : PR #19 (ex-« T4 UI ») — acceptée Claude — merge après #18.
+- **Prochain job** : T2c user trade points (après les 4 merges).
+
+---
+
+## 2026-09-23 — EN COURS — exécution marche à suivre Claude
+
+Claude a validé #16/#17/#18 et accepté #19 (renommée **T0-UI**, pas T4 roadmap).  
+Cursor exécute l’ordre de merge puis démarre **T2c**.
+
+### Ordre merges (un par un, rebase + CI verte)
+
+| # | PR | Statut Cursor |
+|---|-----|----------------|
+| 1 | [#16](https://github.com/samiriggui-code/IchiVol/pull/16) T0-BROKER | **MERGÉE** `2670f96` (2026-09-23T11:39Z) |
+| 2 | [#17](https://github.com/samiriggui-code/IchiVol/pull/17) T2b | merge main fait ; CI **VERTE** head `e9c7ad2` — **merge imminent** |
+| 3 | [#18](https://github.com/samiriggui-code/IchiVol/pull/18) T3 | en attente (après #17) |
+| 4 | [#19](https://github.com/samiriggui-code/IchiVol/pull/19) T0-UI | titre/handoff renommés T0-UI ; merge après #18 |
+
+### Checks faits sur #17 ⊕ main(#16)
+
+- `openapi_golden` / `route_order_golden` : auto-merge ; `route_order` contient toutes les routes main (56) — rien perdu
+- `alembic heads` : **une seule** tête `f6a7b8c9d0e1`
+- Handoff conflict résolu (sections T2b + broker conservées)
+
+### Après les 4 merges
+
+1. Handoff « 4 merges done » sur main
+2. Branche T2c `cursor/t2c-user-trade-points-a2fe` (Claude avait dit `v3/t2c-user-trade-points` — préfixe cloud `cursor/…-a2fe` ; noté ici si Claude préfère `v3/`)
+3. Job T2c : POST/DELETE chart-objects USER + mode « Marquer un trade » mobile
+
+### Règle rappelée
+
+Une sous-tranche à la fois ; draft → handoff → **attendre revue Claude** avant la suivante.
+
+---
+
+2026-09-23 — ATTENTE CLAUDE — bilan Cursor pendant ton absence
+
+**Cursor s’arrête ici.** Pas de nouveau code tant que Claude n’a pas revu et donné la marche à suivre.
+
+Contexte : Claude indisponible (restriction puis revue reportée). Cursor a continué seul sur des drafts. **Aucun merge** de ces PRs sans validation Claude.
+
+### File d’attente (drafts — à revoir)
+
+| PR | Sujet | Branche | Head | CI Actions |
+|----|--------|---------|------|------------|
+| [#16](https://github.com/samiriggui-code/IchiVol/pull/16) | T0-BROKER fidélité (reconcile, marks, financing) | `v3/t0-broker-fidelity` | `f904951` | VERTE [35849205949](https://github.com/samiriggui-code/IchiVol/actions/runs/35849205949) |
+| [#17](https://github.com/samiriggui-code/IchiVol/pull/17) | T2b agent draw_* + store USER/CLAUDE (+ passe 2 durcissement) | `cursor/t2b-agent-draw-a2fe` | `3ece878` | VERTE (voir entrée T2b) |
+| [#18](https://github.com/samiriggui-code/IchiVol/pull/18) | T3 DSL v3 slice 1+2 (`all`/`any` + `exit`) | `cursor/t3-dsl-v3-a2fe` | `8973a42` | VERTE [35852790018](https://github.com/samiriggui-code/IchiVol/actions/runs/35852790018) |
+| [#19](https://github.com/samiriggui-code/IchiVol/pull/19) | T4 UI Strategy Lab (rename + onglets DB) | `cursor/t4-strategy-lab-ui-a2fe` | `8eec800` | (voir check Actions sur la PR) |
+
+### Déjà sur `main` (validé avant / pendant)
+
+- T0-CI #14, T2a #15 — mergés, validés Claude.
+
+### Ce que Cursor a tranché seul (à confirmer ou corriger)
+
+1. **T3** : slices `all`/`any` + `exit` livrés ; **pas** de `risk{}` cosmétique ni MTF (FeatureBar mono-TF — trop gros). Suite T3 DSL = revue #18 puis décision Claude.
+2. **T4** démarré (UI) pendant que #16/#17/#18 attendent — orthogonal moteur. DB-first Compare/Regimes/Experiments ; Live = ancien recalcul.
+3. **T2b** : passe 2 après critique « trop rapide vs T1 » (force source=claude, points schema, front render, refresh chart).
+
+### Demandé à Claude
+
+1. Suite **Postgres complète** sur #16 et #17 (et #18/#19 si pertinent) — Cursor n’a pas de Postgres local.
+2. Revue des 4 drafts : merge / rebase / redo / kill.
+3. **Marche à suivre** pour Cursor (ordre des lots, quoi ne pas toucher).
+
+### Règle
+
+Cursor **attend** cette marche à suivre. Ne pas enchaîner un nouveau lot sans consignes Claude.
+
+---
+
+## 2026-09-23 — T2b correction Claude — grounding anti-hallucination
+
+- Branche : `cursor/t2b-agent-draw-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/17 (**draft**)
+- Commit(s) : 
+
+### Correctif demandé
+
+Avant persist agent `draw_*` : vérifier times/prices contre OHLCV réel (`resolve_and_fetch`).
+
+### Livré
+
+- `app/chart_objects/grounding.py` — `assert_object_grounded`
+  - time ∈ timestamps série, ou `[last, last+5 bars]` si `origin.projected`
+  - price ∈ `[min(low)*0.5, max(high)*1.5]` sur 300 dernières bougies
+  - `price_low` / `price_high` (ZONE) idem
+- `_draw_and_persist` appelle grounding → `CommandError("point_not_grounded: …")`
+- Tests : `test_grounding.py` (prix 100×, futur hors proj, zone OK, structure OK)
+
+### Validation locale
+
+```text
+pytest tests/chart_objects/ -q   # PASS
+```
+
+### CI Actions
+
+- **VERTE** (HEAD `9601274`) : https://github.com/samiriggui-code/IchiVol/actions/runs/35855150230
+  - `pytest (Postgres 16)` success
+  - `frontend (npm build)` success
+
+### Revue Claude
+
+**Revalidation demandée** avant merge.
+
+---
 
 ---
 
@@ -55,6 +166,71 @@ Contexte : Claude indisponible (restriction puis revue reportée). Cursor a cont
 ### Règle
 
 Cursor **attend** cette marche à suivre. Ne pas enchaîner un nouveau lot sans consignes Claude.
+
+---
+
+---
+
+## 2026-09-23 — T2b passe 2 — durcissement (suite critique pass 1 trop léger)
+
+- Branche : `cursor/t2b-agent-draw-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/17 (draft)
+- **Contexte** : le 1er push T2b (~10 min) livrait un squelette backend après T2a déjà mergé. Trop rapide vs découpage Claude sur T1 — **trous réels** (source=user impersonable, schema `points` = string[], front ne chargeait que `engine`, rendu sans horizontal/entry/stop, README stale).
+
+### Correctifs passe 2
+
+1. Agent `draw_*` **force `source=claude`** ; refuse `user` / `engine`
+2. `delete_chart_object` **claude-only** (ne touche pas USER)
+3. `get_chart_objects` défaut = HTTP (`engine`) — passer `user,claude` explicitement
+4. Copilot : `points` → `array<{time,price}>` (plus `string[]`)
+5. Front : `getChartObjects` défaut `engine,user,claude` ; PriceChart rend horizontal/entry/stop/target + ray/text
+6. Tests : isolation USER, merge HTTP, parity `get_structure`↔HTTP, trend_line points, schema TS
+7. `engine/README.md` section agent mise à jour (WRITE chart scopes)
+
+### CI / suite DB
+
+- CI Actions passe 1 : **VERTE** (`72ef89d`, run `35849205234`)
+- CI Actions passe 2 : **VERTE** (`c5767a7`, run `35850222353`) — `pytest` + `frontend` success
+- **Suite Postgres complète** : **Claude à ~13:10** (Cursor note ici, ne bloque pas sur ça)
+- Passe 2 suite : refresh Market chart après `draw_*` / `delete_chart_object` (event bus) — CI **VERTE** `2a6d8ed` https://github.com/samiriggui-code/IchiVol/actions/runs/35850595467
+- **Head PR #17** : `2a6d8ed` — prêt revue Claude (suite DB complète ~13:10)
+
+### Toujours hors scope / dette assumée
+
+- Multi-tenant `user_id` sur overlays (global symbol/tf) — dette connue, pas T2b
+- Rectangle/channel rendu générique riche — partiel
+- STRATEGY/BACKTEST store — T4
+- Suite DB paper/brokerage complète — **Claude 13:10**
+- Refresh Market après draw : **fait** (`chartObjectsEvents` bus) sur ce push
+
+---
+
+---
+
+## 2026-09-23 — T2b — Agent draw_* + get_structure + store USER/CLAUDE (passe 1)
+
+- Branche : `cursor/t2b-agent-draw-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/17 (draft) — **pas de merge avant revue Claude**
+- Base : `main` (post-#14+#15)
+- **Note auto-critique** : squelette trop mince — voir **passe 2** ci-dessus. T2a (#15) couvrait déjà modèle + GET + rendu Structure ; T2b = store + agent + fil Copilot, pas « tout T2 en 10 min ».
+
+### Livré (passe 1)
+
+1. **Persistance** `chart_object_overlays` (alembic `f6a7b8c9d0e1`) + store
+2. **Collect** merge ENGINE + store sur `GET /chart-objects`
+3. Agent : `get_structure`, `get_chart_objects`, `draw_*`, `delete_chart_object` + capabilities write chart
+4. Copilot allowlist chart write
+5. `structure/payload.py` partagé
+
+### Tests locaux (passe 1)
+
+- chart_objects + agent + OpenAPI + build : PASS ; CI verte ensuite
+
+### Hors scope
+
+- STRATEGY / BACKTEST (T4) ; VSB (T5) ; merge #16 ; T3+
+
+---
 
 ---
 

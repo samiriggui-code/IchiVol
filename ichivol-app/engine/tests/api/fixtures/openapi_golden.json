@@ -722,7 +722,7 @@
     },
     "/api/engine/agent/capabilities": {
       "get": {
-        "description": "Stub-level capabilities descriptor (per brief: \"stub OK\"). No WRITE\ntier in this pass -- paper trading stays reachable only through\n`POST /paper/positions` directly (app/paper/engine.py), never through\nthis command channel, until a WRITE allowlist is explicitly asked for.",
+        "description": "Capabilities descriptor. Chart-overlay WRITE (draw_*/delete_chart_object)\nis enabled (T2b). Paper trading stays off this channel \u2014 only via\n``POST /paper/positions`` (app/paper/engine.py).",
         "operationId": "get_agent_capabilities_api_engine_agent_capabilities_get",
         "responses": {
           "200": {
@@ -1101,7 +1101,7 @@
     },
     "/api/engine/chart-objects/{symbol}": {
       "get": {
-        "description": "Typed chart overlays derived from Market Structure (ENGINE source).\n\nNon-engine sources requested in ``sources`` return no objects (empty list\ncontribution) until T2b/T5 persistence lands. No real orders \u2014 analysis only.",
+        "description": "Typed chart overlays: ENGINE from structure; USER/CLAUDE from store (T2b).\n\nSTRATEGY / BACKTEST sources return empty until T4/T5. No real orders.",
         "operationId": "get_chart_objects_api_engine_chart_objects__symbol__get",
         "parameters": [
           {

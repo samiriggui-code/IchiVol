@@ -6,15 +6,13 @@ import time
 
 from fastapi import APIRouter, Header, HTTPException
 
-from app.api.common import _atr_params_override, _line_dict, _rvol_params_override, _zone_dict
+from app.api.common import _atr_params_override, _rvol_params_override
 from app.api.serializers import metrics_dict, summary_dict
 from app.config import settings
 from app.correlation.engine import compute_correlation_matrix
 from app.market_data import twelve_data
 from app.screener.cache import screener_cache
 from app.screener.service import scan_watchlist
-from app.structure.params import StructureEngineParams
-from app.structure.service import detect_market_structure
 from app.universe.catalog import UNIVERSE, default_watchlist
 from app.universe.types import AssetClass
 
@@ -100,72 +98,21 @@ def get_structure(
     ``include_pytrendline=true`` runs the capped offline detector (not for
     hot-path screener loops). No real orders — analysis only.
     """
-    from app.market_data.resolve import ProviderNotWiredError, resolve_and_fetch
+    from app.market_data.resolve import ProviderNotWiredError
+    from app.structure.payload import build_structure_payload
 
-    twelve_data.set_api_key_override(x_twelve_data_key)
     try:
-        provider, provider_symbol, candles = resolve_and_fetch(
-            symbol.upper(), timeframe, min(limit, 500)
+        return build_structure_payload(
+            symbol=symbol,
+            timeframe=timeframe,
+            limit=limit,
+            include_pytrendline=include_pytrendline,
+            x_twelve_data_key=x_twelve_data_key,
         )
     except ProviderNotWiredError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-
-    params = StructureEngineParams(window_bars=min(limit, 500))
-    snap = detect_market_structure(
-        candles, params, include_pytrendline=include_pytrendline
-    )
-    consensus = snap.consensus
-    window = list(candles[-params.window_bars :])
-    detectors: dict = {}
-    for name, ms in snap.by_detector.items():
-        # Bar indices on trendlines are relative to the detector's own window
-        # (e.g. pytrendline caps at pytrendline_max_bars), not the full
-        # structure window — slice so _line_dict maps times correctly.
-        bars = int(ms.meta.get("bars") or len(window))
-        det_series = window[-bars:]
-        detectors[name] = {
-            "structure_score": ms.structure_score,
-            "support_zones": [_zone_dict(z) for z in ms.support_zones],
-            "resistance_zones": [_zone_dict(z) for z in ms.resistance_zones],
-            "support_trendlines": [_line_dict(t, det_series) for t in ms.support_trendlines],
-            "resistance_trendlines": [
-                _line_dict(t, det_series) for t in ms.resistance_trendlines
-            ],
-            "pivot_count": len(ms.pivots),
-            "meta": ms.meta,
-        }
-    return {
-        "symbol": symbol.upper(),
-        "timeframe": timeframe,
-        "provider": provider.id,
-        "provider_symbol": provider_symbol,
-        "atr": snap.atr,
-        "last_close": snap.last_close,
-        "distance_to_support": snap.distance_to_support,
-        "distance_to_resistance": snap.distance_to_resistance,
-        "consensus": {
-            "structure_score": consensus.structure_score,
-            "support_zones": [_zone_dict(z) for z in consensus.support_zones],
-            "resistance_zones": [_zone_dict(z) for z in consensus.resistance_zones],
-            "meta": consensus.meta,
-        },
-        "detectors": detectors,
-        "breakout_candidates": [
-            {
-                "side": b.side.value,
-                "confirmed": b.confirmed,
-                "close": b.close,
-                "distance_atr": b.distance_atr,
-                "body_ratio": b.body_ratio,
-                "rvol": b.rvol,
-                "reason": b.reason,
-                "zone": _zone_dict(b.zone),
-            }
-            for b in snap.breakout_candidates
-        ],
-    }
 
 
 @router_screener.get("/screener")

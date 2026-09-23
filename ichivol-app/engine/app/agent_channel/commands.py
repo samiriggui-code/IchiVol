@@ -25,6 +25,11 @@ from typing import Callable
 
 from app.api.serializers import backtest_dict, detail_dict, metrics_dict, risk_dict, summary_dict
 from app.backtest import experiments
+from app.chart_objects.collect import collect_chart_objects
+from app.chart_objects.draw import build_from_draw_args
+from app.chart_objects.grounding import assert_object_grounded
+from app.chart_objects.store import soft_delete_chart_object, upsert_chart_object
+from app.chart_objects.types import ChartObjectType
 from app.context.calendar import fetch_calendar_events
 from app.context.news import fetch_news
 from app.correlation.engine import compute_correlation_matrix
@@ -32,7 +37,7 @@ from app.db.session import SessionLocal
 from app.indicators.atr import AtrParams
 from app.indicators.registry import REGISTRY
 from app.indicators.rvol import RvolParams
-from app.market_data.resolve import resolve_and_fetch
+from app.market_data.resolve import ProviderNotWiredError, resolve_and_fetch
 from app.screener.cache import screener_cache
 from app.screener.persistence import persist_scan
 from app.screener.service import scan_symbol
@@ -40,6 +45,7 @@ from app.strategy_lab.catalog import get_builtin_ruleset, list_builtin_rulesets
 from app.strategy_lab.event_study import event_study_dict, run_event_study
 from app.strategy_lab.ruleset import parse_ruleset
 from app.strategy_lab.run_ruleset import ruleset_study_dict, run_ruleset_event_study
+from app.structure.payload import build_structure_payload
 from app.universe.catalog import default_watchlist
 
 
@@ -522,6 +528,155 @@ def cmd_list_tools(_args: dict) -> dict:
     from app.agent_channel.registry import list_tool_specs
 
     return {"tools": list_tool_specs()}
+
+
+def cmd_get_structure(args: dict) -> dict:
+    """Same payload as GET /structure/{symbol} — analysis only, no draws."""
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = args.get("timeframe", "1h")
+    limit = int(args.get("limit", 300))
+    include_pytrendline = bool(args.get("include_pytrendline", False))
+    try:
+        return build_structure_payload(
+            symbol=symbol,
+            timeframe=timeframe,
+            limit=limit,
+            include_pytrendline=include_pytrendline,
+        )
+    except ProviderNotWiredError as exc:
+        raise CommandError(str(exc)) from exc
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+
+
+def cmd_get_chart_objects(args: dict) -> dict:
+    """Same payload as GET /chart-objects/{symbol} (ENGINE + USER/CLAUDE store).
+
+    Default sources match HTTP: ``engine`` only. Pass ``sources`` explicitly
+    to include persisted overlays (e.g. ``engine,user,claude``).
+    """
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = args.get("timeframe", "1h")
+    limit = int(args.get("limit", 300))
+    sources = args.get("sources", "engine")
+    include_pytrendline = bool(args.get("include_pytrendline", False))
+    try:
+        return collect_chart_objects(
+            symbol=symbol,
+            timeframe=timeframe,
+            limit=limit,
+            sources=sources,
+            include_pytrendline=include_pytrendline,
+        )
+    except ProviderNotWiredError as exc:
+        raise CommandError(str(exc)) from exc
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+
+
+def _draw_and_persist(obj_type_value: str, args: dict) -> dict:
+    try:
+        obj_type = ChartObjectType(obj_type_value)
+        # Agent channel always stamps source=claude (no USER impersonation).
+        obj = build_from_draw_args(obj_type, args, agent_channel=True)
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+
+    # Anti-hallucination: times/prices must sit on the real OHLCV series.
+    limit = int(args.get("limit") or 500)
+    if limit < 50 or limit > 5000:
+        limit = 500
+    try:
+        _provider, _psym, candles = resolve_and_fetch(obj.symbol, obj.timeframe, limit)
+        assert_object_grounded(obj, candles)
+    except ProviderNotWiredError as exc:
+        raise CommandError(str(exc)) from exc
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+
+    session = SessionLocal()
+    try:
+        saved = upsert_chart_object(session, obj)
+        session.commit()
+        return {"object": saved.to_dict(), "upserted": True}
+    except ValueError as exc:
+        session.rollback()
+        raise CommandError(str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        session.rollback()
+        raise CommandError(f"persist_failed: {exc}") from exc
+    finally:
+        session.close()
+
+
+def cmd_draw_horizontal_line(args: dict) -> dict:
+    return _draw_and_persist("horizontal_line", args)
+
+
+def cmd_draw_trend_line(args: dict) -> dict:
+    return _draw_and_persist("trend_line", args)
+
+
+def cmd_draw_ray(args: dict) -> dict:
+    return _draw_and_persist("ray", args)
+
+
+def cmd_draw_zone(args: dict) -> dict:
+    return _draw_and_persist("zone", args)
+
+
+def cmd_draw_rectangle(args: dict) -> dict:
+    return _draw_and_persist("rectangle", args)
+
+
+def cmd_draw_channel(args: dict) -> dict:
+    return _draw_and_persist("channel", args)
+
+
+def cmd_draw_marker(args: dict) -> dict:
+    return _draw_and_persist("marker", args)
+
+
+def cmd_draw_text(args: dict) -> dict:
+    return _draw_and_persist("text", args)
+
+
+def cmd_draw_entry(args: dict) -> dict:
+    return _draw_and_persist("entry", args)
+
+
+def cmd_draw_stop(args: dict) -> dict:
+    return _draw_and_persist("stop", args)
+
+
+def cmd_draw_target(args: dict) -> dict:
+    return _draw_and_persist("target", args)
+
+
+def cmd_delete_chart_object(args: dict) -> dict:
+    """Soft-delete a CLAUDE overlay. USER deletes are not allowed via agent."""
+    object_id = _require_str(args, "id")
+    # Agent may only delete its own overlays (source=claude).
+    source = "claude"
+    if args.get("source") not in (None, "", "claude"):
+        raise CommandError(
+            "agent delete_chart_object only deletes source=claude overlays"
+        )
+    session = SessionLocal()
+    try:
+        deleted = soft_delete_chart_object(session, object_id, source=source)
+        session.commit()
+        if not deleted:
+            raise CommandError(f"not_found: chart object {object_id!r} (claude)")
+        return {"id": object_id, "deleted": True, "source": source}
+    except CommandError:
+        session.rollback()
+        raise
+    except Exception as exc:  # noqa: BLE001
+        session.rollback()
+        raise CommandError(f"delete_failed: {exc}") from exc
+    finally:
+        session.close()
 
 
 Handler = Callable[[dict], dict]
