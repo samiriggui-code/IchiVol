@@ -22,7 +22,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `cursor/t0-ci-postgres-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/14 (draft) — **pas de merge avant revalidation Claude**
-- Commit(s) : *(à pinner après push)*
+- Commit(s) : `8306028` (isolation baseline + disposable opens + garde snapshots)
 
 ### Correctif
 
