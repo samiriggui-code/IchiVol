@@ -30,6 +30,7 @@ from app.agent_channel.commands import (
     cmd_get_calendar,
     cmd_get_chart_objects,
     cmd_get_correlations,
+    cmd_get_event_context,
     cmd_get_news,
     cmd_get_structure,
     cmd_get_symbol_context,
@@ -300,6 +301,19 @@ TOOLS: dict[str, ToolSpec] = {
             True,
             {"limit": "int, optionnel -- défaut tout"},
             cmd_get_calendar,
+        ),
+        ToolSpec(
+            "get_event_context",
+            "Event Intelligence PHASE 7 — anomalie + news/calendrier causals (EVENT≠SIGNAL). Pour Claude explainer.",
+            True,
+            {
+                "symbol": "str, requis",
+                "timeframe": "str, défaut '1h'",
+                "limit": "int, défaut 300",
+                "include_news": "bool, défaut true",
+                "include_macro": "bool, défaut true",
+            },
+            cmd_get_event_context,
         ),
         ToolSpec(
             "list_tools", "Liste ce même registre (identique à GET /agent/tools).", True, {}, cmd_list_tools,

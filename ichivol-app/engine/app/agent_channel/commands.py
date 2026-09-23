@@ -570,6 +570,42 @@ def cmd_get_calendar(args: dict) -> dict:
     }
 
 
+def cmd_get_event_context(args: dict) -> dict:
+    """Event Intelligence PHASE 7 — anomaly + causal news/calendar matches.
+
+    Read-only. Never votes BUY/SELL. Prefer calling this for Claude explain;
+    decision pipeline remains unchanged.
+    """
+    from app.events.anomaly import anomaly_observation_dict, detect_anomaly
+    from app.events.context import build_event_context
+    from app.events.correlate import event_context_dict
+
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = str(args.get("timeframe", "1h"))
+    limit = int(args.get("limit", 300))
+    try:
+        _prov, _sym, candles = resolve_and_fetch(symbol, timeframe, limit)
+    except (ValueError, ProviderNotWiredError) as exc:
+        raise CommandError(str(exc)) from exc
+
+    rvol_states = REGISTRY.compute("rvol", candles)
+    atr_states = REGISTRY.compute("atr", candles)
+    rvol_f = rvol_states[-1].rvol if rvol_states else None
+    atr_f = float(atr_states[-1].atr) if atr_states and atr_states[-1].atr else None
+
+    anomaly = detect_anomaly(
+        candles, symbol=symbol, timeframe=timeframe, rvol=rvol_f, atr=atr_f
+    )
+    include_news = bool(args.get("include_news", True))
+    include_macro = bool(args.get("include_macro", True))
+    bundle = build_event_context(
+        anomaly, include_news=include_news, include_macro=include_macro
+    )
+    payload = event_context_dict(bundle) or {}
+    payload["anomaly"] = anomaly_observation_dict(bundle.anomaly)
+    return payload
+
+
 def cmd_list_tools(_args: dict) -> dict:
     # Populated at module load time by registry.py (which imports this
     # module and appends `list_tools` itself once every spec is built) --

@@ -120,6 +120,16 @@ def detail_dict(row: ScreenerRow) -> dict:
     full_anomaly = anomaly_observation_dict(getattr(row, "market_anomaly", None))
     if full_anomaly is not None:
         body["market_anomaly"] = full_anomaly
+    from app.events.correlate import event_context_dict
+
+    ec = event_context_dict(getattr(row, "event_context", None))
+    if ec is not None:
+        # Detail: matches + disclaimer; anomaly already in market_anomaly.
+        body["event_context"] = {
+            "market_regime": ec["market_regime"],
+            "matches": ec["matches"],
+            "disclaimer": ec["disclaimer"],
+        }
     if row.context is not None:
         body["context"] = row.context.to_dict()
     if row.evidence is not None:
