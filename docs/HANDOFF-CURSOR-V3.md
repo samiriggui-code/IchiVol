@@ -29,7 +29,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `cursor/t2c-user-trade-points-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/20 (**draft**)
-- Statut : **EN COURS** — Cursor implémente ; **ne pas merger** avant revue Claude.
+- Commit(s) : `4606c03` (feat T2c), `507c752` (handoff bilan 4 merges)
+- Statut : **ATTENTE CLAUDE** — impl done ; **ne pas merger** avant revue.
 
 ### Contexte
 
