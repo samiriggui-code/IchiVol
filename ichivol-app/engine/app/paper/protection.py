@@ -19,6 +19,12 @@ Method (no look-ahead into the past of the position):
 Legacy positions (opened before monitoring existed) are NOT closed on the basis
 of a reconstruction: they get a watermark "from now" and any historical breach
 is only reported (see ``history_breach`` in the result).
+
+Trailing / breakeven (T0-MANAGE-b): opt-in via ``protection_trail`` on
+``entry_signal`` or portfolio ``strategy_profile``, ``user_confirmed`` only.
+Uses ``app.strategy_lab.stop_trail.update_trailing_stop`` (same math as Lab);
+check-then-ratchet per closed bar; watermark always advances on the trail path
+so past bars are never re-scored against a ratcheted stop.
 """
 
 from __future__ import annotations
@@ -32,10 +38,18 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.agents.types import Direction
 from app.brokerage.execution import resolve_bar_exit
-from app.db.models import PaperJournalEvent, PaperPosition
+from app.db.models import PaperJournalEvent, PaperPortfolio, PaperPosition
 from app.market_data.binance import BASE_URL
 from app.paper import broker as paper_broker
+from app.paper.protection_trail import (
+    TRAIL_EVENT,
+    PaperTrailConfig,
+    freeze_trail_anchor,
+    resolve_paper_trail,
+)
+from app.strategy_lab.stop_trail import update_trailing_stop
 from app.universe.catalog import get_instrument
 
 logger = logging.getLogger(__name__)
@@ -150,6 +164,159 @@ def find_first_breach(
     return ScanResult(None, checked, seen, expected)  # only advanced by bars actually seen: no data != no breach
 
 
+def _direction_enum(direction: str) -> Direction:
+    return Direction.LONG if direction.upper() == "LONG" else Direction.SHORT
+
+
+def find_breach_with_trail(
+    direction: str,
+    stop: float,
+    target: float,
+    *,
+    entry: float,
+    config: PaperTrailConfig,
+    symbol: str,
+    since_ms: int,
+    until_ms: int,
+    klines_fn: KlinesFn,
+    trades_fn: TradesFn | None,
+) -> tuple[ScanResult, float]:
+    """Bar-by-bar: check exit at current stop, then ratchet via ``stop_trail``.
+
+    Same no-lookahead contract as Lab: trail update runs after the bar's exit
+    check so the new stop applies from the next bar. Returns ``(scan, stop)``
+    where ``stop`` is the (possibly ratcheted) level after all clear bars.
+    """
+    dir_enum = _direction_enum(direction)
+    minute0 = since_ms - since_ms % MINUTE_MS
+    checked = since_ms
+    cur_stop = stop
+
+    if since_ms % MINUTE_MS:
+        entry_minute_end = minute0 + MINUTE_MS
+        if trades_fn is not None and entry_minute_end <= until_ms:
+            ticks = [
+                (t, p)
+                for t, p in trades_fn(symbol, since_ms, entry_minute_end)
+                if t >= since_ms
+            ]
+            b = _scan_ticks(direction, cur_stop, target, ticks)
+            if b:
+                return ScanResult(b, entry_minute_end), cur_stop
+            if ticks:
+                highs = max(p for _, p in ticks)
+                lows = min(p for _, p in ticks)
+                close = ticks[-1][1]
+                cur_stop = update_trailing_stop(
+                    dir_enum,
+                    cur_stop,
+                    entry=entry,
+                    initial_stop=config.initial_stop,
+                    high=highs,
+                    low=lows,
+                    close=close,
+                    atr=config.atr_ref,
+                    trail=config.trail,
+                    commission_bps=config.commission_bps,
+                    slippage_bps=config.slippage_bps,
+                )
+            checked = entry_minute_end
+        start = entry_minute_end
+    else:
+        start = minute0
+
+    end_closed = until_ms - until_ms % MINUTE_MS
+    if start >= end_closed:
+        return ScanResult(None, max(checked, min(start, end_closed))), cur_stop
+
+    rows = klines_fn(symbol, start, end_closed)
+    expected = (end_closed - start) // MINUTE_MS
+    seen = 0
+    for k in rows:
+        open_ms = int(k[0])
+        if open_ms < start or open_ms + MINUTE_MS > end_closed:
+            continue
+        seen += 1
+        o, h, l, c = float(k[1]), float(k[2]), float(k[3]), float(k[4])
+        r = resolve_bar_exit(direction, cur_stop, target, o, h, l)
+        checked = open_ms + MINUTE_MS
+        if r.reason is not None:
+            if "both inside bar" in r.note and trades_fn is not None:
+                ticks = list(trades_fn(symbol, open_ms, open_ms + MINUTE_MS))
+                b = _scan_ticks(direction, cur_stop, target, ticks)
+                if b:
+                    return (
+                        ScanResult(
+                            Breach(
+                                b.reason,
+                                b.price,
+                                b.time_ms,
+                                "tick",
+                                "both levels in one minute; order resolved from ticks",
+                            ),
+                            checked,
+                        ),
+                        cur_stop,
+                    )
+            reason = {
+                "target_hit": "take_profit_hit",
+                "target_gap": "take_profit_hit",
+            }.get(r.reason, r.reason)
+            return (
+                ScanResult(Breach(reason, float(r.price), open_ms, "1m", r.note), checked),
+                cur_stop,
+            )
+
+        cur_stop = update_trailing_stop(
+            dir_enum,
+            cur_stop,
+            entry=entry,
+            initial_stop=config.initial_stop,
+            high=h,
+            low=l,
+            close=c,
+            atr=config.atr_ref,
+            trail=config.trail,
+            commission_bps=config.commission_bps,
+            slippage_bps=config.slippage_bps,
+        )
+
+    return ScanResult(None, checked, seen, expected), cur_stop
+
+
+def _persist_trail_stop(
+    session: Session,
+    pos: PaperPosition,
+    old_stop: float,
+    new_stop: float,
+    *,
+    now: datetime,
+    through_ms: int,
+) -> None:
+    """Ratchet-only write: stop never moves against the position."""
+    long = pos.direction.upper() == "LONG"
+    if long and new_stop < old_stop:
+        return
+    if not long and new_stop > old_stop:
+        return
+    if new_stop == old_stop:
+        return
+    pos.stop_price = new_stop
+    session.add(
+        PaperJournalEvent(
+            portfolio_id=pos.portfolio_id,
+            position_id=pos.id,
+            event_type=TRAIL_EVENT,
+            payload={
+                "from": old_stop,
+                "to": new_stop,
+                "through_ms": through_ms,
+            },
+            created_at=now,
+        )
+    )
+
+
 # ── Binance data access ─────────────────────────────────────────────────────
 
 def binance_klines_1m(symbol: str, start_ms: int, end_ms: int) -> list[list[Any]]:
@@ -258,6 +425,7 @@ def _process_position(
     since_ms, legacy = _seed(session, pos)
     if since_ms is None:
         # Legacy lot, first sight: report what history says, never act on it; watermark = now.
+        # Trail is never applied to historical reconstruction (gate: no default on history).
         hist = find_first_breach(
             pos.direction, pos.stop_price, pos.take_profit_price, symbol=inst.provider_symbol,
             since_ms=_ms(pos.entry_time), until_ms=now_ms, klines_fn=klines_fn, trades_fn=trades_fn,
@@ -268,10 +436,32 @@ def _process_position(
             _write_check(session, pos, now_ms - now_ms % MINUTE_MS, True, now)
         return
 
-    scan = find_first_breach(
-        pos.direction, pos.stop_price, pos.take_profit_price, symbol=inst.provider_symbol,
-        since_ms=since_ms, until_ms=now_ms, klines_fn=klines_fn, trades_fn=trades_fn,
-    )
+    portfolio = session.get(PaperPortfolio, pos.portfolio_id)
+    trail_cfg = None if legacy else resolve_paper_trail(pos, portfolio)
+
+    if trail_cfg is not None:
+        if not dry_run:
+            freeze_trail_anchor(pos, trail_cfg)
+            trail_cfg = resolve_paper_trail(pos, portfolio) or trail_cfg
+        scan, new_stop = find_breach_with_trail(
+            pos.direction,
+            float(pos.stop_price),
+            float(pos.take_profit_price),
+            entry=float(pos.entry_price),
+            config=trail_cfg,
+            symbol=inst.provider_symbol,
+            since_ms=since_ms,
+            until_ms=now_ms,
+            klines_fn=klines_fn,
+            trades_fn=trades_fn,
+        )
+    else:
+        scan = find_first_breach(
+            pos.direction, pos.stop_price, pos.take_profit_price, symbol=inst.provider_symbol,
+            since_ms=since_ms, until_ms=now_ms, klines_fn=klines_fn, trades_fn=trades_fn,
+        )
+        new_stop = float(pos.stop_price)
+
     row["checked_through_ms"] = scan.checked_through_ms
 
     if scan.breach is None:
@@ -279,8 +469,18 @@ def _process_position(
             row["status"] = "no_data"  # provider returned no bar: watermark NOT advanced, position NOT declared safe
             return
         row["status"] = "ok"
-        if not dry_run and now_ms - since_ms >= CHECK_EVENT_EVERY_MS:
-            _write_check(session, pos, scan.checked_through_ms, legacy, now)
+        if trail_cfg is not None and new_stop != float(pos.stop_price):
+            old = float(pos.stop_price)
+            row["trail_stop"] = {"from": old, "to": new_stop}
+            if not dry_run:
+                _persist_trail_stop(
+                    session, pos, old, new_stop, now=now, through_ms=scan.checked_through_ms,
+                )
+        if not dry_run:
+            # Trail path always advances the watermark: never re-walk past bars
+            # against an already-ratcheted stop (would invent false stop hits).
+            if trail_cfg is not None or now_ms - since_ms >= CHECK_EVENT_EVERY_MS:
+                _write_check(session, pos, scan.checked_through_ms, legacy, now)
         return
 
     b = scan.breach

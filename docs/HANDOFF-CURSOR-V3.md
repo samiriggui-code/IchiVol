@@ -39,8 +39,33 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **UI Lab Research** #43 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres).
 - **T0-NOTIF** #44 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres).
 - **T0-MANAGE-a** #45 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres — diff réel + no-lookahead vérifié bar par bar).
-- **Job en cours** : **T0-MANAGE-b** — stop suiveur / breakeven **paper** (brancher sur `app/paper/protection.py`, après validation Lab). Voir découpage complet plus bas.
+- **Job en cours** : **T0-MANAGE-b** — stop suiveur / breakeven **paper** — PR draft (voir entrée ci-dessous). **Pas de merge / pas de T0-MANAGE-c** avant revue Claude.
 
+
+---
+
+## 2026-09-23 — T0-MANAGE-b EN COURS — trail / breakeven paper (protection)
+
+- Branche : `cursor/t0-manage-b-trail-paper-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/46 (**draft**)
+- Statut : **ATTENTE CLAUDE** — CI à confirmer ; **ne pas merger** ; **pas de T0-MANAGE-c**.
+
+### Livré
+
+1. `app/paper/protection_trail.py` — gate `user_confirmed` + `protection_trail` explicite (`entry_signal` > `strategy_profile`) ; `freeze_trail_anchor` pour figer `initial_stop` / ATR après le 1er cycle
+2. `app/paper/protection.py` — `find_breach_with_trail` : check exit puis `stop_trail.update_trailing_stop` (même chemin Lab) ; watermark toujours avancé sur le chemin trail (pas de re-scan des barres passées contre un stop déjà ratcheté) ; journal `PROTECTION_TRAIL_UPDATED` ; legacy / historique : jamais de trail sur reconstruction
+3. Tests `tests/paper/test_protection.py` — gate resolve ; BE next-bar only ; ratchet ATR ; cycle DB portfolio trail → BE puis close ; `auto_watchlist` ignore le trail portefeuille ; sans config = inchangé
+4. Assertions DB scopées par `position.id` (base locale non vierge avec lots ouverts type NDX)
+
+### Non-fait
+
+- Pas de prise de profit partielle (T0-MANAGE-c/d)
+- Pas de renforcement (T0-MANAGE-e/f)
+- Trail non activé par défaut ; pas d’UI dédiée
+
+### Tests locaux (Cursor)
+
+- `pytest tests/paper/test_protection.py tests/strategy_lab/test_t0_manage_a_trail.py` : 24/24 OK (venv engine)
 
 ---
 

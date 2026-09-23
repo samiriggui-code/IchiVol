@@ -4,18 +4,27 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 
+from app.agents.types import Direction
 from app.brokerage import persistence as ledger_db
 from app.db.models import (
     LedgerLeg, LedgerTransaction, PaperJournalEvent, PaperOrder, PaperPortfolio, PaperPosition,
 )
 from app.db.session import SessionLocal, engine
 from app.paper import broker
-from app.paper.protection import CHECK_EVENT, find_first_breach, run_protection_cycle
+from app.paper.protection import CHECK_EVENT, find_breach_with_trail, find_first_breach, run_protection_cycle
+from app.paper.protection_trail import (
+    TRAIL_EVENT,
+    TRAIL_KEY,
+    PaperTrailConfig,
+    resolve_paper_trail,
+)
+from app.strategy_lab.stop_trail import TrailSpec, breakeven_price
 
 M = 60_000
 T0 = int(datetime(2026, 9, 18, 20, 38, tzinfo=timezone.utc).timestamp() * 1000)
@@ -117,12 +126,13 @@ def test_monitored_user_confirmed_position_closed_at_breach_time_and_reconciles(
     k, t = _fetchers(bars)
     now = datetime.fromtimestamp((m1 + 5 * M) / 1000, timezone.utc)
     rep = run_protection_cycle(session, klines_fn=k, trades_fn=t, now=now)
-    assert [r["status"] for r in rep] == ["closed"]
+    by_id = {r["id"]: r for r in rep}
+    assert by_id[pos.id]["status"] == "closed"
     assert pos.status == "CLOSED" and pos.exit_reason == "take_profit_hit"
     assert int(pos.exit_time.timestamp() * 1000) == m1 + M  # timestamped at the breach, not at run time
     assert ledger_db.is_reconciled(session, p)
-    # idempotent: a second run has nothing to do
-    assert run_protection_cycle(session, klines_fn=k, trades_fn=t, now=now) == []
+    # idempotent: a second run has nothing to do for this lot
+    assert pos.id not in {r["id"] for r in run_protection_cycle(session, klines_fn=k, trades_fn=t, now=now)}
 
 
 @pytest.mark.skipif(not DB, reason="Postgres not reachable")
@@ -141,11 +151,13 @@ def test_legacy_position_is_never_closed_from_history_but_breach_is_reported(ses
     now = datetime.fromtimestamp((m1 + 5 * M) / 1000, timezone.utc)
 
     dry = run_protection_cycle(session, klines_fn=k, trades_fn=t, now=now, dry_run=True)
-    assert dry[0]["status"] == "legacy_watermark_initialised" and dry[0]["history_breach"]["reason"] == "take_profit_hit"
+    dry_row = next(r for r in dry if r["id"] == pos.id)
+    assert dry_row["status"] == "legacy_watermark_initialised" and dry_row["history_breach"]["reason"] == "take_profit_hit"
     assert session.query(PaperJournalEvent).filter_by(position_id=pos.id, event_type=CHECK_EVENT).count() == 0  # dry run wrote nothing
 
     live = run_protection_cycle(session, klines_fn=k, trades_fn=t, now=now)
-    assert live[0]["status"] == "legacy_watermark_initialised"
+    live_row = next(r for r in live if r["id"] == pos.id)
+    assert live_row["status"] == "legacy_watermark_initialised"
     assert pos.status == "OPEN"  # history is reported, never acted on
     assert session.query(PaperJournalEvent).filter_by(position_id=pos.id, event_type=CHECK_EVENT).count() == 1
 
@@ -153,11 +165,11 @@ def test_legacy_position_is_never_closed_from_history_but_breach_is_reported(ses
     bars2 = [kline(int(now.timestamp() * 1000) - int(now.timestamp() * 1000) % M + 2 * M, 80000, 80100, 78900, 79000)]
     k2, t2 = _fetchers(bars2)
     later = datetime.fromtimestamp(now.timestamp() + 10 * 60, timezone.utc)
-    r2 = run_protection_cycle(session, klines_fn=k2, trades_fn=t2, now=later)
+    r2 = next(r for r in run_protection_cycle(session, klines_fn=k2, trades_fn=t2, now=later) if r["id"] == pos.id)
     # legacy lots are report-only by default: a later breach is reported, never enforced
-    assert r2[0]["status"] == "legacy_report_only" and r2[0]["breach"]["reason"] == "stop_hit" and pos.status == "OPEN"
-    r3 = run_protection_cycle(session, klines_fn=k2, trades_fn=t2, now=later, enforce_legacy=True)
-    assert r3[0]["status"] == "closed" and pos.exit_reason == "stop_hit"
+    assert r2["status"] == "legacy_report_only" and r2["breach"]["reason"] == "stop_hit" and pos.status == "OPEN"
+    r3 = next(r for r in run_protection_cycle(session, klines_fn=k2, trades_fn=t2, now=later, enforce_legacy=True) if r["id"] == pos.id)
+    assert r3["status"] == "closed" and pos.exit_reason == "stop_hit"
 
 
 def _open_sym(s, symbol):
@@ -181,8 +193,8 @@ def test_one_failing_symbol_does_not_abort_or_roll_back_the_others(session):
         return [x for x in ok_bars if a <= x[0] < b]
 
     now = datetime.fromtimestamp((m1 + 5 * M) / 1000, timezone.utc)
-    rep = {r["symbol"] if "symbol" in r else r["id"]: r for r in run_protection_cycle(session, klines_fn=klines, trades_fn=lambda *a: [], now=now)}
-    statuses = sorted(r["status"] for r in rep.values())
+    rep = {r["id"]: r for r in run_protection_cycle(session, klines_fn=klines, trades_fn=lambda *a: [], now=now)}
+    statuses = sorted(rep[pid]["status"] for pid in (btc.id, eth.id))
     assert statuses == ["closed", "error"], statuses
     session.expire_all()
     assert session.get(PaperPosition, eth.id).status == "CLOSED"  # committed despite the other failure
@@ -195,8 +207,8 @@ def test_no_data_is_not_declared_safe_and_watermark_does_not_advance(session):
     session.commit()
     entry_ms = int(pos.entry_time.timestamp() * 1000)
     now = datetime.fromtimestamp((entry_ms + 30 * 60_000) / 1000, timezone.utc)
-    rep = run_protection_cycle(session, klines_fn=lambda *a: [], trades_fn=lambda *a: [], now=now)
-    assert rep[0]["status"] == "no_data"
+    rep = next(r for r in run_protection_cycle(session, klines_fn=lambda *a: [], trades_fn=lambda *a: [], now=now) if r["id"] == pos.id)
+    assert rep["status"] == "no_data"
     assert session.query(PaperJournalEvent).filter_by(position_id=pos.id, event_type=CHECK_EVENT).count() == 0
 
 
@@ -225,3 +237,199 @@ def test_concurrent_close_of_the_same_position_credits_cash_once(session):
         assert s2.query(PaperOrder).filter_by(position_id=pid, side="SELL").count() == 1
     finally:
         s2.close()
+
+
+# ── T0-MANAGE-b — trailing / breakeven (opt-in, user_confirmed) ─────────────
+
+
+def _trail_scan(klines, *, entry, stop, target, config, since, until, ticks=None):
+    k = lambda s, a, b: [x for x in klines if a <= x[0] < b]
+    t = (lambda s, a, b: [(ts, p) for ts, p in (ticks or []) if a <= ts < b]) if ticks is not None else (lambda *a: [])
+    return find_breach_with_trail(
+        "LONG", stop, target, entry=entry, config=config, symbol="X",
+        since_ms=since, until_ms=until, klines_fn=k, trades_fn=t,
+    )
+
+
+def test_resolve_paper_trail_gates_user_confirmed_and_explicit_config():
+    cfg_raw = {"breakeven_at_r": 1.0, "initial_stop": 79000.0, "atr_ref": 1000.0}
+    pos = SimpleNamespace(
+        source="user_confirmed",
+        entry_price=80000.0,
+        stop_price=79000.0,
+        entry_signal={TRAIL_KEY: cfg_raw},
+    )
+    assert resolve_paper_trail(pos, None) is not None
+
+    auto = SimpleNamespace(
+        source="auto_watchlist",
+        entry_price=80000.0,
+        stop_price=79000.0,
+        entry_signal={TRAIL_KEY: cfg_raw},
+    )
+    assert resolve_paper_trail(auto, None) is None
+
+    bare = SimpleNamespace(
+        source="user_confirmed",
+        entry_price=80000.0,
+        stop_price=79000.0,
+        entry_signal={},
+    )
+    assert resolve_paper_trail(bare, SimpleNamespace(strategy_profile={})) is None
+
+    from_pf = SimpleNamespace(
+        source="user_confirmed",
+        entry_price=80000.0,
+        stop_price=79000.0,
+        entry_signal={},
+    )
+    pf = SimpleNamespace(strategy_profile={TRAIL_KEY: {"breakeven_at_r": 1.0}})
+    got = resolve_paper_trail(from_pf, pf)
+    assert got is not None and got.trail.breakeven_at_r == 1.0
+
+
+def test_find_breach_with_trail_arms_breakeven_next_bar_only():
+    """1R on bar N arms BE after checks; same-bar dip to BE does not exit; next bar does."""
+    entry, stop, target = 80000.0, 79000.0, 85000.0
+    be = breakeven_price(Direction.LONG, entry, commission_bps=5.0, slippage_bps=3.0)
+    cfg = PaperTrailConfig(
+        trail=TrailSpec(breakeven_at_r=1.0),
+        initial_stop=stop,
+        atr_ref=1000.0,
+        commission_bps=5.0,
+        slippage_bps=3.0,
+    )
+    since = T0 + M
+    # Bar1: exactly 1R high, low dips through BE — must NOT close at BE same bar
+    # Bar2: low through BE → stop at BE
+    kl = [
+        kline(since, 80000, 81000, be - 50, 80900),
+        kline(since + M, 80900, 80950, be - 10, 80200),
+    ]
+    scan, final_stop = _trail_scan(
+        kl, entry=entry, stop=stop, target=target, config=cfg,
+        since=since, until=since + 3 * M,
+    )
+    assert scan.breach is not None
+    assert scan.breach.reason == "stop_hit"
+    assert scan.breach.time_ms == since + M
+    assert scan.breach.price == pytest.approx(be)
+    assert final_stop == pytest.approx(be)
+
+    # Without trail the second-bar low never hits the initial stop
+    plain = find_first_breach(
+        "LONG", stop, target, symbol="X", since_ms=since, until_ms=since + 3 * M,
+        klines_fn=lambda s, a, b: [x for x in kl if a <= x[0] < b],
+        trades_fn=lambda *a: [],
+    )
+    assert plain.breach is None
+
+
+def test_find_breach_with_trail_never_relaxes_stop():
+    entry, stop, target = 80000.0, 79000.0, 85000.0
+    cfg = PaperTrailConfig(
+        trail=TrailSpec(atr_trail_mult=1.0),
+        initial_stop=stop,
+        atr_ref=1000.0,
+        commission_bps=5.0,
+        slippage_bps=3.0,
+    )
+    since = T0 + M
+    # Bar1 close 82000 → trail candidate 81000; bar2 close 80500 → candidate 79500 but ratchet keeps 81000
+    kl = [
+        kline(since, 80000, 82100, 79900, 82000),
+        kline(since + M, 82000, 82100, 80400, 80500),
+        kline(since + 2 * M, 80500, 80600, 80950, 80980),  # low 80950 < 81000 → stop
+    ]
+    scan, final_stop = _trail_scan(
+        kl, entry=entry, stop=stop, target=target, config=cfg,
+        since=since, until=since + 4 * M,
+    )
+    assert scan.breach is not None
+    assert scan.breach.reason == "stop_hit"
+    assert scan.breach.price == pytest.approx(81000.0)
+    assert final_stop == pytest.approx(81000.0)
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_user_confirmed_portfolio_trail_ratchets_then_closes_at_breakeven(session):
+    p = session.info["p"]
+    p.strategy_profile = {
+        **p.strategy_profile,
+        TRAIL_KEY: {"breakeven_at_r": 1.0, "commission_bps": 5.0, "slippage_bps": 3.0},
+    }
+    session.flush()
+    pos = _open(session, source="user_confirmed")
+    entry = float(pos.entry_price)
+    stop0 = float(pos.stop_price)
+    risk = entry - stop0
+    be = breakeven_price(Direction.LONG, entry, commission_bps=5.0, slippage_bps=3.0)
+    entry_ms = int(pos.entry_time.timestamp() * 1000)
+    m1 = entry_ms - entry_ms % M + M
+
+    # Cycle 1: +1R bar arms BE and persists stop (watermark advanced)
+    bars1 = [kline(m1, entry, entry + risk, entry - 50, entry + risk * 0.9)]
+    k1, t1 = _fetchers(bars1)
+    now1 = datetime.fromtimestamp((m1 + 2 * M) / 1000, timezone.utc)
+    rep1 = next(r for r in run_protection_cycle(session, klines_fn=k1, trades_fn=t1, now=now1) if r["id"] == pos.id)
+    assert rep1["status"] == "ok"
+    assert rep1["trail_stop"]["to"] == pytest.approx(be)
+    assert float(pos.stop_price) == pytest.approx(be)
+    assert session.query(PaperJournalEvent).filter_by(position_id=pos.id, event_type=TRAIL_EVENT).count() == 1
+    assert (pos.entry_signal or {}).get(TRAIL_KEY, {}).get("initial_stop") == pytest.approx(stop0)
+
+    # Cycle 2: dip through BE → close at BE (no re-walk of bar1 against new stop)
+    bars2 = [kline(m1 + M, entry + risk * 0.9, entry + risk * 0.95, be - 20, be + 10)]
+    k2, t2 = _fetchers(bars2)
+    now2 = datetime.fromtimestamp((m1 + 5 * M) / 1000, timezone.utc)
+    rep2 = next(r for r in run_protection_cycle(session, klines_fn=k2, trades_fn=t2, now=now2) if r["id"] == pos.id)
+    assert rep2["status"] == "closed"
+    assert pos.status == "CLOSED" and pos.exit_reason == "stop_hit"
+    assert rep2["breach"]["price"] == pytest.approx(be)
+    # exit_price includes paper exit friction on top of the trigger level
+    assert float(pos.exit_price) < be
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_auto_watchlist_ignores_portfolio_trail(session):
+    p = session.info["p"]
+    p.strategy_profile = {
+        **p.strategy_profile,
+        TRAIL_KEY: {"breakeven_at_r": 1.0},
+    }
+    session.flush()
+    pos = _open(session, source="auto_watchlist")
+    entry = float(pos.entry_price)
+    stop0 = float(pos.stop_price)
+    risk = entry - stop0
+    be = breakeven_price(Direction.LONG, entry, commission_bps=5.0, slippage_bps=3.0)
+    entry_ms = int(pos.entry_time.timestamp() * 1000)
+    m1 = entry_ms - entry_ms % M + M
+    bars = [
+        kline(m1, entry, entry + risk, entry - 50, entry + risk * 0.9),
+        kline(m1 + M, entry + risk * 0.9, entry + risk * 0.95, be - 20, be + 10),
+    ]
+    k, t = _fetchers(bars)
+    now = datetime.fromtimestamp((m1 + 5 * M) / 1000, timezone.utc)
+    rep = next(r for r in run_protection_cycle(session, klines_fn=k, trades_fn=t, now=now) if r["id"] == pos.id)
+    assert rep["status"] == "ok"
+    assert pos.status == "OPEN"
+    assert float(pos.stop_price) == pytest.approx(stop0)
+    assert session.query(PaperJournalEvent).filter_by(position_id=pos.id, event_type=TRAIL_EVENT).count() == 0
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_user_confirmed_without_trail_config_unchanged(session):
+    pos = _open(session, source="user_confirmed")
+    stop0 = float(pos.stop_price)
+    entry = float(pos.entry_price)
+    risk = entry - stop0
+    entry_ms = int(pos.entry_time.timestamp() * 1000)
+    m1 = entry_ms - entry_ms % M + M
+    bars = [kline(m1, entry, entry + risk, entry - 50, entry + 100)]
+    k, t = _fetchers(bars)
+    now = datetime.fromtimestamp((m1 + 5 * M) / 1000, timezone.utc)
+    rep = next(r for r in run_protection_cycle(session, klines_fn=k, trades_fn=t, now=now) if r["id"] == pos.id)
+    assert rep["status"] == "ok"
+    assert float(pos.stop_price) == pytest.approx(stop0)
+    assert "trail_stop" not in rep
