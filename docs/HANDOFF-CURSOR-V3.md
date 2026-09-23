@@ -11,7 +11,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `v3/t1b-front-engine-indicators`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/7 (prête — hors draft, en attente revalidation Claude)
-- Commit(s) : `25e2249` (code initial) ; handoff `417da25`… ; corrections revue Claude (warmup projection + chikou + REGISTRY params) sur ce push
+- Commit(s) : `25e2249` (code initial) ; handoff `417da25`… ; corrections revue Claude `30991c7`
 
 - Livré :
   - `docs/HANDOFF-CURSOR-V3.md` — canal handoff V3 (entrée T1 + T1b)
