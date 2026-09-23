@@ -25,16 +25,16 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T4a** #22 — **MERGÉE** — **validé par Claude** (overlay + correction net).
 - **T0-METRICS** #23 — **MERGÉE** — **validé par Claude** (stats nettes ; `cost_log` / `net_v1`).
 - **T0-METRICS-2** #24 — **MERGÉE** — **validé par Claude** (`eod_return` ; lookahead strict).
-- **Job en cours** : **T0-CALC** — scénarios historiques (fiche d’achat + positions ouvertes) — branche `cursor/t0-calc-scenarios-a2fe`.
+- **Job en cours** : **T0-CALC** — scénarios historiques — PR #25 **ATTENTE Claude** (CI verte).
 
 
 ---
 
-## 2026-09-23 — T0-CALC EN COURS — calculateur de scénarios
+## 2026-09-23 — T0-CALC — ATTENTE Claude (#25)
 
 - Branche : `cursor/t0-calc-scenarios-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/25 (**draft**)
-- Statut : **ATTENTE CI** puis **ATTENTE Claude**.
+- Statut : **ATTENTE Claude** — CI **VERTE** (pytest Postgres + frontend npm build) ; ne pas merger avant revue.
 
 ### Livré
 
