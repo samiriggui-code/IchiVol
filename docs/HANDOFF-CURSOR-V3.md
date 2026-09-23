@@ -30,11 +30,24 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `cursor/t3c-condition-registry-a2fe` (Claude : `v3/t3c-condition-registry` — préfixe cloud `cursor/…-a2fe`)
 - PR : (draft — lien dès ouverture)
-- Statut : **EN COURS** — fixtures golden **avant** refactor d’abord ; **ne pas merger** avant revue Claude.
+- Commit(s) : `0545826` (fixtures **avant** refactor) ; (refactor à suivre)
+- Statut : **EN COURS** / **ATTENTE CLAUDE** après CI ; **ne pas merger** avant revue.
 
 ### Objectif
 
 Une condition DSL = une déclaration (`ConditionSpec`) ; `CONDITION_SCHEMA` et `_condition_holds` dérivés du registre.
+
+### Livré
+
+1. Fixtures pré-refactor : `condition_schema_golden.json`, `condition_eval_golden.json` + tests égalité stricte
+2. `app/strategy_lab/conditions.py` — `ConditionSpec` + `CONDITION_REGISTRY` (copie exacte des expressions `_condition_holds`)
+3. `CONDITION_SCHEMA` / `CONDITION_ENUMS` dérivés ; evaluator dispatch via registre ; cliquet AST `key == "…"`
+4. Contrats : indicator_id ∈ REGISTRY ∪ {structure,derived} ; pas de doublons ; test « une déclaration »
+5. `ruleset_backtest_golden` **inchangé** ; OpenAPI **inchangé**
+
+### Note validation `allowed_values`
+
+`CONDITION_ENUMS` **existait déjà** avant T3c (même valeurs). Déplacé sur `ConditionSpec.allowed_values` → dérivation. **Aucun builtin ne viole** les enums (re-parse catalog OK). Pas de correction catalog.
 
 ### Arbitrages T3 (Claude — à respecter)
 
