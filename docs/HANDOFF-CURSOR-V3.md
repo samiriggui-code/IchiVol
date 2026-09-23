@@ -23,8 +23,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T1g — Découpage de `api/routes.py` (zéro changement de comportement)
 
 - Branche : `v3/t1g-split-routes`
-- PR : *(draft — lien à compléter)* — **pas de merge avant revue Claude**
-- Commit(s) : `d58adca` (golden OpenAPI + ordre des routes **avant** refactor) ; *(split à compléter)*
+- PR : https://github.com/samiriggui-code/IchiVol/pull/13 (draft) — **pas de merge avant revue Claude**
+- Commit(s) : `d58adca` (golden OpenAPI + ordre des routes **avant** refactor) ; `67ae482` (découpage)
 
 - Livré :
   - Modules domaine : `market.py`, `context.py`, `decisions.py`, `backtest.py`, `rulesets.py`, `strategy_lab.py` + `strategy_lab_wf.py`, `paper.py` + `paper_orders.py`, `agent.py`, `common.py`
