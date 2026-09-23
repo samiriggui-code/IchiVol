@@ -187,23 +187,24 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
 ## 2026-09-23 — T0-BROKER — Fidélité paper broker (marks / liquidation / financing / reconcile)
 
 - Branche : `v3/t0-broker-fidelity`
-- PR : **draft à ouvrir** — **pas de merge avant revue Claude**
-- Commit(s) : `ec845bf` (engine + front Synthèse + tests + golden reconcile)
+- PR : draft (ce push) — **pas de merge avant revue Claude** ; parallèle aux PR #14 (T0-CI) et #15 (T2a)
+- **Annule et remplace** le brief T0-UI : journal d’ordres + P&L réalisé déjà sur Synthèse — **non refaits**.
+- Commit(s) : `ec845bf` (engine + front + tests + golden) ; `b8fa72a` (handoff) ; mark age UI (ce commit)
 
 - Livré :
   - Engine : `marks.py`, `liquidation.py`, `financing.py`, `reconcile.py` ; overview avec `liquidation_value` / marks stale ; `GET /paper/portfolios/{code}/reconcile`
   - Financing overnight CFD branché sur le moniteur de protection ; réalisé de clôture déduit le financement déjà payé
-  - Front Synthèse : Equity + valeur de clôture, badge « Comptabilité : OK / N anomalies », frais de détention dans CostsPanel
-  - Tests : `tests/paper/test_broker_fidelity.py` (portefeuilles jetables uniquement)
+  - Front Synthèse : Equity + valeur de clôture, badge « Comptabilité : OK / N anomalies », âge du mark, frais de détention dans CostsPanel
+  - Tests : `tests/paper/test_broker_fidelity.py` (portefeuilles jetables `FID_*` uniquement — **jamais** baseline)
   - Golden OpenAPI / route order : **ajout seul** de `/paper/portfolios/{code}/reconcile` (+ docstring overview)
 
 - **Financing** :
-  - Activation : **2026-09-23** (UTC, inclusive) — **pas de rétroactif** avant cette date (`FINANCING_ACTIVATED_ON`)
+  - Activation : **2026-09-23** (UTC, inclusive) — **pas de rétroactif** avant cette date (`FINANCING_ACTIVATED_ON`) ; baseline historique non recalculée
   - ASSUMPTION : **0.5 bps/jour** CFD (`FINANCING_BPS_PER_DAY_CFD_ASSUMED`) ; crypto spot = 0
   - Idempotence : clé ledger `financing:{position_id}:{YYYY-MM-DD}`
 
 - Tests (Cursor, Postgres dispo) : `test_broker_fidelity` **5 passed** ; `test_api_surface_golden` **2 passed** ; `npm run build` **OK**
-- Non fait : merge ; T0-CI (branche parallèle) ; ne pas toucher `/workspace` t0-ci / t2a
+- Non fait : merge ; revalidation Claude de #14 / #15 / cette PR avant T2b
 
 ---
 
