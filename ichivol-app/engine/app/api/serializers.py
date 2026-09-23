@@ -54,7 +54,9 @@ def risk_dict(row: ScreenerRow) -> dict | None:
 
 
 def summary_dict(row: ScreenerRow) -> dict:
-    return {
+    from app.events.anomaly import anomaly_observation_dict
+
+    body = {
         "symbol": row.symbol,
         "timeframe": row.timeframe,
         "price": row.price,
@@ -67,9 +69,22 @@ def summary_dict(row: ScreenerRow) -> dict:
         "pipeline": pipeline_dict(row),
         "risk": risk_dict(row),
     }
+    # Additive observation — never alters decision/confidence.
+    anomaly = anomaly_observation_dict(getattr(row, "market_anomaly", None))
+    if anomaly is not None:
+        body["market_anomaly"] = {
+            "event_suspected": anomaly["event_suspected"],
+            "event_type": anomaly["event_type"],
+            "market_regime": anomaly["market_regime"],
+            "confidence": anomaly["confidence"],
+            "feature_version": anomaly["feature_version"],
+        }
+    return body
 
 
 def detail_dict(row: ScreenerRow) -> dict:
+    from app.events.anomaly import anomaly_observation_dict
+
     body = {
         **summary_dict(row),
         "reasons": row.decision.reasons,
@@ -102,6 +117,9 @@ def detail_dict(row: ScreenerRow) -> dict:
             ),
         },
     }
+    full_anomaly = anomaly_observation_dict(getattr(row, "market_anomaly", None))
+    if full_anomaly is not None:
+        body["market_anomaly"] = full_anomaly
     if row.context is not None:
         body["context"] = row.context.to_dict()
     if row.evidence is not None:
