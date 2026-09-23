@@ -14,14 +14,15 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - **1 skip** réseau Binance
   - **Aucune régression V3** (même compte avant/après)
 - **Règle de merge** : avec la base, tout échec **hors** de ces 13 = régression → **bloque le merge**.
-- **T0-CI** : greening + correctif isolation baseline (entrée ci-dessous) — **pas de merge avant revalidation Claude**.
+- **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
+- **T2a** : ChartObject — **à merger** (PR #15) après rebase sur main post-#14 — **validé par Claude**.
 
 ---
 
 ## 2026-09-23 — T0-CI — isolation baseline (revue Claude PR #14)
 
 - Branche : `cursor/t0-ci-postgres-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/14 (draft) — **pas de merge avant revalidation Claude**
+- PR : https://github.com/samiriggui-code/IchiVol/pull/14 (**mergée**) — **validé par Claude**
 - Commit(s) : `8306028` (isolation baseline + disposable opens + garde snapshots)
 
 ### Correctif
@@ -43,16 +44,16 @@ Les helpers `_heal_baseline_if_halted` / `_restore_baseline` ne remettent **plus
   - `pytest (Postgres 16)` success
   - `frontend (npm build)` success
 
-### Attente
+### Revue Claude
 
-Claude revalide avec sa base (historique paper intact).
+Historique baseline injecté puis `tests/paper` + `tests/api` : historique survit, cash inchangé, **0 échec** sur base vierge → **merge**.
 
 ---
 
 ## 2026-09-23 — T0-CI greening — rewrite 13 paper/API tests + honest 422 + frontend job
 
 - Branche : `cursor/t0-ci-postgres-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/14 (draft) — **pas de merge avant revue Claude**
+- PR : https://github.com/samiriggui-code/IchiVol/pull/14 (**mergée**) — **validé par Claude**
 - Commit(s) : `28929be` (13 tests + honest 422 + frontend job), `b1e5773` (baseline heal), `8aa8f9e` (handoff SHAs)
 - **CI Actions VERTE** : https://github.com/samiriggui-code/IchiVol/actions/runs/35841290882
   - `pytest (Postgres 16)` success
@@ -81,7 +82,7 @@ Claude revalide avec sa base (historique paper intact).
 ## 2026-09-23 — T0-CI — Postgres Actions + diagnostic des 13 paper failures
 
 - Branche : `cursor/t0-ci-postgres-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/14 (draft) — **pas de merge avant revue Claude**
+- PR : https://github.com/samiriggui-code/IchiVol/pull/14 (**mergée**) — **validé par Claude**
 - Commit(s) : `c7f13b9` (workflow + diagnostic handoff)
 
 ### Livré
@@ -156,11 +157,11 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
 ## 2026-09-23 — T2a — ChartObject (typed overlays from engine)
 
 - Branche : `v3/t2a-chart-objects`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/15 (draft) — **pas de merge avant revue Claude**
+- PR : https://github.com/samiriggui-code/IchiVol/pull/15 — **validé par Claude** (merge après rebase sur main post-#14)
 - Commit(s) : `3672f5d` (feat) ; `a41ef76` / `ad3f9a3` / `6b96c94` / `b9a9dd0` (handoff) ; `428c1f9` (fix detector window bars)
-- Base : `main` @ `a19f924` (après merge PR #13 T1g — **validé / mergé**)
+- Base : `main` après merge PR #14 (T0-CI)
 
-- **Fix (pytrendline bar indices)** : `start_bar`/`end_bar` sont relatifs à la fenêtre du détecteur (`meta["bars"]`, pytrendline cap 150), pas à `window_bars` (300). `_line_dict` dans `get_structure` et `_line_endpoints` dans `from_structure` utilisent désormais `window[-bars:]` / `candles[-bars:]` par détecteur. Sans pytrendline, `bars == window_bars` → réponse `/structure` inchangée.
+- **Fix (pytrendline bar indices)** : `start_bar`/`end_bar` sont relatifs à la fenêtre du détecteur (`meta["bars"]`, pytrendline cap 150), pas à `window_bars` (300). `_line_dict` dans `get_structure` et `_line_endpoints` dans `from_structure` utilisent désormais `window[-bars:]` / `candles[-bars:]` par détecteur. Sans pytrendline, `bars == window_bars` → réponse `/structure` inchangée. **Revue Claude** : décalage corrigé dans ChartObjects et `/structure`, vérifié sur la reproduction ; aucun golden existant modifié.
 
 - Livré :
   - Modèle `app/chart_objects/types.py` — `ChartObject` frozen, id déterministe (sha256[:24] de type/source/symbol/tf/coords arrondis/subtype), validation par type, `to_dict`/`from_dict`
