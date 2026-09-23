@@ -157,7 +157,7 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
 
 - Branche : `v3/t2a-chart-objects`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/15 (draft) — **pas de merge avant revue Claude**
-- Commit(s) : `3672f5d` (feat) ; `a41ef76` / `ad3f9a3` / `6b96c94` / `b9a9dd0` (handoff) ; **fix window offset** (à venir / ce commit)
+- Commit(s) : `3672f5d` (feat) ; `a41ef76` / `ad3f9a3` / `6b96c94` / `b9a9dd0` (handoff) ; `428c1f9` (fix detector window bars)
 - Base : `main` @ `a19f924` (après merge PR #13 T1g — **validé / mergé**)
 
 - **Fix (pytrendline bar indices)** : `start_bar`/`end_bar` sont relatifs à la fenêtre du détecteur (`meta["bars"]`, pytrendline cap 150), pas à `window_bars` (300). `_line_dict` dans `get_structure` et `_line_endpoints` dans `from_structure` utilisent désormais `window[-bars:]` / `candles[-bars:]` par détecteur. Sans pytrendline, `bars == window_bars` → réponse `/structure` inchangée.
