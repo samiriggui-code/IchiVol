@@ -10,7 +10,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — T1d — Chemin live via le REGISTRY
 
 - Branche : `v3/t1d-live-path-registry`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/9 (draft)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/9 (mergée) — **validé par Claude**
 - Commit(s) : `89caa75` (fixtures golden **avant** refactor) ; `51b0edf` (migration + ratchet)
 
 - Livré :
@@ -32,13 +32,12 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - Gate : un seul `compute_many` des indicateurs demandés par le profil.
   - Signatures publiques / seuils inchangés.
 
-- Doutes / points à vérifier par Claude :
-  - Screener a aussi migré cvd/adx/donchian (nécessité cliquet) — OK vs brief qui ne citait que structure/atr/location ?
+- Doutes / points à vérifier par Claude : aucun restant — **validé par Claude** (cvd/adx/donchian screener OK).
 
 - Non fait / reste à faire :
-  - T1e : api/routes, agent_channel, backtest/experiments, strategy_lab/regime, synthetic/validation, structure/atr_utils
-  - CONDITION_SCHEMA, structure unifiée
-  - **Ne pas merger** avant revue Claude.
+  - T1e : modules restants + cliquet vide.
+  - CONDITION_SCHEMA, structure unifiée.
+  - Mergé dans `main` après validation Claude.
 
 ---
 
