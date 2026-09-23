@@ -41,9 +41,38 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-MANAGE-a** #45 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres — diff réel + no-lookahead vérifié bar par bar).
 - **T0-MANAGE-b** #46 — **MERGÉE** (validé par Claude — watermark, gate legacy/auto et isolation des tests vérifiés ; 2 réserves non bloquantes notées).
 - **T0-MANAGE-c** #47 — **MERGÉE** (validé par Claude — invariant 1e-9 revérifié indépendamment ; **résidu de Jensen mesuré et non borné, voir entrée dédiée**).
-- **Job en cours** : **T0-MANAGE-d** — prise de profit partielle **paper**. Voir découpage détaillé plus bas.
+- **Job en cours** : **T0-MANAGE-d** — prise de profit partielle **paper** — PR draft (voir entrée ci-dessous). **Pas de merge / pas de T0-MANAGE-e** avant revue Claude.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol² (jusqu'à ~2,2 % par trade à 10 % de volatilité). **Ne pas comparer un ruleset avec partiels à un ruleset sans partiels sur le drawdown** avant correction — le total de performance, lui, est exact.
 
+
+---
+
+## 2026-09-23 — T0-MANAGE-d EN COURS — partial TP paper
+
+- Branche : `cursor/t0-manage-d-partial-tp-paper-a2fe`
+- PR : *(à compléter après `gh pr create --draft`)*
+- Statut : **ATTENTE CLAUDE** — CI à confirmer ; **ne pas merger** ; **pas de T0-MANAGE-e**.
+
+### Livré
+
+1. Table `paper_partial_exits` (alembic `b8c9d0e1f2a3`, `time_ms` BIGINT) + modèle `PaperPartialExit`
+2. `broker.partial_close_capital_position` — qty/notional/entry_fee shrink ; `realized_pnl` cumule ; OPEN tant que qty > 0 ; refuse qty > remaining ; ledger `partial:{id}:{seq}`
+3. `close_capital_position` — ajoute le PnL du reliquat au réalisé déjà cumulé (ne l’écrase plus)
+4. `protection_partial_tp.py` — gate `user_confirmed` + `protection_partial_tp` ; réutilise `partial_tp.py` (niveaux / MFE)
+5. `protection.find_breach_manage` — priorité **stop > partials > target > trail** ; watermark avancé sur chemin partial
+6. API `partial_exits` sur les positions ; UI fiche (`PaperTradeSheet` étape 3b)
+7. Tests protection : gate, scale-out puis close reliquat, qty jamais négative, auto ignore ; assertions par `position.id`
+
+### Non-fait
+
+- Renforcement (T0-MANAGE-e/f) ; dette Jensen Lab
+
+### Tests locaux (Cursor)
+
+```text
+pytest tests/paper/test_protection.py -q
+# 20 passed
+```
 
 ---
 

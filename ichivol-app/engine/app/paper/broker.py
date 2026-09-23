@@ -14,6 +14,7 @@ from app.db.models import (
     PaperEquitySnapshot,
     PaperJournalEvent,
     PaperOrder,
+    PaperPartialExit,
     PaperPortfolio,
     PaperPosition,
 )
@@ -354,17 +355,21 @@ def close_capital_position(
         from app.paper.financing import financing_total_for_position
 
         financing_paid = financing_total_for_position(session, position.id)
+        prior_realized = float(position.realized_pnl or 0.0)
         if position.direction == "LONG":
             proceeds = position.qty * exit_fill
-            realized = proceeds - exit_fee - entry_notional - (position.entry_fee or 0.0) - financing_paid
+            slice_realized = (
+                proceeds - exit_fee - entry_notional - (position.entry_fee or 0.0) - financing_paid
+            )
             portfolio.cash += proceeds - exit_fee
         else:
             # Correct SHORT return (entry − exit) / entry — NOT entry/exit − 1.
             pnl_currency = short_realized_currency(position.qty, position.entry_price, exit_fill)
-            realized = pnl_currency - exit_fee - financing_paid
+            slice_realized = pnl_currency - exit_fee - financing_paid
             # Return reserved short margin + PnL (financing already left cash day by day)
             portfolio.cash += entry_notional + pnl_currency - exit_fee
-        portfolio.realized_pnl += realized
+        realized = prior_realized + slice_realized
+        portfolio.realized_pnl += slice_realized
         portfolio.updated_at = now
         cash_delta = portfolio.cash - cash_before
         ledger_db.guarded(
@@ -413,13 +418,15 @@ def close_capital_position(
     position.exit_price = exit_fill
     position.exit_reason = reason
     position.exit_signal = signal
-    position.exit_fee = exit_fee
-    position.realized_pnl = realized
+    position.exit_fee = (position.exit_fee or 0.0) + exit_fee
+    position.realized_pnl = realized if realized is not None else position.realized_pnl
     position.pnl_pct = (
         (exit_fill / position.entry_price) - 1.0
         if position.direction == "LONG"
         else short_pnl_pct(position.entry_price, exit_fill)
     )
+    position.qty = 0.0
+    position.notional = 0.0
     position.updated_at = now
 
     if portfolio is not None:
@@ -432,12 +439,231 @@ def close_capital_position(
                 "reason": reason,
                 "exit": exit_fill,
                 "pnl_pct": position.pnl_pct,
-                "realized_pnl": realized,
+                "realized_pnl": position.realized_pnl,
                 "fee": _fee_meta(profile) | {"amount": exit_fee},
                 "execution": close_exec,
             },
         )
     return position
+
+
+def partial_close_capital_position(
+    session: Session,
+    position: PaperPosition,
+    *,
+    price: float,
+    qty: float,
+    fraction: float,
+    r_multiple: float,
+    reason: str = "partial_tp",
+    signal: dict[str, Any] | None = None,
+    at: datetime | None = None,
+    time_ms: int | None = None,
+) -> PaperPartialExit | None:
+    """Scale out ``qty`` (must be > 0 and ≤ remaining). Position stays OPEN if qty remains.
+
+    Returns the journal row, or None if the lot was already closed / qty invalid.
+    Never drives ``position.qty`` negative.
+    """
+    if position.status != "OPEN":
+        return None
+    if not math.isfinite(float(price)) or not math.isfinite(float(qty)):
+        raise ValueError(f"non-finite partial price/qty: {price!r} {qty!r}")
+    remaining = float(position.qty or 0.0)
+    if qty <= 0 or remaining <= 0:
+        return None
+    if qty > remaining + 1e-12:
+        raise ValueError(
+            f"partial qty {qty} exceeds remaining {remaining} on {position.id}"
+        )
+    qty = min(qty, remaining)
+
+    portfolio = session.get(PaperPortfolio, position.portfolio_id) if position.portfolio_id else None
+    if portfolio is None:
+        return None
+    _lock_portfolio(session, portfolio)
+    bind = session.get_bind()
+    if bind is not None and bind.dialect.name == "postgresql":
+        session.refresh(position)
+        if position.status != "OPEN":
+            return None
+        remaining = float(position.qty or 0.0)
+        if qty > remaining + 1e-12:
+            return None
+        qty = min(qty, remaining)
+
+    profile = _profile(portfolio)
+    now = at or datetime.now(timezone.utc)
+    ts_ms = time_ms if time_ms is not None else int(now.timestamp() * 1000)
+
+    existing = list(
+        session.execute(
+            select(PaperPartialExit)
+            .where(PaperPartialExit.position_id == position.id)
+            .order_by(PaperPartialExit.seq)
+        ).scalars()
+    )
+    seq = (existing[-1].seq + 1) if existing else 1
+    key = f"partial:{position.id}:{seq}"
+
+    # Idempotent replay
+    prior = session.execute(
+        select(PaperPartialExit).where(
+            PaperPartialExit.portfolio_id == portfolio.id,
+            PaperPartialExit.key == key,
+        )
+    ).scalar_one_or_none()
+    if prior is not None:
+        return prior
+
+    spread_bps, slip_bps = _friction(profile, position.symbol)
+    exit_fill = apply_exit_friction(
+        price,
+        direction=position.direction,
+        spread_bps=spread_bps,
+        slippage_bps=slip_bps,
+    )
+    exit_fee = _commission(profile, qty * exit_fill, qty, position.symbol)
+
+    share = qty / remaining
+    entry_notional_share = float(position.notional or 0.0) * share
+    entry_fee_share = float(position.entry_fee or 0.0) * share
+
+    cash_before = portfolio.cash
+    if position.direction == "LONG":
+        proceeds = qty * exit_fill
+        slice_realized = proceeds - exit_fee - entry_notional_share - entry_fee_share
+        portfolio.cash += proceeds - exit_fee
+    else:
+        pnl_currency = short_realized_currency(qty, position.entry_price, exit_fill)
+        slice_realized = pnl_currency - exit_fee
+        portfolio.cash += entry_notional_share + pnl_currency - exit_fee
+
+    portfolio.realized_pnl += slice_realized
+    portfolio.updated_at = now
+    cash_delta = portfolio.cash - cash_before
+
+    ledger_db.guarded(
+        session,
+        portfolio.id,
+        position.id,
+        "partial",
+        lambda: ledger_db.post(
+            session,
+            portfolio.id,
+            key,
+            now,
+            [
+                Leg(
+                    portfolio.currency,
+                    ledger_db.to_decimal(cash_delta + exit_fee),
+                    Cause.EXECUTION,
+                    f"partial {position.symbol} @ {r_multiple}R",
+                ),
+                Leg(
+                    portfolio.currency,
+                    -ledger_db.to_decimal(exit_fee),
+                    Cause.COMMISSION,
+                    "partial exit commission",
+                ),
+            ],
+            ref=position.id,
+        ),
+    )
+
+    session.add(
+        PaperOrder(
+            portfolio_id=portfolio.id,
+            position_id=position.id,
+            symbol=position.symbol,
+            timeframe=position.timeframe,
+            side="SELL" if position.direction == "LONG" else "BUY",
+            order_type="LIMIT",
+            requested_price=price,
+            filled_price=exit_fill,
+            qty=qty,
+            notional=qty * exit_fill,
+            fee=exit_fee,
+            spread_bps=spread_bps,
+            slippage_bps=slip_bps,
+            status="FILLED",
+            reason=reason,
+            created_at=now,
+        )
+    )
+
+    row = PaperPartialExit(
+        portfolio_id=portfolio.id,
+        position_id=position.id,
+        seq=seq,
+        key=key,
+        r_multiple=float(r_multiple),
+        fraction=float(fraction),
+        qty=qty,
+        price=exit_fill,
+        fee=exit_fee,
+        realized_pnl=slice_realized,
+        time_ms=ts_ms,
+        created_at=now,
+    )
+    session.add(row)
+
+    new_qty = remaining - qty
+    if new_qty < 0:
+        new_qty = 0.0
+    position.qty = new_qty
+    position.notional = float(position.notional or 0.0) * (1.0 - share)
+    position.entry_fee = float(position.entry_fee or 0.0) * (1.0 - share)
+    position.realized_pnl = float(position.realized_pnl or 0.0) + slice_realized
+    position.exit_fee = float(position.exit_fee or 0.0) + exit_fee
+    position.updated_at = now
+
+    _journal(
+        session,
+        portfolio_id=portfolio.id,
+        position_id=position.id,
+        event_type="PARTIAL_TP",
+        payload={
+            "seq": seq,
+            "r_multiple": r_multiple,
+            "fraction": fraction,
+            "qty": qty,
+            "price": exit_fill,
+            "realized_pnl": slice_realized,
+            "remaining_qty": new_qty,
+            "signal": signal,
+        },
+    )
+
+    if new_qty <= 1e-12:
+        # Exact scale-out of remainder via partial steps — finalize as CLOSED.
+        position.qty = 0.0
+        position.notional = 0.0
+        position.status = "CLOSED"
+        position.exit_time = now
+        position.exit_price = exit_fill
+        position.exit_reason = reason
+        position.exit_signal = signal
+        position.pnl_pct = (
+            (exit_fill / position.entry_price) - 1.0
+            if position.direction == "LONG"
+            else short_pnl_pct(position.entry_price, exit_fill)
+        )
+        _journal(
+            session,
+            portfolio_id=portfolio.id,
+            position_id=position.id,
+            event_type="CLOSED",
+            payload={
+                "reason": reason,
+                "exit": exit_fill,
+                "pnl_pct": position.pnl_pct,
+                "realized_pnl": position.realized_pnl,
+                "via": "partial_exhausted",
+            },
+        )
+
+    return row
 
 
 def check_stop_or_tp(position: PaperPosition, price: float) -> str | None:

@@ -15,8 +15,10 @@ from app.api.common import (
     _rvol_params_override,
 )
 from app.config import settings
+from app.db.models import PaperPartialExit
 from app.db.session import SessionLocal
 from app.paper import engine as paper_engine
+from sqlalchemy import select
 from app.paper.costs import compute_costs
 from app.paper.performance import compute_performance, compute_portfolio_performance
 from app.paper.portfolio import (
@@ -28,6 +30,20 @@ from app.paper.portfolio import (
 )
 from app.paper.strategy_profiles import ALL_PROFILES, BASELINE_CODE
 from app.paper.verdict import compute_progress
+
+
+def _partials_by_position(session, position_ids: list[str]) -> dict[str, list]:
+    if not position_ids:
+        return {}
+    rows = session.execute(
+        select(PaperPartialExit)
+        .where(PaperPartialExit.position_id.in_(position_ids))
+        .order_by(PaperPartialExit.position_id, PaperPartialExit.seq)
+    ).scalars()
+    out: dict[str, list] = {}
+    for e in rows:
+        out.setdefault(e.position_id, []).append(e)
+    return out
 from app.screener.cache import screener_cache
 from app.screener.service import scan_symbol
 
@@ -44,7 +60,12 @@ def list_paper_positions(
     session = SessionLocal()
     try:
         positions = paper_engine.list_positions(session, source=source, user_id=user_id, status=status)
-        return {"positions": [_paper_position_dict(p) for p in positions]}
+        by = _partials_by_position(session, [p.id for p in positions])
+        return {
+            "positions": [
+                _paper_position_dict(p, partial_exits=by.get(p.id, [])) for p in positions
+            ]
+        }
     finally:
         session.close()
 
@@ -134,8 +155,9 @@ def get_paper_portfolio_overview(code: str) -> dict:
         incomplete_open = 0
         stale_open = 0
         mark_px: dict[str, float] = {}
+        by_partial = _partials_by_position(session, [p.id for p in positions])
         for p in positions:
-            d = _paper_position_dict(p)
+            d = _paper_position_dict(p, partial_exits=by_partial.get(p.id, []))
             d["current_price"] = None
             d["unrealized_pnl"] = None
             d["unrealized_pct"] = None

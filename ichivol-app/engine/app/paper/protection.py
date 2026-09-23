@@ -40,15 +40,26 @@ from sqlalchemy.orm import Session
 
 from app.agents.types import Direction
 from app.brokerage.execution import resolve_bar_exit
-from app.db.models import PaperJournalEvent, PaperPortfolio, PaperPosition
+from app.db.models import PaperJournalEvent, PaperPartialExit, PaperPortfolio, PaperPosition
 from app.market_data.binance import BASE_URL
 from app.paper import broker as paper_broker
+from app.paper.protection_partial_tp import (
+    PaperPartialTpConfig,
+    bar_hits_step,
+    fired_r_multiples,
+    freeze_partial_tp_anchor,
+    level_for_step,
+    pending_steps,
+    qty_for_step,
+    resolve_paper_partial_tp,
+)
 from app.paper.protection_trail import (
     TRAIL_EVENT,
     PaperTrailConfig,
     freeze_trail_anchor,
     resolve_paper_trail,
 )
+from app.strategy_lab.partial_tp import PartialTpStep
 from app.strategy_lab.stop_trail import update_trailing_stop
 from app.universe.catalog import get_instrument
 
@@ -162,6 +173,186 @@ def find_first_breach(
         reason = {"target_hit": "take_profit_hit", "target_gap": "take_profit_hit"}.get(r.reason, r.reason)
         return ScanResult(Breach(reason, float(r.price), open_ms, "1m", r.note), checked)
     return ScanResult(None, checked, seen, expected)  # only advanced by bars actually seen: no data != no breach
+
+
+@dataclass(frozen=True)
+class PendingPartial:
+    time_ms: int
+    price: float
+    step: PartialTpStep
+
+
+@dataclass(frozen=True)
+class ManageScanResult:
+    breach: Breach | None
+    checked_through_ms: int
+    new_stop: float
+    bars_seen: int = 0
+    bars_expected: int = 0
+    partials: tuple[PendingPartial, ...] = ()
+
+
+def _hit_stop_only(direction: str, stop: float, high: float, low: float) -> bool:
+    long = direction.upper() == "LONG"
+    return (low <= stop) if long else (high >= stop)
+
+
+def _hit_target_only(direction: str, target: float, high: float, low: float) -> bool:
+    long = direction.upper() == "LONG"
+    return (high >= target) if long else (low <= target)
+
+
+def find_breach_manage(
+    direction: str,
+    stop: float,
+    target: float,
+    *,
+    entry: float,
+    trail_cfg: PaperTrailConfig | None,
+    partial_cfg: PaperPartialTpConfig | None,
+    pending: Sequence[PartialTpStep],
+    symbol: str,
+    since_ms: int,
+    until_ms: int,
+    klines_fn: KlinesFn,
+    trades_fn: TradesFn | None,
+) -> ManageScanResult:
+    """Bar-by-bar: stop > partials (asc R) > target > trail update.
+
+    Same no-lookahead contract as Lab / trail path.
+    """
+    dir_enum = _direction_enum(direction)
+    minute0 = since_ms - since_ms % MINUTE_MS
+    checked = since_ms
+    cur_stop = stop
+    remaining_steps = list(pending)
+    found_partials: list[PendingPartial] = []
+
+    if since_ms % MINUTE_MS:
+        entry_minute_end = minute0 + MINUTE_MS
+        start = entry_minute_end
+        if trades_fn is not None and entry_minute_end <= until_ms:
+            ticks = [
+                (t, p)
+                for t, p in trades_fn(symbol, since_ms, entry_minute_end)
+                if t >= since_ms
+            ]
+            # Ticks: stop only (conservative); no partial from incomplete minute mix.
+            b = _scan_ticks(direction, cur_stop, target, ticks)
+            if b and b.reason.startswith("stop"):
+                return ManageScanResult(b, entry_minute_end, cur_stop)
+            checked = entry_minute_end
+            if ticks and trail_cfg is not None:
+                highs = max(p for _, p in ticks)
+                lows = min(p for _, p in ticks)
+                close = ticks[-1][1]
+                cur_stop = update_trailing_stop(
+                    dir_enum,
+                    cur_stop,
+                    entry=entry,
+                    initial_stop=trail_cfg.initial_stop,
+                    high=highs,
+                    low=lows,
+                    close=close,
+                    atr=trail_cfg.atr_ref,
+                    trail=trail_cfg.trail,
+                    commission_bps=trail_cfg.commission_bps,
+                    slippage_bps=trail_cfg.slippage_bps,
+                )
+    else:
+        start = minute0
+
+    end_closed = until_ms - until_ms % MINUTE_MS
+    if start >= end_closed:
+        return ManageScanResult(
+            None,
+            max(checked, min(start, end_closed)),
+            cur_stop,
+            partials=tuple(found_partials),
+        )
+
+    rows = klines_fn(symbol, start, end_closed)
+    expected = (end_closed - start) // MINUTE_MS
+    seen = 0
+    for k in rows:
+        open_ms = int(k[0])
+        if open_ms < start or open_ms + MINUTE_MS > end_closed:
+            continue
+        seen += 1
+        o, h, l, c = float(k[1]), float(k[2]), float(k[3]), float(k[4])
+        checked = open_ms + MINUTE_MS
+
+        # 1) Stop first
+        if _hit_stop_only(direction, cur_stop, h, l):
+            gapped = (o < cur_stop) if direction.upper() == "LONG" else (o > cur_stop)
+            reason = "stop_gap" if gapped else "stop_hit"
+            price = float(o) if gapped else float(cur_stop)
+            return ManageScanResult(
+                Breach(reason, price, open_ms, "1m", ""),
+                checked,
+                cur_stop,
+                seen,
+                expected,
+                tuple(found_partials),
+            )
+
+        # 2) Partials ascending R
+        while remaining_steps and partial_cfg is not None:
+            step = remaining_steps[0]
+            if not bar_hits_step(direction, entry, partial_cfg, step, h, l):
+                break
+            level = level_for_step(direction, entry, partial_cfg, step)
+            found_partials.append(PendingPartial(open_ms, level, step))
+            remaining_steps.pop(0)
+
+        # If all scale-outs fired, no target left to chase this cycle
+        if partial_cfg is not None and not remaining_steps and found_partials:
+            # May still have remainder qty if sum(fractions) < 1 — fall through to target
+            pass
+
+        # 3) Target on remainder
+        if _hit_target_only(direction, target, h, l):
+            gapped = (o > target) if direction.upper() == "LONG" else (o < target)
+            reason = "take_profit_hit"
+            price = float(o) if gapped else float(target)
+            return ManageScanResult(
+                Breach(reason, price, open_ms, "1m", "target_gap" if gapped else ""),
+                checked,
+                cur_stop,
+                seen,
+                expected,
+                tuple(found_partials),
+            )
+
+        # 4) Trail after checks
+        if trail_cfg is not None:
+            cur_stop = update_trailing_stop(
+                dir_enum,
+                cur_stop,
+                entry=entry,
+                initial_stop=trail_cfg.initial_stop,
+                high=h,
+                low=l,
+                close=c,
+                atr=trail_cfg.atr_ref,
+                trail=trail_cfg.trail,
+                commission_bps=trail_cfg.commission_bps,
+                slippage_bps=trail_cfg.slippage_bps,
+            )
+
+    return ManageScanResult(
+        None, checked, cur_stop, seen, expected, tuple(found_partials)
+    )
+
+
+def _load_partial_exits(session: Session, position_id: str) -> list[PaperPartialExit]:
+    return list(
+        session.execute(
+            select(PaperPartialExit)
+            .where(PaperPartialExit.position_id == position_id)
+            .order_by(PaperPartialExit.seq)
+        ).scalars()
+    )
 
 
 def _direction_enum(direction: str) -> Direction:
@@ -438,11 +629,47 @@ def _process_position(
 
     portfolio = session.get(PaperPortfolio, pos.portfolio_id)
     trail_cfg = None if legacy else resolve_paper_trail(pos, portfolio)
+    partial_cfg = None if legacy else resolve_paper_partial_tp(pos, portfolio)
 
-    if trail_cfg is not None:
-        if not dry_run:
-            freeze_trail_anchor(pos, trail_cfg)
-            trail_cfg = resolve_paper_trail(pos, portfolio) or trail_cfg
+    if trail_cfg is not None and not dry_run:
+        freeze_trail_anchor(pos, trail_cfg)
+        trail_cfg = resolve_paper_trail(pos, portfolio) or trail_cfg
+    if partial_cfg is not None and not dry_run:
+        freeze_partial_tp_anchor(pos, partial_cfg)
+        partial_cfg = resolve_paper_partial_tp(pos, portfolio) or partial_cfg
+
+    use_manage = partial_cfg is not None
+    manage: ManageScanResult | None = None
+    scan: ScanResult | None = None
+    new_stop = float(pos.stop_price)
+    scan_breach: Breach | None
+    bars_seen = 0
+    bars_expected = 0
+    checked_through = since_ms
+
+    if use_manage:
+        existing = _load_partial_exits(session, pos.id)
+        pending = pending_steps(partial_cfg, fired_r_multiples(existing))
+        manage = find_breach_manage(
+            pos.direction,
+            float(pos.stop_price),
+            float(pos.take_profit_price),
+            entry=float(pos.entry_price),
+            trail_cfg=trail_cfg,
+            partial_cfg=partial_cfg,
+            pending=pending,
+            symbol=inst.provider_symbol,
+            since_ms=since_ms,
+            until_ms=now_ms,
+            klines_fn=klines_fn,
+            trades_fn=trades_fn,
+        )
+        new_stop = manage.new_stop
+        row["checked_through_ms"] = manage.checked_through_ms
+        scan_breach = manage.breach
+        bars_seen, bars_expected = manage.bars_seen, manage.bars_expected
+        checked_through = manage.checked_through_ms
+    elif trail_cfg is not None:
         scan, new_stop = find_breach_with_trail(
             pos.direction,
             float(pos.stop_price),
@@ -455,43 +682,103 @@ def _process_position(
             klines_fn=klines_fn,
             trades_fn=trades_fn,
         )
+        row["checked_through_ms"] = scan.checked_through_ms
+        scan_breach = scan.breach
+        bars_seen, bars_expected = scan.bars_seen, scan.bars_expected
+        checked_through = scan.checked_through_ms
     else:
         scan = find_first_breach(
             pos.direction, pos.stop_price, pos.take_profit_price, symbol=inst.provider_symbol,
             since_ms=since_ms, until_ms=now_ms, klines_fn=klines_fn, trades_fn=trades_fn,
         )
-        new_stop = float(pos.stop_price)
+        row["checked_through_ms"] = scan.checked_through_ms
+        scan_breach = scan.breach
+        bars_seen, bars_expected = scan.bars_seen, scan.bars_expected
+        checked_through = scan.checked_through_ms
 
-    row["checked_through_ms"] = scan.checked_through_ms
+    # Apply newly discovered partials (before any full close).
+    applied_partials = 0
+    if manage is not None and manage.partials and partial_cfg is not None:
+        row["partials"] = [
+            {
+                "r_multiple": p.step.r_multiple,
+                "fraction": p.step.fraction,
+                "price": p.price,
+                "at_ms": p.time_ms,
+            }
+            for p in manage.partials
+        ]
+        if dry_run:
+            row["status"] = "would_partial" if scan_breach is None else "would_partial_then_close"
+        elif not (legacy and not enforce_legacy):
+            for pend in manage.partials:
+                if pos.status != "OPEN" or not pos.qty:
+                    break
+                q = qty_for_step(partial_cfg, pend.step, float(pos.qty))
+                if q <= 0:
+                    continue
+                at = datetime.fromtimestamp(pend.time_ms / 1000, timezone.utc)
+                paper_broker.partial_close_capital_position(
+                    session,
+                    pos,
+                    price=pend.price,
+                    qty=q,
+                    fraction=pend.step.fraction,
+                    r_multiple=pend.step.r_multiple,
+                    reason="partial_tp",
+                    signal={
+                        "protection": {
+                            "reason": "partial_tp",
+                            "r_multiple": pend.step.r_multiple,
+                            "fraction": pend.step.fraction,
+                        }
+                    },
+                    at=at,
+                    time_ms=pend.time_ms,
+                )
+                applied_partials += 1
+            if applied_partials:
+                row["partials_applied"] = applied_partials
 
-    if scan.breach is None:
-        if scan.bars_seen == 0 and scan.bars_expected >= 5:
-            row["status"] = "no_data"  # provider returned no bar: watermark NOT advanced, position NOT declared safe
+    if scan_breach is None:
+        if bars_seen == 0 and bars_expected >= 5:
+            row["status"] = "no_data"
             return
-        row["status"] = "ok"
-        if trail_cfg is not None and new_stop != float(pos.stop_price):
+        if pos.status == "CLOSED":
+            row["status"] = "closed"
+            if not dry_run:
+                _write_check(session, pos, checked_through, legacy, now)
+            return
+        row["status"] = "ok" if applied_partials == 0 else "partialed"
+        if trail_cfg is not None and new_stop != float(pos.stop_price) and pos.status == "OPEN":
             old = float(pos.stop_price)
             row["trail_stop"] = {"from": old, "to": new_stop}
             if not dry_run:
                 _persist_trail_stop(
-                    session, pos, old, new_stop, now=now, through_ms=scan.checked_through_ms,
+                    session, pos, old, new_stop, now=now, through_ms=checked_through,
                 )
         if not dry_run:
-            # Trail path always advances the watermark: never re-walk past bars
-            # against an already-ratcheted stop (would invent false stop hits).
-            if trail_cfg is not None or now_ms - since_ms >= CHECK_EVENT_EVERY_MS:
-                _write_check(session, pos, scan.checked_through_ms, legacy, now)
+            # Trail / partial path always advances watermark (no re-walk against ratcheted state).
+            if (
+                trail_cfg is not None
+                or partial_cfg is not None
+                or now_ms - since_ms >= CHECK_EVENT_EVERY_MS
+            ):
+                _write_check(session, pos, checked_through, legacy, now)
         return
 
-    b = scan.breach
+    b = scan_breach
     row["breach"] = _report_breach(b)
     if legacy and not enforce_legacy:
-        # A lot opened before monitoring existed is report-only: it can already sit beyond a level
-        # (first bar opens past the stop), which would be a closure driven by history, not by an event.
         row["status"] = "legacy_report_only"
         return
     if dry_run:
         row["status"] = "would_close"
+        return
+    if pos.status != "OPEN" or not pos.qty:
+        row["status"] = "closed" if pos.status == "CLOSED" else "already_closed_elsewhere"
+        if not dry_run:
+            _write_check(session, pos, checked_through, legacy, now)
         return
     at = datetime.fromtimestamp(b.time_ms / 1000, timezone.utc)
     paper_broker.close_capital_position(
@@ -501,6 +788,8 @@ def _process_position(
         at=at,
     )
     row["status"] = "closed" if pos.status == "CLOSED" else "already_closed_elsewhere"
+    if not dry_run and (trail_cfg is not None or partial_cfg is not None):
+        _write_check(session, pos, checked_through, legacy, now)
 
 
 def run_protection_cycle(
