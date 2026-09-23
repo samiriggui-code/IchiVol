@@ -26,8 +26,28 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-METRICS** #23 — **MERGÉE** — **validé par Claude** (stats nettes ; `cost_log` / `net_v1`).
 - **T0-METRICS-2** #24 — **MERGÉE** — **validé par Claude** (`eod_return` ; lookahead strict).
 - **T0-CALC** #25 — **MERGÉE** — intégrée par Cursor (Claude indisponible jusqu’à 18:10 ; CI verte ; brief Claude respecté).
-- **Job en cours** : **Event Intelligence Layer** — audit → PHASE 5 anomalie (observation-only) — Claude absente jusqu’à 18:10, Cursor avance seul.
+- **Event Intelligence audit** #26 — **MERGÉE** (doc).
+- **Job en cours** : **Event Intelligence PHASE 5** — `EventAnomalyDetector` observation-only — branche `cursor/event-anomaly-detector-a2fe` (Cursor solo jusqu’à 18:10).
 
+
+---
+
+## 2026-09-23 — EVENT INTELLIGENCE PHASE 5 — Anomaly Detector (observation-only)
+
+- Branche : `cursor/event-anomaly-detector-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/27 (**draft**)
+- Statut : **ATTENTE Claude** — CI **VERTE** ; Cursor solo jusqu’à 18:10 puis revue.
+### Livré
+
+1. `app/events/` — `detect_anomaly` causal (past-only z-scores, range/gap vs ATR, RVOL)
+2. Régimes : `NORMAL_MARKET` | `UNKNOWN_EVENT` (pas de `EVENT_MARKET` sans match news — PHASE 6+)
+3. Branchement `ScreenerRow.market_anomaly` + serializers summary/detail — **n’altère pas** decision/confidence/pipeline
+4. Tests `tests/events/test_anomaly.py` (lookahead / shock / quiet)
+5. CDC : T0-CALC + EIL audit + PHASE 5 cochés ; PHASE 6–7 ouverts
+
+### Non-faits (volontaire)
+
+News / earnings / FinBERT / vote pipeline / calibration empirique des seuils.
 
 ---
 
