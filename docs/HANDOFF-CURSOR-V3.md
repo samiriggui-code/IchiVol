@@ -36,8 +36,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-23 — EVENT INTELLIGENCE PHASE 6 — regime study + calibration
 
 - Branche : `cursor/event-regime-study-a2fe`
-- PR : (draft)
-- Statut : **EN COURS** — Cursor solo (Claude absente jusqu’à 18:10).
+- PR : https://github.com/samiriggui-code/IchiVol/pull/28 (**draft**)
+- Statut : **ATTENTE CI** — Cursor solo (Claude absente jusqu’à 18:10) ; puis revue Claude.
 
 ### Livré
 
