@@ -4127,6 +4127,51 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
   100% { opacity: 1; transform: none; }
 }
 
+.mark-trade-direction {
+  margin: 0;
+  font-size: 0.82rem;
+}
+.mark-trade-direction.is-bad {
+  color: var(--bear, #c45c5c);
+}
+.mark-trade-metrics {
+  margin: 0;
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+}
+.mark-trade-metrics > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.mark-trade-metrics dt {
+  color: var(--muted-foreground, #888);
+}
+.mark-trade-metrics dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.mark-trade-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+.mark-trade-validate {
+  font-weight: 700;
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--bull, #3d9a6a);
+  background: color-mix(in srgb, var(--bull, #3d9a6a) 18%, transparent);
+  color: inherit;
+}
+.mark-trade-validate:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 @media (min-width: 981px) {
   .mark-trade-backdrop {
     align-items: flex-end;

@@ -1,4 +1,4 @@
-"""T2c — USER HTTP write/delete for ENTRY/STOP/TARGET chart objects."""
+"""T2c — USER HTTP write/delete + atomic /setup for ENTRY/STOP/TARGET."""
 
 from __future__ import annotations
 
@@ -49,6 +49,26 @@ def _patch_fetch(monkeypatch, candles: list[Candle]) -> None:
     monkeypatch.setattr(
         "app.chart_objects.collect.resolve_and_fetch", fake_resolve
     )
+
+
+def _user_by_setup(setup_id: str, symbol: str = "T2CUSDT") -> list[dict]:
+    listed = client.get(
+        f"/api/engine/chart-objects/{symbol}?timeframe=1h&sources=user&limit=120"
+    )
+    assert listed.status_code == 200
+    return [
+        o
+        for o in listed.json()["objects"]
+        if o.get("origin", {}).get("setup_id") == setup_id
+    ]
+
+
+def _count_user(symbol: str = "T2CUSDT") -> int:
+    listed = client.get(
+        f"/api/engine/chart-objects/{symbol}?timeframe=1h&sources=user&limit=120"
+    )
+    assert listed.status_code == 200
+    return len(listed.json()["objects"])
 
 
 def test_post_user_entry_stop_target_with_setup_id(monkeypatch):
@@ -171,7 +191,6 @@ def test_delete_user_only_leaves_claude(monkeypatch):
     assert claude.json()["ok"] is True
     cid = claude.json()["data"]["object"]["id"]
 
-    # Cannot delete CLAUDE via USER delete route.
     bad = client.delete(f"/api/engine/chart-objects/item/{cid}")
     assert bad.status_code == 404
 
@@ -205,3 +224,107 @@ def test_post_forces_source_user(monkeypatch):
     )
     assert resp.status_code == 200
     assert resp.json()["object"]["source"] == "user"
+
+
+def test_setup_long_coherent(monkeypatch):
+    candles = _candles()
+    _patch_fetch(monkeypatch, candles)
+    e, s, t = candles[40], candles[41], candles[42]
+    entry_px = float(e.close)
+    stop_px = entry_px - 1.0
+    target_px = entry_px + 2.0
+    resp = client.post(
+        "/api/engine/chart-objects/T2CUSDT/setup",
+        json={
+            "timeframe": "1h",
+            "setup_id": "long-ok",
+            "entry": {"time": e.time, "price": entry_px},
+            "stop": {"time": s.time, "price": stop_px},
+            "target": {"time": t.time, "price": target_px},
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["direction"] == "long"
+    assert body["setup_id"] == "long-ok"
+    assert len(body["objects"]) == 3
+    assert {o["type"] for o in body["objects"]} == {"entry", "stop", "target"}
+    for o in body["objects"]:
+        assert o["source"] == "user"
+        assert o["origin"]["setup_id"] == "long-ok"
+        assert o["origin"]["direction"] == "long"
+        assert o["side"] == "LONG"
+    stored = _user_by_setup("long-ok")
+    assert len(stored) == 3
+    assert {o["type"] for o in stored} == {"entry", "stop", "target"}
+
+
+def test_setup_long_target_wrong_side_422_atomic(monkeypatch):
+    candles = _candles()
+    _patch_fetch(monkeypatch, candles)
+    e = candles[50]
+    entry_px = float(e.close)
+    before = _count_user()
+    resp = client.post(
+        "/api/engine/chart-objects/T2CUSDT/setup",
+        json={
+            "timeframe": "1h",
+            "setup_id": "long-bad-target",
+            "entry": {"time": e.time, "price": entry_px},
+            "stop": {"time": e.time, "price": entry_px - 1.0},
+            "target": {"time": e.time, "price": entry_px - 2.0},
+        },
+    )
+    assert resp.status_code == 422
+    assert "objectif du mauvais côté" in resp.json()["detail"]
+    assert "LONG" in resp.json()["detail"]
+    assert _count_user() == before
+    assert _user_by_setup("long-bad-target") == []
+
+
+def test_setup_ungrounded_point_422_atomic(monkeypatch):
+    candles = _candles()
+    _patch_fetch(monkeypatch, candles)
+    e = candles[55]
+    entry_px = float(e.close)
+    before = _count_user()
+    resp = client.post(
+        "/api/engine/chart-objects/T2CUSDT/setup",
+        json={
+            "timeframe": "1h",
+            "setup_id": "ungrounded",
+            "entry": {"time": e.time, "price": entry_px},
+            "stop": {"time": e.time, "price": entry_px - 1.0},
+            "target": {"time": e.time, "price": entry_px * 100},
+        },
+    )
+    assert resp.status_code == 422
+    assert "point_not_grounded" in resp.json()["detail"]
+    assert _count_user() == before
+    assert _user_by_setup("ungrounded") == []
+
+
+def test_setup_short_coherent(monkeypatch):
+    candles = _candles()
+    _patch_fetch(monkeypatch, candles)
+    e, s, t = candles[60], candles[61], candles[62]
+    entry_px = float(e.close)
+    stop_px = entry_px + 1.0
+    target_px = entry_px - 2.0
+    resp = client.post(
+        "/api/engine/chart-objects/T2CUSDT/setup",
+        json={
+            "timeframe": "1h",
+            "setup_id": "short-ok",
+            "entry": {"time": e.time, "price": entry_px},
+            "stop": {"time": s.time, "price": stop_px},
+            "target": {"time": t.time, "price": target_px},
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["direction"] == "short"
+    for o in body["objects"]:
+        assert o["origin"]["direction"] == "short"
+        assert o["side"] == "SHORT"
+    assert len(_user_by_setup("short-ok")) == 3

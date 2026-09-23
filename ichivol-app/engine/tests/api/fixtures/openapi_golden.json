@@ -1249,7 +1249,7 @@
         ]
       },
       "post": {
-        "description": "Persist a USER trade point (entry|stop|target). Source is always forced to user.\n\nOptional ``setup_id`` groups ENTRY/STOP/TARGET of one mark-trade session.\nPoints are grounded against real OHLCV (same rules as agent draw_*).",
+        "description": "Persist a USER trade point (entry|stop|target). Source is always forced to user.\n\nOptional ``setup_id`` groups ENTRY/STOP/TARGET of one mark-trade session.\nPoints are grounded against real OHLCV (same rules as agent draw_*).\nPrefer ``POST \u2026/setup`` for atomic triple writes from the UI.",
         "operationId": "post_user_chart_object_api_engine_chart_objects__symbol__post",
         "parameters": [
           {
@@ -1315,6 +1315,79 @@
           }
         },
         "summary": "Post User Chart Object",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/chart-objects/{symbol}/setup": {
+      "post": {
+        "description": "Persist ENTRY+STOP+TARGET as one atomic USER setup (T2c).\n\nDirection is deduced from stop vs entry. All three points are grounded then\nwritten in a single transaction (all-or-nothing).",
+        "operationId": "post_user_chart_object_setup_api_engine_chart_objects__symbol__setup_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Twelve-Data-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Twelve-Data-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post User Chart Object Setup Api Engine Chart Objects  Symbol  Setup Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post User Chart Object Setup",
         "tags": [
           "engine"
         ]

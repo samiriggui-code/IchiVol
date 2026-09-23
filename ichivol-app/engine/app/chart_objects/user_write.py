@@ -1,7 +1,8 @@
-"""USER chart-object writes (T2c) — ENTRY / STOP / TARGET only."""
+"""USER chart-object writes (T2c) — ENTRY / STOP / TARGET + atomic setup."""
 
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 from app.chart_objects.draw import build_from_draw_args
@@ -40,6 +41,59 @@ def _parse_type(raw: Any) -> ChartObjectType:
     return obj_type
 
 
+def _parse_point(raw: Any, label: str) -> dict[str, Any]:
+    if not isinstance(raw, dict) or "time" not in raw or "price" not in raw:
+        raise UserWriteError(f"{label} must be {{time, price}}")
+    try:
+        return {"time": int(raw["time"]), "price": float(raw["price"])}
+    except (TypeError, ValueError) as exc:
+        raise UserWriteError(f"{label} time/price invalid") from exc
+
+
+def deduce_direction(entry_price: float, stop_price: float) -> str:
+    """Return ``long`` or ``short``. Raises if stop == entry."""
+    if stop_price < entry_price:
+        return "long"
+    if stop_price > entry_price:
+        return "short"
+    raise UserWriteError(
+        "stop et entry au même prix — impossible de déduire le sens "
+        "(stop < entry → LONG ; stop > entry → SHORT)"
+    )
+
+
+def assert_setup_geometry(
+    *,
+    direction: str,
+    entry_price: float,
+    stop_price: float,
+    target_price: float,
+) -> None:
+    """LONG: stop < entry < target ; SHORT: target < entry < stop."""
+    if direction == "long":
+        if not (stop_price < entry_price < target_price):
+            if target_price <= entry_price:
+                raise UserWriteError(
+                    "objectif du mauvais côté de l'entrée pour un LONG "
+                    "(attendu : stop < entry < target)"
+                )
+            raise UserWriteError(
+                "setup LONG incohérent (attendu : stop < entry < target)"
+            )
+    elif direction == "short":
+        if not (target_price < entry_price < stop_price):
+            if target_price >= entry_price:
+                raise UserWriteError(
+                    "objectif du mauvais côté de l'entrée pour un SHORT "
+                    "(attendu : target < entry < stop)"
+                )
+            raise UserWriteError(
+                "setup SHORT incohérent (attendu : target < entry < stop)"
+            )
+    else:
+        raise UserWriteError(f"direction invalide: {direction!r}")
+
+
 def build_user_trade_object(symbol: str, body: dict[str, Any]) -> ChartObject:
     """Build a source=user ENTRY/STOP/TARGET from HTTP body.
 
@@ -68,6 +122,22 @@ def build_user_trade_object(symbol: str, body: dict[str, Any]) -> ChartObject:
         raise UserWriteError(str(exc)) from exc
 
 
+def _fetch_candles(
+    symbol: str,
+    timeframe: str,
+    limit: int,
+    *,
+    x_twelve_data_key: str | None,
+):
+    twelve_data.set_api_key_override(x_twelve_data_key)
+    try:
+        return resolve_and_fetch(symbol, timeframe, limit)
+    except ProviderNotWiredError as exc:
+        raise UserWriteError(str(exc)) from exc
+    except ValueError as exc:
+        raise UserWriteError(str(exc)) from exc
+
+
 def persist_user_trade_object(
     symbol: str,
     body: dict[str, Any],
@@ -83,14 +153,11 @@ def persist_user_trade_object(
     if limit < 50 or limit > 5000:
         limit = 500
 
-    twelve_data.set_api_key_override(x_twelve_data_key)
+    _provider, _psym, candles = _fetch_candles(
+        obj.symbol, obj.timeframe, limit, x_twelve_data_key=x_twelve_data_key
+    )
     try:
-        _provider, _psym, candles = resolve_and_fetch(
-            obj.symbol, obj.timeframe, limit
-        )
         assert_object_grounded(obj, candles)
-    except ProviderNotWiredError as exc:
-        raise UserWriteError(str(exc)) from exc
     except ValueError as exc:
         raise UserWriteError(str(exc)) from exc
 
@@ -99,6 +166,99 @@ def persist_user_trade_object(
         saved = upsert_chart_object(session, obj)
         session.commit()
         return {"object": saved.to_dict(), "upserted": True}
+    except ValueError as exc:
+        session.rollback()
+        raise UserWriteError(str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        session.rollback()
+        raise UserWriteError(f"persist_failed: {exc}") from exc
+    finally:
+        session.close()
+
+
+def persist_user_trade_setup(
+    symbol: str,
+    body: dict[str, Any],
+    *,
+    x_twelve_data_key: str | None = None,
+) -> dict[str, Any]:
+    """Validate + ground ENTRY/STOP/TARGET then persist all three atomically.
+
+    Body: ``{timeframe, entry:{time,price}, stop:{…}, target:{…}, setup_id?}``.
+    Direction is deduced from stop vs entry; geometry is enforced server-side.
+    """
+    if not isinstance(body, dict):
+        raise UserWriteError("body must be an object")
+    timeframe = str(body.get("timeframe") or "").strip()
+    if not timeframe:
+        raise UserWriteError("timeframe is required")
+
+    entry = _parse_point(body.get("entry"), "entry")
+    stop = _parse_point(body.get("stop"), "stop")
+    target = _parse_point(body.get("target"), "target")
+
+    direction = deduce_direction(entry["price"], stop["price"])
+    assert_setup_geometry(
+        direction=direction,
+        entry_price=entry["price"],
+        stop_price=stop["price"],
+        target_price=target["price"],
+    )
+
+    setup_id = str(body.get("setup_id") or "").strip() or str(uuid.uuid4())
+    side = "LONG" if direction == "long" else "SHORT"
+    limit = int(body.get("limit") or 500)
+    if limit < 50 or limit > 5000:
+        limit = 500
+
+    sym = symbol.strip().upper()
+    specs = (
+        (ChartObjectType.ENTRY, entry, "Entry"),
+        (ChartObjectType.STOP, stop, "Stop"),
+        (ChartObjectType.TARGET, target, "Target"),
+    )
+    objects: list[ChartObject] = []
+    for obj_type, pt, label in specs:
+        objects.append(
+            build_user_trade_object(
+                sym,
+                {
+                    "type": obj_type.value,
+                    "timeframe": timeframe,
+                    "price": pt["price"],
+                    "time": pt["time"],
+                    "as_of": pt["time"],
+                    "side": side,
+                    "label": label,
+                    "setup_id": setup_id,
+                    "origin": {
+                        "via": "user_mark_trade_setup",
+                        "setup_id": setup_id,
+                        "direction": direction,
+                    },
+                },
+            )
+        )
+
+    _provider, _psym, candles = _fetch_candles(
+        sym, timeframe, limit, x_twelve_data_key=x_twelve_data_key
+    )
+    for obj in objects:
+        try:
+            assert_object_grounded(obj, candles)
+        except ValueError as exc:
+            raise UserWriteError(str(exc)) from exc
+
+    session = SessionLocal()
+    try:
+        saved = [upsert_chart_object(session, obj) for obj in objects]
+        session.commit()
+        return {
+            "setup_id": setup_id,
+            "direction": direction,
+            "upserted": True,
+            "objects": [o.to_dict() for o in saved],
+        }
     except ValueError as exc:
         session.rollback()
         raise UserWriteError(str(exc)) from exc

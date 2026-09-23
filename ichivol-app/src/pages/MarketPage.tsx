@@ -15,8 +15,9 @@ import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
 import { displaySymbol } from '../lib/markets'
 import {
   getChartObjects,
-  postUserTradePoint,
+  postUserTradeSetup,
   type ChartObject,
+  type UserTradePointType,
 } from '../lib/chartObjects'
 import { notifyChartObjectsChanged, onChartObjectsChanged } from '../lib/chartObjectsEvents'
 import { useMarketSnapshot } from '../lib/marketSnapshot'
@@ -36,7 +37,7 @@ import {
 } from '../lib/types'
 
 const ENGINE_TIMEFRAMES = new Set<Interval>(['15m', '1h', '4h', '1d'])
-const MARK_STEPS: MarkTradeStep[] = ['entry', 'stop', 'target']
+const MARK_STEPS: UserTradePointType[] = ['entry', 'stop', 'target']
 
 function newSetupId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -103,13 +104,12 @@ export function MarketPage() {
   const [engineLoading, setEngineLoading] = useState(false)
   const [engineError, setEngineError] = useState<string | null>(null)
 
-  // T2c — Marquer un trade (ENTRY → STOP → TARGET)
+  // T2c — Marquer un trade (ENTRY → STOP → TARGET en mémoire, Valider = /setup)
   const [markOpen, setMarkOpen] = useState(false)
   const [markStep, setMarkStep] = useState<MarkTradeStep>('entry')
-  const [markSide, setMarkSide] = useState<'LONG' | 'SHORT'>('LONG')
   const [markSetupId, setMarkSetupId] = useState<string | null>(null)
   const [markPlaced, setMarkPlaced] = useState<
-    Partial<Record<MarkTradeStep, { price: number; time: number }>>
+    Partial<Record<'entry' | 'stop' | 'target', { price: number; time: number }>>
   >({})
   const [markSaving, setMarkSaving] = useState(false)
   const [markError, setMarkError] = useState<string | null>(null)
@@ -340,8 +340,9 @@ export function MarketPage() {
 
   useEffect(() => {
     setChartObjects(null)
-    // Twelve Data (actions) : budget de crédits serré, /chart-objects refetche les bougies.
-    if (!current?.wired || current.provider === 'twelve_data' || !ENGINE_TIMEFRAMES.has(interval)) {
+    // Chart-objects refetche OHLCV ; cache provider 90s + grounding moteur.
+    // Twelve Data inclus (T2c revue Claude) — erreur claire à la validation.
+    if (!current?.wired || !ENGINE_TIMEFRAMES.has(interval)) {
       return
     }
     let cancelled = false
@@ -395,15 +396,11 @@ export function MarketPage() {
         : chartProvider ?? '—'
 
   const canMarkTrade =
-    Boolean(current?.wired) &&
-    current?.provider !== 'twelve_data' &&
-    ENGINE_TIMEFRAMES.has(interval) &&
-    candles.length > 0
+    Boolean(current?.wired) && ENGINE_TIMEFRAMES.has(interval) && candles.length > 0
 
   const startMarkTrade = useCallback(() => {
     setMarkSetupId(newSetupId())
     setMarkStep('entry')
-    setMarkSide('LONG')
     setMarkPlaced({})
     setMarkError(null)
     setMarkSaving(false)
@@ -412,43 +409,49 @@ export function MarketPage() {
 
   const cancelMarkTrade = useCallback(() => {
     setMarkOpen(false)
+    setMarkStep('entry')
+    setMarkPlaced({})
+    setMarkSetupId(null)
     setMarkError(null)
     setMarkSaving(false)
   }, [])
 
   const onPickPoint = useCallback(
-    async (point: ChartPickPoint) => {
-      if (!markOpen || markSaving || !markSetupId) return
+    (point: ChartPickPoint) => {
+      if (!markOpen || markSaving || markStep === 'review') return
       const step = markStep
-      setMarkSaving(true)
       setMarkError(null)
-      try {
-        await postUserTradePoint(symbol, {
-          type: step,
-          timeframe: interval,
-          price: point.price,
-          time: point.time,
-          side: markSide,
-          label: step === 'entry' ? 'Entry' : step === 'stop' ? 'Stop' : 'Target',
-          setup_id: markSetupId,
-          as_of: point.time,
-        })
-        setMarkPlaced((prev) => ({ ...prev, [step]: point }))
-        notifyChartObjectsChanged({ tool: `user_${step}`, ok: true })
-        const idx = MARK_STEPS.indexOf(step)
-        if (idx >= 0 && idx < MARK_STEPS.length - 1) {
-          setMarkStep(MARK_STEPS[idx + 1]!)
-        } else {
-          setMarkOpen(false)
-        }
-      } catch (err: unknown) {
-        setMarkError(err instanceof Error ? err.message : 'Échec enregistrement')
-      } finally {
-        setMarkSaving(false)
+      setMarkPlaced((prev) => ({ ...prev, [step]: point }))
+      const idx = MARK_STEPS.indexOf(step)
+      if (idx >= 0 && idx < MARK_STEPS.length - 1) {
+        setMarkStep(MARK_STEPS[idx + 1]!)
+      } else {
+        setMarkStep('review')
       }
     },
-    [markOpen, markSaving, markSetupId, markStep, markSide, symbol, interval],
+    [markOpen, markSaving, markStep],
   )
+
+  const validateMarkTrade = useCallback(async () => {
+    if (!markSetupId || !markPlaced.entry || !markPlaced.stop || !markPlaced.target) return
+    setMarkSaving(true)
+    setMarkError(null)
+    try {
+      await postUserTradeSetup(symbol, {
+        timeframe: interval,
+        setup_id: markSetupId,
+        entry: markPlaced.entry,
+        stop: markPlaced.stop,
+        target: markPlaced.target,
+      })
+      notifyChartObjectsChanged({ tool: 'user_setup', ok: true })
+      cancelMarkTrade()
+    } catch (err: unknown) {
+      setMarkError(err instanceof Error ? err.message : 'Échec validation')
+    } finally {
+      setMarkSaving(false)
+    }
+  }, [markSetupId, markPlaced, symbol, interval, cancelMarkTrade])
 
   // Reset mark mode when symbol / TF changes.
   useEffect(() => {
@@ -549,7 +552,7 @@ export function MarketPage() {
                 title={
                   canMarkTrade
                     ? 'Poser ENTRY / STOP / TARGET sur le graphique'
-                    : 'Disponible sur symboles moteur (hors Twelve Data)'
+                    : 'Disponible sur symboles câblés (TF moteur)'
                 }
                 onClick={() => (markOpen ? cancelMarkTrade() : startMarkTrade())}
               >
@@ -574,7 +577,7 @@ export function MarketPage() {
             onSignals={setSignals}
             onLive={setChartLive}
             chartObjects={chartObjects}
-            pickMode={markOpen}
+            pickMode={markOpen && markStep !== 'review'}
             onPickPoint={onPickPoint}
           />
           <div className="tf-group tf-group--chart" role="group" aria-label="Timeframe">
@@ -618,12 +621,11 @@ export function MarketPage() {
         <MarkTradeSheet
           symbolLabel={current?.label ?? displaySymbol(symbol)}
           step={markStep}
-          side={markSide}
           saving={markSaving}
           error={markError}
           placed={markPlaced}
-          onSideChange={setMarkSide}
           onCancel={cancelMarkTrade}
+          onValidate={() => void validateMarkTrade()}
         />
       ) : null}
     </div>

@@ -171,6 +171,45 @@ def test_draw_zone_coherent_accepted(patch_fetch, candles):
     assert out["object"]["type"] == "zone"
 
 
+def test_grounding_rejects_future_as_of_on_zone(candles):
+    """as_of must sit on the series even when ZONE has no points."""
+    lo = min(c.low for c in candles[-50:])
+    hi = max(c.high for c in candles[-50:])
+    step = candles[-1].time - candles[-2].time
+    future = candles[-1].time + step * 20
+    obj = ChartObject(
+        type=ChartObjectType.ZONE,
+        source=ChartObjectSource.CLAUDE,
+        symbol="T2BTC",
+        timeframe="1h",
+        points=(),
+        as_of=future,
+        price_low=lo,
+        price_high=hi,
+        origin={"via": "test"},
+    )
+    with pytest.raises(ValueError, match="point_not_grounded: as_of"):
+        assert_object_grounded(obj, candles)
+
+
+def test_draw_zone_future_as_of_rejected_via_agent(patch_fetch, candles):
+    lo = min(c.low for c in candles[-50:])
+    hi = max(c.high for c in candles[-50:])
+    step = candles[-1].time - candles[-2].time
+    future = candles[-1].time + step * 20
+    with pytest.raises(CommandError, match="point_not_grounded"):
+        _draw_and_persist(
+            "zone",
+            {
+                "symbol": "T2BTC",
+                "timeframe": "1h",
+                "price_low": lo,
+                "price_high": hi,
+                "as_of": future,
+            },
+        )
+
+
 def test_structure_derived_objects_still_ground(patch_fetch, candles):
     """Normal agent path: structure endpoints → coords stay on the series."""
     from app.structure.service import detect_market_structure
