@@ -14,15 +14,24 @@ meant to be "real" instruments. So resolution is two-tiered:
    raw symbol for `default_provider` (Binance unless told otherwise). This
    is what keeps every existing symbol -- real crypto pairs and made-up
    test fixtures alike -- working exactly as before.
+
+T11a-bis: fallback is tagged ``resolution="raw_fallback"`` (catalog hits
+use ``"catalog"``). Unpacking ``provider, symbol = resolve(...)`` still
+works — ``ResolvedSymbol`` iterates only those two fields.
 """
 
 from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Literal
 
 from app.indicators.ichimoku import Candle
 from app.market_data.accumulator import fetch_with_accumulation, needs_accumulation
 from app.market_data.provider import MarketDataProvider
 from app.market_data.registry import get_provider
 from app.universe.catalog import get_instrument
+
+ResolutionKind = Literal["catalog", "raw_fallback"]
 
 
 class ProviderNotWiredError(ValueError):
@@ -32,15 +41,27 @@ class ProviderNotWiredError(ValueError):
         self.asset_class = asset_class
 
 
+@dataclass(frozen=True)
+class ResolvedSymbol:
+    provider: MarketDataProvider
+    provider_symbol: str
+    resolution: ResolutionKind
+
+    def __iter__(self):
+        """Back-compat: ``provider, symbol = resolve(...)``."""
+        yield self.provider
+        yield self.provider_symbol
+
+
 def resolve(
     symbol_or_id: str, default_provider: str = "binance"
-) -> tuple[MarketDataProvider, str]:
+) -> ResolvedSymbol:
     instrument = get_instrument(symbol_or_id)
     if instrument is not None:
         provider = get_provider(instrument.provider) if instrument.provider else None
         if provider is None:
             raise ProviderNotWiredError(instrument.id, instrument.asset_class.value)
-        return provider, instrument.provider_symbol
+        return ResolvedSymbol(provider, instrument.provider_symbol, "catalog")
 
     provider = get_provider(default_provider)
     if provider is None:
@@ -48,7 +69,7 @@ def resolve(
             f"unsupported exchange {default_provider!r} "
             f"(wired providers: binance, twelve_data, biquote)"
         )
-    return provider, symbol_or_id
+    return ResolvedSymbol(provider, symbol_or_id, "raw_fallback")
 
 
 def resolve_and_fetch(
@@ -62,7 +83,8 @@ def resolve_and_fetch(
     the provider felt like returning. Prefer this over calling
     `provider.fetch_ohlcv()` directly wherever the caller doesn't have a
     specific reason not to (a chart/decision/backtest almost never does)."""
-    provider, provider_symbol = resolve(symbol, default_provider)
+    resolved = resolve(symbol, default_provider)
+    provider, provider_symbol = resolved.provider, resolved.provider_symbol
     if needs_accumulation(provider.id):
         candles = fetch_with_accumulation(provider, symbol, provider_symbol, timeframe, limit)
     else:

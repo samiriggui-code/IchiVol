@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -20,7 +21,7 @@ from typing import Any, Sequence
 import httpx
 
 from app.indicators.ichimoku import Candle
-from app.market_data.quality import QualityReport, validate_candles
+from app.market_data.quality import QualityReport, closed_candles, validate_candles
 from app.market_data.timeframes import TF_SECONDS
 from app.market_data.volume_semantics import VolumeType
 
@@ -30,7 +31,17 @@ _MIN_SLEEP_S = 0.12
 TWELVE_DATA_MAX_BARS = 5_000
 DEFAULT_CRYPTO_YEARS = 2
 
-DATASETS_DIR = Path(__file__).resolve().parent / "datasets"
+_DEFAULT_DATASETS_DIR = Path(__file__).resolve().parent / "datasets"
+
+
+def _env_datasets_dir() -> Path | None:
+    raw = os.environ.get("LAB_DATASETS_DIR", "").strip()
+    if not raw:
+        return None
+    return Path(raw).expanduser()
+
+
+DATASETS_DIR = _env_datasets_dir() or _DEFAULT_DATASETS_DIR
 
 
 @dataclass(frozen=True)
@@ -73,7 +84,11 @@ class LabHistoryBundle:
 
 
 def _datasets_root(root: Path | None = None) -> Path:
-    path = root if root is not None else DATASETS_DIR
+    if root is not None:
+        path = root
+    else:
+        # Re-read env each call so tests can set LAB_DATASETS_DIR late.
+        path = _env_datasets_dir() or _DEFAULT_DATASETS_DIR
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -90,7 +105,23 @@ def _load_manifest(root: Path) -> dict[str, Any]:
 
 
 def _save_manifest(root: Path, man: dict[str, Any]) -> None:
-    _manifest_path(root).write_text(json.dumps(man, indent=2) + "\n", encoding="utf-8")
+    """Atomic write + exclusive lock (T11a-bis) so concurrent Lab jobs
+    cannot interleave partial manifests."""
+    mp = _manifest_path(root)
+    payload = json.dumps(man, indent=2) + "\n"
+    lock_path = root / "manifest.lock"
+    tmp_path = root / "manifest.json.tmp"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    # fcntl is POSIX; Lab runs on Linux in prod/CI.
+    import fcntl
+
+    with open(lock_path, "a+", encoding="utf-8") as lock_f:
+        fcntl.flock(lock_f.fileno(), fcntl.LOCK_EX)
+        try:
+            tmp_path.write_text(payload, encoding="utf-8")
+            os.replace(tmp_path, mp)
+        finally:
+            fcntl.flock(lock_f.fileno(), fcntl.LOCK_UN)
 
 
 def _aligned_cache_end_ms(now_ms: int, timeframe: str) -> int:
@@ -401,6 +432,17 @@ def build_or_load_binance_history(
     )
 
 
+def _drop_forming(
+    candles: Sequence[Candle], timeframe: str, *, now: int | None = None
+) -> list[Candle]:
+    """T11a-bis — never keep the still-forming bar in Lab deep/live series."""
+    tf_sec = TF_SECONDS.get(timeframe)
+    if tf_sec is None:
+        return list(candles)
+    now_s = int(now) if now is not None else int(time.time())
+    return closed_candles(candles, tf_sec, now_s)
+
+
 def build_or_load_from_candles(
     candles: Sequence[Candle],
     *,
@@ -416,13 +458,14 @@ def build_or_load_from_candles(
 ) -> LabHistoryBundle:
     """Validate + persist an in-memory series (tests / offline inject)."""
     root = _datasets_root(root)
-    if not candles:
+    closed = _drop_forming(candles, timeframe, now=now)
+    if not closed:
         raise ValueError("candles must be non-empty")
-    s_ms = start_ms if start_ms is not None else int(candles[0].time) * 1000
+    s_ms = start_ms if start_ms is not None else int(closed[0].time) * 1000
     e_ms = (
         end_ms
         if end_ms is not None
-        else (int(candles[-1].time) + TF_SECONDS.get(timeframe, 3600)) * 1000
+        else (int(closed[-1].time) + TF_SECONDS.get(timeframe, 3600)) * 1000
     )
     req = (
         requested_seconds
@@ -435,7 +478,7 @@ def build_or_load_from_candles(
         provider=provider,
         symbol=symbol.upper(),
         timeframe=timeframe,
-        candles=list(candles),
+        candles=closed,
         start_ms=s_ms,
         end_ms=e_ms,
         now=now,
@@ -554,22 +597,23 @@ def bundle_from_live_candles(
     requested_seconds: int | None = None,
 ) -> LabHistoryBundle:
     """Validate candles for a Lab study without writing the datasets cache."""
-    if not candles:
+    closed = _drop_forming(candles, timeframe, now=now)
+    if not closed:
         raise ValueError("candles must be non-empty")
     tf_sec = TF_SECONDS.get(timeframe)
     if tf_sec is None:
         raise ValueError(f"unknown timeframe: {timeframe!r}")
-    report = validate_candles(candles, tf_sec, now=now)
+    report = validate_candles(closed, tf_sec, now=now)
     quality = quality_report_to_manifest(report)
-    did = dataset_id or f"live_{symbol.upper()}_{timeframe}_{len(candles)}"
+    did = dataset_id or f"live_{symbol.upper()}_{timeframe}_{len(closed)}"
     entry: dict[str, Any] = {
         "dataset_id": did,
         "provider": provider,
         "symbol": symbol.upper(),
         "timeframe": timeframe,
-        "n_bars": len(candles),
-        "first_time": int(candles[0].time),
-        "last_time": int(candles[-1].time),
+        "n_bars": len(closed),
+        "first_time": int(closed[0].time),
+        "last_time": int(closed[-1].time),
         "quality": quality,
         "degraded": not report.ok,
         "persisted": False,
@@ -580,7 +624,7 @@ def bundle_from_live_candles(
     )
     bundle = LabHistoryBundle(
         dataset_id=did,
-        candles=list(candles),
+        candles=list(closed),
         manifest=entry,
         quality=quality,
         data_warning=warning,

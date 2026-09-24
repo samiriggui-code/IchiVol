@@ -53,9 +53,17 @@ def test_resolve_raises_provider_not_wired_for_a_known_but_unwired_instrument(mo
 
 
 def test_resolve_falls_back_to_default_provider_for_an_uncatalogued_symbol():
-    provider, provider_symbol = resolve("SOME_TEST_FIXTURE_SYMBOL")
+    resolved = resolve("SOME_TEST_FIXTURE_SYMBOL")
+    provider, provider_symbol = resolved
     assert provider.id == "binance"
     assert provider_symbol == "SOME_TEST_FIXTURE_SYMBOL"
+    assert resolved.resolution == "raw_fallback"
+
+
+def test_resolve_catalog_hit_tags_catalog():
+    resolved = resolve("BTCUSDT")
+    assert resolved.resolution == "catalog"
+    assert resolved.provider.id == "binance"
 
 
 def test_resolve_raises_value_error_for_an_uncatalogued_symbol_with_unknown_default():

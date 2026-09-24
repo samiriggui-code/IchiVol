@@ -82,6 +82,9 @@ class Candle(Base):
     low: Mapped[float] = mapped_column(Float)
     close: Mapped[float] = mapped_column(Float)
     volume: Mapped[float] = mapped_column(Float)
+    # T11a-bis — nullable; legacy rows stay NULL until re-collected.
+    volume_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    taker_buy_volume: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     asset: Mapped[Asset] = relationship(back_populates="candles")
     ichimoku: Mapped["IchimokuIndicator | None"] = relationship(

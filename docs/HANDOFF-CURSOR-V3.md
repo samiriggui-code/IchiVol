@@ -7,28 +7,47 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-24 — T13c EN COURS — kill switch + verrou perte journalière
+## 2026-09-24 — T11a-bis EN COURS — quality/provenance leftovers
+
+- Branche : `cursor/t11a-bis-quality-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/82
+- Base : `main` @ `71c162c` (#81 T13c **MERGÉE**)
+
+### Livré
+1. `resolve()` → `ResolvedSymbol` + `resolution="catalog"|"raw_fallback"` (unpack 2-tuple inchangé)
+2. Provenance screener : champ `resolution` (observation only)
+3. Migration `h4i5j6k7l8m9` — `candles.volume_type` + `taker_buy_volume` nullable ; collector round-trip
+4. Test garde imports : `pipeline` + `combiner` n’importent ni `lab_context` ni indicateur hors PRODUCTION
+5. Lab : `LAB_DATASETS_DIR` · verrou `fcntl` sur manifeste · drop bougie en formation (`closed_candles`)
+
+### Hors scope
+T11b Twelve Data mesure · cache `observe_lab_context` · changement live decision
+
+### Auto-revue
+- [ ] pytest PG16 CI
+- [x] tests ciblés T11a-bis / resolve / deep_history / import guard
+
+---
+
+## 2026-09-24 — T13c MERGÉE (#81) — squash `71c162c`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/81 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `71c162c`
+- Kill switch + daily loss lock (persisté, humain only)
+- CI fix : `tests/conftest.py` clear locks between tests (cash=0.5 latchait le baseline)
+
+**Suite** : T11a-bis → T11b (partiel) → T10d/e.
+
+---
+
+## 2026-09-24 — T13c (archive) — kill switch + verrou perte journalière
 
 - Branche : `cursor/t13c-kill-switch-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/81
 - Base : `main` @ `7d7d767` (#80 T13b **MERGÉE**)
-- Persisté · humain seul pour rouvrir · **aucun auto-lift**
-
-### Livré
-1. Migration `g3h4i5j6k7l8` — colonnes `kill_switch_*` / `daily_loss_locked*` sur `paper_portfolios`
-2. `paper/kill_switch.py` — arm/disarm/unlock + latch `maybe_trip_daily_loss_lock`
-3. Risk Kernel refuse `kill_switch` / `daily_loss_halt` **avant** les gates (y compris manuel)
-4. API `risk-lock` · `kill-switch/arm|disarm` · `daily-loss/unlock` (`confirm: true` obligatoire)
-5. UI header bouton rouge + bannière « Paper verrouillé » + ConfirmDialog
-6. Tests + goldens OpenAPI
 
 ### DÉCISION CURSOR
-Latch perte jour **ne se lève pas à minuit** (changement vs halt éphémère T13b) — humain only.
-
-### Auto-revue
-- [x] pytest kill_switch + risk_kernel + engine + openapi
-- [x] npm build
-- [ ] pytest PG16 CI
+Latch perte jour **ne se lève pas à minuit** — humain only.
 
 ---
 
