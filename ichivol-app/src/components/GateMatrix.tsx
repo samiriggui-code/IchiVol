@@ -1,6 +1,7 @@
 import { labelDecision, labelPipelineGate } from '../lib/decisionLabels'
 import {
   PIPELINE_STAGE_ORDER,
+  stageDirectionMatrixLabel,
   stageFullLabel,
   stageMatrixLabel,
   stageStatusLabel,
@@ -133,13 +134,17 @@ export function GateMatrix({
                 </th>
                 {PIPELINE_STAGE_ORDER.map((id) => {
                   const st = statuses[id]
+                  const cell =
+                    id === 'direction'
+                      ? stageDirectionMatrixLabel(st, row.direction)
+                      : stageStatusLabel(st)
                   return (
                     <td key={id}>
                       <span
                         className={`gate-matrix-pill gate-matrix-pill--${statusTone(st)}`}
-                        title={`${stageFullLabel(id)} · ${stageStatusLabel(st)}`}
+                        title={`${stageFullLabel(id)} · ${cell}`}
                       >
-                        {stageStatusLabel(st)}
+                        {cell}
                       </span>
                     </td>
                   )

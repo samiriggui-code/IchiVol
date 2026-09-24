@@ -7,43 +7,55 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-24 — SYNC Claude rév.56 — T14 Interface V3 (NE PAS DÉMARRER)
+## 2026-09-24 — UI exception EN COURS — Risque→Régime + DIR ↑/↓ (rév.56/58)
 
-Audit UI ajouté à la feuille de route (**section T14**).
+- Branche : `cursor/ui-regime-dir-a2fe`
+- Base : `main` @ `a7b630f` (#73 T12b **MERGÉE**)
+- Front only — **aucun changement moteur**
 
-**Ordre** (rév.56, remplace le enchaînement T12e→T13a de rév.49) :  
-… T12e → **T14a** → T13a → T13b + T14c → …  
-Aucune fusion ni suppression de page avant T14a. **Ne pas démarrer T14 maintenant.**
+### Livré
+1. `stageMatrixLabel('regime')` : **« Risque » → « Régime »**
+2. Colonne DIR Matrice : `pass` + LONG → **↑** ; `pass` + SHORT → **↓** (`stageDirectionMatrixLabel`) ; autres statuts inchangés
 
-### Exception autorisée (petite PR séparée, APRÈS merge de T12b #73)
-
-Front only — **aucun changement moteur** :
-1. `ichivol-app/src/lib/decisionPipeline.ts:110` (`stageMatrixLabel` case `regime`) : libellé matrice **« Risque » → « Régime »** (étape ADX/Donchian/ATR, pas le sizing risque)
-2. Colonne DIR (`GateMatrix` cellule `direction`) : afficher **↑ / ↓** au lieu de « OK » (pas un remplacement global de `stageStatusLabel`)
-
-**File d’attente** : exception **pas ouverte** tant que #73 n’est pas squash-MERGÉE.
+### Hors scope
+T12c+ · T14a · moteur
 
 ---
 
-## 2026-09-24 — T12b EN COURS — parité Lab / live (FeatureBar + stages)
+## 2026-09-24 — SYNC Claude rév.58 — MODE SOLO jusqu’au retour Claude
 
-- Branche : `cursor/t12b-lab-live-parity-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/73 (**draft**)
-- Base : `main` @ `5bc1e9c` (#72 T12a **MERGÉE**)
-- Statut : **DRAFT** — CI verte @ tip `368bf72` ; attente revue Claude avant merge. **Pas de merge solo.**
+Claude indisponible jusqu’à demain. **Solo autorisé** sur la liste §5 (rév.58) :
+UI exception → T12c → T12d → T12e → T14a → T13a → T13b → T13c → T11a-bis → T11b (partiel) → T10d/e.
 
-### Livré
+Auto-revue §2 avant chaque merge ; arrêts §3 inchangés ; design UI §4.  
+ChatGPT = consultatif seulement. Toute décision seule = **« DÉCISION CURSOR — à relire par Claude »**.
 
-1. Ichimoku live dans FeatureBar/DSL : `chikou_state`, `future_kumo`, `ichimoku_score`, `ichimoku_direction` (via `ichimoku_agent.state_to_agent_output`)
-2. Régime : `adx` / `plus_di` / `minus_di` / `donchian_breakout` + labels `classify_regimes` + `regime_stage_pass` (= `_regime_stage`)
-3. Location : VWAP / AVWAP / VA / HVN + `location_stage_pass` (= `_location_stage`)
-4. Participation : `cvd_bias` + bandes RVOL booléennes (faible…extrême) + `participation_stage_pass`
-5. Test de parité obligatoire : Lab `*_stage_pass` == pipeline live (bar par bar)
-6. Tout via REGISTRY ; test de causalité sur les nouvelles features
-7. Cosmétique T12a : écart < 2 j → message avec bougies manquantes
+**STOP après point 11** : ne pas démarrer T13d, T13e, T11c, pages Sessions/Agents.
 
-### Hors scope
-T12c–e · T13 · microstructure · seuils live
+---
+
+## 2026-09-24 — T12b MERGÉE (#73) — squash `a7b630f`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/73 — **VALIDÉE** Claude (rév.58) → **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `a7b630f`
+- Suite PG (Claude) : 1 073 ok / 1 skip ; golden additifs ; chemin live inchangé ; parité via helpers pipeline ; 3 statuts exercés.
+
+### Réserves Claude (non bloquantes) — à traiter plus tard
+1. La parité T12b utilise les **paramètres par défaut** ; **T12e DOIT** utiliser les paramètres réels du screener live (settings).
+2. L’étape **structure (MTF)** reste hors parité jusqu’à **T3e**.
+
+**Suite** : petite PR UI exception (Risque→Régime + DIR ↑/↓), puis T12c…
+
+---
+
+## 2026-09-24 — SYNC Claude rév.56 — T14 Interface V3
+
+Audit UI ajouté à la feuille de route (**section T14**).
+
+**Ordre** (rév.56/58) : … T12e → **T14a** → T13a → T13b + T14c → …  
+Aucune fusion ni suppression de page avant T14a.
+
+### Exception autorisée — EN COURS (voir entrée UI exception ci-dessus)
 
 ---
 
@@ -53,7 +65,7 @@ T12c–e · T13 · microstructure · seuils live
 - **Vérifié** : `origin/main` tip = `5bc1e9c`
 - Historique profond versionné + validate_candles + qualité Lab ; correctifs rév.53/54.
 
-**Suite** : T12b EN COURS (parité Lab / live).
+**Suite** : T12b MERGÉE ; UI exception + T12c…
 
 ---
 

@@ -107,12 +107,27 @@ export function stageMatrixLabel(id: PipelineStageId): string {
     case 'location':
       return 'Loc'
     case 'regime':
-      return 'Risque'
+      return 'Régime'
     default: {
       const _exhaustive: never = id
       return _exhaustive
     }
   }
+}
+
+/**
+ * Libellé cellule Matrice pour la porte Direction.
+ * En `pass` : ↑ (LONG) / ↓ (SHORT) à la place de « OK » ; sinon statut classique.
+ */
+export function stageDirectionMatrixLabel(
+  status: PipelineStageStatus,
+  direction: AgentDirection | null | undefined,
+): string {
+  if (status === 'pass') {
+    if (direction === 'LONG') return '↑'
+    if (direction === 'SHORT') return '↓'
+  }
+  return stageStatusLabel(status)
 }
 
 export function stageFullLabel(id: PipelineStageId): string {
