@@ -476,7 +476,10 @@ def test_partial_tp_scales_qty_then_final_close_settles_remainder(session):
         "take_profit_r": 3.0,
     }
     session.flush()
+    cash0 = float(p.cash)
     pos = _open(session, source="user_confirmed")
+    entry_fee0 = float(pos.entry_fee or 0.0)
+    assert float(pos.initial_entry_fee) == pytest.approx(entry_fee0)
     entry = float(pos.entry_price)
     stop0 = float(pos.stop_price)
     risk = entry - stop0
@@ -494,6 +497,7 @@ def test_partial_tp_scales_qty_then_final_close_settles_remainder(session):
     assert pos.status == "OPEN"
     assert float(pos.qty) == pytest.approx(initial_qty * 0.5)
     assert float(pos.qty) > 0
+    assert float(pos.entry_fee) == pytest.approx(entry_fee0 * 0.5)
     exits = session.query(PaperPartialExit).filter_by(position_id=pos.id).order_by(PaperPartialExit.seq).all()
     assert len(exits) == 1
     assert exits[0].qty == pytest.approx(initial_qty * 0.5)
@@ -510,12 +514,89 @@ def test_partial_tp_scales_qty_then_final_close_settles_remainder(session):
     assert pos.status == "CLOSED"
     assert float(pos.initial_qty) == pytest.approx(initial_qty)
     assert float(pos.qty) == pytest.approx(initial_qty)  # restored entry size after CLOSE
+    assert float(pos.initial_entry_fee) == pytest.approx(entry_fee0)
+    assert float(pos.entry_fee) == pytest.approx(entry_fee0)  # restored like qty
     assert session.query(PaperPartialExit).filter_by(position_id=pos.id).count() == 1
-    # Cumulative realized includes the partial slice plus the final remainder.
-    assert float(pos.realized_pnl) == pytest.approx(
-        partial_pnl + (float(pos.realized_pnl) - partial_pnl)
-    )
+    # LONG, no financing: cash delta from pre-open == cumulative realized.
+    assert float(p.cash) - cash0 == pytest.approx(float(pos.realized_pnl))
     assert abs(float(pos.realized_pnl)) >= abs(partial_pnl) - 1e-6
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_partial_tp_steps_sum_one_deducts_financing_on_exhaustion(session):
+    """Steps summing to 1 exhaust via close_capital_position; financing hits realized."""
+    from datetime import date
+
+    from app.paper.financing import apply_daily_financing, financing_total_for_position
+
+    p = session.info["p"]
+    p.strategy_profile = {
+        **p.strategy_profile,
+        "commission_bps": 0.0,
+        "slippage_bps": 0.0,
+        "spread_bps": 0.0,
+        "financing_bps_per_day_crypto": 10.0,  # force non-zero on BTCUSDT
+        PARTIAL_TP_KEY: {
+            "steps": [
+                {"r_multiple": 1.0, "fraction": 0.5},
+                {"r_multiple": 2.0, "fraction": 0.5},
+            ]
+        },
+    }
+    session.flush()
+    pos = _open(session, source="user_confirmed")
+    entry_fee0 = float(pos.entry_fee or 0.0)
+    remaining = float(pos.qty)
+    entry = float(pos.entry_price)
+    notional0 = float(pos.notional or 0.0)
+
+    fin = apply_daily_financing(
+        session,
+        p,
+        as_of=datetime(2026, 9, 24, 12, 0, tzinfo=timezone.utc),
+        force_day=date(2026, 9, 24),
+    )
+    session.flush()
+    assert len(fin) == 1
+    financed = financing_total_for_position(session, pos.id)
+    assert financed > 0
+    assert financed == pytest.approx(notional0 * (10.0 / 10_000.0))
+
+    half = remaining * 0.5
+    r1 = broker.partial_close_capital_position(
+        session,
+        pos,
+        price=entry * 1.01,
+        qty=half,
+        fraction=0.5,
+        r_multiple=1.0,
+    )
+    assert r1 is not None and pos.status == "OPEN"
+    # First slice: no financing yet (deferred to final close).
+    assert float(r1.realized_pnl) == pytest.approx(
+        half * (entry * 1.01) - (notional0 * 0.5) - (entry_fee0 * 0.5)
+    )
+
+    r2 = broker.partial_close_capital_position(
+        session,
+        pos,
+        price=entry * 1.02,
+        qty=half,
+        fraction=0.5,
+        r_multiple=2.0,
+    )
+    assert r2 is not None and pos.status == "CLOSED"
+    assert float(pos.entry_fee) == pytest.approx(entry_fee0)
+    assert float(pos.qty) == pytest.approx(remaining)
+    session.flush()
+    assert session.query(PaperPartialExit).filter_by(position_id=pos.id).count() == 2
+    # Exhausting slice settles via close_capital_position → financing deducted once.
+    assert float(r2.realized_pnl) == pytest.approx(
+        half * (entry * 1.02) - (notional0 * 0.5) - (entry_fee0 * 0.5) - financed
+    )
+    assert float(pos.realized_pnl) == pytest.approx(
+        float(r1.realized_pnl) + float(r2.realized_pnl)
+    )
 
 
 @pytest.mark.skipif(not DB, reason="Postgres not reachable")

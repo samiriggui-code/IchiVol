@@ -286,6 +286,8 @@ class PaperPosition(Base):
     risk_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
     risk_amount: Mapped[float | None] = mapped_column(Float, nullable=True)
     entry_fee: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Stable entry commission (never shrinks on partials); restored on CLOSE like qty.
+    initial_entry_fee: Mapped[float | None] = mapped_column(Float, nullable=True)
     exit_fee: Mapped[float | None] = mapped_column(Float, nullable=True)
     realized_pnl: Mapped[float | None] = mapped_column(Float, nullable=True)
     mfe_pct: Mapped[float | None] = mapped_column(Float, nullable=True)

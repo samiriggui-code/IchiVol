@@ -41,8 +41,41 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-MANAGE-a** #45 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres — diff réel + no-lookahead vérifié bar par bar).
 - **T0-MANAGE-b** #46 — **MERGÉE** (validé par Claude — watermark, gate legacy/auto et isolation des tests vérifiés ; 2 réserves non bloquantes notées).
 - **T0-MANAGE-c** #47 — **MERGÉE** (validé par Claude — invariant 1e-9 revérifié indépendamment ; **résidu de Jensen mesuré et non borné, voir entrée dédiée**).
-- **Job en cours** : **T0-MANAGE-d** — prise de profit partielle **paper** — PR draft (voir entrée ci-dessous). **Pas de merge / pas de T0-MANAGE-e** avant revue Claude.
+- **Job en cours** : **T0-MANAGE-d** — prise de profit partielle **paper** — PR draft #48. **Pas de merge / pas de T0-MANAGE-e** avant nouvelle revue Claude.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol² (jusqu'à ~2,2 % par trade à 10 % de volatilité). **Ne pas comparer un ruleset avec partiels à un ruleset sans partiels sur le drawdown** avant correction — le total de performance, lui, est exact.
+- ⚠️ **Dette préexistante (hors #48)** : SHORT `realized` n'inclut pas `entry_fee` (noté revue Claude).
+
+
+---
+
+## 2026-09-24 — T0-MANAGE-d CORRECTIONS revue Claude #48
+
+- Branche : `cursor/t0-manage-d-partial-tp-paper-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/48 (**draft**)
+- Statut : **ATTENTE RE-REVUE CLAUDE** — **ne pas merger** ; **pas de T0-MANAGE-e**.
+
+### Corrections demandées (fait)
+
+1. **Épuisement partial → `close_capital_position`** : si `qty` couvre le reliquat (`new_qty≈0`), `partial_close_capital_position` délègue le règlement à `close_capital_position` (financing déduit une fois, restore qty/entry_fee). Journal `PaperPartialExit` + event `PARTIAL_TP` conservés pour le tracking des steps.
+2. **`initial_entry_fee`** (alembic `d0e1f2a3b4c5`) : figé à l'open ; `entry_fee` shrink sur partiels ; **restauré à `initial_entry_fee` sur CLOSE** (chemins full close et exhaustion). Même contrat que `qty` / `initial_qty`.
+3. **Tests** : assert tautologique remplacé par `cash_delta == realized` (LONG, sans financement, depuis cash pré-open). Nouveau test steps somme=1 + financement crypto forcé non nul → financing dans le slice d'épuisement.
+
+### Non-bloquant (fait)
+
+- `pnl_pct` à la clôture = VWAP qty-pondéré des fills (partiels + reliquat), via `vwap_exit`.
+- `initial_stop` partial : priorité au `protection_trail.initial_stop` figé (resolve + alignement runtime si trail+partial actifs).
+- **`initial_qty`** : colonne stable = taille d'entrée ; pendant OPEN, `qty` = restant ; à CLOSE, `qty` restauré à `initial_qty` (consommateurs fees/ledger/T0-METRICS). Ne jamais shrink `initial_qty`. Fraction de step = `initial_qty * fraction`, capée au restant.
+
+### Dette hors scope
+
+- SHORT realized sans `entry_fee` (préexistant).
+
+### Tests locaux (Cursor, Postgres)
+
+```text
+pytest tests/paper/test_protection.py tests/paper/test_broker_fidelity.py -q
+# 28 passed
+```
 
 
 ---
@@ -62,6 +95,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 5. `protection.find_breach_manage` — priorité **stop > partials > target > trail** ; watermark avancé sur chemin partial
 6. API `partial_exits` sur les positions ; UI fiche (`PaperTradeSheet` étape 3b)
 7. Tests protection : gate, scale-out puis close reliquat, qty jamais négative, auto ignore ; assertions par `position.id`
+8. `initial_qty` (alembic `c9d0e1f2a3b4`) — taille d'entrée stable ; `qty` = restant tant qu'OPEN ; restauré à CLOSE
 
 ### Non-fait
 

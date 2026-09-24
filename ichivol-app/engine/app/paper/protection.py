@@ -637,6 +637,12 @@ def _process_position(
     if partial_cfg is not None and not dry_run:
         freeze_partial_tp_anchor(pos, partial_cfg)
         partial_cfg = resolve_paper_partial_tp(pos, portfolio) or partial_cfg
+    # Align partial R-base with trail's frozen initial_stop when both are active.
+    if partial_cfg is not None and trail_cfg is not None:
+        from dataclasses import replace as _dc_replace
+
+        if abs(partial_cfg.initial_stop - trail_cfg.initial_stop) > 1e-12:
+            partial_cfg = _dc_replace(partial_cfg, initial_stop=trail_cfg.initial_stop)
 
     use_manage = partial_cfg is not None
     manage: ManageScanResult | None = None

@@ -92,7 +92,16 @@ def resolve_paper_partial_tp(
         return None
     if position.stop_price is None or position.entry_price is None or not position.qty:
         return None
-    initial_stop = float(raw.get("initial_stop", position.stop_price))
+    # Prefer trail's frozen initial_stop when both manage modes share the lot
+    # (same risk base for R-multiples and trail).
+    sig = position.entry_signal if isinstance(position.entry_signal, dict) else {}
+    trail_blob = sig.get("protection_trail")
+    if isinstance(trail_blob, Mapping) and trail_blob.get("initial_stop") is not None:
+        initial_stop = float(trail_blob["initial_stop"])
+    elif "initial_stop" in raw and raw["initial_stop"] is not None:
+        initial_stop = float(raw["initial_stop"])
+    else:
+        initial_stop = float(position.stop_price)
     # Prefer frozen blob, then column, then current remaining (open, no partials yet).
     if "initial_qty" in raw and raw["initial_qty"] is not None:
         initial_qty = float(raw["initial_qty"])

@@ -108,6 +108,70 @@ def _journal(
 
 
 
+def _ensure_initial_entry_refs(position: PaperPosition, *, remaining: float, prior_sold: float) -> None:
+    """Freeze initial_qty / initial_entry_fee before any shrink (OPEN path)."""
+    if position.initial_qty is None:
+        position.initial_qty = remaining + prior_sold
+    if position.initial_entry_fee is None:
+        iq = float(position.initial_qty or 0.0)
+        fee_now = float(position.entry_fee or 0.0)
+        if iq > 0 and remaining + 1e-12 < iq and remaining > 1e-12:
+            # Already scaled out without the column — reconstruct full entry fee.
+            position.initial_entry_fee = fee_now * (iq / remaining)
+        else:
+            position.initial_entry_fee = fee_now
+
+
+def _restore_entry_refs_after_close(position: PaperPosition) -> None:
+    """Restore qty / entry_fee to stable entry sizes after CLOSE (T0-MANAGE-d)."""
+    entry_qty = float(position.initial_qty) if position.initial_qty is not None else float(position.qty or 0.0)
+    if position.initial_qty is None and entry_qty > 0:
+        position.initial_qty = entry_qty
+    position.qty = entry_qty
+    position.notional = float(position.entry_price or 0.0) * entry_qty if entry_qty else 0.0
+
+    entry_fee0 = (
+        float(position.initial_entry_fee)
+        if position.initial_entry_fee is not None
+        else float(position.entry_fee or 0.0)
+    )
+    if position.initial_entry_fee is None:
+        position.initial_entry_fee = entry_fee0
+    position.entry_fee = entry_fee0
+
+
+def _apply_vwap_pnl_pct(
+    session: Session,
+    position: PaperPosition,
+    *,
+    extra_fill: tuple[float, float] | None = None,
+) -> None:
+    """Set ``pnl_pct`` from qty-weighted VWAP of partial exits + optional final fill."""
+    from app.strategy_lab.partial_tp import vwap_exit
+
+    exits = list(
+        session.execute(
+            select(PaperPartialExit).where(PaperPartialExit.position_id == position.id)
+        ).scalars()
+    )
+    fills: list[tuple[float, float]] = [
+        (float(e.price), float(e.qty or 0.0)) for e in exits if float(e.qty or 0.0) > 0
+    ]
+    if extra_fill is not None and extra_fill[1] > 0:
+        fills.append(extra_fill)
+    if not fills:
+        px = float(position.exit_price or position.entry_price or 0.0)
+        q = float(position.initial_qty or position.qty or 0.0)
+        if q <= 0 or px <= 0:
+            return
+        fills = [(px, q)]
+    vwap = vwap_exit(fills)
+    if position.direction == "LONG":
+        position.pnl_pct = (vwap / position.entry_price) - 1.0
+    else:
+        position.pnl_pct = short_pnl_pct(position.entry_price, vwap)
+
+
 def short_pnl_pct(entry_price: float, exit_fill: float) -> float:
     """SHORT return: (entry − exit) / entry. Never use entry/exit − 1 (overstates gains)."""
     if not entry_price:
@@ -224,6 +288,7 @@ def open_capital_position(
         risk_pct=sized.risk_pct,
         risk_amount=sized.risk_amount,
         entry_fee=fee,
+        initial_entry_fee=fee,
         mfe_pct=0.0,
         mae_pct=0.0,
         highest_price_seen=sized.entry_fill,
@@ -421,19 +486,16 @@ def close_capital_position(
     position.exit_signal = signal
     position.exit_fee = (position.exit_fee or 0.0) + exit_fee
     position.realized_pnl = realized if realized is not None else position.realized_pnl
-    position.pnl_pct = (
-        (exit_fill / position.entry_price) - 1.0
-        if position.direction == "LONG"
-        else short_pnl_pct(position.entry_price, exit_fill)
+    # Restore qty / entry_fee to stable entry sizes so fee/ledger consumers that
+    # read pos.qty / pos.entry_fee after CLOSE keep a fixed reference.
+    # Capture remaining size before restore for VWAP (partials + this fill).
+    closed_qty = float(position.qty or 0.0)
+    _apply_vwap_pnl_pct(
+        session,
+        position,
+        extra_fill=(exit_fill, closed_qty) if closed_qty > 0 else None,
     )
-    # Restore qty to the stable entry size so fee/ledger consumers that read
-    # pos.qty after CLOSE keep a fixed reference (T0-METRICS / T0-MANAGE-d).
-    # While OPEN, qty means remaining; initial_qty never shrinks.
-    entry_qty = float(position.initial_qty) if position.initial_qty is not None else float(position.qty or 0.0)
-    if position.initial_qty is None and entry_qty > 0:
-        position.initial_qty = entry_qty
-    position.qty = entry_qty
-    position.notional = float(position.entry_price or 0.0) * entry_qty if entry_qty else 0.0
+    _restore_entry_refs_after_close(position)
     position.updated_at = now
 
     if portfolio is not None:
@@ -471,6 +533,9 @@ def partial_close_capital_position(
 
     Returns the journal row, or None if the lot was already closed / qty invalid.
     Never drives ``position.qty`` negative.
+
+    When ``qty`` exhausts the lot (new_qty ≈ 0), settlement goes through
+    ``close_capital_position`` so financing and entry_fee restore match a full close.
     """
     if position.status != "OPEN":
         return None
@@ -513,10 +578,8 @@ def partial_close_capital_position(
     seq = (existing[-1].seq + 1) if existing else 1
     key = f"partial:{position.id}:{seq}"
 
-    # Ensure a stable entry-size reference before qty shrinks.
-    if position.initial_qty is None:
-        prior_sold = sum(float(e.qty or 0.0) for e in existing)
-        position.initial_qty = remaining + prior_sold
+    prior_sold = sum(float(e.qty or 0.0) for e in existing)
+    _ensure_initial_entry_refs(position, remaining=remaining, prior_sold=prior_sold)
 
     # Idempotent replay
     prior = session.execute(
@@ -527,6 +590,56 @@ def partial_close_capital_position(
     ).scalar_one_or_none()
     if prior is not None:
         return prior
+
+    # Exhausting scale-out: settle via close_capital_position (financing + entry_fee restore).
+    if qty >= remaining - 1e-12:
+        prior_realized = float(position.realized_pnl or 0.0)
+        exit_fee_before = float(position.exit_fee or 0.0)
+        close_capital_position(
+            session,
+            position,
+            price=price,
+            reason=reason,
+            signal=signal,
+            at=now,
+        )
+        slice_realized = float(position.realized_pnl or 0.0) - prior_realized
+        exit_fee = float(position.exit_fee or 0.0) - exit_fee_before
+        exit_fill = float(position.exit_price or price)
+        row = PaperPartialExit(
+            portfolio_id=portfolio.id,
+            position_id=position.id,
+            seq=seq,
+            key=key,
+            r_multiple=float(r_multiple),
+            fraction=float(fraction),
+            qty=qty,
+            price=exit_fill,
+            fee=exit_fee,
+            realized_pnl=slice_realized,
+            time_ms=ts_ms,
+            created_at=now,
+        )
+        session.add(row)
+        _journal(
+            session,
+            portfolio_id=portfolio.id,
+            position_id=position.id,
+            event_type="PARTIAL_TP",
+            payload={
+                "seq": seq,
+                "r_multiple": r_multiple,
+                "fraction": fraction,
+                "qty": qty,
+                "price": exit_fill,
+                "realized_pnl": slice_realized,
+                "remaining_qty": 0.0,
+                "via": "close_capital_position",
+                "signal": signal,
+            },
+        )
+        session.flush()
+        return row
 
     spread_bps, slip_bps = _friction(profile, position.symbol)
     exit_fill = apply_exit_friction(
@@ -647,37 +760,8 @@ def partial_close_capital_position(
         },
     )
 
-    if new_qty <= 1e-12:
-        # Exact scale-out of remainder via partial steps — finalize as CLOSED.
-        # Restore qty to initial_qty (never leave a CLOSED lot with qty=0).
-        entry_qty = float(position.initial_qty) if position.initial_qty is not None else 0.0
-        position.qty = entry_qty
-        position.notional = float(position.entry_price or 0.0) * entry_qty if entry_qty else 0.0
-        position.status = "CLOSED"
-        position.exit_time = now
-        position.exit_price = exit_fill
-        position.exit_reason = reason
-        position.exit_signal = signal
-        position.pnl_pct = (
-            (exit_fill / position.entry_price) - 1.0
-            if position.direction == "LONG"
-            else short_pnl_pct(position.entry_price, exit_fill)
-        )
-        _journal(
-            session,
-            portfolio_id=portfolio.id,
-            position_id=position.id,
-            event_type="CLOSED",
-            payload={
-                "reason": reason,
-                "exit": exit_fill,
-                "pnl_pct": position.pnl_pct,
-                "realized_pnl": position.realized_pnl,
-                "via": "partial_exhausted",
-            },
-        )
-
     return row
+
 
 
 def check_stop_or_tp(position: PaperPosition, price: float) -> str | None:
