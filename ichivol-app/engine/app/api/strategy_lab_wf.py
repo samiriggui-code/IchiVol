@@ -31,6 +31,9 @@ class WalkForwardBody(BaseModel):
     persist: bool = False
     ruleset_id: str | None = "IV_ICHIMOKU_RVOL_LONG_001"
     ruleset: dict | None = None
+    deep_history: bool = False
+    years: float = 2.0
+    dataset_id: str | None = None
 
 
 @router.post("/strategy-lab/walk-forward")
@@ -52,6 +55,9 @@ def post_strategy_lab_walk_forward(body: WalkForwardBody) -> dict:
             warmup_bars=body.warmup_bars,
             include_train=body.include_train,
             persist=body.persist,
+            deep_history=body.deep_history,
+            years=body.years,
+            dataset_id=body.dataset_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -71,6 +77,9 @@ def get_strategy_lab_walk_forward(
     include_train: bool = True,
     persist: bool = False,
     ruleset_id: str = "IV_ICHIMOKU_RVOL_LONG_001",
+    deep_history: bool = False,
+    years: float = 2.0,
+    dataset_id: str | None = None,
 ) -> dict:
     if limit < 100 or limit > 5000:
         raise HTTPException(status_code=422, detail="limit must be between 100 and 5000")
@@ -87,6 +96,9 @@ def get_strategy_lab_walk_forward(
             warmup_bars=warmup_bars,
             include_train=include_train,
             persist=persist,
+            deep_history=deep_history,
+            years=years,
+            dataset_id=dataset_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

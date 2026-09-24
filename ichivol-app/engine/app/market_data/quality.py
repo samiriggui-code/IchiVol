@@ -35,8 +35,25 @@ class QualityReport:
     def codes(self) -> set[str]:
         return {i.code for i in self.issues}
 
+    def code_counts(self) -> dict[str, int]:
+        """Per-code issue counts (T12a manifest / Lab responses)."""
+        out: dict[str, int] = {}
+        for i in self.issues:
+            out[i.code] = out.get(i.code, 0) + 1
+        return out
+
     def has(self, code: str) -> bool:
         return code in self.codes()
+
+    def to_dict(self) -> dict:
+        return {
+            "ok": self.ok,
+            "n_candles": self.n_candles,
+            "codes": sorted(self.codes()),
+            "code_counts": self.code_counts(),
+            "n_issues": len(self.issues),
+            "degraded": not self.ok,
+        }
 
 
 def validate_candles(

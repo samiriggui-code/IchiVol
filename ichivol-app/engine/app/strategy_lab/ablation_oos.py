@@ -99,6 +99,9 @@ class AblationOosReport:
     history_span_seconds: int | None = None
     history_warning: str | None = None
     min_oos_trades: int = DEFAULT_MIN_OOS_TRADES
+    dataset_id: str | None = None
+    quality_report: dict | None = None
+    data_warning: str | None = None
     cost_base_bps: dict[str, float] = field(
         default_factory=lambda: {
             "commission_bps": BASE_COMMISSION_BPS,
@@ -129,6 +132,9 @@ class AblationOosReport:
             "history_span_seconds": self.history_span_seconds,
             "history_warning": self.history_warning,
             "min_oos_trades": self.min_oos_trades,
+            "dataset_id": self.dataset_id,
+            "quality_report": dict(self.quality_report) if self.quality_report else None,
+            "data_warning": self.data_warning,
             "cost_base_bps": dict(self.cost_base_bps),
             "cost_adverse_bps": dict(self.cost_adverse_bps),
         }
@@ -353,6 +359,9 @@ def run_ablation_oos_study_on_candles(
     slippage_bps: float = BASE_SLIPPAGE_BPS,
     adverse_commission_bps: float = ADVERSE_COMMISSION_BPS,
     adverse_slippage_bps: float = ADVERSE_SLIPPAGE_BPS,
+    dataset_id: str | None = None,
+    quality_report: dict | None = None,
+    data_warning: str | None = None,
 ) -> AblationOosReport:
     mode = compare_mode.lower().strip()
     if mode not in ("additive", "leave_one_layer_out"):
@@ -489,6 +498,26 @@ def run_ablation_oos_study_on_candles(
 
     span, hist_warn = _history_meta(candles)
     hid = str(hypothesis_id).strip() if hypothesis_id else None
+
+    qr = quality_report
+    dw = data_warning
+    did = dataset_id
+    if qr is None:
+        from app.strategy_lab.deep_history import bundle_from_live_candles
+
+        bundle = bundle_from_live_candles(
+            candles, symbol=symbol, timeframe=timeframe, dataset_id=did
+        )
+        qr = bundle.quality
+        dw = bundle.data_warning if dw is None else dw
+        did = bundle.dataset_id if did is None else did
+    # Prefer quality/data_warning from T12a when history is long enough;
+    # keep short-history indicatif warning when span < 1y.
+    if hist_warn is None and dw:
+        hist_warn = dw
+    elif hist_warn is not None and dw and dw not in hist_warn:
+        hist_warn = f"{hist_warn}; {dw}"
+
     return AblationOosReport(
         symbol=symbol,
         timeframe=timeframe,
@@ -504,6 +533,9 @@ def run_ablation_oos_study_on_candles(
         history_span_seconds=span,
         history_warning=hist_warn,
         min_oos_trades=min_oos_trades,
+        dataset_id=did,
+        quality_report=qr,
+        data_warning=dw,
         cost_base_bps={
             "commission_bps": commission_bps,
             "slippage_bps": slippage_bps,

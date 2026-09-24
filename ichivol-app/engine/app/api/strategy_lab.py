@@ -166,6 +166,9 @@ class RegimeSlicesBody(BaseModel):
     persist: bool = False
     ruleset_id: str | None = "IV_ICHIMOKU_RVOL_LONG_001"
     ruleset: dict | None = None
+    deep_history: bool = False
+    years: float = 2.0
+    dataset_id: str | None = None
 
 
 @router.post("/strategy-lab/regime-slices")
@@ -181,6 +184,9 @@ def post_strategy_lab_regime_slices(body: RegimeSlicesBody) -> dict:
             ruleset_id=body.ruleset_id,
             ruleset=body.ruleset,
             persist=body.persist,
+            deep_history=body.deep_history,
+            years=body.years,
+            dataset_id=body.dataset_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -194,6 +200,9 @@ def get_strategy_lab_regime_slices(
     limit: int = 1000,
     ruleset_id: str = "IV_ICHIMOKU_RVOL_LONG_001",
     persist: bool = False,
+    deep_history: bool = False,
+    years: float = 2.0,
+    dataset_id: str | None = None,
 ) -> dict:
     if limit < 50 or limit > 5000:
         raise HTTPException(status_code=422, detail="limit must be between 50 and 5000")
@@ -204,6 +213,9 @@ def get_strategy_lab_regime_slices(
             limit=limit,
             ruleset_id=ruleset_id,
             persist=persist,
+            deep_history=deep_history,
+            years=years,
+            dataset_id=dataset_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

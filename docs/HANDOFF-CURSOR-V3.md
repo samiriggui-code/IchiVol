@@ -7,6 +7,36 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — T12a EN COURS — historique profond versionné (Strategy Lab)
+
+- Branche : `cursor/t12a-deep-history-a2fe`
+- PR : *(draft — à renseigner)*
+- Base : `main` @ `9490e4b` (#71 T9g-fix **MERGÉE**)
+- Statut : **DRAFT** — attente revue Claude avant merge.
+
+### Livré
+
+1. `strategy_lab/deep_history.py` — jeux versionnés (`manifest.json` + sha256), pagination Binance `startTime`, plafond Twelve Data **5 000**, défaut crypto **≥ 2 ans** en 1h
+2. `validate_candles` à la construction ; rapport qualité (**codes + code_counts**) dans le manifeste
+3. Études Lab (`walk-forward`, `ablation_oos`, `regime_slices`) renvoient `quality_report` / `data_warning` / `dataset_id` ; jeu défaillant **utilisable** avec avertissement
+4. API / agent : `deep_history`, `years`, `dataset_id`
+5. **Réserve #71** : test étude `test_study_inconclusive_when_variant_has_few_trades_mocked_wf` — `_run_wf` mocké base=40 / variante=5 → `inconclusive` (échoue si `max()` remis)
+
+### Hors scope
+T12b–e · T13 · FeatureStatus · pipeline · microstructure
+
+---
+
+## 2026-09-24 — T9g-fix MERGÉE (#71) — squash `9490e4b`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/71 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `9490e4b`
+- `review_candidate` + gates ; `min(trades_base, trades_var)` (rév.50).
+
+**Suite** : T12a EN COURS (historique profond versionné + validate_candles).
+
+---
+
 ## 2026-09-24 — SYNC Claude rév.51 — complétude T12a/b + T11a-bis (après #71)
 
 Contrôle de complétude Claude — **à appliquer après merge de #71**,  
