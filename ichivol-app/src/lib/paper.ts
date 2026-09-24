@@ -553,6 +553,25 @@ export interface PaperOverview {
   equity_curve: { t: string; equity: number }[]
   costs?: PaperCosts
   progress?: PaperProgress
+  /** T13b Risk Kernel summary for Portefeuille → Risque. */
+  risk?: {
+    capital: number
+    cash: number
+    exposed: number
+    open_risk_amount: number
+    open_risk_pct: number | null
+    max_open_risk_pct: number | null
+    open_positions: number
+    max_open_positions: number
+    recent_refusals: Array<{
+      at: string | null
+      symbol?: string
+      timeframe?: string
+      reason?: string
+      codes?: string[]
+    }>
+    kernel: string
+  }
 }
 
 export interface PaperReconcileCheck {

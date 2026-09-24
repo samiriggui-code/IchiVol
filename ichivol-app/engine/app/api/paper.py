@@ -240,6 +240,49 @@ def get_paper_portfolio_overview(code: str) -> dict:
         priced_n = sum(
             1 for r in rows if r["status"] == "OPEN" and r["valuation_status"] in ("priced", "stale_mark")
         )
+        # T13b — Risk tab payload (capital / exposed / risk used / recent refusals)
+        from app.db.models import PaperJournalEvent
+        from app.paper.counters import REJECT_EVENT
+
+        open_risk_amount = sum(float(p.risk_amount or 0.0) for p in opens)
+        profile = portfolio.strategy_profile or {}
+        max_open_risk_pct = float(profile.get("max_open_risk_pct") or 0.0) or None
+        open_risk_pct = (open_risk_amount / equity) if equity > 0 else None
+        rej_rows = list(
+            session.execute(
+                select(PaperJournalEvent)
+                .where(
+                    PaperJournalEvent.portfolio_id == portfolio.id,
+                    PaperJournalEvent.event_type == REJECT_EVENT,
+                )
+                .order_by(PaperJournalEvent.created_at.desc())
+                .limit(20)
+            ).scalars()
+        )
+        recent_refusals = []
+        for ev in rej_rows:
+            pl = ev.payload or {}
+            recent_refusals.append(
+                {
+                    "at": ev.created_at.isoformat() if ev.created_at else None,
+                    "symbol": pl.get("symbol"),
+                    "timeframe": pl.get("timeframe"),
+                    "reason": pl.get("reason"),
+                    "codes": pl.get("codes") or ([pl.get("reason")] if pl.get("reason") else []),
+                }
+            )
+        risk = {
+            "capital": equity,
+            "cash": portfolio.cash,
+            "exposed": invested,
+            "open_risk_amount": open_risk_amount,
+            "open_risk_pct": open_risk_pct,
+            "max_open_risk_pct": max_open_risk_pct,
+            "open_positions": open_n,
+            "max_open_positions": int(profile.get("max_open_positions", 5)),
+            "recent_refusals": recent_refusals,
+            "kernel": "risk_kernel_v1",
+        }
         return {
             "portfolio": _portfolio_dict(portfolio),
             "account": {
@@ -264,6 +307,7 @@ def get_paper_portfolio_overview(code: str) -> dict:
             "equity_curve": curve,
             "costs": compute_costs(session, portfolio, equity=equity),
             "progress": compute_progress(session, portfolio, equity=equity),
+            "risk": risk,
         }
     finally:
         session.close()

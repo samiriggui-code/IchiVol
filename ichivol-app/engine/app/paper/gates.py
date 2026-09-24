@@ -44,6 +44,10 @@ def observe_decision(portfolio_id: str, symbol: str, timeframe: str, decision: s
     return _RUN[key][1]
 
 
+def traded_run_id(portfolio_id: str, symbol: str, timeframe: str) -> int | None:
+    return _TRADED_RUN.get((portfolio_id, symbol, timeframe))
+
+
 def mark_run_traded(portfolio_id: str, symbol: str, timeframe: str, run_id: int) -> None:
     _TRADED_RUN[(portfolio_id, symbol, timeframe)] = run_id
 
@@ -69,30 +73,28 @@ def entry_gate(
     session: Session, portfolio: PaperPortfolio, *, symbol: str, timeframe: str, price: float,
     stop_distance: float | None, equity: float, run_id: int | None = None, now: datetime | None = None,
 ) -> str | None:
+    """Session adapter — delegates pure checks to ``risk_kernel.evaluate_entry_codes`` (T13b)."""
+    from app.paper.risk_kernel import OpenPlan, PortfolioState, evaluate_entry_codes, open_lots_from_positions
+
     p: dict[str, Any] = portfolio.strategy_profile or {}
-    if not stop_distance or stop_distance <= 0:
-        return "no_atr_stop"
     opens = open_positions(session, portfolio.id)
-    if p.get("one_position_per_symbol") and any(o.symbol == symbol for o in opens):
-        return "position_already_open"
-    if p.get("one_entry_per_signal_run") and run_id is not None:
-        if _TRADED_RUN.get((portfolio.id, symbol, timeframe)) == run_id:
-            return "signal_already_processed"
-    if len(opens) >= int(p.get("max_open_positions", 5)):
-        return "max_positions"
-    risk_pct = float(p.get("risk_pct", 0.01))
-    max_notional_pct = float(p.get("max_notional_pct", 0.25))
-    est_qty = min(equity * risk_pct / stop_distance, equity * max_notional_pct / price)
-    if p.get("max_open_risk_pct"):
-        cur = sum(float(o.risk_amount or 0.0) for o in opens)
-        if cur + est_qty * stop_distance > equity * float(p["max_open_risk_pct"]) + 1e-9:
-            return "open_risk_cap"
-    if p.get("max_symbol_notional_pct"):
-        cur = sum(float(o.notional or 0.0) for o in opens if o.symbol == symbol)
-        if cur + est_qty * price > equity * float(p["max_symbol_notional_pct"]) + 1e-9:
-            return "symbol_exposure_cap"
-    if p.get("daily_loss_limit_pct"):
-        start = day_start_equity(session, portfolio, now)
-        if start > 0 and equity <= start * (1 - float(p["daily_loss_limit_pct"])):
-            return "daily_loss_halt"
-    return None
+    traded = None
+    if run_id is not None:
+        traded = _TRADED_RUN.get((portfolio.id, symbol, timeframe))
+    state = PortfolioState(
+        cash=float(portfolio.cash),
+        equity=float(equity),
+        profile=p,
+        open_positions=open_lots_from_positions(opens),
+        day_start_equity=day_start_equity(session, portfolio, now),
+        traded_run_id=traded,
+    )
+    plan = OpenPlan(
+        symbol=symbol,
+        timeframe=timeframe,
+        direction="LONG",  # unused by evaluate_entry_codes
+        price=price,
+        stop_distance=stop_distance,
+        run_id=run_id,
+    )
+    return evaluate_entry_codes(plan, state)
