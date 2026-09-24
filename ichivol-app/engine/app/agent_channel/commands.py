@@ -468,6 +468,27 @@ def cmd_run_walk_forward_opt(args: dict) -> dict:
 _MAX_CORRELATION_SYMBOLS = 40
 
 
+def cmd_list_provider_capabilities(args: dict) -> dict:
+    """V3 — declared provider capabilities (inventory; not a live guarantee)."""
+    from app.market_data.capabilities import get_capabilities, list_capabilities
+
+    provider = args.get("provider")
+    if provider:
+        caps = get_capabilities(str(provider).strip().lower())
+        if caps is None:
+            raise CommandError(f"unknown provider: {provider}")
+        providers = [caps.to_dict()]
+    else:
+        providers = [c.to_dict() for c in list_capabilities()]
+    return {
+        "providers": providers,
+        "disclaimer": (
+            "Provider capabilities — declarative inventory of what the "
+            "engine wires today; not a live data guarantee."
+        ),
+    }
+
+
 def cmd_get_correlations(args: dict) -> dict:
     """Same payload as `GET /correlations`. `symbols` accepts either a
     comma-separated string (HTTP-style) or a JSON list (command-style)."""

@@ -3875,6 +3875,58 @@
         ]
       }
     },
+    "/api/engine/providers/capabilities": {
+      "get": {
+        "description": "V3 \u2014 declared provider capabilities (observation / routing honesty).",
+        "operationId": "get_provider_capabilities_api_engine_providers_capabilities_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "provider",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Provider Capabilities Api Engine Providers Capabilities Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Provider Capabilities",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
     "/api/engine/ruleset/event-study": {
       "post": {
         "description": "Strategy Lab Phase 2 \u2014 evaluate a ruleset then run Event Study on rising-edge hits.",

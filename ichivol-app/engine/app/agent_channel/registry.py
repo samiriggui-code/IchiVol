@@ -30,6 +30,7 @@ from app.agent_channel.commands import (
     cmd_get_calendar,
     cmd_get_chart_objects,
     cmd_get_correlations,
+    cmd_list_provider_capabilities,
     cmd_get_event_context,
     cmd_get_family_weights,
     cmd_list_family_weight_profiles,
@@ -289,6 +290,13 @@ TOOLS: dict[str, ToolSpec] = {
                 "method": "'log_returns' | 'price', défaut 'log_returns'",
             },
             cmd_get_correlations,
+        ),
+        ToolSpec(
+            "list_provider_capabilities",
+            "V3 — capacités déclarées des providers (OHLCV/quotes/trades/depth/OI…). Inventaire, pas une garantie live.",
+            True,
+            {"provider": "str, optionnel (binance|biquote|twelve_data)"},
+            cmd_list_provider_capabilities,
         ),
         ToolSpec(
             "calculate_ichimoku", "État Ichimoku brut (tenkan/kijun/cloud/score) -- pas de décision.", True,
