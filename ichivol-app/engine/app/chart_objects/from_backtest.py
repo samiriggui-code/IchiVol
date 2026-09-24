@@ -14,6 +14,7 @@ from typing import Sequence
 from app.agents.types import Direction
 from app.chart_objects.types import (
     ChartObject,
+    ChartObjectLayer,
     ChartObjectSource,
     ChartObjectType,
     ChartPoint,
@@ -114,6 +115,7 @@ def backtest_to_chart_objects(
             return ChartObject(
                 type=obj_type,
                 source=ChartObjectSource.BACKTEST,
+                layer=ChartObjectLayer.BACKTEST,
                 symbol=symbol,
                 timeframe=timeframe,
                 points=(ChartPoint(time=time, price=float(price)),),
@@ -172,6 +174,7 @@ def backtest_to_chart_objects(
             ChartObject(
                 type=ChartObjectType.MARKER,
                 source=ChartObjectSource.BACKTEST,
+                layer=ChartObjectLayer.BACKTEST,
                 symbol=symbol,
                 timeframe=timeframe,
                 points=(ChartPoint(time=t, price=px),),

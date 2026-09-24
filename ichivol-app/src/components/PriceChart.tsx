@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import {
   CandlestickSeries,
   ColorType,
@@ -16,6 +16,13 @@ import {
   type Time,
   type UTCTimestamp,
 } from 'lightweight-charts'
+import {
+  DEFAULT_LAYERS,
+  OBJECT_LAYER_META,
+  layerFromSource,
+  type LayerPrefs,
+  type ObjectLayerKey,
+} from '../lib/marketPrefs'
 import {
   chartObjectMarkers,
   chartObjectPriceLevels,
@@ -46,11 +53,17 @@ interface Props {
   timeframe: Interval | string
   onSignals?: (signals: Signal[]) => void
   onLive?: (live: { bias: 'bull' | 'bear' | 'neutral'; rvol: number }) => void
-  /** ChartObjects moteur (zones / trendlines / markers) — couche Structure. */
+  /** ChartObjects moteur (zones / trendlines / markers) — filtered by layer prefs. */
   chartObjects?: ChartObject[] | null
   /** T2c: when true, chart clicks emit onPickPoint (mark-trade mode). */
   pickMode?: boolean
   onPickPoint?: (point: ChartPickPoint) => void
+  /** Global layer visibility (persisted by Market page). */
+  layerPrefs?: LayerPrefs
+  onLayerPrefsChange?: (next: LayerPrefs) => void
+  /** Volume pane height in px (persisted). */
+  volumeHeight?: number
+  onVolumeHeightChange?: (h: number) => void
 }
 
 type SeriesBag = {
@@ -90,7 +103,7 @@ type LayerKey =
 
 type LayerVis = Record<LayerKey, boolean>
 
-const DEFAULT_LAYERS: LayerVis = {
+const LOCAL_DEFAULT: LayerVis = {
   candles: true,
   tenkan: true,
   kijun: true,
@@ -99,6 +112,17 @@ const DEFAULT_LAYERS: LayerVis = {
   volume: true,
   signals: true,
   structure: true,
+}
+
+function filterObjectsByLayers(
+  objects: ChartObject[] | null | undefined,
+  prefs: LayerPrefs,
+): ChartObject[] {
+  if (!objects?.length) return []
+  return objects.filter((o) => {
+    const layer = layerFromSource(o.source, o.layer)
+    return prefs[layer] !== false
+  })
 }
 
 function buildLegend(colors: ChartColors): { key: LayerKey; label: string; color: string; color2?: string }[] {
@@ -279,6 +303,10 @@ export function PriceChart({
   chartObjects,
   pickMode = false,
   onPickPoint,
+  layerPrefs,
+  onLayerPrefsChange,
+  volumeHeight = 110,
+  onVolumeHeightChange,
 }: Props) {
   const priceLinesRef = useRef<IPriceLine[]>([])
   const trendSeriesRef = useRef<ISeriesApi<'Line'>[]>([])
@@ -290,13 +318,39 @@ export function PriceChart({
   const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null)
   const hoverMapRef = useRef<Map<number, HoverPoint>>(new Map())
   const signalsCacheRef = useRef<Signal[]>([])
-  const layersRef = useRef<LayerVis>(DEFAULT_LAYERS)
+  const volumeHeightRef = useRef(volumeHeight)
   const pickModeRef = useRef(pickMode)
   const onPickPointRef = useRef(onPickPoint)
   const [colors, setColors] = useState<ChartColors>(() => readChartColors())
-  const [layers, setLayers] = useState<LayerVis>(DEFAULT_LAYERS)
+  const [layers, setLayers] = useState<LayerVis>(() => ({
+    ...LOCAL_DEFAULT,
+    candles: layerPrefs?.candles ?? true,
+    tenkan: layerPrefs?.tenkan ?? true,
+    kijun: layerPrefs?.kijun ?? true,
+    spanA: layerPrefs?.spanA ?? true,
+    spanB: layerPrefs?.spanB ?? true,
+    volume: layerPrefs?.volume ?? true,
+    signals: layerPrefs?.signals ?? true,
+    structure: layerPrefs?.structure ?? true,
+  }))
+  const layersRef = useRef<LayerVis>(layers)
   const [overlayError, setOverlayError] = useState<string | null>(null)
   const [overlaysReady, setOverlaysReady] = useState(false)
+  const prefs: LayerPrefs = layerPrefs ?? { ...DEFAULT_LAYERS, ...layers }
+
+  useEffect(() => {
+    if (!layerPrefs) return
+    setLayers({
+      candles: layerPrefs.candles,
+      tenkan: layerPrefs.tenkan,
+      kijun: layerPrefs.kijun,
+      spanA: layerPrefs.spanA,
+      spanB: layerPrefs.spanB,
+      volume: layerPrefs.volume,
+      signals: layerPrefs.signals,
+      structure: layerPrefs.structure,
+    })
+  }, [layerPrefs])
 
   useEffect(() => {
     layersRef.current = layers
@@ -307,6 +361,12 @@ export function PriceChart({
   useEffect(() => {
     onPickPointRef.current = onPickPoint
   }, [onPickPoint])
+  useEffect(() => {
+    volumeHeightRef.current = volumeHeight
+    const panes = chartRef.current?.panes()
+    if (panes?.[1]) panes[1].setHeight(Math.max(40, Math.min(280, volumeHeight)))
+  }, [volumeHeight])
+
   const [tip, setTip] = useState<TipState>({
     visible: false,
     x: 0,
@@ -315,7 +375,15 @@ export function PriceChart({
   })
 
   const toggleLayer = (key: LayerKey) => {
-    setLayers((prev) => ({ ...prev, [key]: !prev[key] }))
+    setLayers((prev) => {
+      const next = { ...prev, [key]: !prev[key] }
+      onLayerPrefsChange?.({ ...prefs, ...next })
+      return next
+    })
+  }
+
+  const toggleObjectLayer = (key: ObjectLayerKey) => {
+    onLayerPrefsChange?.({ ...prefs, [key]: !prefs[key] })
   }
 
   useEffect(() => {
@@ -356,7 +424,7 @@ export function PriceChart({
     )
     volume.priceScale().applyOptions({ scaleMargins: { top: 0.2, bottom: 0 } })
     const panes = chart.panes()
-    if (panes[1]) panes[1].setHeight(110)
+    if (panes[1]) panes[1].setHeight(Math.max(40, Math.min(280, volumeHeightRef.current)))
 
     const seriesBag: SeriesBag = { candle, tenkan, kijun, spanA, spanB, volume }
     applyChartTheme(chart, seriesBag, initialColors)
@@ -577,13 +645,15 @@ export function PriceChart({
 
   // Overlays moteur via ChartObjects : zones = 2 price lines, trendlines = 2-point series.
   useEffect(() => {
+    const filtered = filterObjectsByLayers(chartObjects, prefs)
+    const showObjects = OBJECT_LAYER_META.some((m) => prefs[m.key])
     structureMarkersRef.current = renderChartObjects(
       chartRef.current,
       seriesRef.current,
       priceLinesRef,
       trendSeriesRef,
-      chartObjects,
-      layers.structure,
+      filtered,
+      showObjects,
       colors,
     )
     const showOverlays = overlaysReady && !overlayError
@@ -602,34 +672,69 @@ export function PriceChart({
         : []
     markersRef.current?.setMarkers([
       ...volMarkers,
-      ...(layers.structure ? structureMarkersRef.current : []),
+      ...structureMarkersRef.current,
     ])
-  }, [chartObjects, layers.structure, layers.signals, colors, candles, overlaysReady, overlayError])
+  }, [chartObjects, layers.signals, colors, candles, overlaysReady, overlayError, prefs])
 
   const p = tip.point
   const up = p ? p.candle.close >= p.candle.open : false
-  const legend = buildLegend(colors)
+  const legend = buildLegend(colors).filter(
+    (item) => item.key === 'tenkan' || item.key === 'kijun' || item.key === 'spanA' || item.key === 'spanB',
+  )
+  const activeObjectLayers = OBJECT_LAYER_META.filter((m) => prefs[m.key])
+
+  const onVolDragStart = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    const startY = e.clientY
+    const startH = volumeHeight
+    const onMove = (ev: PointerEvent) => {
+      const delta = startY - ev.clientY
+      const next = Math.max(40, Math.min(280, startH + delta))
+      onVolumeHeightChange?.(next)
+    }
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
 
   return (
     <div className={`chart-wrap${pickMode ? ' is-pick-mode' : ''}`} ref={wrapRef}>
-      <div className="chart-legend" role="toolbar" aria-label="Couches du graphique">
-        {legend.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            className={`legend-chip${layers[item.key] ? ' is-on' : ' is-off'}`}
-            aria-pressed={layers[item.key]}
-            title={layers[item.key] ? `Masquer ${item.label}` : `Afficher ${item.label}`}
-            onClick={() => toggleLayer(item.key)}
-          >
-            <span className="legend-dots" aria-hidden="true">
-              <i style={{ background: item.color }} />
-              {item.color2 && <i style={{ background: item.color2 }} />}
-            </span>
-            {item.label}
-          </button>
-        ))}
-        <span className="legend-hint">Clique pour afficher / masquer</span>
+      <div className="chart-chrome-row">
+        <div className="chart-layer-pills" role="toolbar" aria-label="Calques actifs">
+          {activeObjectLayers.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              className="layer-pill is-on"
+              aria-pressed
+              title={`Masquer ${item.label}`}
+              onClick={() => toggleObjectLayer(item.key)}
+            >
+              <i style={{ background: item.color }} aria-hidden />
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <div className="chart-legend chart-legend--indicators" role="toolbar" aria-label="Ichimoku">
+          {legend.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              className={`legend-chip${layers[item.key] ? ' is-on' : ' is-off'}`}
+              aria-pressed={layers[item.key]}
+              title={layers[item.key] ? `Masquer ${item.label}` : `Afficher ${item.label}`}
+              onClick={() => toggleLayer(item.key)}
+            >
+              <span className="legend-dots" aria-hidden="true">
+                <i style={{ background: item.color }} />
+              </span>
+              {item.label}
+            </button>
+          ))}
+        </div>
       </div>
       {overlayError && (
         <p className="muted chart-overlay-msg" role="status">
@@ -642,6 +747,14 @@ export function PriceChart({
         </p>
       )}
       <div className="chart-host" ref={hostRef} />
+      <div
+        className="chart-vol-resize"
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label="Redimensionner le volume"
+        title="Glisser pour redimensionner volume / RVOL"
+        onPointerDown={onVolDragStart}
+      />
       {tip.visible && p && (
         <div
           className="chart-tip"

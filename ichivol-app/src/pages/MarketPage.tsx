@@ -1,10 +1,23 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { BiasPanel } from '../components/BiasPanel'
-import { BacktestOverlaySheet } from '../components/BacktestOverlaySheet'
+import {
+  BacktestOverlaySheet,
+  type BacktestUiFilter,
+} from '../components/BacktestOverlaySheet'
 import { MarkTradeSheet, type MarkTradeStep } from '../components/MarkTradeSheet'
+import { MarketLayersMenu } from '../components/MarketLayersMenu'
+import { MarketSymbolSearch } from '../components/MarketSymbolSearch'
+import { MarketWatchlist, buildContextBadges } from '../components/MarketWatchlist'
 import { PriceChart, type ChartPickPoint } from '../components/PriceChart'
-import { Screener } from '../components/Screener'
 import { INTERVALS } from '../lib/binance'
 import {
   getDecisionDetail,
@@ -28,10 +41,21 @@ import {
   type BacktestOverlayTrade,
   type BacktestRejectedSignal,
 } from '../lib/backtestOverlay'
+import type { BacktestMetrics } from '../lib/backtest'
 import { useMarketSnapshot } from '../lib/marketSnapshot'
 import {
-  CLASS_BLURBS,
-  CLASS_LABELS,
+  OBJECT_LAYER_META,
+  countObjectsByLayer,
+  loadLayerPrefs,
+  loadLayoutPrefs,
+  saveLayerPrefs,
+  saveLayoutPrefs,
+  type IndicatorLayerKey,
+  type LayerPrefs,
+  type MarketLayoutPrefs,
+  type WatchlistSortKey,
+} from '../lib/marketPrefs'
+import {
   getEngineOhlcv,
   getEngineUniverse,
   type EngineAssetClass,
@@ -47,21 +71,22 @@ import {
 const ENGINE_TIMEFRAMES = new Set<Interval>(['15m', '1h', '4h', '1d'])
 const MARK_STEPS: UserTradePointType[] = ['entry', 'stop', 'target']
 
+const INDICATOR_TOGGLES: { key: IndicatorLayerKey; label: string }[] = [
+  { key: 'candles', label: 'Bougies' },
+  { key: 'tenkan', label: 'Tenkan' },
+  { key: 'kijun', label: 'Kijun' },
+  { key: 'spanA', label: 'Span A' },
+  { key: 'spanB', label: 'Span B' },
+  { key: 'volume', label: 'Volume' },
+  { key: 'signals', label: 'Signaux' },
+]
+
 function newSetupId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return crypto.randomUUID()
   }
   return `setup-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 }
-
-const CLASS_ORDER: EngineAssetClass[] = [
-  'crypto',
-  'forex',
-  'metal',
-  'index',
-  'equity',
-  'energy',
-]
 
 function decisionToBias(d: ScreenerDecisionRow['decision']): ScreenerRow['bias'] {
   if (d === 'STRONG_BUY' || d === 'BUY') return 'bull'
@@ -86,6 +111,28 @@ function friendlyDataError(raw: string): string {
   return raw
 }
 
+function fmtPrice(n: number | null): string {
+  if (n == null || !Number.isFinite(n)) return '—'
+  return n.toLocaleString(undefined, { maximumFractionDigits: n >= 100 ? 2 : 6 })
+}
+
+function fmtPct(n: number | null): string {
+  if (n == null || !Number.isFinite(n)) return '—'
+  const sign = n > 0 ? '+' : ''
+  return `${sign}${n.toFixed(2)} %`
+}
+
+function isAssetClass(v: string | null): v is EngineAssetClass {
+  return (
+    v === 'crypto' ||
+    v === 'forex' ||
+    v === 'metal' ||
+    v === 'index' ||
+    v === 'equity' ||
+    v === 'energy'
+  )
+}
+
 export function MarketPage() {
   const { setSnapshot } = useMarketSnapshot()
   const [searchParams] = useSearchParams()
@@ -106,7 +153,16 @@ export function MarketPage() {
   const [chartLoading, setChartLoading] = useState(false)
   const [scanLoading, setScanLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [sideOpen, setSideOpen] = useState(true)
+
+  const [layout, setLayout] = useState<MarketLayoutPrefs>(() => loadLayoutPrefs())
+  const [layerPrefs, setLayerPrefs] = useState<LayerPrefs>(() => loadLayerPrefs())
+  const [isMobile, setIsMobile] = useState(false)
+
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [layersOpen, setLayersOpen] = useState(false)
+  const [indicatorsOpen, setIndicatorsOpen] = useState(false)
+  const [infoOpen, setInfoOpen] = useState(false)
 
   const [engineDetail, setEngineDetail] = useState<DecisionDetail | null>(null)
   const [engineLoading, setEngineLoading] = useState(false)
@@ -123,9 +179,9 @@ export function MarketPage() {
   const [markError, setMarkError] = useState<string | null>(null)
 
   // T4a — Backtest overlay (ephemeral BACKTEST objects layered on ENGINE/USER/CLAUDE)
-  const [btSheetOpen, setBtSheetOpen] = useState(false)
   const [btRulesetId, setBtRulesetId] = useState<string | null>(null)
   const [btOutcome, setBtOutcome] = useState<BacktestOutcomeFilter>('all')
+  const [btUiFilter, setBtUiFilter] = useState<BacktestUiFilter>('all')
   const [btExitReason, setBtExitReason] = useState<string | null>(null)
   const [btDirection, setBtDirection] = useState<string | null>(null)
   const [btRegimeLabel, setBtRegimeLabel] = useState<string | null>(null)
@@ -133,38 +189,104 @@ export function MarketPage() {
   const [btTrades, setBtTrades] = useState<BacktestOverlayTrade[]>([])
   const [btRejected, setBtRejected] = useState<BacktestRejectedSignal[]>([])
   const [btCounts, setBtCounts] = useState<BacktestOverlayCounts | null>(null)
+  const [btMetrics, setBtMetrics] = useState<BacktestMetrics | null>(null)
   const [btActive, setBtActive] = useState(false)
   const [btLoading, setBtLoading] = useState(false)
   const [btError, setBtError] = useState<string | null>(null)
 
-  const classInstruments = useMemo(
-    () => instruments.filter((i) => i.asset_class === marketClass),
-    [instruments, marketClass],
-  )
-  const wiredInClass = useMemo(
-    () => classInstruments.filter((i) => i.wired),
-    [classInstruments],
-  )
+  const resizeRef = useRef<{ startX: number; startW: number } | null>(null)
+  const indicatorsRef = useRef<HTMLDivElement | null>(null)
+  const infoRef = useRef<HTMLDivElement | null>(null)
+
+  const classFilter = isAssetClass(layout.classFilter) ? layout.classFilter : null
+
+  const allWired = useMemo(() => instruments.filter((i) => i.wired), [instruments])
   const current = useMemo(
     () => instruments.find((i) => i.id === symbol) ?? null,
     [instruments, symbol],
   )
   const engineOn = Boolean(current?.wired && ENGINE_TIMEFRAMES.has(interval))
+  const activeObjectLayerCount = useMemo(
+    () => OBJECT_LAYER_META.filter((m) => layerPrefs[m.key]).length,
+    [layerPrefs],
+  )
 
-  const visibleClasses = useMemo(() => {
-    const present = new Set(instruments.map((i) => i.asset_class))
-    return CLASS_ORDER.filter((c) => present.has(c))
-  }, [instruments])
+  const updateLayout = useCallback((patch: Partial<MarketLayoutPrefs>) => {
+    setLayout((prev) => {
+      const next = { ...prev, ...patch }
+      saveLayoutPrefs(next)
+      return next
+    })
+  }, [])
+
+  const setLayerPrefsAndSave = useCallback((next: LayerPrefs) => {
+    setLayerPrefs(next)
+    saveLayerPrefs(next)
+  }, [])
+
+  const selectSymbol = useCallback(
+    (next: string) => {
+      setSymbol(next)
+      const inst = instruments.find((i) => i.id === next)
+      if (inst) setMarketClass(inst.asset_class)
+      setSearchOpen(false)
+      setSearchQuery('')
+    },
+    [instruments],
+  )
+
+  const onClassFilter = useCallback(
+    (c: EngineAssetClass | null) => {
+      updateLayout({ classFilter: c })
+    },
+    [updateLayout],
+  )
+
+  const onSort = useCallback(
+    (key: WatchlistSortKey) => {
+      if (layout.sortKey === key) {
+        updateLayout({ sortDir: layout.sortDir === 'asc' ? 'desc' : 'asc' })
+      } else {
+        updateLayout({ sortKey: key, sortDir: key === 'symbol' ? 'asc' : 'desc' })
+      }
+    },
+    [layout.sortKey, layout.sortDir, updateLayout],
+  )
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 980px)')
-    const apply = () => {
-      if (mq.matches) setSideOpen(true)
-    }
+    const apply = () => setIsMobile(mq.matches)
     apply()
     mq.addEventListener('change', apply)
     return () => mq.removeEventListener('change', apply)
   }, [])
+
+  useEffect(() => {
+    if (!indicatorsOpen && !infoOpen) return
+    const onDoc = (e: MouseEvent) => {
+      const t = e.target as Node
+      if (indicatorsOpen && indicatorsRef.current && !indicatorsRef.current.contains(t)) {
+        setIndicatorsOpen(false)
+      }
+      if (infoOpen && infoRef.current && !infoRef.current.contains(t)) {
+        setInfoOpen(false)
+      }
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIndicatorsOpen(false)
+        setInfoOpen(false)
+        setLayersOpen(false)
+        if (!isMobile) setSearchOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [indicatorsOpen, infoOpen, isMobile])
 
   useEffect(() => {
     let cancelled = false
@@ -203,16 +325,6 @@ export function MarketPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deep-link on first universe load
   }, [])
 
-  const selectClass = useCallback(
-    (next: EngineAssetClass) => {
-      setMarketClass(next)
-      const list = instruments.filter((i) => i.asset_class === next)
-      const pick = list.find((i) => i.wired) ?? list[0]
-      if (pick) setSymbol(pick.id)
-    },
-    [instruments],
-  )
-
   const loadChart = useCallback(async (sym: string, tf: Interval) => {
     setChartLoading(true)
     setError(null)
@@ -235,18 +347,22 @@ export function MarketPage() {
   /** Screener moteur = un seul appel partagé qui couvre déjà crypto (binance)
    * ET forex/métal/index/énergie (biquote, gratuit) via default_watchlist()
    * côté moteur -- seul twelve_data (actions) reste en liste locale pour ne
-   * pas cramer son quota (~7 crédits/min) sur un scan multi-symboles. */
+   * pas cramer son quota (~7 crédits/min) sur un scan multi-symboles.
+   * Watchlist UI-MARKET : scanne TOUS les instruments câblés (toutes classes). */
   const runClassScan = useCallback(async (tf: Interval, list: EngineInstrument[]) => {
     const wired = list.filter((i) => i.wired)
     setScanLoading(true)
     setError(null)
     try {
-      if (list[0]?.provider !== 'twelve_data') {
+      const allTwelve =
+        wired.length > 0 && wired.every((i) => i.provider === 'twelve_data')
+
+      if (!allTwelve) {
         const res = await getScreener(tf, false)
         const bySym = new Map(res.rows.map((r) => [r.symbol, r]))
         const scanned: ScreenerRow[] = wired.map((inst) => {
           const eng = bySym.get(inst.id)
-          return {
+          const row: ScreenerRow = {
             symbol: inst.id,
             price: eng?.price ?? 0,
             change24h: 0,
@@ -259,6 +375,7 @@ export function MarketPage() {
             engineConfidence: eng?.confidence,
             enginePipeline: eng?.pipeline,
           }
+          return { ...row, context: buildContextBadges(row) }
         })
         scanned.sort((a, b) => (b.engineConfidence ?? 0) - (a.engineConfidence ?? 0))
         setRows(scanned)
@@ -267,16 +384,19 @@ export function MarketPage() {
 
       // Pas d’appels Twelve Data en rafale — lignes placeholder, détail au clic.
       setRows(
-        wired.map((inst) => ({
-          symbol: inst.id,
-          price: 0,
-          change24h: 0,
-          quoteVolume: 0,
-          bias: 'neutral' as const,
-          rvol: 0,
-          signals: [],
-          lastSignal: null,
-        })),
+        wired.map((inst) => {
+          const row: ScreenerRow = {
+            symbol: inst.id,
+            price: 0,
+            change24h: 0,
+            quoteVolume: 0,
+            bias: 'neutral' as const,
+            rvol: 0,
+            signals: [],
+            lastSignal: null,
+          }
+          return { ...row, context: buildContextBadges(row) }
+        }),
       )
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Erreur screener'
@@ -388,9 +508,9 @@ export function MarketPage() {
   }, [symbol, interval, current])
 
   useEffect(() => {
-    if (!classInstruments.length) return
-    void runClassScan(interval, classInstruments)
-  }, [interval, marketClass, classInstruments, runClassScan])
+    if (!instruments.length) return
+    void runClassScan(interval, instruments)
+  }, [interval, instruments, runClassScan])
 
   const live = useMemo(
     () => ({
@@ -400,6 +520,15 @@ export function MarketPage() {
     }),
     [candles, chartLive],
   )
+
+  /** Top-bar % only — rows keep change24h: 0 from API. */
+  const change24hDisplay = useMemo(() => {
+    if (candles.length < 2) return null
+    const last = candles[candles.length - 1]?.close
+    const prev = candles[candles.length - 2]?.close
+    if (last == null || prev == null || prev === 0) return null
+    return ((last - prev) / prev) * 100
+  }, [candles])
 
   const enginePipeline = useMemo(
     () => (engineDetail ? pipelineFromDecisionDetail(engineDetail) : null),
@@ -417,6 +546,8 @@ export function MarketPage() {
       : chartProvider === 'binance'
         ? 'Binance Vision'
         : chartProvider ?? '—'
+
+  const isTwelveData = chartProvider === 'twelve_data' || current?.provider === 'twelve_data'
 
   const canMarkTrade =
     Boolean(current?.wired) && ENGINE_TIMEFRAMES.has(interval) && candles.length > 0
@@ -483,8 +614,10 @@ export function MarketPage() {
     setBtTrades([])
     setBtRejected([])
     setBtCounts(null)
+    setBtMetrics(null)
     setBtActive(false)
     setBtError(null)
+    setBtUiFilter('all')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, interval])
 
@@ -493,8 +626,10 @@ export function MarketPage() {
     setBtTrades([])
     setBtRejected([])
     setBtCounts(null)
+    setBtMetrics(null)
     setBtActive(false)
     setBtError(null)
+    setBtUiFilter('all')
   }, [])
 
   const loadBacktestOverlay = useCallback(
@@ -523,6 +658,7 @@ export function MarketPage() {
         setBtTrades(res.trades)
         setBtRejected(res.rejected ?? [])
         setBtCounts(res.counts)
+        setBtMetrics(res.metrics ?? null)
         setBtActive(true)
       } catch (err: unknown) {
         setBtError(err instanceof Error ? err.message : 'Échec backtest')
@@ -536,7 +672,18 @@ export function MarketPage() {
   const onBtOutcome = useCallback(
     (o: BacktestOutcomeFilter) => {
       setBtOutcome(o)
+      setBtUiFilter(o)
       if (btActive) void loadBacktestOverlay(o, btExitReason, btDirection, btRegimeLabel)
+    },
+    [btActive, btExitReason, btDirection, btRegimeLabel, loadBacktestOverlay],
+  )
+
+  const onBtUiFilter = useCallback(
+    (f: BacktestUiFilter) => {
+      setBtUiFilter(f)
+      if (f === 'rejected') return
+      setBtOutcome(f)
+      if (btActive) void loadBacktestOverlay(f, btExitReason, btDirection, btRegimeLabel)
     },
     [btActive, btExitReason, btDirection, btRegimeLabel, loadBacktestOverlay],
   )
@@ -571,174 +718,591 @@ export function MarketPage() {
     return [...base, ...btObjects]
   }, [chartObjects, btObjects])
 
+  const layerCounts = useMemo(
+    () => countObjectsByLayer(mergedChartObjects),
+    [mergedChartObjects],
+  )
+
+  const btPanelOpen =
+    (!isMobile && layout.bottomOpen && layout.bottomTab === 'backtest') ||
+    (isMobile && layout.drawerPos !== 'closed' && layout.drawerTab === 'backtest')
+
+  const onRightResizeStart = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      e.preventDefault()
+      resizeRef.current = { startX: e.clientX, startW: layout.rightWidth }
+      const onMove = (ev: PointerEvent) => {
+        if (!resizeRef.current) return
+        const delta = resizeRef.current.startX - ev.clientX
+        const next = Math.max(280, Math.min(520, resizeRef.current.startW + delta))
+        updateLayout({ rightWidth: next, rightOpen: true })
+      }
+      const onUp = () => {
+        resizeRef.current = null
+        window.removeEventListener('pointermove', onMove)
+        window.removeEventListener('pointerup', onUp)
+      }
+      window.addEventListener('pointermove', onMove)
+      window.addEventListener('pointerup', onUp)
+    },
+    [layout.rightWidth, updateLayout],
+  )
+
+  const openBottomTab = useCallback(
+    (tab: MarketLayoutPrefs['bottomTab']) => {
+      if (layout.bottomOpen && layout.bottomTab === tab) {
+        updateLayout({ bottomOpen: false })
+        return
+      }
+      updateLayout({ bottomOpen: true, bottomTab: tab, bottomHeight: layout.bottomHeight || 250 })
+      if (tab === 'mark' && !markOpen && canMarkTrade) {
+        /* hint only — user starts from button in panel / top bar */
+      }
+    },
+    [layout.bottomOpen, layout.bottomTab, layout.bottomHeight, updateLayout, markOpen, canMarkTrade],
+  )
+
+  const cycleDrawer = useCallback(
+    (tab?: MarketLayoutPrefs['drawerTab']) => {
+      const nextTab = tab ?? layout.drawerTab
+      if (tab && tab !== layout.drawerTab) {
+        updateLayout({
+          drawerTab: nextTab,
+          drawerPos: layout.drawerPos === 'closed' ? 'half' : layout.drawerPos,
+        })
+        return
+      }
+      const order = ['closed', 'half', 'full'] as const
+      const idx = order.indexOf(layout.drawerPos)
+      const next = order[(idx + 1) % order.length]!
+      updateLayout({ drawerPos: next, drawerTab: nextTab })
+    },
+    [layout.drawerPos, layout.drawerTab, updateLayout],
+  )
+
+  const setDrawerTab = useCallback(
+    (tab: MarketLayoutPrefs['drawerTab']) => {
+      if (layout.drawerPos === 'closed') {
+        updateLayout({ drawerTab: tab, drawerPos: 'half' })
+      } else if (layout.drawerTab === tab) {
+        updateLayout({ drawerPos: 'closed' })
+      } else {
+        updateLayout({ drawerTab: tab })
+      }
+    },
+    [layout.drawerPos, layout.drawerTab, updateLayout],
+  )
+
+  const toggleIndicator = useCallback(
+    (key: IndicatorLayerKey) => {
+      setLayerPrefsAndSave({ ...layerPrefs, [key]: !layerPrefs[key] })
+    },
+    [layerPrefs, setLayerPrefsAndSave],
+  )
+
+  const pctClass =
+    change24hDisplay == null
+      ? ''
+      : change24hDisplay > 0
+        ? 'is-up'
+        : change24hDisplay < 0
+          ? 'is-down'
+          : ''
+
+  const watchlistProps = {
+    rows,
+    instruments,
+    loading: scanLoading,
+    selected: symbol,
+    onSelect: selectSymbol,
+    sortKey: layout.sortKey,
+    sortDir: layout.sortDir,
+    onSort,
+    classFilter,
+    onClassFilter,
+    onRescan: () => void runClassScan(interval, instruments),
+    scanLoading,
+    showEngine: engineOn || marketClass === 'crypto' || allWired.some((i) => i.provider !== 'twelve_data'),
+  }
+
+  const biasPanel = (
+    <BiasPanel
+      symbol={current?.label ?? displaySymbol(symbol)}
+      signals={signals}
+      bias={live.bias}
+      rvol={live.rvol}
+      price={live.price}
+      engineDetail={engineDetail}
+      enginePipeline={enginePipeline}
+      engineLoading={engineLoading}
+      engineError={engineError}
+      engineAvailable={engineOn}
+    />
+  )
+
+  const chartEl = (
+    <PriceChart
+      candles={candles}
+      symbol={symbol}
+      timeframe={interval}
+      onSignals={setSignals}
+      onLive={setChartLive}
+      chartObjects={mergedChartObjects}
+      pickMode={markOpen && markStep !== 'review'}
+      onPickPoint={onPickPoint}
+      layerPrefs={layerPrefs}
+      onLayerPrefsChange={setLayerPrefsAndSave}
+      volumeHeight={isMobile ? Math.min(layout.volumeHeight, 120) : layout.volumeHeight}
+      onVolumeHeightChange={(h) => updateLayout({ volumeHeight: h })}
+    />
+  )
+
+  const backtestEmbed = btPanelOpen ? (
+    <BacktestOverlaySheet
+      symbolLabel={current?.label ?? displaySymbol(symbol)}
+      selectedRulesetId={btRulesetId}
+      outcome={btOutcome}
+      uiFilter={btUiFilter}
+      counts={btCounts}
+      trades={btTrades}
+      rejected={btRejected}
+      metrics={btMetrics}
+      exitReason={btExitReason}
+      direction={btDirection}
+      regimeLabel={btRegimeLabel}
+      loading={btLoading}
+      error={btError}
+      active={btActive}
+      variant="embed"
+      onSelectRuleset={setBtRulesetId}
+      onOutcome={onBtOutcome}
+      onUiFilter={onBtUiFilter}
+      onExitReason={onBtExitReason}
+      onDirection={onBtDirection}
+      onRegimeLabel={onBtRegimeLabel}
+      onShow={() => void loadBacktestOverlay(btOutcome)}
+      onClear={clearBacktestOverlay}
+      onClose={() => {
+        if (isMobile) updateLayout({ drawerPos: 'closed' })
+        else updateLayout({ bottomOpen: false })
+      }}
+    />
+  ) : null
+
+  const tfButtons = (
+    <div className="mkt-tf-group" role="group" aria-label="Timeframe">
+      {INTERVALS.map((tf) => (
+        <button
+          key={tf.id}
+          type="button"
+          className={tf.id === interval ? 'is-active' : undefined}
+          onClick={() => setInterval(tf.id)}
+        >
+          {tf.label}
+        </button>
+      ))}
+    </div>
+  )
+
+  const infoButton = (
+    <div className="mkt-info-wrap" ref={infoRef}>
+      <button
+        type="button"
+        className="mkt-icon-btn"
+        aria-label="Info source"
+        aria-expanded={infoOpen}
+        onClick={() => setInfoOpen((o) => !o)}
+      >
+        i
+      </button>
+      {infoOpen ? (
+        <div className="mkt-info-pop" role="note">
+          {isTwelveData
+            ? `Données via le moteur IchiVol (${providerLabel}) — pas de compte broker. Plan Twelve Data gratuit ≈ 8 crédits/min : charge un symbole à la fois (liste sans scan parallèle).`
+            : `Source : ${providerLabel}. OHLCV via le moteur IchiVol — pas de compte broker.`}
+        </div>
+      ) : null}
+    </div>
+  )
+
   return (
     <div
-      className={`market-page${markOpen ? ' is-mark-trade' : ''}${btSheetOpen ? ' is-backtest-overlay' : ''}`}
+      className={`market-page mkt-page${isMobile ? ' is-mobile' : ' is-desktop'}${
+        markOpen ? ' is-mark-trade' : ''
+      }${btPanelOpen ? ' is-backtest-overlay' : ''}${
+        layout.rightOpen ? '' : ' is-right-collapsed'
+      }${layout.bottomOpen ? ' is-bottom-open' : ''}`}
+      style={
+        {
+          '--mkt-right-w': `${layout.rightWidth}px`,
+          '--mkt-bottom-h': `${layout.bottomHeight}px`,
+          '--mkt-drawer-pos': layout.drawerPos,
+        } as CSSProperties
+      }
+      data-drawer={layout.drawerPos}
     >
-      <header className="market-head">
-        <div className="market-head-copy">
-          <h1>Marché</h1>
-          <p className="muted">{CLASS_BLURBS[marketClass]}</p>
-        </div>
-        <div className="market-class-tabs" role="tablist" aria-label="Classe d’actif">
-          {visibleClasses.map((c) => (
-            <button
-              key={c}
-              type="button"
-              role="tab"
-              aria-selected={c === marketClass}
-              className={c === marketClass ? 'is-active' : undefined}
-              onClick={() => selectClass(c)}
-            >
-              {CLASS_LABELS[c]}
-            </button>
-          ))}
-        </div>
-      </header>
-
-      <div className="market-toolbar topbar">
-        <div className="controls">
-          <label>
-            Instrument
-            <select value={symbol} onChange={(e) => setSymbol(e.target.value)}>
-              {classInstruments.map((p) => (
-                <option key={p.id} value={p.id} disabled={!p.wired}>
-                  {p.label}
-                  {!p.wired ? ' · non câblé' : ` · ${p.provider ?? ''}`} · {p.id}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="tf-group tf-group--toolbar" role="group" aria-label="Timeframe">
-            {INTERVALS.map((tf) => (
-              <button
-                key={tf.id}
-                type="button"
-                className={tf.id === interval ? 'is-active' : undefined}
-                onClick={() => setInterval(tf.id)}
-              >
-                {tf.label}
-              </button>
-            ))}
-          </div>
-
+      {/* —— Desktop top bar —— */}
+      {!isMobile && (
+        <header className="mkt-topbar" style={{ height: 52 }}>
           <button
             type="button"
-            className="ghost"
-            disabled={!wiredInClass.length || scanLoading}
-            onClick={() => void runClassScan(interval, classInstruments)}
+            className="mkt-symbol-btn"
+            aria-haspopup="dialog"
+            aria-expanded={searchOpen}
+            onClick={() => setSearchOpen((o) => !o)}
           >
-            {scanLoading ? 'Scan…' : 'Rescan'}
+            <span className="mkt-symbol-label">
+              {current?.label ?? displaySymbol(symbol)}
+            </span>
+            <span className="mkt-caret" aria-hidden>
+              ▾
+            </span>
           </button>
-        </div>
-      </div>
+
+          <div className="mkt-quote">
+            <span className="mkt-price mono">{fmtPrice(live.price)}</span>
+            <span className={`mkt-pct mono ${pctClass}`}>{fmtPct(change24hDisplay)}</span>
+            <span className="mkt-source muted">{providerLabel}</span>
+            {chartLoading ? <span className="muted">…</span> : null}
+          </div>
+
+          {tfButtons}
+
+          <div className="mkt-topbar-actions">
+            <div className="mkt-menu-anchor">
+              <button
+                type="button"
+                className="ghost mkt-topbar-btn"
+                aria-expanded={layersOpen}
+                onClick={() => {
+                  setLayersOpen((o) => !o)
+                  setIndicatorsOpen(false)
+                }}
+              >
+                Calques{activeObjectLayerCount ? ` · ${activeObjectLayerCount}` : ''} ▾
+              </button>
+              {layersOpen ? (
+                <MarketLayersMenu
+                  open
+                  onClose={() => setLayersOpen(false)}
+                  prefs={layerPrefs}
+                  onChange={setLayerPrefsAndSave}
+                  counts={layerCounts}
+                  variant="menu"
+                />
+              ) : null}
+            </div>
+
+            <div className="mkt-menu-anchor" ref={indicatorsRef}>
+              <button
+                type="button"
+                className="ghost mkt-topbar-btn"
+                aria-expanded={indicatorsOpen}
+                onClick={() => {
+                  setIndicatorsOpen((o) => !o)
+                  setLayersOpen(false)
+                }}
+              >
+                Indicateurs ▾
+              </button>
+              {indicatorsOpen ? (
+                <div className="mkt-indicators-menu" role="menu">
+                  {INDICATOR_TOGGLES.map((t) => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      role="menuitemcheckbox"
+                      aria-checked={layerPrefs[t.key]}
+                      className={layerPrefs[t.key] ? 'is-on' : undefined}
+                      onClick={() => toggleIndicator(t.key)}
+                    >
+                      <span aria-hidden>{layerPrefs[t.key] ? '◉' : '○'}</span>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <span className="mkt-topbar-ellipsis" aria-hidden>
+              …
+            </span>
+
+            {infoButton}
+
+            <button
+              type="button"
+              className={markOpen ? 'is-active mkt-topbar-btn' : 'ghost mkt-topbar-btn'}
+              disabled={!canMarkTrade || markSaving}
+              title={
+                canMarkTrade
+                  ? 'Poser ENTRY / STOP / TARGET sur le graphique'
+                  : 'Disponible sur symboles câblés (TF moteur)'
+              }
+              onClick={() => {
+                if (markOpen) cancelMarkTrade()
+                else {
+                  startMarkTrade()
+                  updateLayout({ bottomOpen: true, bottomTab: 'mark' })
+                }
+              }}
+            >
+              {markOpen ? 'Annuler marquage' : 'Marquer un trade'}
+            </button>
+
+            <button
+              type="button"
+              className="side-toggle mkt-icon-btn"
+              aria-expanded={layout.rightOpen}
+              aria-controls="mkt-right"
+              title={layout.rightOpen ? 'Réduire le panneau' : 'Afficher le panneau'}
+              onClick={() => updateLayout({ rightOpen: !layout.rightOpen })}
+            >
+              {layout.rightOpen ? '⟩' : '⟨'}
+            </button>
+          </div>
+
+          {searchOpen ? (
+            <MarketSymbolSearch
+              open
+              onClose={() => setSearchOpen(false)}
+              instruments={instruments}
+              rows={rows}
+              selected={symbol}
+              search={searchQuery}
+              onSearch={setSearchQuery}
+              classFilter={classFilter}
+              onClassFilter={onClassFilter}
+              onSelect={selectSymbol}
+              variant="popover"
+            />
+          ) : null}
+        </header>
+      )}
+
+      {/* —— Mobile top bar —— */}
+      {isMobile && (
+        <>
+          <header className="mkt-topbar mkt-topbar--mobile" style={{ minHeight: 52 }}>
+            <button
+              type="button"
+              className="mkt-symbol-btn"
+              style={{ minWidth: 44, minHeight: 44 }}
+              aria-haspopup="dialog"
+              aria-expanded={searchOpen}
+              onClick={() => setSearchOpen(true)}
+            >
+              <span className="mkt-symbol-label">
+                {current?.label ?? displaySymbol(symbol)}
+              </span>
+              <span className="mkt-caret" aria-hidden>
+                ▾
+              </span>
+            </button>
+            <div className="mkt-quote">
+              <span className="mkt-price mono">{fmtPrice(live.price)}</span>
+              <span className={`mkt-pct mono ${pctClass}`}>{fmtPct(change24hDisplay)}</span>
+            </div>
+            <button
+              type="button"
+              className="mkt-icon-btn"
+              style={{ minWidth: 44, minHeight: 44 }}
+              aria-label="Rechercher"
+              onClick={() => setSearchOpen(true)}
+            >
+              ⌕
+            </button>
+            <button
+              type="button"
+              className="mkt-icon-btn"
+              style={{ minWidth: 44, minHeight: 44 }}
+              aria-label="Calques"
+              aria-expanded={layersOpen}
+              onClick={() => setLayersOpen(true)}
+            >
+              Calques
+            </button>
+          </header>
+          <div className="mkt-mobile-tf-row">
+            {tfButtons}
+            {infoButton}
+          </div>
+        </>
+      )}
 
       {(error || universeError) && (
-        <div className="banner error" role="alert">
+        <div className="banner error mkt-error-toast" role="alert">
           {error ?? universeError}
         </div>
       )}
-      <div className="banner info market-feed-note" role="note">
-        Données via le moteur IchiVol ({providerLabel}) — pas de compte broker. Plan Twelve Data
-        gratuit ≈ 8 crédits/min : sur Forex/Métaux/Actions, charge un symbole à la fois (liste sans
-        scan parallèle).
+
+      {/* —— Main layout —— */}
+      <div className="mkt-body">
+        <section className="mkt-chart-panel chart-panel panel">
+          {chartEl}
+        </section>
+
+        {!isMobile && layout.rightOpen && (
+          <>
+            <div
+              className="mkt-resize-handle"
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Redimensionner la colonne"
+              onPointerDown={onRightResizeStart}
+            />
+            <aside id="mkt-right" className="mkt-right side">
+              <div className="mkt-right-list">
+                <MarketWatchlist {...watchlistProps} />
+              </div>
+              <div className="mkt-right-bias">{biasPanel}</div>
+            </aside>
+          </>
+        )}
       </div>
 
-      <main className={`layout${sideOpen ? '' : ' is-side-collapsed'}`}>
-        <section className="chart-panel panel">
-          <header className="panel-head">
-            <h2>
-              <span className="market-pair-title">{current?.label ?? displaySymbol(symbol)}</span>
-              <span className="market-pair-meta">
-                {symbol} · {interval} · {providerLabel}
-                {engineOn ? ' · moteur ON' : current && !current.wired ? ' · non câblé' : ''}
-              </span>
-            </h2>
-            <div className="panel-head-actions">
-              <span className="panel-meta">
-                {chartLoading ? 'chargement…' : `${candles.length} bougies`}
-              </span>
-              <button
-                type="button"
-                className={markOpen ? 'is-active' : 'ghost'}
-                disabled={!canMarkTrade || markSaving}
-                title={
-                  canMarkTrade
-                    ? 'Poser ENTRY / STOP / TARGET sur le graphique'
-                    : 'Disponible sur symboles câblés (TF moteur)'
-                }
-                onClick={() => (markOpen ? cancelMarkTrade() : startMarkTrade())}
-              >
-                {markOpen ? 'Annuler marquage' : 'Marquer un trade'}
-              </button>
-              <button
-                type="button"
-                className={btSheetOpen || btActive ? 'is-active' : 'ghost'}
-                disabled={!canMarkTrade || btLoading}
-                title="Afficher les trades d’une stratégie catalogue sur le chart"
-                onClick={() => setBtSheetOpen((o) => !o)}
-              >
-                Backtest
-              </button>
-              <button
-                type="button"
-                className="side-toggle"
-                aria-expanded={sideOpen}
-                aria-controls="side-panel"
-                title={sideOpen ? 'Réduire le panneau' : 'Afficher le panneau'}
-                onClick={() => setSideOpen((open) => !open)}
-              >
-                {sideOpen ? '⟩' : '⟨'}
-              </button>
+      {/* —— Desktop bottom dock —— */}
+      {!isMobile && (
+        <div className="mkt-bottom-dock">
+          {layout.bottomOpen && (
+            <div
+              className="mkt-bottom-panel"
+              style={{ height: layout.bottomHeight || 250 }}
+            >
+              {layout.bottomTab === 'backtest' ? backtestEmbed : null}
+              {layout.bottomTab === 'mark' ? (
+                <div className="mkt-bottom-embed">
+                  <p>
+                    {markOpen
+                      ? `Mode marquage — étape : ${markStep}. Clique le graphique pour poser les points.`
+                      : 'Pose ENTRY → STOP → TARGET sur le graphique, puis valide.'}
+                  </p>
+                  <button
+                    type="button"
+                    className={markOpen ? 'is-active' : undefined}
+                    disabled={!canMarkTrade || markSaving}
+                    onClick={() => (markOpen ? cancelMarkTrade() : startMarkTrade())}
+                  >
+                    {markOpen ? 'Annuler' : 'Démarrer'}
+                  </button>
+                </div>
+              ) : null}
+              {layout.bottomTab === 'journal' ? (
+                <div className="mkt-bottom-embed">
+                  <p>Journal — bientôt</p>
+                </div>
+              ) : null}
             </div>
-          </header>
-          <PriceChart
-            candles={candles}
-            symbol={symbol}
-            timeframe={interval}
-            onSignals={setSignals}
-            onLive={setChartLive}
-            chartObjects={mergedChartObjects}
-            pickMode={markOpen && markStep !== 'review'}
-            onPickPoint={onPickPoint}
-          />
-          <div className="tf-group tf-group--chart" role="group" aria-label="Timeframe">
-            {INTERVALS.map((tf) => (
+          )}
+          <nav className="mkt-bottom-bar" style={{ height: 44 }} aria-label="Panneau bas">
+            {(
+              [
+                ['backtest', 'Backtest'],
+                ['mark', 'Marquer un trade'],
+                ['journal', 'Journal'],
+              ] as const
+            ).map(([id, label]) => (
               <button
-                key={tf.id}
+                key={id}
                 type="button"
-                className={tf.id === interval ? 'is-active' : undefined}
-                onClick={() => setInterval(tf.id)}
+                className={
+                  layout.bottomOpen && layout.bottomTab === id ? 'is-active' : undefined
+                }
+                disabled={id === 'backtest' ? !canMarkTrade && !btActive : false}
+                onClick={() => openBottomTab(id)}
               >
-                {tf.label}
+                {label}
               </button>
             ))}
-          </div>
-        </section>
-        <aside id="side-panel" className="side" hidden={!sideOpen} aria-hidden={!sideOpen}>
-          <BiasPanel
-            symbol={current?.label ?? displaySymbol(symbol)}
-            signals={signals}
-            bias={live.bias}
-            rvol={live.rvol}
-            price={live.price}
-            engineDetail={engineDetail}
-            enginePipeline={enginePipeline}
-            engineLoading={engineLoading}
-            engineError={engineError}
-            engineAvailable={engineOn}
+          </nav>
+        </div>
+      )}
+
+      {/* —— Mobile bottom drawer —— */}
+      {isMobile && (
+        <div className={`mkt-drawer is-${layout.drawerPos}`} data-pos={layout.drawerPos}>
+          <button
+            type="button"
+            className="mkt-drawer-handle"
+            aria-label="Hauteur du tiroir"
+            onClick={() => cycleDrawer()}
           />
-          <Screener
-            rows={rows}
-            loading={scanLoading}
-            selected={symbol}
-            onSelect={setSymbol}
-            title={`Screener · ${CLASS_LABELS[marketClass]}`}
-            showEngine={engineOn || marketClass === 'crypto'}
-          />
-        </aside>
-      </main>
+          <nav className="mkt-drawer-tabs" aria-label="Tiroir">
+            {(
+              [
+                ['list', 'Liste'],
+                ['analysis', 'Analyse'],
+                ['backtest', 'Backtest'],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                className={
+                  layout.drawerPos !== 'closed' && layout.drawerTab === id
+                    ? 'is-active'
+                    : undefined
+                }
+                style={{ minHeight: 44 }}
+                onClick={() => setDrawerTab(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+          {layout.drawerPos !== 'closed' && (
+            <div className="mkt-drawer-body">
+              {layout.drawerTab === 'list' ? (
+                <MarketWatchlist {...watchlistProps} hideScore />
+              ) : null}
+              {layout.drawerTab === 'analysis' ? (
+                <div className="mkt-analysis-mobile">
+                  {biasPanel}
+                  <button
+                    type="button"
+                    className="mkt-paper-cta"
+                    disabled={!canMarkTrade}
+                    onClick={() => {
+                      if (!markOpen) startMarkTrade()
+                      updateLayout({ drawerPos: 'closed' })
+                    }}
+                  >
+                    Ouvrir un trade paper
+                  </button>
+                </div>
+              ) : null}
+              {layout.drawerTab === 'backtest' ? backtestEmbed : null}
+            </div>
+          )}
+        </div>
+      )}
+
+      {isMobile && searchOpen ? (
+        <MarketSymbolSearch
+          open
+          onClose={() => setSearchOpen(false)}
+          instruments={instruments}
+          rows={rows}
+          selected={symbol}
+          search={searchQuery}
+          onSearch={setSearchQuery}
+          classFilter={classFilter}
+          onClassFilter={onClassFilter}
+          onSelect={selectSymbol}
+          variant="sheet"
+        />
+      ) : null}
+
+      {isMobile && layersOpen ? (
+        <MarketLayersMenu
+          open
+          onClose={() => setLayersOpen(false)}
+          prefs={layerPrefs}
+          onChange={setLayerPrefsAndSave}
+          counts={layerCounts}
+          variant="sheet"
+        />
+      ) : null}
 
       {markOpen ? (
         <MarkTradeSheet
@@ -749,31 +1313,6 @@ export function MarketPage() {
           placed={markPlaced}
           onCancel={cancelMarkTrade}
           onValidate={() => void validateMarkTrade()}
-        />
-      ) : null}
-
-      {btSheetOpen ? (
-        <BacktestOverlaySheet
-          symbolLabel={current?.label ?? displaySymbol(symbol)}
-          selectedRulesetId={btRulesetId}
-          outcome={btOutcome}
-          counts={btCounts}
-          trades={btTrades}
-          rejected={btRejected}
-          exitReason={btExitReason}
-          direction={btDirection}
-          regimeLabel={btRegimeLabel}
-          loading={btLoading}
-          error={btError}
-          active={btActive}
-          onSelectRuleset={setBtRulesetId}
-          onOutcome={onBtOutcome}
-          onExitReason={onBtExitReason}
-          onDirection={onBtDirection}
-          onRegimeLabel={onBtRegimeLabel}
-          onShow={() => void loadBacktestOverlay(btOutcome)}
-          onClear={clearBacktestOverlay}
-          onClose={() => setBtSheetOpen(false)}
         />
       ) : null}
     </div>

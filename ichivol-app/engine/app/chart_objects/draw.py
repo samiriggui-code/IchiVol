@@ -6,6 +6,7 @@ from typing import Any
 
 from app.chart_objects.types import (
     ChartObject,
+    ChartObjectLayer,
     ChartObjectSource,
     ChartObjectType,
     ChartPoint,
@@ -137,6 +138,11 @@ def build_from_draw_args(
     return ChartObject(
         type=obj_type,
         source=source,
+        layer=(
+            ChartObjectLayer.USER_TRADES
+            if source == ChartObjectSource.USER
+            else ChartObjectLayer.CLAUDE
+        ),
         symbol=symbol,
         timeframe=timeframe,
         points=points,
