@@ -13,11 +13,12 @@ from sqlalchemy.exc import OperationalError
 from app.agents.types import Direction
 from app.brokerage import persistence as ledger_db
 from app.db.models import (
-    LedgerLeg, LedgerTransaction, PaperJournalEvent, PaperOrder, PaperPortfolio, PaperPosition,
+    LedgerLeg, LedgerTransaction, PaperJournalEvent, PaperOrder, PaperPartialExit, PaperPortfolio, PaperPosition,
 )
 from app.db.session import SessionLocal, engine
 from app.paper import broker
-from app.paper.protection import CHECK_EVENT, find_breach_with_trail, find_first_breach, run_protection_cycle
+from app.paper.protection import CHECK_EVENT, find_first_breach, find_breach_with_trail, run_protection_cycle
+from app.paper.protection_partial_tp import PARTIAL_TP_KEY, resolve_paper_partial_tp
 from app.paper.protection_trail import (
     TRAIL_EVENT,
     TRAIL_KEY,
@@ -97,7 +98,7 @@ def session():
     pid = p.id
     s.rollback()
     s.query(LedgerLeg).filter(LedgerLeg.transaction_id.in_(s.query(LedgerTransaction.id).filter_by(portfolio_id=pid))).delete(synchronize_session=False)
-    for m in (LedgerTransaction, PaperOrder, PaperJournalEvent, PaperPosition):
+    for m in (LedgerTransaction, PaperOrder, PaperJournalEvent, PaperPartialExit, PaperPosition):
         s.query(m).filter_by(portfolio_id=pid).delete()
     s.query(PaperPortfolio).filter_by(id=pid).delete()
     s.commit()
@@ -433,3 +434,204 @@ def test_user_confirmed_without_trail_config_unchanged(session):
     assert rep["status"] == "ok"
     assert float(pos.stop_price) == pytest.approx(stop0)
     assert "trail_stop" not in rep
+
+
+# ── T0-MANAGE-d — partial take-profit (opt-in, user_confirmed) ──────────────
+
+
+def test_resolve_paper_partial_tp_gates():
+    steps = [{"r_multiple": 1.0, "fraction": 0.5}]
+    pos = SimpleNamespace(
+        source="user_confirmed",
+        entry_price=80000.0,
+        stop_price=79000.0,
+        qty=0.1,
+        entry_signal={PARTIAL_TP_KEY: {"steps": steps}},
+    )
+    assert resolve_paper_partial_tp(pos, None) is not None
+    auto = SimpleNamespace(
+        source="auto_watchlist",
+        entry_price=80000.0,
+        stop_price=79000.0,
+        qty=0.1,
+        entry_signal={PARTIAL_TP_KEY: {"steps": steps}},
+    )
+    assert resolve_paper_partial_tp(auto, None) is None
+    bare = SimpleNamespace(
+        source="user_confirmed",
+        entry_price=80000.0,
+        stop_price=79000.0,
+        qty=0.1,
+        entry_signal={},
+    )
+    assert resolve_paper_partial_tp(bare, SimpleNamespace(strategy_profile={})) is None
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_partial_tp_scales_qty_then_final_close_settles_remainder(session):
+    p = session.info["p"]
+    p.strategy_profile = {
+        **p.strategy_profile,
+        PARTIAL_TP_KEY: {"steps": [{"r_multiple": 1.0, "fraction": 0.5}]},
+        "take_profit_r": 3.0,
+    }
+    session.flush()
+    cash0 = float(p.cash)
+    pos = _open(session, source="user_confirmed")
+    entry_fee0 = float(pos.entry_fee or 0.0)
+    assert float(pos.initial_entry_fee) == pytest.approx(entry_fee0)
+    entry = float(pos.entry_price)
+    stop0 = float(pos.stop_price)
+    risk = entry - stop0
+    initial_qty = float(pos.qty)
+    target = float(pos.take_profit_price)
+    entry_ms = int(pos.entry_time.timestamp() * 1000)
+    m1 = entry_ms - entry_ms % M + M
+
+    # Cycle 1: +1R → partial 50%
+    bars1 = [kline(m1, entry, entry + risk, entry - 50, entry + risk * 0.8)]
+    k1, t1 = _fetchers(bars1)
+    now1 = datetime.fromtimestamp((m1 + 2 * M) / 1000, timezone.utc)
+    rep1 = next(r for r in run_protection_cycle(session, klines_fn=k1, trades_fn=t1, now=now1) if r["id"] == pos.id)
+    assert rep1["status"] == "partialed"
+    assert pos.status == "OPEN"
+    assert float(pos.qty) == pytest.approx(initial_qty * 0.5)
+    assert float(pos.qty) > 0
+    assert float(pos.entry_fee) == pytest.approx(entry_fee0 * 0.5)
+    exits = session.query(PaperPartialExit).filter_by(position_id=pos.id).order_by(PaperPartialExit.seq).all()
+    assert len(exits) == 1
+    assert exits[0].qty == pytest.approx(initial_qty * 0.5)
+    assert exits[0].r_multiple == pytest.approx(1.0)
+    partial_pnl = float(pos.realized_pnl or 0.0)
+    assert partial_pnl != 0.0
+
+    # Cycle 2: hit target on remainder
+    bars2 = [kline(m1 + M, entry + risk * 0.8, target + 10, entry + risk * 0.7, target)]
+    k2, t2 = _fetchers(bars2)
+    now2 = datetime.fromtimestamp((m1 + 5 * M) / 1000, timezone.utc)
+    rep2 = next(r for r in run_protection_cycle(session, klines_fn=k2, trades_fn=t2, now=now2) if r["id"] == pos.id)
+    assert rep2["status"] == "closed"
+    assert pos.status == "CLOSED"
+    assert float(pos.initial_qty) == pytest.approx(initial_qty)
+    assert float(pos.qty) == pytest.approx(initial_qty)  # restored entry size after CLOSE
+    assert float(pos.initial_entry_fee) == pytest.approx(entry_fee0)
+    assert float(pos.entry_fee) == pytest.approx(entry_fee0)  # restored like qty
+    assert session.query(PaperPartialExit).filter_by(position_id=pos.id).count() == 1
+    # LONG, no financing: cash delta from pre-open == cumulative realized.
+    assert float(p.cash) - cash0 == pytest.approx(float(pos.realized_pnl))
+    assert abs(float(pos.realized_pnl)) >= abs(partial_pnl) - 1e-6
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_partial_tp_steps_sum_one_deducts_financing_on_exhaustion(session):
+    """Steps summing to 1 exhaust via close_capital_position; financing hits realized."""
+    from datetime import date
+
+    from app.paper.financing import apply_daily_financing, financing_total_for_position
+
+    p = session.info["p"]
+    p.strategy_profile = {
+        **p.strategy_profile,
+        "commission_bps": 0.0,
+        "slippage_bps": 0.0,
+        "spread_bps": 0.0,
+        "financing_bps_per_day_crypto": 10.0,  # force non-zero on BTCUSDT
+        PARTIAL_TP_KEY: {
+            "steps": [
+                {"r_multiple": 1.0, "fraction": 0.5},
+                {"r_multiple": 2.0, "fraction": 0.5},
+            ]
+        },
+    }
+    session.flush()
+    pos = _open(session, source="user_confirmed")
+    entry_fee0 = float(pos.entry_fee or 0.0)
+    remaining = float(pos.qty)
+    entry = float(pos.entry_price)
+    notional0 = float(pos.notional or 0.0)
+
+    fin = apply_daily_financing(
+        session,
+        p,
+        as_of=datetime(2026, 9, 24, 12, 0, tzinfo=timezone.utc),
+        force_day=date(2026, 9, 24),
+    )
+    session.flush()
+    assert len(fin) == 1
+    financed = financing_total_for_position(session, pos.id)
+    assert financed > 0
+    assert financed == pytest.approx(notional0 * (10.0 / 10_000.0))
+
+    half = remaining * 0.5
+    r1 = broker.partial_close_capital_position(
+        session,
+        pos,
+        price=entry * 1.01,
+        qty=half,
+        fraction=0.5,
+        r_multiple=1.0,
+    )
+    assert r1 is not None and pos.status == "OPEN"
+    # First slice: no financing yet (deferred to final close).
+    assert float(r1.realized_pnl) == pytest.approx(
+        half * (entry * 1.01) - (notional0 * 0.5) - (entry_fee0 * 0.5)
+    )
+
+    r2 = broker.partial_close_capital_position(
+        session,
+        pos,
+        price=entry * 1.02,
+        qty=half,
+        fraction=0.5,
+        r_multiple=2.0,
+    )
+    assert r2 is not None and pos.status == "CLOSED"
+    assert float(pos.entry_fee) == pytest.approx(entry_fee0)
+    assert float(pos.qty) == pytest.approx(remaining)
+    session.flush()
+    assert session.query(PaperPartialExit).filter_by(position_id=pos.id).count() == 2
+    # Exhausting slice settles via close_capital_position → financing deducted once.
+    assert float(r2.realized_pnl) == pytest.approx(
+        half * (entry * 1.02) - (notional0 * 0.5) - (entry_fee0 * 0.5) - financed
+    )
+    assert float(pos.realized_pnl) == pytest.approx(
+        float(r1.realized_pnl) + float(r2.realized_pnl)
+    )
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_partial_tp_never_negative_qty(session):
+    pos = _open(session, source="user_confirmed")
+    with pytest.raises(ValueError, match="exceeds remaining"):
+        broker.partial_close_capital_position(
+            session,
+            pos,
+            price=float(pos.entry_price) * 1.01,
+            qty=float(pos.qty) + 1.0,
+            fraction=0.5,
+            r_multiple=1.0,
+        )
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_auto_watchlist_ignores_portfolio_partial_tp(session):
+    p = session.info["p"]
+    p.strategy_profile = {
+        **p.strategy_profile,
+        PARTIAL_TP_KEY: {"steps": [{"r_multiple": 1.0, "fraction": 0.5}]},
+    }
+    session.flush()
+    pos = _open(session, source="auto_watchlist")
+    entry = float(pos.entry_price)
+    stop0 = float(pos.stop_price)
+    risk = entry - stop0
+    qty0 = float(pos.qty)
+    entry_ms = int(pos.entry_time.timestamp() * 1000)
+    m1 = entry_ms - entry_ms % M + M
+    bars = [kline(m1, entry, entry + risk, entry - 50, entry + risk * 0.8)]
+    k, t = _fetchers(bars)
+    now = datetime.fromtimestamp((m1 + 5 * M) / 1000, timezone.utc)
+    rep = next(r for r in run_protection_cycle(session, klines_fn=k, trades_fn=t, now=now) if r["id"] == pos.id)
+    assert rep["status"] == "ok"
+    assert float(pos.qty) == pytest.approx(qty0)
+    assert session.query(PaperPartialExit).filter_by(position_id=pos.id).count() == 0

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.common import (
@@ -11,6 +12,7 @@ from app.api.common import (
     _rvol_params_override,
 )
 from app.config import settings
+from app.db.models import PaperPartialExit
 from app.db.session import SessionLocal
 from app.decision.pipeline import PipelineResult
 from app.paper import broker as paper_broker
@@ -20,6 +22,16 @@ from app.paper.portfolio import ensure_baseline_portfolio
 from app.screener.service import scan_symbol
 
 router_after_shadow = APIRouter(prefix=settings.engine_api_prefix, tags=["engine"])
+
+
+def _load_partials(session: Session, position_id: str) -> list:
+    return list(
+        session.execute(
+            select(PaperPartialExit)
+            .where(PaperPartialExit.position_id == position_id)
+            .order_by(PaperPartialExit.seq)
+        ).scalars()
+    )
 
 
 def _open_refusal_detail(
@@ -377,7 +389,10 @@ def open_paper_position(
         if evidence_id and position.evidence_id is None:
             position.evidence_id = evidence_id
             session.commit()
-        payload = _paper_position_dict(position)
+        payload = _paper_position_dict(
+            position,
+            partial_exits=_load_partials(session, position.id),
+        )
         payload["created"] = created
         if not created:
             payload["already_open"] = True
@@ -411,6 +426,8 @@ def close_paper_position(position_id: str) -> dict:
         closed = paper_engine.close_manually(session, position_id, price=row.price)
         if closed is None:
             raise HTTPException(status_code=409, detail="position_already_closed")
-        return _paper_position_dict(closed)  # while the session is still open, see open_paper_position
+        return _paper_position_dict(
+            closed, partial_exits=_load_partials(session, closed.id)
+        )  # while the session is still open, see open_paper_position
     finally:
         session.close()

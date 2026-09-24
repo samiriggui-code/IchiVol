@@ -98,8 +98,8 @@ def _line_dict(line: TrendlineSegment, series: list | None = None) -> dict:
 from app.paper.costs import compute_costs
 from app.paper.verdict import compute_progress
 
-def _paper_position_dict(p) -> dict:
-    return {
+def _paper_position_dict(p, *, partial_exits: list | None = None) -> dict:
+    out = {
         "id": p.id,
         "portfolio_id": p.portfolio_id,
         "symbol": p.symbol,
@@ -130,6 +130,22 @@ def _paper_position_dict(p) -> dict:
         "evidence_id": getattr(p, "evidence_id", None),
         "entry_signal": getattr(p, "entry_signal", None),
     }
+    if partial_exits is not None:
+        out["partial_exits"] = [
+            {
+                "seq": e.seq,
+                "r_multiple": e.r_multiple,
+                "fraction": e.fraction,
+                "qty": e.qty,
+                "price": e.price,
+                "fee": e.fee,
+                "realized_pnl": e.realized_pnl,
+                "time_ms": e.time_ms,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            }
+            for e in partial_exits
+        ]
+    return out
 
 
 def _paper_perf_dict(perf) -> dict:

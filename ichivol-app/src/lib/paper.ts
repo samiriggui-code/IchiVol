@@ -4,6 +4,18 @@ export type PaperSource = 'auto_watchlist' | 'user_confirmed'
 export type PaperStatus = 'OPEN' | 'CLOSED'
 export type PaperDirection = 'LONG' | 'SHORT'
 
+export interface PaperPartialExit {
+  seq: number
+  r_multiple: number
+  fraction: number
+  qty: number
+  price: number
+  fee: number
+  realized_pnl: number
+  time_ms: number
+  created_at?: string | null
+}
+
 export interface PaperPosition {
   id: string
   portfolio_id?: string | null
@@ -35,6 +47,7 @@ export interface PaperPosition {
   decision_id?: string | null
   evidence_id?: string | null
   entry_signal?: Record<string, unknown> | null
+  partial_exits?: PaperPartialExit[]
 }
 
 export interface OrderIntent {

@@ -44,7 +44,7 @@ from datetime import datetime, timezone
 
 from decimal import Decimal
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, Numeric, String, UniqueConstraint
+from sqlalchemy import JSON, Boolean, BigInteger, DateTime, Float, ForeignKey, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -279,12 +279,15 @@ class PaperPosition(Base):
     pnl_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     qty: Mapped[float | None] = mapped_column(Float, nullable=True)
+    initial_qty: Mapped[float | None] = mapped_column(Float, nullable=True)
     notional: Mapped[float | None] = mapped_column(Float, nullable=True)
     stop_price: Mapped[float | None] = mapped_column(Float, nullable=True)
     take_profit_price: Mapped[float | None] = mapped_column(Float, nullable=True)
     risk_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
     risk_amount: Mapped[float | None] = mapped_column(Float, nullable=True)
     entry_fee: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Stable entry commission (never shrinks on partials); restored on CLOSE like qty.
+    initial_entry_fee: Mapped[float | None] = mapped_column(Float, nullable=True)
     exit_fee: Mapped[float | None] = mapped_column(Float, nullable=True)
     realized_pnl: Mapped[float | None] = mapped_column(Float, nullable=True)
     mfe_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -303,6 +306,36 @@ class PaperPosition(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
+class PaperPartialExit(Base):
+    """One partial take-profit fill for an open paper lot (T0-MANAGE-d).
+
+    The living position stays on ``paper_positions`` (qty shrinks); each scale-out
+    is an append-only row, idempotent via ``(position_id, seq)`` / ``key``.
+    """
+
+    __tablename__ = "paper_partial_exits"
+    __table_args__ = (
+        UniqueConstraint("position_id", "seq", name="uq_paper_partial_position_seq"),
+        UniqueConstraint("portfolio_id", "key", name="uq_paper_partial_portfolio_key"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    portfolio_id: Mapped[str] = mapped_column(ForeignKey("paper_portfolios.id"), index=True)
+    position_id: Mapped[str] = mapped_column(ForeignKey("paper_positions.id"), index=True)
+    seq: Mapped[int] = mapped_column(Integer)
+    key: Mapped[str] = mapped_column(String(128))
+    r_multiple: Mapped[float] = mapped_column(Float)
+    fraction: Mapped[float] = mapped_column(Float)  # of original entry qty
+    qty: Mapped[float] = mapped_column(Float)
+    price: Mapped[float] = mapped_column(Float)
+    fee: Mapped[float] = mapped_column(Float, default=0.0)
+    realized_pnl: Mapped[float] = mapped_column(Float)
+    time_ms: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
 
 

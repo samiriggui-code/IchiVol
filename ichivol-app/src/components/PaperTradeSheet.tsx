@@ -147,10 +147,23 @@ export function PaperTradeSheet({
               <dd>{p.qty != null ? `${p.qty.toPrecision(4)} ${asset}` : '—'}</dd>
             </div>
             <div>
-              <dt>{open ? 'Résultat (à la clôture)' : 'Résultat final'}</dt>
-              <dd className={tone(open ? null : p.realized_pnl)}>
-                {open ? 'pas encore réalisé' : signedEur(p.realized_pnl)}
-                {!open && <small> · {pct(p.pnl_pct, 2)}</small>}
+              <dt>{open ? 'Résultat (réalisé / restant)' : 'Résultat final'}</dt>
+              <dd className={tone(open ? (p.partial_exits?.length ? p.realized_pnl : null) : p.realized_pnl)}>
+                {open ? (
+                  (p.partial_exits?.length ?? 0) > 0 ? (
+                    <>
+                      {signedEur(p.realized_pnl)}
+                      <small> · prises partielles</small>
+                    </>
+                  ) : (
+                    'pas encore réalisé'
+                  )
+                ) : (
+                  <>
+                    {signedEur(p.realized_pnl)}
+                    <small> · {pct(p.pnl_pct, 2)}</small>
+                  </>
+                )}
               </dd>
             </div>
             <div>
@@ -276,6 +289,24 @@ export function PaperTradeSheet({
                 {targetGain != null && <> (gain visé ≈ {signedEur(targetGain)})</>}.
               </p>
             </li>
+
+            {(p.partial_exits?.length ?? 0) > 0 && (
+              <li>
+                <h4>3b · Prises partielles</h4>
+                <ul className="trade-plan-rules">
+                  {p.partial_exits!.map((pe) => (
+                    <li key={pe.seq}>
+                      {pe.r_multiple}R · {(pe.fraction * 100).toFixed(0)} % · qty{' '}
+                      {pe.qty.toPrecision(4)} @ {price(pe.price)} →{' '}
+                      <span className={tone(pe.realized_pnl)}>{signedEur(pe.realized_pnl)}</span>
+                    </li>
+                  ))}
+                </ul>
+                {open && p.qty != null && (
+                  <p className="muted">Quantité restante : {p.qty.toPrecision(4)} {asset}.</p>
+                )}
+              </li>
+            )}
 
             <li>
               <h4>4 · Évolution pendant le trade</h4>
