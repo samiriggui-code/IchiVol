@@ -1,22 +1,10 @@
-import { useEffect, useState, type ComponentType } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { NotificationBell } from '../components/NotificationBell'
 import {
-  IconActivity,
-  IconBacktests,
-  IconChat,
   IconChevronLeft,
   IconClose,
-  IconDecisions,
-  IconGlobe,
-  IconJournal,
-  IconMarket,
   IconMenu,
-  IconOverview,
-  IconPaper,
-  IconSettings,
-  IconSynthese,
-  IconWatchlist,
 } from '../components/NavIcons'
 import { BrandMark } from '../components/BrandMark'
 import { ThemeToggle } from '../components/ThemeToggle'
@@ -24,41 +12,14 @@ import { getMe, logout } from '../lib/auth'
 import { AgentSessionProvider } from '../lib/agentSession'
 import { llmStatusLabel, LlmStatusProvider, useLlmStatus } from '../lib/llmStatus'
 import { MarketSnapshotProvider } from '../lib/marketSnapshot'
+import {
+  MOBILE_MORE_ITEMS,
+  MOBILE_PRIMARY_ITEMS,
+  NAV_GROUPS,
+} from '../lib/workspaceNav'
 
 const SIDEBAR_KEY = 'ichivol_sidebar_collapsed'
 const MOBILE_MQ = '(max-width: 768px)'
-
-type NavItem = {
-  to: string
-  label: string
-  Icon: ComponentType<{ className?: string }>
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { to: '/app/overview', label: 'Cockpit', Icon: IconOverview },
-  { to: '/app/market', label: 'Marché', Icon: IconMarket },
-  { to: '/app/context', label: 'Contexte', Icon: IconGlobe },
-  { to: '/app/decisions', label: 'Décisions', Icon: IconDecisions },
-  { to: '/app/journal', label: 'Journal', Icon: IconJournal },
-  { to: '/app/watchlist', label: 'Watchlist', Icon: IconWatchlist },
-  { to: '/app/synthese', label: 'Synthèse', Icon: IconSynthese },
-  { to: '/app/activite', label: 'Activité', Icon: IconActivity },
-  { to: '/app/paper', label: 'Paper', Icon: IconPaper },
-  { to: '/app/strategy-lab', label: 'Strategy Lab', Icon: IconBacktests },
-  { to: '/app/agent', label: 'Copilot', Icon: IconChat },
-  { to: '/app/settings', label: 'Paramètres', Icon: IconSettings },
-]
-
-/** Primary tabs on phone — rest go in the « Plus » sheet. */
-const MOBILE_PRIMARY = new Set([
-  '/app/overview',
-  '/app/decisions',
-  '/app/synthese',
-  '/app/agent',
-])
-
-const MOBILE_PRIMARY_ITEMS = NAV_ITEMS.filter((item) => MOBILE_PRIMARY.has(item.to))
-const MOBILE_MORE_ITEMS = NAV_ITEMS.filter((item) => !MOBILE_PRIMARY.has(item.to))
 
 function LlmHeaderBadge() {
   const { state, provider, model, message, refresh } = useLlmStatus()
@@ -149,22 +110,27 @@ function DashboardShellInner() {
     <div className={`dash-shell${isMobile ? ' is-mobile' : ''}${collapsed ? ' is-nav-collapsed' : ''}`}>
       <aside className={`dash-sidebar${collapsed ? ' is-collapsed' : ''}`} aria-label="Navigation">
         <div className="dash-sidebar-top">
-          <NavLink to="/app/overview" className="dash-side-brand" title="IchiVol">
+          <NavLink to="/app/desk" className="dash-side-brand" title="IchiVol">
             <BrandMark className="dash-side-mark" />
             <span className="dash-side-name">IchiVol</span>
           </NavLink>
 
           <nav className="dash-nav">
-            {NAV_ITEMS.map(({ to, label, Icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                title={label}
-                className={({ isActive }) => `dash-nav-link${isActive ? ' is-active' : ''}`}
-              >
-                <Icon />
-                <span>{label}</span>
-              </NavLink>
+            {NAV_GROUPS.map((group) => (
+              <div key={group.id} className="dash-nav-group">
+                <p className="dash-nav-label">{group.label}</p>
+                {group.items.map(({ to, label, Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    title={label}
+                    className={({ isActive }) => `dash-nav-link${isActive ? ' is-active' : ''}`}
+                  >
+                    <Icon />
+                    <span>{label}</span>
+                  </NavLink>
+                ))}
+              </div>
             ))}
           </nav>
         </div>
@@ -186,7 +152,7 @@ function DashboardShellInner() {
         <header className="dash-header">
           <div className="dash-header-left">
             {isMobile && (
-              <NavLink to="/app/overview" className="dash-mobile-brand" title="IchiVol">
+              <NavLink to="/app/desk" className="dash-mobile-brand" title="IchiVol">
                 <BrandMark className="dash-side-mark" />
                 <span>IchiVol</span>
               </NavLink>
@@ -300,7 +266,6 @@ function DashboardShellInner() {
           </div>
         </>
       )}
-
     </div>
   )
 }

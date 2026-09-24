@@ -207,7 +207,7 @@ export function ActivityPage() {
     <div className="act-page">
       <header className="page-head market-head">
         <div className="market-head-copy">
-          <h1>Activité</h1>
+          <h1>Opérations</h1>
           <p className="muted">
             Circuit automatique : décisions, paper, filtres, backtests — chaque ligne est datée.
           </p>

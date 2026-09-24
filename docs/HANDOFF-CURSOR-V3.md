@@ -7,10 +7,52 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-24 — T12d EN COURS — fausses cassures du nuage
+## 2026-09-24 — T14a EN COURS — interface workspace (maquette utilisateur)
+
+- Branche : `cursor/t14a-interface-workspace-a2fe`
+- PR : (à ouvrir)
+- Base : `main` @ `69a11f6` (#76 T12d **MERGÉE**)
+- Front only — **aucun changement moteur**
+- Réf. visuelle : `design-reference/ichivol-workspace/` (maquette fournie par l’utilisateur)
+
+### DÉCISION CURSOR — à relire par Claude
+L’utilisateur a joint la maquette V3 et demandé d’**appliquer les correctifs de pages maintenant**.
+Ordre rév.58 plaçait T14a après T12e — **dérogation utilisateur** pour démarrer T14a (shell + routes) tout de suite.
+Tokens **camap / chrome UI-MARKET** conservés (pas le skin crème de la maquette).
+
+### Livré (tranche 1)
+1. Nav 4 groupes : Trading · Recherche · Automatisation · Système
+2. Renoms : Cockpit→**Desk**, Décisions→**Opportunités**, Activité→**Opérations**
+3. **Portefeuille** = onglets Synthèse / Compte / Positions / Tests
+4. Redirections legacy : overview, decisions, activite, synthese, paper, watchlist
+5. Mobile : Desk · Opportunités · Portefeuille · Copilot · Plus
+6. Desk : doublons « Ce que ça prouve / Filtres / Signaux suivis » retirés → pointe Opérations
+
+### Hors scope (suite T14a / T13)
+Kill switch header · page Agents · redesign pixel-perfect maquette · T12e
+
+### Auto-revue partielle
+- [x] `npm run build` OK
+- [x] moteur decision/agents/paper/screener/brokerage : **vide**
+- [ ] pytest PG16 (front-only — à lancer avant merge)
+- [ ] captures mobile/desktop clair/sombre
+
+---
+
+## 2026-09-24 — T12d MERGÉE (#76) — squash `69a11f6`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/76 — **MERGÉE** squash (solo rév.58)
+- **Vérifié** : `origin/main` tip = `69a11f6`
+- Fausses cassures nuage à N ; ventilation RVOL/ADX/structure/location/CVD
+
+**Suite** : T14a (shell) en parallèle de T12e…
+
+---
+
+## 2026-09-24 — T12d (archive) — fausses cassures du nuage
 
 - Branche : `cursor/t12d-false-breaks-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/76 (**draft**)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/76
 - Base : `main` @ `abe6177` (#75 T12c **MERGÉE**)
 - ADD-ONLY Lab — **aucun changement live**
 
@@ -26,6 +68,13 @@ FeatureBar fields · HTTP · T12e · live
 
 ### Sonde manuelle
 Cassure haussière + prix sous nuage à i+N → `failure` ; toujours au-dessus → `continuation`.
+
+### Auto-revue (§2) — FAIT
+- [x] pytest PG16 : **1086 passed**
+- [x] pytest réseau coupé : **1085 passed, 1 skipped**
+- [x] `npm run build` OK
+- [x] golden : N/A (aucun golden touché)
+- [x] `git diff` decision/agents/paper/screener/brokerage : **vide**
 
 ---
 

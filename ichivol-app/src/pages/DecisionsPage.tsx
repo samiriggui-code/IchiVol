@@ -683,7 +683,7 @@ export function DecisionsPage() {
     <div className={`decisions-page${sheetOpen ? ' is-sheet-open' : ''}`}>
       <header className="page-head market-head">
         <div className="market-head-copy">
-          <h1>Décisions</h1>
+          <h1>Opportunités</h1>
           <p className="muted">
             Filtre actionnable · comprendre les portes · confirmer paper. Vue Liste ou Matrice —
             clic = détail.

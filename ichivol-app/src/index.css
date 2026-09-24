@@ -66,6 +66,18 @@ button, select { font: inherit; color: inherit; }
 .dash-sidebar.is-collapsed .dash-side-brand { justify-content: center; padding: 0; }
 
 .dash-nav { display: flex; flex-direction: column; gap: 0.08rem; }
+.dash-nav-group { display: flex; flex-direction: column; gap: 0.08rem; margin-bottom: 0.55rem; }
+.dash-nav-group:last-child { margin-bottom: 0; }
+.dash-nav-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  padding: 0.35rem 0.4rem 0.2rem;
+  margin: 0;
+}
+.dash-sidebar.is-collapsed .dash-nav-label { display: none; }
 .dash-nav-link {
   display: flex; align-items: center; gap: 0.4rem;
   padding: 0.32rem 0.4rem;

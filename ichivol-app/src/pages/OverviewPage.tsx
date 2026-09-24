@@ -5,10 +5,8 @@ import { VerdictBadge } from '../components/VerdictBadge'
 import {
   getActivityFeed,
   getActivitySummary,
-  getEvidenceOutcomes,
   type ActivityItem,
   type ActivitySummary,
-  type EvidenceOutcomes,
 } from '../lib/activity'
 import {
   getBacktestEvidence,
@@ -21,11 +19,9 @@ import {
 } from '../lib/decisions'
 import {
   getPaperOverview,
-  getShadowStats,
   listPaperPortfolios,
   type PaperOverview,
   type PaperPortfolioRow,
-  type ShadowStats,
 } from '../lib/paper'
 import { asGate } from '../lib/verdict'
 import './OverviewPage.css'
@@ -185,14 +181,12 @@ export function OverviewPage() {
   const [summary, setSummary] = useState<ActivitySummary | null>(null)
   const [tape, setTape] = useState<ActivityItem[]>([])
   const [evidence, setEvidence] = useState<BacktestEvidenceSummary | null>(null)
-  const [shadow, setShadow] = useState<ShadowStats | null>(null)
-  const [outcomes, setOutcomes] = useState<EvidenceOutcomes | null>(null)
   const [portfolios, setPortfolios] = useState<PaperPortfolioRow[]>([])
 
   const load = useCallback(async (force = false) => {
     setLoading(true)
     type ScreenerOk = Awaited<ReturnType<typeof getScreener>>
-    const [screenerRes, ovRes, sumRes, feedRes, evRes, shRes, ocRes, pfRes] = await Promise.all([
+    const [screenerRes, ovRes, sumRes, feedRes, evRes, pfRes] = await Promise.all([
       getScreener('1h', force)
         .then((r): ScreenerOk | Error => r)
         .catch((err: unknown): ScreenerOk | Error =>
@@ -202,8 +196,6 @@ export function OverviewPage() {
       getActivitySummary().catch(() => null),
       getActivityFeed(40).catch(() => ({ items: [] as ActivityItem[] })),
       getBacktestEvidence().catch(() => null),
-      getShadowStats().catch(() => null),
-      getEvidenceOutcomes().catch(() => null),
       listPaperPortfolios().catch(() => [] as PaperPortfolioRow[]),
     ])
 
@@ -211,7 +203,7 @@ export function OverviewPage() {
       const msg = screenerRes.message
       setError(
         msg.includes('engine_unreachable') || msg.includes('502')
-          ? 'Moteur Python injoignable — lance l’engine pour le cockpit.'
+          ? 'Moteur Python injoignable — lance l’engine pour le desk.'
           : msg,
       )
       setRows([])
@@ -226,8 +218,6 @@ export function OverviewPage() {
     setSummary(sumRes)
     setTape(feedRes.items.slice(0, TAPE_LIMIT))
     setEvidence(evRes)
-    setShadow(shRes)
-    setOutcomes(ocRes)
     setPortfolios(pfRes.filter((p) => p.is_active))
     setLoading(false)
   }, [])
@@ -252,8 +242,6 @@ export function OverviewPage() {
 
   const circuitAlive = (summary?.decisions.last_24h ?? 0) > 0
   const edgeHint = evidence?.pipeline_beats_ichimoku_sharpe
-  const pipelineOutcome = outcomes?.groups.find((g) => g.id === 'pipeline' || g.id.includes('pipeline'))
-  const h10 = pipelineOutcome?.horizons['10']
 
   const labs = useMemo(() => {
     return [...portfolios].sort((a, b) => {
@@ -269,7 +257,7 @@ export function OverviewPage() {
     <div className="overview-page">
       <header className="page-head overview-head">
         <div>
-          <h1>Cockpit</h1>
+          <h1>Desk</h1>
           <p className="muted">
             {circuitAlive
               ? `Circuit actif · ${fmtInt(summary?.decisions.last_24h ?? 0)} décisions / 24 h`
@@ -293,8 +281,8 @@ export function OverviewPage() {
       <section className="panel ov-desk" aria-label="Compte baseline">
         <header className="panel-head">
           <h2>Desk · {BASELINE}</h2>
-          <Link to="/app/synthese" className="ghost">
-            Synthèse →
+          <Link to="/app/portefeuille" className="ghost">
+            Portefeuille →
           </Link>
         </header>
         <div className="ov-desk-body">
@@ -344,8 +332,8 @@ export function OverviewPage() {
           <span className="overview-stat-meta muted">
             {summary ? `${fmtInt(summary.decisions.total)} total · ${fmtWhen(summary.decisions.last_at)}` : '…'}
           </span>
-          <Link to="/app/activite" className="overview-stat-link">
-            Activité →
+          <Link to="/app/operations" className="overview-stat-link">
+            Opérations →
           </Link>
         </article>
         <article className="panel overview-stat ov-pulse is-ok">
@@ -362,42 +350,10 @@ export function OverviewPage() {
           </span>
         </article>
         <article className="panel overview-stat ov-pulse">
-          <span className="overview-stat-label muted">Filtres 24 h</span>
-          <strong className="mono">{summary ? fmtInt(summary.shadow.blocked_24h) : '—'}</strong>
-          <span className="overview-stat-meta muted">
-            {summary ? `${fmtInt(summary.shadow.judged_total)} jugés` : '…'}
-          </span>
-        </article>
-        <article className="panel overview-stat ov-pulse">
           <span className="overview-stat-label muted">Strategy Lab</span>
           <strong className="mono">{summary ? fmtInt(summary.backtest.runs_total) : '—'}</strong>
           <span className="overview-stat-meta muted">
             {summary ? `dernier ${fmtWhen(summary.backtest.last_at)}` : '…'}
-          </span>
-        </article>
-        <article
-          className={`panel overview-stat ov-pulse ${
-            summary?.evidence.tracking_enabled && summary.evidence.rows_total > 0
-              ? 'is-ok'
-              : summary?.evidence.tracking_enabled
-                ? 'is-warn'
-                : 'is-off'
-          }`}
-        >
-          <span className="overview-stat-label muted">Signaux suivis</span>
-          <strong className="mono">
-            {!summary
-              ? '—'
-              : !summary.evidence.tracking_enabled
-                ? 'Off'
-                : summary.evidence.rows_total > 0
-                  ? fmtInt(summary.evidence.rows_total)
-                  : 'Attente'}
-          </strong>
-          <span className="overview-stat-meta muted">
-            {summary?.evidence.tracking_enabled
-              ? `${fmtInt(summary.evidence.measured)} mesurés · ${fmtInt(summary.evidence.complete)} terminés`
-              : 'tracking coupé'}
           </span>
         </article>
       </section>
@@ -406,8 +362,8 @@ export function OverviewPage() {
         <section className="panel ov-book" aria-label="Livre live">
           <header className="panel-head">
             <h2>Livre live · 1h</h2>
-            <Link to="/app/decisions" className="ghost">
-              Décisions →
+            <Link to="/app/opportunites" className="ghost">
+              Opportunités →
             </Link>
           </header>
           <div className="ov-book-stats">
@@ -447,7 +403,7 @@ export function OverviewPage() {
                   {stats.top.map((r) => (
                     <tr key={r.symbol}>
                       <td>
-                        <Link to={`/app/decisions?symbol=${encodeURIComponent(r.symbol)}`}>
+                        <Link to={`/app/opportunites?symbol=${encodeURIComponent(r.symbol)}`}>
                           <strong>{r.symbol.replace(/USDT$/i, '')}</strong>
                         </Link>
                       </td>
@@ -464,95 +420,24 @@ export function OverviewPage() {
           )}
         </section>
 
+        {/* T14a — preuves / filtres / signaux suivis : détail dans Opérations (plus sur le Desk). */}
         <section className="panel ov-proof" aria-label="Preuves">
           <header className="panel-head">
-            <h2>Ce que ça prouve</h2>
-            <Link to="/app/activite" className="ghost">
-              Détail →
+            <h2>Preuves & opérations</h2>
+            <Link to="/app/operations" className="ghost">
+              Opérations →
             </Link>
           </header>
           <div className="ov-proof-body">
-            <div className="ov-proof-block">
-              <h3 className="subhead">Edge backtest</h3>
-              <p className="ov-proof-lead">
-                {edgeHint ? (
-                  <>
-                    Pipeline bat Ichimoku sur{' '}
-                    <strong className="mono">
-                      {edgeHint.beats}/{edgeHint.compared}
-                    </strong>{' '}
-                    paires (Sharpe).
-                  </>
-                ) : evidence?.enabled === false ? (
-                  'Collecte backtest désactivée.'
-                ) : (
-                  'Pas encore assez de runs pour conclure.'
-                )}
-              </p>
-              <p className="muted ov-proof-note">
-                {evidence?.note
-                  ? evidence.note
-                  : `Dernier run ${fmtWhen(evidence?.last_run_at ?? null)}`}
-                {evidence && evidence.distinct_days > 0
-                  ? ` · ${evidence.distinct_days} j d’historique`
-                  : ''}
-              </p>
-              <Link to="/app/strategy-lab" className="overview-stat-link">
-                Strategy Lab →
-              </Link>
-            </div>
-
-            <div className="ov-proof-block">
-              <h3 className="subhead">Filtres (shadow)</h3>
-              {shadow && shadow.n_closed > 0 ? (
-                <>
-                  <p className="ov-proof-lead">
-                    Verdict : <strong>{shadow.filter_verdict ?? 'inconnu'}</strong>
-                    {shadow.mean_pnl_r != null ? (
-                      <>
-                        {' '}
-                        · mean{' '}
-                        <span className={shadow.mean_pnl_r < 0 ? 'up' : 'down'}>
-                          {shadow.mean_pnl_r >= 0 ? '+' : ''}
-                          {shadow.mean_pnl_r.toFixed(2)} R
-                        </span>
-                      </>
-                    ) : null}
-                  </p>
-                  <p className="muted ov-proof-note">
-                    {shadow.n_closed} refusés jugés
-                    {shadow.n_closed < 5 ? ' · échantillon encore mince' : ''}
-                  </p>
-                </>
-              ) : (
-                <p className="muted">Pas encore de trade refusé jugé.</p>
-              )}
-            </div>
-
-            <div className="ov-proof-block">
-              <h3 className="subhead">Signaux suivis</h3>
-              {h10 && h10.n > 0 ? (
-                <>
-                  <p className="ov-proof-lead">
-                    Pipeline @ 10 bougies : hit{' '}
-                    <strong className="mono">
-                      {h10.hit_rate != null ? `${(h10.hit_rate * 100).toFixed(0)} %` : '—'}
-                    </strong>{' '}
-                    · n={h10.n}
-                    {h10.small_sample ? ' · faible' : ''}
-                  </p>
-                  <p className="muted ov-proof-note">
-                    {outcomes ? `${outcomes.n_used} signaux utilisés / ${outcomes.n_total}` : ''}
-                  </p>
-                </>
-              ) : (
-                <p className="muted">
-                  {summary?.evidence.tracking_enabled
-                    ? 'En attente des premiers outcomes mesurés.'
-                    : 'Suivi désactivé (ENABLE_SIGNAL_TRACKING).'}
-                </p>
-              )}
-            </div>
+            <p className="muted ov-proof-note">
+              Filtres shadow, signaux suivis et journal d’audit vivent dans{' '}
+              <Link to="/app/operations">Opérations</Link>. Edge backtest :{' '}
+              <Link to="/app/strategy-lab">Strategy Lab</Link>
+              {edgeHint
+                ? ` · pipeline bat Ichimoku sur ${edgeHint.beats}/${edgeHint.compared} paires`
+                : ''}
+              .
+            </p>
           </div>
         </section>
       </div>
@@ -604,7 +489,7 @@ export function OverviewPage() {
         <section className="panel ov-tape" aria-label="Derniers événements">
           <header className="panel-head">
             <h2>Tape</h2>
-            <Link to="/app/activite" className="ghost">
+            <Link to="/app/operations" className="ghost">
               Historique →
             </Link>
           </header>
@@ -629,8 +514,8 @@ export function OverviewPage() {
         <section className="panel ov-labs" aria-label="Laboratoires paper">
           <header className="panel-head">
             <h2>Labs paper</h2>
-            <Link to="/app/paper" className="ghost">
-              Paper →
+            <Link to="/app/portefeuille?tab=positions" className="ghost">
+              Portefeuille →
             </Link>
           </header>
           {labs.length === 0 ? (
