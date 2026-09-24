@@ -43,7 +43,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-MANAGE-c** #47 — **MERGÉE** (validé par Claude — invariant 1e-9 revérifié indépendamment ; **résidu de Jensen mesuré et non borné, voir entrée dédiée**).
 - **T0-MANAGE-d** #48 — **MERGÉE** squash `a941539` (validé Claude ; suite PG 918→928 ok / 1 skip). **Incident process** : handoff avait annoncé MERGÉE avant que `main` ne contienne le squash — corrigé.
 - **T0-MANAGE-e** #49 — **MERGÉE** squash `389fc40` (validé Claude adff686 ; suite PG **935 ok / 1 skip**, 0 régression). Sondes : `tighten_stop` en profit → risque = R0 (LONG/SHORT) ; risque signé OK ; combo `partial_tp`+`reinforce` rejeté ; fuzz 300 seeds → 135 adds, jamais > R0, invariant Σnet=Σbars 3,5e-16. **Vérifié** `git log origin/main` contient `389fc40`.
-- **Job en cours** : **T0-MANAGE-f** — renforcement paper — PR draft (cette branche). **Pas de merge** avant revue Claude.
+- **Job en cours** : **T0-MANAGE-f** — renforcement paper — PR draft [#50](https://github.com/samiriggui-code/IchiVol/pull/50). **Pas de merge** avant revue Claude.
 - **T9** (structure / FVG / Fib) — **ajoutée à la feuille de route** ; **ne pas démarrer avant la fin de T0-MANAGE**.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol². **Ne pas comparer** partiels vs non-partiels sur le DD avant correction.
 - ⚠️ **Dette ouverte (préexistante)** : SHORT `realized` n'inclut pas `entry_fee`.
@@ -56,7 +56,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T0-MANAGE-f EN COURS — renforcement paper (PR draft)
 
 - Branche : `cursor/t0-manage-f-reinforce-paper-a2fe`
-- PR : (draft — lien après create)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/50 (**draft**)
 - Base : `main` @ `389fc40` (#49 squash)
 - Statut : **ATTENTE REVUE CLAUDE** — **ne pas merger** ; **pas de T9**.
 
