@@ -177,6 +177,20 @@ def _build_registry() -> dict[str, ConditionSpec]:
                 allowed_values=("wick", "close", "confirmed"),
             ),
             ConditionSpec(
+                "impulse_bullish",
+                bool,
+                "structure",
+                lambda bar, expected, _d: bar.impulse_bullish == expected,
+                "EXPERIMENTAL (T9c/Lab) — Bullish pivot-to-pivot impulse this bar. Not read by decision pipeline yet.",
+            ),
+            ConditionSpec(
+                "impulse_bearish",
+                bool,
+                "structure",
+                lambda bar, expected, _d: bar.impulse_bearish == expected,
+                "EXPERIMENTAL (T9c/Lab) — Bearish pivot-to-pivot impulse this bar. Not read by decision pipeline yet.",
+            ),
+            ConditionSpec(
                 "structure_bias_bullish",
                 bool,
                 "structure",
