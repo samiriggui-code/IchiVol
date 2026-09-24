@@ -830,6 +830,8 @@ def cmd_run_ablation_oos_study(args: dict) -> dict:
             dataset_id=bundle.dataset_id,
             quality_report=bundle.quality,
             data_warning=bundle.data_warning,
+            history_span_seconds=bundle.history_span_seconds,
+            history_warning=bundle.history_warning,
         )
     except ValueError as exc:
         raise CommandError(str(exc)) from exc

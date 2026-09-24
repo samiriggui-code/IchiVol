@@ -10,10 +10,12 @@ from app.strategy_lab.ablation_oos import run_ablation_oos_study_on_candles
 from app.strategy_lab.catalog import get_builtin_ruleset
 from app.strategy_lab.deep_history import (
     TWELVE_DATA_MAX_BARS,
+    build_or_load_binance_history,
     build_or_load_from_candles,
     bundle_from_live_candles,
     load_dataset,
     quality_report_to_manifest,
+    resolve_lab_history,
 )
 from app.strategy_lab.regime_slices import regime_slices_dict, run_regime_slices_on_candles
 from app.strategy_lab.walk_forward import run_walk_forward_on_candles, walk_forward_dict
@@ -165,3 +167,109 @@ def test_studies_return_quality_report():
     abl_body = abl.to_dict()
     assert abl_body["quality_report"]["ok"] in (True, False)
     assert abl_body["dataset_id"] == "live_test"
+
+
+def test_day_aligned_cache_single_download(monkeypatch, tmp_path: Path):
+    """Two calls same UTC day → one fetch, one file (rév.53)."""
+    import app.strategy_lab.deep_history as dh
+
+    candles = _make_candles(48, seed=2)
+    fetches = {"n": 0}
+
+    def _fake_fetch(symbol, interval, start_ms, end_ms, *, client=None):
+        fetches["n"] += 1
+        return list(candles)
+
+    monkeypatch.setattr(dh, "_binance_fetch_range", _fake_fetch)
+    # Mid-day UTC then later same day — aligned end identical.
+    day0 = 1_704_067_200_000  # 2023-12-01 00:00:00 UTC
+    noon = day0 + 12 * 3_600_000
+    evening = day0 + 20 * 3_600_000
+
+    b1 = build_or_load_binance_history(
+        "BTCUSDT",
+        "1h",
+        years=2.0,
+        end_ms=noon,
+        root=tmp_path,
+        now=noon // 1000,
+    )
+    b2 = build_or_load_binance_history(
+        "BTCUSDT",
+        "1h",
+        years=2.0,
+        end_ms=evening,
+        root=tmp_path,
+        now=evening // 1000,
+    )
+    assert fetches["n"] == 1
+    assert b1.dataset_id == b2.dataset_id
+    series = list(tmp_path.glob("binance_*.json"))
+    assert len(series) == 1
+
+
+def test_load_dataset_rejects_tampered_sha256(tmp_path: Path):
+    candles = _make_candles(40, seed=4)
+    bundle = build_or_load_from_candles(
+        candles,
+        dataset_id="tamper_me",
+        provider="binance",
+        symbol="BTCUSDT",
+        timeframe="1h",
+        root=tmp_path,
+        now=int(candles[-1].time) + 7200,
+    )
+    path = tmp_path / "tamper_me.json"
+    rows = json.loads(path.read_text(encoding="utf-8"))
+    rows[0]["close"] = float(rows[0]["close"]) + 1.0
+    path.write_text(json.dumps(rows, separators=(",", ":"), sort_keys=True) + "\n")
+    try:
+        load_dataset("tamper_me", root=tmp_path)
+        raise AssertionError("expected sha256 mismatch")
+    except ValueError as exc:
+        assert "sha256" in str(exc).lower()
+    # Untouched reload still works via a fresh write
+    build_or_load_from_candles(
+        candles,
+        dataset_id="ok_me",
+        provider="binance",
+        symbol="BTCUSDT",
+        timeframe="1h",
+        root=tmp_path,
+        now=int(candles[-1].time) + 7200,
+    )
+    assert load_dataset("ok_me", root=tmp_path).dataset_id == "ok_me"
+    assert bundle.manifest["sha256"]
+
+
+def test_short_history_warning_biquote_100_bars(monkeypatch, tmp_path: Path):
+    """deep_history on biquote (~100 bars) → coverage warning (rév.53)."""
+    candles = _make_candles(100, seed=6)
+
+    class _Prov:
+        id = "biquote"
+
+    monkeypatch.setattr(
+        "app.market_data.resolve.resolve",
+        lambda symbol, default_provider="binance": (_Prov(), "EURUSD"),
+    )
+    monkeypatch.setattr(
+        "app.market_data.resolve.resolve_and_fetch",
+        lambda *a, **k: (_Prov(), "EURUSD", list(candles)),
+    )
+    bundle = resolve_lab_history(
+        "EURUSD",
+        "1h",
+        deep_history=True,
+        years=2.0,
+        limit=5000,
+        exchange="biquote",
+        root=tmp_path,
+        now=int(candles[-1].time) + 7200,
+    )
+    assert len(bundle.candles) == 100
+    assert bundle.history_span_seconds is not None
+    assert bundle.history_span_seconds < 2 * 365 * 86400
+    assert bundle.history_warning is not None
+    assert "demandés" in bundle.history_warning
+    assert "historique obtenu" in bundle.history_warning

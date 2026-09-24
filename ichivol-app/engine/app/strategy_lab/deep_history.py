@@ -42,12 +42,16 @@ class LabHistoryBundle:
     manifest: dict[str, Any]
     quality: dict[str, Any]
     data_warning: str | None
+    history_span_seconds: int | None = None
+    history_warning: str | None = None
 
     def to_meta_dict(self) -> dict[str, Any]:
         return {
             "dataset_id": self.dataset_id,
             "quality_report": dict(self.quality),
             "data_warning": self.data_warning,
+            "history_span_seconds": self.history_span_seconds,
+            "history_warning": self.history_warning,
             "manifest": {
                 k: self.manifest[k]
                 for k in (
@@ -87,6 +91,99 @@ def _load_manifest(root: Path) -> dict[str, Any]:
 
 def _save_manifest(root: Path, man: dict[str, Any]) -> None:
     _manifest_path(root).write_text(json.dumps(man, indent=2) + "\n", encoding="utf-8")
+
+
+def _aligned_cache_end_ms(now_ms: int, timeframe: str) -> int:
+    """Stable cache-key end: last closed boundary used for dataset_id.
+
+    For ``1h`` / ``4h`` / ``1d``: midnight UTC of the current UTC day so two
+    calls the same day share one id. For ``15m``: last closed 15m boundary.
+    """
+    if timeframe in ("1h", "4h", "1d"):
+        day_ms = 86_400_000
+        return (int(now_ms) // day_ms) * day_ms
+    step = _INTERVAL_MS.get(timeframe)
+    if step is None:
+        raise ValueError(f"unsupported interval for deep history: {timeframe!r}")
+    return (int(now_ms) // step) * step
+
+
+def _cache_window_ms(
+    timeframe: str,
+    years: float,
+    *,
+    now_ms: int | None = None,
+) -> tuple[int, int]:
+    raw_end = int(now_ms) if now_ms is not None else int(time.time() * 1000)
+    end = _aligned_cache_end_ms(raw_end, timeframe)
+    start = end - int(float(years) * 365.25 * 86400 * 1000)
+    return start, end
+
+
+def _series_payload_text(series_path: Path) -> str:
+    text = series_path.read_text(encoding="utf-8")
+    return text[:-1] if text.endswith("\n") else text
+
+
+def _verify_series_sha256(series_path: Path, expected: str) -> None:
+    digest = _sha256_bytes(_series_payload_text(series_path).encode("utf-8"))
+    if digest != expected:
+        raise ValueError(
+            f"dataset sha256 mismatch for {series_path.name}: "
+            f"expected {expected}, got {digest}"
+        )
+
+
+def _load_verified_candles(series_path: Path, expected_sha: str) -> list[Candle]:
+    _verify_series_sha256(series_path, expected_sha)
+    rows = json.loads(_series_payload_text(series_path))
+    return _candles_from_jsonable(rows)
+
+
+def _span_seconds(candles: Sequence[Candle]) -> int | None:
+    if len(candles) < 2:
+        return 0 if candles else None
+    return int(candles[-1].time) - int(candles[0].time)
+
+
+def _coverage_warning(
+    candles: Sequence[Candle],
+    *,
+    requested_seconds: int | None,
+) -> tuple[int | None, str | None]:
+    """Warn when obtained span is shorter than requested coverage."""
+    span = _span_seconds(candles)
+    if span is None or requested_seconds is None or requested_seconds <= 0:
+        return span, None
+    if span >= int(requested_seconds):
+        return span, None
+    got_days = max(0, int(span) // 86400)
+    want_days = max(1, int(requested_seconds) // 86400)
+    return span, f"historique obtenu {got_days} j pour {want_days} demandés"
+
+
+def _with_coverage(
+    bundle: LabHistoryBundle,
+    *,
+    requested_seconds: int | None,
+) -> LabHistoryBundle:
+    span, hist_warn = _coverage_warning(
+        bundle.candles, requested_seconds=requested_seconds
+    )
+    if (
+        span == bundle.history_span_seconds
+        and hist_warn == bundle.history_warning
+    ):
+        return bundle
+    return LabHistoryBundle(
+        dataset_id=bundle.dataset_id,
+        candles=bundle.candles,
+        manifest=bundle.manifest,
+        quality=bundle.quality,
+        data_warning=bundle.data_warning,
+        history_span_seconds=span,
+        history_warning=hist_warn,
+    )
 
 
 def _candles_to_jsonable(candles: Sequence[Candle]) -> list[dict[str, Any]]:
@@ -224,33 +321,41 @@ def build_or_load_binance_history(
     client: httpx.Client | None = None,
     now: int | None = None,
 ) -> LabHistoryBundle:
-    """Build (≥ ``years``) or load cached Binance deep history for Lab."""
+    """Build (≥ ``years``) or load cached Binance deep history for Lab.
+
+    ``dataset_id`` uses a day-aligned (1h/4h/1d) end so two calls the same
+    UTC day hit the same cache entry.
+    """
     if timeframe not in TF_SECONDS:
         raise ValueError(f"timeframe must be one of {sorted(TF_SECONDS)}")
     root = _datasets_root(root)
-    end = end_ms if end_ms is not None else int(time.time() * 1000)
-    start = end - int(years * 365.25 * 86400 * 1000)
+    raw_end = end_ms if end_ms is not None else int(time.time() * 1000)
+    start, end = _cache_window_ms(timeframe, years, now_ms=raw_end)
+    requested_seconds = max(0, (end - start) // 1000)
     dataset_id = f"binance_{symbol.upper()}_{timeframe}_{start}_{end}"
     man = _load_manifest(root)
     series_path = root / f"{dataset_id}.json"
 
     if dataset_id in man and series_path.exists():
-        rows = json.loads(series_path.read_text(encoding="utf-8"))
-        candles = _candles_from_jsonable(rows)
         entry = man[dataset_id]
+        expected = str(entry.get("sha256") or "")
+        if not expected:
+            raise ValueError(f"dataset manifest missing sha256: {dataset_id!r}")
+        candles = _load_verified_candles(series_path, expected)
         quality = dict(entry.get("quality") or {})
         warning = (
             "dataset quality degraded — usable with caution"
             if entry.get("degraded")
             else None
         )
-        return LabHistoryBundle(
+        bundle = LabHistoryBundle(
             dataset_id=dataset_id,
             candles=candles,
             manifest=entry,
             quality=quality,
             data_warning=warning,
         )
+        return _with_coverage(bundle, requested_seconds=requested_seconds)
 
     candles = _binance_fetch_range(
         symbol.upper(), timeframe, start, end, client=client
@@ -265,6 +370,7 @@ def build_or_load_binance_history(
         start_ms=start,
         end_ms=end,
         now=now,
+        requested_seconds=requested_seconds,
     )
 
 
@@ -279,6 +385,7 @@ def build_or_load_from_candles(
     end_ms: int | None = None,
     root: Path | None = None,
     now: int | None = None,
+    requested_seconds: int | None = None,
 ) -> LabHistoryBundle:
     """Validate + persist an in-memory series (tests / offline inject)."""
     root = _datasets_root(root)
@@ -290,6 +397,11 @@ def build_or_load_from_candles(
         if end_ms is not None
         else (int(candles[-1].time) + TF_SECONDS.get(timeframe, 3600)) * 1000
     )
+    req = (
+        requested_seconds
+        if requested_seconds is not None
+        else max(0, (e_ms - s_ms) // 1000)
+    )
     return _persist_bundle(
         root,
         dataset_id=dataset_id,
@@ -300,6 +412,7 @@ def build_or_load_from_candles(
         start_ms=s_ms,
         end_ms=e_ms,
         now=now,
+        requested_seconds=req,
     )
 
 
@@ -311,23 +424,30 @@ def load_dataset(dataset_id: str, *, root: Path | None = None) -> LabHistoryBund
     series_path = root / f"{dataset_id}.json"
     if not series_path.exists():
         raise ValueError(f"dataset file missing: {series_path}")
-    candles = _candles_from_jsonable(
-        json.loads(series_path.read_text(encoding="utf-8"))
-    )
     entry = man[dataset_id]
+    expected = str(entry.get("sha256") or "")
+    if not expected:
+        raise ValueError(f"dataset manifest missing sha256: {dataset_id!r}")
+    candles = _load_verified_candles(series_path, expected)
     quality = dict(entry.get("quality") or {})
     warning = (
         "dataset quality degraded — usable with caution"
         if entry.get("degraded")
         else None
     )
-    return LabHistoryBundle(
+    start_ms = entry.get("start_ms")
+    end_ms = entry.get("end_ms")
+    requested = None
+    if isinstance(start_ms, int) and isinstance(end_ms, int) and end_ms > start_ms:
+        requested = (end_ms - start_ms) // 1000
+    bundle = LabHistoryBundle(
         dataset_id=dataset_id,
         candles=candles,
         manifest=entry,
         quality=quality,
         data_warning=warning,
     )
+    return _with_coverage(bundle, requested_seconds=requested)
 
 
 def _persist_bundle(
@@ -341,6 +461,7 @@ def _persist_bundle(
     start_ms: int,
     end_ms: int,
     now: int | None,
+    requested_seconds: int | None = None,
 ) -> LabHistoryBundle:
     tf_sec = TF_SECONDS.get(timeframe)
     if tf_sec is None:
@@ -374,13 +495,19 @@ def _persist_bundle(
     warning = (
         "dataset quality degraded — usable with caution" if not report.ok else None
     )
-    return LabHistoryBundle(
+    req = (
+        requested_seconds
+        if requested_seconds is not None
+        else max(0, (end_ms - start_ms) // 1000)
+    )
+    bundle = LabHistoryBundle(
         dataset_id=dataset_id,
         candles=candles,
         manifest=entry,
         quality=quality,
         data_warning=warning,
     )
+    return _with_coverage(bundle, requested_seconds=req)
 
 
 def twelve_data_max_bars() -> int:
@@ -395,6 +522,7 @@ def bundle_from_live_candles(
     provider: str = "live",
     dataset_id: str | None = None,
     now: int | None = None,
+    requested_seconds: int | None = None,
 ) -> LabHistoryBundle:
     """Validate candles for a Lab study without writing the datasets cache."""
     if not candles:
@@ -421,13 +549,14 @@ def bundle_from_live_candles(
     warning = (
         "dataset quality degraded — usable with caution" if not report.ok else None
     )
-    return LabHistoryBundle(
+    bundle = LabHistoryBundle(
         dataset_id=did,
         candles=list(candles),
         manifest=entry,
         quality=quality,
         data_warning=warning,
     )
+    return _with_coverage(bundle, requested_seconds=requested_seconds)
 
 
 def resolve_lab_history(
@@ -445,13 +574,13 @@ def resolve_lab_history(
 ) -> LabHistoryBundle:
     """Resolve candles for Lab studies with quality always attached.
 
-    - ``dataset_id`` → load versioned cache
+    - ``dataset_id`` → load versioned cache (sha256 verified)
     - ``deep_history`` + Binance → ≥ ``years`` via startTime pagination + persist
     - ``deep_history`` + other providers → ``resolve_and_fetch`` capped at
       ``TWELVE_DATA_MAX_BARS`` (5 000), then validate + persist
     - otherwise → live fetch + validate (ephemeral, not persisted)
     """
-    from app.market_data.resolve import resolve_and_fetch
+    from app.market_data.resolve import resolve, resolve_and_fetch
 
     sym = symbol.upper()
     exch = (exchange or "binance").lower()
@@ -459,8 +588,11 @@ def resolve_lab_history(
     if dataset_id:
         return load_dataset(str(dataset_id).strip(), root=root)
 
+    provider, _psym = resolve(sym, exch)
+    requested_years_s = int(float(years) * 365.25 * 86400)
+
     if deep_history:
-        if exch in ("binance", "binance_spot", "binance-usdm"):
+        if provider.id == "binance":
             return build_or_load_binance_history(
                 sym,
                 timeframe,
@@ -469,18 +601,21 @@ def resolve_lab_history(
                 client=client,
                 now=now,
             )
-        # Twelve Data / FX / equities: hard cap 5 000 bars (provider limit).
+        # Twelve Data / biquote / FX: hard cap 5 000 bars (provider limit).
         want = min(max(int(limit), 300), TWELVE_DATA_MAX_BARS)
-        prov, _psym, candles = resolve_and_fetch(
+        prov, _psym2, candles = resolve_and_fetch(
             sym, timeframe, want, default_provider=exchange
         )
         if len(candles) < 2:
             raise ValueError(f"not enough candles for {sym} {timeframe}")
-        end_ms = int(candles[-1].time) * 1000 + TF_SECONDS[timeframe] * 1000
-        start_ms = int(candles[0].time) * 1000
-        did = (
-            f"{prov.id}_{sym}_{timeframe}_{start_ms}_{end_ms}_n{len(candles)}"
-        )
+        raw_end = int(time.time() * 1000)
+        start_ms, end_ms = _cache_window_ms(timeframe, years, now_ms=raw_end)
+        did = f"{prov.id}_{sym}_{timeframe}_{start_ms}_{end_ms}"
+        # Cache hit if already persisted under the day-aligned id.
+        man = _load_manifest(_datasets_root(root))
+        series_path = _datasets_root(root) / f"{did}.json"
+        if did in man and series_path.exists():
+            return load_dataset(did, root=root)
         return build_or_load_from_candles(
             candles,
             dataset_id=did,
@@ -491,19 +626,22 @@ def resolve_lab_history(
             end_ms=end_ms,
             root=root,
             now=now,
+            requested_seconds=requested_years_s,
         )
 
-    prov, _psym, candles = resolve_and_fetch(
+    prov, _psym2, candles = resolve_and_fetch(
         sym, timeframe, int(limit), default_provider=exchange
     )
     if len(candles) < 2:
         raise ValueError(f"not enough candles for {sym} {timeframe}")
+    req = int(limit) * int(TF_SECONDS.get(timeframe, 3600))
     return bundle_from_live_candles(
         candles,
         symbol=sym,
         timeframe=timeframe,
         provider=prov.id,
         now=now,
+        requested_seconds=req,
     )
 
 

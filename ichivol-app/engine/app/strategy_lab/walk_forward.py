@@ -67,6 +67,8 @@ class WalkForwardReport:
     dataset_id: str | None = None
     quality_report: dict | None = None
     data_warning: str | None = None
+    history_span_seconds: int | None = None
+    history_warning: str | None = None
 
 
 def generate_rolling_folds(
@@ -289,6 +291,8 @@ def run_walk_forward_on_candles(
     dataset_id: str | None = None,
     quality_report: dict | None = None,
     data_warning: str | None = None,
+    history_span_seconds: int | None = None,
+    history_warning: str | None = None,
 ) -> WalkForwardReport:
     n = len(candles)
     mode_l = mode.lower().strip()
@@ -403,6 +407,8 @@ def run_walk_forward_on_candles(
         dataset_id=dataset_id,
         quality_report=quality_report,
         data_warning=data_warning,
+        history_span_seconds=history_span_seconds,
+        history_warning=history_warning,
     )
 
 
@@ -457,6 +463,8 @@ def run_walk_forward(
         dataset_id=bundle.dataset_id,
         quality_report=bundle.quality,
         data_warning=bundle.data_warning,
+        history_span_seconds=bundle.history_span_seconds,
+        history_warning=bundle.history_warning,
     )
 
 
@@ -492,6 +500,8 @@ def walk_forward_dict(report: WalkForwardReport) -> dict:
         "dataset_id": report.dataset_id,
         "quality_report": dict(report.quality_report) if report.quality_report else None,
         "data_warning": report.data_warning,
+        "history_span_seconds": report.history_span_seconds,
+        "history_warning": report.history_warning,
         "note": (
             "Walk-forward on a fixed ruleset (no optimizer). "
             "OOS metrics are the anti-overfitting check; IS is diagnostic only."

@@ -362,6 +362,8 @@ def run_ablation_oos_study_on_candles(
     dataset_id: str | None = None,
     quality_report: dict | None = None,
     data_warning: str | None = None,
+    history_span_seconds: int | None = None,
+    history_warning: str | None = None,
 ) -> AblationOosReport:
     mode = compare_mode.lower().strip()
     if mode not in ("additive", "leave_one_layer_out"):
@@ -511,9 +513,17 @@ def run_ablation_oos_study_on_candles(
         qr = bundle.quality
         dw = bundle.data_warning if dw is None else dw
         did = bundle.dataset_id if did is None else did
-    # Prefer quality/data_warning from T12a when history is long enough;
-    # keep short-history indicatif warning when span < 1y.
-    if hist_warn is None and dw:
+        if history_span_seconds is None:
+            history_span_seconds = bundle.history_span_seconds
+        if history_warning is None:
+            history_warning = bundle.history_warning
+
+    # T12a short-coverage warning takes precedence; else keep <1y indicatif.
+    if history_span_seconds is not None:
+        span = history_span_seconds
+    if history_warning:
+        hist_warn = history_warning
+    elif hist_warn is None and dw:
         hist_warn = dw
     elif hist_warn is not None and dw and dw not in hist_warn:
         hist_warn = f"{hist_warn}; {dw}"

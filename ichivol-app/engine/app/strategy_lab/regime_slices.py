@@ -64,6 +64,8 @@ class RegimeSliceReport:
     dataset_id: str | None = None
     quality_report: dict | None = None
     data_warning: str | None = None
+    history_span_seconds: int | None = None
+    history_warning: str | None = None
 
 
 def _filter_signals(
@@ -187,6 +189,8 @@ def run_regime_slices_on_candles(
     dataset_id: str | None = None,
     quality_report: dict | None = None,
     data_warning: str | None = None,
+    history_span_seconds: int | None = None,
+    history_warning: str | None = None,
 ) -> RegimeSliceReport:
     features = build_feature_series(candles)
     regimes = classify_regimes(candles)
@@ -251,6 +255,8 @@ def run_regime_slices_on_candles(
         dataset_id=dataset_id,
         quality_report=quality_report,
         data_warning=data_warning,
+        history_span_seconds=history_span_seconds,
+        history_warning=history_warning,
     )
 
 
@@ -293,6 +299,8 @@ def run_regime_slices(
         dataset_id=bundle.dataset_id,
         quality_report=bundle.quality,
         data_warning=bundle.data_warning,
+        history_span_seconds=bundle.history_span_seconds,
+        history_warning=bundle.history_warning,
     )
 
 
@@ -316,6 +324,8 @@ def regime_slices_dict(report: RegimeSliceReport) -> dict:
         "dataset_id": report.dataset_id,
         "quality_report": dict(report.quality_report) if report.quality_report else None,
         "data_warning": report.data_warning,
+        "history_span_seconds": report.history_span_seconds,
+        "history_warning": report.history_warning,
         "note": (
             "Regime at signal bar (causal ADX+ATR). "
             "GLOBAL = all signals; other rows = same ruleset filtered by tag. "

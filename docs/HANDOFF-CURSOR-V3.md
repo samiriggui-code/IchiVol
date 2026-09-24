@@ -12,15 +12,28 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - Branche : `cursor/t12a-deep-history-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/72 (**draft**)
 - Base : `main` @ `9490e4b` (#71 T9g-fix **MERGÉE**)
-- Statut : **DRAFT** — CI verte @ `00f4407` ; attente revue Claude avant merge.
+- Statut : **DRAFT** — correctifs rév.53 poussés ; attente re-revue Claude avant merge.
 
 ### Livré
 
 1. `strategy_lab/deep_history.py` — jeux versionnés (`manifest.json` + sha256), pagination Binance `startTime`, plafond Twelve Data **5 000**, défaut crypto **≥ 2 ans** en 1h
 2. `validate_candles` à la construction ; rapport qualité (**codes + code_counts**) dans le manifeste
-3. Études Lab (`walk-forward`, `ablation_oos`, `regime_slices`) renvoient `quality_report` / `data_warning` / `dataset_id` ; jeu défaillant **utilisable** avec avertissement
+3. Études Lab (`walk-forward`, `ablation_oos`, `regime_slices`) renvoient `quality_report` / `data_warning` / `dataset_id` / `history_*` ; jeu défaillant **utilisable** avec avertissement
 4. API / agent : `deep_history`, `years`, `dataset_id`
 5. **Réserve #71** : test étude `test_study_inconclusive_when_variant_has_few_trades_mocked_wf` — `_run_wf` mocké base=40 / variante=5 → `inconclusive` (échoue si `max()` remis)
+
+### Correctifs rév.53 (bloquants)
+
+1. Routes Lab : monkeypatch `resolve_lab_history` / `run_*` (suite hermétique hors réseau)
+2. `dataset_id` day-aligned (minuit UTC pour 1h/4h/1d) → cache effectif
+3. `load_dataset` / cache hit : vérification sha256 (refus si empreinte diffère)
+4. Couverture courte : `history_warning` « historique obtenu X j pour Y demandés » (biquote 100 barres)
+
+### Non bloquant (plus tard)
+
+- Écriture concurrente du manifeste sans verrou
+- `LAB_DATASETS_DIR` configurable (volume Docker persistant)
+- Chemin non profond : bougie en formation encore présente (existant pré-T12a → T11a-bis)
 
 ### Hors scope
 T12b–e · T13 · FeatureStatus · pipeline · microstructure
