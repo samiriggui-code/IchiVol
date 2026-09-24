@@ -43,6 +43,14 @@ function fmtTime(iso: string | null | undefined): string {
   })
 }
 
+const LIFECYCLE_CHECKS = new Set([
+  'open_has_entry_filled_order',
+  'filled_qty_matches_open_position',
+  'filled_order_has_ledger',
+  'closed_has_close_filled_order',
+  'no_stale_non_terminal_orders',
+])
+
 /**
  * T14d — Portefeuille › Ordres : liste + timeline events (lecture seule).
  */
@@ -67,7 +75,9 @@ export function OrdersPanel({ portfolioCode = 'ICHIVOL_BASELINE_V1' }: { portfol
         limit: 100,
       })
       setOrders(page.orders)
-      setDivergences(page.divergences || [])
+      setDivergences(
+        (page.divergences || []).filter((d) => LIFECYCLE_CHECKS.has(d.name)),
+      )
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Ordres indisponibles')
     } finally {

@@ -418,6 +418,9 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
         candles = getattr(row, "candles", None) or []
 
         if not portfolios:
+            extra0: dict[str, Any] = {"rvol": rvol_val, "atr_stop": stop}
+            if candles:
+                extra0["bar_time"] = int(candles[-1].time)
             result = sync_position(
                 session,
                 symbol=row.symbol,
@@ -427,7 +430,7 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
                 price=row.price,
                 pipeline=row.pipeline,
                 stop_distance=stop,
-                signal_extra={"rvol": rvol_val, "atr_stop": stop},
+                signal_extra=extra0,
             )
             marks[f"{row.symbol}:{row.timeframe}"] = row.price
             if result is not None:
@@ -493,6 +496,8 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
                 "atr_stop": stop,
                 "portfolio_code": portfolio.code,
             }
+            if candles:
+                extra["bar_time"] = int(candles[-1].time)
             if struct_gate.structure_payload is not None:
                 extra["market_structure"] = struct_gate.structure_payload
             if fib_gate.fibonacci_payload is not None:

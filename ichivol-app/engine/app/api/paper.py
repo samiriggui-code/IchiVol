@@ -392,7 +392,18 @@ def list_paper_orders(
         from app.paper.reconcile import reconcile_portfolio
 
         report = reconcile_portfolio(session, portfolio)
-        divergences = [c for c in report.get("checks", []) if not c.get("ok")]
+        lifecycle_names = {
+            "open_has_entry_filled_order",
+            "filled_qty_matches_open_position",
+            "filled_order_has_ledger",
+            "closed_has_close_filled_order",
+            "no_stale_non_terminal_orders",
+        }
+        divergences = [
+            c
+            for c in report.get("checks", [])
+            if not c.get("ok") and c.get("name") in lifecycle_names
+        ]
         return {
             "orders": [_order_dict(o) for o in rows],
             "total": total,

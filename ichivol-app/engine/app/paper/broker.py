@@ -289,17 +289,32 @@ def open_capital_position(
         return None
 
     now = datetime.now(timezone.utc)
+    bar_key = paper_orders.resolve_open_bar_key(
+        signal, decision_id=decision_id, intent_ref=(signal or {}).get("intent_ref")
+    )
+    if not bar_key:
+        _journal(
+            session,
+            portfolio_id=portfolio.id,
+            position_id=None,
+            event_type="ORDER_REFUSED",
+            payload={"code": "no_bar_key", "symbol": symbol, "timeframe": timeframe},
+        )
+        return None
     coid = paper_orders.client_order_id_open(
         portfolio_id=portfolio.id,
         symbol=symbol,
         timeframe=timeframe,
         side=side,
-        bar_key=paper_orders.bar_key_from_signal(signal, fallback=now),
+        bar_key=bar_key,
     )
     prior = paper_orders.get_by_client_order_id(session, portfolio.id, coid)
     if prior is not None and prior.status == paper_orders.FILLED and prior.position_id:
         # Idempotent resubmit: zero 2nd fill / ledger / cash debit
         return session.get(PaperPosition, prior.position_id)
+    if prior is not None and prior.status in paper_orders.TERMINAL and prior.status != paper_orders.FILLED:
+        # create_order would return this terminal non-FILLED — no open effect
+        return None
 
     position = PaperPosition(
         portfolio_id=portfolio.id,
@@ -350,8 +365,13 @@ def open_capital_position(
         spread_bps=spread_bps,
         slippage_bps=slippage_bps,
         reason="open",
+        intent_ref=(signal or {}).get("intent_ref") if signal else None,
         at=now,
     )
+    if order.status in paper_orders.TERMINAL and order.status != paper_orders.FILLED:
+        session.delete(position)
+        session.flush()
+        return None
     if order.status == paper_orders.FILLED:
         # Race: create_order returned existing FILLED — drop orphan position if different
         if order.position_id and order.position_id != position.id:
@@ -370,6 +390,11 @@ def open_capital_position(
         reason="open",
         at=now,
     )
+    if order.status != paper_orders.FILLED:
+        session.delete(position)
+        session.flush()
+        return None
+
     ledger_db.guarded(session, portfolio.id, position.id, "opening", lambda: ledger_db.ensure_opening(session, portfolio, now))
     portfolio.cash -= sized.notional + fee
     portfolio.updated_at = now
@@ -405,6 +430,7 @@ def open_capital_position(
             "fee": _fee_meta(profile) | {"amount": fee},
             "execution": exec_meta,
             "client_order_id": coid,
+            "bar_key": bar_key,
         },
     )
     return position
@@ -447,6 +473,20 @@ def close_capital_position(
         position.updated_at = now
         session.flush()
 
+    def _revert_open(*, order_reason: str, codes: list[str] | None = None) -> PaperPosition:
+        position.status = "OPEN"
+        position.close_requested_at = None
+        position.updated_at = now
+        if portfolio is not None:
+            _journal(
+                session,
+                portfolio_id=portfolio.id,
+                position_id=position.id,
+                event_type="CLOSE_REJECTED",
+                payload={"reason": order_reason, "codes": codes or []},
+            )
+        return position
+
     exit_fill = price
     exit_fee = 0.0
     realized = None
@@ -454,17 +494,21 @@ def close_capital_position(
     exit_spread_bps = exit_slip_bps = 0.0
 
     if position.qty and position.qty > 0 and portfolio is not None:
-        coid = paper_orders.client_order_id_close(position.id)
-        prior = paper_orders.get_by_client_order_id(session, portfolio.id, coid)
-        if prior is not None and prior.status == paper_orders.FILLED:
-            # Idempotent: order already filled — ensure CLOSED without 2nd ledger
+        coid, existing = paper_orders.resolve_close_client_order_id(
+            session, portfolio.id, position.id
+        )
+        if existing is not None and existing.status == paper_orders.FILLED:
             if position.status != "CLOSED":
                 position.status = "CLOSED"
-                position.exit_time = position.exit_time or prior.created_at
-                position.exit_price = prior.filled_price
+                position.exit_time = position.exit_time or existing.created_at
+                position.exit_price = existing.filled_price
                 position.exit_reason = reason
+                position.close_requested_at = None
                 position.updated_at = now
             return position
+        if existing is not None and existing.status in paper_orders.TERMINAL:
+            # Should not happen (resolver skips terminal non-FILLED) — belt & braces
+            return _revert_open(order_reason="terminal_non_filled", codes=["order_terminal"])
 
         side = "SELL" if position.direction == "LONG" else "BUY"
         order = paper_orders.create_order(
@@ -483,40 +527,77 @@ def close_capital_position(
             reason=reason,
             at=now,
         )
+        if order.status in paper_orders.TERMINAL and order.status != paper_orders.FILLED:
+            return _revert_open(order_reason=order.reason or "terminal_non_filled", codes=["order_terminal"])
         if order.status == paper_orders.FILLED:
             if position.status != "CLOSED":
                 position.status = "CLOSED"
                 position.exit_time = position.exit_time or now
                 position.exit_price = order.filled_price
                 position.exit_reason = reason
+                position.close_requested_at = None
                 position.updated_at = now
             return position
 
+        try:
+            if quote is not None:
+                exit_fill = quote.bid if position.direction == "LONG" else quote.ask
+                exit_spread_bps = exit_slip_bps = 0.0
+                close_exec = {
+                    "model": ExecutionMode.QUOTE_BASED.value,
+                    "bid": quote.bid,
+                    "ask": quote.ask,
+                    "quote_source": quote.provenance.source,
+                }
+            else:
+                exit_spread_bps, exit_slip_bps = _friction(profile, position.symbol)
+                exit_fill = apply_exit_friction(
+                    price,
+                    direction=position.direction,
+                    spread_bps=exit_spread_bps,
+                    slippage_bps=exit_slip_bps,
+                )
+                close_exec = {
+                    "model": ExecutionMode.CANDLE_ONLY.value,
+                    "spread_bps": exit_spread_bps,
+                    "slippage_bps": exit_slip_bps,
+                }
+            if not math.isfinite(float(exit_fill)):
+                raise ValueError(f"non-finite exit fill: {exit_fill!r}")
+            exit_fee = _commission(profile, position.qty * exit_fill, position.qty, position.symbol)
+            if not math.isfinite(float(exit_fee)):
+                raise ValueError(f"non-finite exit fee: {exit_fee!r}")
+        except Exception as exc:
+            paper_orders.reject_order(
+                session,
+                order,
+                reason="fill_failed",
+                codes=["fill_failed", type(exc).__name__],
+                at=now,
+            )
+            return _revert_open(order_reason="fill_failed", codes=["fill_failed", type(exc).__name__])
+
+        # Fill first — zero cash / ledger / CLOSED until FILLED
+        order.spread_bps = exit_spread_bps
+        order.slippage_bps = exit_slip_bps
+        paper_orders.submit_ack_fill_market(
+            session,
+            order,
+            filled_price=exit_fill,
+            filled_qty=float(position.qty),
+            fee=exit_fee,
+            notional=float(position.qty) * exit_fill,
+            reason=reason,
+            at=now,
+        )
+        if order.status != paper_orders.FILLED:
+            paper_orders.reject_order(
+                session, order, reason="fill_incomplete", codes=["fill_incomplete"], at=now
+            )
+            return _revert_open(order_reason="fill_incomplete", codes=["fill_incomplete"])
+
         ledger_db.guarded(session, portfolio.id, position.id, "opening", lambda: ledger_db.ensure_opening(session, portfolio, now))
         cash_before = portfolio.cash
-        if quote is not None:
-            exit_fill = quote.bid if position.direction == "LONG" else quote.ask
-            exit_spread_bps = exit_slip_bps = 0.0
-            close_exec = {
-                "model": ExecutionMode.QUOTE_BASED.value,
-                "bid": quote.bid,
-                "ask": quote.ask,
-                "quote_source": quote.provenance.source,
-            }
-        else:
-            exit_spread_bps, exit_slip_bps = _friction(profile, position.symbol)
-            exit_fill = apply_exit_friction(
-                price,
-                direction=position.direction,
-                spread_bps=exit_spread_bps,
-                slippage_bps=exit_slip_bps,
-            )
-            close_exec = {
-                "model": ExecutionMode.CANDLE_ONLY.value,
-                "spread_bps": exit_spread_bps,
-                "slippage_bps": exit_slip_bps,
-            }
-        exit_fee = _commission(profile, position.qty * exit_fill, position.qty, position.symbol)
         entry_notional = position.notional or 0.0
         from app.paper.financing import financing_total_for_position
 
@@ -529,18 +610,16 @@ def close_capital_position(
             )
             portfolio.cash += proceeds - exit_fee
         else:
-            # Correct SHORT return (entry − exit) / entry — NOT entry/exit − 1.
-            # Entry fees (open + renforts) must leave realized like LONG.
             pnl_currency = short_realized_currency(position.qty, position.entry_price, exit_fill)
             slice_realized = (
                 pnl_currency - exit_fee - (position.entry_fee or 0.0) - financing_paid
             )
-            # Return reserved short margin + PnL (financing already left cash day by day)
             portfolio.cash += entry_notional + pnl_currency - exit_fee
         realized = prior_realized + slice_realized
         portfolio.realized_pnl += slice_realized
         portfolio.updated_at = now
         cash_delta = portfolio.cash - cash_before
+
         ledger_db.guarded(
             session, portfolio.id, position.id, "close",
             lambda: ledger_db.post(
@@ -560,30 +639,18 @@ def close_capital_position(
                 ref=position.id,
             ),
         )
-
-        order.spread_bps = exit_spread_bps
-        order.slippage_bps = exit_slip_bps
-        paper_orders.submit_ack_fill_market(
-            session,
-            order,
-            filled_price=exit_fill,
-            filled_qty=float(position.qty),
-            fee=exit_fee,
-            notional=float(position.qty) * exit_fill,
-            reason=reason,
-            at=now,
-        )
+    elif position.qty and position.qty > 0 and portfolio is None:
+        # No portfolio book — cannot place order; revert CLOSING
+        return _revert_open(order_reason="no_portfolio", codes=["no_portfolio"])
 
     position.status = "CLOSED"
     position.exit_time = now
     position.exit_price = exit_fill
     position.exit_reason = reason
     position.exit_signal = signal
+    position.close_requested_at = None
     position.exit_fee = (position.exit_fee or 0.0) + exit_fee
     position.realized_pnl = realized if realized is not None else position.realized_pnl
-    # Restore qty / entry_fee to stable entry sizes so fee/ledger consumers that
-    # read pos.qty / pos.entry_fee after CLOSE keep a fixed reference.
-    # Capture remaining size before restore for VWAP (partials + this fill).
     closed_qty = float(position.qty or 0.0)
     _apply_vwap_pnl_pct(
         session,
@@ -749,14 +816,52 @@ def partial_close_capital_position(
     entry_notional_share = float(position.notional or 0.0) * share
     entry_fee_share = float(position.entry_fee or 0.0) * share
 
-    cash_before = portfolio.cash
     if position.direction == "LONG":
         proceeds = qty * exit_fill
         slice_realized = proceeds - exit_fee - entry_notional_share - entry_fee_share
-        portfolio.cash += proceeds - exit_fee
     else:
         pnl_currency = short_realized_currency(qty, position.entry_price, exit_fill)
         slice_realized = pnl_currency - exit_fee - entry_fee_share
+
+    coid = paper_orders.client_order_id_partial(position.id, seq)
+    order = paper_orders.create_order(
+        session,
+        portfolio_id=portfolio.id,
+        client_order_id=coid,
+        position_id=position.id,
+        symbol=position.symbol,
+        timeframe=position.timeframe,
+        side="SELL" if position.direction == "LONG" else "BUY",
+        order_type="LIMIT",
+        requested_price=price,
+        qty=qty,
+        notional=qty * exit_fill,
+        fee=exit_fee,
+        spread_bps=spread_bps,
+        slippage_bps=slip_bps,
+        reason=reason,
+        at=now,
+    )
+    if order.status in paper_orders.TERMINAL and order.status != paper_orders.FILLED:
+        return None
+    if order.status != paper_orders.FILLED:
+        paper_orders.submit_ack_fill_market(
+            session,
+            order,
+            filled_price=exit_fill,
+            filled_qty=qty,
+            fee=exit_fee,
+            notional=qty * exit_fill,
+            reason=reason,
+            at=now,
+        )
+    if order.status != paper_orders.FILLED:
+        return None
+
+    cash_before = portfolio.cash
+    if position.direction == "LONG":
+        portfolio.cash += proceeds - exit_fee
+    else:
         portfolio.cash += entry_notional_share + pnl_currency - exit_fee
 
     portfolio.realized_pnl += slice_realized
@@ -790,37 +895,6 @@ def partial_close_capital_position(
             ref=position.id,
         ),
     )
-
-    coid = paper_orders.client_order_id_partial(position.id, seq)
-    order = paper_orders.create_order(
-        session,
-        portfolio_id=portfolio.id,
-        client_order_id=coid,
-        position_id=position.id,
-        symbol=position.symbol,
-        timeframe=position.timeframe,
-        side="SELL" if position.direction == "LONG" else "BUY",
-        order_type="LIMIT",
-        requested_price=price,
-        qty=qty,
-        notional=qty * exit_fill,
-        fee=exit_fee,
-        spread_bps=spread_bps,
-        slippage_bps=slip_bps,
-        reason=reason,
-        at=now,
-    )
-    if order.status != paper_orders.FILLED:
-        paper_orders.submit_ack_fill_market(
-            session,
-            order,
-            filled_price=exit_fill,
-            filled_qty=qty,
-            fee=exit_fee,
-            notional=qty * exit_fill,
-            reason=reason,
-            at=now,
-        )
 
     row = PaperPartialExit(
         portfolio_id=portfolio.id,
@@ -988,6 +1062,41 @@ def reinforce_add_capital_position(
     if add_notional + fee > float(portfolio.cash) + 1e-9:
         return None  # cash/margin gate — refuse, do not partial-fill silently
 
+    coid = paper_orders.client_order_id_reinforce(position.id, seq)
+    order = paper_orders.create_order(
+        session,
+        portfolio_id=portfolio.id,
+        client_order_id=coid,
+        position_id=position.id,
+        symbol=position.symbol,
+        timeframe=position.timeframe,
+        side="BUY" if position.direction == "LONG" else "SELL",
+        order_type="LIMIT",
+        requested_price=price,
+        qty=actual,
+        notional=add_notional,
+        fee=fee,
+        spread_bps=spread_bps,
+        slippage_bps=slip_bps,
+        reason=reason,
+        at=now,
+    )
+    if order.status in paper_orders.TERMINAL and order.status != paper_orders.FILLED:
+        return None
+    if order.status != paper_orders.FILLED:
+        paper_orders.submit_ack_fill_market(
+            session,
+            order,
+            filled_price=float(fill),
+            filled_qty=actual,
+            fee=fee,
+            notional=add_notional,
+            reason=reason,
+            at=now,
+        )
+    if order.status != paper_orders.FILLED:
+        return None
+
     cash_before = portfolio.cash
     portfolio.cash -= add_notional + fee
     portfolio.updated_at = now
@@ -1020,37 +1129,6 @@ def reinforce_add_capital_position(
             ref=position.id,
         ),
     )
-
-    coid = paper_orders.client_order_id_reinforce(position.id, seq)
-    order = paper_orders.create_order(
-        session,
-        portfolio_id=portfolio.id,
-        client_order_id=coid,
-        position_id=position.id,
-        symbol=position.symbol,
-        timeframe=position.timeframe,
-        side="BUY" if position.direction == "LONG" else "SELL",
-        order_type="LIMIT",
-        requested_price=price,
-        qty=actual,
-        notional=add_notional,
-        fee=fee,
-        spread_bps=spread_bps,
-        slippage_bps=slip_bps,
-        reason=reason,
-        at=now,
-    )
-    if order.status != paper_orders.FILLED:
-        paper_orders.submit_ack_fill_market(
-            session,
-            order,
-            filled_price=float(fill),
-            filled_qty=actual,
-            fee=fee,
-            notional=add_notional,
-            reason=reason,
-            at=now,
-        )
 
     position.qty = new_qty
     position.entry_price = new_avg

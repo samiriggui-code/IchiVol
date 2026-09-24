@@ -307,6 +307,11 @@ def resolve_unknown(
     if to not in (FILLED, CANCELLED, REJECTED):
         raise IllegalOrderTransition(order.id, UNKNOWN, to)
     when = at or _now()
+    if to == FILLED:
+        if not order.filled_qty:
+            order.filled_qty = float(order.qty or 0.0)
+        if order.avg_fill_price is None and order.filled_price is not None:
+            order.avg_fill_price = float(order.filled_price)
     transition(session, order, to, reason=reason, codes=codes, at=when)
     return order
 
@@ -345,8 +350,8 @@ def client_order_id_open(
     return f"open:{portfolio_id}:{symbol}:{timeframe}:{bar_key}:{side}"
 
 
-def client_order_id_close(position_id: str) -> str:
-    return f"close:{position_id}"
+def client_order_id_close(position_id: str, attempt: int) -> str:
+    return f"close:{position_id}:{int(attempt)}"
 
 
 def client_order_id_partial(position_id: str, seq: int) -> str:
@@ -357,15 +362,73 @@ def client_order_id_reinforce(position_id: str, seq: int) -> str:
     return f"reinforce:{position_id}:{seq}"
 
 
-def bar_key_from_signal(signal: dict[str, Any] | None, *, fallback: datetime) -> str:
-    """Deterministic bar identity for open idempotence."""
+def resolve_close_client_order_id(
+    session: Session, portfolio_id: str, position_id: str
+) -> tuple[str, PaperOrder | None]:
+    """Pick close client_order_id for this position.
+
+    - Existing FILLED → resume (idempotent, no 2nd fill).
+    - Existing non-terminal → resume same attempt.
+    - Else next attempt ``close:{pid}:{n}`` after REJECTED/CANCELLED/EXPIRED.
+    """
+    rows = list(
+        session.execute(
+            select(PaperOrder).where(
+                PaperOrder.portfolio_id == portfolio_id,
+                PaperOrder.position_id == position_id,
+            )
+        ).scalars()
+    )
+    matched: list[PaperOrder] = []
+    for o in rows:
+        coid = o.client_order_id or ""
+        if coid == f"close:{position_id}" or coid.startswith(f"close:{position_id}:"):
+            matched.append(o)
+    for o in matched:
+        if o.status == FILLED:
+            return o.client_order_id or client_order_id_close(position_id, 1), o
+    for o in matched:
+        if o.status not in TERMINAL:
+            return o.client_order_id or client_order_id_close(position_id, 1), o
+    attempts: list[int] = []
+    for o in matched:
+        coid = o.client_order_id or ""
+        if coid.startswith(f"close:{position_id}:"):
+            try:
+                attempts.append(int(coid.rsplit(":", 1)[-1]))
+            except ValueError:
+                attempts.append(1)
+        elif coid == f"close:{position_id}":
+            attempts.append(1)
+    nxt = (max(attempts) if attempts else 0) + 1
+    return client_order_id_close(position_id, nxt), None
+
+
+def resolve_open_bar_key(
+    signal: dict[str, Any] | None,
+    *,
+    decision_id: str | None = None,
+    intent_ref: str | None = None,
+) -> str | None:
+    """Bar identity for open idempotence. No wall-clock fallback.
+
+    Prefer ``bar_time`` (and aliases) from signal; else ``decision:{id}`` /
+    ``intent:{ref}``. ``None`` → caller must refuse with ``no_bar_key``.
+    """
     if signal:
         for k in ("bar_time", "candle_time", "time", "t", "time_ms", "closed_at"):
             v = signal.get(k)
-            if v is None:
+            if v is None or v == "":
                 continue
             return str(v)
-    return fallback.strftime("%Y%m%d%H%M%S")
+        iref = signal.get("intent_ref")
+        if iref:
+            return f"intent:{iref}"
+    if decision_id:
+        return f"decision:{decision_id}"
+    if intent_ref:
+        return f"intent:{intent_ref}"
+    return None
 
 
 def list_events(session: Session, order_id: str) -> list[PaperOrderEvent]:

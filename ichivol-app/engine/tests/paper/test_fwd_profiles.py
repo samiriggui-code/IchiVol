@@ -68,9 +68,11 @@ def factory():
 
 
 def step(s, pf, decision, direction, price, run_id=None, stop=2.0):
+    bar = run_id if run_id is not None else int(price * 1000)
     r = paper_engine.sync_position(
         s, symbol=SYM, timeframe="1h", source="auto_watchlist", user_id=None, price=price,
         pipeline=pipe(decision, direction), stop_distance=stop, portfolio=pf, run_id=run_id,
+        signal_extra={"bar_time": bar},
     )
     s.flush()
     return r
@@ -204,6 +206,7 @@ def test_direction_exit_only_from_the_lots_own_timeframe(factory):
     paper_engine.sync_position(  # a 4h row loses direction: must NOT close the 1h lot
         s, symbol=SYM, timeframe="4h", source="auto_watchlist", user_id=None, price=101.0,
         pipeline=pipe("NO_TRADE", N), stop_distance=2.0, portfolio=e,
+        signal_extra={"bar_time": 4},
     )
     s.flush()
     assert positions(s, e)[0].status == "OPEN"

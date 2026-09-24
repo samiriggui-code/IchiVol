@@ -50,6 +50,10 @@ def open_at_market(
     quote = _fresh_quote(provider, instrument.provider_symbol, now or datetime.now(timezone.utc))
     if quote is None:
         return None
+    sig = dict(signal or {})
+    if "bar_time" not in sig and "intent_ref" not in sig:
+        # Quote path must carry a deterministic bar/intent for T13d idempotence.
+        sig.setdefault("intent_ref", f"quote:{instrument.id}:{timeframe}:{direction}")
     return broker.open_capital_position(
         session,
         portfolio=portfolio,
@@ -61,7 +65,7 @@ def open_at_market(
         price=quote.mid,
         decision=decision,
         stop_distance=stop_distance,
-        signal=signal,
+        signal=sig,
         quote=quote,
     )
 
