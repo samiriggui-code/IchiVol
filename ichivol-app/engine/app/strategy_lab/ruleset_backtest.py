@@ -3,10 +3,12 @@
 Rising-edge ruleset signals → enter at next open → exit at ATR stop/target
 (or optional exit.conditions signal, end of series / max hold). One position
 at a time. Conservative intra-bar priority:
-``stop`` > ``partials`` (ascending R) > ``target`` > ``signal`` > ``max_hold`` / ``eod``.
+``stop`` > ``partials`` (ascending R) > ``target`` > ``signal`` > ``reinforce`` >
+``max_hold`` / ``eod`` (trail update after exit checks).
 
 Produces a standard BacktestResult so compute_metrics() stays unchanged.
 Exit fills: stop/target/partials at price levels; signal exit at bar close.
+Reinforce fills: bar close when ConditionGroup rising-edge fires.
 """
 
 from __future__ import annotations
@@ -35,7 +37,12 @@ from app.strategy_lab.partial_tp import (
     partial_level,
     vwap_exit,
 )
-from app.strategy_lab.ruleset import ConditionGroup, Ruleset, parse_ruleset
+from app.strategy_lab.reinforce import (
+    ReinforceAdd,
+    apply_reinforce_add,
+    open_risk,
+)
+from app.strategy_lab.ruleset import ConditionGroup, ReinforceSpec, Ruleset, parse_ruleset
 from app.strategy_lab.stop_trail import TrailSpec, update_trailing_stop
 
 _SIGN = {Direction.LONG: 1.0, Direction.SHORT: -1.0, Direction.NEUTRAL: 0.0}
@@ -56,7 +63,8 @@ class RulesetTradeDetail:
     why_exited: tuple[dict, ...] = ()
     # T0-MANAGE-c — empty when no scale-out fired.
     partial_exits: tuple[PartialExit, ...] = ()
-
+    # T0-MANAGE-e — empty when no scale-in fired.
+    reinforce_adds: tuple[ReinforceAdd, ...] = ()
 
 @dataclass(frozen=True)
 class RejectedSignal:
@@ -264,6 +272,7 @@ def simulate_ruleset_trades(
     entry_group: ConditionGroup | None = None,
     trail: TrailSpec | None = None,
     partial_tp: tuple[PartialTpStep, ...] | None = None,
+    reinforce: ReinforceSpec | None = None,
 ) -> tuple[
     list[RulesetTradeDetail],
     list[Direction],
@@ -275,10 +284,14 @@ def simulate_ruleset_trades(
     if n < 2:
         return [], [Direction.NEUTRAL] * n, [], 0, []
 
-    if exit_group is not None:
+    need_features = exit_group is not None or (
+        reinforce is not None and reinforce.condition_group is not None
+    )
+    if need_features:
         if feature_bars is None or len(feature_bars) != n:
             raise ValueError(
-                "feature_bars (len == candles) required when exit_group is set"
+                "feature_bars (len == candles) required when exit_group "
+                "or reinforce is set"
             )
 
     cost = (commission_bps + slippage_bps) / 10_000
@@ -319,6 +332,15 @@ def simulate_ruleset_trades(
             direction, entry_price, atr_val, stop_atr, target_atr
         )
         stop = initial_stop
+        avg_entry = entry_price
+        open_qty = 1.0
+        risk0 = open_risk(entry_price, initial_stop, 1.0)
+        entry_lots: list[tuple[int, float, float]] = [
+            (entry_index, entry_price, 1.0)
+        ]
+        reinforce_adds: list[ReinforceAdd] = []
+        adds_done = 0
+        reinforce_prev_match = False
 
         hold_end = n - 1
         if max_hold_bars is not None and max_hold_bars > 0:
@@ -329,6 +351,7 @@ def simulate_ruleset_trades(
         exit_reason = "eod" if hold_end == n - 1 else "max_hold"
         why_exited: tuple[dict, ...] = ()
         partial_exits: list[PartialExit] = []
+        # ``remaining`` tracks un-exited fraction of the *original* unit (partials).
         remaining = 1.0
         next_step = 0
         closed = False
@@ -374,9 +397,11 @@ def simulate_ruleset_trades(
                     )
                 )
                 remaining -= take
+                open_qty = max(0.0, open_qty - take)
                 next_step += 1
-                if remaining <= 1e-12:
+                if remaining <= 1e-12 and open_qty <= 1e-12:
                     remaining = 0.0
+                    open_qty = 0.0
                     exit_index = j
                     exit_price = level
                     exit_reason = "partial"
@@ -388,7 +413,9 @@ def simulate_ruleset_trades(
                 break
 
             # 3) Full target on remainder.
-            if _hit_target(direction, candles[j].high, candles[j].low, target):
+            if open_qty > 1e-12 and _hit_target(
+                direction, candles[j].high, candles[j].low, target
+            ):
                 exit_index = j
                 exit_price = target
                 exit_reason = "target"
@@ -399,7 +426,8 @@ def simulate_ruleset_trades(
 
             # 4) Signal exit on remainder.
             if (
-                exit_group is not None
+                open_qty > 1e-12
+                and exit_group is not None
                 and feature_bars is not None
                 and bar_matches_group(feature_bars[j], exit_group, direction)
             ):
@@ -412,12 +440,60 @@ def simulate_ruleset_trades(
                     posn[k] = Direction.NEUTRAL
                 break
 
-            # 5) Trail update after exit checks — new stop applies from next bar.
+            # 5) Reinforce (rising-edge ConditionGroup) — after exit checks.
+            if (
+                reinforce is not None
+                and feature_bars is not None
+                and open_qty > 1e-12
+                and adds_done < reinforce.max_adds
+                and j > entry_index
+            ):
+                matched = bar_matches_group(
+                    feature_bars[j], reinforce.condition_group, direction
+                )
+                rising = matched and not reinforce_prev_match
+                reinforce_prev_match = matched
+                if rising:
+                    add_px = float(candles[j].close)
+                    if add_px > 0:
+                        actual, avg_entry, stop, open_qty, clamped = apply_reinforce_add(
+                            direction=direction,
+                            avg_entry=avg_entry,
+                            qty=open_qty,
+                            stop=stop,
+                            add_price=add_px,
+                            requested_add=reinforce.add_fraction,
+                            initial_risk=risk0,
+                            policy=reinforce.risk_policy,
+                        )
+                        if actual > 1e-15:
+                            entry_lots.append((j, add_px, actual))
+                            reinforce_adds.append(
+                                ReinforceAdd(
+                                    bar_index=j,
+                                    price=add_px,
+                                    fraction=actual,
+                                    requested_fraction=reinforce.add_fraction,
+                                    stop_after=stop,
+                                    avg_entry_after=avg_entry,
+                                    open_risk_after=open_risk(
+                                        avg_entry, stop, open_qty
+                                    ),
+                                    clamped=clamped,
+                                )
+                            )
+                            adds_done += 1
+            elif reinforce is not None and feature_bars is not None:
+                reinforce_prev_match = bar_matches_group(
+                    feature_bars[j], reinforce.condition_group, direction
+                )
+
+            # 6) Trail update after exit checks — new stop applies from next bar.
             bar_atr = atr_states[j].atr if j < len(atr_states) else None
             stop = update_trailing_stop(
                 direction,
                 stop,
-                entry=entry_price,
+                entry=avg_entry,
                 initial_stop=initial_stop,
                 high=candles[j].high,
                 low=candles[j].low,
@@ -428,21 +504,33 @@ def simulate_ruleset_trades(
                 slippage_bps=slippage_bps,
             )
 
-        # Build fill list: partials + remainder (if any).
+        # Build exit fill list: partials + remainder (open_qty).
         fills: list[tuple[int, float, float]] = [
             (pe.bar_index, pe.price, pe.fraction) for pe in partial_exits
         ]
-        if remaining > 1e-12:
-            fills.append((exit_index, exit_price, remaining))
+        if open_qty > 1e-12:
+            fills.append((exit_index, exit_price, open_qty))
         elif not fills:
             fills.append((exit_index, exit_price, 1.0))
 
+        entry_vwap = vwap_exit([(p, f) for _, p, f in entry_lots])
         exit_vwap = vwap_exit([(p, f) for _, p, f in fills])
-        gross = log_return_from_vwap(direction, entry_price, exit_vwap)
-        rt_cost = round_trip_cost_log(commission_bps, slippage_bps)
+        total_qty = sum(f for _, _, f in entry_lots)
+        gross = log_return_from_vwap(direction, entry_vwap, exit_vwap)
+        # Scale fees with total traded size (each unit pays a full round-trip).
+        rt_cost = round_trip_cost_log(commission_bps, slippage_bps) * total_qty
+        # Trade.log_return stays per-unit VWAP return; net scales via cost only
+        # when size==1. With adds, express gross on full notional for metrics:
+        if abs(total_qty - 1.0) > 1e-12:
+            gross = total_qty * log_return_from_vwap(direction, entry_vwap, exit_vwap)
         target_net = gross - rt_cost
 
-        if len(fills) == 1 and fills[0][2] >= 1.0 - 1e-12:
+        if (
+            len(fills) == 1
+            and fills[0][2] >= 1.0 - 1e-12
+            and len(entry_lots) == 1
+            and abs(total_qty - 1.0) <= 1e-12
+        ):
             _apply_hold_returns(
                 bar_returns,
                 candles,
@@ -455,16 +543,39 @@ def simulate_ruleset_trades(
                 size=1.0,
             )
         else:
-            _apply_fills_hold_returns(
-                bar_returns,
-                candles,
-                direction=direction,
-                entry_index=entry_index,
-                entry_price=entry_price,
-                fills=fills,
-                cost=cost,
-                target_net_log=target_net,
-            )
+            # Per entry-lot → allocated exit share (proportional), then soak residual.
+            scratch = [0.0] * len(bar_returns)
+            exit_total = sum(f for _, _, f in fills)
+            for lot_i, lot_px, lot_f in entry_lots:
+                share = lot_f / exit_total if exit_total > 0 else 0.0
+                for ex_i, ex_px, ex_f in fills:
+                    piece_f = ex_f * share
+                    if piece_f <= 1e-15:
+                        continue
+                    piece = [0.0] * len(bar_returns)
+                    _apply_hold_returns(
+                        piece,
+                        candles,
+                        direction=direction,
+                        entry_index=lot_i,
+                        entry_price=lot_px,
+                        exit_index=ex_i,
+                        exit_price=ex_px,
+                        cost=cost,
+                        size=piece_f,
+                    )
+                    for jj, v in enumerate(piece):
+                        if v:
+                            scratch[jj] += v
+            path_sum = sum(scratch)
+            residual = target_net - path_sum
+            final_idx = fills[-1][0]
+            soak_at = final_idx if final_idx < n - 1 else max(entry_index, n - 2)
+            if 0 <= soak_at < len(scratch) and abs(residual) >= 1e-15:
+                scratch[soak_at] += residual
+            for jj, v in enumerate(scratch):
+                if v:
+                    bar_returns[jj] += v
 
         details.append(
             RulesetTradeDetail(
@@ -472,7 +583,7 @@ def simulate_ruleset_trades(
                     entry_time=candles[entry_index].time,
                     exit_time=candles[exit_index].time,
                     direction=direction,
-                    entry_price=entry_price,
+                    entry_price=entry_vwap,
                     exit_price=exit_vwap,
                     log_return=gross,
                     cost_log=rt_cost,
@@ -489,6 +600,7 @@ def simulate_ruleset_trades(
                 ),
                 why_exited=why_exited,
                 partial_exits=tuple(partial_exits),
+                reinforce_adds=tuple(reinforce_adds),
             )
         )
         busy_until = exit_index
@@ -532,6 +644,7 @@ def run_ruleset_backtest_on_features(
         entry_group=ruleset.condition_group,
         trail=ruleset.exit.trail,
         partial_tp=ruleset.exit.partial_tp or None,
+        reinforce=ruleset.exit.reinforce,
     )
     backtest = BacktestResult(
         symbol=symbol,
