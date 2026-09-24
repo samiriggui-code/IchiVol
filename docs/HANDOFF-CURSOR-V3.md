@@ -7,43 +7,45 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-24 — T14a polish — PR #77
+## 2026-09-24 — T12e EN COURS — ADN matrice A→F (#78)
 
-- Branche : `cursor/t14a-interface-workspace-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/77
-- Base : `main` @ `69a11f6` (#76 T12d **MERGÉE**)
-- Front only — **aucun changement moteur**
-- Réf. visuelle : `design-reference/ichivol-workspace/`
-
-### DÉCISION CURSOR — à relire par Claude
-Dérogation utilisateur : T14a avant T12e (maquette jointe). Tokens camap conservés.
-Peaufinage demandé (« on peaufine puis on revient sur le t12e »).
+- Branche : `cursor/t12e-adn-ichivol-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/78
+- Base : `main` @ `4549a2f` (#77 T14a **MERGÉE**)
+- Lab only — **aucun changement live**
+- Livrable doc : `docs/ETUDE-T12-ADN-ICHIVOL.md`
 
 ### Livré
-1. Nav 4 groupes + renoms Desk / Opportunités / Opérations / Portefeuille onglets
-2. Redirects legacy + mobile Desk·Opportunités·Portefeuille·Copilot·Plus
-3. **Polish** : libellés maquette · Journal Trades/Décisions · `?filter=pinned` Marché+Opportunités · liens canoniques · stub kill switch (disabled, T13c) · headers Portefeuille imbriqués masqués
+1. `app/strategy_lab/adn_ichivol.py` — LiveScreenerSettings · ladder A→B→D→E→F · C parallèle · KEEP/RESEARCH/REJECT
+2. Ladder `adn_ichivol` · fix coerce `location_stage_pass` / `regime_stage_pass`
+3. Tests + `scripts/t12e_adn_study.py` · étude méthode (pas de KEEP sans deep_history)
 
-### Hors scope
-T12e · T13a–c · redesign pixel-perfect · Agents/Sessions
+### DÉCISION CURSOR — à relire par Claude
+Settings = défauts production nommés ; C parallèle ; forex/actions exclus (<2 ans).
 
 ### Auto-revue
-- [x] `npm run build` OK
-- [x] moteur decision/agents/paper/screener/brokerage : **vide**
-- [ ] pytest PG16 (front-only)
-- [ ] captures mobile/desktop clair/sombre avant merge
+- [x] pytest T12e + T9g OK
+- [ ] pytest PG16 complet (CI)
+- [x] decision/screener/paper/brokerage non touchés
+- [ ] deep_history BTC/ETH sur VPS (Binance 451 ici)
 
-**Suite** : merge #77 → **T12e** matrice A→F + `docs/ETUDE-T12-ADN-ICHIVOL.md`.
+---
+
+## 2026-09-24 — T14a MERGÉE (#77) — squash `4549a2f`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/77 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `4549a2f`
+- Nav 4 groupes · Desk/Opportunités/Opérations/Portefeuille · pinned · Journal tabs · kill stub
+
+**Suite** : T12e #78.
 
 ---
 
 ## 2026-09-24 — T12d MERGÉE (#76) — squash `69a11f6`
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/76 — **MERGÉE** squash (solo rév.58)
-- **Vérifié** : `origin/main` tip = `69a11f6`
+- **Vérifié** : squash `69a11f6` (ancêtre de `4549a2f`)
 - Fausses cassures nuage à N ; ventilation RVOL/ADX/structure/location/CVD
-
-**Suite** : T14a (shell) en parallèle de T12e…
 
 ---
 
