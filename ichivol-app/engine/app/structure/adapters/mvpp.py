@@ -67,29 +67,24 @@ def _causal_fractal_pivots(
     left: int,
     right: int,
 ) -> list[PivotPoint]:
-    """Pivot at j confirmed only when bar i = j + right is known."""
-    n = len(candles)
+    """Pivot at j confirmed only when bar i = j + right is known (T9a core).
+
+    Adapter-specific: volume-adaptive ``prices``, prominence → quality,
+    ``is_high_volume``, dedup by bar_index.
+    """
+    from app.indicators.pivots import detect_causal_extrema
+
+    mode = "max" if side == LevelSide.RESISTANCE else "min"
+    raw = detect_causal_extrema(prices, left=left, right=right, mode=mode)
     pivots: list[PivotPoint] = []
-    for i in range(n):
-        j = i - right
-        if j - left < 0:
-            continue
-        window = prices[j - left : j + right + 1]
-        if len(window) < left + right + 1:
-            continue
-        center = prices[j]
-        if side == LevelSide.RESISTANCE:
-            if center != max(window):
-                continue
-        else:
-            if center != min(window):
-                continue
-        # Prominence vs neighbors (no future bounce — causal)
+    price_range = (max(prices) - min(prices)) if prices else 1.0
+    if price_range <= 0:
+        price_range = 1.0
+    for j, center, confirmed in raw:
         neighbors = [prices[k] for k in range(j - left, j + right + 1) if k != j]
         if not neighbors:
             continue
         mean_n = sum(neighbors) / len(neighbors)
-        price_range = max(prices) - min(prices) or 1.0
         if side == LevelSide.RESISTANCE:
             prominence = max(0.0, (center - mean_n) / price_range)
         else:
@@ -103,7 +98,7 @@ def _causal_fractal_pivots(
                 side=side,
                 quality=quality,
                 is_high_volume=high_vol[j],
-                confirmed_bar=j + right,
+                confirmed_bar=confirmed,
                 provisional=False,
             )
         )

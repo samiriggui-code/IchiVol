@@ -19,6 +19,7 @@ from enum import Enum
 from typing import Sequence
 
 from app.indicators.ichimoku import Candle
+from app.indicators.pivots import fractal_confirmed_at
 
 
 class StructureBias(str, Enum):
@@ -66,22 +67,20 @@ def compute_structure(
     prev_low: float | None = None
     bias = StructureBias.UNKNOWN
 
+    highs = [c.high for c in candles]
+    lows = [c.low for c in candles]
     out: list[StructureState] = []
 
     for i in range(n):
-        # A candidate swing at index j = i - k is confirmed exactly now: it
-        # takes candles[j-k .. j+k] == candles[j-k .. i] to confirm, all of
-        # which are already known at bar i.
-        j = i - k
-        if j - k >= 0:
-            window = candles[j - k : j + k + 1]
-            highs = [c.high for c in window]
-            lows = [c.low for c in window]
-            if candles[j].high == max(highs):
-                prev_high, last_high = last_high, candles[j].high
-            if candles[j].low == min(lows):
-                prev_low, last_low = last_low, candles[j].low
+        # Shared causal fractal (T9a): pivot at j confirmed only at i = j + k.
+        hi = fractal_confirmed_at(highs, i, left=k, right=k, mode="max")
+        if hi is not None:
+            prev_high, last_high = last_high, hi[1]
+        lo = fractal_confirmed_at(lows, i, left=k, right=k, mode="min")
+        if lo is not None:
+            prev_low, last_low = last_low, lo[1]
 
+        if hi is not None or lo is not None:
             if prev_high is not None and prev_low is not None:
                 higher_high = last_high > prev_high
                 higher_low = last_low > prev_low

@@ -29,6 +29,9 @@ def _window(candles: Sequence[Candle], max_bars: int) -> list[Candle]:
 
 
 def _pivots(candles: Sequence[Candle], lookback: int = 3) -> tuple[list[PivotPoint], list[PivotPoint]]:
+    """Causal fractals (T9a) + pytrendline-specific provisional first/last anchors."""
+    from app.indicators.pivots import detect_causal_ohlc_fractals
+
     n = len(candles)
     lows: list[PivotPoint] = []
     highs: list[PivotPoint] = []
@@ -57,33 +60,34 @@ def _pivots(candles: Sequence[Candle], lookback: int = 3) -> tuple[list[PivotPoi
                 provisional=True,
             )
         )
-    for i in range(n):
-        j = i - lookback
-        if j - lookback < 0:
-            continue
-        window = candles[j - lookback : j + lookback + 1]
-        if candles[j].low == min(c.low for c in window):
-            lows.append(
-                PivotPoint(
-                    j,
-                    candles[j].time,
-                    candles[j].low,
-                    LevelSide.SUPPORT,
-                    confirmed_bar=i,
-                    provisional=False,
-                )
+    hi_piv, lo_piv = detect_causal_ohlc_fractals(
+        [c.high for c in candles],
+        [c.low for c in candles],
+        left=lookback,
+        right=lookback,
+    )
+    for p in lo_piv:
+        lows.append(
+            PivotPoint(
+                p.bar_index,
+                candles[p.bar_index].time,
+                p.price,
+                LevelSide.SUPPORT,
+                confirmed_bar=p.confirmed_bar,
+                provisional=False,
             )
-        if candles[j].high == max(c.high for c in window):
-            highs.append(
-                PivotPoint(
-                    j,
-                    candles[j].time,
-                    candles[j].high,
-                    LevelSide.RESISTANCE,
-                    confirmed_bar=i,
-                    provisional=False,
-                )
+        )
+    for p in hi_piv:
+        highs.append(
+            PivotPoint(
+                p.bar_index,
+                candles[p.bar_index].time,
+                p.price,
+                LevelSide.RESISTANCE,
+                confirmed_bar=p.confirmed_bar,
+                provisional=False,
             )
+        )
     if n >= 2:
         lows.append(
             PivotPoint(
