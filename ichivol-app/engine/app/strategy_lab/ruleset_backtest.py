@@ -334,7 +334,7 @@ def simulate_ruleset_trades(
         stop = initial_stop
         avg_entry = entry_price
         open_qty = 1.0
-        risk0 = open_risk(entry_price, initial_stop, 1.0)
+        risk0 = open_risk(direction, entry_price, initial_stop, 1.0)
         entry_lots: list[tuple[int, float, float]] = [
             (entry_index, entry_price, 1.0)
         ]
@@ -477,7 +477,7 @@ def simulate_ruleset_trades(
                                     stop_after=stop,
                                     avg_entry_after=avg_entry,
                                     open_risk_after=open_risk(
-                                        avg_entry, stop, open_qty
+                                        direction, avg_entry, stop, open_qty
                                     ),
                                     clamped=clamped,
                                 )

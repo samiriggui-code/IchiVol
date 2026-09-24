@@ -58,12 +58,12 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - Statut : **ATTENTE RE-REVUE CLAUDE** — **ne pas merger** ; **pas de T0-MANAGE-f**.
 - Process : #48 squash-mergé sur `main` (`a941539`) ; #49 rebasé.
 
-### Corrections demandées (en cours / fait dans ce commit)
+### Corrections demandées (fait)
 
 1. Défaut `risk_policy` → **`tighten_stop`** (`reduce_qty` reste option)
 2. `open_risk` **signé** : LONG `max(0, avg−stop)×qty` ; SHORT `max(0, stop−avg)×qty`
 3. Parse **rejette** `partial_tp` + `reinforce` ensemble (message clair)
-4. Tests : tighten_stop en profit ; rejet combo ; open_risk stop au-delà du prix moyen
+4. Tests : tighten_stop en profit ; rejet combo ; open_risk stop au-delà du prix moyen ; reduce_qty bloque add au-dessus du avg (structurel)
 
 ### Non-bloquant
 

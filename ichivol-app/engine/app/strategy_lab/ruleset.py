@@ -75,7 +75,7 @@ class ReinforceSpec:
     condition_group: ConditionGroup
     add_fraction: float
     max_adds: int = 1
-    risk_policy: RiskPolicy = "reduce_qty"
+    risk_policy: RiskPolicy = "tighten_stop"
 
 
 @dataclass(frozen=True)
@@ -388,7 +388,7 @@ def _parse_reinforce(raw: Any) -> ReinforceSpec:
             raise ValueError("ruleset.exit.reinforce.max_adds must be an int >= 1")
         max_adds = ma
 
-    policy: RiskPolicy = "reduce_qty"
+    policy: RiskPolicy = "tighten_stop"
     if "risk_policy" in raw:
         rp = raw["risk_policy"]
         if not isinstance(rp, str) or rp not in _RISK_POLICIES:
@@ -497,6 +497,12 @@ def parse_ruleset(raw: Mapping[str, Any]) -> Ruleset:
         raise ValueError("stop_atr and target_atr must be > 0")
 
     exit_spec = _parse_exit_spec(raw.get("exit"))
+    if exit_spec.partial_tp and exit_spec.reinforce is not None:
+        raise ValueError(
+            "ruleset.exit cannot combine partial_tp and reinforce in this tranche "
+            "(T0-MANAGE-e); use one or the other — FIFO allocation deferred to a "
+            "later tranche / T0-MANAGE-f"
+        )
     if exit_spec.partial_tp:
         target_r = target_atr / stop_atr
         for i, step in enumerate(exit_spec.partial_tp):
