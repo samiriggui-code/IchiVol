@@ -10,9 +10,9 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — Binance microstructure Lab EN COURS — trade CVD compare
 
 - Branche : `cursor/binance-microstructure-lab-a2fe`
-- PR : *(draft à ouvrir)*
+- PR : https://github.com/samiriggui-code/IchiVol/pull/66 (**draft**)
 - Base : `main` @ `8c6af5e` (#65 ProviderCapabilities)
-- Statut : **EN COURS** — Cursor solo (**pas d’attente validation**). Lab-only ; **pas** de REGISTRY / pipeline / FeatureStatus.
+- Statut : **DRAFT** — Cursor solo (**pas d’attente validation**). Lab-only ; **pas** de REGISTRY / pipeline / FeatureStatus.
 
 ### Livré
 
