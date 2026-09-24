@@ -45,8 +45,7 @@ def _open_refusal_detail(
 ) -> str:
     """Honest 422 detail when open_user_confirmed returns None.
 
-    WATCH/NO_TRADE stay as ``not_actionable``; gates / short / sizing get their
-    real reason codes (``no_atr_stop``, ``short_not_allowed``, …).
+    WATCH/NO_TRADE stay as ``not_actionable``; Risk Kernel codes otherwise (T13b).
     """
     decision = pipeline.decision
     if decision in ("WATCH", "NO_TRADE"):
@@ -55,24 +54,42 @@ def _open_refusal_detail(
     if direction is None:
         return "not_actionable: pipeline.decision is WATCH/NO_TRADE, nothing to open"
 
+    from app.paper.risk_kernel import (
+        OpenPlan,
+        PortfolioState,
+        evaluate as risk_kernel_evaluate,
+        market_state_from_profile,
+        open_lots_from_positions,
+    )
+
     portfolio = ensure_baseline_portfolio(session)
     profile = portfolio.strategy_profile or {}
-    if direction == "SHORT" and profile.get("allow_short", True) is False:
-        return "short_not_allowed: baseline portfolio does not allow short selling"
-    if paper_gates.has_gates(profile):
-        reason = paper_gates.entry_gate(
-            session,
-            portfolio,
+    equity = paper_broker.estimate_equity(session, portfolio)
+    opens = paper_gates.open_positions(session, portfolio.id)
+    rk = risk_kernel_evaluate(
+        OpenPlan(
             symbol=symbol,
             timeframe=timeframe,
+            direction=direction,
             price=price,
             stop_distance=stop_distance,
-            equity=paper_broker.estimate_equity(session, portfolio),
-        )
-        if reason is not None:
-            return f"{reason}: entry gate refused open"
-    if not stop_distance or stop_distance <= 0:
-        return "no_atr_stop: ATR stop required, nothing to open"
+            stale=False,
+        ),
+        PortfolioState(
+            cash=float(portfolio.cash),
+            equity=float(equity),
+            profile=profile,
+            open_positions=open_lots_from_positions(opens),
+            day_start_equity=paper_gates.day_start_equity(session, portfolio),
+            traded_run_id=None,
+        ),
+        market_state_from_profile(profile, symbol),
+        apply_gates=paper_gates.has_gates(profile),
+        check_size=True,
+    )
+    if not rk.accepted:
+        code = rk.primary_code() or "open_refused"
+        return f"{code}: risk kernel refused open"
     return "open_refused: insufficient_cash_or_size or max_positions"
 
 

@@ -22,6 +22,13 @@ from app.market_data.timeframes import TF_SECONDS
 from app.paper import broker as paper_broker
 from app.paper import counters as paper_counters
 from app.paper import gates as paper_gates
+from app.paper.risk_kernel import (
+    OpenPlan,
+    PortfolioState,
+    evaluate as risk_kernel_evaluate,
+    market_state_from_profile,
+    open_lots_from_positions,
+)
 from app.paper.portfolio import ensure_baseline_portfolio, ensure_syncable_portfolios
 from app.shadow import broker as shadow_broker
 from app.structure.gate import apply_structure_gate
@@ -266,15 +273,43 @@ def sync_position(
             paper_counters.record_rejection(session, portfolio, symbol=symbol, timeframe=timeframe, reason="short_not_allowed")
         return None
     if portfolio is not None and manual_notional is None and paper_gates.has_gates(profile):
-        # (a user-chosen amount is validated with its real numbers by app.paper.manual before it gets here)
-        # Optional experimental gates (all OFF for the baseline): first failing reason wins.
-        reason = paper_gates.entry_gate(
-            session, portfolio, symbol=symbol, timeframe=timeframe, price=price,
-            stop_distance=stop_distance, equity=paper_broker.estimate_equity(session, portfolio), run_id=run_id,
+        # T13b — Risk Kernel (defaults ≡ entry_gate + size). First failing code wins.
+        equity = paper_broker.estimate_equity(session, portfolio)
+        opens = paper_gates.open_positions(session, portfolio.id)
+        traded = None
+        if run_id is not None:
+            traded = paper_gates.traded_run_id(portfolio.id, symbol, timeframe)
+        decision_rk = risk_kernel_evaluate(
+            OpenPlan(
+                symbol=symbol,
+                timeframe=timeframe,
+                direction=direction,
+                price=price,
+                stop_distance=stop_distance,
+                run_id=run_id,
+                stale=False,
+                manual_notional=None,
+                take_profit_r=take_profit_r,
+            ),
+            PortfolioState(
+                cash=float(portfolio.cash),
+                equity=float(equity),
+                profile=profile,
+                open_positions=open_lots_from_positions(opens),
+                day_start_equity=paper_gates.day_start_equity(session, portfolio),
+                traded_run_id=traded,
+            ),
+            market_state_from_profile(profile, symbol),
+            apply_gates=True,
+            check_size=True,
         )
-        if reason is not None:
+        if not decision_rk.accepted:
+            reason = decision_rk.primary_code() or "rejected"
             if log_rej:
-                paper_counters.record_rejection(session, portfolio, symbol=symbol, timeframe=timeframe, reason=reason)
+                paper_counters.record_rejection(
+                    session, portfolio, symbol=symbol, timeframe=timeframe, reason=reason,
+                    detail={"codes": list(decision_rk.codes)},
+                )
             return None
 
     if portfolio is not None and stop_distance and stop_distance > 0:

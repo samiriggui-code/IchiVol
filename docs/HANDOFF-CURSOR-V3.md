@@ -7,7 +7,46 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-24 — T13a EN COURS — TradePlan OrderIntent sérialisation
+## 2026-09-24 — T13b EN COURS — Risk Kernel + onglet Risque
+
+- Branche : `cursor/t13b-risk-kernel-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/80
+- Base : `main` @ `30b5968` (#79 T13a **MERGÉE**)
+- Paper + UI — **défauts = comportement actuel** (pas plus strict)
+
+### Livré
+1. `paper/risk_kernel.py` — `evaluate(plan, portfolio_state, market_state)` → accepté/refusé + codes
+2. `gates.entry_gate` délègue à `evaluate_entry_codes` ; `sync_position` + `_open_refusal_detail` passent par le kernel
+3. Tests AST (chemins d’ouverture) + parité (stale/short/risk cap/manual skip)
+4. Overview `risk` : capital, exposé, risque utilisé, derniers refus
+5. Portefeuille onglet **Risque**
+
+### DÉCISION CURSOR — à relire par Claude
+- Qualité T11a = code informatif seulement (`quality_*`), jamais refuse
+- Pas de nouveau `max_spread` hard gate
+- `check_size` dans le kernel avant open (même issue finale qu’avant)
+
+### Hors scope
+T13c kill switch · cycle ordres T13d
+
+### Auto-revue
+- [x] pytest risk_kernel + engine + build
+- [ ] pytest PG16 CI
+- [x] decision/screener/brokerage : non touchés
+
+---
+
+## 2026-09-24 — T13a MERGÉE (#79) — squash `30b5968`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/79 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `30b5968`
+- TradePlan fields on OrderIntent (serialization only)
+
+**Suite** : T13b.
+
+---
+
+## 2026-09-24 — T13a (archive) — TradePlan OrderIntent sérialisation
 
 - Branche : `cursor/t13a-tradeplan-intent-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/79
