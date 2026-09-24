@@ -45,7 +45,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-MANAGE-e** #49 — **MERGÉE** squash `389fc40` (validé Claude adff686 ; suite PG **935 ok / 1 skip**, 0 régression). Sondes : `tighten_stop` en profit → risque = R0 (LONG/SHORT) ; risque signé OK ; combo `partial_tp`+`reinforce` rejeté ; fuzz 300 seeds → 135 adds, jamais > R0, invariant Σnet=Σbars 3,5e-16. **Vérifié** `git log origin/main` contient `389fc40`.
 - **T0-MANAGE-f** #50 — **MERGÉE** squash `7a77424` (validé Claude 102caee ; suite PG **944 ok / 1 skip**, 0 régression). **T0-MANAGE a→f terminé.**
 - **T0-FIX-SHORT-FEE** #51 — **MERGÉE** squash `b9f8421` (validé Claude ; suite PG **948 ok / 1 skip**, 0 régression). Sondes SHORT (close / partiel→target / renfort→target / épuisement / stop) : cash = réalisé ≤ 5e-13. **Vérifié** `git log origin/main` contient `b9f8421`. **Dette SHORT entry_fee soldée** pour clôtures post-fix.
-- **Job en cours** : **T9a** — détecteur de swings causal unique — PR draft (voir entrée ci-dessous). **Pas de merge** avant revue Claude. **Pas de CHoCH / FVG** dans T9a.
+- **Job en cours** : **T9a** — détecteur de swings causal unique — PR draft [#52](https://github.com/samiriggui-code/IchiVol/pull/52). **Pas de merge** avant revue Claude. **Pas de CHoCH / FVG** dans T9a.
 - **T9** (structure / FVG / Fib) — feuille de route ; T9a = pivots partagés seulement.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol². **Ne pas comparer** partiels vs non-partiels sur le DD avant correction.
 - ⚠️ **Caveat historique SHORT** : positions SHORT **CLOSED avant** `b9f8421` (#51) ont un `realized` **surévalué de `entry_fee`**. Compte local Cursor : **CLOSED_SHORT = 0** → pas de recalcul nécessaire ici. Script ponctuel (dry-run) : `ichivol-app/engine/scripts/recalc_short_entry_fee.py` — **pas de migration auto** ; si une base avec historique a `CLOSED_SHORT > 0`, proposer `--apply` après revue.
@@ -58,6 +58,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T9a EN COURS — un seul détecteur de swings causal (PR draft)
 
 - Branche : `cursor/t9a-causal-swings-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/52 (**draft**)
 - Base : `main` @ `b9f8421` (#51 squash)
 - Statut : **ATTENTE REVUE CLAUDE** — **ne pas merger**. Pas de CHoCH / FVG.
 
