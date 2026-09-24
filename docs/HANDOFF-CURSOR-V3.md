@@ -10,7 +10,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T12a EN COURS — historique profond versionné (Strategy Lab)
 
 - Branche : `cursor/t12a-deep-history-a2fe`
-- PR : *(draft — à renseigner)*
+- PR : https://github.com/samiriggui-code/IchiVol/pull/72 (**draft**)
 - Base : `main` @ `9490e4b` (#71 T9g-fix **MERGÉE**)
 - Statut : **DRAFT** — attente revue Claude avant merge.
 
