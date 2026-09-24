@@ -293,7 +293,9 @@ export function ContextPage() {
     <div className="context-page">
       <header className="page-head overview-head">
         <div>
+          <p className="iv-page-eyebrow">Recherche · Contexte</p>
           <h1>Contexte</h1>
+          <p className="iv-page-question">Dans quel environnement évolue le marché ?</p>
           <p className="muted">{CLASS_HINT[assetClass]}</p>
         </div>
         <div className="market-class-tabs" role="tablist" aria-label="Classe d’actif">

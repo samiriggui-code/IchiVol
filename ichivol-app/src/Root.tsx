@@ -17,6 +17,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import './theme/camap-tokens.css'
 import './theme/keenicons.css'
 import './theme/camap-landing.css'
+import './theme/iv-workspace.css'
 import './index.css'
 
 initTheme()

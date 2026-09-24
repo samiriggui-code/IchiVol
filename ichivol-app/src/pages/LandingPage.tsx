@@ -244,20 +244,16 @@ export function LandingPage() {
             <div className="camap-hero-copy camap-reveal">
               <p className="camap-brand-lockup">IchiVol</p>
               <h1 className="camap-hero-title">
-                Voir le signal. <em>Mesurer</em> chaque brique. Décider.
+                Observer. Qualifier. <em>Décider.</em>
               </h1>
               <p className="camap-hero-lede">
-                Laboratoire Ichimoku × RVOL : Structure, Fibonacci, Context et
-                Paper multi-portfolio — le moteur tranche, le Lab prouve, le
-                Copilot explique.
+                Ichimoku trouve la direction. RVOL exige la participation. Le moteur tranche —
+                Claude explique, sans jamais inventer le BUY.
               </p>
               <div className="camap-hero-cta">
                 <Link to="/login" className="camap-btn camap-btn-primary camap-btn-lg">
-                  Entrer dans le cockpit
+                  Entrer dans le Desk
                 </Link>
-                <a href="#moteur" className="camap-btn camap-btn-outline camap-btn-lg">
-                  Voir le moteur V2
-                </a>
               </div>
             </div>
 

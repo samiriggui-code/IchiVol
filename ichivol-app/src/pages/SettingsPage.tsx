@@ -301,8 +301,10 @@ export function SettingsPage() {
 
       <div className="settings-main">
         <header className="page-head">
+          <p className="iv-page-eyebrow">Système · Paramètres</p>
           <h1>{SECTIONS.find((s) => s.id === section)?.label}</h1>
-      <p className="muted">
+          <p className="iv-page-question">Quels réglages gouvernent le cockpit ?</p>
+          <p className="muted">
             {section === 'llm'
               ? 'LLM actif en haut. Ajoute ou remplace la clé seulement si tu changes de provider.'
               : section === 'sources'

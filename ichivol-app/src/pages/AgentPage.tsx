@@ -31,8 +31,9 @@ export function AgentPage() {
     <div className="page agent-atelier">
       <header className="agent-atelier-hero">
         <div className="agent-atelier-hero-copy">
-          <p className="agent-atelier-kicker">Atelier d’analyse</p>
+          <p className="iv-page-eyebrow">Automatisation · Copilot</p>
           <h1>Copilot</h1>
+          <p className="iv-page-question">Pourquoi le moteur a-t-il classé ainsi ?</p>
           <p className="agent-atelier-lede">
             Le <strong>moteur Python</strong> calcule. Claude <strong>interroge le moteur</strong> avec ses outils, puis explique.
             Depuis Décisions ou Journal, un clic « Expliquer » t’amène ici avec la

@@ -65,11 +65,11 @@ export function PortfolioPage() {
 
   return (
     <div className="portfolio-page">
-      <header className="page-header portfolio-page-header">
+      <header className="page-head portfolio-page-header iv-animate-soft">
         <div>
-          <p className="eyebrow muted">Trading</p>
+          <p className="iv-page-eyebrow">Trading · Portefeuille</p>
           <h1>Portefeuille</h1>
-          <p className="muted portfolio-page-sub">Le capital d’abord. Le risque toujours.</p>
+          <p className="iv-page-question">Le capital d’abord. Le risque toujours.</p>
         </div>
       </header>
 

@@ -207,8 +207,9 @@ export function ActivityPage() {
     <div className="act-page">
       <header className="page-head market-head">
         <div className="market-head-copy">
+          <p className="iv-page-eyebrow">Automatisation · Opérations</p>
           <h1>Opérations</h1>
-          <p className="muted">
+          <p className="iv-page-question">
             L’activité du système, sans angle mort — décisions, paper, filtres, backtests.
           </p>
         </div>

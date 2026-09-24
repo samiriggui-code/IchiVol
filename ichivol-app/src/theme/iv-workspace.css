@@ -1,0 +1,368 @@
+/**
+ * IchiVol workspace chrome — shared page rhythm for Desk / landing / auth.
+ * Builds on camap-tokens; does not invent a second design system.
+ */
+
+/* —— Page chrome —— */
+.iv-page-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  margin: 0 0 0.4rem;
+}
+
+.page-head h1,
+.portfolio-page-header h1,
+.agent-atelier-hero h1,
+.iv-page-title {
+  font-family: var(--font-serif) !important;
+  font-size: clamp(1.55rem, 2.4vw, 2.15rem) !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.15 !important;
+  margin: 0 0 0.25rem !important;
+  color: var(--foreground);
+}
+
+.page-head p.iv-page-question,
+.iv-page-question {
+  margin: 0;
+  max-width: 36rem;
+  font-size: 0.8125rem !important;
+  line-height: 1.45 !important;
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+.iv-status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+}
+
+.iv-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.5rem;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--surface-subtle);
+  color: var(--foreground);
+}
+
+.iv-status-pill .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--bull);
+}
+
+.iv-status-pill.is-offline .dot {
+  background: var(--bear);
+}
+
+.iv-status-pill.is-warn .dot {
+  background: var(--neutral);
+}
+
+/* —— Metric strip —— */
+.iv-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 1100px) {
+  .iv-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .iv-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+}
+
+.iv-metric {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: var(--radius);
+  min-width: 0;
+}
+
+.iv-metric-label {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  margin-bottom: 0.55rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.iv-metric-value {
+  font-family: var(--font-mono);
+  font-size: clamp(1.15rem, 2vw, 1.55rem);
+  letter-spacing: -0.04em;
+  color: var(--foreground);
+  line-height: 1.1;
+}
+
+.iv-metric-value.is-bull {
+  color: var(--bull);
+}
+
+.iv-metric-value.is-bear {
+  color: var(--bear);
+}
+
+.iv-metric small {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.625rem;
+  color: var(--muted-foreground);
+}
+
+/* —— Market pulse + pipeline —— */
+.iv-desk-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 900px) {
+  .iv-desk-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.iv-pulse {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.iv-donut {
+  --buy: 0;
+  --sell: 0;
+  --watch: 0;
+  width: 9rem;
+  height: 9rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: conic-gradient(
+    var(--bull) 0 calc(var(--buy) * 1%),
+    var(--bear) calc(var(--buy) * 1%) calc((var(--buy) + var(--sell)) * 1%),
+    var(--neutral) calc((var(--buy) + var(--sell)) * 1%)
+      calc((var(--buy) + var(--sell) + var(--watch)) * 1%),
+    var(--muted) calc((var(--buy) + var(--sell) + var(--watch)) * 1%) 100%
+  );
+  display: grid;
+  place-items: center;
+}
+
+.iv-donut::before {
+  content: attr(data-center);
+  display: grid;
+  place-items: center;
+  width: 6.4rem;
+  height: 6.4rem;
+  border-radius: 50%;
+  background: var(--card);
+  font-family: var(--font-mono);
+  font-size: 1.35rem;
+  letter-spacing: -0.04em;
+  color: var(--foreground);
+}
+
+.iv-pulse-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  font-size: 0.8125rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.iv-pulse-legend span {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.iv-pulse-legend span:last-child {
+  border-bottom: 0;
+}
+
+.iv-pulse-legend i {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 2px;
+  margin-right: 0.45rem;
+}
+
+.iv-pulse-legend .is-buy {
+  background: var(--bull);
+}
+
+.iv-pulse-legend .is-sell {
+  background: var(--bear);
+}
+
+.iv-pulse-legend .is-watch {
+  background: var(--neutral);
+}
+
+.iv-pulse-legend .is-none {
+  background: var(--muted-foreground);
+  opacity: 0.45;
+}
+
+.iv-pipeline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.iv-pipeline li {
+  flex: 1 1 5.5rem;
+  min-width: 4.5rem;
+  padding: 0.65rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 4px);
+  background: var(--surface-subtle);
+  text-align: center;
+}
+
+.iv-pipeline li strong {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.2rem;
+}
+
+.iv-pipeline li span {
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.iv-pipeline-arrow {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .iv-pipeline {
+    gap: 0;
+  }
+  .iv-pipeline li {
+    border-radius: 0;
+    border-right-width: 0;
+  }
+  .iv-pipeline li:first-child {
+    border-radius: calc(var(--radius) - 4px) 0 0 calc(var(--radius) - 4px);
+  }
+  .iv-pipeline li:last-child {
+    border-radius: 0 calc(var(--radius) - 4px) calc(var(--radius) - 4px) 0;
+    border-right-width: 1px;
+  }
+}
+
+/* —— Status text (never color alone) —— */
+.iv-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  padding: 0.28rem 0.45rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface-subtle);
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.iv-badge.is-pass {
+  background: color-mix(in srgb, var(--bull) 12%, var(--card));
+  border-color: color-mix(in srgb, var(--bull) 35%, var(--border));
+  color: var(--bull);
+}
+
+.iv-badge.is-watch,
+.iv-badge.is-caution {
+  background: color-mix(in srgb, var(--neutral) 14%, var(--card));
+  border-color: color-mix(in srgb, var(--neutral) 40%, var(--border));
+  color: var(--neutral);
+}
+
+.iv-badge.is-block,
+.iv-badge.is-refuse {
+  background: color-mix(in srgb, var(--bear) 12%, var(--card));
+  border-color: color-mix(in srgb, var(--bear) 35%, var(--border));
+  color: var(--bear);
+}
+
+/* —— Motion —— */
+@keyframes iv-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes iv-soft-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.iv-animate-in {
+  animation: iv-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.iv-animate-in-delay {
+  animation: iv-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+
+.iv-animate-soft {
+  animation: iv-soft-in 0.7s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-animate-in,
+  .iv-animate-in-delay,
+  .iv-animate-soft {
+    animation: none;
+  }
+}

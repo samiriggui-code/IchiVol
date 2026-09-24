@@ -710,9 +710,10 @@ export function DecisionsPage() {
     <div className={`decisions-page${sheetOpen ? ' is-sheet-open' : ''}`}>
       <header className="page-head market-head">
         <div className="market-head-copy">
+          <p className="iv-page-eyebrow">Trading · Opportunités</p>
           <h1>Opportunités</h1>
-          <p className="muted">
-            Chaque décision commence par une preuve. Vue Liste ou Matrice — clic = détail.
+          <p className="iv-page-question">
+            Que dit la méthode ?
             {pinnedOnly ? ' · Filtre Épinglés actif.' : ''}
           </p>
           <p className="muted">{CLASS_BLURBS[marketClass]}</p>
