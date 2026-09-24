@@ -11,8 +11,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `cursor/t9g-fix-gate-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/71 (**draft**)
-- Base : `main` @ `23dc4ba`
-- Statut : **DRAFT** — **attente revue Claude** (pas de merge solo).
+- Base : `main` @ `33684c0` (#70 Wyckoff)
+- Statut : **DRAFT** — correctif bloquant rév.50 poussé ; **attente re-revue Claude** (pas de merge).
 
 ### Livré
 
@@ -20,6 +20,11 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 2. Gates : min_oos_trades défaut **30** ; majorité stricte de plis ; coûts défavorables (10/8 bps) ; PF OOS non dégradé
 3. Affichage : `hypothesis_id` / `lineage_trial_count` (T10b), `n_bars`, `history_warning` si < 1 an
 4. Tests limite par règle ; OpenAPI golden (défaut min_oos_trades)
+5. **Correctif rév.50** : `total_oos_trades = min(trades_base, trades_var)` (pas `max`)
+
+### Réserve (non bloquante)
+
+`lineage_trial_count` ne compte que les expériences **persistées** en Perf DB ; l’étude courante n’y est **pas** incluse.
 
 ### Changement non additif (seul autorisé)
 
@@ -30,12 +35,106 @@ T12 · FeatureStatus mutation · pipeline · microstructure
 
 ---
 
+## 2026-09-24 — Wyckoff REJECTED MERGÉE (#70) — squash `33684c0`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/70 — **MERGÉE** squash
+- **Vérifié** : tip attendu `33684c0` sur `origin/main`
+- `FeatureStatus.REJECTED` ; toujours calculable Lab. Golden inchangés.
+
+---
+
+## 2026-09-24 — SYNC Claude rév.49 — T13 ajoutée (NE PAS DÉMARRER)
+
+Addendum feuille de route : tranche **T13 « couche de trading contrôlée »**.  
+**Aucun code T13 dans cette session.**
+
+### Ordre du jour (rév. 49) — inchangé jusqu’à T12e
+
+1. T9g-fix  
+2. T12a  
+3. T12b  
+4. T12c  
+5. T12d  
+6. T12e  
+7. **T13a** → **T13b** → …  
+8. Ensuite : T11b-c, T10d-e, T11d-f, T3e MTF, modèle G  
+
+(microstructure : toujours rien avant T12e)
+
+### Contraintes T13 à respecter dès maintenant (sans coder)
+
+- **Risk Kernel** = **une** fonction pure **obligatoire** ; tous les chemins d’ouverture paper devront y passer :
+  - `sync_auto_watchlist`
+  - `open_user_confirmed`
+  - action agent `open_paper_position`
+- **Ne pas** ajouter de nouveau chemin d’ouverture qui contournerait le kernel.
+- **Aucun** ordre réel, identifiant broker, ni adaptateur broker réel dans T13.
+- Réutiliser (pas dupliquer) : `paper/gates.py`, `paper/risk.py`, `quote_paper.py`, `brokerage/execution.py`.
+
+### PR ouvertes (attente revue Claude, une à la fois)
+
+| PR | Objet |
+|---|---|
+| #69 | ce handoff (rév.48 + rév.49) |
+| #70 | Wyckoff REJECTED |
+| #71 | T9g-fix |
+| #68 | trade VP — différée post-T12e |
+
+---
+
+## 2026-09-24 — SYNC Claude rév.48 — bilan #53→#67 + reprise
+
+Revue Claude a posteriori sur `main` @ `23dc4ba` : **rien à revert**  
+(suite PG 1 049 ok / 1 skip ; golden additifs ; décision inchangée).
+
+### Règle merge (rétablie)
+
+**Fin du mode solo.** Une PR à la fois ; **aucun merge sans revue Claude**,  
+sauf autorisation utilisateur explicite pour une tranche nommée.  
+Vérifier `origin/main` avant d’écrire MERGÉE.
+
+### #67 — MERGÉE (correction handoff)
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/67 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `23dc4ba`
+- (L’entrée « EN COURS / draft » plus bas est **obsolète** — squash déjà dans main.)
+
+### #68 trade VP
+
+**Différée** jusqu’après T12e (rév.48 §6).  
+PR draft : https://github.com/samiriggui-code/IchiVol/pull/68 — ne pas merger.
+
+### Ordre du jour (rév. 48) — **supersédé par rév.49** (ci-dessus)
+
+Voir entrée SYNC rév.49 : T9g-fix → T12a–e → **T13a…** ; microstructure après T12e.
+
+### Point mesuré — `observe_lab_context` (sans code)
+
+Benchmark local synthétique (300 barres × 20 symboles × 3 reps, pas de réseau) :
+
+| Path | ms / cycle 20 symboles |
+|---|---|
+| `observe_lab_context` seul | ~238 ms |
+| scan_like (agents + REGISTRY + pipeline) | ~489 ms |
+| scan_like + observe | ~717 ms |
+
+**Overhead observe / scan_like ≈ 49 %** (part du total ≈ 33 %).  
+**> 10 %** → candidat cache (tranche dédiée, pas dans T9g-fix).
+
+### Suite immédiate
+
+1. PR Wyckoff `FeatureStatus.REJECTED` (commit séparé, golden inchangés)  
+2. PR **T9g-fix** — `promote` → `review_candidate` + gates (revue Claude avant merge)
+
+
+---
+
 ## 2026-09-24 — Chart layer=breaks EN COURS — BOS / CHoCH producer
 
 - Branche : `cursor/breaks-chart-producer-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/67 (**draft**)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/67
 - Base : `main` @ `35e14f3` (#66 microstructure)
-- Statut : **DRAFT** — Cursor solo. Markers ENGINE `layer=breaks` ; **pas** de vote pipeline.
+- Statut : **MERGÉE** squash `23dc4ba` — voir entrée SYNC rév.48 en tête.
 
 ### Livré (prévu)
 

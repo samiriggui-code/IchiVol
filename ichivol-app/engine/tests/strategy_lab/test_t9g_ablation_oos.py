@@ -76,6 +76,22 @@ def test_decide_inconclusive_too_few_trades():
     assert "min_oos_trades" in reasons[0]
 
 
+def test_decide_inconclusive_when_variant_has_few_trades():
+    """rév.50 — use min(base, variant): base=40, variant=5 → inconclusive."""
+    rec, reasons = decide_recommendation(
+        oos_expectancy_delta=0.02,
+        oos_profit_factor_delta=0.1,
+        is_expectancy_delta=0.01,
+        total_oos_trades=min(40, 5),
+        n_folds=3,
+        min_oos_trades=30,
+        fold_oos_expectancy_deltas=[0.01, 0.02, 0.005],
+        adverse_oos_expectancy_delta=0.01,
+    )
+    assert rec == "inconclusive"
+    assert "min_oos_trades" in reasons[0]
+
+
 def test_decide_reject_pf_degraded():
     rec, reasons = decide_recommendation(
         oos_expectancy_delta=0.01,

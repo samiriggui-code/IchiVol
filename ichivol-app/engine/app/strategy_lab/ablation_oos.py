@@ -197,10 +197,14 @@ def decide_recommendation(
     """Deterministic research gate — never writes FeatureStatus.
 
     ``review_candidate`` (never ``promote``) requires all of:
-    - enough OOS trades,
+    - enough OOS trades on **both** baseline and variant
+      (``total_oos_trades`` must be ``min(trades_base, trades_var)``),
     - OOS expectancy delta > 0 in a strict majority of folds,
     - OOS expectancy delta > 0 under adverse costs,
     - OOS profit-factor not degraded.
+
+    ``lineage_trial_count`` on the report (when set) counts only **persisted**
+    Perf DB rows for ``hypothesis_id`` — the in-flight study is not included.
     """
     reasons: list[str] = []
     if n_folds < 2:
@@ -291,6 +295,11 @@ def _run_wf(
 
 
 def _lineage_trial_count(hypothesis_id: str | None) -> int | None:
+    """Count persisted Perf DB rows for ``hypothesis_id`` (T10b display).
+
+    Does **not** include the current in-flight study — only rows already
+    written to ``strategy_lab_experiments``.
+    """
     if not hypothesis_id:
         return None
     try:
@@ -449,7 +458,7 @@ def run_ablation_oos_study_on_candles(
             oos_expectancy_delta=oos_exp_d,
             oos_profit_factor_delta=oos_pf_d,
             is_expectancy_delta=is_exp_d,
-            total_oos_trades=max(trades_base, trades_var),
+            total_oos_trades=min(trades_base, trades_var),
             n_folds=int(base_wf.oos_summary.get("n_folds") or 0),
             min_oos_trades=min_oos_trades,
             fold_oos_expectancy_deltas=fold_deltas,
