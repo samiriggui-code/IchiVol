@@ -64,7 +64,21 @@ def arm_kill_switch(session: Session, portfolio: PaperPortfolio, *, confirm: boo
         return portfolio
     portfolio.kill_switch_armed = True
     portfolio.kill_switch_armed_at = _now()
-    _journal(session, portfolio, KILL_ARMED_EVENT, {"confirm": True})
+    from app.paper import orders as paper_orders
+
+    cancelled = paper_orders.cancel_non_terminal_for_portfolio(
+        session, portfolio.id, reason="kill_switch", at=_now()
+    )
+    _journal(
+        session,
+        portfolio,
+        KILL_ARMED_EVENT,
+        {
+            "confirm": True,
+            "cancelled_order_ids": [o.id for o in cancelled],
+            "cancelled_count": len(cancelled),
+        },
+    )
     session.flush()
     return portfolio
 

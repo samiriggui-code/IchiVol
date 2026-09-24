@@ -56,8 +56,13 @@ def reconcile_portfolio(session: Session, portfolio: PaperPortfolio) -> dict[str
             )
         ).scalars()
     )
-    opens = [p for p in positions if p.status == "OPEN"]
+    opens = [p for p in positions if p.status in ("OPEN", "CLOSING")]
     closed = [p for p in positions if p.status == "CLOSED"]
+    all_orders = list(
+        session.execute(
+            select(PaperOrder).where(PaperOrder.portfolio_id == portfolio.id)
+        ).scalars()
+    )
 
     checks: list[dict[str, Any]] = []
 
@@ -201,6 +206,9 @@ def reconcile_portfolio(session: Session, portfolio: PaperPortfolio) -> dict[str
     legacy = _short_pnl_legacy_check(closed)
     checks.append(legacy)
 
+    # —— T13d order lifecycle checks (report only; no cash mutation) ——
+    checks.extend(_order_lifecycle_checks(session, portfolio, positions, all_orders))
+
     anomalies = [c for c in checks if not c["ok"]]
     return {
         "portfolio_code": portfolio.code,
@@ -218,9 +226,187 @@ def reconcile_portfolio(session: Session, portfolio: PaperPortfolio) -> dict[str
     }
 
 
-# Inclusive: CLOSED shorts exited strictly before this UTC date keep stored PnL;
-# reconcile reports legacy formula gap without rewriting history.
-SHORT_PNL_FIX_ACTIVATED_ON = date(2026, 9, 23)
+def _ledger_keys(session: Session, portfolio_id: str) -> set[str]:
+    return set(
+        session.execute(
+            select(LedgerTransaction.key).where(LedgerTransaction.portfolio_id == portfolio_id)
+        ).scalars().all()
+    )
+
+
+def _order_lifecycle_checks(
+    session: Session,
+    portfolio: PaperPortfolio,
+    positions: list[PaperPosition],
+    all_orders: list[PaperOrder],
+) -> list[dict[str, Any]]:
+    """T13d divergence report — never mutates cash / positions."""
+    from app.paper import orders as paper_orders
+
+    checks: list[dict[str, Any]] = []
+    filled = [o for o in all_orders if o.status == paper_orders.FILLED]
+    keys = _ledger_keys(session, portfolio.id)
+    opens = [p for p in positions if p.status in ("OPEN", "CLOSING")]
+    closed = [p for p in positions if p.status == "CLOSED"]
+
+    missing_entry: list[str] = []
+    for p in opens:
+        open_side = "BUY" if p.direction == "LONG" else "SELL"
+        if not any(
+            o.position_id == p.id and o.side == open_side and o.status == paper_orders.FILLED
+            for o in filled
+        ):
+            missing_entry.append(p.id)
+    checks.append(
+        _check(
+            "open_has_entry_filled_order",
+            ok=not missing_entry,
+            expected="OPEN/CLOSING → ≥1 entry FILLED",
+            actual=f"{len(missing_entry)} missing",
+            delta=len(missing_entry),
+            positions=missing_entry,
+        )
+    )
+
+    qty_mismatch: list[str] = []
+    for p in opens:
+        if not p.qty:
+            continue
+        pos_o = [o for o in filled if o.position_id == p.id]
+        open_side = "BUY" if p.direction == "LONG" else "SELL"
+        close_side = "SELL" if p.direction == "LONG" else "BUY"
+        entry_qty = sum(float(o.filled_qty or o.qty or 0) for o in pos_o if o.side == open_side)
+        exit_qty = sum(float(o.filled_qty or o.qty or 0) for o in pos_o if o.side == close_side)
+        net = entry_qty - exit_qty
+        if abs(net - float(p.qty)) > max(_FTOL, abs(float(p.qty)) * 1e-6):
+            qty_mismatch.append(p.id)
+    checks.append(
+        _check(
+            "filled_qty_matches_open_position",
+            ok=not qty_mismatch,
+            expected="Σ entry − exit filled_qty = position.qty",
+            actual=f"{len(qty_mismatch)} mismatched",
+            delta=len(qty_mismatch),
+            positions=qty_mismatch,
+        )
+    )
+
+    missing_ledger: list[str] = []
+    for o in filled:
+        reason = (o.reason or "").lower()
+        candidates: list[str] = []
+        if reason == "open" and o.position_id:
+            candidates = [f"open:{o.position_id}"]
+        elif o.position_id and reason in ("partial_tp", "partial"):
+            candidates = [f"partial:{o.position_id}:{s}" for s in range(1, 32)]
+        elif o.position_id and reason == "reinforce":
+            candidates = [f"reinforce:{o.position_id}:{s}" for s in range(1, 32)]
+        elif o.position_id:
+            candidates = [f"close:{o.position_id}"]
+        if candidates and not any(c in keys for c in candidates):
+            # also accept client_order_id as ledger key for partial/reinforce
+            if o.client_order_id and o.client_order_id in keys:
+                continue
+            missing_ledger.append(o.id)
+    checks.append(
+        _check(
+            "filled_order_has_ledger",
+            ok=not missing_ledger,
+            expected="FILLED order → ledger key",
+            actual=f"{len(missing_ledger)} missing",
+            delta=len(missing_ledger),
+            positions=missing_ledger,
+        )
+    )
+
+    missing_close: list[str] = []
+    for p in closed:
+        close_side = "SELL" if p.direction == "LONG" else "BUY"
+        if not any(
+            o.position_id == p.id and o.side == close_side and o.status == paper_orders.FILLED
+            for o in filled
+        ):
+            missing_close.append(p.id)
+    checks.append(
+        _check(
+            "closed_has_close_filled_order",
+            ok=not missing_close,
+            expected="CLOSED → close FILLED order",
+            actual=f"{len(missing_close)} missing",
+            delta=len(missing_close),
+            positions=missing_close,
+        )
+    )
+
+    stale = [
+        o.id
+        for o in all_orders
+        if o.status not in paper_orders.TERMINAL
+        and o.created_at is not None
+        and (datetime.now(timezone.utc) - o.created_at).total_seconds() > 30 * 60
+    ]
+    checks.append(
+        _check(
+            "no_stale_non_terminal_orders",
+            ok=not stale,
+            expected="no non-terminal order older than 30 min",
+            actual=f"{len(stale)} stale",
+            delta=len(stale),
+            positions=stale,
+        )
+    )
+    return checks
+
+
+def apply_stale_order_reconciliation(
+    session: Session,
+    portfolio: PaperPortfolio,
+    *,
+    stale_minutes: float = 30.0,
+) -> dict[str, Any]:
+    """Mutate order statuses only: stale → UNKNOWN → FILLED|CANCELLED via ledger.
+
+    Never touches cash, positions, or ledger rows.
+    """
+    from app.paper import orders as paper_orders
+
+    keys = _ledger_keys(session, portfolio.id)
+    now = datetime.now(timezone.utc)
+    cutoff = stale_minutes * 60.0
+    rows = list(
+        session.execute(
+            select(PaperOrder).where(PaperOrder.portfolio_id == portfolio.id)
+        ).scalars()
+    )
+    marked: list[str] = []
+    resolved: list[dict[str, str]] = []
+    for o in rows:
+        if o.status in paper_orders.TERMINAL:
+            continue
+        age = (now - (o.created_at or now)).total_seconds()
+        if o.status != paper_orders.UNKNOWN and age > cutoff:
+            paper_orders.mark_unknown(session, o, reason="stale_reconcile", at=now)
+            marked.append(o.id)
+        if o.status != paper_orders.UNKNOWN:
+            continue
+        # Resolve via ledger presence
+        coid = o.client_order_id or ""
+        pos = o.position_id
+        has_fill = False
+        if coid and coid in keys:
+            has_fill = True
+        if pos and f"open:{pos}" in keys and (o.reason or "") == "open":
+            has_fill = True
+        if pos and f"close:{pos}" in keys and (o.reason or "") not in ("open", "reinforce", "partial_tp"):
+            has_fill = True
+        if has_fill:
+            paper_orders.resolve_unknown(session, o, to=paper_orders.FILLED, reason="ledger_present", at=now)
+            resolved.append({"id": o.id, "to": paper_orders.FILLED})
+        else:
+            paper_orders.resolve_unknown(session, o, to=paper_orders.CANCELLED, reason="ledger_absent", at=now)
+            resolved.append({"id": o.id, "to": paper_orders.CANCELLED})
+    return {"marked_unknown": marked, "resolved": resolved}
+
 
 
 def _short_pnl_legacy_check(closed: list[PaperPosition]) -> dict[str, Any]:

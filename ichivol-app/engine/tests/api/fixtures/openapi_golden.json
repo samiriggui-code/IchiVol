@@ -3288,6 +3288,141 @@
         ]
       }
     },
+    "/api/engine/paper/portfolios/{code}/orders": {
+      "get": {
+        "description": "T13d \u2014 read-only order list (filter by status, paginated).",
+        "operationId": "list_paper_orders_api_engine_paper_portfolios__code__orders_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Paper Orders Api Engine Paper Portfolios  Code  Orders Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Paper Orders",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/paper/portfolios/{code}/orders/{order_id}": {
+      "get": {
+        "description": "T13d \u2014 read-only order + append-only events timeline.",
+        "operationId": "get_paper_order_api_engine_paper_portfolios__code__orders__order_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Paper Order Api Engine Paper Portfolios  Code  Orders  Order Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Paper Order",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
     "/api/engine/paper/portfolios/{code}/overview": {
       "get": {
         "description": "Broker-style account view: cash / invested / unrealized P&L, open positions\nmarked to screener cache or last candle, equity + liquidation_value. Read-only.",

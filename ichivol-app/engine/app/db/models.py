@@ -277,7 +277,7 @@ class PaperPosition(Base):
     user_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
 
     direction: Mapped[str] = mapped_column(String(8))  # LONG | SHORT
-    status: Mapped[str] = mapped_column(String(8), default="OPEN", index=True)  # OPEN | CLOSED
+    status: Mapped[str] = mapped_column(String(16), default="OPEN", index=True)  # OPEN | CLOSING | CLOSED
 
     entry_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     entry_price: Mapped[float] = mapped_column(Float)
@@ -289,6 +289,9 @@ class PaperPosition(Base):
     exit_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
     exit_signal: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     pnl_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    close_requested_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     qty: Mapped[float | None] = mapped_column(Float, nullable=True)
     initial_qty: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -385,9 +388,12 @@ class PaperReinforceAdd(Base):
 
 
 class PaperOrder(Base):
-    """Virtual fill log for the paper broker (never sent to a real venue)."""
+    """Virtual paper order — lifecycle in ``paper.orders`` (never a real venue)."""
 
     __tablename__ = "paper_orders"
+    __table_args__ = (
+        UniqueConstraint("portfolio_id", "client_order_id", name="uq_paper_order_client"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     portfolio_id: Mapped[str] = mapped_column(ForeignKey("paper_portfolios.id"), index=True)
@@ -405,11 +411,37 @@ class PaperOrder(Base):
     fee: Mapped[float] = mapped_column(Float, default=0.0)
     spread_bps: Mapped[float] = mapped_column(Float, default=0.0)
     slippage_bps: Mapped[float] = mapped_column(Float, default=0.0)
-    status: Mapped[str] = mapped_column(String(16), default="FILLED")
+    status: Mapped[str] = mapped_column(String(16), default="CREATED")
     reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    client_order_id: Mapped[str | None] = mapped_column(String(160), nullable=True, index=True)
+    filled_qty: Mapped[float] = mapped_column(Float, default=0.0)
+    avg_fill_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    intent_ref: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
     )
+
+
+class PaperOrderEvent(Base):
+    """Append-only status history for a paper order (T13d). Never updated."""
+
+    __tablename__ = "paper_order_events"
+    __table_args__ = (
+        UniqueConstraint("order_id", "seq", name="uq_paper_order_event_seq"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    order_id: Mapped[str] = mapped_column(
+        ForeignKey("paper_orders.id", ondelete="CASCADE"), index=True
+    )
+    seq: Mapped[int] = mapped_column(Integer)
+    from_status: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    to_status: Mapped[str] = mapped_column(String(16))
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    reason: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    codes: Mapped[list] = mapped_column(JSON, default=list)
+
 
 
 class PaperEquitySnapshot(Base):

@@ -335,6 +335,116 @@ def get_paper_portfolio_reconcile(code: str) -> dict:
         session.close()
 
 
+def _order_dict(o) -> dict:
+    return {
+        "id": o.id,
+        "position_id": o.position_id,
+        "time": o.created_at.isoformat() if o.created_at else None,
+        "symbol": o.symbol,
+        "timeframe": o.timeframe,
+        "side": o.side,
+        "order_type": o.order_type,
+        "requested_price": o.requested_price,
+        "filled_price": o.filled_price,
+        "qty": o.qty,
+        "filled_qty": getattr(o, "filled_qty", None),
+        "avg_fill_price": getattr(o, "avg_fill_price", None),
+        "notional": o.notional,
+        "fee": o.fee,
+        "status": o.status,
+        "reason": o.reason,
+        "client_order_id": getattr(o, "client_order_id", None),
+        "expires_at": o.expires_at.isoformat() if getattr(o, "expires_at", None) else None,
+        "intent_ref": getattr(o, "intent_ref", None),
+    }
+
+
+@router_before_shadow.get("/paper/portfolios/{code}/orders")
+def list_paper_orders(
+    code: str,
+    status: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> dict:
+    """T13d — read-only order list (filter by status, paginated)."""
+    from sqlalchemy import select
+
+    from app.db.models import PaperOrder
+
+    session = SessionLocal()
+    try:
+        portfolio = get_portfolio_by_code(session, code)
+        if portfolio is None:
+            raise HTTPException(status_code=404, detail="portfolio_not_found")
+        q = select(PaperOrder).where(PaperOrder.portfolio_id == portfolio.id)
+        if status:
+            q = q.where(PaperOrder.status == status.upper())
+        total = len(session.execute(q).scalars().all())
+        rows = (
+            session.execute(
+                q.order_by(PaperOrder.created_at.desc())
+                .offset(max(0, offset))
+                .limit(max(1, min(limit, 200)))
+            )
+            .scalars()
+            .all()
+        )
+        from app.paper.reconcile import reconcile_portfolio
+
+        report = reconcile_portfolio(session, portfolio)
+        divergences = [c for c in report.get("checks", []) if not c.get("ok")]
+        return {
+            "orders": [_order_dict(o) for o in rows],
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "divergences": divergences,
+            "divergence_count": len(divergences),
+        }
+    finally:
+        session.close()
+
+
+@router_before_shadow.get("/paper/portfolios/{code}/orders/{order_id}")
+def get_paper_order(code: str, order_id: str) -> dict:
+    """T13d — read-only order + append-only events timeline."""
+    from sqlalchemy import select
+
+    from app.db.models import PaperOrder
+    from app.paper import orders as paper_orders
+
+    session = SessionLocal()
+    try:
+        portfolio = get_portfolio_by_code(session, code)
+        if portfolio is None:
+            raise HTTPException(status_code=404, detail="portfolio_not_found")
+        order = session.execute(
+            select(PaperOrder).where(
+                PaperOrder.id == order_id,
+                PaperOrder.portfolio_id == portfolio.id,
+            )
+        ).scalar_one_or_none()
+        if order is None:
+            raise HTTPException(status_code=404, detail="order_not_found")
+        events = paper_orders.list_events(session, order.id)
+        return {
+            "order": _order_dict(order),
+            "events": [
+                {
+                    "seq": e.seq,
+                    "from": e.from_status,
+                    "to": e.to_status,
+                    "at": e.at.isoformat() if e.at else None,
+                    "reason": e.reason,
+                    "codes": e.codes or [],
+                }
+                for e in events
+            ],
+        }
+    finally:
+        session.close()
+
+
 @router_before_shadow.get("/paper/portfolios/{code}/activity")
 def get_paper_portfolio_activity(code: str, limit: int = 100) -> dict:
     """Virtual fill log (buys / sells) newest first, for the broker-style activity

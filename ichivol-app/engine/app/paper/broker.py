@@ -13,7 +13,6 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     PaperEquitySnapshot,
     PaperJournalEvent,
-    PaperOrder,
     PaperPartialExit,
     PaperPortfolio,
     PaperPosition,
@@ -24,6 +23,7 @@ from app.brokerage.execution import fill_at_quote
 from app.brokerage.fee_profiles import get_schedule
 from app.brokerage.ledger import Cause, Leg
 from app.market_data.contracts import ExecutionMode, Quote
+from app.paper import orders as paper_orders
 from app.paper.risk import apply_exit_friction, size_position
 from app.paper.strategy_profiles import BASELINE_PROFILE
 
@@ -83,7 +83,7 @@ def _count_open(session: Session, portfolio_id: str) -> int:
             .select_from(PaperPosition)
             .where(
                 PaperPosition.portfolio_id == portfolio_id,
-                PaperPosition.status == "OPEN",
+                PaperPosition.status.in_(("OPEN", "CLOSING")),
             )
         ).scalar_one()
     )
@@ -289,6 +289,18 @@ def open_capital_position(
         return None
 
     now = datetime.now(timezone.utc)
+    coid = paper_orders.client_order_id_open(
+        portfolio_id=portfolio.id,
+        symbol=symbol,
+        timeframe=timeframe,
+        side=side,
+        bar_key=paper_orders.bar_key_from_signal(signal, fallback=now),
+    )
+    prior = paper_orders.get_by_client_order_id(session, portfolio.id, coid)
+    if prior is not None and prior.status == paper_orders.FILLED and prior.position_id:
+        # Idempotent resubmit: zero 2nd fill / ledger / cash debit
+        return session.get(PaperPosition, prior.position_id)
+
     position = PaperPosition(
         portfolio_id=portfolio.id,
         symbol=symbol,
@@ -322,25 +334,41 @@ def open_capital_position(
     session.add(position)
     session.flush()
 
-    session.add(
-        PaperOrder(
-            portfolio_id=portfolio.id,
-            position_id=position.id,
-            symbol=symbol,
-            timeframe=timeframe,
-            side=side,
-            order_type="MARKET",
-            requested_price=price,
-            filled_price=sized.entry_fill,
-            qty=sized.qty,
-            notional=sized.notional,
-            fee=fee,
-            spread_bps=spread_bps,
-            slippage_bps=slippage_bps,
-            status="FILLED",
-            reason="open",
-            created_at=now,
-        )
+    order = paper_orders.create_order(
+        session,
+        portfolio_id=portfolio.id,
+        client_order_id=coid,
+        position_id=position.id,
+        symbol=symbol,
+        timeframe=timeframe,
+        side=side,
+        order_type="MARKET",
+        requested_price=price,
+        qty=sized.qty,
+        notional=sized.notional,
+        fee=fee,
+        spread_bps=spread_bps,
+        slippage_bps=slippage_bps,
+        reason="open",
+        at=now,
+    )
+    if order.status == paper_orders.FILLED:
+        # Race: create_order returned existing FILLED — drop orphan position if different
+        if order.position_id and order.position_id != position.id:
+            session.delete(position)
+            session.flush()
+            return session.get(PaperPosition, order.position_id)
+        return position
+
+    paper_orders.submit_ack_fill_market(
+        session,
+        order,
+        filled_price=sized.entry_fill,
+        filled_qty=sized.qty,
+        fee=fee,
+        notional=sized.notional,
+        reason="open",
+        at=now,
     )
     ledger_db.guarded(session, portfolio.id, position.id, "opening", lambda: ledger_db.ensure_opening(session, portfolio, now))
     portfolio.cash -= sized.notional + fee
@@ -376,6 +404,7 @@ def open_capital_position(
             "protection_monitored": True,
             "fee": _fee_meta(profile) | {"amount": fee},
             "execution": exec_meta,
+            "client_order_id": coid,
         },
     )
     return position
@@ -391,8 +420,10 @@ def close_capital_position(
     quote: Quote | None = None,
     at: datetime | None = None,
 ) -> PaperPosition:
-    if position.status != "OPEN":
+    if position.status == "CLOSED":
         return position  # replay/double close: no second credit, no second order
+    if position.status not in ("OPEN", "CLOSING"):
+        return position
     if not math.isfinite(float(price)):
         raise ValueError(f"non-finite exit price: {price!r}")
     portfolio = session.get(PaperPortfolio, position.portfolio_id) if position.portfolio_id else None
@@ -402,17 +433,65 @@ def close_capital_position(
         # Another transaction (auto loop / monitor) may have closed this lot while we waited for the
         # portfolio lock: reload it and re-check, otherwise cash would be credited twice.
         session.refresh(position)
-        if position.status != "OPEN":
+        if position.status == "CLOSED":
+            return position
+        if position.status not in ("OPEN", "CLOSING"):
             return position
     profile = _profile(portfolio) if portfolio is not None else dict(BASELINE_PROFILE)
     now = at or datetime.now(timezone.utc)
+
+    # Fermeture demandée ≠ position fermée
+    if position.status == "OPEN":
+        position.status = "CLOSING"
+        position.close_requested_at = now
+        position.updated_at = now
+        session.flush()
 
     exit_fill = price
     exit_fee = 0.0
     realized = None
     close_exec = None
+    exit_spread_bps = exit_slip_bps = 0.0
 
     if position.qty and position.qty > 0 and portfolio is not None:
+        coid = paper_orders.client_order_id_close(position.id)
+        prior = paper_orders.get_by_client_order_id(session, portfolio.id, coid)
+        if prior is not None and prior.status == paper_orders.FILLED:
+            # Idempotent: order already filled — ensure CLOSED without 2nd ledger
+            if position.status != "CLOSED":
+                position.status = "CLOSED"
+                position.exit_time = position.exit_time or prior.created_at
+                position.exit_price = prior.filled_price
+                position.exit_reason = reason
+                position.updated_at = now
+            return position
+
+        side = "SELL" if position.direction == "LONG" else "BUY"
+        order = paper_orders.create_order(
+            session,
+            portfolio_id=portfolio.id,
+            client_order_id=coid,
+            position_id=position.id,
+            symbol=position.symbol,
+            timeframe=position.timeframe,
+            side=side,
+            order_type="MARKET",
+            requested_price=price,
+            qty=float(position.qty),
+            notional=float(position.qty) * float(price),
+            fee=0.0,
+            reason=reason,
+            at=now,
+        )
+        if order.status == paper_orders.FILLED:
+            if position.status != "CLOSED":
+                position.status = "CLOSED"
+                position.exit_time = position.exit_time or now
+                position.exit_price = order.filled_price
+                position.exit_reason = reason
+                position.updated_at = now
+            return position
+
         ledger_db.guarded(session, portfolio.id, position.id, "opening", lambda: ledger_db.ensure_opening(session, portfolio, now))
         cash_before = portfolio.cash
         if quote is not None:
@@ -482,25 +561,17 @@ def close_capital_position(
             ),
         )
 
-        session.add(
-            PaperOrder(
-                portfolio_id=portfolio.id,
-                position_id=position.id,
-                symbol=position.symbol,
-                timeframe=position.timeframe,
-                side="SELL" if position.direction == "LONG" else "BUY",
-                order_type="MARKET",
-                requested_price=price,
-                filled_price=exit_fill,
-                qty=position.qty,
-                notional=position.qty * exit_fill,
-                fee=exit_fee,
-                spread_bps=exit_spread_bps,
-                slippage_bps=exit_slip_bps,
-                status="FILLED",
-                reason=reason,
-                created_at=now,
-            )
+        order.spread_bps = exit_spread_bps
+        order.slippage_bps = exit_slip_bps
+        paper_orders.submit_ack_fill_market(
+            session,
+            order,
+            filled_price=exit_fill,
+            filled_qty=float(position.qty),
+            fee=exit_fee,
+            notional=float(position.qty) * exit_fill,
+            reason=reason,
+            at=now,
         )
 
     position.status = "CLOSED"
@@ -720,26 +791,36 @@ def partial_close_capital_position(
         ),
     )
 
-    session.add(
-        PaperOrder(
-            portfolio_id=portfolio.id,
-            position_id=position.id,
-            symbol=position.symbol,
-            timeframe=position.timeframe,
-            side="SELL" if position.direction == "LONG" else "BUY",
-            order_type="LIMIT",
-            requested_price=price,
-            filled_price=exit_fill,
-            qty=qty,
-            notional=qty * exit_fill,
-            fee=exit_fee,
-            spread_bps=spread_bps,
-            slippage_bps=slip_bps,
-            status="FILLED",
-            reason=reason,
-            created_at=now,
-        )
+    coid = paper_orders.client_order_id_partial(position.id, seq)
+    order = paper_orders.create_order(
+        session,
+        portfolio_id=portfolio.id,
+        client_order_id=coid,
+        position_id=position.id,
+        symbol=position.symbol,
+        timeframe=position.timeframe,
+        side="SELL" if position.direction == "LONG" else "BUY",
+        order_type="LIMIT",
+        requested_price=price,
+        qty=qty,
+        notional=qty * exit_fill,
+        fee=exit_fee,
+        spread_bps=spread_bps,
+        slippage_bps=slip_bps,
+        reason=reason,
+        at=now,
     )
+    if order.status != paper_orders.FILLED:
+        paper_orders.submit_ack_fill_market(
+            session,
+            order,
+            filled_price=exit_fill,
+            filled_qty=qty,
+            fee=exit_fee,
+            notional=qty * exit_fill,
+            reason=reason,
+            at=now,
+        )
 
     row = PaperPartialExit(
         portfolio_id=portfolio.id,
@@ -940,26 +1021,36 @@ def reinforce_add_capital_position(
         ),
     )
 
-    session.add(
-        PaperOrder(
-            portfolio_id=portfolio.id,
-            position_id=position.id,
-            symbol=position.symbol,
-            timeframe=position.timeframe,
-            side="BUY" if position.direction == "LONG" else "SELL",
-            order_type="LIMIT",
-            requested_price=price,
-            filled_price=float(fill),
-            qty=actual,
-            notional=add_notional,
-            fee=fee,
-            spread_bps=spread_bps,
-            slippage_bps=slip_bps,
-            status="FILLED",
-            reason=reason,
-            created_at=now,
-        )
+    coid = paper_orders.client_order_id_reinforce(position.id, seq)
+    order = paper_orders.create_order(
+        session,
+        portfolio_id=portfolio.id,
+        client_order_id=coid,
+        position_id=position.id,
+        symbol=position.symbol,
+        timeframe=position.timeframe,
+        side="BUY" if position.direction == "LONG" else "SELL",
+        order_type="LIMIT",
+        requested_price=price,
+        qty=actual,
+        notional=add_notional,
+        fee=fee,
+        spread_bps=spread_bps,
+        slippage_bps=slip_bps,
+        reason=reason,
+        at=now,
     )
+    if order.status != paper_orders.FILLED:
+        paper_orders.submit_ack_fill_market(
+            session,
+            order,
+            filled_price=float(fill),
+            filled_qty=actual,
+            fee=fee,
+            notional=add_notional,
+            reason=reason,
+            at=now,
+        )
 
     position.qty = new_qty
     position.entry_price = new_avg

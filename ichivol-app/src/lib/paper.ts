@@ -616,13 +616,37 @@ export interface PaperOrderRow {
   symbol: string
   timeframe: string
   side: 'BUY' | 'SELL' | string
+  order_type?: string
   requested_price: number
   filled_price: number
   qty: number
+  filled_qty?: number | null
+  avg_fill_price?: number | null
   notional: number
   fee: number
   status: string
   reason: string | null
+  client_order_id?: string | null
+  expires_at?: string | null
+  intent_ref?: string | null
+}
+
+export interface PaperOrderEventRow {
+  seq: number
+  from: string | null
+  to: string
+  at: string | null
+  reason: string | null
+  codes: string[]
+}
+
+export interface PaperOrdersPage {
+  orders: PaperOrderRow[]
+  total: number
+  limit: number
+  offset: number
+  divergences: Array<{ name: string; ok: boolean; expected?: unknown; actual?: unknown; delta?: unknown }>
+  divergence_count: number
 }
 
 export async function getPaperActivity(
@@ -635,4 +659,33 @@ export async function getPaperActivity(
   )
   if (!res.ok) throw new Error(await parseError(res))
   return ((await res.json()) as { orders: PaperOrderRow[] }).orders
+}
+
+export async function listPaperOrders(
+  code = 'ICHIVOL_BASELINE_V1',
+  opts: { status?: string; limit?: number; offset?: number } = {},
+): Promise<PaperOrdersPage> {
+  const q = new URLSearchParams()
+  if (opts.status) q.set('status', opts.status)
+  if (opts.limit != null) q.set('limit', String(opts.limit))
+  if (opts.offset != null) q.set('offset', String(opts.offset))
+  const qs = q.toString()
+  const res = await fetch(
+    `/api/engine/paper/portfolios/${encodeURIComponent(code)}/orders${qs ? `?${qs}` : ''}`,
+    { credentials: 'include' },
+  )
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json() as Promise<PaperOrdersPage>
+}
+
+export async function getPaperOrderDetail(
+  orderId: string,
+  code = 'ICHIVOL_BASELINE_V1',
+): Promise<{ order: PaperOrderRow; events: PaperOrderEventRow[] }> {
+  const res = await fetch(
+    `/api/engine/paper/portfolios/${encodeURIComponent(code)}/orders/${encodeURIComponent(orderId)}`,
+    { credentials: 'include' },
+  )
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json() as Promise<{ order: PaperOrderRow; events: PaperOrderEventRow[] }>
 }
