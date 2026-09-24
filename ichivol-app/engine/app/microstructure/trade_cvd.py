@@ -10,8 +10,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Sequence
 
-from app.indicators.cvd import CvdBias, CvdParams, CvdState, compute_cvd
+from app.indicators.cvd import CvdBias, CvdParams, CvdState
 from app.indicators.ichimoku import Candle
+from app.indicators.registry import REGISTRY
 
 
 @dataclass(frozen=True)
@@ -174,7 +175,7 @@ def compare_kline_vs_trade_cvd(
     """Side-by-side bias/delta agreement — Lab measurement only."""
     import statistics
 
-    kline = compute_cvd(candles, params)
+    kline = REGISTRY.compute("cvd", candles, params)
     trade = compute_trade_cvd(candles, trades, tf_seconds=tf_seconds, params=params)
     agree = 0
     compared = 0
