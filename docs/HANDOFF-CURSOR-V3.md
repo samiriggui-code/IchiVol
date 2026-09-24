@@ -7,20 +7,15 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-24 — T10d/e EN COURS — fiches candidats + critères promo
+## 2026-09-24 — T10d/e MERGÉE (#84) — squash `9b2991a`
 
-- Branche : `cursor/t10de-candidate-promo-a2fe`
-- PR : (à ouvrir)
-- Base : `main` @ `f877e0b` (#83 T11b **MERGÉE**)
-- **Docs only** — aucun changement `FeatureStatus` / pipeline
+- PR : https://github.com/samiriggui-code/IchiVol/pull/84 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `9b2991a`
+- `docs/research/` : PROMOTION-CRITERIA (T10e) + fiches rsi / cmf / obv (T10d)
 
-### Livré
-1. `docs/research/PROMOTION-CRITERIA.md` (T10e)
-2. Fiches T10d : `rsi.md` · `cmf.md` · `obv.md` + `README.md`
-3. Rappel : Lab `review_candidate` ≠ promotion ; humain only
-
-### STOP rév.58
-Fin de la liste solo (§5 point 11). **Ne pas démarrer** T13d / T13e / T11c / Sessions / Agents.
+### STOP solo rév.58
+Liste §5 (points 1–11) **terminée**.  
+**Ne pas démarrer** : T13d · T13e · T11c · pages Sessions / Agents · ni autre tranche hors brief Claude.
 
 ---
 
