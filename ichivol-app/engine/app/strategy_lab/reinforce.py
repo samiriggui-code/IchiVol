@@ -60,6 +60,22 @@ def avg_entry_after_add(
     return (float(avg_entry) * float(qty) + float(add_price) * float(add_qty)) / total
 
 
+def cap_add_by_exposure(
+    *,
+    open_qty: float,
+    requested_add: float,
+    initial_qty: float,
+    max_exposure: float,
+) -> float:
+    """Clamp add so ``open_qty + add ≤ initial_qty × max_exposure`` (default 1.0 = no add)."""
+    if requested_add <= 0 or initial_qty <= 0 or max_exposure <= 0:
+        return 0.0
+    headroom = float(initial_qty) * float(max_exposure) - float(open_qty)
+    if headroom <= 1e-15:
+        return 0.0
+    return min(float(requested_add), headroom)
+
+
 def _risk_after(
     direction: Direction,
     avg_entry: float,

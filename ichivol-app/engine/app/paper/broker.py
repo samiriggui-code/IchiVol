@@ -17,6 +17,7 @@ from app.db.models import (
     PaperPartialExit,
     PaperPortfolio,
     PaperPosition,
+    PaperReinforceAdd,
 )
 from app.brokerage import persistence as ledger_db
 from app.brokerage.execution import fill_at_quote
@@ -762,6 +763,225 @@ def partial_close_capital_position(
 
     return row
 
+
+def reinforce_add_capital_position(
+    session: Session,
+    position: PaperPosition,
+    *,
+    price: float,
+    add_fraction: float,
+    r_multiple: float,
+    initial_qty: float,
+    initial_risk: float,
+    max_exposure: float = 1.0,
+    risk_policy: str = "tighten_stop",
+    reason: str = "reinforce",
+    signal: dict[str, Any] | None = None,
+    at: datetime | None = None,
+    time_ms: int | None = None,
+) -> PaperReinforceAdd | None:
+    """Scale in under Lab risk invariant + max_exposure + cash gate.
+
+    Refuses (returns None) when the add would violate risk/exposure/cash —
+    never executes out of invariant. Does not mutate ``initial_qty`` /
+    ``initial_entry_fee``.
+    """
+    from app.agents.types import Direction
+    from app.strategy_lab.reinforce import (
+        apply_reinforce_add,
+        cap_add_by_exposure,
+        open_risk,
+    )
+
+    if position.status != "OPEN":
+        return None
+    if not math.isfinite(float(price)) or not math.isfinite(float(add_fraction)):
+        raise ValueError(f"non-finite reinforce price/fraction: {price!r} {add_fraction!r}")
+    open_qty = float(position.qty or 0.0)
+    if open_qty <= 0 or initial_qty <= 0:
+        return None
+
+    portfolio = session.get(PaperPortfolio, position.portfolio_id) if position.portfolio_id else None
+    if portfolio is None:
+        return None
+    _lock_portfolio(session, portfolio)
+    bind = session.get_bind()
+    if bind is not None and bind.dialect.name == "postgresql":
+        session.refresh(position)
+        if position.status != "OPEN":
+            return None
+        open_qty = float(position.qty or 0.0)
+        if open_qty <= 0:
+            return None
+
+    profile = _profile(portfolio)
+    now = at or datetime.now(timezone.utc)
+    ts_ms = time_ms if time_ms is not None else int(now.timestamp() * 1000)
+
+    existing = list(
+        session.execute(
+            select(PaperReinforceAdd)
+            .where(PaperReinforceAdd.position_id == position.id)
+            .order_by(PaperReinforceAdd.seq)
+        ).scalars()
+    )
+    seq = (existing[-1].seq + 1) if existing else 1
+    key = f"reinforce:{position.id}:{seq}"
+    prior = session.execute(
+        select(PaperReinforceAdd).where(
+            PaperReinforceAdd.portfolio_id == portfolio.id,
+            PaperReinforceAdd.key == key,
+        )
+    ).scalar_one_or_none()
+    if prior is not None:
+        return prior
+
+    requested = cap_add_by_exposure(
+        open_qty=open_qty,
+        requested_add=float(initial_qty) * float(add_fraction),
+        initial_qty=float(initial_qty),
+        max_exposure=float(max_exposure),
+    )
+    if requested <= 1e-15:
+        return None
+
+    direction = Direction.LONG if position.direction == "LONG" else Direction.SHORT
+    avg_entry = float(position.entry_price)
+    stop = float(position.stop_price) if position.stop_price is not None else avg_entry
+
+    spread_bps, slip_bps = _friction(profile, position.symbol)
+    # Entry friction for an add (same side as open).
+    from app.paper.risk import apply_entry_friction
+
+    try:
+        fill = apply_entry_friction(
+            price,
+            direction=position.direction,
+            spread_bps=spread_bps,
+            slippage_bps=slip_bps,
+        )
+    except Exception:
+        # Fallback: use exit friction inverted / raw mid if entry helper differs.
+        fill = float(price)
+
+    actual, new_avg, new_stop, new_qty, clamped = apply_reinforce_add(
+        direction=direction,
+        avg_entry=avg_entry,
+        qty=open_qty,
+        stop=stop,
+        add_price=float(fill),
+        requested_add=requested,
+        initial_risk=float(initial_risk),
+        policy=risk_policy if risk_policy in ("tighten_stop", "reduce_qty") else "tighten_stop",
+    )
+    if actual <= 1e-15:
+        return None
+
+    add_notional = actual * float(fill)
+    fee = _commission(profile, add_notional, actual, position.symbol)
+    if add_notional + fee > float(portfolio.cash) + 1e-9:
+        return None  # cash/margin gate — refuse, do not partial-fill silently
+
+    cash_before = portfolio.cash
+    portfolio.cash -= add_notional + fee
+    portfolio.updated_at = now
+    cash_delta = portfolio.cash - cash_before
+
+    ledger_db.guarded(
+        session,
+        portfolio.id,
+        position.id,
+        "reinforce",
+        lambda: ledger_db.post(
+            session,
+            portfolio.id,
+            key,
+            now,
+            [
+                Leg(
+                    portfolio.currency,
+                    ledger_db.to_decimal(cash_delta + fee),
+                    Cause.EXECUTION,
+                    f"reinforce {position.symbol} @ {r_multiple}R",
+                ),
+                Leg(
+                    portfolio.currency,
+                    -ledger_db.to_decimal(fee),
+                    Cause.COMMISSION,
+                    "reinforce entry commission",
+                ),
+            ],
+            ref=position.id,
+        ),
+    )
+
+    session.add(
+        PaperOrder(
+            portfolio_id=portfolio.id,
+            position_id=position.id,
+            symbol=position.symbol,
+            timeframe=position.timeframe,
+            side="BUY" if position.direction == "LONG" else "SELL",
+            order_type="LIMIT",
+            requested_price=price,
+            filled_price=float(fill),
+            qty=actual,
+            notional=add_notional,
+            fee=fee,
+            spread_bps=spread_bps,
+            slippage_bps=slip_bps,
+            status="FILLED",
+            reason=reason,
+            created_at=now,
+        )
+    )
+
+    position.qty = new_qty
+    position.entry_price = new_avg
+    position.notional = new_qty * new_avg
+    position.entry_fee = float(position.entry_fee or 0.0) + fee
+    position.stop_price = new_stop
+    position.risk_amount = open_risk(direction, new_avg, new_stop, new_qty)
+    position.updated_at = now
+
+    row = PaperReinforceAdd(
+        portfolio_id=portfolio.id,
+        position_id=position.id,
+        seq=seq,
+        key=key,
+        r_multiple=float(r_multiple),
+        fraction=float(add_fraction),
+        qty=actual,
+        price=float(fill),
+        fee=fee,
+        stop_after=new_stop,
+        avg_entry_after=new_avg,
+        open_risk_after=open_risk(direction, new_avg, new_stop, new_qty),
+        clamped=clamped or actual + 1e-12 < requested,
+        time_ms=ts_ms,
+        created_at=now,
+    )
+    session.add(row)
+    _journal(
+        session,
+        portfolio_id=portfolio.id,
+        position_id=position.id,
+        event_type="REINFORCE",
+        payload={
+            "seq": seq,
+            "r_multiple": r_multiple,
+            "fraction": add_fraction,
+            "qty": actual,
+            "price": float(fill),
+            "avg_entry": new_avg,
+            "stop": new_stop,
+            "open_risk": row.open_risk_after,
+            "clamped": row.clamped,
+            "signal": signal,
+        },
+    )
+    session.flush()
+    return row
 
 
 def check_stop_or_tp(position: PaperPosition, price: float) -> str | None:

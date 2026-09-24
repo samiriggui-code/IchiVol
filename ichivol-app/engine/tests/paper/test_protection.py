@@ -13,18 +13,21 @@ from sqlalchemy.exc import OperationalError
 from app.agents.types import Direction
 from app.brokerage import persistence as ledger_db
 from app.db.models import (
-    LedgerLeg, LedgerTransaction, PaperJournalEvent, PaperOrder, PaperPartialExit, PaperPortfolio, PaperPosition,
+    LedgerLeg, LedgerTransaction, PaperJournalEvent, PaperOrder, PaperPartialExit,
+    PaperPortfolio, PaperPosition, PaperReinforceAdd,
 )
 from app.db.session import SessionLocal, engine
 from app.paper import broker
 from app.paper.protection import CHECK_EVENT, find_first_breach, find_breach_with_trail, run_protection_cycle
 from app.paper.protection_partial_tp import PARTIAL_TP_KEY, resolve_paper_partial_tp
+from app.paper.protection_reinforce import REINFORCE_KEY, resolve_paper_reinforce
 from app.paper.protection_trail import (
     TRAIL_EVENT,
     TRAIL_KEY,
     PaperTrailConfig,
     resolve_paper_trail,
 )
+from app.strategy_lab.reinforce import open_risk
 from app.strategy_lab.stop_trail import TrailSpec, breakeven_price
 
 M = 60_000
@@ -98,7 +101,7 @@ def session():
     pid = p.id
     s.rollback()
     s.query(LedgerLeg).filter(LedgerLeg.transaction_id.in_(s.query(LedgerTransaction.id).filter_by(portfolio_id=pid))).delete(synchronize_session=False)
-    for m in (LedgerTransaction, PaperOrder, PaperJournalEvent, PaperPartialExit, PaperPosition):
+    for m in (LedgerTransaction, PaperOrder, PaperJournalEvent, PaperReinforceAdd, PaperPartialExit, PaperPosition):
         s.query(m).filter_by(portfolio_id=pid).delete()
     s.query(PaperPortfolio).filter_by(id=pid).delete()
     s.commit()
@@ -635,3 +638,269 @@ def test_auto_watchlist_ignores_portfolio_partial_tp(session):
     assert rep["status"] == "ok"
     assert float(pos.qty) == pytest.approx(qty0)
     assert session.query(PaperPartialExit).filter_by(position_id=pos.id).count() == 0
+
+
+def test_resolve_paper_reinforce_gates():
+    blob = {
+        "add_fraction": 0.5,
+        "at_r_multiple": 1.0,
+        "max_adds": 1,
+        "max_exposure": 2.0,
+    }
+    pos = SimpleNamespace(
+        source="user_confirmed",
+        direction="LONG",
+        entry_price=80000.0,
+        stop_price=79000.0,
+        qty=0.1,
+        initial_qty=0.1,
+        entry_signal={REINFORCE_KEY: blob},
+    )
+    cfg = resolve_paper_reinforce(pos, None)
+    assert cfg is not None
+    assert cfg.max_exposure == 2.0
+    assert cfg.risk_policy == "tighten_stop"
+    assert cfg.initial_risk == pytest.approx(100.0)  # (80000-79000)*0.1
+
+    auto = SimpleNamespace(
+        source="auto_watchlist",
+        direction="LONG",
+        entry_price=80000.0,
+        stop_price=79000.0,
+        qty=0.1,
+        initial_qty=0.1,
+        entry_signal={REINFORCE_KEY: blob},
+    )
+    assert resolve_paper_reinforce(auto, None) is None
+
+    # Mutual exclusion with partial_tp
+    both = SimpleNamespace(
+        source="user_confirmed",
+        direction="LONG",
+        entry_price=80000.0,
+        stop_price=79000.0,
+        qty=0.1,
+        initial_qty=0.1,
+        entry_signal={
+            REINFORCE_KEY: blob,
+            PARTIAL_TP_KEY: {"steps": [{"r_multiple": 1.0, "fraction": 0.5}]},
+        },
+    )
+    assert resolve_paper_reinforce(both, None) is None
+
+    # Default max_exposure 1.0 still resolves (broker/cap blocks the add)
+    bare = SimpleNamespace(
+        source="user_confirmed",
+        direction="LONG",
+        entry_price=80000.0,
+        stop_price=79000.0,
+        qty=0.1,
+        initial_qty=0.1,
+        entry_signal={
+            REINFORCE_KEY: {"add_fraction": 0.5, "at_r_multiple": 1.0},
+        },
+    )
+    cfg2 = resolve_paper_reinforce(bare, None)
+    assert cfg2 is not None and cfg2.max_exposure == 1.0
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_reinforce_adds_at_r_tightens_stop_keeps_risk_le_r0(session):
+    p = session.info["p"]
+    p.strategy_profile = {
+        **p.strategy_profile,
+        "commission_bps": 0.0,
+        "slippage_bps": 0.0,
+        "spread_bps": 0.0,
+        REINFORCE_KEY: {
+            "add_fraction": 0.5,
+            "at_r_multiple": 1.0,
+            "max_adds": 1,
+            "max_exposure": 2.0,
+            "risk_policy": "tighten_stop",
+        },
+        "take_profit_r": 3.0,
+    }
+    session.flush()
+    pos = _open(session, source="user_confirmed")
+    entry = float(pos.entry_price)
+    stop0 = float(pos.stop_price)
+    qty0 = float(pos.qty)
+    r0 = open_risk(Direction.LONG, entry, stop0, qty0)
+    risk = entry - stop0
+    entry_ms = int(pos.entry_time.timestamp() * 1000)
+    m1 = entry_ms - entry_ms % M + M
+
+    bars = [kline(m1, entry, entry + risk, entry - 50, entry + risk * 0.8)]
+    k, t = _fetchers(bars)
+    now = datetime.fromtimestamp((m1 + 2 * M) / 1000, timezone.utc)
+    rep = next(
+        r for r in run_protection_cycle(session, klines_fn=k, trades_fn=t, now=now) if r["id"] == pos.id
+    )
+    assert rep["status"] == "reinforced"
+    assert pos.status == "OPEN"
+    assert float(pos.qty) == pytest.approx(qty0 * 1.5)
+    assert float(pos.stop_price) > stop0  # tightened toward avg
+    adds = session.query(PaperReinforceAdd).filter_by(position_id=pos.id).order_by(PaperReinforceAdd.seq).all()
+    assert len(adds) == 1
+    assert adds[0].r_multiple == pytest.approx(1.0)
+    live_risk = open_risk(
+        Direction.LONG, float(pos.entry_price), float(pos.stop_price), float(pos.qty)
+    )
+    assert live_risk <= r0 + 1e-6
+    assert adds[0].open_risk_after == pytest.approx(live_risk)
+
+    # Rising-edge latch: still above 1R next cycle → no second add
+    bars2 = [kline(m1 + M, entry + risk * 0.8, entry + risk * 1.1, entry + risk * 0.7, entry + risk)]
+    k2, t2 = _fetchers(bars2)
+    now2 = datetime.fromtimestamp((m1 + 5 * M) / 1000, timezone.utc)
+    rep2 = next(
+        r for r in run_protection_cycle(session, klines_fn=k2, trades_fn=t2, now=now2) if r["id"] == pos.id
+    )
+    assert rep2["status"] == "ok"
+    assert session.query(PaperReinforceAdd).filter_by(position_id=pos.id).count() == 1
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_reinforce_default_max_exposure_blocks_add(session):
+    """max_exposure default 1.0 → headroom 0 when fully sized → refuse."""
+    p = session.info["p"]
+    p.strategy_profile = {
+        **p.strategy_profile,
+        "commission_bps": 0.0,
+        "slippage_bps": 0.0,
+        "spread_bps": 0.0,
+        REINFORCE_KEY: {
+            "add_fraction": 0.5,
+            "at_r_multiple": 1.0,
+            "max_adds": 1,
+            # max_exposure omitted → 1.0
+        },
+        "take_profit_r": 3.0,
+    }
+    session.flush()
+    pos = _open(session, source="user_confirmed")
+    qty0 = float(pos.qty)
+    entry = float(pos.entry_price)
+    stop0 = float(pos.stop_price)
+    risk = entry - stop0
+    entry_ms = int(pos.entry_time.timestamp() * 1000)
+    m1 = entry_ms - entry_ms % M + M
+    bars = [kline(m1, entry, entry + risk, entry - 50, entry + risk * 0.8)]
+    k, t = _fetchers(bars)
+    now = datetime.fromtimestamp((m1 + 2 * M) / 1000, timezone.utc)
+    rep = next(
+        r for r in run_protection_cycle(session, klines_fn=k, trades_fn=t, now=now) if r["id"] == pos.id
+    )
+    assert rep["status"] == "ok"
+    assert float(pos.qty) == pytest.approx(qty0)
+    assert session.query(PaperReinforceAdd).filter_by(position_id=pos.id).count() == 0
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_reinforce_refuses_when_cash_insufficient(session):
+    p = session.info["p"]
+    p.strategy_profile = {
+        **p.strategy_profile,
+        "commission_bps": 0.0,
+        "slippage_bps": 0.0,
+        "spread_bps": 0.0,
+        REINFORCE_KEY: {
+            "add_fraction": 0.5,
+            "at_r_multiple": 1.0,
+            "max_adds": 1,
+            "max_exposure": 2.0,
+        },
+        "take_profit_r": 3.0,
+    }
+    session.flush()
+    pos = _open(session, source="user_confirmed")
+    qty0 = float(pos.qty)
+    # Drain cash so add cannot fund.
+    p.cash = 0.01
+    session.flush()
+    entry = float(pos.entry_price)
+    stop0 = float(pos.stop_price)
+    risk = entry - stop0
+    entry_ms = int(pos.entry_time.timestamp() * 1000)
+    m1 = entry_ms - entry_ms % M + M
+    bars = [kline(m1, entry, entry + risk, entry - 50, entry + risk * 0.8)]
+    k, t = _fetchers(bars)
+    now = datetime.fromtimestamp((m1 + 2 * M) / 1000, timezone.utc)
+    rep = next(
+        r for r in run_protection_cycle(session, klines_fn=k, trades_fn=t, now=now) if r["id"] == pos.id
+    )
+    # Discover may list reinforce, but broker refuse → qty unchanged
+    assert float(pos.qty) == pytest.approx(qty0)
+    assert session.query(PaperReinforceAdd).filter_by(position_id=pos.id).count() == 0
+    assert pos.status == "OPEN"
+    assert rep.get("reinforces_applied", 0) == 0
+    assert rep["status"] == "ok"
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_stop_beats_reinforce_same_bar(session):
+    p = session.info["p"]
+    p.strategy_profile = {
+        **p.strategy_profile,
+        "commission_bps": 0.0,
+        "slippage_bps": 0.0,
+        "spread_bps": 0.0,
+        REINFORCE_KEY: {
+            "add_fraction": 0.5,
+            "at_r_multiple": 1.0,
+            "max_adds": 1,
+            "max_exposure": 2.0,
+        },
+        "take_profit_r": 3.0,
+    }
+    session.flush()
+    pos = _open(session, source="user_confirmed")
+    qty0 = float(pos.qty)
+    entry = float(pos.entry_price)
+    stop0 = float(pos.stop_price)
+    risk = entry - stop0
+    entry_ms = int(pos.entry_time.timestamp() * 1000)
+    m1 = entry_ms - entry_ms % M + M
+    # Same bar: high reaches +1R AND low pierces stop → stop wins, no add
+    bars = [kline(m1, entry, entry + risk, stop0 - 10, entry)]
+    k, t = _fetchers(bars)
+    now = datetime.fromtimestamp((m1 + 2 * M) / 1000, timezone.utc)
+    rep = next(
+        r for r in run_protection_cycle(session, klines_fn=k, trades_fn=t, now=now) if r["id"] == pos.id
+    )
+    assert rep["status"] == "closed"
+    assert pos.exit_reason in ("stop_hit", "stop_gap")
+    assert session.query(PaperReinforceAdd).filter_by(position_id=pos.id).count() == 0
+    # qty restored to entry size on CLOSE
+    assert float(pos.qty) == pytest.approx(qty0)
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_auto_watchlist_ignores_portfolio_reinforce(session):
+    p = session.info["p"]
+    p.strategy_profile = {
+        **p.strategy_profile,
+        REINFORCE_KEY: {
+            "add_fraction": 0.5,
+            "at_r_multiple": 1.0,
+            "max_exposure": 2.0,
+        },
+    }
+    session.flush()
+    pos = _open(session, source="auto_watchlist")
+    entry = float(pos.entry_price)
+    stop0 = float(pos.stop_price)
+    risk = entry - stop0
+    qty0 = float(pos.qty)
+    entry_ms = int(pos.entry_time.timestamp() * 1000)
+    m1 = entry_ms - entry_ms % M + M
+    bars = [kline(m1, entry, entry + risk, entry - 50, entry + risk * 0.8)]
+    k, t = _fetchers(bars)
+    now = datetime.fromtimestamp((m1 + 5 * M) / 1000, timezone.utc)
+    rep = next(
+        r for r in run_protection_cycle(session, klines_fn=k, trades_fn=t, now=now) if r["id"] == pos.id
+    )
+    assert rep["status"] == "ok"
+    assert float(pos.qty) == pytest.approx(qty0)
+    assert session.query(PaperReinforceAdd).filter_by(position_id=pos.id).count() == 0

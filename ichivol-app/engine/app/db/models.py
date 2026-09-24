@@ -339,6 +339,39 @@ class PaperPartialExit(Base):
     )
 
 
+class PaperReinforceAdd(Base):
+    """One scale-in fill for an open paper lot (T0-MANAGE-f).
+
+    Living position stays on ``paper_positions`` (qty grows; entry_price = avg);
+    each add is append-only, idempotent via ``(position_id, seq)`` / ``key``.
+    """
+
+    __tablename__ = "paper_reinforce_adds"
+    __table_args__ = (
+        UniqueConstraint("position_id", "seq", name="uq_paper_reinforce_position_seq"),
+        UniqueConstraint("portfolio_id", "key", name="uq_paper_reinforce_portfolio_key"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    portfolio_id: Mapped[str] = mapped_column(ForeignKey("paper_portfolios.id"), index=True)
+    position_id: Mapped[str] = mapped_column(ForeignKey("paper_positions.id"), index=True)
+    seq: Mapped[int] = mapped_column(Integer)
+    key: Mapped[str] = mapped_column(String(128))
+    r_multiple: Mapped[float] = mapped_column(Float)
+    fraction: Mapped[float] = mapped_column(Float)  # of original entry qty (requested)
+    qty: Mapped[float] = mapped_column(Float)  # actual added qty
+    price: Mapped[float] = mapped_column(Float)
+    fee: Mapped[float] = mapped_column(Float, default=0.0)
+    stop_after: Mapped[float | None] = mapped_column(Float, nullable=True)
+    avg_entry_after: Mapped[float | None] = mapped_column(Float, nullable=True)
+    open_risk_after: Mapped[float | None] = mapped_column(Float, nullable=True)
+    clamped: Mapped[bool] = mapped_column(Boolean, default=False)
+    time_ms: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+
 class PaperOrder(Base):
     """Virtual fill log for the paper broker (never sent to a real venue)."""
 

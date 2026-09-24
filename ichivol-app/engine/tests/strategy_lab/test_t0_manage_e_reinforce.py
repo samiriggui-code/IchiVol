@@ -97,9 +97,9 @@ def test_parse_reinforce_default_is_tighten_stop():
     )
     assert rs.exit.reinforce is not None
     assert rs.exit.reinforce.risk_policy == "tighten_stop"
+    assert rs.exit.reinforce.max_exposure == 1.0
     again = parse_ruleset(rs.to_dict())
     assert again.exit.reinforce == rs.exit.reinforce
-
 
 def test_parse_reinforce_roundtrip_explicit_reduce_qty():
     rs = parse_ruleset(
@@ -283,6 +283,7 @@ def test_reinforce_then_target_records_add_and_entry_vwap():
                 "reinforce": {
                     "conditions": {"tk_cross_bullish": True},
                     "add_fraction": 0.5,
+                    "max_exposure": 2.0,
                 }
             },
         }
@@ -332,6 +333,7 @@ def test_stop_beats_reinforce_same_bar():
                 "reinforce": {
                     "conditions": {"tk_cross_bullish": True},
                     "add_fraction": 0.5,
+                    "max_exposure": 2.0,
                 }
             },
         }
