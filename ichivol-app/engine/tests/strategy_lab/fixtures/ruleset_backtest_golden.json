@@ -274,6 +274,172 @@
           "target_price": 111.76148933199475
         }
       ]
+    },
+    "IV_REF_DONCHIAN_BO_LONG_001": {
+      "n_signals": 8,
+      "n_skipped_in_position": 2,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 25,
+          "entry_price": 106.47322878686722,
+          "exit_index": 25,
+          "exit_price": 104.6887971042368,
+          "exit_reason": "stop",
+          "signal_index": 24,
+          "stop_price": 104.6887971042368,
+          "target_price": 110.04209215212809
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 89,
+          "entry_price": 102.06229404621725,
+          "exit_index": 103,
+          "exit_price": 106.20842972611288,
+          "exit_reason": "target",
+          "signal_index": 88,
+          "stop_price": 99.98922620626942,
+          "target_price": 106.20842972611288
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 115,
+          "entry_price": 107.40590122566752,
+          "exit_index": 127,
+          "exit_price": 105.73324058894522,
+          "exit_reason": "stop",
+          "signal_index": 114,
+          "stop_price": 105.73324058894522,
+          "target_price": 110.7512224991121
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 169,
+          "entry_price": 106.97355116616615,
+          "exit_index": 172,
+          "exit_price": 105.273879199937,
+          "exit_reason": "stop",
+          "signal_index": 168,
+          "stop_price": 105.273879199937,
+          "target_price": 110.37289509862444
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 207,
+          "entry_price": 108.55658643805715,
+          "exit_index": 220,
+          "exit_price": 106.67753294152614,
+          "exit_reason": "stop",
+          "signal_index": 206,
+          "stop_price": 106.67753294152614,
+          "target_price": 112.31469343111917
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 239,
+          "entry_price": 109.41251689280338,
+          "exit_index": 240,
+          "exit_price": 107.41479264338439,
+          "exit_reason": "stop",
+          "signal_index": 238,
+          "stop_price": 107.41479264338439,
+          "target_price": 113.40796539164137
+        }
+      ]
+    },
+    "IV_REF_STRUCTURE_BOS_LONG_001": {
+      "n_signals": 14,
+      "n_skipped_in_position": 6,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 19,
+          "entry_price": 104.20994962940438,
+          "exit_index": 37,
+          "exit_price": 102.37020406347128,
+          "exit_reason": "stop",
+          "signal_index": 18,
+          "stop_price": 102.37020406347128,
+          "target_price": 107.88944076127059
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 56,
+          "entry_price": 100.90956688919273,
+          "exit_index": 56,
+          "exit_price": 99.11274981017392,
+          "exit_reason": "stop",
+          "signal_index": 55,
+          "stop_price": 99.11274981017392,
+          "target_price": 104.50320104723035
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 89,
+          "entry_price": 102.06229404621725,
+          "exit_index": 103,
+          "exit_price": 106.20842972611288,
+          "exit_reason": "target",
+          "signal_index": 88,
+          "stop_price": 99.98922620626942,
+          "target_price": 106.20842972611288
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 115,
+          "entry_price": 107.40590122566752,
+          "exit_index": 127,
+          "exit_price": 105.73324058894522,
+          "exit_reason": "stop",
+          "signal_index": 114,
+          "stop_price": 105.73324058894522,
+          "target_price": 110.7512224991121
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 169,
+          "entry_price": 106.97355116616615,
+          "exit_index": 172,
+          "exit_price": 105.273879199937,
+          "exit_reason": "stop",
+          "signal_index": 168,
+          "stop_price": 105.273879199937,
+          "target_price": 110.37289509862444
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 207,
+          "entry_price": 108.55658643805715,
+          "exit_index": 220,
+          "exit_price": 106.67753294152614,
+          "exit_reason": "stop",
+          "signal_index": 206,
+          "stop_price": 106.67753294152614,
+          "target_price": 112.31469343111917
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 239,
+          "entry_price": 109.41251689280338,
+          "exit_index": 240,
+          "exit_price": 107.41479264338439,
+          "exit_reason": "stop",
+          "signal_index": 238,
+          "stop_price": 107.41479264338439,
+          "target_price": 113.40796539164137
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 275,
+          "entry_price": 106.48713408830712,
+          "exit_index": 293,
+          "exit_price": 104.97550277527763,
+          "exit_reason": "stop",
+          "signal_index": 274,
+          "stop_price": 104.97550277527763,
+          "target_price": 109.5103967143661
+        }
+      ]
     }
   },
   "seed_7": {
@@ -562,6 +728,117 @@
           "signal_index": 251,
           "stop_price": 58.87509326811701,
           "target_price": 63.94482830212845
+        }
+      ]
+    },
+    "IV_REF_DONCHIAN_BO_LONG_001": {
+      "n_signals": 2,
+      "n_skipped_in_position": 0,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 131,
+          "entry_price": 69.76677877418619,
+          "exit_index": 132,
+          "exit_price": 67.96288507988795,
+          "exit_reason": "stop",
+          "signal_index": 130,
+          "stop_price": 67.96288507988795,
+          "target_price": 73.37456616278267
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 237,
+          "entry_price": 62.48348311407913,
+          "exit_index": 238,
+          "exit_price": 60.981321176582036,
+          "exit_reason": "stop",
+          "signal_index": 236,
+          "stop_price": 60.981321176582036,
+          "target_price": 65.4878069890733
+        }
+      ]
+    },
+    "IV_REF_STRUCTURE_BOS_LONG_001": {
+      "n_signals": 7,
+      "n_skipped_in_position": 0,
+      "trades": [
+        {
+          "direction": "LONG",
+          "entry_index": 126,
+          "entry_price": 68.26458501029559,
+          "exit_index": 126,
+          "exit_price": 66.47982152389145,
+          "exit_reason": "stop",
+          "signal_index": 125,
+          "stop_price": 66.47982152389145,
+          "target_price": 71.83411198310387
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 130,
+          "entry_price": 68.80708569608659,
+          "exit_index": 132,
+          "exit_price": 67.10339348298842,
+          "exit_reason": "stop",
+          "signal_index": 129,
+          "stop_price": 67.10339348298842,
+          "target_price": 72.2144701222829
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 201,
+          "entry_price": 61.04814198068084,
+          "exit_index": 203,
+          "exit_price": 58.98448671068348,
+          "exit_reason": "stop",
+          "signal_index": 200,
+          "stop_price": 58.98448671068348,
+          "target_price": 65.17545252067556
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 217,
+          "entry_price": 60.459497785000515,
+          "exit_index": 220,
+          "exit_price": 58.360681535839035,
+          "exit_reason": "stop",
+          "signal_index": 216,
+          "stop_price": 58.360681535839035,
+          "target_price": 64.65713028332348
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 235,
+          "entry_price": 60.231312412884456,
+          "exit_index": 237,
+          "exit_price": 63.07543407806816,
+          "exit_reason": "target",
+          "signal_index": 234,
+          "stop_price": 58.8092515802926,
+          "target_price": 63.07543407806816
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 254,
+          "entry_price": 61.405759410589795,
+          "exit_index": 259,
+          "exit_price": 59.723539452473545,
+          "exit_reason": "stop",
+          "signal_index": 253,
+          "stop_price": 59.723539452473545,
+          "target_price": 64.77019932682228
+        },
+        {
+          "direction": "LONG",
+          "entry_index": 290,
+          "entry_price": 54.38660818449677,
+          "exit_index": 298,
+          "exit_price": 52.45576646774055,
+          "exit_reason": "stop",
+          "signal_index": 289,
+          "stop_price": 52.45576646774055,
+          "target_price": 58.24829161800921
         }
       ]
     }

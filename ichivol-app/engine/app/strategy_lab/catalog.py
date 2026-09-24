@@ -225,6 +225,29 @@ _BUILTIN_RAW: list[dict] = [
         "target_atr": 2.0,
         "meta": {"experiment": "T-EXP"},
     },
+    # --- T12c reference baselines (Lab observation; not live) ---
+    {
+        "id": "IV_REF_DONCHIAN_BO_LONG_001",
+        "version": "1",
+        "direction": "LONG",
+        "description": "T12c reference — Donchian breakout UP alone",
+        "conditions": {"donchian_breakout": "UP"},
+        "entry": "next_open",
+        "stop_atr": 1.0,
+        "target_atr": 2.0,
+        "meta": {"reference": True, "t12c": True},
+    },
+    {
+        "id": "IV_REF_STRUCTURE_BOS_LONG_001",
+        "version": "1",
+        "direction": "LONG",
+        "description": "T12c reference — BOS bullish alone (structure)",
+        "conditions": {"bos_bullish": True},
+        "entry": "next_open",
+        "stop_atr": 1.0,
+        "target_atr": 2.0,
+        "meta": {"reference": True, "t12c": True},
+    },
 ]
 
 
