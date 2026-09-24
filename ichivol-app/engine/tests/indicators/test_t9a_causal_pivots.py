@@ -113,7 +113,14 @@ def test_structure_outputs_unchanged_vs_inline_reference():
                 bos=bos,
             )
         )
-    assert got == ref
+    # Legacy fields bit-identical (T9b may attach ``event`` alongside).
+    assert len(got) == len(ref)
+    for g, r in zip(got, ref):
+        assert g.time == r.time
+        assert g.last_swing_high == r.last_swing_high
+        assert g.last_swing_low == r.last_swing_low
+        assert g.bias == r.bias
+        assert g.bos == r.bos
 
 
 def test_fib_context_stable_on_seed():

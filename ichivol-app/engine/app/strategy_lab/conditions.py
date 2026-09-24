@@ -155,6 +155,28 @@ def _build_registry() -> dict[str, ConditionSpec]:
                 "Bearish break of structure on this bar.",
             ),
             ConditionSpec(
+                "choch_bullish",
+                bool,
+                "structure",
+                lambda bar, expected, _d: bar.choch_bullish == expected,
+                "Bullish change of character (break against bearish bias).",
+            ),
+            ConditionSpec(
+                "choch_bearish",
+                bool,
+                "structure",
+                lambda bar, expected, _d: bar.choch_bearish == expected,
+                "Bearish change of character (break against bullish bias).",
+            ),
+            ConditionSpec(
+                "break_quality",
+                str,
+                "structure",
+                lambda bar, expected, _d: bar.break_quality == expected,
+                "Structure break quality: wick | close | confirmed.",
+                allowed_values=("wick", "close", "confirmed"),
+            ),
+            ConditionSpec(
                 "structure_bias_bullish",
                 bool,
                 "structure",

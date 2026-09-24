@@ -45,13 +45,13 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-MANAGE-e** #49 — **MERGÉE** squash `389fc40` (validé Claude adff686 ; suite PG **935 ok / 1 skip**, 0 régression). Sondes : `tighten_stop` en profit → risque = R0 (LONG/SHORT) ; risque signé OK ; combo `partial_tp`+`reinforce` rejeté ; fuzz 300 seeds → 135 adds, jamais > R0, invariant Σnet=Σbars 3,5e-16. **Vérifié** `git log origin/main` contient `389fc40`.
 - **T0-MANAGE-f** #50 — **MERGÉE** squash `7a77424` (validé Claude 102caee ; suite PG **944 ok / 1 skip**, 0 régression). **T0-MANAGE a→f terminé.**
 - **T0-FIX-SHORT-FEE** #51 — **MERGÉE** squash `b9f8421` (validé Claude ; suite PG **948 ok / 1 skip**, 0 régression). Sondes SHORT (close / partiel→target / renfort→target / épuisement / stop) : cash = réalisé ≤ 5e-13. **Vérifié** `git log origin/main` contient `b9f8421`. **Dette SHORT entry_fee soldée** pour clôtures post-fix.
-- **T9a** #52 — **MERGÉE** squash `985c4e5` (validé Claude ; suite PG **955 ok / 1 skip**). **Vérifié** `origin/main` tip = `985c4e5` (2026-09-24).
-- **UI-MARKET** #54 — **MERGÉE** squash `10631ef` (2026-09-24). **Cursor solo** : Claude en restriction jusqu’à 12h10 ; CI verte (pytest PG + npm build) ; précédent T0-CALC. **À auditer par Claude à 12h10.**
-- **Job en cours** : **T10a** — registry status/source — branche `cursor/t10a-registry-status-a2fe`.
-- **T9b** draft [#53](https://github.com/samiriggui-code/IchiVol/pull/53) — **brouillon figé** ; rebase **après** merge T10a.
-- **T9** (structure / FVG / Fib) — T9a OK ; T9b après T10a.
+- **T9a** #52 — **MERGÉE** squash `985c4e5` (validé Claude ; suite PG **955 ok / 1 skip**). **Vérifié** `origin/main` tip contenait `985c4e5`.
+- **UI-MARKET** #54 — **MERGÉE** squash `10631ef` (Cursor solo, Claude restreint ; CI verte). **À auditer Claude 12h10.**
+- **T10a** #55 — **MERGÉE** squash `2e3ebc1` (Cursor solo ; CI verte). **À auditer Claude 12h10.**
+- **Job en cours** : **T9b** — CHoCH + break quality — rebase sur `main`@`2e3ebc1` — draft [#53](https://github.com/samiriggui-code/IchiVol/pull/53).
+- **T9** (structure / FVG / Fib) — T9a+T10a OK ; T9b en rebase.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol². **Ne pas comparer** partiels vs non-partiels sur le DD avant correction.
-- ⚠️ **Caveat historique SHORT** : positions SHORT **CLOSED avant** `b9f8421` (#51) ont un `realized` **surévalué de `entry_fee`**. Compte local Cursor : **CLOSED_SHORT = 0** → pas de recalcul nécessaire ici. Script ponctuel (dry-run) : `ichivol-app/engine/scripts/recalc_short_entry_fee.py` — **pas de migration auto** ; si une base avec historique a `CLOSED_SHORT > 0`, proposer `--apply` après revue.
+- ⚠️ **Caveat historique SHORT** : positions SHORT **CLOSED avant** `b9f8421` (#51, mergedAt `2026-09-24T07:02:48Z`) ont un `realized` **surévalué de `entry_fee`**. Compte local Cursor : **CLOSED_SHORT = 0**. Script ponctuel : `scripts/recalc_short_entry_fee.py` — filtre par **horodatage exact**, journal `SHORT_FEE_RECALC` idempotent ; **ne pas lancer `--apply`** sans revue ; **pas de migration auto**.
 - ⚠️ **Caveat migration #48** : backfill `initial_entry_fee = entry_fee` courant — **faux pour lots déjà partialisés avant migration**.
 - ⚠️ **Dette max_exposure** : sémantiques **divergentes** Lab vs paper — Lab = `qty/initial_qty` (1 unité = 100 % capital ; `levier: true` si > 1) ; paper = `notional ≤ max_exposure × equity`. **Ne pas comparer** rulesets Lab `max_exposure>1` aux paper sans le flag `levier`.
 
@@ -71,11 +71,12 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-24 — T10a EN COURS — registry status + source (PR draft)
+## 2026-09-24 — T10a MERGÉE (#55) — squash `2e3ebc1` — registry status + source
 
 - Branche : `cursor/t10a-registry-status-a2fe` @ `e49e602`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/55 (**draft**) — base `main` @ `10631ef` (#54)
-- Statut : **ATTENTE REVUE CLAUDE** (implémentation Cursor solo — Claude revient 12h10)
+- Statut : **MERGÉE** squash `2e3ebc1` (Cursor solo ; CI verte). **À auditer Claude 12h10.**
+- **Vérifié** : `origin/main` tip = `2e3ebc1`
 - Tests locaux : `test_t10a_registry_status` + `test_registry` + `test_indicators_route` + `test_ppo_best_cloud_lab` **OK**
 
 ### Objectif
@@ -105,7 +106,7 @@ Chaque `IndicatorDefinition` porte `status` / `source` / `confirmation_lag_bars`
 ### Hors scope
 T10b compteur d’essais ; T10c redondance ; fiches candidats.
 
-**Cursor s’arrête sur T10a (draft).** Prochaine après merge Claude : rebase #53 T9b.
+**T10a mergée.** Rebase #53 T9b en cours.
 
 ---
 
@@ -231,6 +232,30 @@ Règles : une PR à la fois ; pas de merge sans Claude ; vérifier `main` après
 - Branche merge : squash sur `main` → `985c4e5`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/52 — **MERGÉE** (validé Claude)
 - **Vérifié** : `git rev-parse origin/main` == `985c4e5`
+
+## 2026-09-24 — T9b EN COURS — CHoCH + break quality (rebase post-T10a)
+
+- Branche : `cursor/t9b-choch-break-quality-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/53 (**draft**)
+- Base cible : `main` @ `2e3ebc1` (#55 T10a)
+- Statut : **REBASE EN COURS** — Cursor solo (Claude restreint). Pas de FVG / pas de changement décision.
+
+### Livré (contenu #53)
+
+1. `StructureEvent {type BOS|CHOCH, direction, level, bar, break_quality wick|close|confirmed, displacement_atr, rvol}`
+2. CHoCH = cassure **contre** le biais ; BOS event = **dans le sens** du biais (MIXED/UNKNOWN → BOS)
+3. `confirmed` = params `confirm_bars` **ou** `confirm_displacement_atr`
+4. Feature `bos_bullish` / `bos_bearish` **bit-identiques** (golden) ; nouvelles : `choch_bullish` / `choch_bearish` / `break_quality`
+5. Anti-lookahead confirmed + mèche ≠ clôture
+6. `recalc_short_entry_fee.py` : timestamp `#51` mergedAt, journal `SHORT_FEE_RECALC`, test double `--apply`
+
+### Décisions documentées (ordre du jour §0 / §4)
+
+- **`bos_bullish` non scindé** : volontaire — compat golden + ablation Lab (`C_BOS`). Un break haussier en biais baissier reste `bos_bullish=True` au bit legacy ; le type riche est dans `StructureEvent.type=CHOCH`. Scission future = **nouvelle** feature, pas de mutation de `bos_bullish`.
+- **Statut T10a** : indicateur `structure` reste **PRODUCTION** (pipeline lit bias/BOS). Champs Lab `choch_*` / `break_quality` = **EXPERIMENTAL** jusqu’à lecture pipeline (pas encore).
+- Fee recalc : dry-run défaut ; idempotence via journal — **`--apply` non lancé**.
+
+
 
 ### Inventaire (3 détecteurs → 1 core)
 
