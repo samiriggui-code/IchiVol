@@ -43,6 +43,7 @@ from app.indicators.structure import (
     StructureState,
 )
 from app.indicators.impulse import ImpulseParams, ImpulseState
+from app.indicators.fvg import FvgParams, FvgState
 
 
 @dataclass(frozen=True)
@@ -120,6 +121,12 @@ class FeatureBar:
     impulse_bullish: bool = False
     impulse_bearish: bool = False
     impulse_displacement_atr: float | None = None
+    # --- T9d FVG (EXPERIMENTAL Lab; no decision change) ---
+    fvg_bullish: bool = False
+    fvg_bearish: bool = False
+    fvg_active: bool = False
+    fvg_status: str | None = None
+    """open | partial | filled | invalidated when an FVG event is known this bar."""
 
 
 @dataclass(frozen=True)
@@ -210,6 +217,14 @@ def _impulse_disp(s: ImpulseState) -> float | None:
     return s.event.displacement_atr if s.event is not None else None
 
 
+def _fvg_bullish(s: FvgState) -> bool:
+    return s.event is not None and s.event.direction == "bullish"
+
+
+def _fvg_bearish(s: FvgState) -> bool:
+    return s.event is not None and s.event.direction == "bearish"
+
+
 def build_feature_series(
     candles: Sequence[Candle],
     *,
@@ -218,6 +233,7 @@ def build_feature_series(
     rvol_params: RvolParams = RvolParams(),
     structure_params: StructureParams = StructureParams(),
     impulse_params: ImpulseParams = ImpulseParams(),
+    fvg_params: FvgParams = FvgParams(),
     atr_params: AtrParams = AtrParams(),
     cmf_params: CmfParams = CmfParams(),
     rsi_params: RsiParams = RsiParams(),
@@ -230,6 +246,7 @@ def build_feature_series(
             "rvol",
             "structure",
             "impulse",
+            "fvg",
             "atr",
             "cmf",
             "rsi",
@@ -243,6 +260,7 @@ def build_feature_series(
             "rvol": rvol_params,
             "structure": structure_params,
             "impulse": impulse_params,
+            "fvg": fvg_params,
             "atr": atr_params,
             "cmf": cmf_params,
             "rsi": rsi_params,
@@ -255,6 +273,7 @@ def build_feature_series(
     rvol = computed["rvol"]
     structure = computed["structure"]
     impulse = computed["impulse"]
+    fvg = computed["fvg"]
     atr = computed["atr"]
     cmf = computed["cmf"]
     rsi = computed["rsi"]
@@ -302,6 +321,10 @@ def build_feature_series(
                 impulse_bullish=_impulse_bullish(impulse[i]),
                 impulse_bearish=_impulse_bearish(impulse[i]),
                 impulse_displacement_atr=_impulse_disp(impulse[i]),
+                fvg_bullish=_fvg_bullish(fvg[i]),
+                fvg_bearish=_fvg_bearish(fvg[i]),
+                fvg_active=len(fvg[i].active) > 0,
+                fvg_status=fvg[i].event.status if fvg[i].event is not None else None,
                 atr=atr_now,
                 atr_percentile=atr[i].percentile,
                 atr_expansion=expansion,

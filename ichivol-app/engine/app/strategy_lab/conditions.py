@@ -191,6 +191,27 @@ def _build_registry() -> dict[str, ConditionSpec]:
                 "EXPERIMENTAL (T9c/Lab) — Bearish pivot-to-pivot impulse this bar. Not read by decision pipeline yet.",
             ),
             ConditionSpec(
+                "fvg_bullish",
+                bool,
+                "structure",
+                lambda bar, expected, _d: bar.fvg_bullish == expected,
+                "EXPERIMENTAL (T9d/Lab) — Bullish FVG discovered this bar. Not read by decision pipeline yet.",
+            ),
+            ConditionSpec(
+                "fvg_bearish",
+                bool,
+                "structure",
+                lambda bar, expected, _d: bar.fvg_bearish == expected,
+                "EXPERIMENTAL (T9d/Lab) — Bearish FVG discovered this bar. Not read by decision pipeline yet.",
+            ),
+            ConditionSpec(
+                "fvg_active",
+                bool,
+                "structure",
+                lambda bar, expected, _d: bar.fvg_active == expected,
+                "EXPERIMENTAL (T9d/Lab) — At least one open/partial FVG is live. Not read by decision pipeline yet.",
+            ),
+            ConditionSpec(
                 "structure_bias_bullish",
                 bool,
                 "structure",

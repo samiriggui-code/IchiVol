@@ -96,9 +96,8 @@ export const OBJECT_LAYER_META: {
   {
     key: 'fvg',
     label: 'FVG',
-    subtitle: 'Fair value gaps (T9)',
+    subtitle: 'Fair value gaps (T9d)',
     color: 'var(--kijun)',
-    emptyUntil: 'T9',
   },
   {
     key: 'claude',
