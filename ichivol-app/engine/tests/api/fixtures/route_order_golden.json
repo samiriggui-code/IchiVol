@@ -281,6 +281,13 @@
   },
   {
     "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/strategy-lab/feature-redundancy/study",
+    "endpoint": "get_feature_redundancy_study"
+  },
+  {
+    "methods": [
       "POST"
     ],
     "path": "/api/engine/strategy-lab/audit-report",
