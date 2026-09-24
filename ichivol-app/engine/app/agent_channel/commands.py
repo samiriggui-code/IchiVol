@@ -741,6 +741,46 @@ def cmd_run_feature_redundancy_study(args: dict) -> dict:
     return report.to_dict()
 
 
+def cmd_run_ablation_oos_study(args: dict) -> dict:
+    """T9g — ablation × walk-forward OOS (observation; no FeatureStatus mutation)."""
+    from app.agents.types import Direction
+    from app.strategy_lab.ablation_oos import run_ablation_oos_study_on_candles
+
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = str(args.get("timeframe", "1h"))
+    limit = int(args.get("limit", 500))
+    compare_mode = str(args.get("compare_mode", "additive"))
+    ladder = str(args.get("ladder", "default"))
+    direction_raw = str(args.get("direction", "LONG")).upper()
+    try:
+        direction = Direction(direction_raw)
+    except ValueError as exc:
+        raise CommandError("direction must be LONG, SHORT, or NEUTRAL") from exc
+    try:
+        _prov, _sym, candles = resolve_and_fetch(symbol, timeframe, limit)
+    except (ValueError, ProviderNotWiredError) as exc:
+        raise CommandError(str(exc)) from exc
+    try:
+        report = run_ablation_oos_study_on_candles(
+            candles,
+            symbol=symbol,
+            timeframe=timeframe,
+            compare_mode=compare_mode,
+            ladder=ladder,
+            direction=direction,
+            train_bars=int(args.get("train_bars", 100)),
+            test_bars=int(args.get("test_bars", 40)),
+            step_bars=(int(args["step_bars"]) if args.get("step_bars") is not None else None),
+            warmup_bars=int(args.get("warmup_bars", 52)),
+            min_oos_trades=int(args.get("min_oos_trades", 5)),
+            stop_atr=float(args.get("stop_atr", 1.0)),
+            target_atr=float(args.get("target_atr", 2.0)),
+        )
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+    return report.to_dict()
+
+
 def cmd_build_audit_report(args: dict) -> dict:
     """T6 — post-outcome AuditReport for one ruleset backtest trade.
 

@@ -149,3 +149,39 @@ def test_feature_redundancy_study_monkeypatched(monkeypatch):
 def test_feature_redundancy_study_rejects_missing_symbol():
     res = client.get("/api/engine/strategy-lab/feature-redundancy/study")
     assert res.status_code == 422
+
+
+def test_ablation_oos_study_monkeypatched(monkeypatch):
+    from app.api import strategy_lab_research as mod
+    from app.strategy_lab.ablation_oos import AblationOosReport
+
+    fake = AblationOosReport(
+        symbol="BTCUSDT",
+        timeframe="1h",
+        compare_mode="additive",
+        ladder="default",
+        n_bars=200,
+        n_folds=2,
+        train_bars=100,
+        test_bars=40,
+    )
+    monkeypatch.setattr(
+        mod,
+        "resolve_and_fetch",
+        lambda *a, **k: ("binance", "BTCUSDT", []),
+    )
+    monkeypatch.setattr(mod, "run_ablation_oos_study_on_candles", lambda *a, **k: fake)
+
+    res = client.post(
+        "/api/engine/strategy-lab/ablation-oos/study",
+        json={"symbol": "BTCUSDT", "timeframe": "1h", "limit": 200, "ladder": "default"},
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["symbol"] == "BTCUSDT"
+    assert "no auto-reject" in body["disclaimer"].lower()
+
+
+def test_ablation_oos_study_rejects_missing_symbol():
+    res = client.post("/api/engine/strategy-lab/ablation-oos/study", json={})
+    assert res.status_code == 422

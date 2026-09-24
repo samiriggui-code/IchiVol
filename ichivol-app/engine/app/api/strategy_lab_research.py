@@ -19,6 +19,7 @@ from app.confluence.study import run_family_weights_study
 from app.market_data.resolve import ProviderNotWiredError, resolve_and_fetch
 from app.screener.service import scan_symbol
 from app.strategy_lab.catalog import get_builtin_ruleset
+from app.strategy_lab.ablation_oos import run_ablation_oos_study_on_candles
 from app.strategy_lab.redundancy import run_feature_redundancy_study
 from app.strategy_lab.ruleset import parse_ruleset
 from app.strategy_lab.ruleset_backtest import run_ruleset_backtest_on_candles
@@ -136,6 +137,60 @@ def get_feature_redundancy_study(
             keys=key_list,
             min_true=min_true,
             top_n=top_n,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return report.to_dict()
+
+
+class AblationOosStudyBody(BaseModel):
+    symbol: str
+    timeframe: str = "1h"
+    limit: int = 500
+    compare_mode: str = "additive"
+    ladder: str = "default"
+    direction: str = "LONG"
+    train_bars: int = 100
+    test_bars: int = 40
+    step_bars: int | None = None
+    warmup_bars: int = 52
+    min_oos_trades: int = 5
+    stop_atr: float = 1.0
+    target_atr: float = 2.0
+
+
+@router.post("/strategy-lab/ablation-oos/study")
+def post_ablation_oos_study(body: AblationOosStudyBody) -> dict:
+    """T9g — ablation × walk-forward OOS recommendations (observation only)."""
+    if body.limit < 100 or body.limit > 5000:
+        raise HTTPException(status_code=422, detail="limit must be between 100 and 5000")
+    try:
+        dir_enum = Direction(body.direction.upper())
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422, detail="direction must be LONG, SHORT, or NEUTRAL"
+        ) from exc
+    try:
+        _prov, _sym, candles = resolve_and_fetch(
+            body.symbol.upper(), body.timeframe, body.limit
+        )
+    except (ValueError, ProviderNotWiredError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    try:
+        report = run_ablation_oos_study_on_candles(
+            candles,
+            symbol=body.symbol.upper(),
+            timeframe=body.timeframe,
+            compare_mode=body.compare_mode,
+            ladder=body.ladder,
+            direction=dir_enum,
+            train_bars=body.train_bars,
+            test_bars=body.test_bars,
+            step_bars=body.step_bars,
+            warmup_bars=body.warmup_bars,
+            min_oos_trades=body.min_oos_trades,
+            stop_atr=body.stop_atr,
+            target_atr=body.target_atr,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

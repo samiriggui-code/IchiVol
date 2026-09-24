@@ -7,6 +7,33 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — T9g EN COURS — ablation × walk-forward OOS
+
+- Branche : `cursor/t9g-ablation-oos-a2fe`
+- PR : *(draft à ouvrir)*
+- Base : `main` @ `c261f48` (#63 T10c)
+- Statut : **EN COURS** — Cursor solo. Recommendations display-only ; **pas de mutation FeatureStatus**.
+
+### Livré
+
+1. `strategy_lab/ablation_oos.py` — additive / leave-one-layer × WF OOS
+2. `decide_recommendation` → promote | reject | inconclusive
+3. `POST /strategy-lab/ablation-oos/study` + agent `run_ablation_oos_study`
+4. Tests `test_t9g_ablation_oos.py` + goldens OpenAPI
+
+### Hors scope
+Auto FeatureStatus · pipeline vote · UI tab · walk-forward-opt grid.
+
+---
+
+## 2026-09-24 — T10c MERGÉE (#63) — squash `c261f48` — redondance feature×feature
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/63 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `c261f48`
+- Cursor solo ; CI verte. Observation-only ; pas d’auto-reject.
+
+---
+
 ## 2026-09-24 — T10c EN COURS — redondance feature×feature
 
 - Branche : `cursor/t10c-feature-redundancy-a2fe`
