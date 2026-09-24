@@ -212,6 +212,59 @@ def _build_registry() -> dict[str, ConditionSpec]:
                 "EXPERIMENTAL (T9d/Lab) — At least one open/partial FVG is live. Not read by decision pipeline yet.",
             ),
             ConditionSpec(
+                "fvg_status",
+                str,
+                "structure",
+                lambda bar, expected, _d: bar.fvg_status == expected,
+                "EXPERIMENTAL (T9f/Lab) — FVG event status this bar. Not read by decision pipeline yet.",
+                allowed_values=("open", "partial", "filled", "invalidated"),
+            ),
+            ConditionSpec(
+                "impulse_displacement_atr_min",
+                float,
+                "structure",
+                lambda bar, expected, _d: (
+                    bar.impulse_displacement_atr is not None
+                    and bar.impulse_displacement_atr >= float(expected)
+                ),
+                "EXPERIMENTAL (T9f/Lab) — Impulse displacement_atr >= threshold this bar.",
+            ),
+            ConditionSpec(
+                "fib_confluence",
+                bool,
+                "structure",
+                lambda bar, expected, _d: bar.fib_confluence == expected,
+                "EXPERIMENTAL (T9f/Lab) — Close near a Fib level (impulse-anchored). Not read by decision pipeline yet.",
+            ),
+            ConditionSpec(
+                "fib_key_confluence",
+                bool,
+                "structure",
+                lambda bar, expected, _d: bar.fib_key_confluence == expected,
+                "EXPERIMENTAL (T9f/Lab) — Close near a key Fib (0.5/0.618/0.786).",
+            ),
+            ConditionSpec(
+                "fib_impulse_up",
+                bool,
+                "structure",
+                lambda bar, expected, _d: bar.fib_impulse_up == expected,
+                "EXPERIMENTAL (T9f/Lab) — Fib anchored on bullish (up) impulse.",
+            ),
+            ConditionSpec(
+                "fib_impulse_down",
+                bool,
+                "structure",
+                lambda bar, expected, _d: bar.fib_impulse_down == expected,
+                "EXPERIMENTAL (T9f/Lab) — Fib anchored on bearish (down) impulse.",
+            ),
+            ConditionSpec(
+                "fib_anchor_impulse",
+                bool,
+                "structure",
+                lambda bar, expected, _d: bar.fib_anchor_impulse == expected,
+                "EXPERIMENTAL (T9f/Lab) — Fib levels derived from a qualified ImpulseEvent.",
+            ),
+            ConditionSpec(
                 "structure_bias_bullish",
                 bool,
                 "structure",

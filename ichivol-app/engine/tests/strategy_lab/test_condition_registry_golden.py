@@ -32,6 +32,7 @@ _FLOAT_SAMPLES = {
     "kumo_thickness_atr_max": [0.5, 1.0, 2.0],
     "ppo_min": [-1.0, 0.0, 1.0],
     "ppo_max": [-1.0, 0.0, 1.0],
+    "impulse_displacement_atr_min": [0.5, 1.0, 2.0],
 }
 _INT_SAMPLES = {
     "tk_cross_age_max": [3, 10, 20],

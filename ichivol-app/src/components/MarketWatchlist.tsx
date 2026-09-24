@@ -255,7 +255,7 @@ export function MarketWatchlist({
   )
 }
 
-/** Build Contexte badges from screener pipeline + bias. Placeholders for T9f kept off the table. */
+/** Build Contexte badges from screener pipeline + T9f lab_context. */
 export function buildContextBadges(row: ScreenerRow): ContextBadge[] {
   const out: ContextBadge[] = []
   if (row.bias === 'bull') out.push({ kind: 'bias', label: 'Bias↑' })
@@ -279,9 +279,29 @@ export function buildContextBadges(row: ScreenerRow): ContextBadge[] {
     }
   }
 
-  // T9f placeholders — reserved for filters later, not shown in Contexte column yet
-  out.push({ kind: 'fvg', label: 'FVG', placeholder: true })
-  out.push({ kind: 'fib', label: 'Fib', placeholder: true })
-  out.push({ kind: 'choch', label: 'CHoCH', placeholder: true })
+  const lab = row.labContext
+  if (lab) {
+    if (lab.choch_bullish) out.push({ kind: 'choch', label: 'CHoCH↑' })
+    else if (lab.choch_bearish) out.push({ kind: 'choch', label: 'CHoCH↓' })
+
+    if (lab.fvg_active) {
+      if (lab.fvg_active_bullish && !lab.fvg_active_bearish) {
+        out.push({ kind: 'fvg', label: 'FVG↑' })
+      } else if (lab.fvg_active_bearish && !lab.fvg_active_bullish) {
+        out.push({ kind: 'fvg', label: 'FVG↓' })
+      } else {
+        out.push({ kind: 'fvg', label: 'FVG' })
+      }
+    } else if (lab.fvg_bullish) {
+      out.push({ kind: 'fvg', label: 'FVG↑' })
+    } else if (lab.fvg_bearish) {
+      out.push({ kind: 'fvg', label: 'FVG↓' })
+    }
+
+    if (lab.fib_key_confluence) out.push({ kind: 'fib', label: 'Fib★' })
+    else if (lab.fib_confluence) out.push({ kind: 'fib', label: 'Fib' })
+    else if (lab.fib_anchor_impulse) out.push({ kind: 'fib', label: 'Fib·' })
+  }
+
   return out
 }

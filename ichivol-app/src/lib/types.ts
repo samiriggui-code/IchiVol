@@ -79,8 +79,33 @@ export interface ScreenerRow {
   engineConfidence?: number
   /** Verdict portes (Option B) — même contrat que ScreenerDecisionRow.pipeline. */
   enginePipeline?: DecisionPipelinePayload
+  /** T9f Lab snapshot (observation-only) for Contexte badges. */
+  labContext?: LabContextPayload
   /** Watchlist Contexte badges (UI-MARKET). */
   context?: ContextBadge[]
+}
+
+/** Mirrors engine `lab_context` observation (T9f) — never votes BUY/SELL. */
+export interface LabContextPayload {
+  choch_bullish: boolean
+  choch_bearish: boolean
+  break_quality?: string | null
+  impulse_bullish?: boolean
+  impulse_bearish?: boolean
+  impulse_displacement_atr?: number | null
+  fvg_bullish?: boolean
+  fvg_bearish?: boolean
+  fvg_active: boolean
+  fvg_active_bullish?: boolean
+  fvg_active_bearish?: boolean
+  fvg_status?: string | null
+  fib_confluence: boolean
+  fib_key_confluence?: boolean
+  fib_impulse_up?: boolean
+  fib_impulse_down?: boolean
+  fib_anchor_impulse?: boolean
+  fib_nearest_ratio?: number | null
+  disclaimer?: string
 }
 
 export type ContextBadgeKind =

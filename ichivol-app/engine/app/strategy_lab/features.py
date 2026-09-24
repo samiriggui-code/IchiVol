@@ -44,6 +44,12 @@ from app.indicators.structure import (
 )
 from app.indicators.impulse import ImpulseParams, ImpulseState
 from app.indicators.fvg import FvgParams, FvgState
+from app.fibonacci.context import (
+    DEFAULT_KEY_RATIOS,
+    compute_fib_levels,
+    swings_from_impulse,
+)
+from app.structure.atr_utils import last_atr
 
 
 @dataclass(frozen=True)
@@ -127,6 +133,13 @@ class FeatureBar:
     fvg_active: bool = False
     fvg_status: str | None = None
     """open | partial | filled | invalidated when an FVG event is known this bar."""
+    # --- T9f Fib Lab (anchored on T9c impulse when active; no decision change) ---
+    fib_confluence: bool = False
+    fib_key_confluence: bool = False
+    fib_impulse_up: bool = False
+    fib_impulse_down: bool = False
+    fib_anchor_impulse: bool = False
+    fib_nearest_ratio: float | None = None
 
 
 @dataclass(frozen=True)
@@ -223,6 +236,50 @@ def _fvg_bullish(s: FvgState) -> bool:
 
 def _fvg_bearish(s: FvgState) -> bool:
     return s.event is not None and s.event.direction == "bearish"
+
+
+def _fib_kwargs_from_impulse(
+    impulse_state: ImpulseState,
+    candles: Sequence[Candle],
+    bar_index: int,
+    *,
+    confluence_atr_mult: float = 0.5,
+) -> dict:
+    """Stamp Fib Lab fields from active ImpulseEvent (causal at bar_index)."""
+    empty = dict(
+        fib_confluence=False,
+        fib_key_confluence=False,
+        fib_impulse_up=False,
+        fib_impulse_down=False,
+        fib_anchor_impulse=False,
+        fib_nearest_ratio=None,
+    )
+    active = impulse_state.active
+    if active is None or active.bar > bar_index:
+        return empty
+    picked = swings_from_impulse(active)
+    if picked is None:
+        return empty
+    swing_low, swing_high, impulse = picked
+    levels = compute_fib_levels(swing_low, swing_high, impulse)
+    if not levels:
+        return empty
+    close = float(candles[bar_index].close)
+    atr = last_atr(candles[: bar_index + 1], 14)
+    tol = (atr * confluence_atr_mult) if atr and atr > 0 else abs(close) * 0.002
+    nearest = min(levels, key=lambda lv: abs(lv.price - close))
+    dist = abs(nearest.price - close)
+    confluence = dist <= tol
+    key_set = {round(r, 4) for r in DEFAULT_KEY_RATIOS}
+    key_confluence = confluence and round(nearest.ratio, 4) in key_set
+    return dict(
+        fib_confluence=confluence,
+        fib_key_confluence=key_confluence,
+        fib_impulse_up=impulse == "up",
+        fib_impulse_down=impulse == "down",
+        fib_anchor_impulse=True,
+        fib_nearest_ratio=nearest.ratio,
+    )
 
 
 def build_feature_series(
@@ -325,6 +382,7 @@ def build_feature_series(
                 fvg_bearish=_fvg_bearish(fvg[i]),
                 fvg_active=len(fvg[i].active) > 0,
                 fvg_status=fvg[i].event.status if fvg[i].event is not None else None,
+                **_fib_kwargs_from_impulse(impulse[i], candles, i),
                 atr=atr_now,
                 atr_percentile=atr[i].percentile,
                 atr_expansion=expansion,
