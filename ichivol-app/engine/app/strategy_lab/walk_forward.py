@@ -18,7 +18,6 @@ from typing import Sequence
 from app.agents.types import Direction
 from app.backtest.engine import BacktestResult
 from app.backtest.metrics import compute_metrics
-from app.market_data.resolve import resolve_and_fetch
 from app.strategy_lab.catalog import get_builtin_ruleset
 from app.strategy_lab.evaluator import extract_ruleset_signals
 from app.strategy_lab.event_study import (
@@ -65,6 +64,11 @@ class WalkForwardReport:
     step_bars: int
     folds: list[WalkForwardFoldResult]
     oos_summary: dict
+    dataset_id: str | None = None
+    quality_report: dict | None = None
+    data_warning: str | None = None
+    history_span_seconds: int | None = None
+    history_warning: str | None = None
 
 
 def generate_rolling_folds(
@@ -284,6 +288,11 @@ def run_walk_forward_on_candles(
     horizons: Sequence[int] = DEFAULT_HORIZONS,
     commission_bps: float = 5.0,
     slippage_bps: float = 3.0,
+    dataset_id: str | None = None,
+    quality_report: dict | None = None,
+    data_warning: str | None = None,
+    history_span_seconds: int | None = None,
+    history_warning: str | None = None,
 ) -> WalkForwardReport:
     n = len(candles)
     mode_l = mode.lower().strip()
@@ -395,6 +404,11 @@ def run_walk_forward_on_candles(
         step_bars=step_bars if step_bars is not None else test_bars,
         folds=fold_results,
         oos_summary=_oos_summary(fold_results),
+        dataset_id=dataset_id,
+        quality_report=quality_report,
+        data_warning=data_warning,
+        history_span_seconds=history_span_seconds,
+        history_warning=history_warning,
     )
 
 
@@ -412,6 +426,9 @@ def run_walk_forward(
     include_train: bool = True,
     persist: bool = False,
     exchange: str = "binance",
+    deep_history: bool = False,
+    years: float = 2.0,
+    dataset_id: str | None = None,
 ) -> WalkForwardReport:
     if ruleset is not None:
         rs = ruleset if isinstance(ruleset, Ruleset) else parse_ruleset(ruleset)
@@ -420,13 +437,19 @@ def run_walk_forward(
     else:
         rs = get_builtin_ruleset("IV_ICHIMOKU_RVOL_LONG_001")
 
-    _p, _s, candles = resolve_and_fetch(
-        symbol, timeframe, limit, default_provider=exchange
+    from app.strategy_lab.deep_history import resolve_lab_history
+
+    bundle = resolve_lab_history(
+        symbol,
+        timeframe,
+        limit=limit,
+        deep_history=deep_history,
+        years=years,
+        dataset_id=dataset_id,
+        exchange=exchange,
     )
-    if len(candles) < 2:
-        raise ValueError(f"not enough candles for {symbol} {timeframe}")
     return run_walk_forward_on_candles(
-        candles,
+        bundle.candles,
         rs,
         symbol=symbol.upper(),
         timeframe=timeframe,
@@ -437,6 +460,11 @@ def run_walk_forward(
         warmup_bars=warmup_bars,
         include_train=include_train,
         persist=persist,
+        dataset_id=bundle.dataset_id,
+        quality_report=bundle.quality,
+        data_warning=bundle.data_warning,
+        history_span_seconds=bundle.history_span_seconds,
+        history_warning=bundle.history_warning,
     )
 
 
@@ -469,6 +497,11 @@ def walk_forward_dict(report: WalkForwardReport) -> dict:
         "step_bars": report.step_bars,
         "folds": [_fold_payload(fr) for fr in report.folds],
         "oos_summary": report.oos_summary,
+        "dataset_id": report.dataset_id,
+        "quality_report": dict(report.quality_report) if report.quality_report else None,
+        "data_warning": report.data_warning,
+        "history_span_seconds": report.history_span_seconds,
+        "history_warning": report.history_warning,
         "note": (
             "Walk-forward on a fixed ruleset (no optimizer). "
             "OOS metrics are the anti-overfitting check; IS is diagnostic only."

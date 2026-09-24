@@ -20,6 +20,7 @@ from app.market_data.resolve import ProviderNotWiredError, resolve_and_fetch
 from app.screener.service import scan_symbol
 from app.strategy_lab.catalog import get_builtin_ruleset
 from app.strategy_lab.ablation_oos import run_ablation_oos_study_on_candles
+from app.strategy_lab.deep_history import resolve_lab_history
 from app.strategy_lab.redundancy import run_feature_redundancy_study
 from app.strategy_lab.ruleset import parse_ruleset
 from app.strategy_lab.ruleset_backtest import run_ruleset_backtest_on_candles
@@ -162,6 +163,9 @@ class AblationOosStudyBody(BaseModel):
     stop_atr: float = 1.0
     target_atr: float = 2.0
     hypothesis_id: str | None = None
+    deep_history: bool = False
+    years: float = 2.0
+    dataset_id: str | None = None
 
 
 @router.post("/strategy-lab/ablation-oos/study")
@@ -176,14 +180,19 @@ def post_ablation_oos_study(body: AblationOosStudyBody) -> dict:
             status_code=422, detail="direction must be LONG, SHORT, or NEUTRAL"
         ) from exc
     try:
-        _prov, _sym, candles = resolve_and_fetch(
-            body.symbol.upper(), body.timeframe, body.limit
+        bundle = resolve_lab_history(
+            body.symbol.upper(),
+            body.timeframe,
+            limit=body.limit,
+            deep_history=body.deep_history,
+            years=body.years,
+            dataset_id=body.dataset_id,
         )
     except (ValueError, ProviderNotWiredError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     try:
         report = run_ablation_oos_study_on_candles(
-            candles,
+            bundle.candles,
             symbol=body.symbol.upper(),
             timeframe=body.timeframe,
             compare_mode=body.compare_mode,
@@ -197,6 +206,11 @@ def post_ablation_oos_study(body: AblationOosStudyBody) -> dict:
             stop_atr=body.stop_atr,
             target_atr=body.target_atr,
             hypothesis_id=body.hypothesis_id,
+            dataset_id=bundle.dataset_id,
+            quality_report=bundle.quality,
+            data_warning=bundle.data_warning,
+            history_span_seconds=bundle.history_span_seconds,
+            history_warning=bundle.history_warning,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

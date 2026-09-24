@@ -15,7 +15,6 @@ from typing import Sequence
 from app.agents.types import Direction
 from app.backtest.engine import BacktestResult
 from app.backtest.metrics import compute_metrics
-from app.market_data.resolve import resolve_and_fetch
 from app.strategy_lab.catalog import get_builtin_ruleset
 from app.strategy_lab.evaluator import extract_ruleset_signals
 from app.strategy_lab.event_study import (
@@ -62,6 +61,11 @@ class RegimeSliceReport:
     n_bars: int
     slices: list[RegimeSliceResult]
     regime_bar_counts: dict[str, int]
+    dataset_id: str | None = None
+    quality_report: dict | None = None
+    data_warning: str | None = None
+    history_span_seconds: int | None = None
+    history_warning: str | None = None
 
 
 def _filter_signals(
@@ -182,6 +186,11 @@ def run_regime_slices_on_candles(
     commission_bps: float = 5.0,
     slippage_bps: float = 3.0,
     min_signals: int = 1,
+    dataset_id: str | None = None,
+    quality_report: dict | None = None,
+    data_warning: str | None = None,
+    history_span_seconds: int | None = None,
+    history_warning: str | None = None,
 ) -> RegimeSliceReport:
     features = build_feature_series(candles)
     regimes = classify_regimes(candles)
@@ -243,6 +252,11 @@ def run_regime_slices_on_candles(
         n_bars=len(candles),
         slices=slices,
         regime_bar_counts=bar_counts,
+        dataset_id=dataset_id,
+        quality_report=quality_report,
+        data_warning=data_warning,
+        history_span_seconds=history_span_seconds,
+        history_warning=history_warning,
     )
 
 
@@ -254,6 +268,9 @@ def run_regime_slices(
     ruleset: dict | Ruleset | None = None,
     persist: bool = False,
     exchange: str = "binance",
+    deep_history: bool = False,
+    years: float = 2.0,
+    dataset_id: str | None = None,
 ) -> RegimeSliceReport:
     if ruleset is not None:
         rs = ruleset if isinstance(ruleset, Ruleset) else parse_ruleset(ruleset)
@@ -262,13 +279,28 @@ def run_regime_slices(
     else:
         rs = get_builtin_ruleset("IV_ICHIMOKU_RVOL_LONG_001")
 
-    _p, _s, candles = resolve_and_fetch(
-        symbol, timeframe, limit, default_provider=exchange
+    from app.strategy_lab.deep_history import resolve_lab_history
+
+    bundle = resolve_lab_history(
+        symbol,
+        timeframe,
+        limit=limit,
+        deep_history=deep_history,
+        years=years,
+        dataset_id=dataset_id,
+        exchange=exchange,
     )
-    if len(candles) < 2:
-        raise ValueError(f"not enough candles for {symbol} {timeframe}")
     return run_regime_slices_on_candles(
-        candles, rs, symbol=symbol.upper(), timeframe=timeframe, persist=persist
+        bundle.candles,
+        rs,
+        symbol=symbol.upper(),
+        timeframe=timeframe,
+        persist=persist,
+        dataset_id=bundle.dataset_id,
+        quality_report=bundle.quality,
+        data_warning=bundle.data_warning,
+        history_span_seconds=bundle.history_span_seconds,
+        history_warning=bundle.history_warning,
     )
 
 
@@ -289,6 +321,11 @@ def regime_slices_dict(report: RegimeSliceReport) -> dict:
             }
             for s in report.slices
         ],
+        "dataset_id": report.dataset_id,
+        "quality_report": dict(report.quality_report) if report.quality_report else None,
+        "data_warning": report.data_warning,
+        "history_span_seconds": report.history_span_seconds,
+        "history_warning": report.history_warning,
         "note": (
             "Regime at signal bar (causal ADX+ATR). "
             "GLOBAL = all signals; other rows = same ruleset filtered by tag. "

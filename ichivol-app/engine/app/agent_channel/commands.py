@@ -385,6 +385,13 @@ def cmd_run_regime_slices(args: dict) -> dict:
             ruleset_id=args.get("ruleset_id"),
             ruleset=args.get("ruleset"),
             persist=bool(args.get("persist", False)),
+            deep_history=bool(args.get("deep_history", False)),
+            years=float(args.get("years", 2.0)),
+            dataset_id=(
+                str(args["dataset_id"]).strip()
+                if args.get("dataset_id") is not None
+                else None
+            ),
         )
     except ValueError as exc:
         raise CommandError(str(exc)) from exc
@@ -410,6 +417,13 @@ def cmd_run_walk_forward(args: dict) -> dict:
             warmup_bars=int(args.get("warmup_bars", 52)),
             include_train=bool(args.get("include_train", True)),
             persist=bool(args.get("persist", False)),
+            deep_history=bool(args.get("deep_history", False)),
+            years=float(args.get("years", 2.0)),
+            dataset_id=(
+                str(args["dataset_id"]).strip()
+                if args.get("dataset_id") is not None
+                else None
+            ),
         )
     except ValueError as exc:
         raise CommandError(str(exc)) from exc
@@ -766,6 +780,7 @@ def cmd_run_ablation_oos_study(args: dict) -> dict:
     """T9g — ablation × walk-forward OOS (observation; no FeatureStatus mutation)."""
     from app.agents.types import Direction
     from app.strategy_lab.ablation_oos import run_ablation_oos_study_on_candles
+    from app.strategy_lab.deep_history import resolve_lab_history
 
     symbol = _require_str(args, "symbol").upper()
     timeframe = str(args.get("timeframe", "1h"))
@@ -778,12 +793,23 @@ def cmd_run_ablation_oos_study(args: dict) -> dict:
     except ValueError as exc:
         raise CommandError("direction must be LONG, SHORT, or NEUTRAL") from exc
     try:
-        _prov, _sym, candles = resolve_and_fetch(symbol, timeframe, limit)
+        bundle = resolve_lab_history(
+            symbol,
+            timeframe,
+            limit=limit,
+            deep_history=bool(args.get("deep_history", False)),
+            years=float(args.get("years", 2.0)),
+            dataset_id=(
+                str(args["dataset_id"]).strip()
+                if args.get("dataset_id") is not None
+                else None
+            ),
+        )
     except (ValueError, ProviderNotWiredError) as exc:
         raise CommandError(str(exc)) from exc
     try:
         report = run_ablation_oos_study_on_candles(
-            candles,
+            bundle.candles,
             symbol=symbol,
             timeframe=timeframe,
             compare_mode=compare_mode,
@@ -801,6 +827,11 @@ def cmd_run_ablation_oos_study(args: dict) -> dict:
                 if args.get("hypothesis_id") is not None
                 else None
             ),
+            dataset_id=bundle.dataset_id,
+            quality_report=bundle.quality,
+            data_warning=bundle.data_warning,
+            history_span_seconds=bundle.history_span_seconds,
+            history_warning=bundle.history_warning,
         )
     except ValueError as exc:
         raise CommandError(str(exc)) from exc

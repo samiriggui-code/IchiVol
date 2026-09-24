@@ -71,6 +71,22 @@
             "title": "Compare Mode",
             "type": "string"
           },
+          "dataset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          },
+          "deep_history": {
+            "default": false,
+            "title": "Deep History",
+            "type": "boolean"
+          },
           "direction": {
             "default": "LONG",
             "title": "Direction",
@@ -146,6 +162,11 @@
             "default": 52,
             "title": "Warmup Bars",
             "type": "integer"
+          },
+          "years": {
+            "default": 2.0,
+            "title": "Years",
+            "type": "number"
           }
         },
         "required": [
@@ -611,6 +632,22 @@
       },
       "RegimeSlicesBody": {
         "properties": {
+          "dataset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          },
+          "deep_history": {
+            "default": false,
+            "title": "Deep History",
+            "type": "boolean"
+          },
           "limit": {
             "default": 1000,
             "title": "Limit",
@@ -653,6 +690,11 @@
             "default": "1h",
             "title": "Timeframe",
             "type": "string"
+          },
+          "years": {
+            "default": 2.0,
+            "title": "Years",
+            "type": "number"
           }
         },
         "required": [
@@ -838,6 +880,22 @@
       },
       "WalkForwardBody": {
         "properties": {
+          "dataset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          },
+          "deep_history": {
+            "default": false,
+            "title": "Deep History",
+            "type": "boolean"
+          },
           "include_train": {
             "default": true,
             "title": "Include Train",
@@ -916,6 +974,11 @@
             "default": 52,
             "title": "Warmup Bars",
             "type": "integer"
+          },
+          "years": {
+            "default": 2.0,
+            "title": "Years",
+            "type": "number"
           }
         },
         "required": [
@@ -5669,6 +5732,42 @@
               "title": "Persist",
               "type": "boolean"
             }
+          },
+          {
+            "in": "query",
+            "name": "deep_history",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Deep History",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "years",
+            "required": false,
+            "schema": {
+              "default": 2.0,
+              "title": "Years",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dataset_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dataset Id"
+            }
           }
         ],
         "responses": {
@@ -5860,6 +5959,42 @@
               "default": "IV_ICHIMOKU_RVOL_LONG_001",
               "title": "Ruleset Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "deep_history",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Deep History",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "years",
+            "required": false,
+            "schema": {
+              "default": 2.0,
+              "title": "Years",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dataset_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dataset Id"
             }
           }
         ],

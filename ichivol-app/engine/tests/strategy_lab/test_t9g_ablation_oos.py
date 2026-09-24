@@ -92,6 +92,75 @@ def test_decide_inconclusive_when_variant_has_few_trades():
     assert "min_oos_trades" in reasons[0]
 
 
+def test_study_inconclusive_when_variant_has_few_trades_mocked_wf(monkeypatch):
+    """#71 réserve — study-level min(trades): base=40 OOS, variant=5 → inconclusive.
+
+    Must fail if someone replaces ``min(trades_base, trades_var)`` with ``max``.
+    """
+    from types import SimpleNamespace
+
+    call_n = {"i": 0}
+
+    def _fake_run_wf(candles, ruleset, **kwargs):
+        # Per pair: base, var, base_adv, var_adv
+        idx = call_n["i"] % 4
+        call_n["i"] += 1
+        if idx in (0, 2):  # baseline (+ adverse baseline)
+            trades = 40
+            mean_exp = 0.01
+            mean_pf = 1.2
+        else:  # variant (+ adverse variant) — few trades
+            trades = 5
+            mean_exp = 0.02
+            mean_pf = 1.3
+        oos = {
+            "n_folds": 3,
+            "total_oos_trades": trades,
+            "mean_oos_expectancy": mean_exp,
+            "mean_oos_profit_factor": mean_pf,
+        }
+        # Three folds with positive expectancy deltas when compared
+        folds = []
+        for _ in range(3):
+            folds.append(
+                SimpleNamespace(
+                    train=SimpleNamespace(
+                        backtest=SimpleNamespace(
+                            metrics=SimpleNamespace(expectancy=0.015, profit_factor=1.25)
+                        )
+                    ),
+                    test=SimpleNamespace(
+                        backtest=SimpleNamespace(
+                            metrics=SimpleNamespace(expectancy=mean_exp, profit_factor=mean_pf)
+                        )
+                    ),
+                )
+            )
+        return SimpleNamespace(oos_summary=oos, folds=folds)
+
+    monkeypatch.setattr("app.strategy_lab.ablation_oos._run_wf", _fake_run_wf)
+    candles = _make_candles(200, seed=9)
+    report = run_ablation_oos_study_on_candles(
+        candles,
+        symbol="BTCUSDT",
+        timeframe="1h",
+        compare_mode="additive",
+        layers=_TINY_LAYERS,
+        direction=Direction.LONG,
+        train_bars=80,
+        test_bars=30,
+        step_bars=30,
+        warmup_bars=52,
+        min_oos_trades=30,
+    )
+    assert len(report.candidates) == 1
+    c = report.candidates[0]
+    assert c.oos_total_trades_baseline == 40
+    assert c.oos_total_trades_variant == 5
+    assert c.recommendation == "inconclusive"
+    assert any("min_oos_trades" in r for r in c.reasons)
+
+
 def test_decide_reject_pf_degraded():
     rec, reasons = decide_recommendation(
         oos_expectancy_delta=0.01,

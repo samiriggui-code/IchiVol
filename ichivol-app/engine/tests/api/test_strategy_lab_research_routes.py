@@ -154,6 +154,7 @@ def test_feature_redundancy_study_rejects_missing_symbol():
 def test_ablation_oos_study_monkeypatched(monkeypatch):
     from app.api import strategy_lab_research as mod
     from app.strategy_lab.ablation_oos import AblationOosReport
+    from app.strategy_lab.deep_history import LabHistoryBundle
 
     fake = AblationOosReport(
         symbol="BTCUSDT",
@@ -165,11 +166,14 @@ def test_ablation_oos_study_monkeypatched(monkeypatch):
         train_bars=100,
         test_bars=40,
     )
-    monkeypatch.setattr(
-        mod,
-        "resolve_and_fetch",
-        lambda *a, **k: ("binance", "BTCUSDT", []),
+    fake_bundle = LabHistoryBundle(
+        dataset_id="live_test",
+        candles=[],
+        manifest={"dataset_id": "live_test"},
+        quality={"ok": True, "n_candles": 200, "codes": [], "code_counts": {}, "n_issues": 0, "degraded": False},
+        data_warning=None,
     )
+    monkeypatch.setattr(mod, "resolve_lab_history", lambda *a, **k: fake_bundle)
     monkeypatch.setattr(mod, "run_ablation_oos_study_on_candles", lambda *a, **k: fake)
 
     res = client.post(
@@ -185,6 +189,65 @@ def test_ablation_oos_study_monkeypatched(monkeypatch):
 def test_ablation_oos_study_rejects_missing_symbol():
     res = client.post("/api/engine/strategy-lab/ablation-oos/study", json={})
     assert res.status_code == 422
+
+
+def test_walk_forward_route_monkeypatched(monkeypatch):
+    """Hermetic: must not call live providers (rév.53)."""
+    from app.api import strategy_lab_wf as mod
+    from app.strategy_lab.catalog import get_builtin_ruleset
+    from app.strategy_lab.walk_forward import WalkForwardReport
+
+    rs = get_builtin_ruleset("IV_ICHIMOKU_RVOL_LONG_001")
+    fake = WalkForwardReport(
+        symbol="BTCUSDT",
+        timeframe="1h",
+        ruleset=rs,
+        mode="rolling",
+        n_bars=200,
+        warmup_bars=52,
+        train_bars=100,
+        test_bars=40,
+        step_bars=40,
+        folds=[],
+        oos_summary={"n_folds": 0, "total_oos_trades": 0},
+        quality_report={"ok": True, "n_candles": 200, "codes": [], "code_counts": {}, "n_issues": 0, "degraded": False},
+    )
+    monkeypatch.setattr(mod, "run_walk_forward", lambda *a, **k: fake)
+
+    res = client.post(
+        "/api/engine/strategy-lab/walk-forward",
+        json={"symbol": "BTCUSDT", "timeframe": "1h", "limit": 200},
+    )
+    assert res.status_code == 200, res.text
+    assert res.json()["symbol"] == "BTCUSDT"
+    assert res.json()["quality_report"] is not None
+
+
+def test_regime_slices_route_monkeypatched(monkeypatch):
+    """Hermetic: must not call live providers (rév.53)."""
+    from app.api import strategy_lab as mod
+    from app.strategy_lab.catalog import get_builtin_ruleset
+    from app.strategy_lab.regime_slices import RegimeSliceReport
+
+    rs = get_builtin_ruleset("IV_ICHIMOKU_RVOL_LONG_001")
+    fake = RegimeSliceReport(
+        symbol="BTCUSDT",
+        timeframe="1h",
+        ruleset=rs,
+        n_bars=200,
+        slices=[],
+        regime_bar_counts={"GLOBAL": 200},
+        quality_report={"ok": True, "n_candles": 200, "codes": [], "code_counts": {}, "n_issues": 0, "degraded": False},
+    )
+    monkeypatch.setattr(mod, "run_regime_slices", lambda *a, **k: fake)
+
+    res = client.post(
+        "/api/engine/strategy-lab/regime-slices",
+        json={"symbol": "BTCUSDT", "timeframe": "1h", "limit": 200},
+    )
+    assert res.status_code == 200, res.text
+    assert res.json()["symbol"] == "BTCUSDT"
+    assert res.json()["quality_report"] is not None
 
 
 def test_microstructure_cvd_compare_monkeypatched(monkeypatch):
