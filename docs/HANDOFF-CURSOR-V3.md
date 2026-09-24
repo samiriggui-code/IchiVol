@@ -7,7 +7,17 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-24 — T12c EN COURS — références buy&hold / Donchian / structure
+## 2026-09-24 — T12c MERGÉE (#75) — squash `abe6177`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/75 — **MERGÉE** squash (solo rév.58)
+- **Vérifié** : `origin/main` tip = `abe6177`
+- Références Lab buy&hold / Donchian / BOS ; golden additif ; 1080/1079+1skip
+
+**Suite** : T12d fausses cassures…
+
+---
+
+## 2026-09-24 — T12c (archive EN COURS) — références buy&hold / Donchian / structure
 
 - Branche : `cursor/t12c-reference-baselines-a2fe`
 - Base : `main` @ `36ff85f` (#74 UI exception **MERGÉE**)
