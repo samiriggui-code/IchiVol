@@ -46,15 +46,50 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-MANAGE-f** #50 — **MERGÉE** squash `7a77424` (validé Claude 102caee ; suite PG **944 ok / 1 skip**, 0 régression). **T0-MANAGE a→f terminé.**
 - **T0-FIX-SHORT-FEE** #51 — **MERGÉE** squash `b9f8421` (validé Claude ; suite PG **948 ok / 1 skip**, 0 régression). Sondes SHORT (close / partiel→target / renfort→target / épuisement / stop) : cash = réalisé ≤ 5e-13. **Vérifié** `git log origin/main` contient `b9f8421`. **Dette SHORT entry_fee soldée** pour clôtures post-fix.
 - **T9a** #52 — **MERGÉE** squash `985c4e5` (validé Claude ; suite PG **955 ok / 1 skip**). **Vérifié** `origin/main` tip = `985c4e5` (2026-09-24).
-- **Job en cours** : **UI-MARKET** draft [#54](https://github.com/samiriggui-code/IchiVol/pull/54) — **ATTENTE REVUE CLAUDE** (Cursor ne touche plus au code). **Pas de merge** sans Claude.
-- **T9b** draft [#53](https://github.com/samiriggui-code/IchiVol/pull/53) — **brouillon figé** ; **aucun rebase** avant merge de **T10a**. Hors ordre (ouverte avant UI-MARKET).
-- **Prochaine** après merge #54 : **T10a** (registry status/source) — **ne pas démarrer** tant que #54 n’est pas mergée.
-- **T9** (structure / FVG / Fib) — feuille de route ; T9a pivots OK ; T9b après T10a.
+- **UI-MARKET** #54 — **MERGÉE** squash `10631ef` (2026-09-24). **Cursor solo** : Claude en restriction jusqu’à 12h10 ; CI verte (pytest PG + npm build) ; précédent T0-CALC. **À auditer par Claude à 12h10.**
+- **Job en cours** : **T10a** — registry status/source — branche `cursor/t10a-registry-status-a2fe`.
+- **T9b** draft [#53](https://github.com/samiriggui-code/IchiVol/pull/53) — **brouillon figé** ; rebase **après** merge T10a.
+- **T9** (structure / FVG / Fib) — T9a OK ; T9b après T10a.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol². **Ne pas comparer** partiels vs non-partiels sur le DD avant correction.
 - ⚠️ **Caveat historique SHORT** : positions SHORT **CLOSED avant** `b9f8421` (#51) ont un `realized` **surévalué de `entry_fee`**. Compte local Cursor : **CLOSED_SHORT = 0** → pas de recalcul nécessaire ici. Script ponctuel (dry-run) : `ichivol-app/engine/scripts/recalc_short_entry_fee.py` — **pas de migration auto** ; si une base avec historique a `CLOSED_SHORT > 0`, proposer `--apply` après revue.
 - ⚠️ **Caveat migration #48** : backfill `initial_entry_fee = entry_fee` courant — **faux pour lots déjà partialisés avant migration**.
 - ⚠️ **Dette max_exposure** : sémantiques **divergentes** Lab vs paper — Lab = `qty/initial_qty` (1 unité = 100 % capital ; `levier: true` si > 1) ; paper = `notional ≤ max_exposure × equity`. **Ne pas comparer** rulesets Lab `max_exposure>1` aux paper sans le flag `levier`.
 
+
+---
+
+## 2026-09-24 — UI-MARKET MERGÉE (#54) — squash `10631ef` — Cursor solo (Claude restreint)
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/54 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `10631ef`
+- **Contexte** : Claude en mode restriction jusqu’à **12h10** ; utilisateur a demandé d’enchaîner seul (précédent T0-CALC #25).
+- **CI avant merge** : `pytest (Postgres 16)` SUCCESS · `frontend (npm build)` SUCCESS · mergeable CLEAN
+- **Auto-revue Cursor** : captures 01–07 + `ChartObject.layer` tests + build OK ; écarts volontaires documentés (pas de 5m, camap-tokens, Journal placeholder).
+- **Suite** : T10a démarrée immédiatement après.
+
+**Claude** : auditer #54 à 12h10 (post-merge).
+
+---
+
+## 2026-09-24 — T10a EN COURS — registry status + source (PR draft)
+
+- Branche : `cursor/t10a-registry-status-a2fe`
+- Base : `main` @ `10631ef` (#54)
+- Statut : **EN COURS** — Cursor solo jusqu’à revue Claude 12h10+
+
+### Objectif
+Chaque `IndicatorDefinition` porte `status` / `source` / `confirmation_lag_bars` / `family` / `experiment_refs`. **Aucune sortie de calcul changée.**
+
+### Plan
+1. Enums `FeatureStatus` / `FeatureSource` + champs sur `IndicatorDefinition`
+2. Statuts depuis le code (PRODUCTION = lu pipeline/screener/evidence…)
+3. PPO + BEST Cloud → REJECTED (rév. sim §5) ; BEST Cloud source external Daveatt
+4. Wyckoff → EXPERIMENTAL (README moteur tableau non promu) — Claude peut retrancher
+5. `confirmation_lag_bars` structure = `swing_lookback` + test cohérence
+6. Garde-fou : ids productifs doivent être PRODUCTION
+7. `catalog()` / `describe()` / GET `/indicators` exposent les champs
+
+**Cursor poursuit l’implémentation.**
 
 ---
 
