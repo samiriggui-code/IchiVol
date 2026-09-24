@@ -4675,11 +4675,87 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 }
 .mkt-bottom-panel {
   height: var(--mkt-bottom-h, 250px);
-  overflow: auto;
+  overflow: hidden;
   border-top: 1px solid var(--border);
-  padding: 0.55rem 0.75rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
-.mkt-bottom-embed { font-size: 0.78rem; }
+.mkt-bottom-embed {
+  font-size: 0.78rem;
+  padding: 0.55rem 0.75rem;
+  overflow: auto;
+}
+
+/* Backtest embed in bottom dock / mobile drawer (UI-MARKET 02) */
+.backtest-overlay-body.is-embed {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  font-size: 0.78rem;
+}
+.bt-embed-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.bt-embed-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.5rem 0.75rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.bt-embed-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: flex-end;
+}
+.bt-embed-toolbar .backtest-overlay-select {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+}
+.bt-embed-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+.bt-key-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+.bt-key-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, var(--muted) 35%, transparent);
+}
+.bt-key-stats .label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+}
+.bt-key-stats strong {
+  font-size: 0.85rem;
+}
+.mkt-drawer-body .backtest-overlay-body.is-embed {
+  height: auto;
+  min-height: 100%;
+}
 
 .mkt-analysis-mobile {
   display: flex;
@@ -4970,6 +5046,7 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
   transition: height 0.18s ease;
 }
 .mkt-page[data-drawer='closed'] .mkt-drawer { height: 28px; }
+.mkt-page[data-drawer='closed'] .mkt-drawer-tabs { display: none; }
 .mkt-page[data-drawer='half'] .mkt-drawer { height: min(48dvh, 420px); }
 .mkt-page[data-drawer='full'] .mkt-drawer { height: min(88dvh, 720px); }
 .mkt-page.is-mobile .mkt-body { flex-direction: column; }

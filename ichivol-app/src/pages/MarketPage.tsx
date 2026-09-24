@@ -9,7 +9,10 @@ import {
 } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { BiasPanel } from '../components/BiasPanel'
-import { BacktestOverlaySheet } from '../components/BacktestOverlaySheet'
+import {
+  BacktestOverlaySheet,
+  type BacktestUiFilter,
+} from '../components/BacktestOverlaySheet'
 import { MarkTradeSheet, type MarkTradeStep } from '../components/MarkTradeSheet'
 import { MarketLayersMenu } from '../components/MarketLayersMenu'
 import { MarketSymbolSearch } from '../components/MarketSymbolSearch'
@@ -38,6 +41,7 @@ import {
   type BacktestOverlayTrade,
   type BacktestRejectedSignal,
 } from '../lib/backtestOverlay'
+import type { BacktestMetrics } from '../lib/backtest'
 import { useMarketSnapshot } from '../lib/marketSnapshot'
 import {
   OBJECT_LAYER_META,
@@ -177,6 +181,7 @@ export function MarketPage() {
   // T4a — Backtest overlay (ephemeral BACKTEST objects layered on ENGINE/USER/CLAUDE)
   const [btRulesetId, setBtRulesetId] = useState<string | null>(null)
   const [btOutcome, setBtOutcome] = useState<BacktestOutcomeFilter>('all')
+  const [btUiFilter, setBtUiFilter] = useState<BacktestUiFilter>('all')
   const [btExitReason, setBtExitReason] = useState<string | null>(null)
   const [btDirection, setBtDirection] = useState<string | null>(null)
   const [btRegimeLabel, setBtRegimeLabel] = useState<string | null>(null)
@@ -184,6 +189,7 @@ export function MarketPage() {
   const [btTrades, setBtTrades] = useState<BacktestOverlayTrade[]>([])
   const [btRejected, setBtRejected] = useState<BacktestRejectedSignal[]>([])
   const [btCounts, setBtCounts] = useState<BacktestOverlayCounts | null>(null)
+  const [btMetrics, setBtMetrics] = useState<BacktestMetrics | null>(null)
   const [btActive, setBtActive] = useState(false)
   const [btLoading, setBtLoading] = useState(false)
   const [btError, setBtError] = useState<string | null>(null)
@@ -608,8 +614,10 @@ export function MarketPage() {
     setBtTrades([])
     setBtRejected([])
     setBtCounts(null)
+    setBtMetrics(null)
     setBtActive(false)
     setBtError(null)
+    setBtUiFilter('all')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, interval])
 
@@ -618,8 +626,10 @@ export function MarketPage() {
     setBtTrades([])
     setBtRejected([])
     setBtCounts(null)
+    setBtMetrics(null)
     setBtActive(false)
     setBtError(null)
+    setBtUiFilter('all')
   }, [])
 
   const loadBacktestOverlay = useCallback(
@@ -648,6 +658,7 @@ export function MarketPage() {
         setBtTrades(res.trades)
         setBtRejected(res.rejected ?? [])
         setBtCounts(res.counts)
+        setBtMetrics(res.metrics ?? null)
         setBtActive(true)
       } catch (err: unknown) {
         setBtError(err instanceof Error ? err.message : 'Échec backtest')
@@ -661,7 +672,18 @@ export function MarketPage() {
   const onBtOutcome = useCallback(
     (o: BacktestOutcomeFilter) => {
       setBtOutcome(o)
+      setBtUiFilter(o)
       if (btActive) void loadBacktestOverlay(o, btExitReason, btDirection, btRegimeLabel)
+    },
+    [btActive, btExitReason, btDirection, btRegimeLabel, loadBacktestOverlay],
+  )
+
+  const onBtUiFilter = useCallback(
+    (f: BacktestUiFilter) => {
+      setBtUiFilter(f)
+      if (f === 'rejected') return
+      setBtOutcome(f)
+      if (btActive) void loadBacktestOverlay(f, btExitReason, btDirection, btRegimeLabel)
     },
     [btActive, btExitReason, btDirection, btRegimeLabel, loadBacktestOverlay],
   )
@@ -701,7 +723,7 @@ export function MarketPage() {
     [mergedChartObjects],
   )
 
-  const btSheetOpen =
+  const btPanelOpen =
     (!isMobile && layout.bottomOpen && layout.bottomTab === 'backtest') ||
     (isMobile && layout.drawerPos !== 'closed' && layout.drawerTab === 'backtest')
 
@@ -830,27 +852,31 @@ export function MarketPage() {
       onPickPoint={onPickPoint}
       layerPrefs={layerPrefs}
       onLayerPrefsChange={setLayerPrefsAndSave}
-      volumeHeight={layout.volumeHeight}
+      volumeHeight={isMobile ? Math.min(layout.volumeHeight, 120) : layout.volumeHeight}
       onVolumeHeightChange={(h) => updateLayout({ volumeHeight: h })}
     />
   )
 
-  const backtestSheet = btSheetOpen ? (
+  const backtestEmbed = btPanelOpen ? (
     <BacktestOverlaySheet
       symbolLabel={current?.label ?? displaySymbol(symbol)}
       selectedRulesetId={btRulesetId}
       outcome={btOutcome}
+      uiFilter={btUiFilter}
       counts={btCounts}
       trades={btTrades}
       rejected={btRejected}
+      metrics={btMetrics}
       exitReason={btExitReason}
       direction={btDirection}
       regimeLabel={btRegimeLabel}
       loading={btLoading}
       error={btError}
       active={btActive}
+      variant="embed"
       onSelectRuleset={setBtRulesetId}
       onOutcome={onBtOutcome}
+      onUiFilter={onBtUiFilter}
       onExitReason={onBtExitReason}
       onDirection={onBtDirection}
       onRegimeLabel={onBtRegimeLabel}
@@ -878,12 +904,12 @@ export function MarketPage() {
     </div>
   )
 
-  const infoButton = isTwelveData ? (
+  const infoButton = (
     <div className="mkt-info-wrap" ref={infoRef}>
       <button
         type="button"
         className="mkt-icon-btn"
-        aria-label="Info source Twelve Data"
+        aria-label="Info source"
         aria-expanded={infoOpen}
         onClick={() => setInfoOpen((o) => !o)}
       >
@@ -891,18 +917,19 @@ export function MarketPage() {
       </button>
       {infoOpen ? (
         <div className="mkt-info-pop" role="note">
-          Données via le moteur IchiVol ({providerLabel}) — pas de compte broker. Plan Twelve Data
-          gratuit ≈ 8 crédits/min : charge un symbole à la fois (liste sans scan parallèle).
+          {isTwelveData
+            ? `Données via le moteur IchiVol (${providerLabel}) — pas de compte broker. Plan Twelve Data gratuit ≈ 8 crédits/min : charge un symbole à la fois (liste sans scan parallèle).`
+            : `Source : ${providerLabel}. OHLCV via le moteur IchiVol — pas de compte broker.`}
         </div>
       ) : null}
     </div>
-  ) : null
+  )
 
   return (
     <div
       className={`market-page mkt-page${isMobile ? ' is-mobile' : ' is-desktop'}${
         markOpen ? ' is-mark-trade' : ''
-      }${btSheetOpen ? ' is-backtest-overlay' : ''}${
+      }${btPanelOpen ? ' is-backtest-overlay' : ''}${
         layout.rightOpen ? '' : ' is-right-collapsed'
       }${layout.bottomOpen ? ' is-bottom-open' : ''}`}
       style={
@@ -1142,13 +1169,7 @@ export function MarketPage() {
               className="mkt-bottom-panel"
               style={{ height: layout.bottomHeight || 250 }}
             >
-              {layout.bottomTab === 'backtest' ? (
-                <div className="mkt-bottom-embed muted">
-                  {btActive
-                    ? `${btCounts?.total ?? btTrades.length} trade(s) affichés — voir le panneau Backtest`
-                    : 'Choisis une stratégie puis Afficher.'}
-                </div>
-              ) : null}
+              {layout.bottomTab === 'backtest' ? backtestEmbed : null}
               {layout.bottomTab === 'mark' ? (
                 <div className="mkt-bottom-embed">
                   <p>
@@ -1250,17 +1271,7 @@ export function MarketPage() {
                   </button>
                 </div>
               ) : null}
-              {layout.drawerTab === 'backtest' ? (
-                <div className="mkt-bottom-embed">
-                  <p className="muted">
-                    {btLoading
-                      ? 'Calcul backtest…'
-                      : btActive
-                        ? `Overlay actif · ${btCounts?.total ?? btTrades.length} trades`
-                        : 'Choisis une stratégie dans le panneau Backtest.'}
-                  </p>
-                </div>
-              ) : null}
+              {layout.drawerTab === 'backtest' ? backtestEmbed : null}
             </div>
           )}
         </div>
@@ -1304,8 +1315,6 @@ export function MarketPage() {
           onValidate={() => void validateMarkTrade()}
         />
       ) : null}
-
-      {backtestSheet}
     </div>
   )
 }
