@@ -87,7 +87,13 @@ function summarize(rows: ScreenerDecisionRow[]) {
       }
     }
   }
-  const top = [...rows].sort((a, b) => b.confidence - a.confidence).slice(0, 6)
+  const top = rows
+    .filter((r) => {
+      const b = verdictBucket(r)
+      return b === 'buy' || b === 'sell'
+    })
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, 6)
   const none = Math.max(0, rows.length - buy - sell - watch)
   return { buy, sell, watch, none, top, total: rows.length, stagePass }
 }
@@ -305,9 +311,13 @@ export function OverviewPage() {
         <div className="iv-metric">
           <div className="iv-metric-label">Opportunités</div>
           <div className={`iv-metric-value mono${stats.buy > 0 ? ' is-bull' : ''}`}>
-            {loading && !rows.length ? '—' : fmtInt(stats.buy + stats.sell)}
+            {loading && !rows.length ? '—' : fmtInt(stats.buy)}
           </div>
-          <small>BUY + SELL actionnables</small>
+          <small>
+            {loading && !rows.length
+              ? 'BUY actionnables'
+              : `SELL : ${fmtInt(stats.sell)} signaux (short désactivé)`}
+          </small>
         </div>
         <div className="iv-metric">
           <div className="iv-metric-label">WATCH</div>
@@ -320,19 +330,23 @@ export function OverviewPage() {
           <small>{BASELINE}</small>
         </div>
         <div className="iv-metric">
-          <div className="iv-metric-label">Risque engagé</div>
+          <div className="iv-metric-label">
+            {overview?.risk ? 'Risque engagé' : 'Exposé'}
+          </div>
           <div className="iv-metric-value mono">
             {overview?.risk?.open_risk_pct != null
               ? `${(overview.risk.open_risk_pct * 100).toFixed(1)} %`
-              : acct
-                ? fmtEur(acct.invested, 0)
-                : '—'}
+              : overview?.risk
+                ? fmtEur(overview.risk.open_risk_amount, 0)
+                : acct
+                  ? fmtEur(acct.invested, 0)
+                  : '—'}
           </div>
           <small>
             {overview?.risk
               ? `ouvert ${fmtEur(overview.risk.open_risk_amount, 0)} / exposé ${fmtEur(overview.risk.exposed, 0)}`
               : acct
-                ? `exposé ${fmtEur(acct.invested, 0)}`
+                ? `capital engagé ${fmtEur(acct.invested, 0)}`
                 : '—'}
           </small>
         </div>
@@ -352,6 +366,9 @@ export function OverviewPage() {
                   ['--buy' as string]: stats.total
                     ? ((stats.buy / stats.total) * 100).toFixed(2)
                     : 0,
+                  ['--sell' as string]: stats.total
+                    ? ((stats.sell / stats.total) * 100).toFixed(2)
+                    : 0,
                   ['--watch' as string]: stats.total
                     ? ((stats.watch / stats.total) * 100).toFixed(2)
                     : 0,
@@ -359,7 +376,7 @@ export function OverviewPage() {
               }
               data-center={loading && !rows.length ? '—' : String(stats.total)}
               role="img"
-              aria-label={`${stats.total} marchés : ${stats.buy} buy, ${stats.watch} watch, ${stats.none + stats.sell} autres`}
+              aria-label={`${stats.total} marchés : ${stats.buy} buy, ${stats.sell} sell, ${stats.watch} watch, ${stats.none} no trade`}
             />
             <div className="iv-pulse-legend">
               <span>
@@ -371,6 +388,13 @@ export function OverviewPage() {
               </span>
               <span>
                 <span>
+                  <i className="is-sell" aria-hidden />
+                  SELL
+                </span>
+                <b className="mono">{stats.sell}</b>
+              </span>
+              <span>
+                <span>
                   <i className="is-watch" aria-hidden />
                   WATCH
                 </span>
@@ -379,9 +403,9 @@ export function OverviewPage() {
               <span>
                 <span>
                   <i className="is-none" aria-hidden />
-                  NO TRADE / autre
+                  NO TRADE
                 </span>
-                <b className="mono">{stats.none + stats.sell}</b>
+                <b className="mono">{stats.none}</b>
               </span>
             </div>
           </div>
@@ -396,7 +420,7 @@ export function OverviewPage() {
           </header>
           {stats.top.length === 0 ? (
             <p className="muted overview-empty" style={{ padding: '0.75rem 1rem' }}>
-              {loading ? 'Scan screener…' : 'Aucune ligne — vérifie le moteur.'}
+              {loading ? 'Scan screener…' : 'Aucune opportunité actionnable'}
             </p>
           ) : (
             <div className="table-wrap">
@@ -440,12 +464,12 @@ export function OverviewPage() {
           {(
             [
               ['analysés', stats.total],
-              ['direction', stats.stagePass.direction || stats.buy + stats.sell + stats.watch],
+              ['direction', stats.stagePass.direction],
               ['participation', stats.stagePass.participation],
               ['structure', stats.stagePass.structure],
               ['location', stats.stagePass.location],
               ['régime', stats.stagePass.regime],
-              ['opportunités', stats.buy + stats.sell],
+              ['opportunités (BUY)', stats.buy],
             ] as const
           ).map(([label, n]) => (
             <li key={label}>

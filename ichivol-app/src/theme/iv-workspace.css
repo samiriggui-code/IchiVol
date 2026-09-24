@@ -157,16 +157,18 @@
 
 .iv-donut {
   --buy: 0;
+  --sell: 0;
   --watch: 0;
-  --rest: 100;
   width: 9rem;
   height: 9rem;
   border-radius: 50%;
   flex-shrink: 0;
   background: conic-gradient(
     var(--bull) 0 calc(var(--buy) * 1%),
-    var(--neutral) calc(var(--buy) * 1%) calc((var(--buy) + var(--watch)) * 1%),
-    var(--muted) calc((var(--buy) + var(--watch)) * 1%) 100%
+    var(--bear) calc(var(--buy) * 1%) calc((var(--buy) + var(--sell)) * 1%),
+    var(--neutral) calc((var(--buy) + var(--sell)) * 1%)
+      calc((var(--buy) + var(--sell) + var(--watch)) * 1%),
+    var(--muted) calc((var(--buy) + var(--sell) + var(--watch)) * 1%) 100%
   );
   display: grid;
   place-items: center;
@@ -217,6 +219,10 @@
 
 .iv-pulse-legend .is-buy {
   background: var(--bull);
+}
+
+.iv-pulse-legend .is-sell {
+  background: var(--bear);
 }
 
 .iv-pulse-legend .is-watch {

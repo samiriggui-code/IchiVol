@@ -7,6 +7,20 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — UI workspace refonte — corrections revue Claude (#86)
+
+- Branche : `cursor/ui-workspace-refonte-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/86
+- **Corrections Desk (`OverviewPage`)** :
+  1. Top opportunités = BUY/SELL only (pas de repli WATCH) ; vide → « Aucune opportunité actionnable »
+  2. Pipeline `direction` = vraie valeur `stagePass` (0 compris), sans fallback
+  3. Short désactivé baseline : carte Opportunités = BUY ; sous-titre SELL N (short désactivé) ; donut BUY/SELL/WATCH/NO TRADE ; pipeline fin « opportunités (BUY) »
+  4. Sans `overview.risk` → libellé « Exposé » (jamais montant investi sous « Risque engagé »)
+- Build : `npm run build` OK
+- **STOP rév.58** toujours actif
+
+---
+
 ## 2026-09-24 — UI workspace refonte (post-STOP)
 
 - Branche : `cursor/ui-workspace-refonte-a2fe`
