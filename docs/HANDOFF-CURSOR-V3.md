@@ -10,9 +10,9 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T9d EN COURS — FVG (Fair Value Gap) causal
 
 - Branche : `cursor/t9d-fvg-a2fe`
-- PR : *(draft — lien après push)*
+- PR : https://github.com/samiriggui-code/IchiVol/pull/58 (**draft**)
 - Base : `main` @ `ef062c2` (#57 T9c)
-- Statut : **EN COURS** — Cursor solo. Pas de Fib / pas de pipeline.
+- Statut : **DRAFT** — Cursor solo. Pas de Fib / pas de pipeline. CI en cours.
 
 ### Livré
 
