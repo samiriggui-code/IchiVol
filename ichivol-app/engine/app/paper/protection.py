@@ -81,8 +81,9 @@ from app.paper.protection_trail import (
     resolve_paper_trail,
 )
 from app.strategy_lab.partial_tp import PartialTpStep
-from app.strategy_lab.reinforce import apply_reinforce_add, cap_add_by_exposure
+from app.strategy_lab.reinforce import apply_reinforce_add, cap_add_by_notional_equity
 from app.strategy_lab.stop_trail import update_trailing_stop
+from app.paper.risk import apply_entry_friction
 from app.universe.catalog import get_instrument
 
 logger = logging.getLogger(__name__)
@@ -246,6 +247,10 @@ def find_breach_manage(
     adds_already: int = 0,
     reinforce_prev: bool = False,
     open_qty: float | None = None,
+    open_notional: float | None = None,
+    equity: float | None = None,
+    spread_bps: float = 0.0,
+    slippage_bps: float = 0.0,
     symbol: str,
     since_ms: int,
     until_ms: int,
@@ -255,8 +260,8 @@ def find_breach_manage(
     """Bar-by-bar: stop > partials (asc R) > target > reinforce > trail.
 
     Same no-lookahead contract as Lab / trail path. Reinforce uses rising-edge
-    ``at_r_multiple`` (paper); stop is simulated forward after each add so the
-    tightened level applies from the next bar.
+    ``at_r_multiple`` on frozen ``initial_entry``; stop is simulated forward
+    after each add with the same entry-friction fill as the broker.
     """
     dir_enum = _direction_enum(direction)
     minute0 = since_ms - since_ms % MINUTE_MS
@@ -274,8 +279,16 @@ def find_breach_manage(
             if open_qty is not None and open_qty > 0
             else float(reinforce_cfg.initial_qty)
         )
+        sim_notional = (
+            float(open_notional)
+            if open_notional is not None and open_notional > 0
+            else sim_qty * sim_avg
+        )
+        sim_equity = float(equity) if equity is not None and equity > 0 else sim_notional
     else:
         sim_qty = 0.0
+        sim_notional = 0.0
+        sim_equity = 0.0
 
     if since_ms % MINUTE_MS:
         entry_minute_end = minute0 + MINUTE_MS
@@ -379,21 +392,29 @@ def find_breach_manage(
                 rf_prev,
             )
 
-        # 4) Reinforce (rising-edge at_r) — after exit checks, before trail
+        # 4) Reinforce (rising-edge at_r on frozen initial_entry) — before trail
         if (
             reinforce_cfg is not None
             and adds_done_n < reinforce_cfg.max_adds
         ):
-            hit = bar_hits_reinforce(direction, entry, reinforce_cfg, h, l)
+            hit = bar_hits_reinforce(direction, reinforce_cfg, h, l)
             rising = hit and not rf_prev
             rf_prev = hit
             if rising:
-                level = level_for_reinforce(direction, entry, reinforce_cfg)
-                requested = cap_add_by_exposure(
-                    open_qty=sim_qty,
-                    requested_add=float(reinforce_cfg.initial_qty)
+                level = level_for_reinforce(direction, reinforce_cfg)
+                # Same fill as broker.reinforce_add_capital_position
+                fill = apply_entry_friction(
+                    level,
+                    direction=direction.upper(),
+                    spread_bps=spread_bps,
+                    slippage_bps=slippage_bps,
+                )
+                requested = cap_add_by_notional_equity(
+                    open_notional=sim_notional,
+                    requested_add_qty=float(reinforce_cfg.initial_qty)
                     * float(reinforce_cfg.add_fraction),
-                    initial_qty=float(reinforce_cfg.initial_qty),
+                    fill_price=float(fill),
+                    equity=sim_equity,
                     max_exposure=float(reinforce_cfg.max_exposure),
                 )
                 if requested > 1e-15:
@@ -402,7 +423,7 @@ def find_breach_manage(
                         avg_entry=sim_avg,
                         qty=sim_qty,
                         stop=cur_stop,
-                        add_price=float(level),
+                        add_price=float(fill),
                         requested_add=requested,
                         initial_risk=float(reinforce_cfg.initial_risk),
                         policy=reinforce_cfg.risk_policy,
@@ -415,8 +436,9 @@ def find_breach_manage(
                         )
                         adds_done_n += 1
                         cur_stop = new_stop
+                        sim_notional = sim_qty * sim_avg
         elif reinforce_cfg is not None:
-            rf_prev = bar_hits_reinforce(direction, entry, reinforce_cfg, h, l)
+            rf_prev = bar_hits_reinforce(direction, reinforce_cfg, h, l)
 
         # 5) Trail after checks
         if trail_cfg is not None:
@@ -781,6 +803,12 @@ def _process_position(
             else []
         )
         existing_adds = _load_reinforce_adds(session, pos.id) if reinforce_cfg else []
+        eq = None
+        spr = 0.0
+        slp = 0.0
+        if reinforce_cfg is not None and portfolio is not None:
+            eq = paper_broker.estimate_equity(session, portfolio)
+            spr, slp = paper_broker.portfolio_friction_bps(portfolio, pos.symbol)
         manage = find_breach_manage(
             pos.direction,
             float(pos.stop_price),
@@ -793,6 +821,10 @@ def _process_position(
             adds_already=reinforce_adds_done(existing_adds),
             reinforce_prev=reinforce_prev_match(pos) if reinforce_cfg else False,
             open_qty=float(pos.qty) if pos.qty else None,
+            open_notional=float(pos.notional) if pos.notional else None,
+            equity=eq,
+            spread_bps=spr,
+            slippage_bps=slp,
             symbol=inst.provider_symbol,
             since_ms=since_ms,
             until_ms=now_ms,

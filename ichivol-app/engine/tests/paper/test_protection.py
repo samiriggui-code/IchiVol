@@ -645,7 +645,7 @@ def test_resolve_paper_reinforce_gates():
         "add_fraction": 0.5,
         "at_r_multiple": 1.0,
         "max_adds": 1,
-        "max_exposure": 2.0,
+        "max_exposure": 1.0,
     }
     pos = SimpleNamespace(
         source="user_confirmed",
@@ -658,8 +658,9 @@ def test_resolve_paper_reinforce_gates():
     )
     cfg = resolve_paper_reinforce(pos, None)
     assert cfg is not None
-    assert cfg.max_exposure == 2.0
+    assert cfg.max_exposure == 1.0
     assert cfg.risk_policy == "tighten_stop"
+    assert cfg.initial_entry == pytest.approx(80000.0)
     assert cfg.initial_risk == pytest.approx(100.0)  # (80000-79000)*0.1
 
     auto = SimpleNamespace(
@@ -688,24 +689,33 @@ def test_resolve_paper_reinforce_gates():
     )
     assert resolve_paper_reinforce(both, None) is None
 
-    # Default max_exposure 1.0 still resolves (broker/cap blocks the add)
-    bare = SimpleNamespace(
+    # After avg drifts, frozen initial_entry still anchors R
+    drifted = SimpleNamespace(
         source="user_confirmed",
         direction="LONG",
-        entry_price=80000.0,
-        stop_price=79000.0,
-        qty=0.1,
+        entry_price=81000.0,  # post-add average
+        stop_price=79500.0,
+        qty=0.15,
         initial_qty=0.1,
         entry_signal={
-            REINFORCE_KEY: {"add_fraction": 0.5, "at_r_multiple": 1.0},
+            REINFORCE_KEY: {
+                **blob,
+                "initial_entry": 80000.0,
+                "initial_stop": 79000.0,
+                "initial_qty": 0.1,
+                "initial_risk": 100.0,
+            }
         },
     )
-    cfg2 = resolve_paper_reinforce(bare, None)
-    assert cfg2 is not None and cfg2.max_exposure == 1.0
+    cfg3 = resolve_paper_reinforce(drifted, None)
+    assert cfg3 is not None
+    assert cfg3.initial_entry == pytest.approx(80000.0)
+    assert cfg3.initial_risk == pytest.approx(100.0)
 
 
 @pytest.mark.skipif(not DB, reason="Postgres not reachable")
-def test_reinforce_adds_at_r_tightens_stop_keeps_risk_le_r0(session):
+def test_reinforce_default_max_exposure_allows_add_within_equity(session):
+    """Paper max_exposure=1.0 = notional≤equity — adds work when cash/headroom exist."""
     p = session.info["p"]
     p.strategy_profile = {
         **p.strategy_profile,
@@ -716,21 +726,22 @@ def test_reinforce_adds_at_r_tightens_stop_keeps_risk_le_r0(session):
             "add_fraction": 0.5,
             "at_r_multiple": 1.0,
             "max_adds": 1,
-            "max_exposure": 2.0,
-            "risk_policy": "tighten_stop",
+            # max_exposure omitted → 1.0 (notional/equity, not qty×1)
         },
         "take_profit_r": 3.0,
     }
     session.flush()
     pos = _open(session, source="user_confirmed")
+    qty0 = float(pos.qty)
+    fee0 = float(pos.entry_fee or 0.0)
     entry = float(pos.entry_price)
     stop0 = float(pos.stop_price)
-    qty0 = float(pos.qty)
     r0 = open_risk(Direction.LONG, entry, stop0, qty0)
     risk = entry - stop0
+    # Typical risk sizing leaves notional << equity → headroom for add.
+    assert float(pos.notional) < float(p.cash) + float(pos.notional)
     entry_ms = int(pos.entry_time.timestamp() * 1000)
     m1 = entry_ms - entry_ms % M + M
-
     bars = [kline(m1, entry, entry + risk, entry - 50, entry + risk * 0.8)]
     k, t = _fetchers(bars)
     now = datetime.fromtimestamp((m1 + 2 * M) / 1000, timezone.utc)
@@ -738,32 +749,22 @@ def test_reinforce_adds_at_r_tightens_stop_keeps_risk_le_r0(session):
         r for r in run_protection_cycle(session, klines_fn=k, trades_fn=t, now=now) if r["id"] == pos.id
     )
     assert rep["status"] == "reinforced"
-    assert pos.status == "OPEN"
     assert float(pos.qty) == pytest.approx(qty0 * 1.5)
-    assert float(pos.stop_price) > stop0  # tightened toward avg
-    adds = session.query(PaperReinforceAdd).filter_by(position_id=pos.id).order_by(PaperReinforceAdd.seq).all()
+    adds = session.query(PaperReinforceAdd).filter_by(position_id=pos.id).all()
     assert len(adds) == 1
-    assert adds[0].r_multiple == pytest.approx(1.0)
+    assert float(pos.entry_fee) == pytest.approx(fee0 + float(adds[0].fee))
     live_risk = open_risk(
         Direction.LONG, float(pos.entry_price), float(pos.stop_price), float(pos.qty)
     )
     assert live_risk <= r0 + 1e-6
-    assert adds[0].open_risk_after == pytest.approx(live_risk)
-
-    # Rising-edge latch: still above 1R next cycle → no second add
-    bars2 = [kline(m1 + M, entry + risk * 0.8, entry + risk * 1.1, entry + risk * 0.7, entry + risk)]
-    k2, t2 = _fetchers(bars2)
-    now2 = datetime.fromtimestamp((m1 + 5 * M) / 1000, timezone.utc)
-    rep2 = next(
-        r for r in run_protection_cycle(session, klines_fn=k2, trades_fn=t2, now=now2) if r["id"] == pos.id
-    )
-    assert rep2["status"] == "ok"
-    assert session.query(PaperReinforceAdd).filter_by(position_id=pos.id).count() == 1
+    # Blob froze original entry for R (not the new avg).
+    blob = (pos.entry_signal or {}).get(REINFORCE_KEY) or {}
+    assert float(blob["initial_entry"]) == pytest.approx(entry)
 
 
 @pytest.mark.skipif(not DB, reason="Postgres not reachable")
-def test_reinforce_default_max_exposure_blocks_add(session):
-    """max_exposure default 1.0 → headroom 0 when fully sized → refuse."""
+def test_reinforce_closed_line_equals_sum_of_fills(session):
+    """After CLOSE, qty/entry_fee/notional = initial + Σ reinforce fills."""
     p = session.info["p"]
     p.strategy_profile = {
         **p.strategy_profile,
@@ -774,9 +775,63 @@ def test_reinforce_default_max_exposure_blocks_add(session):
             "add_fraction": 0.5,
             "at_r_multiple": 1.0,
             "max_adds": 1,
-            # max_exposure omitted → 1.0
         },
         "take_profit_r": 3.0,
+    }
+    session.flush()
+    pos = _open(session, source="user_confirmed")
+    qty0 = float(pos.qty)
+    fee0 = float(pos.entry_fee or 0.0)
+    entry = float(pos.entry_price)
+    stop0 = float(pos.stop_price)
+    risk = entry - stop0
+    target = float(pos.take_profit_price)
+    entry_ms = int(pos.entry_time.timestamp() * 1000)
+    m1 = entry_ms - entry_ms % M + M
+
+    bars1 = [kline(m1, entry, entry + risk, entry - 50, entry + risk * 0.8)]
+    k1, t1 = _fetchers(bars1)
+    now1 = datetime.fromtimestamp((m1 + 2 * M) / 1000, timezone.utc)
+    run_protection_cycle(session, klines_fn=k1, trades_fn=t1, now=now1)
+    adds = session.query(PaperReinforceAdd).filter_by(position_id=pos.id).all()
+    assert len(adds) == 1
+    add_qty = float(adds[0].qty)
+    add_fee = float(adds[0].fee)
+    open_qty = float(pos.qty)
+    assert open_qty == pytest.approx(qty0 + add_qty)
+
+    bars2 = [kline(m1 + M, entry + risk * 0.8, target + 10, entry + risk * 0.7, target)]
+    k2, t2 = _fetchers(bars2)
+    now2 = datetime.fromtimestamp((m1 + 5 * M) / 1000, timezone.utc)
+    rep2 = next(
+        r for r in run_protection_cycle(session, klines_fn=k2, trades_fn=t2, now=now2) if r["id"] == pos.id
+    )
+    assert rep2["status"] == "closed"
+    assert pos.status == "CLOSED"
+    # initial_* stay original open refs
+    assert float(pos.initial_qty) == pytest.approx(qty0)
+    assert float(pos.initial_entry_fee) == pytest.approx(fee0)
+    # displayed CLOSED size = total entered
+    assert float(pos.qty) == pytest.approx(qty0 + add_qty)
+    assert float(pos.entry_fee) == pytest.approx(fee0 + add_fee)
+    assert float(pos.notional) == pytest.approx(float(pos.entry_price) * float(pos.qty))
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_reinforce_two_successive_adds_at_frozen_r_level(session):
+    """Two rising-edge hits at the same at_r (dip between) on frozen initial_entry."""
+    p = session.info["p"]
+    p.strategy_profile = {
+        **p.strategy_profile,
+        "commission_bps": 0.0,
+        "slippage_bps": 0.0,
+        "spread_bps": 0.0,
+        REINFORCE_KEY: {
+            "add_fraction": 0.25,
+            "at_r_multiple": 1.0,
+            "max_adds": 2,
+        },
+        "take_profit_r": 4.0,
     }
     session.flush()
     pos = _open(session, source="user_confirmed")
@@ -786,15 +841,112 @@ def test_reinforce_default_max_exposure_blocks_add(session):
     risk = entry - stop0
     entry_ms = int(pos.entry_time.timestamp() * 1000)
     m1 = entry_ms - entry_ms % M + M
-    bars = [kline(m1, entry, entry + risk, entry - 50, entry + risk * 0.8)]
-    k, t = _fetchers(bars)
-    now = datetime.fromtimestamp((m1 + 2 * M) / 1000, timezone.utc)
-    rep = next(
-        r for r in run_protection_cycle(session, klines_fn=k, trades_fn=t, now=now) if r["id"] == pos.id
+
+    # Cycle 1: hit +1R
+    bars1 = [kline(m1, entry, entry + risk, entry - 50, entry + risk * 0.5)]
+    k1, t1 = _fetchers(bars1)
+    now1 = datetime.fromtimestamp((m1 + 2 * M) / 1000, timezone.utc)
+    rep1 = next(
+        r for r in run_protection_cycle(session, klines_fn=k1, trades_fn=t1, now=now1) if r["id"] == pos.id
     )
-    assert rep["status"] == "ok"
-    assert float(pos.qty) == pytest.approx(qty0)
-    assert session.query(PaperReinforceAdd).filter_by(position_id=pos.id).count() == 0
+    assert rep1["status"] == "reinforced"
+    assert session.query(PaperReinforceAdd).filter_by(position_id=pos.id).count() == 1
+    avg1 = float(pos.entry_price)
+    assert avg1 != pytest.approx(entry)  # avg moved — R must stay on initial
+
+    # Cycle 2: dip below 1R (clear rising-edge latch) — use frozen entry, not avg
+    bars2 = [kline(m1 + M, entry + risk * 0.3, entry + risk * 0.4, entry + risk * 0.1, entry + risk * 0.2)]
+    k2, t2 = _fetchers(bars2)
+    now2 = datetime.fromtimestamp((m1 + 4 * M) / 1000, timezone.utc)
+    rep2 = next(
+        r for r in run_protection_cycle(session, klines_fn=k2, trades_fn=t2, now=now2) if r["id"] == pos.id
+    )
+    assert rep2["status"] == "ok"
+    assert session.query(PaperReinforceAdd).filter_by(position_id=pos.id).count() == 1
+
+    # Cycle 3: re-hit +1R vs initial_entry (avg is higher — if we used avg, level would be wrong)
+    bars3 = [kline(m1 + 2 * M, entry + risk * 0.2, entry + risk * 1.05, entry + risk * 0.15, entry + risk * 0.9)]
+    k3, t3 = _fetchers(bars3)
+    now3 = datetime.fromtimestamp((m1 + 6 * M) / 1000, timezone.utc)
+    rep3 = next(
+        r for r in run_protection_cycle(session, klines_fn=k3, trades_fn=t3, now=now3) if r["id"] == pos.id
+    )
+    assert rep3["status"] == "reinforced"
+    adds = session.query(PaperReinforceAdd).filter_by(position_id=pos.id).order_by(PaperReinforceAdd.seq).all()
+    assert len(adds) == 2
+    assert float(pos.qty) == pytest.approx(qty0 * 1.5)  # 0.25 + 0.25
+    # Both adds filled near the frozen 1R level (entry+risk), not avg-based level
+    level = entry + risk
+    for a in adds:
+        assert float(a.price) == pytest.approx(level, rel=1e-9)
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_reinforce_short_tighten_stop_and_closed_totals(session):
+    p = session.info["p"]
+    p.strategy_profile = {
+        **p.strategy_profile,
+        "allow_short": True,
+        "commission_bps": 0.0,
+        "slippage_bps": 0.0,
+        "spread_bps": 0.0,
+        REINFORCE_KEY: {
+            "add_fraction": 0.5,
+            "at_r_multiple": 1.0,
+            "max_adds": 1,
+        },
+        "take_profit_r": 3.0,
+    }
+    session.flush()
+    pos = broker.open_capital_position(
+        session,
+        portfolio=p,
+        symbol="BTCUSDT",
+        timeframe="1h",
+        source="user_confirmed",
+        user_id=None,
+        direction="SHORT",
+        price=80000.0,
+        decision="SELL",
+        stop_distance=1000.0,
+    )
+    assert pos is not None and pos.direction == "SHORT"
+    qty0 = float(pos.qty)
+    fee0 = float(pos.entry_fee or 0.0)
+    entry = float(pos.entry_price)
+    stop0 = float(pos.stop_price)
+    r0 = open_risk(Direction.SHORT, entry, stop0, qty0)
+    risk = stop0 - entry  # SHORT initial stop above entry
+    assert risk > 0
+    target = float(pos.take_profit_price)
+    entry_ms = int(pos.entry_time.timestamp() * 1000)
+    m1 = entry_ms - entry_ms % M + M
+
+    # MFE for SHORT: price drops by 1R
+    bars1 = [kline(m1, entry, entry + 50, entry - risk, entry - risk * 0.8)]
+    k1, t1 = _fetchers(bars1)
+    now1 = datetime.fromtimestamp((m1 + 2 * M) / 1000, timezone.utc)
+    rep1 = next(
+        r for r in run_protection_cycle(session, klines_fn=k1, trades_fn=t1, now=now1) if r["id"] == pos.id
+    )
+    assert rep1["status"] == "reinforced"
+    assert float(pos.qty) == pytest.approx(qty0 * 1.5)
+    assert float(pos.stop_price) < stop0  # SHORT tighten lowers stop toward avg
+    live_risk = open_risk(
+        Direction.SHORT, float(pos.entry_price), float(pos.stop_price), float(pos.qty)
+    )
+    assert live_risk <= r0 + 1e-6
+    add = session.query(PaperReinforceAdd).filter_by(position_id=pos.id).one()
+
+    bars2 = [kline(m1 + M, entry - risk * 0.8, entry - risk * 0.7, target - 10, target)]
+    k2, t2 = _fetchers(bars2)
+    now2 = datetime.fromtimestamp((m1 + 5 * M) / 1000, timezone.utc)
+    rep2 = next(
+        r for r in run_protection_cycle(session, klines_fn=k2, trades_fn=t2, now=now2) if r["id"] == pos.id
+    )
+    assert rep2["status"] == "closed"
+    assert float(pos.qty) == pytest.approx(qty0 + float(add.qty))
+    assert float(pos.entry_fee) == pytest.approx(fee0 + float(add.fee))
 
 
 @pytest.mark.skipif(not DB, reason="Postgres not reachable")
@@ -809,15 +961,14 @@ def test_reinforce_refuses_when_cash_insufficient(session):
             "add_fraction": 0.5,
             "at_r_multiple": 1.0,
             "max_adds": 1,
-            "max_exposure": 2.0,
         },
         "take_profit_r": 3.0,
     }
     session.flush()
     pos = _open(session, source="user_confirmed")
     qty0 = float(pos.qty)
-    # Drain cash so add cannot fund.
-    p.cash = 0.01
+    # Drain cash so add cannot fund (even dust fills).
+    p.cash = 0.0
     session.flush()
     entry = float(pos.entry_price)
     stop0 = float(pos.stop_price)
@@ -850,7 +1001,6 @@ def test_stop_beats_reinforce_same_bar(session):
             "add_fraction": 0.5,
             "at_r_multiple": 1.0,
             "max_adds": 1,
-            "max_exposure": 2.0,
         },
         "take_profit_r": 3.0,
     }
@@ -872,7 +1022,7 @@ def test_stop_beats_reinforce_same_bar(session):
     assert rep["status"] == "closed"
     assert pos.exit_reason in ("stop_hit", "stop_gap")
     assert session.query(PaperReinforceAdd).filter_by(position_id=pos.id).count() == 0
-    # qty restored to entry size on CLOSE
+    # qty restored to entry size on CLOSE (no adds)
     assert float(pos.qty) == pytest.approx(qty0)
 
 
@@ -884,7 +1034,6 @@ def test_auto_watchlist_ignores_portfolio_reinforce(session):
         REINFORCE_KEY: {
             "add_fraction": 0.5,
             "at_r_multiple": 1.0,
-            "max_exposure": 2.0,
         },
     }
     session.flush()

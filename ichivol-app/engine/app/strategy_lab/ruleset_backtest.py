@@ -41,6 +41,7 @@ from app.strategy_lab.reinforce import (
     ReinforceAdd,
     apply_reinforce_add,
     cap_add_by_exposure,
+    is_leverage_exposure,
     open_risk,
 )
 from app.strategy_lab.ruleset import ConditionGroup, ReinforceSpec, Ruleset, parse_ruleset
@@ -88,6 +89,8 @@ class RulesetBacktestResult:
     n_signals: int
     n_skipped_in_position: int
     rejected: tuple[RejectedSignal, ...] = ()
+    # True when exit.reinforce.max_exposure > 1 (Lab unit capital exceeded).
+    levier: bool = False
 
 
 def _levels(
@@ -677,6 +680,10 @@ def run_ruleset_backtest_on_features(
         n_signals=len(signals),
         n_skipped_in_position=skipped,
         rejected=tuple(rejected),
+        levier=bool(
+            ruleset.exit.reinforce is not None
+            and is_leverage_exposure(ruleset.exit.reinforce.max_exposure)
+        ),
     )
 
 

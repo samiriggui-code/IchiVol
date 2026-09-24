@@ -77,8 +77,9 @@ class ReinforceSpec:
     max_adds: int = 1
     risk_policy: RiskPolicy = "tighten_stop"
     max_exposure: float = 1.0
-    """Cap on ``qty / initial_qty`` after adds. Default 1.0 blocks all adds
-    unless raised (Lab/paper leverage gate — T0-MANAGE-f)."""
+    """Lab: cap on ``qty / initial_qty`` (1 unit = 100 % capital). Default 1.0
+    blocks adds unless raised. Values > 1 imply **levier** — mark results.
+    Paper uses a separate notional/equity cap with the same field name."""
 
 
 @dataclass(frozen=True)

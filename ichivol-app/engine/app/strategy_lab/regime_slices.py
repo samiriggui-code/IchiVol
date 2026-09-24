@@ -153,6 +153,10 @@ def _study_from_signals(
         details=details,
         n_signals=len(signals),
         n_skipped_in_position=skipped,
+        levier=bool(
+            ruleset.exit.reinforce is not None
+            and ruleset.exit.reinforce.max_exposure > 1.0 + 1e-12
+        ),
     )
     matching = len(signals)  # rising-edge already; slice-specific
     return RulesetStudyResult(

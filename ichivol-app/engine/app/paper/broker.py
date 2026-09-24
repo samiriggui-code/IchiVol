@@ -123,22 +123,42 @@ def _ensure_initial_entry_refs(position: PaperPosition, *, remaining: float, pri
             position.initial_entry_fee = fee_now
 
 
-def _restore_entry_refs_after_close(position: PaperPosition) -> None:
-    """Restore qty / entry_fee to stable entry sizes after CLOSE (T0-MANAGE-d)."""
-    entry_qty = float(position.initial_qty) if position.initial_qty is not None else float(position.qty or 0.0)
-    if position.initial_qty is None and entry_qty > 0:
-        position.initial_qty = entry_qty
-    position.qty = entry_qty
-    position.notional = float(position.entry_price or 0.0) * entry_qty if entry_qty else 0.0
-
-    entry_fee0 = (
+def _total_entered_qty_fee(
+    session: Session, position: PaperPosition
+) -> tuple[float, float]:
+    """Original open + Σ reinforce adds (stable CLOSE display size)."""
+    iq = float(position.initial_qty) if position.initial_qty is not None else float(position.qty or 0.0)
+    ifee = (
         float(position.initial_entry_fee)
         if position.initial_entry_fee is not None
         else float(position.entry_fee or 0.0)
     )
+    adds = list(
+        session.execute(
+            select(PaperReinforceAdd).where(PaperReinforceAdd.position_id == position.id)
+        ).scalars()
+    )
+    return iq + sum(float(a.qty or 0.0) for a in adds), ifee + sum(
+        float(a.fee or 0.0) for a in adds
+    )
+
+
+def _restore_entry_refs_after_close(session: Session, position: PaperPosition) -> None:
+    """Restore qty / entry_fee / notional to total entered (open + renforts).
+
+    ``initial_qty`` / ``initial_entry_fee`` stay the original open refs;
+    displayed CLOSED size is initial + Σ ``paper_reinforce_adds``.
+    """
+    if position.initial_qty is None:
+        position.initial_qty = float(position.qty or 0.0)
     if position.initial_entry_fee is None:
-        position.initial_entry_fee = entry_fee0
-    position.entry_fee = entry_fee0
+        position.initial_entry_fee = float(position.entry_fee or 0.0)
+
+    total_qty, total_fee = _total_entered_qty_fee(session, position)
+    position.qty = total_qty
+    position.entry_fee = total_fee
+    avg = float(position.entry_price or 0.0)
+    position.notional = avg * total_qty if total_qty else 0.0
 
 
 def _apply_vwap_pnl_pct(
@@ -496,7 +516,7 @@ def close_capital_position(
         position,
         extra_fill=(exit_fill, closed_qty) if closed_qty > 0 else None,
     )
-    _restore_entry_refs_after_close(position)
+    _restore_entry_refs_after_close(session, position)
     position.updated_at = now
 
     if portfolio is not None:
@@ -780,16 +800,18 @@ def reinforce_add_capital_position(
     at: datetime | None = None,
     time_ms: int | None = None,
 ) -> PaperReinforceAdd | None:
-    """Scale in under Lab risk invariant + max_exposure + cash gate.
+    """Scale in under Lab risk invariant + notional/equity max_exposure + cash.
 
-    Refuses (returns None) when the add would violate risk/exposure/cash —
-    never executes out of invariant. Does not mutate ``initial_qty`` /
+    Paper ``max_exposure`` caps ``notional_après_add ≤ max_exposure × equity``
+    (not Lab's qty-unit cap). Refuses (returns None) on risk/exposure/cash
+    violation — never partial-fills silently. Does not mutate ``initial_qty`` /
     ``initial_entry_fee``.
     """
     from app.agents.types import Direction
+    from app.paper.risk import apply_entry_friction
     from app.strategy_lab.reinforce import (
         apply_reinforce_add,
-        cap_add_by_exposure,
+        cap_add_by_notional_equity,
         open_risk,
     )
 
@@ -836,33 +858,30 @@ def reinforce_add_capital_position(
     if prior is not None:
         return prior
 
-    requested = cap_add_by_exposure(
-        open_qty=open_qty,
-        requested_add=float(initial_qty) * float(add_fraction),
-        initial_qty=float(initial_qty),
+    direction = Direction.LONG if position.direction == "LONG" else Direction.SHORT
+    avg_entry = float(position.entry_price)
+    stop = float(position.stop_price) if position.stop_price is not None else avg_entry
+    open_notional = float(position.notional or (open_qty * avg_entry))
+
+    spread_bps, slip_bps = _friction(profile, position.symbol)
+    # Same fill path as open — no silent fallback on failure.
+    fill = apply_entry_friction(
+        price,
+        direction=position.direction,
+        spread_bps=spread_bps,
+        slippage_bps=slip_bps,
+    )
+
+    equity = estimate_equity(session, portfolio)
+    requested = cap_add_by_notional_equity(
+        open_notional=open_notional,
+        requested_add_qty=float(initial_qty) * float(add_fraction),
+        fill_price=float(fill),
+        equity=float(equity),
         max_exposure=float(max_exposure),
     )
     if requested <= 1e-15:
         return None
-
-    direction = Direction.LONG if position.direction == "LONG" else Direction.SHORT
-    avg_entry = float(position.entry_price)
-    stop = float(position.stop_price) if position.stop_price is not None else avg_entry
-
-    spread_bps, slip_bps = _friction(profile, position.symbol)
-    # Entry friction for an add (same side as open).
-    from app.paper.risk import apply_entry_friction
-
-    try:
-        fill = apply_entry_friction(
-            price,
-            direction=position.direction,
-            spread_bps=spread_bps,
-            slippage_bps=slip_bps,
-        )
-    except Exception:
-        # Fallback: use exit friction inverted / raw mid if entry helper differs.
-        fill = float(price)
 
     actual, new_avg, new_stop, new_qty, clamped = apply_reinforce_add(
         direction=direction,
@@ -878,6 +897,9 @@ def reinforce_add_capital_position(
         return None
 
     add_notional = actual * float(fill)
+    # Re-check equity cap on actual (risk clamp may have shrunk qty).
+    if open_notional + add_notional > float(max_exposure) * float(equity) + 1e-6:
+        return None
     fee = _commission(profile, add_notional, actual, position.symbol)
     if add_notional + fee > float(portfolio.cash) + 1e-9:
         return None  # cash/margin gate — refuse, do not partial-fill silently
@@ -1028,6 +1050,11 @@ def estimate_equity(session: Session, portfolio: PaperPortfolio) -> float:
     ).scalars().all()
     reserved = sum((p.notional or 0.0) for p in opens)
     return portfolio.cash + reserved
+
+
+def portfolio_friction_bps(portfolio: PaperPortfolio, symbol: str) -> tuple[float, float]:
+    """Public (spread_bps, slippage_bps) for protection ↔ broker fill parity."""
+    return _friction(_profile(portfolio), symbol)
 
 
 def snapshot_equity(

@@ -162,7 +162,7 @@ def ruleset_backtest_dict(bt: RulesetBacktestResult) -> dict:
     exit_counts: dict[str, int] = {}
     for d in bt.details:
         exit_counts[d.exit_reason] = exit_counts.get(d.exit_reason, 0) + 1
-    return {
+    out = {
         "metrics": _metrics_dict(bt.metrics),
         "backtest": {
             "symbol": bt.backtest.symbol,
@@ -201,6 +201,9 @@ def ruleset_backtest_dict(bt: RulesetBacktestResult) -> dict:
             for d in bt.details
         ],
     }
+    if bt.levier:
+        out["levier"] = True
+    return out
 
 
 def ruleset_study_dict(result: RulesetStudyResult, *, include_events: bool = False) -> dict:

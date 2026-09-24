@@ -67,13 +67,47 @@ def cap_add_by_exposure(
     initial_qty: float,
     max_exposure: float,
 ) -> float:
-    """Clamp add so ``open_qty + add ≤ initial_qty × max_exposure`` (default 1.0 = no add)."""
+    """Lab clamp: ``open_qty + add ≤ initial_qty × max_exposure`` (1 unit = 100 % capital).
+
+    Paper uses ``cap_add_by_notional_equity`` instead (portfolio notional / equity).
+    """
     if requested_add <= 0 or initial_qty <= 0 or max_exposure <= 0:
         return 0.0
     headroom = float(initial_qty) * float(max_exposure) - float(open_qty)
     if headroom <= 1e-15:
         return 0.0
     return min(float(requested_add), headroom)
+
+
+def cap_add_by_notional_equity(
+    *,
+    open_notional: float,
+    requested_add_qty: float,
+    fill_price: float,
+    equity: float,
+    max_exposure: float,
+) -> float:
+    """Paper clamp: ``open_notional + add×fill ≤ max_exposure × equity``.
+
+    Default ``max_exposure=1.0`` allows adds while total position notional stays
+    within one times portfolio equity (unlike the Lab qty-unit cap).
+    """
+    if (
+        requested_add_qty <= 0
+        or fill_price <= 0
+        or equity <= 0
+        or max_exposure <= 0
+    ):
+        return 0.0
+    headroom = float(max_exposure) * float(equity) - float(open_notional)
+    if headroom <= 1e-15:
+        return 0.0
+    return min(float(requested_add_qty), headroom / float(fill_price))
+
+
+def is_leverage_exposure(max_exposure: float) -> bool:
+    """True when max_exposure > 1 — Lab size > 100 % of the unit capital."""
+    return float(max_exposure) > 1.0 + 1e-12
 
 
 def _risk_after(

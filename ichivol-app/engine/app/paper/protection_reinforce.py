@@ -32,6 +32,7 @@ class PaperReinforceConfig:
     max_exposure: float
     at_r_multiple: float
     initial_stop: float
+    initial_entry: float
     initial_qty: float
     initial_risk: float
 
@@ -89,6 +90,13 @@ def resolve_paper_reinforce(
     if position.stop_price is None or position.entry_price is None or not position.qty:
         return None
     initial_stop = float(raw.get("initial_stop", position.stop_price))
+    # Frozen original entry for R levels — never the post-add average.
+    if "initial_entry" in raw and raw["initial_entry"] is not None:
+        initial_entry = float(raw["initial_entry"])
+    else:
+        initial_entry = float(position.entry_price)
+    if initial_entry <= 0:
+        return None
     if "initial_qty" in raw and raw["initial_qty"] is not None:
         initial_qty = float(raw["initial_qty"])
     else:
@@ -101,7 +109,7 @@ def resolve_paper_reinforce(
         initial_risk = float(raw["initial_risk"])
     else:
         initial_risk = open_risk(
-            direction, float(position.entry_price), initial_stop, initial_qty
+            direction, initial_entry, initial_stop, initial_qty
         )
     if initial_risk <= 0:
         return None
@@ -112,6 +120,7 @@ def resolve_paper_reinforce(
         max_exposure=max_exposure,
         at_r_multiple=at_r,
         initial_stop=initial_stop,
+        initial_entry=initial_entry,
         initial_qty=initial_qty,
         initial_risk=initial_risk,
     )
@@ -131,6 +140,7 @@ def freeze_reinforce_anchor(
         ("max_exposure", config.max_exposure),
         ("at_r_multiple", config.at_r_multiple),
         ("initial_stop", config.initial_stop),
+        ("initial_entry", config.initial_entry),
         ("initial_qty", config.initial_qty),
         ("initial_risk", config.initial_risk),
     ):
@@ -171,12 +181,12 @@ def adds_done(rows: Sequence[PaperReinforceAdd]) -> int:
 
 def level_for_reinforce(
     direction: str,
-    entry: float,
     config: PaperReinforceConfig,
 ) -> float:
+    """R-level from frozen ``initial_entry`` / ``initial_stop`` (never avg)."""
     return partial_level(
         Direction.LONG if direction.upper() == "LONG" else Direction.SHORT,
-        entry,
+        config.initial_entry,
         config.initial_stop,
         config.at_r_multiple,
     )
@@ -184,7 +194,6 @@ def level_for_reinforce(
 
 def bar_hits_reinforce(
     direction: str,
-    entry: float,
     config: PaperReinforceConfig,
     high: float,
     low: float,
@@ -192,7 +201,7 @@ def bar_hits_reinforce(
     return (
         mfe_r(
             Direction.LONG if direction.upper() == "LONG" else Direction.SHORT,
-            entry,
+            config.initial_entry,
             config.initial_stop,
             high,
             low,
