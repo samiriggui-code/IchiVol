@@ -7,6 +7,16 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — T11a MERGÉE (#61) — squash `ff43f17` — quality + provenance (obs)
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/61 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `ff43f17`
+- Cursor solo ; CI verte. **Observation-only** (pas de hard `bad→NO_TRADE`).
+
+**Suite (audit DELTA-ONLY validé par user)** : T10c → T9g — *en attente validation roadmap*.
+
+---
+
 ## 2026-09-24 — T11a EN COURS — quality gate + provenance
 
 - Branche : `cursor/t11a-quality-provenance-a2fe`
