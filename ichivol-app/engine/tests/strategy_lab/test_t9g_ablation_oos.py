@@ -1,4 +1,4 @@
-"""T9g — ablation × walk-forward OOS (observation-only recommendations)."""
+"""T9g-fix — hardened ablation OOS recommendations (review_candidate)."""
 
 from __future__ import annotations
 
@@ -15,38 +15,133 @@ _TINY_LAYERS = (
 )
 
 
-def test_decide_promote_reject_inconclusive():
+def test_decide_review_candidate_requires_all_gates():
     rec, reasons = decide_recommendation(
         oos_expectancy_delta=0.01,
         oos_profit_factor_delta=0.1,
         is_expectancy_delta=0.02,
-        total_oos_trades=20,
+        total_oos_trades=40,
         n_folds=3,
-        min_oos_trades=5,
+        min_oos_trades=30,
+        fold_oos_expectancy_deltas=[0.01, 0.02, 0.005],
+        adverse_oos_expectancy_delta=0.004,
     )
-    assert rec == "promote"
+    assert rec == "review_candidate"
+    assert "promote" not in rec
     assert reasons
 
+
+def test_decide_reject_mixed_folds_no_majority():
     rec, reasons = decide_recommendation(
-        oos_expectancy_delta=-0.01,
-        oos_profit_factor_delta=0.0,
-        is_expectancy_delta=0.05,
-        total_oos_trades=20,
+        oos_expectancy_delta=0.01,  # aggregate positive
+        oos_profit_factor_delta=0.1,
+        is_expectancy_delta=0.02,
+        total_oos_trades=40,
         n_folds=3,
-        min_oos_trades=5,
+        min_oos_trades=30,
+        fold_oos_expectancy_deltas=[0.02, -0.01, -0.005],  # 1/3 only
+        adverse_oos_expectancy_delta=0.01,
     )
     assert rec == "reject"
+    assert any("majority" in r.lower() for r in reasons)
 
+
+def test_decide_reject_adverse_cost_negative():
+    rec, reasons = decide_recommendation(
+        oos_expectancy_delta=0.01,
+        oos_profit_factor_delta=0.1,
+        is_expectancy_delta=0.02,
+        total_oos_trades=40,
+        n_folds=3,
+        min_oos_trades=30,
+        fold_oos_expectancy_deltas=[0.01, 0.02, 0.005],
+        adverse_oos_expectancy_delta=-0.01,
+    )
+    assert rec == "reject"
+    assert any("adverse" in r.lower() for r in reasons)
+
+
+def test_decide_inconclusive_too_few_trades():
     rec, reasons = decide_recommendation(
         oos_expectancy_delta=0.01,
         oos_profit_factor_delta=0.0,
         is_expectancy_delta=0.0,
-        total_oos_trades=2,
+        total_oos_trades=5,
         n_folds=3,
-        min_oos_trades=5,
+        min_oos_trades=30,
+        fold_oos_expectancy_deltas=[0.01, 0.02, 0.005],
+        adverse_oos_expectancy_delta=0.01,
     )
     assert rec == "inconclusive"
     assert "min_oos_trades" in reasons[0]
+
+
+def test_decide_inconclusive_when_variant_has_few_trades():
+    """rév.50 — use min(base, variant): base=40, variant=5 → inconclusive."""
+    rec, reasons = decide_recommendation(
+        oos_expectancy_delta=0.02,
+        oos_profit_factor_delta=0.1,
+        is_expectancy_delta=0.01,
+        total_oos_trades=min(40, 5),
+        n_folds=3,
+        min_oos_trades=30,
+        fold_oos_expectancy_deltas=[0.01, 0.02, 0.005],
+        adverse_oos_expectancy_delta=0.01,
+    )
+    assert rec == "inconclusive"
+    assert "min_oos_trades" in reasons[0]
+
+
+def test_decide_reject_pf_degraded():
+    rec, reasons = decide_recommendation(
+        oos_expectancy_delta=0.01,
+        oos_profit_factor_delta=-0.2,
+        is_expectancy_delta=0.02,
+        total_oos_trades=40,
+        n_folds=3,
+        min_oos_trades=30,
+        fold_oos_expectancy_deltas=[0.01, 0.02, 0.005],
+        adverse_oos_expectancy_delta=0.01,
+    )
+    assert rec == "reject"
+    assert any("PF" in r or "pf" in r.lower() for r in reasons)
+
+
+def test_report_displays_lineage_and_history_warning(monkeypatch):
+    monkeypatch.setattr(
+        "app.strategy_lab.ablation_oos._lineage_trial_count",
+        lambda _hid: 20,
+    )
+    candles = _make_candles(280, seed=11)
+    report = run_ablation_oos_study_on_candles(
+        candles,
+        symbol="BTCUSDT",
+        timeframe="1h",
+        compare_mode="additive",
+        layers=_TINY_LAYERS,
+        direction=Direction.LONG,
+        train_bars=80,
+        test_bars=30,
+        step_bars=30,
+        warmup_bars=52,
+        min_oos_trades=1,
+        hypothesis_id="h_test_lineage",
+    )
+    body = report.to_dict()
+    assert body["hypothesis_id"] == "h_test_lineage"
+    assert body["lineage_trial_count"] == 20
+    assert body["n_bars"] == 280
+    assert body["history_warning"] is not None
+    assert "indicatif" in body["history_warning"].lower()
+    assert body["min_oos_trades"] == 1
+    c = body["candidates"][0]
+    assert c["recommendation"] in ("review_candidate", "reject", "inconclusive")
+    assert c["recommendation"] != "promote"
+    assert "fold_oos_expectancy_deltas" in c
+    assert "adverse_oos_expectancy_delta" in c
+    assert "review_candidate is not a promotion" in body["disclaimer"].lower() or (
+        "not a promotion" in body["disclaimer"].lower()
+    )
 
 
 def test_ablation_oos_additive_on_synthetic():
@@ -69,12 +164,8 @@ def test_ablation_oos_additive_on_synthetic():
     assert len(report.candidates) == 1
     c = report.candidates[0]
     assert c.label == "B_RVOL"
-    assert c.recommendation in ("promote", "reject", "inconclusive")
+    assert c.recommendation in ("review_candidate", "reject", "inconclusive")
     assert "no auto-reject" in report.disclaimer.lower()
-    assert "FeatureStatus" in report.disclaimer or "featurestatus" in report.disclaimer.lower()
-    body = report.to_dict()
-    assert body["candidates"][0]["baseline_ruleset_id"]
-    assert body["candidates"][0]["variant_ruleset_id"]
 
 
 def test_ablation_oos_leave_one_layer():

@@ -158,9 +158,10 @@ class AblationOosStudyBody(BaseModel):
     test_bars: int = 40
     step_bars: int | None = None
     warmup_bars: int = 52
-    min_oos_trades: int = 5
+    min_oos_trades: int = 30
     stop_atr: float = 1.0
     target_atr: float = 2.0
+    hypothesis_id: str | None = None
 
 
 @router.post("/strategy-lab/ablation-oos/study")
@@ -195,6 +196,7 @@ def post_ablation_oos_study(body: AblationOosStudyBody) -> dict:
             min_oos_trades=body.min_oos_trades,
             stop_atr=body.stop_atr,
             target_atr=body.target_atr,
+            hypothesis_id=body.hypothesis_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
