@@ -42,6 +42,7 @@ from app.indicators.structure import (
     StructureParams,
     StructureState,
 )
+from app.indicators.impulse import ImpulseParams, ImpulseState
 
 
 @dataclass(frozen=True)
@@ -115,6 +116,10 @@ class FeatureBar:
     choch_bearish: bool = False
     break_quality: str | None = None
     """wick | close | confirmed when a StructureEvent is known this bar."""
+    # --- T9c impulse (EXPERIMENTAL Lab; no decision change) ---
+    impulse_bullish: bool = False
+    impulse_bearish: bool = False
+    impulse_displacement_atr: float | None = None
 
 
 @dataclass(frozen=True)
@@ -191,6 +196,20 @@ def _break_quality(s: StructureState) -> str | None:
     return s.event.break_quality.value if s.event is not None else None
 
 
+def _impulse_bullish(s: ImpulseState) -> bool:
+    ev = s.event
+    return ev is not None and ev.direction == "bullish"
+
+
+def _impulse_bearish(s: ImpulseState) -> bool:
+    ev = s.event
+    return ev is not None and ev.direction == "bearish"
+
+
+def _impulse_disp(s: ImpulseState) -> float | None:
+    return s.event.displacement_atr if s.event is not None else None
+
+
 def build_feature_series(
     candles: Sequence[Candle],
     *,
@@ -198,6 +217,7 @@ def build_feature_series(
     analytics_params: IchimokuAnalyticsParams = IchimokuAnalyticsParams(),
     rvol_params: RvolParams = RvolParams(),
     structure_params: StructureParams = StructureParams(),
+    impulse_params: ImpulseParams = ImpulseParams(),
     atr_params: AtrParams = AtrParams(),
     cmf_params: CmfParams = CmfParams(),
     rsi_params: RsiParams = RsiParams(),
@@ -209,6 +229,7 @@ def build_feature_series(
             "ichimoku",
             "rvol",
             "structure",
+            "impulse",
             "atr",
             "cmf",
             "rsi",
@@ -221,6 +242,7 @@ def build_feature_series(
             "ichimoku": ichi_params,
             "rvol": rvol_params,
             "structure": structure_params,
+            "impulse": impulse_params,
             "atr": atr_params,
             "cmf": cmf_params,
             "rsi": rsi_params,
@@ -232,6 +254,7 @@ def build_feature_series(
     ichi = computed["ichimoku"]
     rvol = computed["rvol"]
     structure = computed["structure"]
+    impulse = computed["impulse"]
     atr = computed["atr"]
     cmf = computed["cmf"]
     rsi = computed["rsi"]
@@ -276,6 +299,9 @@ def build_feature_series(
                 choch_bullish=_choch_bullish(structure[i]),
                 choch_bearish=_choch_bearish(structure[i]),
                 break_quality=_break_quality(structure[i]),
+                impulse_bullish=_impulse_bullish(impulse[i]),
+                impulse_bearish=_impulse_bearish(impulse[i]),
+                impulse_displacement_atr=_impulse_disp(impulse[i]),
                 atr=atr_now,
                 atr_percentile=atr[i].percentile,
                 atr_expansion=expansion,

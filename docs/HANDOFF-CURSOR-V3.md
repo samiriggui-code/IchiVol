@@ -7,6 +7,40 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — T9c EN COURS — impulsion / displacement causal
+
+- Branche : `cursor/t9c-impulsion-a2fe`
+- PR : *(draft — lien après push)*
+- Base : `main` @ `82e980e` (#56 T10b)
+- Statut : **EN COURS** — Cursor solo (Claude restreint). Pas de FVG / pas de Fib rewrite / pas de pipeline.
+
+### Livré (prévu / en cours)
+
+1. `app/indicators/impulse.py` — `ImpulseParams` / `ImpulseEvent` / `ImpulseState` / `compute_impulse`
+2. Pivot-to-pivot leg (T9a fractal) ; gate `min_displacement_atr` (+ `min_rvol` optionnel)
+3. Registry `impulse` EXPERIMENTAL (`family=structure`)
+4. Lab : `impulse_bullish` / `impulse_bearish` / `impulse_displacement_atr` (conditions + FeatureBar)
+5. Tests anti-lookahead + seuil + non-interférence structure bos/bias
+6. Goldens **additifs** only (condition schema/eval + features)
+
+### Hors scope
+T9d FVG · T9e Fib ancré · chart `layer=breaks` (plus tard) · décision / paper / broker.
+
+**Claude** : valider définition leg vs candle ; seuils a priori.
+
+---
+
+## 2026-09-24 — T10b MERGÉE (#56) — squash `82e980e` — compteur d’essais + complexité
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/56 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `82e980e`
+- Cursor solo (Claude restreint) ; CI verte (fix assertion untagged lineage = total essais ruleset).
+- Display-only : **aucune auto-rejection**.
+
+**Claude** : auditer #56 avec #54/#55/#53.
+
+---
+
 ## 2026-09-24 — T10b EN COURS — hypothesis_id + lineage + complexité (display-only)
 
 - Branche : `cursor/t10b-hypothesis-lineage-a2fe`
@@ -86,8 +120,9 @@ T10c redondance ; T9g ablation OOS ; aucun rejet automatique sur complexité / e
 - **UI-MARKET** #54 — **MERGÉE** squash `10631ef` (Cursor solo, Claude restreint ; CI verte). **À auditer Claude 12h10.**
 - **T10a** #55 — **MERGÉE** squash `2e3ebc1` (Cursor solo ; CI verte). **À auditer Claude 12h10.**
 - **T9b** #53 — **MERGÉE** squash `6d1968a` (Cursor solo, Claude restreint ; CI verte). **À auditer Claude 12h10.**
-- **Job en cours** : **T10b** — compteur d’essais + complexité — branche `cursor/t10b-hypothesis-lineage-a2fe` — draft PR. **Cursor solo** (Claude restreint).
-- **T9** (structure / FVG / Fib) — T9a+T9b+T10a OK ; T9c next after T10b.
+- **T10b** #56 — **MERGÉE** squash `82e980e` (Cursor solo ; CI verte). **À auditer Claude 12h10.**
+- **Job en cours** : **T9c** — impulsion / displacement — branche `cursor/t9c-impulsion-a2fe`. **Cursor solo** (Claude restreint).
+- **T9** (structure / FVG / Fib) — T9a+T9b+T10a+T10b OK ; T9c en cours.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol². **Ne pas comparer** partiels vs non-partiels sur le DD avant correction.
 - ⚠️ **Caveat historique SHORT** : positions SHORT **CLOSED avant** `b9f8421` (#51, mergedAt `2026-09-24T07:02:48Z`) ont un `realized` **surévalué de `entry_fee`**. Compte local Cursor : **CLOSED_SHORT = 0**. Script ponctuel : `scripts/recalc_short_entry_fee.py` — filtre par **horodatage exact**, journal `SHORT_FEE_RECALC` idempotent ; **ne pas lancer `--apply`** sans revue ; **pas de migration auto**.
 - ⚠️ **Caveat migration #48** : backfill `initial_entry_fee = entry_fee` courant — **faux pour lots déjà partialisés avant migration**.

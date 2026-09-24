@@ -16,6 +16,8 @@
   "choch_bullish": "bool",
   "cmf_max": "float",
   "cmf_min": "float",
+  "impulse_bearish": "bool",
+  "impulse_bullish": "bool",
   "kijun_bounce": "bool",
   "kijun_break_bearish": "bool",
   "kijun_break_bullish": "bool",

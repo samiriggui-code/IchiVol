@@ -33,6 +33,7 @@ from app.indicators.obv import ObvParams, compute_obv
 from app.indicators.ppo import PpoParams, compute_ppo
 from app.indicators.rsi import RsiParams, compute_rsi
 from app.indicators.rvol import RvolParams, compute_rvol
+from app.indicators.impulse import ImpulseParams, compute_impulse
 from app.indicators.structure import StructureParams, compute_structure
 from app.indicators.wyckoff import WyckoffParams, compute_wyckoff
 
@@ -692,6 +693,27 @@ def _build_registry() -> IndicatorRegistry:
             source=INTERNAL,
             family="structure",
             confirmation_lag_bars=_structure_lag,
+        )
+    )
+    _impulse_lag = int(ImpulseParams().swing_lookback)
+    reg.register(
+        IndicatorDefinition(
+            id="impulse",
+            name="Impulse / Displacement",
+            category=IndicatorCategory.STRUCTURE,
+            params_cls=ImpulseParams,
+            compute_fn=compute_impulse,
+            warmup_fn=lambda p: 2 * int(p.swing_lookback) + 1,
+            primary_output="event",
+            visualization=Visualization.NONE,
+            description=(
+                "T9c causal pivot-to-pivot displacement leg (ATR-gated). "
+                "EXPERIMENTAL — Lab / chart anchors; not a live pipeline vote."
+            ),
+            status=FeatureStatus.EXPERIMENTAL,
+            source=INTERNAL,
+            family="structure",
+            confirmation_lag_bars=_impulse_lag,
         )
     )
     reg.register(
