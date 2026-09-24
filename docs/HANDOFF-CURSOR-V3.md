@@ -45,12 +45,49 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-MANAGE-e** #49 — **MERGÉE** squash `389fc40` (validé Claude adff686 ; suite PG **935 ok / 1 skip**, 0 régression). Sondes : `tighten_stop` en profit → risque = R0 (LONG/SHORT) ; risque signé OK ; combo `partial_tp`+`reinforce` rejeté ; fuzz 300 seeds → 135 adds, jamais > R0, invariant Σnet=Σbars 3,5e-16. **Vérifié** `git log origin/main` contient `389fc40`.
 - **T0-MANAGE-f** #50 — **MERGÉE** squash `7a77424` (validé Claude 102caee ; suite PG **944 ok / 1 skip**, 0 régression). **T0-MANAGE a→f terminé.**
 - **T0-FIX-SHORT-FEE** #51 — **MERGÉE** squash `b9f8421` (validé Claude ; suite PG **948 ok / 1 skip**, 0 régression). Sondes SHORT (close / partiel→target / renfort→target / épuisement / stop) : cash = réalisé ≤ 5e-13. **Vérifié** `git log origin/main` contient `b9f8421`. **Dette SHORT entry_fee soldée** pour clôtures post-fix.
-- **Job en cours** : **T9a** — détecteur de swings causal unique — PR draft [#52](https://github.com/samiriggui-code/IchiVol/pull/52). **Pas de merge** avant revue Claude. **Pas de CHoCH / FVG** dans T9a.
-- **T9** (structure / FVG / Fib) — feuille de route ; T9a = pivots partagés seulement.
+- **T9a** #52 — **MERGÉE** squash `985c4e5` (validé Claude ; suite PG **955 ok / 1 skip**). **Vérifié** `origin/main` tip = `985c4e5`.
+- **Job en cours** : **UI-MARKET** — page Marché TradingView — PR draft (voir entrée). **Avant T9b.** **Pas de merge** avant revue Claude.
+- **T9b** — CHoCH + break quality — **en pause** (draft #53) jusqu’à clôture UI-MARKET.
+- **T9** (structure / FVG / Fib) — feuille de route ; T9a pivots OK ; T9b après UI-MARKET.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol². **Ne pas comparer** partiels vs non-partiels sur le DD avant correction.
 - ⚠️ **Caveat historique SHORT** : positions SHORT **CLOSED avant** `b9f8421` (#51) ont un `realized` **surévalué de `entry_fee`**. Compte local Cursor : **CLOSED_SHORT = 0** → pas de recalcul nécessaire ici. Script ponctuel (dry-run) : `ichivol-app/engine/scripts/recalc_short_entry_fee.py` — **pas de migration auto** ; si une base avec historique a `CLOSED_SHORT > 0`, proposer `--apply` après revue.
 - ⚠️ **Caveat migration #48** : backfill `initial_entry_fee = entry_fee` courant — **faux pour lots déjà partialisés avant migration**.
 - ⚠️ **Dette max_exposure** : sémantiques **divergentes** Lab vs paper — Lab = `qty/initial_qty` (1 unité = 100 % capital ; `levier: true` si > 1) ; paper = `notional ≤ max_exposure × equity`. **Ne pas comparer** rulesets Lab `max_exposure>1` aux paper sans le flag `levier`.
+
+
+---
+
+## 2026-09-24 — UI-MARKET EN COURS — Marché TradingView (PR draft)
+
+- Branche : `cursor/ui-market-tradingview-a2fe`
+- Base : `main` @ `985c4e5` (#52)
+- Statut : **ATTENTE REVUE CLAUDE** — **ne pas merger**. T9b en pause.
+
+### Livré
+
+1. Barre haute 52 px (symbole→recherche, prix, %, TF unique, Calques, Indicateurs, « i » Twelve Data, Marquer un trade)
+2. Graphe max height ; volume ~150 px redimensionnable (persisté)
+3. Watchlist triable Symbole / % / RVOL / Score / Contexte + filtres classe
+4. Desktop : colonne droite ~380 px repliable/redim. ; barre bas 44 px (Backtest / Marquer / Journal)
+5. Mobile : tiroir 3 positions Liste / Analyse / Backtest ; feuilles Calques + Recherche
+6. Moteur : `ChartObject.layer` (structure|fibonacci|fvg|breaks|claude|user_trades|backtest) — rétrocompat ; id inchangé
+7. Pastilles calques + menu (FVG/Fib/Cassures vides jusqu’à T9) ; prefs globales
+
+### Écarts volontaires vs captures 01–07
+
+| # | Écart | Pourquoi |
+| --- | --- | --- |
+| 01 | Pas de TF **5m** | `INTERVALS` moteur = 15m/1h/4h/1d |
+| 01–07 | Couleurs / polices **camap-tokens** | Contrainte IchiVol (pas maquette pixel) |
+| 02 | Backtest bas = résumé + sheet existante | Réutilise `BacktestOverlaySheet` |
+| 05 | Analyse = BiasPanel + CTA paper | Pipeline déjà dans BiasPanel |
+| Journal | Placeholder « bientôt » | Hors scope UI-MARKET |
+
+### Captures
+
+Artifacts PR : états 01→07 (desktop défaut, calques+backtest, mobile graphe, tiroir liste, tiroir analyse, feuille calques, recherche).
+
+**Cursor s’arrête ici.**
 
 
 ---

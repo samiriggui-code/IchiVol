@@ -1234,7 +1234,22 @@ export function MarketPage() {
               {layout.drawerTab === 'list' ? (
                 <MarketWatchlist {...watchlistProps} hideScore />
               ) : null}
-              {layout.drawerTab === 'analysis' ? biasPanel : null}
+              {layout.drawerTab === 'analysis' ? (
+                <div className="mkt-analysis-mobile">
+                  {biasPanel}
+                  <button
+                    type="button"
+                    className="mkt-paper-cta"
+                    disabled={!canMarkTrade}
+                    onClick={() => {
+                      if (!markOpen) startMarkTrade()
+                      updateLayout({ drawerPos: 'closed' })
+                    }}
+                  >
+                    Ouvrir un trade paper
+                  </button>
+                </div>
+              ) : null}
               {layout.drawerTab === 'backtest' ? (
                 <div className="mkt-bottom-embed">
                   <p className="muted">
