@@ -76,26 +76,11 @@ function summarize(rows: ScreenerDecisionRow[]) {
   let buy = 0
   let sell = 0
   let watch = 0
-  const stagePass: Record<string, number> = {
-    direction: 0,
-    participation: 0,
-    structure: 0,
-    location: 0,
-    regime: 0,
-  }
   for (const r of rows) {
     const bucket = verdictBucket(r)
     if (bucket === 'buy') buy += 1
     else if (bucket === 'sell') sell += 1
     else if (bucket === 'watch') watch += 1
-    const stages = r.pipeline?.stages
-    if (Array.isArray(stages)) {
-      for (const s of stages) {
-        if (s.id in stagePass && s.status === 'pass') {
-          stagePass[s.id] += 1
-        }
-      }
-    }
   }
   const top = rows
     .filter((r) => {
@@ -104,8 +89,7 @@ function summarize(rows: ScreenerDecisionRow[]) {
     })
     .sort((a, b) => b.confidence - a.confidence)
     .slice(0, 6)
-  const none = Math.max(0, rows.length - buy - sell - watch)
-  return { buy, sell, watch, none, top, total: rows.length, stagePass }
+  return { buy, sell, watch, top, total: rows.length }
 }
 
 function fmtPct(v: number | null | undefined, digits = 1): string {
@@ -159,8 +143,7 @@ function cycleTag(r: ScreenerDecisionRow): { label: string; tone: string } {
     }
     return { label: 'ARMED', tone: '' }
   }
-  if (bucket === 'sell') return { label: 'WATCH', tone: '' }
-  if (bucket === 'watch') return { label: 'WATCH', tone: '' }
+  if (bucket === 'sell' || bucket === 'watch') return { label: 'WATCH', tone: '' }
   return { label: 'WATCH', tone: 'gray' }
 }
 
@@ -290,8 +273,6 @@ function EquityChart({
   const min = Math.min(...vals, initial)
   const max = Math.max(...vals, initial)
   const span = Math.max(1e-6, max - min)
-  const w = 720
-  const h = 230
   const left = 25
   const right = 680
   const top = 20
@@ -315,7 +296,7 @@ function EquityChart({
 
   return (
     <>
-      <svg className="chart" viewBox={`0 0 ${w} ${h}`} role="img" aria-label="Courbe de performance">
+      <svg className="chart" viewBox="0 0 720 230" role="img" aria-label="Courbe de performance">
         <defs>
           <linearGradient id="desk-equity-fade" x1="0" y1="0" x2="0" y2="1">
             <stop stopColor="#b5d6cc" stopOpacity=".35" />
@@ -410,12 +391,8 @@ export function OverviewPage() {
       ? acct.day_change / Math.max(1e-9, acct.equity - acct.day_change)
       : null
 
-  const availablePct =
-    acct != null && acct.equity > 0 ? acct.cash / acct.equity : null
-
-  const exposedPct =
-    acct != null && acct.equity > 0 ? acct.invested / acct.equity : null
-
+  const availablePct = acct != null && acct.equity > 0 ? acct.cash / acct.equity : null
+  const exposedPct = acct != null && acct.equity > 0 ? acct.invested / acct.equity : null
   const riskPct = overview?.risk?.open_risk_pct ?? null
   const riskCap = overview?.risk?.max_open_risk_pct ?? 0.03
 
@@ -443,11 +420,10 @@ export function OverviewPage() {
     return filtered.length >= 2 ? filtered : curve
   }, [overview?.equity_curve, period])
 
-  const tickers = useMemo(() => {
-    return [...rows]
-      .sort((a, b) => b.confidence - a.confidence)
-      .slice(0, 4)
-  }, [rows])
+  const tickers = useMemo(
+    () => [...rows].sort((a, b) => b.confidence - a.confidence).slice(0, 4),
+    [rows],
+  )
 
   const watchList = useMemo(() => {
     if (stats.top.length) return stats.top.slice(0, 3)
@@ -472,7 +448,6 @@ export function OverviewPage() {
       .map((p) => ({
         symbol: displaySymbol(p.symbol),
         pct: (positionNotional(p) / total) * 100,
-        notional: positionNotional(p),
       }))
       .sort((a, b) => b.pct - a.pct)
       .slice(0, 6)
@@ -491,15 +466,12 @@ export function OverviewPage() {
         ? 'down'
         : ''
 
-  const riskOk =
-    riskPct == null || riskPct <= riskCap
+  const riskOk = riskPct == null || riskPct <= riskCap
   const maxPos = overview?.risk?.max_open_positions ?? 6
   const openPos = acct?.open_positions ?? openBook.length
-
   const engineOk = !error
-  void evidence
-  void portfolios
-  void loading
+  const activeLabs = portfolios.length
+  const edgeHint = evidence?.pipeline_beats_ichimoku_sharpe
 
   return (
     <>
@@ -558,13 +530,9 @@ export function OverviewPage() {
               Risque utilisé<span>↗</span>
             </div>
             <div className="metric-value">
-              {riskPct != null
-                ? `${(riskPct * 100).toFixed(1).replace('.', ',')} %`
-                : '—'}
+              {riskPct != null ? `${(riskPct * 100).toFixed(1).replace('.', ',')} %` : '—'}
             </div>
-            <small>
-              Limite : {((riskCap ?? 0.03) * 100).toFixed(0)} %
-            </small>
+            <small>Limite : {((riskCap ?? 0.03) * 100).toFixed(0)} %</small>
           </div>
         </div>
 
@@ -634,7 +602,9 @@ export function OverviewPage() {
               {tickers.length === 0 ? (
                 <div className="desk-ticker" style={{ pointerEvents: 'none' }}>
                   <span>
-                    <b>—<small> / USDT</small></b>
+                    <b>
+                      —<small> / USDT</small>
+                    </b>
                     <small>Aucun ticker</small>
                   </span>
                   <span className="right">
@@ -660,9 +630,7 @@ export function OverviewPage() {
                       </span>
                       <span className="right">
                         <b className="mono">{fmtPrice(r.price)}</b>
-                        <small>
-                          {r.rvol != null ? `RVOL ${r.rvol.toFixed(1)}×` : '—'}
-                        </small>
+                        <small>{r.rvol != null ? `RVOL ${r.rvol.toFixed(1)}×` : '—'}</small>
                       </span>
                     </Link>
                   )
@@ -694,10 +662,7 @@ export function OverviewPage() {
                 label="Volatilité"
                 value={stats.total ? (stats.watch > stats.total * 0.4 ? 'Élevée' : 'Modérée') : '—'}
               />
-              <StatLine
-                label="Signaux BUY"
-                value={stats.total ? String(stats.buy) : '—'}
-              />
+              <StatLine label="Signaux BUY" value={stats.total ? String(stats.buy) : '—'} />
               <StatLine
                 label="Concentration"
                 value={
@@ -754,9 +719,7 @@ export function OverviewPage() {
           <section className="card">
             <div className="card-head">
               <h2>À surveiller</h2>
-              <Tag tone="gray">
-                {watchList.length ? `${watchList.length} SÉLECTIONS` : '—'}
-              </Tag>
+              <Tag tone="gray">{watchList.length ? `${watchList.length} SÉLECTIONS` : '—'}</Tag>
             </div>
             <div className="card-body">
               {watchList.length === 0 ? (
@@ -766,15 +729,14 @@ export function OverviewPage() {
                   const base = displaySymbol(r.symbol)
                   const tag = cycleTag(r)
                   const score = Math.round(r.confidence * 100)
+                  const extra = coinClass(base)
                   return (
                     <Link
                       key={r.symbol}
                       to={`/app/opportunites?symbol=${encodeURIComponent(r.symbol)}`}
                       className="opportunity"
                     >
-                      <span className={`coin${coinClass(base) ? ` ${coinClass(base)}` : ''}`}>
-                        {coinGlyph(base)}
-                      </span>
+                      <span className={`coin${extra ? ` ${extra}` : ''}`}>{coinGlyph(base)}</span>
                       <div>
                         <strong>
                           {base}
@@ -804,24 +766,29 @@ export function OverviewPage() {
           </section>
         </div>
 
-        {(error || (cacheAge != null && cacheAge > 3600)) && (
-          <div className="notice">
-            <span>△</span>
-            <span>
-              {error ? (
-                <>
-                  <b>Une donnée demande votre attention.</b> {error}
-                </>
-              ) : (
-                <>
-                  <b>Une donnée demande votre attention.</b> Screener : dernière mise à jour{' '}
-                  {cacheAge != null ? fmtCacheAge(cacheAge) : '—'}.
-                </>
-              )}
-            </span>
-            <Link to="/app/operations">Vérifier →</Link>
-          </div>
-        )}
+        <div className={`notice${error ? '' : ' blue'}`}>
+          <span>△</span>
+          <span>
+            {error ? (
+              <>
+                <b>Une donnée demande votre attention.</b> {error}
+              </>
+            ) : cacheAge != null && cacheAge > 3600 ? (
+              <>
+                <b>Une donnée demande votre attention.</b> Screener : dernière mise à jour{' '}
+                {fmtCacheAge(cacheAge)}.
+              </>
+            ) : (
+              <>
+                <b>Desk à jour.</b>{' '}
+                {cacheAge != null
+                  ? `Screener ${fmtCacheAge(cacheAge)}.`
+                  : 'En attente du screener.'}
+              </>
+            )}
+          </span>
+          <Link to="/app/operations">Vérifier →</Link>
+        </div>
 
         <div className="grid">
           <section className="card">
@@ -855,9 +822,7 @@ export function OverviewPage() {
                         <tr key={p.id} className="clickable">
                           <td>
                             <b>{displaySymbol(p.symbol)}</b>
-                            <small>
-                              Ichimoku × RVOL · {p.timeframe}
-                            </small>
+                            <small>Ichimoku × RVOL · {p.timeframe}</small>
                           </td>
                           <td>
                             <span className="mono">{fmtEur(positionNotional(p))}</span>
@@ -865,7 +830,11 @@ export function OverviewPage() {
                           <td>
                             <span
                               className={`mono${
-                                perf != null && perf > 0 ? ' up' : perf != null && perf < 0 ? ' down' : ''
+                                perf != null && perf > 0
+                                  ? ' up'
+                                  : perf != null && perf < 0
+                                    ? ' down'
+                                    : ''
                               }`}
                             >
                               {fmtPct(perf)}
@@ -914,11 +883,7 @@ export function OverviewPage() {
                     ? `${(riskPct * 100).toFixed(1)} / ${(riskCap * 100).toFixed(0)} %`
                     : '—'
                 }
-                pct={
-                  riskPct != null && riskCap > 0
-                    ? (riskPct / riskCap) * 100
-                    : 0
-                }
+                pct={riskPct != null && riskCap > 0 ? (riskPct / riskCap) * 100 : 0}
               />
               <ProgressRow
                 label="Positions simultanées"
@@ -1025,15 +990,25 @@ export function OverviewPage() {
                 label="Risk Kernel"
                 value={<Tag tone={riskOk ? '' : 'red'}>{riskOk ? 'PASSE' : 'REFUSÉ'}</Tag>}
               />
-              <StatLine
-                label="Exécution réelle"
-                value={<Tag tone="red">BLOQUÉE</Tag>}
-              />
+              <StatLine label="Exécution réelle" value={<Tag tone="red">BLOQUÉE</Tag>} />
               {summary ? (
                 <StatLine
                   label="Décisions 24 h"
                   value={<b className="mono">{summary.decisions.last_24h}</b>}
                 />
+              ) : null}
+              {edgeHint ? (
+                <StatLine
+                  label="Edge Lab"
+                  value={
+                    <Tag tone="gray">
+                      {edgeHint.beats}/{edgeHint.compared}
+                    </Tag>
+                  }
+                />
+              ) : null}
+              {activeLabs > 0 ? (
+                <StatLine label="Labs paper" value={<b className="mono">{activeLabs}</b>} />
               ) : null}
             </div>
           </section>
@@ -1097,7 +1072,11 @@ export function OverviewPage() {
             <div className="card-head">
               <h2>Concentration des positions</h2>
               <Tag tone={concentration.length >= 3 ? 'amber' : 'gray'}>
-                {concentration.length >= 3 ? 'PRUDENCE' : concentration.length ? String(concentration.length) : '—'}
+                {concentration.length >= 3
+                  ? 'PRUDENCE'
+                  : concentration.length
+                    ? String(concentration.length)
+                    : '—'}
               </Tag>
             </div>
             <div className="allocation-body">
