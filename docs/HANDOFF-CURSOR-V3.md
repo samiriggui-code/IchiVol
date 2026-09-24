@@ -27,7 +27,7 @@ Front only — **aucun changement moteur** :
 - Branche : `cursor/t12b-lab-live-parity-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/73 (**draft**)
 - Base : `main` @ `5bc1e9c` (#72 T12a **MERGÉE**)
-- Statut : **DRAFT** — attente revue Claude avant merge.
+- Statut : **DRAFT** — CI verte @ `3bb922b` ; attente revue Claude avant merge.
 
 ### Livré
 
