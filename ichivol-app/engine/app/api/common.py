@@ -171,7 +171,9 @@ def _paper_perf_dict(perf) -> dict:
 
 
 def _portfolio_dict(p) -> dict:
-    return {
+    from app.paper.kill_switch import lock_status
+
+    out = {
         "id": p.id,
         "code": p.code,
         "label": p.label,
@@ -184,6 +186,8 @@ def _portfolio_dict(p) -> dict:
         "started_at": p.started_at.isoformat(),
         "strategy_profile": p.strategy_profile,
     }
+    out.update(lock_status(p))
+    return out
 
 
 def _latest_marks() -> dict[str, tuple[float, float]]:

@@ -395,6 +395,34 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/paper/portfolios/{code}/risk-lock",
+    "endpoint": "get_paper_risk_lock"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/paper/portfolios/{code}/kill-switch/arm",
+    "endpoint": "post_kill_switch_arm"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/paper/portfolios/{code}/kill-switch/disarm",
+    "endpoint": "post_kill_switch_disarm"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/paper/portfolios/{code}/daily-loss/unlock",
+    "endpoint": "post_daily_loss_unlock"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/shadow/stats",
     "endpoint": "get_shadow_stats"
   },

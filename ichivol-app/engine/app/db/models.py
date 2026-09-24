@@ -236,6 +236,15 @@ class PaperPortfolio(Base):
     realized_pnl: Mapped[float] = mapped_column(Float, default=0.0)
     strategy_profile: Mapped[dict] = mapped_column(JSON, default=dict)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # T13c — persisted entry locks (human reopen only; never auto-lift)
+    kill_switch_armed: Mapped[bool] = mapped_column(Boolean, default=False)
+    kill_switch_armed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    daily_loss_locked: Mapped[bool] = mapped_column(Boolean, default=False)
+    daily_loss_locked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

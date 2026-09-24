@@ -272,13 +272,18 @@ def sync_position(
         if log_rej:
             paper_counters.record_rejection(session, portfolio, symbol=symbol, timeframe=timeframe, reason="short_not_allowed")
         return None
-    if portfolio is not None and manual_notional is None and paper_gates.has_gates(profile):
-        # T13b — Risk Kernel (defaults ≡ entry_gate + size). First failing code wins.
+    if portfolio is not None:
+        # T13b/T13c — Risk Kernel for every open (kill/daily lock always; gates when enabled).
+        from app.paper import kill_switch as paper_kill
+
         equity = paper_broker.estimate_equity(session, portfolio)
+        paper_kill.maybe_trip_daily_loss_lock(session, portfolio, equity)
+        session.refresh(portfolio)
         opens = paper_gates.open_positions(session, portfolio.id)
         traded = None
         if run_id is not None:
             traded = paper_gates.traded_run_id(portfolio.id, symbol, timeframe)
+        apply_gates = paper_gates.has_gates(profile) and manual_notional is None
         decision_rk = risk_kernel_evaluate(
             OpenPlan(
                 symbol=symbol,
@@ -288,7 +293,7 @@ def sync_position(
                 stop_distance=stop_distance,
                 run_id=run_id,
                 stale=False,
-                manual_notional=None,
+                manual_notional=manual_notional,
                 take_profit_r=take_profit_r,
             ),
             PortfolioState(
@@ -298,14 +303,16 @@ def sync_position(
                 open_positions=open_lots_from_positions(opens),
                 day_start_equity=paper_gates.day_start_equity(session, portfolio),
                 traded_run_id=traded,
+                kill_switch_armed=bool(getattr(portfolio, "kill_switch_armed", False)),
+                daily_loss_locked=bool(getattr(portfolio, "daily_loss_locked", False)),
             ),
             market_state_from_profile(profile, symbol),
-            apply_gates=True,
-            check_size=True,
+            apply_gates=apply_gates,
+            check_size=apply_gates,  # sizing still done in broker when gates skipped (manual)
         )
         if not decision_rk.accepted:
             reason = decision_rk.primary_code() or "rejected"
-            if log_rej:
+            if log_rej or reason in ("kill_switch", "daily_loss_halt"):
                 paper_counters.record_rejection(
                     session, portfolio, symbol=symbol, timeframe=timeframe, reason=reason,
                     detail={"codes": list(decision_rk.codes)},

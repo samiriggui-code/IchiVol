@@ -47,6 +47,9 @@ class PortfolioState:
     open_positions: tuple[OpenLotSnap, ...]
     day_start_equity: float
     traded_run_id: int | None = None  # for one_entry_per_signal_run
+    # T13c — persisted locks (human reopen only)
+    kill_switch_armed: bool = False
+    daily_loss_locked: bool = False
 
 
 @dataclass(frozen=True)
@@ -151,6 +154,12 @@ def evaluate(
     info: list[str] = []
     if plan.data_quality_gate and plan.data_quality_gate != "pass":
         info.append(f"quality_{plan.data_quality_gate}")
+
+    # T13c — locks first; always apply (including manual_notional / ungated)
+    if portfolio_state.kill_switch_armed:
+        return _reject("kill_switch", *info)
+    if portfolio_state.daily_loss_locked:
+        return _reject("daily_loss_halt", *info)
 
     if plan.stale:
         return _reject("stale_data", *info)

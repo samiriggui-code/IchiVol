@@ -441,6 +441,17 @@
         "title": "BatchDecisionsRequest",
         "type": "object"
       },
+      "ConfirmBody": {
+        "properties": {
+          "confirm": {
+            "default": false,
+            "title": "Confirm",
+            "type": "boolean"
+          }
+        },
+        "title": "ConfirmBody",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3115,6 +3126,168 @@
         ]
       }
     },
+    "/api/engine/paper/portfolios/{code}/daily-loss/unlock": {
+      "post": {
+        "operationId": "post_daily_loss_unlock_api_engine_paper_portfolios__code__daily_loss_unlock_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Daily Loss Unlock Api Engine Paper Portfolios  Code  Daily Loss Unlock Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Daily Loss Unlock",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/paper/portfolios/{code}/kill-switch/arm": {
+      "post": {
+        "operationId": "post_kill_switch_arm_api_engine_paper_portfolios__code__kill_switch_arm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Kill Switch Arm Api Engine Paper Portfolios  Code  Kill Switch Arm Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Kill Switch Arm",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/paper/portfolios/{code}/kill-switch/disarm": {
+      "post": {
+        "operationId": "post_kill_switch_disarm_api_engine_paper_portfolios__code__kill_switch_disarm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Kill Switch Disarm Api Engine Paper Portfolios  Code  Kill Switch Disarm Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Kill Switch Disarm",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
     "/api/engine/paper/portfolios/{code}/overview": {
       "get": {
         "description": "Broker-style account view: cash / invested / unrealized P&L, open positions\nmarked to screener cache or last candle, equity + liquidation_value. Read-only.",
@@ -3200,6 +3373,51 @@
           }
         },
         "summary": "Get Paper Portfolio Reconcile",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/paper/portfolios/{code}/risk-lock": {
+      "get": {
+        "description": "T13c \u2014 kill switch + daily loss lock status.",
+        "operationId": "get_paper_risk_lock_api_engine_paper_portfolios__code__risk_lock_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Paper Risk Lock Api Engine Paper Portfolios  Code  Risk Lock Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Paper Risk Lock",
         "tags": [
           "engine"
         ]
