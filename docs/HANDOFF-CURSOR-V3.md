@@ -44,7 +44,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-MANAGE-d** #48 — **MERGÉE** squash `a941539` (validé Claude ; suite PG 918→928 ok / 1 skip). **Incident process** : handoff avait annoncé MERGÉE avant que `main` ne contienne le squash — corrigé.
 - **T0-MANAGE-e** #49 — **MERGÉE** squash `389fc40` (validé Claude adff686 ; suite PG **935 ok / 1 skip**, 0 régression). Sondes : `tighten_stop` en profit → risque = R0 (LONG/SHORT) ; risque signé OK ; combo `partial_tp`+`reinforce` rejeté ; fuzz 300 seeds → 135 adds, jamais > R0, invariant Σnet=Σbars 3,5e-16. **Vérifié** `git log origin/main` contient `389fc40`.
 - **T0-MANAGE-f** #50 — **MERGÉE** squash `7a77424` (validé Claude 102caee ; suite PG **944 ok / 1 skip**, 0 régression). **T0-MANAGE a→f terminé.**
-- **Job en cours** : **T0-FIX-SHORT-FEE** — PR draft (cette branche). **Pas de merge** avant revue Claude. **Pas de T9** avant clôture de cette fix.
+- **Job en cours** : **T0-FIX-SHORT-FEE** — PR draft [#51](https://github.com/samiriggui-code/IchiVol/pull/51). **Pas de merge** avant revue Claude. **Pas de T9** avant clôture de cette fix.
 - **T9** (structure / FVG / Fib) — feuille de route ; **seulement après T0-FIX-SHORT-FEE**.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol². **Ne pas comparer** partiels vs non-partiels sur le DD avant correction.
 - ⚠️ **Dette SHORT entry_fee** : en cours de correction (T0-FIX-SHORT-FEE) — `realized` SHORT doit déduire frais d'entrée (open + renforts).
@@ -57,7 +57,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T0-FIX-SHORT-FEE EN COURS — SHORT realized − entry fees (PR draft)
 
 - Branche : `cursor/t0-fix-short-fee-a2fe`
-- PR : (draft — lien après create)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/51 (**draft**)
 - Base : `main` @ `7a77424` (#50 squash)
 - Statut : **ATTENTE REVUE CLAUDE** — **ne pas merger** ; **pas de T9**.
 
