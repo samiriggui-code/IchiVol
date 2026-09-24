@@ -7,6 +7,33 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — ProviderCapabilities EN COURS — inventaire providers
+
+- Branche : `cursor/provider-capabilities-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/65 (**draft**)
+- Base : `main` @ `00ab86a` (#64 T9g)
+- Statut : **DRAFT** — Cursor solo. Déclaratif only ; **pas de nouveau router**. CI en cours.
+
+### Livré
+
+1. `market_data/capabilities.py` — `ProviderCapabilities` (ohlcv/quotes/trades/depth/OI/funding/volume)
+2. Déclarations binance / biquote / twelve_data (honnêtes vs code réel)
+3. `GET /providers/capabilities` + agent `list_provider_capabilities`
+4. Tests + OpenAPI goldens
+
+### Hors scope
+OANDA/IBKR adapters · WS · depth fetch · changer paper path.
+
+---
+
+## 2026-09-24 — T9g MERGÉE (#64) — squash `00ab86a` — ablation × WF OOS
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/64 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `00ab86a`
+- Cursor solo ; CI verte. Recommendations display-only.
+
+---
+
 ## 2026-09-24 — T9g EN COURS — ablation × walk-forward OOS
 
 - Branche : `cursor/t9g-ablation-oos-a2fe`
