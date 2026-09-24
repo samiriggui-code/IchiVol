@@ -10,15 +10,29 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — UI exception EN COURS — Risque→Régime + DIR ↑/↓ (rév.56/58)
 
 - Branche : `cursor/ui-regime-dir-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/74 (**draft**)
 - Base : `main` @ `a7b630f` (#73 T12b **MERGÉE**)
+- Tip : `99c778e`
 - Front only — **aucun changement moteur**
 
 ### Livré
 1. `stageMatrixLabel('regime')` : **« Risque » → « Régime »**
 2. Colonne DIR Matrice : `pass` + LONG → **↑** ; `pass` + SHORT → **↓** (`stageDirectionMatrixLabel`) ; autres statuts inchangés
 
+### Auto-revue (§2) — FAIT
+- [x] pytest PG16 : **1074 passed** (réseau ON)
+- [x] pytest réseau coupé (HTTP_PROXY mort) : **1073 passed, 1 skipped** (Binance)
+- [x] `npm run build` OK
+- [x] golden : N/A (aucun golden touché)
+- [x] `git diff` decision/agents/paper/screener/brokerage : **vide**
+- [x] Captures Matrice desktop/mobile × clair/sombre → `/opt/cursor/artifacts/ui74-*-matrix.png`  
+  Headers vérifiés : `… Loc · Régime · Portes` ; DIR sample = `↓` (SHORT pass)
+
 ### Hors scope
-T12c+ · T14a · moteur
+T12c+ · T14a · moteur · libellé carte résumé « Régime / Risque » (STAGE_META, hors brief)
+
+### Sonde manuelle
+Matrice live `/app/decisions` vue Matrice : en-tête **Régime** ; cellules Dir **↓** (marché short) — pas « OK ».
 
 ---
 
