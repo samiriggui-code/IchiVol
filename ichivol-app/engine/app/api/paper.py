@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 from app.api.common import (
     _atr_params_override,
@@ -282,6 +283,12 @@ def get_paper_portfolio_overview(code: str) -> dict:
             "max_open_positions": int(profile.get("max_open_positions", 5)),
             "recent_refusals": recent_refusals,
             "kernel": "risk_kernel_v1",
+            "kill_switch_armed": bool(getattr(portfolio, "kill_switch_armed", False)),
+            "daily_loss_locked": bool(getattr(portfolio, "daily_loss_locked", False)),
+            "entries_blocked": bool(
+                getattr(portfolio, "kill_switch_armed", False)
+                or getattr(portfolio, "daily_loss_locked", False)
+            ),
         }
         return {
             "portfolio": _portfolio_dict(portfolio),
@@ -393,6 +400,84 @@ def get_paper_portfolio(code: str) -> dict:
             "performance": _paper_perf_dict(perf),
             "positions": [_paper_position_dict(p) for p in positions[:100]],
         }
+    finally:
+        session.close()
+
+
+def _require_portfolio(session, code: str):
+    if code in ALL_PROFILES:
+        ensure_portfolio(session, code)
+        session.commit()
+    portfolio = get_portfolio_by_code(session, code)
+    if portfolio is None:
+        raise HTTPException(status_code=404, detail="portfolio_not_found")
+    return portfolio
+
+
+class ConfirmBody(BaseModel):
+    confirm: bool = Field(default=False)
+
+
+@router_before_shadow.get("/paper/portfolios/{code}/risk-lock")
+def get_paper_risk_lock(code: str) -> dict:
+    """T13c — kill switch + daily loss lock status."""
+    from app.paper.kill_switch import lock_status
+
+    session = SessionLocal()
+    try:
+        portfolio = _require_portfolio(session, code)
+        return {"portfolio_code": portfolio.code, **lock_status(portfolio)}
+    finally:
+        session.close()
+
+
+@router_before_shadow.post("/paper/portfolios/{code}/kill-switch/arm")
+def post_kill_switch_arm(code: str, body: ConfirmBody) -> dict:
+    from app.paper.kill_switch import arm_kill_switch, lock_status
+
+    session = SessionLocal()
+    try:
+        portfolio = _require_portfolio(session, code)
+        try:
+            arm_kill_switch(session, portfolio, confirm=body.confirm)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        session.commit()
+        return {"portfolio_code": portfolio.code, **lock_status(portfolio)}
+    finally:
+        session.close()
+
+
+@router_before_shadow.post("/paper/portfolios/{code}/kill-switch/disarm")
+def post_kill_switch_disarm(code: str, body: ConfirmBody) -> dict:
+    from app.paper.kill_switch import disarm_kill_switch, lock_status
+
+    session = SessionLocal()
+    try:
+        portfolio = _require_portfolio(session, code)
+        try:
+            disarm_kill_switch(session, portfolio, confirm=body.confirm)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        session.commit()
+        return {"portfolio_code": portfolio.code, **lock_status(portfolio)}
+    finally:
+        session.close()
+
+
+@router_before_shadow.post("/paper/portfolios/{code}/daily-loss/unlock")
+def post_daily_loss_unlock(code: str, body: ConfirmBody) -> dict:
+    from app.paper.kill_switch import lock_status, unlock_daily_loss
+
+    session = SessionLocal()
+    try:
+        portfolio = _require_portfolio(session, code)
+        try:
+            unlock_daily_loss(session, portfolio, confirm=body.confirm)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        session.commit()
+        return {"portfolio_code": portfolio.code, **lock_status(portfolio)}
     finally:
         session.close()
 

@@ -132,6 +132,35 @@ button, select { font: inherit; color: inherit; }
   padding: 0 0.65rem; border-bottom: 1px solid var(--border); background: var(--card);
 }
 .dash-header-right { display: flex; align-items: center; gap: 0.3rem; }
+.dash-kill {
+  border: 1px solid color-mix(in srgb, var(--destructive, #c8412f) 55%, var(--border));
+  background: transparent;
+  color: color-mix(in srgb, var(--destructive, #c8412f) 90%, var(--foreground));
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.28rem 0.55rem;
+  border-radius: 0.35rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.dash-kill:hover {
+  background: color-mix(in srgb, var(--destructive, #c8412f) 12%, transparent);
+}
+.dash-kill.is-armed {
+  background: color-mix(in srgb, var(--destructive, #c8412f) 18%, transparent);
+  opacity: 1;
+}
+.dash-lock-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.45rem 0.85rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--destructive, #c8412f) 35%, var(--border));
+  background: color-mix(in srgb, var(--destructive, #c8412f) 10%, var(--card));
+  color: var(--foreground);
+  font-size: 0.8rem;
+}
 .dash-kill-stub {
   border: 1px solid color-mix(in srgb, var(--destructive, #c8412f) 35%, var(--border));
   background: transparent;

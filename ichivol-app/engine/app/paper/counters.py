@@ -36,7 +36,8 @@ REJECT_EVENT = "SIGNAL_REJECTED"
 # first-failing-check wins; keep in sync with app/paper/gates.py
 REJECT_REASONS = (
     "no_atr_stop", "position_already_open", "signal_already_processed", "max_positions", "open_risk_cap",
-    "symbol_exposure_cap", "daily_loss_halt", "insufficient_cash_or_size", "order_not_executed",
+    "symbol_exposure_cap", "daily_loss_halt", "kill_switch", "insufficient_cash_or_size", "order_not_executed",
+    "short_not_allowed", "stale_data",
 )
 
 SEMANTICS = {

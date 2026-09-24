@@ -7,7 +7,41 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-24 — T13b EN COURS — Risk Kernel + onglet Risque
+## 2026-09-24 — T13c EN COURS — kill switch + verrou perte journalière
+
+- Branche : `cursor/t13c-kill-switch-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/81
+- Base : `main` @ `7d7d767` (#80 T13b **MERGÉE**)
+- Persisté · humain seul pour rouvrir · **aucun auto-lift**
+
+### Livré
+1. Migration `g3h4i5j6k7l8` — colonnes `kill_switch_*` / `daily_loss_locked*` sur `paper_portfolios`
+2. `paper/kill_switch.py` — arm/disarm/unlock + latch `maybe_trip_daily_loss_lock`
+3. Risk Kernel refuse `kill_switch` / `daily_loss_halt` **avant** les gates (y compris manuel)
+4. API `risk-lock` · `kill-switch/arm|disarm` · `daily-loss/unlock` (`confirm: true` obligatoire)
+5. UI header bouton rouge + bannière « Paper verrouillé » + ConfirmDialog
+6. Tests + goldens OpenAPI
+
+### DÉCISION CURSOR
+Latch perte jour **ne se lève pas à minuit** (changement vs halt éphémère T13b) — humain only.
+
+### Auto-revue
+- [x] pytest kill_switch + risk_kernel + engine + openapi
+- [x] npm build
+- [ ] pytest PG16 CI
+
+---
+
+## 2026-09-24 — T13b MERGÉE (#80) — squash `7d7d767`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/80 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `7d7d767`
+
+**Suite** : T13c.
+
+---
+
+## 2026-09-24 — T13b (archive) — Risk Kernel + onglet Risque
 
 - Branche : `cursor/t13b-risk-kernel-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/80

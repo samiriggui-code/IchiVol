@@ -161,6 +161,9 @@ def test_refusal_for_insufficient_funds_leaves_account_untouched(client, monkeyp
     pf = s.get(PaperPortfolio, pid)
     real_cash = pf.cash
     pf.cash = 0.5
+    # Avoid T13c latch from the synthetic cash drop (equity ≪ day_start).
+    pf.daily_loss_locked = False
+    pf.daily_loss_locked_at = None
     s.commit()
     try:
         before = _state(pid)
@@ -170,6 +173,8 @@ def test_refusal_for_insufficient_funds_leaves_account_untouched(client, monkeyp
     finally:
         pf = s.get(PaperPortfolio, pid)
         pf.cash = real_cash
+        pf.daily_loss_locked = False
+        pf.daily_loss_locked_at = None
         s.commit()
 
 

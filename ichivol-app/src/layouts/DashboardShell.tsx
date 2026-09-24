@@ -7,6 +7,7 @@ import {
   IconMenu,
 } from '../components/NavIcons'
 import { BrandMark } from '../components/BrandMark'
+import { KillLockBanner, KillSwitchButton, KillSwitchProvider } from '../components/KillSwitchControls'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { getMe, logout } from '../lib/auth'
 import { AgentSessionProvider } from '../lib/agentSession'
@@ -160,14 +161,7 @@ function DashboardShellInner() {
           </div>
           <div className="dash-header-right">
             {isMobile && <ThemeToggle />}
-            <button
-              type="button"
-              className="dash-kill-stub"
-              disabled
-              title="Kill switch — disponible avec T13c"
-            >
-              Arrêt d’urgence
-            </button>
+            <KillSwitchButton />
             <LlmHeaderBadge />
 
             <NotificationBell onOpen={() => setUserMenuOpen(false)} />
@@ -208,6 +202,7 @@ function DashboardShellInner() {
           </div>
         </header>
 
+        <KillLockBanner />
         <div className="dash-content">
           <Outlet />
         </div>
@@ -283,7 +278,9 @@ export function DashboardShell() {
     <MarketSnapshotProvider>
       <AgentSessionProvider>
         <LlmStatusProvider>
-          <DashboardShellInner />
+          <KillSwitchProvider>
+            <DashboardShellInner />
+          </KillSwitchProvider>
         </LlmStatusProvider>
       </AgentSessionProvider>
     </MarketSnapshotProvider>
