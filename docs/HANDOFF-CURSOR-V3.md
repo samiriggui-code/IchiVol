@@ -7,6 +7,21 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — SYNC Claude rév.56 — T14 Interface V3 (NE PAS DÉMARRER)
+
+Audit UI ajouté à la feuille de route (**section T14**).
+
+**Ordre** : … T12e → **T14a** → T13a → T13b + T14c → …  
+Aucune fusion ni suppression de page avant T14a. **Ne pas démarrer T14 maintenant.**
+
+### Exception autorisée (petite PR séparée, APRÈS merge de T12b #73)
+
+Front only — **aucun changement moteur** :
+1. `lib/decisionPipeline.ts` (~L110) : libellé matrice **« Risque » → « Régime »** (étape ADX/Donchian/ATR)
+2. Colonne DIR : afficher **↑ / ↓** au lieu de « OK »
+
+---
+
 ## 2026-09-24 — T12b EN COURS — parité Lab / live (FeatureBar + stages)
 
 - Branche : `cursor/t12b-lab-live-parity-a2fe`
