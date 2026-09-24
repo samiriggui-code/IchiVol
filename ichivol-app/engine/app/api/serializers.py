@@ -88,6 +88,12 @@ def summary_dict(row: ScreenerRow) -> dict:
             "version": fw["version"],
             "weighted_support": fw["weighted_support"],
         }
+    from app.strategy_lab.lab_context import lab_context_observation_dict
+
+    lab = lab_context_observation_dict(getattr(row, "lab_context", None))
+    if lab is not None:
+        # Watchlist badges need the full flag set; still observation-only.
+        body["lab_context"] = lab
     return body
 
 
@@ -144,6 +150,11 @@ def detail_dict(row: ScreenerRow) -> dict:
     fw = family_weights_observation_dict(getattr(row, "family_weights", None))
     if fw is not None:
         body["family_weights"] = fw
+    from app.strategy_lab.lab_context import lab_context_observation_dict
+
+    lab = lab_context_observation_dict(getattr(row, "lab_context", None))
+    if lab is not None:
+        body["lab_context"] = lab
     if row.context is not None:
         body["context"] = row.context.to_dict()
     if row.evidence is not None:

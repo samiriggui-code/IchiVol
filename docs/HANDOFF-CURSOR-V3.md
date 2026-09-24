@@ -7,6 +7,33 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — T9f EN COURS — Lab fib_* + lab_context watchlist
+
+- Branche : `cursor/t9f-lab-features-a2fe`
+- PR : *(draft à ouvrir)*
+- Base : `main` @ `84efa9d` (#59 T9e)
+- Statut : **EN COURS** — Cursor solo. **Observation-only** (pas de pipeline / pas d’auto-reject).
+
+### Livré
+
+1. FeatureBar `fib_*` (ancre ImpulseEvent actif) + conditions Lab orphelines (`fvg_status`, `impulse_displacement_atr_min`, `fib_*`)
+2. `observe_lab_context` → `ScreenerRow.lab_context` + serializers summary/detail
+3. Watchlist : badges CHoCH / FVG / Fib **réels** (placeholders T9f retirés)
+4. Goldens **additifs** only ; tests `test_t9f_lab_features.py`
+
+### Hors scope
+Pipeline / paper gate impulse · T11a · T10c · T9g.
+
+---
+
+## 2026-09-24 — T9e MERGÉE (#59) — squash `84efa9d` — Fib ancré ImpulseEvent
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/59 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `84efa9d`
+- Cursor solo ; CI verte. Gate paper reste `anchor=naive`.
+
+---
+
 ## 2026-09-24 — T9e EN COURS — Fib ancré sur ImpulseEvent
 
 - Branche : `cursor/t9e-fib-anchor-a2fe`

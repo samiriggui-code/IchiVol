@@ -374,6 +374,7 @@ export function MarketPage() {
             engineDecision: eng?.decision,
             engineConfidence: eng?.confidence,
             enginePipeline: eng?.pipeline,
+            labContext: eng?.lab_context,
           }
           return { ...row, context: buildContextBadges(row) }
         })

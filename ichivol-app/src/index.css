@@ -4863,6 +4863,9 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 .mw-badge-bias { color: var(--bull); }
 .mw-badge-bos { color: var(--primary); }
 .mw-badge-sr_break { color: var(--neutral); }
+.mw-badge-fvg { color: var(--accent, var(--primary)); }
+.mw-badge-fib { color: var(--warning, #c4a35a); }
+.mw-badge-choch { color: var(--bear, #d4534a); }
 
 /* Layers menu / sheet */
 .mkt-layers-list { list-style: none; margin: 0; padding: 0; }

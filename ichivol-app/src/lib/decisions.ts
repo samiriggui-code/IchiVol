@@ -1,5 +1,6 @@
 import { appendEngineThresholds, loadEngineThresholds } from './engineThresholds'
 import type { OrderIntent } from './paper'
+import type { LabContextPayload } from './types'
 
 export type DecisionLabel = 'STRONG_BUY' | 'BUY' | 'WATCH' | 'WAIT' | 'SELL' | 'STRONG_SELL'
 export type AgentDirection = 'LONG' | 'SHORT' | 'NEUTRAL'
@@ -32,6 +33,8 @@ export interface ScreenerDecisionRow {
   rvol: number | null
   /** Présent sur chaque ligne screener (même contrat que le détail). */
   pipeline?: DecisionPipelinePayload
+  /** T9f Lab snapshot — observation only (watchlist Contexte badges). */
+  lab_context?: LabContextPayload
 }
 
 export interface AgentDetail {

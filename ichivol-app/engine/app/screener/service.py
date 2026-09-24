@@ -24,6 +24,7 @@ from app.evidence.context import SignalContext, build_signal_context
 from app.evidence.engine import EvidenceEngine, EvidenceReport
 from app.confluence.observe import FamilyWeightsObservation
 from app.events.types import EventContextBundle, MarketAnomalyObservation
+from app.strategy_lab.lab_context import LabContextObservation
 from app.indicators.atr import AtrParams, AtrState
 from app.indicators.ichimoku import Candle, IchimokuParams
 from app.indicators.location import LocationParams
@@ -139,6 +140,8 @@ class ScreenerRow:
     """PHASE 7: anomaly + causal news/calendar matches. Never votes BUY/SELL."""
     family_weights: FamilyWeightsObservation | None = None
     """T5a: versioned family-weight observation. Never alters decision/confidence."""
+    lab_context: LabContextObservation | None = None
+    """T9f: CHoCH/FVG/Fib/impulse Lab snapshot. Never alters decision/confidence."""
 
 
 def scan_symbol(
@@ -272,6 +275,18 @@ def scan_symbol(
     except Exception:
         logger.exception("family_weights observe failed for %s — leaving unset", symbol)
 
+    # T9f Lab context — observation only (never mutates pipeline/decision).
+    from app.strategy_lab.lab_context import observe_lab_context
+
+    lab_context = None
+    try:
+        lab_context = observe_lab_context(
+            candles,
+            structure_params=structure_params,
+        )
+    except Exception:
+        logger.exception("lab_context observe failed for %s — leaving unset", symbol)
+
     return ScreenerRow(
         symbol=symbol,
         exchange=provider.id,
@@ -296,6 +311,7 @@ def scan_symbol(
         market_anomaly=market_anomaly,
         event_context=event_context,
         family_weights=family_weights,
+        lab_context=lab_context,
     )
 
 def scan_watchlist(
