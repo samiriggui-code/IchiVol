@@ -7,6 +7,34 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — T9d EN COURS — FVG (Fair Value Gap) causal
+
+- Branche : `cursor/t9d-fvg-a2fe`
+- PR : *(draft — lien après push)*
+- Base : `main` @ `ef062c2` (#57 T9c)
+- Statut : **EN COURS** — Cursor solo. Pas de Fib / pas de pipeline.
+
+### Livré
+
+1. `app/indicators/fvg.py` — 3-candle ICT imbalance + fill/invalidation causals
+2. Registry `fvg` EXPERIMENTAL ; Lab `fvg_bullish` / `fvg_bearish` / `fvg_active`
+3. `from_fvg.py` → rectangles `layer=fvg` ; merge dans `collect.py`
+4. Front : rectangles via dual price-lines ; calque FVG plus `emptyUntil`
+5. Tests anti-lookahead + non-interférence structure/impulse ; goldens additifs
+
+### Hors scope
+T9e Fib ancré · T9f badges watchlist · breaks layer · décision / broker.
+
+---
+
+## 2026-09-24 — T9c MERGÉE (#57) — squash `ef062c2` — impulsion / displacement
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/57 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `ef062c2`
+- Cursor solo ; CI verte.
+
+---
+
 ## 2026-09-24 — T9c EN COURS — impulsion / displacement causal
 
 - Branche : `cursor/t9c-impulsion-a2fe`
@@ -121,8 +149,9 @@ T10c redondance ; T9g ablation OOS ; aucun rejet automatique sur complexité / e
 - **T10a** #55 — **MERGÉE** squash `2e3ebc1` (Cursor solo ; CI verte). **À auditer Claude 12h10.**
 - **T9b** #53 — **MERGÉE** squash `6d1968a` (Cursor solo, Claude restreint ; CI verte). **À auditer Claude 12h10.**
 - **T10b** #56 — **MERGÉE** squash `82e980e` (Cursor solo ; CI verte). **À auditer Claude 12h10.**
-- **Job en cours** : **T9c** — impulsion / displacement — branche `cursor/t9c-impulsion-a2fe`. **Cursor solo** (Claude restreint).
-- **T9** (structure / FVG / Fib) — T9a+T9b+T10a+T10b OK ; T9c en cours.
+- **T9c** #57 — **MERGÉE** squash `ef062c2` (Cursor solo ; CI verte). **À auditer Claude 12h10.**
+- **Job en cours** : **T9d** — FVG — branche `cursor/t9d-fvg-a2fe`. **Cursor solo**.
+- **T9** (structure / FVG / Fib) — T9a+T9b+T9c+T10a+T10b OK ; T9d en cours.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol². **Ne pas comparer** partiels vs non-partiels sur le DD avant correction.
 - ⚠️ **Caveat historique SHORT** : positions SHORT **CLOSED avant** `b9f8421` (#51, mergedAt `2026-09-24T07:02:48Z`) ont un `realized` **surévalué de `entry_fee`**. Compte local Cursor : **CLOSED_SHORT = 0**. Script ponctuel : `scripts/recalc_short_entry_fee.py` — filtre par **horodatage exact**, journal `SHORT_FEE_RECALC` idempotent ; **ne pas lancer `--apply`** sans revue ; **pas de migration auto**.
 - ⚠️ **Caveat migration #48** : backfill `initial_entry_fee = entry_fee` courant — **faux pour lots déjà partialisés avant migration**.
