@@ -84,9 +84,15 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 | 05 | Analyse = BiasPanel + CTA paper | Pipeline déjà dans BiasPanel |
 | Journal | Placeholder « bientôt » | Hors scope UI-MARKET |
 
-### Captures
+### Captures (états 01→07)
 
-Artifacts PR : états 01→07 (desktop défaut, calques+backtest, mobile graphe, tiroir liste, tiroir analyse, feuille calques, recherche).
+<img alt="01 Desktop défaut" src="/opt/cursor/artifacts/01-desktop-default.png" />
+<img alt="02 Desktop Calques + Backtest" src="/opt/cursor/artifacts/02-desktop-layers-backtest.png" />
+<img alt="03 Mobile graphe" src="/opt/cursor/artifacts/03-mobile-chart.png" />
+<img alt="04 Mobile tiroir Liste" src="/opt/cursor/artifacts/04-mobile-drawer-list.png" />
+<img alt="05 Mobile tiroir Analyse" src="/opt/cursor/artifacts/05-mobile-drawer-analysis.png" />
+<img alt="06 Mobile feuille Calques" src="/opt/cursor/artifacts/06-mobile-layers-sheet.png" />
+<img alt="07 Mobile recherche" src="/opt/cursor/artifacts/07-mobile-search.png" />
 
 **Cursor s’arrête ici.**
 
