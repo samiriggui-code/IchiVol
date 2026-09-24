@@ -1,6 +1,7 @@
 """T13c — kill switch + daily loss lock (persisted, human reopen only).
 
-Never auto-lifts. Blocks paper **entries** only (closes/protection unchanged).
+Never auto-lifts. Blocks paper **entries** only (closes/protection still run).
+T13d: arming cancels every non-terminal paper order (CANCELLED, reason kill_switch).
 """
 
 from __future__ import annotations
