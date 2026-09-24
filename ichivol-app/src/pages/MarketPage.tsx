@@ -68,7 +68,9 @@ import {
   type ScreenerRow,
   type Signal,
 } from '../lib/types'
+import { workspaceEyebrow, workspacePageMeta } from '../lib/workspaceNav'
 
+const META = workspacePageMeta('/app/market')!
 const ENGINE_TIMEFRAMES = new Set<Interval>(['15m', '1h', '4h', '1d'])
 const MARK_STEPS: UserTradePointType[] = ['entry', 'stop', 'target']
 
@@ -756,7 +758,7 @@ export function MarketPage() {
       const onMove = (ev: PointerEvent) => {
         if (!resizeRef.current) return
         const delta = resizeRef.current.startX - ev.clientX
-        const next = Math.max(280, Math.min(520, resizeRef.current.startW + delta))
+        const next = Math.max(230, Math.min(480, resizeRef.current.startW + delta))
         updateLayout({ rightWidth: next, rightOpen: true })
       }
       const onUp = () => {
@@ -861,8 +863,35 @@ export function MarketPage() {
       engineLoading={engineLoading}
       engineError={engineError}
       engineAvailable={engineOn}
+      prepareTradeDisabled={!canMarkTrade || markSaving}
+      onPrepareTrade={() => {
+        if (!markOpen) startMarkTrade()
+        if (isMobile) updateLayout({ drawerPos: 'closed' })
+        else updateLayout({ bottomOpen: true, bottomTab: 'mark' })
+      }}
     />
   )
+
+  const ichimokuOn =
+    layerPrefs.tenkan && layerPrefs.kijun && layerPrefs.spanA && layerPrefs.spanB
+
+  const toggleIchimokuCloud = () => {
+    const next = !ichimokuOn
+    setLayerPrefsAndSave({
+      ...layerPrefs,
+      tenkan: next,
+      kijun: next,
+      spanA: next,
+      spanB: next,
+    })
+  }
+
+  const toggleStructureLevels = () => {
+    setLayerPrefsAndSave({ ...layerPrefs, structure: !layerPrefs.structure })
+  }
+
+  const quoteBase = current?.quote ?? (symbol.endsWith('USDT') ? 'USDT' : '')
+  const pairTitle = current?.label ?? displaySymbol(symbol)
 
   const chartEl = (
     <PriceChart
@@ -954,8 +983,10 @@ export function MarketPage() {
       className={`market-page mkt-page${isMobile ? ' is-mobile' : ' is-desktop'}${
         markOpen ? ' is-mark-trade' : ''
       }${btPanelOpen ? ' is-backtest-overlay' : ''}${
-        layout.rightOpen ? '' : ' is-right-collapsed'
-      }${layout.bottomOpen ? ' is-bottom-open' : ''}`}
+        layout.leftOpen ? '' : ' is-left-collapsed'
+      }${layout.rightOpen ? '' : ' is-right-collapsed'}${
+        layout.bottomOpen ? ' is-bottom-open' : ''
+      }`}
       style={
         {
           '--mkt-right-w': `${layout.rightWidth}px`,
@@ -965,9 +996,17 @@ export function MarketPage() {
       }
       data-drawer={layout.drawerPos}
     >
-      {/* —— Desktop top bar —— */}
+      <header className="page-head market-head">
+        <div className="market-head-copy">
+          <p className="iv-page-eyebrow">{workspaceEyebrow('/app/market')}</p>
+          <h1>{META.label}</h1>
+          <p className="iv-page-question">{META.subtitle}</p>
+        </div>
+      </header>
+
+      {/* —— Desktop tools bar —— */}
       {!isMobile && (
-        <header className="mkt-topbar" style={{ height: 52 }}>
+        <header className="mkt-topbar mkt-topbar--tools" style={{ height: 44 }}>
           <button
             type="button"
             className="mkt-symbol-btn"
@@ -975,24 +1014,24 @@ export function MarketPage() {
             aria-expanded={searchOpen}
             onClick={() => setSearchOpen((o) => !o)}
           >
-            <span className="mkt-symbol-label">
-              {current?.label ?? displaySymbol(symbol)}
-            </span>
+            <span className="mkt-symbol-label">{pairTitle}</span>
             <span className="mkt-caret" aria-hidden>
               ▾
             </span>
           </button>
 
-          <div className="mkt-quote">
-            <span className="mkt-price mono">{fmtPrice(live.price)}</span>
-            <span className={`mkt-pct mono ${pctClass}`}>{fmtPct(change24hDisplay)}</span>
-            <span className="mkt-source muted">{providerLabel}</span>
-            {chartLoading ? <span className="muted">…</span> : null}
-          </div>
-
-          {tfButtons}
-
           <div className="mkt-topbar-actions">
+            <button
+              type="button"
+              className="side-toggle mkt-icon-btn"
+              aria-expanded={layout.leftOpen}
+              aria-controls="mkt-left"
+              title={layout.leftOpen ? 'Masquer la watchlist' : 'Afficher la watchlist'}
+              onClick={() => updateLayout({ leftOpen: !layout.leftOpen })}
+            >
+              {layout.leftOpen ? '⟨' : '⟩'}
+            </button>
+
             <div className="mkt-menu-anchor">
               <button
                 type="button"
@@ -1048,10 +1087,6 @@ export function MarketPage() {
               ) : null}
             </div>
 
-            <span className="mkt-topbar-ellipsis" aria-hidden>
-              …
-            </span>
-
             {infoButton}
 
             <button
@@ -1079,7 +1114,7 @@ export function MarketPage() {
               className="side-toggle mkt-icon-btn"
               aria-expanded={layout.rightOpen}
               aria-controls="mkt-right"
-              title={layout.rightOpen ? 'Réduire le panneau' : 'Afficher le panneau'}
+              title={layout.rightOpen ? 'Réduire l’analyse' : 'Afficher l’analyse'}
               onClick={() => updateLayout({ rightOpen: !layout.rightOpen })}
             >
               {layout.rightOpen ? '⟩' : '⟨'}
@@ -1116,9 +1151,7 @@ export function MarketPage() {
               aria-expanded={searchOpen}
               onClick={() => setSearchOpen(true)}
             >
-              <span className="mkt-symbol-label">
-                {current?.label ?? displaySymbol(symbol)}
-              </span>
+              <span className="mkt-symbol-label">{pairTitle}</span>
               <span className="mkt-caret" aria-hidden>
                 ▾
               </span>
@@ -1166,10 +1199,68 @@ export function MarketPage() {
         </div>
       )}
 
-      {/* —— Main layout —— */}
-      <div className="mkt-body">
-        <section className="mkt-chart-panel chart-panel panel">
+      {/* —— Main layout: watchlist | chart | analysis —— */}
+      <div className="mkt-body market-layout">
+        {!isMobile && layout.leftOpen && (
+          <aside id="mkt-left" className="mkt-left card watchlist">
+            <MarketWatchlist {...watchlistProps} variant="rail" />
+          </aside>
+        )}
+
+        <section className="mkt-chart-panel chart-panel panel card">
+          {!isMobile && (
+            <>
+              <div className="mkt-chart-head card-head">
+                <div>
+                  <h2 className="mkt-pair-title">
+                    {displaySymbol(symbol)}
+                    {quoteBase ? (
+                      <span className="mkt-pair-quote"> / {quoteBase}</span>
+                    ) : null}
+                  </h2>
+                  <small className="mkt-pair-meta">
+                    {providerLabel}
+                    {chartLoading ? ' · …' : ' · bougies clôturées'}
+                  </small>
+                </div>
+                <div className="segmented mkt-tf-segmented">{tfButtons}</div>
+              </div>
+              <div className="chart-summary">
+                <span>
+                  PRIX <b>{fmtPrice(live.price)}</b>
+                </span>
+                <span>
+                  24H <b className={pctClass}>{fmtPct(change24hDisplay)}</b>
+                </span>
+                <span>
+                  RVOL <b>{live.rvol > 0 ? `${live.rvol.toFixed(2)}×` : '—'}</b>
+                </span>
+              </div>
+            </>
+          )}
           {chartEl}
+          {!isMobile && (
+            <div className="mkt-chart-layers card-body">
+              <div className="checkrow">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={ichimokuOn}
+                    onChange={toggleIchimokuCloud}
+                  />{' '}
+                  Ichimoku 9 / 26 / 52
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={layerPrefs.structure}
+                    onChange={toggleStructureLevels}
+                  />{' '}
+                  Supports / résistances
+                </label>
+              </div>
+            </div>
+          )}
         </section>
 
         {!isMobile && layout.rightOpen && (
@@ -1178,13 +1269,10 @@ export function MarketPage() {
               className="mkt-resize-handle"
               role="separator"
               aria-orientation="vertical"
-              aria-label="Redimensionner la colonne"
+              aria-label="Redimensionner la colonne analyse"
               onPointerDown={onRightResizeStart}
             />
-            <aside id="mkt-right" className="mkt-right side">
-              <div className="mkt-right-list">
-                <MarketWatchlist {...watchlistProps} />
-              </div>
+            <aside id="mkt-right" className="mkt-right side analysis-panel">
               <div className="mkt-right-bias">{biasPanel}</div>
             </aside>
           </>

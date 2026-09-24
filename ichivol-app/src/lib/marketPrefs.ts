@@ -12,6 +12,8 @@ export type WatchlistSortKey =
   | 'context'
 
 export interface MarketLayoutPrefs {
+  /** Left watchlist rail (desktop market-layout). */
+  leftOpen: boolean
   rightOpen: boolean
   rightWidth: number
   bottomOpen: boolean
@@ -30,8 +32,9 @@ const LAYOUT_KEY = 'ichivol.market.layout'
 const LAYERS_KEY = 'ichivol.market.layers'
 
 export const DEFAULT_LAYOUT: MarketLayoutPrefs = {
+  leftOpen: true,
   rightOpen: true,
-  rightWidth: 380,
+  rightWidth: 280,
   bottomOpen: false,
   bottomHeight: 250,
   volumeHeight: 150,

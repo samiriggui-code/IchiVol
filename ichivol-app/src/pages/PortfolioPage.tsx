@@ -1,207 +1,367 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { getPaperOverview, type PaperOverview } from '../lib/paper'
+import {
+  Card,
+  Metric,
+  RiskTrack,
+  StatLine,
+  Tag,
+  WorkspacePageHead,
+} from '../components/maquette'
+import {
+  getPaperOverview,
+  type PaperOverview,
+  type PaperOverviewPosition,
+} from '../lib/paper'
 import { PaperPage } from './PaperPage'
-import { SynthesePage } from './SynthesePage'
-import './PortfolioPage.css'
 
-type PortfolioTab = 'synthese' | 'compte' | 'positions' | 'risque' | 'tests'
+const BASELINE = 'ICHIVOL_BASELINE_V1'
 
-function normalizeTab(raw: string | null): PortfolioTab {
-  if (raw === 'positions' || raw === 'paper') return 'positions'
-  if (raw === 'compte' || raw === 'account') return 'compte'
-  if (raw === 'risque' || raw === 'risk') return 'risque'
-  if (raw === 'tests') return 'tests'
-  return 'synthese'
-}
-
-function fmtPct(v: number | null | undefined): string {
+function fmtPct(v: number | null | undefined, digits = 1): string {
   if (v == null || !Number.isFinite(v)) return '—'
-  return `${(v * 100).toFixed(2)} %`
+  return `${(v * 100).toFixed(digits)} %`
 }
 
-function fmtMoney(v: number | null | undefined): string {
+function fmtMoney(v: number | null | undefined, digits = 2): string {
   if (v == null || !Number.isFinite(v)) return '—'
-  return v.toLocaleString('fr-FR', { maximumFractionDigits: 2 })
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits,
+  }).format(v)
 }
 
-/**
- * T14a + T13b — Portefeuille = Synthèse + Paper + onglet Risque.
- */
+function displaySymbol(symbol: string): string {
+  return symbol.replace(/USDT$/i, '').replace(/USD$/i, '')
+}
+
+function positionNotional(p: PaperOverviewPosition): number {
+  if (p.market_value != null && Number.isFinite(p.market_value)) return Math.abs(p.market_value)
+  if (p.notional != null && Number.isFinite(p.notional)) return Math.abs(p.notional)
+  return 0
+}
+
+/** Portefeuille — maquette `portefeuille()`. */
 export function PortfolioPage() {
-  const [params, setParams] = useSearchParams()
-  const active = useMemo(() => normalizeTab(params.get('tab')), [params])
+  const [params] = useSearchParams()
+  const detailTab = params.get('tab') === 'positions' || params.get('tab') === 'paper'
   const [overview, setOverview] = useState<PaperOverview | null>(null)
-  const [riskError, setRiskError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (active !== 'risque') return
-    let cancelled = false
-    getPaperOverview()
+  const load = useCallback(() => {
+    setLoading(true)
+    getPaperOverview(BASELINE)
       .then((ov) => {
-        if (!cancelled) {
-          setOverview(ov)
-          setRiskError(null)
-        }
+        setOverview(ov)
+        setError(null)
       })
       .catch((err: unknown) => {
-        if (!cancelled) {
-          setRiskError(err instanceof Error ? err.message : 'Risque indisponible')
-        }
+        setError(err instanceof Error ? err.message : 'Portefeuille indisponible')
       })
-    return () => {
-      cancelled = true
-    }
-  }, [active])
+      .finally(() => setLoading(false))
+  }, [])
 
-  function selectTab(next: PortfolioTab) {
-    const nextParams = new URLSearchParams(params)
-    if (next === 'synthese') nextParams.delete('tab')
-    else nextParams.set('tab', next === 'positions' ? 'positions' : next)
-    setParams(nextParams, { replace: true })
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const acct = overview?.account
+  const risk = overview?.risk
+  const openBook = useMemo(
+    () => (overview?.positions ?? []).filter((p) => p.status === 'OPEN'),
+    [overview],
+  )
+
+  const exposed = risk?.exposed ?? acct?.invested ?? 0
+  const capital = risk?.capital ?? acct?.equity ?? 0
+  const cash = risk?.cash ?? acct?.cash ?? 0
+  const exposedShare = capital > 0 ? exposed / capital : null
+  const drawdown = overview?.progress?.max_drawdown_pct ?? null
+
+  const riskTracks = useMemo(() => {
+    const openRiskPct = risk?.open_risk_pct ?? null
+    const maxOpenRisk = risk?.max_open_risk_pct ?? 0.03
+    const maxPositions = risk?.max_open_positions ?? 6
+    const openPositions = risk?.open_positions ?? openBook.length
+    const exposurePct = exposedShare ?? 0
+    const exposureCap = 0.4
+    return [
+      {
+        label: 'Risque par trade',
+        value:
+          openRiskPct != null && openPositions > 0
+            ? `${((openRiskPct / Math.max(openPositions, 1)) * 100).toFixed(1)} / ${(maxOpenRisk * 100).toFixed(0)} %`
+            : `— / ${(maxOpenRisk * 100).toFixed(0)} %`,
+        pct:
+          openRiskPct != null && openPositions > 0
+            ? Math.min(100, ((openRiskPct / Math.max(openPositions, 1)) / maxOpenRisk) * 100)
+            : 0,
+      },
+      {
+        label: 'Risque par jour',
+        value:
+          openRiskPct != null
+            ? `${(openRiskPct * 100).toFixed(1)} / ${(maxOpenRisk * 100).toFixed(0)} %`
+            : `— / ${(maxOpenRisk * 100).toFixed(0)} %`,
+        pct: openRiskPct != null ? Math.min(100, (openRiskPct / maxOpenRisk) * 100) : 0,
+        warn: openRiskPct != null && openRiskPct > maxOpenRisk * 0.85,
+      },
+      {
+        label: 'Exposition globale',
+        value: `${(exposurePct * 100).toFixed(1)} / ${(exposureCap * 100).toFixed(0)} %`,
+        pct: Math.min(100, (exposurePct / exposureCap) * 100),
+        warn: exposurePct > exposureCap * 0.85,
+      },
+      {
+        label: 'Positions simultanées',
+        value: `${openPositions} / ${maxPositions}`,
+        pct: maxPositions > 0 ? Math.min(100, (openPositions / maxPositions) * 100) : 0,
+        warn: openPositions >= maxPositions,
+      },
+    ]
+  }, [risk, openBook.length, exposedShare])
+
+  const verdictPass =
+    risk == null || (risk.open_risk_pct ?? 0) <= (risk.max_open_risk_pct ?? 1)
+
+  const concentration = useMemo(() => {
+    const total = openBook.reduce((s, p) => s + positionNotional(p), 0)
+    if (total <= 0) return []
+    return [...openBook]
+      .map((p) => ({
+        symbol: displaySymbol(p.symbol),
+        pct: (positionNotional(p) / total) * 100,
+      }))
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, 6)
+  }, [openBook])
+
+  if (detailTab) {
+    return (
+      <div>
+        <WorkspacePageHead
+          path="/app/portefeuille"
+          subtitleExtra={
+            <>
+              {' '}
+              · <Link to="/app/portefeuille" className="link">Vue synthèse</Link>
+            </>
+          }
+        />
+        <PaperPage />
+      </div>
+    )
   }
 
-  const risk = overview?.risk
-
   return (
-    <div className="portfolio-page">
-      <header className="page-head portfolio-page-header iv-animate-soft">
-        <div>
-          <p className="iv-page-eyebrow">Trading · Portefeuille</p>
-          <h1>Portefeuille</h1>
-          <p className="iv-page-question">Le capital d’abord. Le risque toujours.</p>
+    <div>
+      <WorkspacePageHead
+        path="/app/portefeuille"
+        actions={
+          <>
+            <Link to="/app/portefeuille?tab=positions" className="link">
+              Détail positions →
+            </Link>
+            <button type="button" onClick={() => load()} disabled={loading}>
+              {loading ? '…' : 'Actualiser'}
+            </button>
+          </>
+        }
+      />
+
+      {error && (
+        <div className="notice" role="alert">
+          <span>△</span>
+          <span>{error}</span>
         </div>
-      </header>
+      )}
 
-      <div className="portfolio-tabs" role="tablist" aria-label="Sections portefeuille">
-        {(
-          [
-            ['synthese', 'Synthèse'],
-            ['compte', 'Compte'],
-            ['positions', 'Positions'],
-            ['risque', 'Risque'],
-            ['tests', 'Tests'],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={active === id}
-            className={`portfolio-tab${active === id ? ' is-active' : ''}`}
-            onClick={() => selectTab(id)}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="metrics" aria-label="Capital & exposition">
+        <Metric label="Capital" value={fmtMoney(capital)} hint="Portefeuille paper" />
+        <Metric
+          label="Exposition"
+          value={fmtMoney(exposed)}
+          hint={
+            exposedShare != null
+              ? `${(exposedShare * 100).toFixed(1)} % du capital`
+              : 'Capital engagé'
+          }
+        />
+        <Metric label="Disponible" value={fmtMoney(cash)} hint="Réserve non engagée" />
+        <Metric
+          label="Drawdown"
+          value={drawdown != null ? `−${drawdown.toFixed(1)} %` : '—'}
+          hint="Depuis le plus haut"
+          tone={drawdown != null && drawdown > 0 ? 'down' : ''}
+        />
       </div>
 
-      <div className="portfolio-tab-panel" role="tabpanel">
-        {active === 'synthese' && (
-          <div className="portfolio-embed is-synthese">
-            <SynthesePage />
+      <div className="grid">
+        <section className="card" aria-label="Risk Kernel">
+          <div className="card-head">
+            <h2>Risk Kernel</h2>
+            <Tag tone={verdictPass ? 'green' : 'red'}>{verdictPass ? 'PASSE' : 'REFUSÉ'}</Tag>
           </div>
-        )}
-        {active === 'compte' && (
-          <div className="portfolio-embed">
-            <p className="muted portfolio-embed-hint">
-              Vue compte paper — détail technique aussi dans{' '}
-              <Link to="/app/portefeuille?tab=positions">Positions</Link>.
-            </p>
-            <PaperPage />
+          <div className="card-body">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '10px 0 22px' }}>
+              <span
+                style={{
+                  font: '42px Newsreader, Georgia, serif',
+                  color: verdictPass ? 'var(--green)' : 'var(--red)',
+                }}
+              >
+                {verdictPass ? 'PASSE' : 'REFUSÉ'}
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Verdict Risk Kernel
+                <br />
+                {openBook.length} position{openBook.length === 1 ? '' : 's'} sous surveillance
+              </span>
+            </div>
+            {riskTracks.map((t) => (
+              <RiskTrack key={t.label} {...t} />
+            ))}
           </div>
-        )}
-        {active === 'positions' && (
-          <div className="portfolio-embed">
-            <PaperPage />
+        </section>
+
+        <section className="card" aria-label="Allocation du capital">
+          <div className="card-head">
+            <h2>Allocation du capital</h2>
+            <Tag tone="gray">CRYPTO SPOT</Tag>
           </div>
-        )}
-        {active === 'risque' && (
-          <div className="portfolio-embed portfolio-risk">
-            <p className="muted portfolio-embed-hint">
-              Risk Kernel (T13b) — capital, exposé, risque utilisé, derniers refus. Kill switch avec
-              T13c.
-            </p>
-            {riskError && (
-              <div className="banner error" role="alert">
-                {riskError}
-              </div>
-            )}
-            {!riskError && !risk && <p className="muted">Chargement…</p>}
-            {risk && (
-              <>
-                <dl className="portfolio-risk-grid">
-                  <div>
-                    <dt>Capital (equity)</dt>
-                    <dd className="mono">{fmtMoney(risk.capital)}</dd>
-                  </div>
-                  <div>
-                    <dt>Cash</dt>
-                    <dd className="mono">{fmtMoney(risk.cash)}</dd>
-                  </div>
-                  <div>
-                    <dt>Exposé</dt>
-                    <dd className="mono">{fmtMoney(risk.exposed)}</dd>
-                  </div>
-                  <div>
-                    <dt>Risque utilisé</dt>
-                    <dd className="mono">
-                      {fmtMoney(risk.open_risk_amount)}
-                      {risk.open_risk_pct != null ? ` · ${fmtPct(risk.open_risk_pct)}` : ''}
-                      {risk.max_open_risk_pct != null
-                        ? ` / lim. ${fmtPct(risk.max_open_risk_pct)}`
-                        : ''}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Positions ouvertes</dt>
-                    <dd className="mono">
-                      {risk.open_positions} / {risk.max_open_positions}
-                    </dd>
-                  </div>
-                </dl>
-                <h2 className="portfolio-risk-h2">Derniers refus</h2>
-                {risk.recent_refusals.length === 0 ? (
-                  <p className="muted">Aucun refus journalisé récemment.</p>
-                ) : (
-                  <div className="table-wrap">
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>Quand</th>
-                          <th>Symbole</th>
-                          <th>TF</th>
-                          <th>Code</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {risk.recent_refusals.map((r, i) => (
-                          <tr key={`${r.at}-${r.symbol}-${i}`}>
-                            <td className="mono muted">
-                              {r.at ? new Date(r.at).toLocaleString('fr-FR') : '—'}
-                            </td>
-                            <td>{r.symbol ?? '—'}</td>
-                            <td>{r.timeframe ?? '—'}</td>
-                            <td className="mono">{(r.codes && r.codes[0]) || r.reason || '—'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </>
+          <div className="card-body">
+            <div
+              className="donut"
+              style={
+                exposedShare != null
+                  ? {
+                      background: `conic-gradient(#347d78 0 ${exposedShare * 100}%, #e9e6df ${exposedShare * 100}% 100%)`,
+                    }
+                  : undefined
+              }
+              aria-hidden
+            />
+            {/* CSS :before shows fixed 27.8% — override via overlay text when live */}
+            <StatLine label="Capital engagé" value={fmtMoney(exposed)} />
+            <StatLine label="Liquidités" value={fmtMoney(cash)} />
+            {exposedShare != null && (
+              <p style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center' }}>
+                {(exposedShare * 100).toFixed(1)} % engagé
+              </p>
             )}
           </div>
-        )}
-        {active === 'tests' && (
-          <div className="portfolio-embed">
-            <p className="muted portfolio-embed-hint">
-              Tests / shadow broker — section Paper. Disponible avec T13x pour un onglet dédié.
-            </p>
-            <PaperPage />
-          </div>
-        )}
+        </section>
       </div>
+
+      <section className="card" aria-label="Positions ouvertes">
+        <div className="card-head">
+          <h2>Positions ouvertes</h2>
+          <Tag tone="gray">
+            {openBook.length} POSITION{openBook.length === 1 ? '' : 'S'}
+          </Tag>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ACTIF / STRATÉGIE</th>
+                <th>ENGAGÉ</th>
+                <th>PERFORMANCE</th>
+                <th>P&L LATENT</th>
+                <th>ÉTAT</th>
+              </tr>
+            </thead>
+            <tbody>
+              {openBook.map((p) => (
+                <tr key={p.id} className="clickable">
+                  <td>
+                    <b>{displaySymbol(p.symbol)}</b>
+                    <small>Ichimoku × RVOL · {p.timeframe}</small>
+                  </td>
+                  <td>
+                    <span className="mono">{fmtMoney(positionNotional(p))}</span>
+                  </td>
+                  <td>
+                    <span
+                      className={`mono${
+                        p.unrealized_pct != null && p.unrealized_pct !== 0
+                          ? p.unrealized_pct > 0
+                            ? ' up'
+                            : ' down'
+                          : ''
+                      }`}
+                    >
+                      {fmtPct(p.unrealized_pct)}
+                    </span>
+                  </td>
+                  <td>
+                    <span
+                      className={`mono${
+                        p.unrealized_pnl != null && p.unrealized_pnl !== 0
+                          ? p.unrealized_pnl > 0
+                            ? ' up'
+                            : ' down'
+                          : ''
+                      }`}
+                    >
+                      {fmtMoney(p.unrealized_pnl)}
+                    </span>
+                  </td>
+                  <td>
+                    <Tag>OUVERTE</Tag>
+                  </td>
+                </tr>
+              ))}
+              {!loading && openBook.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)' }}>
+                    Aucune position ouverte.
+                  </td>
+                </tr>
+              )}
+              {loading && openBook.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)' }}>
+                    Chargement…
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div style={{ height: 20 }} aria-hidden />
+
+      <Card
+        title="Concentration des positions"
+        extra={
+          <Tag tone={concentration.length >= 3 ? 'amber' : 'gray'}>
+            {concentration.length >= 3 ? 'PRUDENCE' : String(concentration.length)}
+          </Tag>
+        }
+      >
+        {concentration.length === 0 ? (
+          <p style={{ fontSize: 12, color: 'var(--muted)' }}>Pas d’exposition ouverte.</p>
+        ) : (
+          concentration.map((c) => (
+            <RiskTrack
+              key={c.symbol}
+              label={c.symbol}
+              value={`${c.pct.toFixed(1)} % de l’exposition`}
+              pct={c.pct}
+            />
+          ))
+        )}
+        <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 12 }}>
+          {concentration.length >= 2
+            ? 'Plusieurs actifs : surveiller leur corrélation avant d’ajouter une position.'
+            : 'Exposition paper baseline.'}
+        </p>
+      </Card>
+
     </div>
   )
 }

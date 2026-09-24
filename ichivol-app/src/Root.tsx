@@ -17,8 +17,11 @@ import { SettingsPage } from './pages/SettingsPage'
 import './theme/camap-tokens.css'
 import './theme/keenicons.css'
 import './theme/camap-landing.css'
-import './theme/iv-workspace.css'
 import './index.css'
+import './theme/iv-workspace.css'
+import './theme/iv-pages.css'
+/* Maquette ChatGPT en dernier — look identique design-reference. */
+import './theme/iv-maquette.css'
 
 initTheme()
 

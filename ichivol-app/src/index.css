@@ -1,7 +1,7 @@
-/* Trading cockpit — dense dashboard shell + GSMS tokens */
+/* Workspace shell — échelle maquette IchiVol (Manrope 14 / crème) */
 .dash-shell {
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: 14px;
   background: var(--background);
   color: var(--foreground);
   min-height: 100%;
@@ -18,7 +18,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 button, select { font: inherit; color: inherit; }
@@ -130,22 +130,22 @@ button, select { font: inherit; color: inherit; }
 .dash-sidebar .camap-icon-btn svg,
 .dash-sidebar .camap-icon-btn .ki-outline { width: 11px; height: 11px; font-size: 11px; }
 
-/* Main + thin header */
+/* Main + header maquette (~78px) */
 .dash-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .dash-header {
-  flex-shrink: 0; height: 36px;
+  flex-shrink: 0; height: 78px;
   display: flex; align-items: center; justify-content: flex-end;
-  padding: 0 0.65rem; border-bottom: 1px solid var(--border); background: var(--card);
+  padding: 0 2rem; border-bottom: 1px solid var(--border); background: #fefdfb;
 }
-.dash-header-right { display: flex; align-items: center; gap: 0.3rem; }
+.dash-header-right { display: flex; align-items: center; gap: 0.85rem; }
 .dash-kill {
-  border: 1px solid color-mix(in srgb, var(--destructive, #c8412f) 55%, var(--border));
+  border: 1px solid transparent;
   background: transparent;
-  color: color-mix(in srgb, var(--destructive, #c8412f) 90%, var(--foreground));
-  font-size: 0.65rem;
+  color: #ac5147;
+  font-size: 0.6875rem;
   font-weight: 700;
-  padding: 0.28rem 0.55rem;
-  border-radius: 0.35rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.5rem;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -480,8 +480,12 @@ button, select { font: inherit; color: inherit; }
 
 .dash-content {
   flex: 1; min-width: 0; min-height: 0;
-  padding: 0.45rem 0.55rem 0.65rem;
+  padding: 1.9rem 2rem 1.5rem;
+  max-width: 1800px;
+  width: 100%;
+  margin: 0 auto;
   overflow-y: auto; display: flex; flex-direction: column;
+  box-sizing: border-box;
 }
 .dash-content:has(.mkt-page) {
   overflow: hidden;
@@ -560,8 +564,10 @@ button, select { font: inherit; color: inherit; }
     flex-wrap: nowrap;
     max-width: 100%;
   }
-  .dash-shell.is-mobile .page-head h1 { font-size: 1rem; }
-  .dash-shell.is-mobile .page-head p { font-size: 0.72rem; }
+  .dash-shell.is-mobile .page-head h1 { font-size: 1.75rem; }
+  .dash-shell.is-mobile .page-head p { font-size: 0.8125rem; }
+  .dash-shell.is-mobile .dash-content { padding: 1.25rem 1rem; }
+  .dash-shell.is-mobile .dash-header { height: 65px; padding: 0 1rem; }
   .dash-shell.is-mobile .gate-matrix-wrap,
   .dash-shell.is-mobile .table-wrap {
     overflow-x: auto;
@@ -695,12 +701,22 @@ button, select { font: inherit; color: inherit; }
   }
 }
 
-.page-head { margin-bottom: 0.4rem; }
-.page-head h1 {
-  margin: 0 0 0.05rem; font-family: var(--font-sans);
-  font-size: 0.78rem; font-weight: 650; letter-spacing: -0.02em;
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
-.page-head p { margin: 0; max-width: 38rem; line-height: 1.3; font-size: 0.65rem; }
+.page-head h1 {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-serif);
+  font-size: clamp(1.85rem, 3.2vw, 2.375rem);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.page-head p { margin: 0; max-width: 38rem; line-height: 1.55; font-size: 0.8125rem; color: var(--muted-foreground); }
 /* Overview */
 .overview-page { display: flex; flex-direction: column; gap: 0.5rem; }
 .overview-head {
@@ -4430,6 +4446,16 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
   display: none !important;
 }
 
+/* Page-head is part of the maquette chrome — keep visible */
+.market-page.mkt-page > .page-head.market-head {
+  display: flex !important;
+  flex-shrink: 0;
+  padding: 0.55rem 0.75rem 0.35rem;
+  margin: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
 .mkt-topbar {
   display: flex;
   align-items: center;
@@ -4588,8 +4614,24 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
   position: relative;
   overflow: hidden;
 }
-.mkt-page.is-desktop .mkt-body {
-  flex-direction: row;
+.mkt-page.is-desktop .mkt-body.market-layout {
+  display: grid;
+  grid-template-columns: 185px minmax(0, 1fr) 5px var(--mkt-right-w, 280px);
+  gap: 0;
+  align-items: stretch;
+}
+.mkt-page.is-desktop.is-left-collapsed .mkt-body.market-layout {
+  grid-template-columns: minmax(0, 1fr) 5px var(--mkt-right-w, 280px);
+}
+.mkt-page.is-desktop.is-right-collapsed .mkt-body.market-layout {
+  grid-template-columns: 185px minmax(0, 1fr);
+}
+.mkt-page.is-desktop.is-left-collapsed.is-right-collapsed .mkt-body.market-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+.mkt-page.is-desktop .mkt-body.market-layout .mkt-resize-handle {
+  width: 5px;
+  min-width: 5px;
 }
 .mkt-chart-panel {
   flex: 1;
@@ -4604,6 +4646,7 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 }
 .mkt-page.is-desktop .mkt-chart-panel {
   border-right: 1px solid var(--border);
+  border-left: 1px solid var(--border);
 }
 .mkt-page .chart-wrap {
   flex: 1;
@@ -4681,9 +4724,9 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 }
 
 .mkt-right {
-  width: var(--mkt-right-w, 380px);
+  width: var(--mkt-right-w, 280px);
   max-width: 48vw;
-  min-width: 260px;
+  min-width: 0;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -4691,8 +4734,15 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
   background: var(--card);
   overflow: hidden;
 }
+.mkt-page.is-desktop .mkt-body.market-layout .mkt-right {
+  width: 100%;
+  max-width: none;
+}
 .mkt-page.is-right-collapsed .mkt-right,
 .mkt-page.is-right-collapsed .mkt-resize-handle {
+  display: none;
+}
+.mkt-page.is-left-collapsed .mkt-left {
   display: none;
 }
 .mkt-right-list {
@@ -4702,7 +4752,7 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
   border-bottom: 1px solid var(--border);
 }
 .mkt-right-bias {
-  flex: 0.9;
+  flex: 1;
   min-height: 0;
   overflow: auto;
 }

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
-import { GateMatrix } from '../components/GateMatrix'
 import { PaperConfirmSheet } from '../components/PaperConfirmSheet'
 import { ProposePaperTradePanel } from '../components/ProposePaperTradePanel'
 import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
@@ -15,12 +14,8 @@ import {
   labelReason,
 } from '../lib/decisionLabels'
 import {
-  PIPELINE_STAGE_ORDER,
   pipelineFromDecisionDetail,
-  stageFullLabel,
-  stageMatrixLabel,
   stageStatusesFromRow,
-  type PipelineStageId,
   type PipelineStageStatus,
 } from '../lib/decisionPipeline'
 import {
@@ -51,11 +46,14 @@ import {
 } from '../lib/paper'
 import { decisionPayloadFromDetail } from '../lib/agent'
 import { useCopilotNav } from '../lib/useCopilotNav'
-import './DecisionsPage.css'
-
+import { Tag, WorkspacePageHead } from '../components/maquette'
 type SortKey = 'symbol' | 'decision' | 'confidence' | 'ichimoku_score' | 'rvol' | 'price'
 type SortDir = 'asc' | 'desc'
-type ListView = 'liste' | 'matrice'
+type CycleStage = 'WATCH' | 'ARMED' | 'TRIGGERED'
+type CycleFilter = 'Tous' | CycleStage
+
+const CYCLE_FILTERS: CycleFilter[] = ['Tous', 'WATCH', 'ARMED', 'TRIGGERED']
+const FLOW_STAGES = ['WATCH', 'ARMED', 'TRIGGERED', 'ACCEPTÉ', 'REFUSÉ'] as const
 
 const CLASS_ORDER: EngineAssetClass[] = [
   'crypto',
@@ -81,16 +79,6 @@ function placeholderRow(inst: EngineInstrument): ScreenerDecisionRow {
   }
 }
 
-const DECISION_FILTERS: Array<'all' | DecisionLabel> = [
-  'all',
-  'STRONG_BUY',
-  'BUY',
-  'WATCH',
-  'WAIT',
-  'SELL',
-  'STRONG_SELL',
-]
-
 const DECISION_RANK: Record<DecisionLabel, number> = {
   STRONG_BUY: 6,
   BUY: 5,
@@ -111,6 +99,74 @@ function rowGate(r: ScreenerDecisionRow): PipelineGateLabel | null {
   const raw = r.pipeline?.decision
   if (raw === 'BUY' || raw === 'SELL' || raw === 'WATCH' || raw === 'NO_TRADE') return raw
   return null
+}
+
+function cycleFromRow(row: ScreenerDecisionRow): CycleStage {
+  const gate = rowGate(row)
+  if (gate === 'BUY' || gate === 'SELL') return 'TRIGGERED'
+  const st = stageStatusesFromRow(row)
+  if (st.direction === 'pass' && st.participation !== 'pass') return 'ARMED'
+  if (gate === 'WATCH' && st.direction === 'pass') return 'ARMED'
+  return 'WATCH'
+}
+
+function gateBadgeLabel(status: PipelineStageStatus): string {
+  switch (status) {
+    case 'pass':
+      return 'PASSE'
+    case 'fail':
+      return 'BLOQUÉ'
+    case 'watch':
+      return 'PRUDENCE'
+    case 'pending':
+      return '—'
+    case 'skip':
+      return 'N/A'
+    default: {
+      const _exhaustive: never = status
+      return _exhaustive
+    }
+  }
+}
+
+function gateBadgeClass(status: PipelineStageStatus): string {
+  switch (status) {
+    case 'pass':
+      return 'tag green'
+    case 'fail':
+      return 'tag red'
+    case 'watch':
+      return 'tag amber'
+    case 'pending':
+    case 'skip':
+      return 'tag gray'
+    default: {
+      const _exhaustive: never = status
+      return _exhaustive
+    }
+  }
+}
+
+function cycleBadgeClass(cycle: CycleStage): string {
+  switch (cycle) {
+    case 'TRIGGERED':
+      return 'tag amber'
+    case 'ARMED':
+      return 'tag green'
+    case 'WATCH':
+      return 'tag gray'
+    default: {
+      const _exhaustive: never = cycle
+      return _exhaustive
+    }
+  }
+}
+
+function directionCell(row: ScreenerDecisionRow): { text: string; tone: 'up' | 'down' | '' } {
+  const gate = rowGate(row)
+  if (gate === 'SELL' || row.direction === 'SHORT') return { text: '↓ Vente', tone: 'down' }
+  if (gate === 'BUY' || row.direction === 'LONG') return { text: '↑ Achat', tone: 'up' }
+  return { text: '— Neutre', tone: '' }
 }
 
 function fmtCacheAge(seconds: number): string {
@@ -143,11 +199,6 @@ function AgentBlock({ title, agent }: { title: string; agent: AgentDetail }) {
       {agent.reasons.length > 0 && <ReasonChips codes={agent.reasons} />}
     </div>
   )
-}
-
-function sortMarker(active: boolean, dir: SortDir): string {
-  if (!active) return ''
-  return dir === 'asc' ? ' ↑' : ' ↓'
 }
 
 function compareRows(a: ScreenerDecisionRow, b: ScreenerDecisionRow, key: SortKey, dir: SortDir): number {
@@ -184,55 +235,6 @@ function compareRows(a: ScreenerDecisionRow, b: ScreenerDecisionRow, key: SortKe
   }
 }
 
-function MethodBanner({ rows }: { rows: ScreenerDecisionRow[] }) {
-  const counts = useMemo(() => {
-    const byStage: Record<PipelineStageId, Record<PipelineStageStatus, number>> = {
-      direction: { pass: 0, fail: 0, watch: 0, pending: 0, skip: 0 },
-      participation: { pass: 0, fail: 0, watch: 0, pending: 0, skip: 0 },
-      structure: { pass: 0, fail: 0, watch: 0, pending: 0, skip: 0 },
-      location: { pass: 0, fail: 0, watch: 0, pending: 0, skip: 0 },
-      regime: { pass: 0, fail: 0, watch: 0, pending: 0, skip: 0 },
-    }
-    for (const row of rows) {
-      const st = stageStatusesFromRow(row)
-      for (const id of PIPELINE_STAGE_ORDER) {
-        byStage[id][st[id]] += 1
-      }
-    }
-    return byStage
-  }, [rows])
-
-  return (
-    <section className="panel dec-method" aria-label="Méthode">
-      <p className="dec-method-lead">
-        Cinq portes successives. Seules <strong>Achat</strong> / <strong>Vente</strong> (colonne
-        Portes) autorisent un ordre paper. <strong>Brut</strong> = Ichimoku + RVOL seul — diagnostic,
-        pas un verdict d’action.
-      </p>
-      <ol className="dec-method-steps">
-        {PIPELINE_STAGE_ORDER.map((id) => {
-          const c = counts[id]
-          const ok = c.pass
-          const blocked = c.fail
-          const soft = c.watch + c.pending
-          return (
-            <li key={id} title={stageFullLabel(id)}>
-              <span className="dec-method-n">{stageMatrixLabel(id)}</span>
-              <strong>{stageFullLabel(id)}</strong>
-              <span className="muted dec-method-counts">
-                <span className="up">{ok} ok</span>
-                {' · '}
-                <span className="down">{blocked} bloqué</span>
-                {soft > 0 ? ` · ${soft} prudence` : ''}
-              </span>
-            </li>
-          )
-        })}
-      </ol>
-    </section>
-  )
-}
-
 type PaperConfirmState = {
   symbol: string
   timeframe: string
@@ -256,18 +258,14 @@ export function DecisionsPage() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
 
-  const [sortKey, setSortKey] = useState<SortKey>('decision')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const sortKey: SortKey = 'confidence'
+  const sortDir: SortDir = 'desc'
   const [symbolQuery, setSymbolQuery] = useState('')
-  const [decisionFilter, setDecisionFilter] = useState<'all' | DecisionLabel>('all')
-  const [rvolMin, setRvolMin] = useState('')
-  const [actionableOnly, setActionableOnly] = useState(false)
+  const [cycleFilter, setCycleFilter] = useState<CycleFilter>('Tous')
   const [timeframe, setTimeframe] = useState('1h')
 
   const [confirming, setConfirming] = useState(false)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null)
-  const [listView, setListView] = useState<ListView>('liste')
-  const [paperBusySymbol, setPaperBusySymbol] = useState<string | null>(null)
   const [paperMsg, setPaperMsg] = useState<string | null>(null)
   const [paperConfirming, setPaperConfirming] = useState(false)
   const [paperConfirm, setPaperConfirm] = useState<PaperConfirmState | null>(null)
@@ -356,7 +354,6 @@ export function DecisionsPage() {
 
   const visibleRows = useMemo(() => {
     const q = symbolQuery.trim().toLowerCase()
-    const minR = rvolMin.trim() === '' ? null : Number(rvolMin)
     const filtered = classRows.filter((r) => {
       if (q) {
         const sym = r.symbol.toLowerCase()
@@ -364,18 +361,18 @@ export function DecisionsPage() {
         const short = sym.replace(/usdt$/, '')
         if (!sym.includes(q) && !short.includes(q) && !label.includes(q)) return false
       }
-      if (decisionFilter !== 'all' && r.decision !== decisionFilter) return false
-      if (actionableOnly) {
-        const g = rowGate(r)
-        if (g !== 'BUY' && g !== 'SELL') return false
-      }
-      if (minR != null && Number.isFinite(minR)) {
-        if (r.rvol == null || r.rvol < minR) return false
-      }
+      if (cycleFilter !== 'Tous' && cycleFromRow(r) !== cycleFilter) return false
       return true
     })
     return [...filtered].sort((a, b) => compareRows(a, b, sortKey, sortDir))
-  }, [classRows, symbolQuery, decisionFilter, rvolMin, actionableOnly, sortKey, sortDir, byId])
+  }, [classRows, symbolQuery, cycleFilter, sortKey, sortDir, byId])
+
+  const highlightRow = useMemo(() => {
+    const triggered = visibleRows.filter((r) => cycleFromRow(r) === 'TRIGGERED')
+    const pool = triggered.length > 0 ? triggered : visibleRows
+    if (pool.length === 0) return null
+    return [...pool].sort((a, b) => b.confidence - a.confidence)[0] ?? null
+  }, [visibleRows])
 
   function instrumentLabel(id: string): string {
     return byId.get(id)?.label ?? id.replace(/USDT$/i, '')
@@ -528,25 +525,6 @@ export function DecisionsPage() {
     }
   }
 
-  async function onOpenPaperFromMatrix(row: ScreenerDecisionRow) {
-    if (openPaperSymbols.has(row.symbol) || paperBusySymbol) return
-    setPaperBusySymbol(row.symbol)
-    setPaperMsg(null)
-    setPaperConfirmError(null)
-    try {
-      // La proposition du moteur sert de taille suggérée ; son absence n'empêche pas d'acheter.
-      const intent = await proposePaperTrade(row.symbol, row.timeframe || timeframe).catch(() => null)
-      setPaperConfirm({
-        symbol: row.symbol,
-        timeframe: row.timeframe || timeframe,
-        intent,
-        source: 'matrix',
-      })
-    } finally {
-      setPaperBusySymbol(null)
-    }
-  }
-
   async function onRefreshIntent() {
     if (!detail) return
     setIntentLoading(true)
@@ -679,41 +657,18 @@ export function DecisionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deep-link once per symbol query
   }, [searchParams, instruments])
 
-  function toggleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-      return
-    }
-    setSortKey(key)
-    setSortDir(key === 'symbol' ? 'asc' : 'desc')
-  }
-
-  const colCount = sheetOpen ? 3 : 6
   const activeIntent: OrderIntent | null = intentOverride ?? detail?.order_intent ?? null
-
-  const gateStats = useMemo(() => {
-    let buy = 0
-    let sell = 0
-    let watch = 0
-    let none = 0
-    for (const r of classRows) {
-      const g = rowGate(r)
-      if (g === 'BUY') buy += 1
-      else if (g === 'SELL') sell += 1
-      else if (g === 'WATCH') watch += 1
-      else none += 1
-    }
-    return { buy, sell, watch, none, total: classRows.length }
-  }, [classRows])
+  const highlightSym = highlightRow ? instrumentLabel(highlightRow.symbol) : null
+  const highlightCycle = highlightRow ? cycleFromRow(highlightRow) : null
 
   return (
     <div className={`decisions-page${sheetOpen ? ' is-sheet-open' : ''}`}>
-      <header className="page-head market-head">
+      <header className="page-head market-head iv-animate-soft">
         <div className="market-head-copy">
-          <p className="iv-page-eyebrow">Trading · Opportunités</p>
-          <h1>Opportunités</h1>
+          <p className="iv-page-eyebrow">{workspaceEyebrow('/app/opportunites')}</p>
+          <h1>{META.label}</h1>
           <p className="iv-page-question">
-            Que dit la méthode ?
+            {META.subtitle}
             {pinnedOnly ? ' · Filtre Épinglés actif.' : ''}
           </p>
           <p className="muted">{CLASS_BLURBS[marketClass]}</p>
@@ -742,56 +697,25 @@ export function DecisionsPage() {
                 {CLASS_LABELS[c]}
               </button>
             ))}
+            <select
+              value={timeframe}
+              onChange={(e) => setTimeframe(e.target.value)}
+              aria-label="Timeframe"
+              style={{ marginLeft: '0.5rem' }}
+            >
+              <option value="15m">15m</option>
+              <option value="1h">1H</option>
+              <option value="4h">4H</option>
+              <option value="1d">1D</option>
+            </select>
+            {marketClass !== 'equity' && (
+              <button type="button" className="ghost" onClick={() => load(true)} disabled={loading}>
+                {loading ? '…' : 'Actualiser'}
+              </button>
+            )}
           </div>
         )}
       </header>
-
-      <MethodBanner rows={classRows} />
-
-      <section className="dec-gate-stats" aria-label="Résumé Portes">
-        <button
-          type="button"
-          className="panel overview-stat overview-stat--bull"
-          onClick={() => {
-            setActionableOnly(true)
-            setDecisionFilter('all')
-          }}
-          title="Filtrer les actionnables Achat"
-        >
-          <span className="overview-stat-label muted">Achats (Portes)</span>
-          <strong className="mono">{loading && !classRows.length ? '—' : gateStats.buy}</strong>
-        </button>
-        <button
-          type="button"
-          className="panel overview-stat overview-stat--bear"
-          onClick={() => {
-            setActionableOnly(true)
-            setDecisionFilter('all')
-          }}
-          title="Filtrer les actionnables Vente"
-        >
-          <span className="overview-stat-label muted">Ventes (Portes)</span>
-          <strong className="mono">{loading && !classRows.length ? '—' : gateStats.sell}</strong>
-        </button>
-        <button
-          type="button"
-          className="panel overview-stat"
-          onClick={() => {
-            setActionableOnly(false)
-            setDecisionFilter('all')
-          }}
-        >
-          <span className="overview-stat-label muted">Surveillance</span>
-          <strong className="mono">{loading && !classRows.length ? '—' : gateStats.watch}</strong>
-        </button>
-        <div className="panel overview-stat">
-          <span className="overview-stat-label muted">Scannées · {timeframe}</span>
-          <strong className="mono">{loading && !classRows.length ? '—' : gateStats.total}</strong>
-          <span className="overview-stat-meta muted">
-            {gateStats.buy + gateStats.sell} actionnables
-          </span>
-        </div>
-      </section>
 
       {error && (
         <div className="banner error" role="alert">
@@ -801,247 +725,112 @@ export function DecisionsPage() {
         </div>
       )}
 
+      <div className="ops-toolbar" role="toolbar" aria-label="Filtres opportunités">
+        <input
+          type="search"
+          className="ops-search"
+          placeholder="Rechercher un actif…"
+          value={symbolQuery}
+          onChange={(e) => setSymbolQuery(e.target.value)}
+          aria-label="Rechercher un actif"
+        />
+        <div className="ops-segmented" role="tablist" aria-label="Cycle">
+          {CYCLE_FILTERS.map((f) => (
+            <button
+              key={f}
+              type="button"
+              role="tab"
+              aria-selected={cycleFilter === f}
+              className={cycleFilter === f ? 'is-active' : undefined}
+              onClick={() => setCycleFilter(f)}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        <span className="opp-count">
+          {loading && !visibleRows.length
+            ? 'scan…'
+            : `${visibleRows.length} actifs · clôture ${timeframe.toUpperCase()}`}
+          {cacheAge != null ? ` · ${fmtCacheAge(cacheAge)}` : ''}
+        </span>
+      </div>
+
       <div className="decisions-split">
-        <section className="panel decisions-table-panel">
+        <section className="panel decisions-table-panel iv-animate-in" aria-label="Matrice de décision">
           <header className="panel-head">
-            <h2>Screener · {CLASS_LABELS[marketClass]}</h2>
-            <div className="panel-head-actions">
-              <div className="decisions-view-tabs" role="tablist" aria-label="Vue screener">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={listView === 'liste'}
-                  className={listView === 'liste' ? 'is-active' : undefined}
-                  onClick={() => setListView('liste')}
-                >
-                  Liste
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={listView === 'matrice'}
-                  className={listView === 'matrice' ? 'is-active' : undefined}
-                  onClick={() => setListView('matrice')}
-                >
-                  Matrice
-                </button>
-              </div>
-              <span className="panel-meta">
-                {loading
-                  ? 'scan…'
-                  : marketClass === 'equity'
-                    ? `${visibleRows.length} · détail au clic (pas de scan masse)`
-                    : `${visibleRows.length}/${classRows.length}${cacheAge != null ? ` · ${fmtCacheAge(cacheAge)}` : ''}`}
-              </span>
-              {marketClass !== 'equity' && (
-                <button type="button" className="ghost" onClick={() => load(true)} disabled={loading}>
-                  Rafraîchir
-                </button>
-              )}
-            </div>
+            <h2>Matrice de décision</h2>
+            <span className="iv-badge">5 PORTES</span>
           </header>
-
-          <div className="decisions-filters" role="search">
-            <label className="decisions-filter">
-              <span className="muted">TF</span>
-              <select value={timeframe} onChange={(e) => setTimeframe(e.target.value)}>
-                <option value="15m">15m</option>
-                <option value="1h">1h</option>
-                <option value="4h">4h</option>
-                <option value="1d">1d</option>
-              </select>
-            </label>
-            <label className="decisions-filter">
-              <span className="muted">Symbole</span>
-              <input
-                type="search"
-                value={symbolQuery}
-                onChange={(e) => setSymbolQuery(e.target.value)}
-                placeholder="BTC, EUR, XAU…"
-                autoComplete="off"
-              />
-            </label>
-            <label className="decisions-filter">
-              <span className="muted">Décision</span>
-              <select
-                value={decisionFilter}
-                onChange={(e) => setDecisionFilter(e.target.value as 'all' | DecisionLabel)}
-              >
-                {DECISION_FILTERS.map((d) => (
-                  <option key={d} value={d}>
-                    {d === 'all' ? 'Toutes' : labelDecision(d)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="decisions-filter">
-              <span className="muted">RVOL ≥</span>
-              <input
-                type="number"
-                min={0}
-                step={0.1}
-                value={rvolMin}
-                onChange={(e) => setRvolMin(e.target.value)}
-                placeholder="ex. 1.5"
-              />
-            </label>
-            <label className="decisions-filter dec-filter-check">
-              <input
-                type="checkbox"
-                checked={actionableOnly}
-                onChange={(e) => setActionableOnly(e.target.checked)}
-              />
-              <span className="muted">Actionnables (Portes Achat/Vente)</span>
-            </label>
-            {(symbolQuery || decisionFilter !== 'all' || rvolMin || actionableOnly) && (
-              <button
-                type="button"
-                className="ghost decisions-filter-reset"
-                onClick={() => {
-                  setSymbolQuery('')
-                  setDecisionFilter('all')
-                  setRvolMin('')
-                  setActionableOnly(false)
-                }}
-              >
-                Reset
-              </button>
-            )}
-          </div>
-
-          <div className="table-wrap">
-            {listView === 'matrice' ? (
-              loading && visibleRows.length === 0 ? (
-                <p className="muted center">Chargement du screener…</p>
-              ) : (
-                <>
-                  <GateMatrix
-                    rows={visibleRows}
-                    selected={selected}
-                    onSelect={onSelect}
-                    symbolLabel={instrumentLabel}
-                    onOpenPaper={onOpenPaperFromMatrix}
-                    paperBusySymbol={paperBusySymbol}
-                    openPaperSymbols={openPaperSymbols}
-                    emptyHint={
-                      classRows.length === 0
-                        ? marketClass === 'equity'
-                          ? 'Aucune action câblée'
-                          : 'Aucune ligne pour cette classe — clique Rafraîchir.'
-                        : 'Aucun résultat pour ces filtres'
-                    }
-                  />
-                  {paperMsg && <p className="muted decisions-paper-msg">{paperMsg}</p>}
-                </>
-              )
-            ) : (
-              <table className="decisions-table">
-                <thead>
-                  <tr>
-                    <th>
-                      <button type="button" className="th-sort" onClick={() => toggleSort('symbol')}>
-                        Symbole{sortMarker(sortKey === 'symbol', sortDir)}
-                      </button>
-                    </th>
-                    <th>
-                      <button
-                        type="button"
-                        className="th-sort"
-                        onClick={() => toggleSort('decision')}
-                        title="Tri sur le verdict Portes (pipeline) ; Brut = diagnostic Ichi+RVOL"
-                      >
-                        Portes{sortMarker(sortKey === 'decision', sortDir)}
-                      </button>
-                    </th>
-                    {!sheetOpen && (
-                      <th>
-                        <button
-                          type="button"
-                          className="th-sort"
-                          onClick={() => toggleSort('confidence')}
-                        >
-                          Confiance{sortMarker(sortKey === 'confidence', sortDir)}
-                        </button>
-                      </th>
-                    )}
-                    {!sheetOpen && (
-                      <th>
-                        <button
-                          type="button"
-                          className="th-sort"
-                          onClick={() => toggleSort('ichimoku_score')}
-                        >
-                          Ichimoku{sortMarker(sortKey === 'ichimoku_score', sortDir)}
-                        </button>
-                      </th>
-                    )}
-                    <th>
-                      <button type="button" className="th-sort" onClick={() => toggleSort('rvol')}>
-                        RVOL{sortMarker(sortKey === 'rvol', sortDir)}
-                      </button>
-                    </th>
-                    {!sheetOpen && (
-                      <th>
-                        <button
-                          type="button"
-                          className="th-sort"
-                          onClick={() => toggleSort('price')}
-                        >
-                          Prix{sortMarker(sortKey === 'price', sortDir)}
-                        </button>
-                      </th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleRows.map((r) => (
+          <div className="table-wrap opp-matrix-wrap">
+            <table className="data-table opp-matrix" aria-label="Matrice de décision">
+              <thead>
+                <tr>
+                  <th>Actif</th>
+                  <th>Direction</th>
+                  <th>Participation</th>
+                  <th>Structure</th>
+                  <th>Emplacement</th>
+                  <th>Régime</th>
+                  <th>Cycle</th>
+                  <th>Confiance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleRows.map((row) => {
+                  const st = stageStatusesFromRow(row)
+                  const cycle = cycleFromRow(row)
+                  const dir = directionCell(row)
+                  return (
                     <tr
-                      key={r.symbol}
-                      className={r.symbol === selected ? 'is-active' : undefined}
-                      onClick={() => onSelect(r.symbol)}
+                      key={row.symbol}
+                      className={row.symbol === selected ? 'is-active' : undefined}
+                      onClick={() => onSelect(row.symbol)}
+                      style={{ cursor: 'pointer' }}
                     >
                       <td>
-                        <strong title={r.symbol}>{instrumentLabel(r.symbol)}</strong>
+                        <b>{instrumentLabel(row.symbol)}</b>
+                        <small>{row.symbol} · USDT</small>
                       </td>
+                      <td className={dir.tone}>{dir.text}</td>
+                      {(['participation', 'structure', 'location', 'regime'] as const).map((id) => (
+                        <td key={id}>
+                          <span className={gateBadgeClass(st[id])}>{gateBadgeLabel(st[id])}</span>
+                        </td>
+                      ))}
                       <td>
-                        <VerdictBadge decision={r.decision} pipeline={r.pipeline} />
+                        <span className={cycleBadgeClass(cycle)}>{cycle}</span>
                       </td>
-                      {!sheetOpen && <td className="mono">{(r.confidence * 100).toFixed(0)}%</td>}
-                      {!sheetOpen && (
-                        <td className="mono">
-                          {r.ichimoku_score != null ? r.ichimoku_score.toFixed(0) : '—'}
-                        </td>
-                      )}
-                      <td className="mono">{r.rvol != null ? `${r.rvol.toFixed(2)}×` : '—'}</td>
-                      {!sheetOpen && (
-                        <td className="mono">
-                          {r.price > 0 ? r.price.toFixed(r.price >= 100 ? 2 : 4) : '—'}
-                        </td>
-                      )}
+                      <td className="mono">{(row.confidence * 100).toFixed(0)} %</td>
                     </tr>
-                  ))}
-                  {loading && visibleRows.length === 0 && (
-                    <tr>
-                      <td colSpan={colCount} className="muted center">
-                        Chargement du screener…
-                      </td>
-                    </tr>
-                  )}
-                  {!loading && visibleRows.length === 0 && !error && (
-                    <tr>
-                      <td colSpan={colCount} className="muted center">
-                        {classRows.length === 0
-                          ? marketClass === 'equity'
-                            ? 'Aucune action câblée'
-                            : 'Aucune ligne pour cette classe — clique Rafraîchir (le cache se reconstruit après un redémarrage moteur).'
-                          : 'Aucun résultat pour ces filtres'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            )}
+                  )
+                })}
+                {loading && visibleRows.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="muted center">
+                      Chargement du screener…
+                    </td>
+                  </tr>
+                )}
+                {!loading && visibleRows.length === 0 && !error && (
+                  <tr>
+                    <td colSpan={8} className="muted center">
+                      {classRows.length === 0
+                        ? marketClass === 'equity'
+                          ? 'Aucune action câblée'
+                          : 'Aucune ligne — clique Actualiser.'
+                        : 'Aucun résultat pour ces filtres'}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
+          {paperMsg && (
+            <p className="muted" style={{ padding: '0.5rem 1rem' }}>
+              {paperMsg}
+            </p>
+          )}
         </section>
 
         {sheetOpen && (
@@ -1182,6 +971,72 @@ export function DecisionsPage() {
             </div>
           </aside>
         )}
+      </div>
+
+      <div className="desk-grid iv-animate-in-delay" style={{ marginTop: '1.25rem' }}>
+        <section className="panel" aria-label="De l’observation à la décision">
+          <header className="panel-head">
+            <h2>De l’observation à la décision</h2>
+          </header>
+          <div className="iv-card-body">
+            <div className="iv-pipeline-flow">
+              {FLOW_STAGES.map((s, i) => (
+                <span key={s} className="iv-pipeline-flow">
+                  {i > 0 && <span className="iv-flow-arrow">→</span>}
+                  <span
+                    className={
+                      s === 'REFUSÉ'
+                        ? 'iv-badge is-refuse'
+                        : s === 'TRIGGERED' || s === 'ACCEPTÉ'
+                          ? 'iv-badge is-caution'
+                          : s === 'ARMED'
+                            ? 'iv-badge is-pass'
+                            : 'iv-badge'
+                    }
+                  >
+                    {s}
+                  </span>
+                </span>
+              ))}
+            </div>
+            <p className="muted" style={{ margin: 0, fontSize: '0.75rem', lineHeight: 1.5 }}>
+              Un signal traverse chaque contrôle. La confiance complète la lecture ; elle ne
+              remplace jamais le verdict du Risk Kernel.
+            </p>
+          </div>
+        </section>
+
+        <section className="panel opp-why" aria-label="Pourquoi cet actif">
+          <header className="panel-head">
+            <h2>{highlightSym ? `Pourquoi ${highlightSym} ?` : 'Pourquoi ?'}</h2>
+            {highlightCycle && (
+              <span className={cycleBadgeClass(highlightCycle)}>{highlightCycle}</span>
+            )}
+          </header>
+          <div className="iv-card-body">
+            {highlightRow ? (
+              <>
+                <p>
+                  {cycleFromRow(highlightRow) === 'TRIGGERED'
+                    ? 'Direction, volume et structure convergent. Le plan attend une validation finale du risque.'
+                    : cycleFromRow(highlightRow) === 'ARMED'
+                      ? 'Direction favorable ; participation à confirmer sur bougie clôturée.'
+                      : 'Sous surveillance — les portes n’autorisent pas encore une action.'}{' '}
+                  Confiance {(highlightRow.confidence * 100).toFixed(0)} %.
+                </p>
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={() => onSelect(highlightRow.symbol)}
+                >
+                  Ouvrir la fiche de décision →
+                </button>
+              </>
+            ) : (
+              <p className="muted">Aucun actif à mettre en avant pour ce filtre.</p>
+            )}
+          </div>
+        </section>
       </div>
 
       {paperConfirm && (

@@ -1,7 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ContextPanel } from '../components/ContextPanel'
-import { VerdictBadge } from '../components/VerdictBadge'
 import {
   getActivityFeed,
   getActivitySummary,
@@ -21,14 +19,26 @@ import {
   getPaperOverview,
   listPaperPortfolios,
   type PaperOverview,
+  type PaperOverviewPosition,
   type PaperPortfolioRow,
 } from '../lib/paper'
 import { asGate } from '../lib/verdict'
-import './OverviewPage.css'
+import { workspaceEyebrow } from '../lib/workspaceNav'
 
 const BASELINE = 'ICHIVOL_BASELINE_V1'
 const REFRESH_MS = 60_000
 const TAPE_LIMIT = 8
+
+const DESK_SESSIONS = [
+  { region: 'Asie', city: 'Tokyo', status: 'Clôturée', hours: '00:00–09:00 UTC', left: 77.6, top: 34.6 },
+  { region: 'Europe', city: 'Londres', status: 'Ouverte', hours: '07:00–16:00 UTC', left: 50, top: 23.1 },
+  { region: 'États-Unis', city: 'New York', status: 'À venir', hours: '13:30–20:00 UTC', left: 29.4, top: 30.6 },
+] as const
+
+const PERIODS = ['1J', '1S', '1M', '3M'] as const
+type Period = (typeof PERIODS)[number]
+
+const RING_COLORS = ['#548f87', '#8c9eb4', '#c2b596', '#a8b5a0'] as const
 
 function fmtCacheAge(seconds: number): string {
   if (seconds < 5) return 'à l’instant'
@@ -104,7 +114,7 @@ function fmtPct(v: number | null | undefined, digits = 1): string {
   return `${sign}${(v * 100).toFixed(digits)} %`
 }
 
-function fmtEur(v: number | null | undefined, digits = 0): string {
+function fmtEur(v: number | null | undefined, digits = 2): string {
   if (v == null || Number.isNaN(v)) return '—'
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
@@ -114,83 +124,222 @@ function fmtEur(v: number | null | undefined, digits = 0): string {
   }).format(v)
 }
 
-function fmtInt(n: number): string {
-  return n.toLocaleString('fr-FR')
-}
-
-function fmtWhen(iso: string | null): string {
-  if (!iso) return 'jamais'
-  const t = Date.parse(iso)
-  if (Number.isNaN(t)) return '—'
-  const ageSec = (Date.now() - t) / 1000
-  if (ageSec < 3600) return `il y a ${Math.max(1, Math.floor(ageSec / 60))} min`
-  if (ageSec < 86400) return `il y a ${Math.floor(ageSec / 3600)} h`
-  return `il y a ${Math.floor(ageSec / 86400)} j`
+function fmtPrice(v: number | null | undefined): string {
+  if (v == null || Number.isNaN(v)) return '—'
+  return new Intl.NumberFormat('fr-FR', {
+    maximumFractionDigits: v >= 100 ? 2 : 4,
+    minimumFractionDigits: 2,
+  }).format(v)
 }
 
 function fmtClock(iso: string): string {
   return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 }
 
-function toneClass(tone: ActivityItem['tone']): string {
-  switch (tone) {
-    case 'good':
-      return 'is-good'
-    case 'bad':
-      return 'is-bad'
-    case 'blocked':
-      return 'is-blocked'
-    case 'neutral':
-      return 'is-neutral'
-    default: {
-      const _exhaustive: never = tone
-      return _exhaustive
-    }
-  }
+function displaySymbol(symbol: string): string {
+  return symbol.replace(/USDT$/i, '').replace(/USD$/i, '')
 }
 
-function EquitySpark({ points, initial }: { points: { equity: number }[]; initial: number }) {
+function coinGlyph(base: string): string {
+  if (base === 'BTC') return '₿'
+  return base.charAt(0)
+}
+
+function coinClass(base: string): string {
+  if (base === 'ETH' || base === 'LINK') return 'eth'
+  if (base === 'SOL') return 'sol'
+  return ''
+}
+
+function cycleTag(r: ScreenerDecisionRow): { label: string; tone: string } {
+  const bucket = verdictBucket(r)
+  if (bucket === 'buy') {
+    if (r.decision === 'STRONG_BUY' || r.confidence >= 0.8) {
+      return { label: 'TRIGGERED', tone: 'amber' }
+    }
+    return { label: 'ARMED', tone: '' }
+  }
+  if (bucket === 'sell') return { label: 'WATCH', tone: '' }
+  if (bucket === 'watch') return { label: 'WATCH', tone: '' }
+  return { label: 'WATCH', tone: 'gray' }
+}
+
+function opportunityHint(r: ScreenerDecisionRow): string {
+  const bucket = verdictBucket(r)
+  if (bucket === 'buy' && (r.rvol == null || r.rvol < 1.5)) {
+    return 'En attente de confirmation RVOL'
+  }
+  if (bucket === 'buy') return 'Toutes les portes sont passées'
+  if (bucket === 'sell') return 'Signal vendeur — short désactivé'
+  return 'Structure à confirmer'
+}
+
+function positionNotional(p: PaperOverviewPosition): number {
+  if (p.market_value != null && Number.isFinite(p.market_value)) return Math.abs(p.market_value)
+  if (p.notional != null && Number.isFinite(p.notional)) return Math.abs(p.notional)
+  return 0
+}
+
+function maxDrawdownPct(points: { equity: number }[], initial: number): number | null {
+  if (!points.length) return null
+  let peak = initial
+  let maxDd = 0
+  for (const p of points) {
+    peak = Math.max(peak, p.equity)
+    if (peak > 0) maxDd = Math.max(maxDd, (peak - p.equity) / peak)
+  }
+  return maxDd
+}
+
+function Tag({ children, tone = '' }: { children: ReactNode; tone?: string }) {
+  return <span className={`tag${tone ? ` ${tone}` : ''}`}>{children}</span>
+}
+
+function StatLine({ label, value }: { label: ReactNode; value: ReactNode }) {
+  return (
+    <div className="statline">
+      <span>{label}</span>
+      <b>{value}</b>
+    </div>
+  )
+}
+
+function ProgressRow({
+  label,
+  value,
+  pct,
+  warn,
+}: {
+  label: string
+  value: string
+  pct: number
+  warn?: boolean
+}) {
+  const width = Math.max(0, Math.min(100, pct))
+  return (
+    <>
+      <div className="risk-row">
+        <span>{label}</span>
+        <span className={`mono${warn ? ' warn' : ''}`}>{value}</span>
+      </div>
+      <div className="track">
+        <span style={{ width: `${width}%`, ...(warn ? { background: '#b99557' } : {}) }} />
+      </div>
+    </>
+  )
+}
+
+function DeskRing({
+  parts,
+  value,
+  label,
+}: {
+  parts: { pct: number; color: string }[]
+  value: string
+  label: string
+}) {
+  let offset = 0
+  return (
+    <div className="desk-ring">
+      <svg viewBox="0 0 200 200" role="img" aria-label={`${label} : ${value}`}>
+        <circle cx="100" cy="100" r="80" fill="none" stroke="#eeeae3" strokeWidth="19" />
+        {parts.map((p, i) => {
+          const o = offset
+          offset += p.pct
+          if (p.pct <= 0) return null
+          return (
+            <circle
+              key={i}
+              cx="100"
+              cy="100"
+              r="80"
+              pathLength="100"
+              fill="none"
+              stroke={p.color}
+              strokeWidth="19"
+              strokeDasharray={`${p.pct} ${100 - p.pct}`}
+              strokeDashoffset={-o}
+              transform="rotate(-90 100 100)"
+            />
+          )
+        })}
+      </svg>
+      <div>
+        <b>{value}</b>
+        <small>{label}</small>
+      </div>
+    </div>
+  )
+}
+
+function EquityChart({
+  points,
+  initial,
+}: {
+  points: { t: string; equity: number }[]
+  initial: number
+}) {
   if (points.length < 2) {
-    return <div className="ov-spark ov-spark--empty muted">Courbe en construction</div>
+    return (
+      <div className="chart-summary" style={{ padding: '40px 20px' }}>
+        <span>Courbe en construction</span>
+      </div>
+    )
   }
   const vals = points.map((p) => p.equity)
   const min = Math.min(...vals, initial)
   const max = Math.max(...vals, initial)
   const span = Math.max(1e-6, max - min)
-  const w = 160
-  const h = 40
-  const poly = vals
+  const w = 720
+  const h = 230
+  const left = 25
+  const right = 680
+  const top = 20
+  const bottom = 210
+  const path = vals
     .map((v, i) => {
-      const x = (i / (vals.length - 1)) * w
-      const y = h - ((v - min) / span) * (h - 4) - 2
-      return `${x.toFixed(1)},${y.toFixed(1)}`
+      const x = left + (i / (vals.length - 1)) * (right - left)
+      const y = bottom - ((v - min) / span) * (bottom - top)
+      return `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`
     })
     .join(' ')
-  const up = vals[vals.length - 1] >= initial
-  return (
-    <svg className={`ov-spark ${up ? 'is-up' : 'is-down'}`} viewBox={`0 0 ${w} ${h}`} aria-hidden>
-      <polyline fill="none" strokeWidth="1.6" points={poly} />
-    </svg>
-  )
-}
+  const lastY = bottom - ((vals[vals.length - 1] - min) / span) * (bottom - top)
+  const gridYs = [45, 95, 145, 195]
+  const labels = [0, 0.25, 0.5, 0.75, 1].map((t) => {
+    const idx = Math.min(vals.length - 1, Math.floor(t * (vals.length - 1)))
+    const d = new Date(points[idx].t)
+    return Number.isNaN(d.getTime())
+      ? '—'
+      : d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }).toUpperCase()
+  })
 
-function DeskKpi({
-  label,
-  value,
-  meta,
-  tone,
-}: {
-  label: string
-  value: string
-  meta?: string
-  tone?: 'bull' | 'bear' | 'flat'
-}) {
   return (
-    <div className={`ov-desk-kpi${tone && tone !== 'flat' ? ` is-${tone}` : ''}`}>
-      <span className="overview-stat-label muted">{label}</span>
-      <strong className="mono">{value}</strong>
-      {meta ? <span className="overview-stat-meta muted">{meta}</span> : null}
-    </div>
+    <>
+      <svg className="chart" viewBox={`0 0 ${w} ${h}`} role="img" aria-label="Courbe de performance">
+        <defs>
+          <linearGradient id="desk-equity-fade" x1="0" y1="0" x2="0" y2="1">
+            <stop stopColor="#b5d6cc" stopOpacity=".35" />
+            <stop offset="1" stopColor="#b5d6cc" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {gridYs.map((y, i) => (
+          <g key={y}>
+            <line x1="25" y1={y} x2="680" y2={y} stroke="#eeeae5" strokeDasharray="3 5" />
+            <text x="684" y={y + 3} fontSize="9" fill="#939a9d">
+              {fmtEur(max - (i / (gridYs.length - 1)) * (max - min), 0)}
+            </text>
+          </g>
+        ))}
+        <path d={`${path} L680,210 L25,210Z`} fill="url(#desk-equity-fade)" />
+        <path d={path} fill="none" stroke="#478f83" strokeWidth="2" />
+        <circle cx="680" cy={lastY} r="4" fill="#478f83" />
+      </svg>
+      <div className="chart-labels">
+        {labels.map((l, i) => (
+          <span key={`${l}-${i}`}>{l}</span>
+        ))}
+      </div>
+    </>
   )
 }
 
@@ -204,6 +353,8 @@ export function OverviewPage() {
   const [tape, setTape] = useState<ActivityItem[]>([])
   const [evidence, setEvidence] = useState<BacktestEvidenceSummary | null>(null)
   const [portfolios, setPortfolios] = useState<PaperPortfolioRow[]>([])
+  const [deskSession, setDeskSession] = useState(1)
+  const [period, setPeriod] = useState<Period>('1M')
 
   const load = useCallback(async (force = false) => {
     setLoading(true)
@@ -251,508 +402,742 @@ export function OverviewPage() {
   }, [load])
 
   const stats = useMemo(() => summarize(rows), [rows])
-
   const acct = overview?.account
+  const openBook = overview?.positions ?? []
+
   const dayPct =
     acct?.day_change != null && acct.equity
       ? acct.day_change / Math.max(1e-9, acct.equity - acct.day_change)
       : null
-  const totalPct =
-    acct != null && acct.initial_cash > 0 ? acct.total_pnl / acct.initial_cash : null
-  const dayTone: 'bull' | 'bear' | 'flat' =
-    acct?.day_change == null ? 'flat' : acct.day_change > 0 ? 'bull' : acct.day_change < 0 ? 'bear' : 'flat'
 
-  const circuitAlive = (summary?.decisions.last_24h ?? 0) > 0
-  const edgeHint = evidence?.pipeline_beats_ichimoku_sharpe
+  const availablePct =
+    acct != null && acct.equity > 0 ? acct.cash / acct.equity : null
 
-  const labs = useMemo(() => {
-    return [...portfolios].sort((a, b) => {
-      if (a.code === BASELINE) return -1
-      if (b.code === BASELINE) return 1
-      return b.realized_pnl - a.realized_pnl
+  const exposedPct =
+    acct != null && acct.equity > 0 ? acct.invested / acct.equity : null
+
+  const riskPct = overview?.risk?.open_risk_pct ?? null
+  const riskCap = overview?.risk?.max_open_risk_pct ?? 0.03
+
+  const drawdown = useMemo(
+    () => maxDrawdownPct(overview?.equity_curve ?? [], acct?.initial_cash ?? 5000),
+    [overview?.equity_curve, acct?.initial_cash],
+  )
+
+  const equityPoints = useMemo(() => {
+    const curve = overview?.equity_curve ?? []
+    if (!curve.length) return curve
+    const now = Date.now()
+    const ms =
+      period === '1J'
+        ? 86_400_000
+        : period === '1S'
+          ? 7 * 86_400_000
+          : period === '1M'
+            ? 30 * 86_400_000
+            : 90 * 86_400_000
+    const filtered = curve.filter((p) => {
+      const t = Date.parse(p.t)
+      return !Number.isNaN(t) && now - t <= ms
     })
-  }, [portfolios])
+    return filtered.length >= 2 ? filtered : curve
+  }, [overview?.equity_curve, period])
 
-  const openBook = overview?.positions.slice(0, 6) ?? []
+  const tickers = useMemo(() => {
+    return [...rows]
+      .sort((a, b) => b.confidence - a.confidence)
+      .slice(0, 4)
+  }, [rows])
+
+  const watchList = useMemo(() => {
+    if (stats.top.length) return stats.top.slice(0, 3)
+    return [...rows].sort((a, b) => b.confidence - a.confidence).slice(0, 3)
+  }, [stats.top, rows])
+
+  const nextCheckpoint = useMemo(() => {
+    return (
+      rows.find((r) => {
+        const b = verdictBucket(r)
+        return b === 'buy' && (r.rvol == null || r.rvol < 1.5)
+      }) ??
+      watchList[0] ??
+      null
+    )
+  }, [rows, watchList])
+
+  const concentration = useMemo(() => {
+    const total = openBook.reduce((s, p) => s + positionNotional(p), 0)
+    if (total <= 0) return []
+    return [...openBook]
+      .map((p) => ({
+        symbol: displaySymbol(p.symbol),
+        pct: (positionNotional(p) / total) * 100,
+        notional: positionNotional(p),
+      }))
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, 6)
+  }, [openBook])
+
+  const session = DESK_SESSIONS[deskSession]
+  const todayLabel = new Date().toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+  })
+
+  const dayTone =
+    acct?.day_change != null && acct.day_change > 0
+      ? 'up'
+      : acct?.day_change != null && acct.day_change < 0
+        ? 'down'
+        : ''
+
+  const riskOk =
+    riskPct == null || riskPct <= riskCap
+  const maxPos = overview?.risk?.max_open_positions ?? 6
+  const openPos = acct?.open_positions ?? openBook.length
+
+  const engineOk = !error
+  void evidence
+  void portfolios
+  void loading
 
   return (
-    <div className="overview-page">
-      <header className="page-head overview-head iv-animate-soft">
+    <>
+      <header className="page-head">
         <div>
-          <p className="iv-page-eyebrow">Trading · Desk</p>
+          <div className="eyebrow">{workspaceEyebrow('/app/desk')}</div>
           <h1>Desk</h1>
-          <p className="iv-page-question">
-            Que se passe-t-il maintenant ?
-            {circuitAlive
-              ? ` · ${fmtInt(summary?.decisions.last_24h ?? 0)} décisions / 24 h`
-              : ''}
-            {cacheAge != null ? ` · screener ${fmtCacheAge(cacheAge)}` : ''}
-          </p>
+          <p className="subtitle">Votre marché, en un regard.</p>
         </div>
-        <div className="market-class-tabs">
-          <button type="button" onClick={() => void load(true)} disabled={loading}>
-            {loading ? '…' : 'Actualiser'}
+        <div className="actions">
+          <span className="subtitle">{todayLabel} · aperçu</span>
+          <Link to="/app/market" className="link" style={{ marginLeft: 14 }}>
+            Ouvrir le marché ↗
+          </Link>
+          <button type="button" onClick={() => void load(true)} style={{ marginLeft: 10 }}>
+            Actualiser
           </button>
         </div>
       </header>
 
-      {error && (
-        <div className="banner error" role="alert">
-          {error}
-        </div>
-      )}
-
-      <section className="iv-metrics iv-animate-in" aria-label="Synthèse marché">
-        <div className="iv-metric">
-          <div className="iv-metric-label">Marchés analysés</div>
-          <div className="iv-metric-value mono">{loading && !rows.length ? '—' : fmtInt(stats.total)}</div>
-          <small>Screener 1h</small>
-        </div>
-        <div className="iv-metric">
-          <div className="iv-metric-label">Opportunités</div>
-          <div className={`iv-metric-value mono${stats.buy > 0 ? ' is-bull' : ''}`}>
-            {loading && !rows.length ? '—' : fmtInt(stats.buy)}
+      <div className="desk-workspace">
+        <div className="metrics">
+          <div className="metric featured">
+            <div className="metric-label">
+              Capital total<span>↗</span>
+            </div>
+            <div className="metric-value">{acct ? fmtEur(acct.equity) : '—'}</div>
+            <small>Portefeuille paper · EUR</small>
           </div>
-          <small>
-            {loading && !rows.length
-              ? 'BUY actionnables'
-              : `SELL : ${fmtInt(stats.sell)} signaux (short désactivé)`}
-          </small>
-        </div>
-        <div className="iv-metric">
-          <div className="iv-metric-label">WATCH</div>
-          <div className="iv-metric-value mono">{loading && !rows.length ? '—' : fmtInt(stats.watch)}</div>
-          <small>Prudence — pas d’entrée</small>
-        </div>
-        <div className="iv-metric">
-          <div className="iv-metric-label">Positions paper</div>
-          <div className="iv-metric-value mono">{acct ? fmtInt(acct.open_positions) : '—'}</div>
-          <small>{BASELINE}</small>
-        </div>
-        <div className="iv-metric">
-          <div className="iv-metric-label">
-            {overview?.risk ? 'Risque engagé' : 'Exposé'}
-          </div>
-          <div className="iv-metric-value mono">
-            {overview?.risk?.open_risk_pct != null
-              ? `${(overview.risk.open_risk_pct * 100).toFixed(1)} %`
-              : overview?.risk
-                ? fmtEur(overview.risk.open_risk_amount, 0)
-                : acct
-                  ? fmtEur(acct.invested, 0)
-                  : '—'}
-          </div>
-          <small>
-            {overview?.risk
-              ? `ouvert ${fmtEur(overview.risk.open_risk_amount, 0)} / exposé ${fmtEur(overview.risk.exposed, 0)}`
-              : acct
-                ? `capital engagé ${fmtEur(acct.invested, 0)}`
+          <div className="metric">
+            <div className="metric-label">
+              Disponible<span>↗</span>
+            </div>
+            <div className="metric-value">{acct ? fmtEur(acct.cash) : '—'}</div>
+            <small>
+              {availablePct != null
+                ? `${(availablePct * 100).toFixed(1).replace('.', ',')} % du capital`
                 : '—'}
-          </small>
+            </small>
+          </div>
+          <div className={`metric${dayTone === 'up' ? ' up' : dayTone === 'down' ? ' down' : ''}`}>
+            <div className="metric-label">
+              P&L du jour<span>↗</span>
+            </div>
+            <div className="metric-value">
+              {acct?.day_change != null ? fmtEur(acct.day_change) : '—'}
+            </div>
+            <small>
+              {dayPct != null
+                ? `${dayPct > 0 ? '↗' : dayPct < 0 ? '↘' : '→'} ${fmtPct(dayPct)} aujourd’hui`
+                : '—'}
+            </small>
+          </div>
+          <div className="metric">
+            <div className="metric-label">
+              Risque utilisé<span>↗</span>
+            </div>
+            <div className="metric-value">
+              {riskPct != null
+                ? `${(riskPct * 100).toFixed(1).replace('.', ',')} %`
+                : '—'}
+            </div>
+            <small>
+              Limite : {((riskCap ?? 0.03) * 100).toFixed(0)} %
+            </small>
+          </div>
         </div>
-      </section>
 
-      <div className="iv-desk-grid iv-animate-in-delay">
-        <section className="panel" aria-label="Market pulse">
-          <header className="panel-head">
-            <h2>Market pulse</h2>
-            <span className="muted">Distribution actuelle</span>
-          </header>
-          <div className="card-body iv-pulse" style={{ padding: '0.75rem 1rem 1.1rem' }}>
-            <div
-              className="iv-donut"
-              style={
-                {
-                  ['--buy' as string]: stats.total
-                    ? ((stats.buy / stats.total) * 100).toFixed(2)
-                    : 0,
-                  ['--sell' as string]: stats.total
-                    ? ((stats.sell / stats.total) * 100).toFixed(2)
-                    : 0,
-                  ['--watch' as string]: stats.total
-                    ? ((stats.watch / stats.total) * 100).toFixed(2)
-                    : 0,
-                } as CSSProperties
-              }
-              data-center={loading && !rows.length ? '—' : String(stats.total)}
-              role="img"
-              aria-label={`${stats.total} marchés : ${stats.buy} buy, ${stats.sell} sell, ${stats.watch} watch, ${stats.none} no trade`}
-            />
-            <div className="iv-pulse-legend">
-              <span>
-                <span>
-                  <i className="is-buy" aria-hidden />
-                  BUY
-                </span>
-                <b className="mono">{stats.buy}</b>
-              </span>
-              <span>
-                <span>
-                  <i className="is-sell" aria-hidden />
-                  SELL
-                </span>
-                <b className="mono">{stats.sell}</b>
-              </span>
-              <span>
-                <span>
-                  <i className="is-watch" aria-hidden />
-                  WATCH
-                </span>
-                <b className="mono">{stats.watch}</b>
-              </span>
-              <span>
-                <span>
-                  <i className="is-none" aria-hidden />
-                  NO TRADE
-                </span>
-                <b className="mono">{stats.none}</b>
-              </span>
+        <div className="desk-overview">
+          <section className="card world-card">
+            <div className="card-head">
+              <h2>Sessions de marché</h2>
+              <Tag tone="gray">APERÇU</Tag>
             </div>
-          </div>
-        </section>
-
-        <section className="panel" aria-label="Top opportunités">
-          <header className="panel-head">
-            <h2>Top opportunités</h2>
-            <Link to="/app/opportunites" className="ghost">
-              Voir tout →
-            </Link>
-          </header>
-          {stats.top.length === 0 ? (
-            <p className="muted overview-empty" style={{ padding: '0.75rem 1rem' }}>
-              {loading ? 'Scan screener…' : 'Aucune opportunité actionnable'}
-            </p>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Symbole</th>
-                    <th>Décision</th>
-                    <th>Conf.</th>
-                    <th>RVOL</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.top.map((r) => (
-                    <tr key={r.symbol}>
-                      <td>
-                        <Link to={`/app/opportunites?symbol=${encodeURIComponent(r.symbol)}`}>
-                          <strong>{r.symbol.replace(/USDT$/i, '')}</strong>
-                        </Link>
-                      </td>
-                      <td>
-                        <VerdictBadge decision={r.decision} pipeline={r.pipeline} />
-                      </td>
-                      <td className="mono">{(r.confidence * 100).toFixed(0)}%</td>
-                      <td className="mono">{r.rvol != null ? `${r.rvol.toFixed(2)}×` : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </div>
-
-      <section className="panel" aria-label="Pipeline health" style={{ marginBottom: '1rem' }}>
-        <header className="panel-head">
-          <h2>Pipeline health</h2>
-          <span className="muted">Marchés ayant passé chaque porte</span>
-        </header>
-        <ul className="iv-pipeline" style={{ margin: '0 0.75rem 1rem' }}>
-          {(
-            [
-              ['analysés', stats.total],
-              ['direction', stats.stagePass.direction],
-              ['participation', stats.stagePass.participation],
-              ['structure', stats.stagePass.structure],
-              ['location', stats.stagePass.location],
-              ['régime', stats.stagePass.regime],
-              ['opportunités (BUY)', stats.buy],
-            ] as const
-          ).map(([label, n]) => (
-            <li key={label}>
-              <strong className="mono">{loading && !rows.length ? '—' : fmtInt(n)}</strong>
-              <span>{label}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="panel ov-desk" aria-label="Compte baseline">
-        <header className="panel-head">
-          <h2>Capital · {BASELINE}</h2>
-          <Link to="/app/portefeuille" className="ghost">
-            Portefeuille →
-          </Link>
-        </header>
-        <div className="ov-desk-body">
-          <div className="ov-desk-hero">
-            <DeskKpi
-              label="Equity"
-              value={acct ? fmtEur(acct.equity, 0) : '—'}
-              meta={totalPct != null ? `depuis départ ${fmtPct(totalPct)}` : undefined}
-              tone={
-                totalPct == null ? 'flat' : totalPct > 0 ? 'bull' : totalPct < 0 ? 'bear' : 'flat'
-              }
-            />
-            <DeskKpi
-              label="Jour"
-              value={acct?.day_change != null ? fmtEur(acct.day_change, 0) : '—'}
-              meta={dayPct != null ? fmtPct(dayPct) : undefined}
-              tone={dayTone}
-            />
-            <DeskKpi
-              label="Cash / engagé"
-              value={acct ? `${fmtEur(acct.cash, 0)} / ${fmtEur(acct.invested, 0)}` : '—'}
-              meta={acct ? `${acct.open_positions} ouvertes` : undefined}
-            />
-            <DeskKpi
-              label="P&L latent"
-              value={acct ? fmtEur(acct.unrealized_pnl, 0) : '—'}
-              meta={acct ? `réalisé ${fmtEur(acct.realized_pnl, 0)}` : undefined}
-              tone={
-                acct == null
-                  ? 'flat'
-                  : acct.unrealized_pnl > 0
-                    ? 'bull'
-                    : acct.unrealized_pnl < 0
-                      ? 'bear'
-                      : 'flat'
-              }
-            />
-          </div>
-          <EquitySpark points={overview?.equity_curve ?? []} initial={acct?.initial_cash ?? 5000} />
-        </div>
-      </section>
-
-      <section className="ov-circuit" aria-label="Circuit 24 h">
-        <article className={`panel overview-stat ov-pulse ${circuitAlive ? 'is-ok' : 'is-warn'}`}>
-          <span className="overview-stat-label muted">Décisions 24 h</span>
-          <strong className="mono">{summary ? fmtInt(summary.decisions.last_24h) : '—'}</strong>
-          <span className="overview-stat-meta muted">
-            {summary ? `${fmtInt(summary.decisions.total)} total · ${fmtWhen(summary.decisions.last_at)}` : '…'}
-          </span>
-          <Link to="/app/operations" className="overview-stat-link">
-            Opérations →
-          </Link>
-        </article>
-        <article className="panel overview-stat ov-pulse is-ok">
-          <span className="overview-stat-label muted">Paper 24 h</span>
-          <strong className="mono">
-            {summary
-              ? `${fmtInt(summary.paper.opened_24h)} / ${fmtInt(summary.paper.closed_24h)}`
-              : '—'}
-          </strong>
-          <span className="overview-stat-meta muted">
-            {summary
-              ? `ouv. / clôt. · ${summary.paper.open_now} en cours`
-              : '…'}
-          </span>
-        </article>
-        <article className="panel overview-stat ov-pulse">
-          <span className="overview-stat-label muted">Strategy Lab</span>
-          <strong className="mono">{summary ? fmtInt(summary.backtest.runs_total) : '—'}</strong>
-          <span className="overview-stat-meta muted">
-            {summary ? `dernier ${fmtWhen(summary.backtest.last_at)}` : '…'}
-          </span>
-        </article>
-      </section>
-
-      <div className="ov-main">
-        <section className="panel ov-book" aria-label="Livre live">
-          <header className="panel-head">
-            <h2>Livre live · 1h</h2>
-            <Link to="/app/opportunites" className="ghost">
-              Opportunités →
-            </Link>
-          </header>
-          <div className="ov-book-stats">
-            <div className="panel overview-stat overview-stat--bull">
-              <span className="overview-stat-label muted">Achats</span>
-              <strong className="mono">{loading && !rows.length ? '—' : stats.buy}</strong>
-            </div>
-            <div className="panel overview-stat overview-stat--bear">
-              <span className="overview-stat-label muted">Ventes</span>
-              <strong className="mono">{loading && !rows.length ? '—' : stats.sell}</strong>
-            </div>
-            <div className="panel overview-stat">
-              <span className="overview-stat-label muted">Watch</span>
-              <strong className="mono">{loading && !rows.length ? '—' : stats.watch}</strong>
-            </div>
-            <div className="panel overview-stat">
-              <span className="overview-stat-label muted">Scannées</span>
-              <strong className="mono">{loading && !rows.length ? '—' : stats.total}</strong>
-            </div>
-          </div>
-          {stats.top.length === 0 ? (
-            <p className="muted overview-empty">
-              {loading ? 'Scan screener…' : 'Aucune ligne — vérifie le moteur.'}
-            </p>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Symbole</th>
-                    <th>Porte</th>
-                    <th>Conf.</th>
-                    <th>RVOL</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.top.map((r) => (
-                    <tr key={r.symbol}>
-                      <td>
-                        <Link to={`/app/opportunites?symbol=${encodeURIComponent(r.symbol)}`}>
-                          <strong>{r.symbol.replace(/USDT$/i, '')}</strong>
-                        </Link>
-                      </td>
-                      <td>
-                        <VerdictBadge decision={r.decision} pipeline={r.pipeline} />
-                      </td>
-                      <td className="mono">{(r.confidence * 100).toFixed(0)}%</td>
-                      <td className="mono">{r.rvol != null ? `${r.rvol.toFixed(2)}×` : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        {/* T14a — preuves / filtres / signaux suivis : détail dans Opérations (plus sur le Desk). */}
-        <section className="panel ov-proof" aria-label="Preuves">
-          <header className="panel-head">
-            <h2>Preuves & opérations</h2>
-            <Link to="/app/operations" className="ghost">
-              Opérations →
-            </Link>
-          </header>
-          <div className="ov-proof-body">
-            <p className="muted ov-proof-note">
-              Filtres shadow, signaux suivis et journal d’audit vivent dans{' '}
-              <Link to="/app/operations">Opérations</Link>. Edge backtest :{' '}
-              <Link to="/app/strategy-lab">Strategy Lab</Link>
-              {edgeHint
-                ? ` · pipeline bat Ichimoku sur ${edgeHint.beats}/${edgeHint.compared} paires`
-                : ''}
-              .
-            </p>
-          </div>
-        </section>
-      </div>
-
-      {openBook.length > 0 && (
-        <section className="panel ov-positions" aria-label="Positions ouvertes">
-          <header className="panel-head">
-            <h2>Livre ouvert</h2>
-            <span className="panel-meta">{acct?.open_positions ?? openBook.length} positions</span>
-          </header>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Symbole</th>
-                  <th>Sens</th>
-                  <th>Notional</th>
-                  <th>Latent</th>
-                </tr>
-              </thead>
-              <tbody>
-                {openBook.map((p) => (
-                  <tr key={p.id}>
-                    <td>
-                      <strong>{p.symbol.replace(/USDT$/i, '')}</strong>
-                      <span className="muted"> · {p.timeframe}</span>
-                    </td>
-                    <td className="mono">{p.direction}</td>
-                    <td className="mono">{fmtEur(p.notional ?? null, 0)}</td>
-                    <td
-                      className={`mono ${
-                        (p.unrealized_pnl ?? 0) > 0 ? 'up' : (p.unrealized_pnl ?? 0) < 0 ? 'down' : ''
-                      }`}
-                    >
-                      {p.unrealized_pnl != null ? fmtEur(p.unrealized_pnl, 0) : '—'}
-                      {p.unrealized_pct != null ? (
-                        <span className="muted"> {fmtPct(p.unrealized_pct)}</span>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      <div className="ov-bottom">
-        <section className="panel ov-tape" aria-label="Derniers événements">
-          <header className="panel-head">
-            <h2>Tape</h2>
-            <Link to="/app/operations" className="ghost">
-              Historique →
-            </Link>
-          </header>
-          {tape.length === 0 ? (
-            <p className="muted overview-empty">Aucun événement récent.</p>
-          ) : (
-            <ul className="ov-tape-list">
-              {tape.map((it) => (
-                <li key={`${it.time}-${it.kind}-${it.symbol}-${it.portfolio}-${it.detail}`}>
-                  <span className={`ov-tape-dot ${toneClass(it.tone)}`} aria-hidden />
-                  <span className="ov-tape-time mono muted">{fmtClock(it.time)}</span>
-                  <div className="ov-tape-body">
-                    <strong>{it.title}</strong>
-                    <span className="muted">{it.detail}</span>
-                  </div>
-                </li>
+            <div className="world-view">
+              <img
+                src="/world-map.svg"
+                alt="Carte du monde situant les sessions de Londres, New York et Tokyo"
+                width={720}
+                height={290}
+              />
+              {DESK_SESSIONS.map((s, i) => (
+                <button
+                  key={s.city}
+                  type="button"
+                  className={`map-marker${i === deskSession ? ' selected' : ''}`}
+                  style={{ left: `${s.left}%`, top: `${s.top}%` }}
+                  aria-label={`Session ${s.city}`}
+                  aria-pressed={i === deskSession}
+                  onClick={() => setDeskSession(i)}
+                >
+                  <span />
+                  <b>{s.city}</b>
+                </button>
               ))}
-            </ul>
-          )}
-        </section>
+            </div>
+            <div className="session-selector">
+              {DESK_SESSIONS.map((s, i) => (
+                <button
+                  key={s.region}
+                  type="button"
+                  className={i === deskSession ? 'active' : undefined}
+                  aria-pressed={i === deskSession}
+                  onClick={() => setDeskSession(i)}
+                >
+                  {s.region}
+                  <small>{s.status}</small>
+                </button>
+              ))}
+            </div>
+            <div className="session-detail">
+              <strong>
+                {session.city}{' '}
+                <span className={deskSession === 1 ? 'up' : 'muted'}>{session.status}</span>
+              </strong>
+              <span className="mono">{session.hours}</span>
+            </div>
+            <div className="map-foot">
+              Sessions illustratives · horaires de l’aperçu{' '}
+              <span>
+                Crypto <b>24/7</b>
+              </span>
+            </div>
+          </section>
 
-        <section className="panel ov-labs" aria-label="Laboratoires paper">
-          <header className="panel-head">
-            <h2>Labs paper</h2>
-            <Link to="/app/portefeuille?tab=positions" className="ghost">
-              Portefeuille →
-            </Link>
-          </header>
-          {labs.length === 0 ? (
-            <p className="muted overview-empty">Aucun portefeuille actif.</p>
-          ) : (
+          <section className="card">
+            <div className="card-head">
+              <h2>Marchés principaux</h2>
+              <Tag tone="gray">{tickers.length ? 'LIVE' : '—'}</Tag>
+            </div>
+            <div className="desk-tickers">
+              {tickers.length === 0 ? (
+                <div className="desk-ticker" style={{ pointerEvents: 'none' }}>
+                  <span>
+                    <b>—<small> / USDT</small></b>
+                    <small>Aucun ticker</small>
+                  </span>
+                  <span className="right">
+                    <b className="mono">—</b>
+                    <small>—</small>
+                  </span>
+                </div>
+              ) : (
+                tickers.map((r) => {
+                  const base = displaySymbol(r.symbol)
+                  return (
+                    <Link
+                      key={r.symbol}
+                      to={`/app/market?symbol=${encodeURIComponent(r.symbol)}`}
+                      className="desk-ticker"
+                    >
+                      <span>
+                        <b>
+                          {base}
+                          <small> / USDT</small>
+                        </b>
+                        <small>{r.timeframe}</small>
+                      </span>
+                      <span className="right">
+                        <b className="mono">{fmtPrice(r.price)}</b>
+                        <small>
+                          {r.rvol != null ? `RVOL ${r.rvol.toFixed(1)}×` : '—'}
+                        </small>
+                      </span>
+                    </Link>
+                  )
+                })
+              )}
+            </div>
+            <div className="card-foot">
+              <Link to="/app/market" className="link">
+                Tout le marché ↗
+              </Link>
+            </div>
+          </section>
+
+          <section className="card">
+            <div className="card-head">
+              <h2>Lecture du marché</h2>
+            </div>
+            <div className="card-body">
+              <div className="climate-head">
+                <span className="climate-symbol">↗</span>
+                <div>
+                  <small>RÉGIME DE L’APERÇU</small>
+                  <h3>
+                    {stats.buy > stats.sell ? 'Tendance' : stats.sell > stats.buy ? 'Prudence' : 'Neutre'}
+                  </h3>
+                </div>
+              </div>
+              <StatLine
+                label="Volatilité"
+                value={stats.total ? (stats.watch > stats.total * 0.4 ? 'Élevée' : 'Modérée') : '—'}
+              />
+              <StatLine
+                label="Signaux BUY"
+                value={stats.total ? String(stats.buy) : '—'}
+              />
+              <StatLine
+                label="Concentration"
+                value={
+                  <Tag tone={openPos >= 3 ? 'amber' : 'gray'}>
+                    {openPos >= 3 ? 'PRUDENCE' : openPos > 0 ? 'OK' : '—'}
+                  </Tag>
+                }
+              />
+              <p className="desk-note">
+                Le contexte éclaire le signal. Le risque garde le dernier mot.
+              </p>
+              <Link to="/app/context" className="link">
+                Ouvrir le contexte ↗
+              </Link>
+            </div>
+          </section>
+        </div>
+
+        <div className="grid">
+          <section className="card">
+            <div className="card-head">
+              <h2>Trajectoire du portefeuille</h2>
+              <div className="segmented">
+                {PERIODS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    className={p === period ? 'active' : undefined}
+                    onClick={() => setPeriod(p)}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="chart-summary">
+              <span>
+                CAPITAL <b>{acct ? fmtEur(acct.equity) : '—'}</b>
+              </span>
+              <span>
+                DRAWDOWN{' '}
+                <b className="down">
+                  {drawdown != null
+                    ? `−${(drawdown * 100).toFixed(1).replace('.', ',')} %`
+                    : '—'}
+                </b>
+              </span>
+            </div>
+            <div id="equity">
+              <EquityChart points={equityPoints} initial={acct?.initial_cash ?? 5000} />
+            </div>
+          </section>
+
+          <section className="card">
+            <div className="card-head">
+              <h2>À surveiller</h2>
+              <Tag tone="gray">
+                {watchList.length ? `${watchList.length} SÉLECTIONS` : '—'}
+              </Tag>
+            </div>
+            <div className="card-body">
+              {watchList.length === 0 ? (
+                <p className="desk-note">{loading ? 'Scan screener…' : 'Aucune sélection.'}</p>
+              ) : (
+                watchList.map((r) => {
+                  const base = displaySymbol(r.symbol)
+                  const tag = cycleTag(r)
+                  const score = Math.round(r.confidence * 100)
+                  return (
+                    <Link
+                      key={r.symbol}
+                      to={`/app/opportunites?symbol=${encodeURIComponent(r.symbol)}`}
+                      className="opportunity"
+                    >
+                      <span className={`coin${coinClass(base) ? ` ${coinClass(base)}` : ''}`}>
+                        {coinGlyph(base)}
+                      </span>
+                      <div>
+                        <strong>
+                          {base}
+                          <span style={{ color: '#a0a4a6', fontWeight: 400 }}> / USDT</span>
+                        </strong>
+                        <small>{opportunityHint(r)}</small>
+                      </div>
+                      <div className="right">
+                        <span className="score">
+                          {score}
+                          <small style={{ display: 'inline' }}> /100</small>
+                        </span>
+                        <small>
+                          <Tag tone={tag.tone}>{tag.label}</Tag>
+                        </small>
+                      </div>
+                    </Link>
+                  )
+                })
+              )}
+            </div>
+            <div className="card-foot">
+              <Link className="link" to="/app/opportunites">
+                Explorer les opportunités ↗
+              </Link>
+            </div>
+          </section>
+        </div>
+
+        {(error || (cacheAge != null && cacheAge > 3600)) && (
+          <div className="notice">
+            <span>△</span>
+            <span>
+              {error ? (
+                <>
+                  <b>Une donnée demande votre attention.</b> {error}
+                </>
+              ) : (
+                <>
+                  <b>Une donnée demande votre attention.</b> Screener : dernière mise à jour{' '}
+                  {cacheAge != null ? fmtCacheAge(cacheAge) : '—'}.
+                </>
+              )}
+            </span>
+            <Link to="/app/operations">Vérifier →</Link>
+          </div>
+        )}
+
+        <div className="grid">
+          <section className="card">
+            <div className="card-head">
+              <h2>Positions ouvertes</h2>
+              <Link className="link" to="/app/portefeuille">
+                Portefeuille ↗
+              </Link>
+            </div>
             <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>Code</th>
-                    <th>Cash</th>
-                    <th>Réalisé</th>
+                    <th>ACTIF / STRATÉGIE</th>
+                    <th>ENGAGÉ</th>
+                    <th>PERFORMANCE</th>
+                    <th>P&L LATENT</th>
+                    <th>ÉTAT</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {labs.slice(0, 8).map((p) => (
-                    <tr key={p.code} className={p.code === BASELINE ? 'is-baseline' : undefined}>
-                      <td>
-                        <strong className="mono">{p.code.replace(/^ICHIVOL_/, '')}</strong>
-                        <span className="muted ov-lab-label"> {p.label}</span>
-                      </td>
-                      <td className="mono">{fmtEur(p.cash, 0)}</td>
-                      <td className={`mono ${p.realized_pnl > 0 ? 'up' : p.realized_pnl < 0 ? 'down' : ''}`}>
-                        {fmtEur(p.realized_pnl, 0)}
-                      </td>
+                  {openBook.length === 0 ? (
+                    <tr>
+                      <td colSpan={5}>—</td>
                     </tr>
-                  ))}
+                  ) : (
+                    openBook.map((p) => {
+                      const perf = p.unrealized_pct
+                      const pnl = p.unrealized_pnl
+                      return (
+                        <tr key={p.id} className="clickable">
+                          <td>
+                            <b>{displaySymbol(p.symbol)}</b>
+                            <small>
+                              Ichimoku × RVOL · {p.timeframe}
+                            </small>
+                          </td>
+                          <td>
+                            <span className="mono">{fmtEur(positionNotional(p))}</span>
+                          </td>
+                          <td>
+                            <span
+                              className={`mono${
+                                perf != null && perf > 0 ? ' up' : perf != null && perf < 0 ? ' down' : ''
+                              }`}
+                            >
+                              {fmtPct(perf)}
+                            </span>
+                          </td>
+                          <td>
+                            <span
+                              className={`mono${
+                                pnl != null && pnl > 0 ? ' up' : pnl != null && pnl < 0 ? ' down' : ''
+                              }`}
+                            >
+                              {fmtEur(pnl)}
+                            </span>
+                          </td>
+                          <td>
+                            <Tag tone="green">OUVERTE</Tag>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
-          )}
-        </section>
-      </div>
+          </section>
 
-      <ContextPanel variant="compact" />
-    </div>
+          <section className="card">
+            <div className="card-head">
+              <h2>Votre budget de risque</h2>
+              <Tag tone={riskOk ? '' : 'red'}>{riskOk ? 'PASSE' : 'REFUSÉ'}</Tag>
+            </div>
+            <div className="card-body">
+              <ProgressRow
+                label="Exposition du capital"
+                value={
+                  exposedPct != null
+                    ? `${(exposedPct * 100).toFixed(1).replace('.', ',')} %`
+                    : '—'
+                }
+                pct={exposedPct != null ? exposedPct * 100 : 0}
+              />
+              <ProgressRow
+                label="Risque journalier"
+                value={
+                  riskPct != null
+                    ? `${(riskPct * 100).toFixed(1)} / ${(riskCap * 100).toFixed(0)} %`
+                    : '—'
+                }
+                pct={
+                  riskPct != null && riskCap > 0
+                    ? (riskPct / riskCap) * 100
+                    : 0
+                }
+              />
+              <ProgressRow
+                label="Positions simultanées"
+                value={`${openPos} / ${maxPos}`}
+                pct={maxPos > 0 ? (openPos / maxPos) * 100 : 0}
+              />
+              <div style={{ marginTop: 20, fontSize: 10, color: 'var(--muted)' }}>
+                {acct
+                  ? `${fmtEur(acct.invested)} engagés sur ${openPos} position${openPos === 1 ? '' : 's'}.`
+                  : '—'}
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div className="grid three">
+          <section className="card">
+            <div className="card-head">
+              <h2>Derniers événements</h2>
+            </div>
+            <div className="card-body">
+              <div className="timeline">
+                {tape.length === 0 ? (
+                  <div className="event">
+                    Aucun événement récent
+                    <small>—</small>
+                  </div>
+                ) : (
+                  tape.slice(0, 3).map((it) => (
+                    <div key={`${it.time}-${it.kind}-${it.symbol}-${it.detail}`} className="event">
+                      {it.title}
+                      <small>
+                        {fmtClock(it.time)} · {it.detail}
+                      </small>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="card">
+            <div className="card-head">
+              <h2>Le prochain contrôle</h2>
+            </div>
+            <div className="card-body">
+              <div className="checkpoint">
+                <span className="checkpoint-icon">◇</span>
+                <div>
+                  <b>Clôture 1H</b>
+                  <small>Confirmer avant d’agir</small>
+                </div>
+              </div>
+              <StatLine
+                label={
+                  nextCheckpoint
+                    ? `${displaySymbol(nextCheckpoint.symbol)} · participation`
+                    : 'Participation'
+                }
+                value={
+                  nextCheckpoint?.rvol != null ? (
+                    <Tag tone={nextCheckpoint.rvol >= 1.5 ? '' : 'amber'}>
+                      RVOL {nextCheckpoint.rvol.toFixed(1)}×
+                    </Tag>
+                  ) : (
+                    <Tag tone="gray">—</Tag>
+                  )
+                }
+              />
+              <StatLine label="Seuil attendu" value="≥ 1,5×" />
+              <p className="desk-note">
+                {nextCheckpoint
+                  ? `Le volume reste à confirmer sur ${displaySymbol(nextCheckpoint.symbol)}. La confiance ne remplace pas les portes de décision.`
+                  : 'Aucune confirmation en attente pour le moment.'}
+              </p>
+              <Link className="link" to="/app/opportunites">
+                Examiner les confirmations →
+              </Link>
+            </div>
+          </section>
+
+          <section className="card">
+            <div className="card-head">
+              <h2>État du système</h2>
+            </div>
+            <div className="card-body">
+              <StatLine
+                label="Moteur Python"
+                value={
+                  <Tag tone={engineOk ? 'green' : 'gray'}>
+                    {engineOk ? 'CONNECTÉ' : 'NON CONNECTÉ'}
+                  </Tag>
+                }
+              />
+              <StatLine
+                label="Source des données"
+                value={
+                  <Tag tone="gray">
+                    {cacheAge != null ? `SCREENER · ${fmtCacheAge(cacheAge)}` : '—'}
+                  </Tag>
+                }
+              />
+              <StatLine
+                label="Risk Kernel"
+                value={<Tag tone={riskOk ? '' : 'red'}>{riskOk ? 'PASSE' : 'REFUSÉ'}</Tag>}
+              />
+              <StatLine
+                label="Exécution réelle"
+                value={<Tag tone="red">BLOQUÉE</Tag>}
+              />
+              {summary ? (
+                <StatLine
+                  label="Décisions 24 h"
+                  value={<b className="mono">{summary.decisions.last_24h}</b>}
+                />
+              ) : null}
+            </div>
+          </section>
+        </div>
+
+        <div className="desk-allocation">
+          <section className="card">
+            <div className="card-head">
+              <h2>Répartition du capital</h2>
+              <Tag tone="gray">{acct ? fmtEur(acct.equity, 0) : '—'}</Tag>
+            </div>
+            <div className="allocation-body">
+              <DeskRing
+                parts={[
+                  {
+                    pct: exposedPct != null ? exposedPct * 100 : 0,
+                    color: '#548f87',
+                  },
+                ]}
+                value={
+                  exposedPct != null
+                    ? `${(exposedPct * 100).toFixed(1).replace('.', ',')} %`
+                    : '—'
+                }
+                label="Capital engagé"
+              />
+              <div className="allocation-legend">
+                <StatLine
+                  label={
+                    <>
+                      <span className="legend-dot teal" />
+                      Engagé
+                    </>
+                  }
+                  value={acct ? fmtEur(acct.invested) : '—'}
+                />
+                <StatLine
+                  label={
+                    <>
+                      <span className="legend-dot neutral" />
+                      Disponible
+                    </>
+                  }
+                  value={acct ? fmtEur(acct.cash) : '—'}
+                />
+                <p className="desk-note">
+                  {availablePct != null
+                    ? `${(availablePct * 100).toFixed(1).replace('.', ',')} % du capital reste disponible.`
+                    : '—'}
+                </p>
+              </div>
+            </div>
+            <div className="card-foot">
+              <Link to="/app/portefeuille" className="link">
+                Voir l’allocation ↗
+              </Link>
+            </div>
+          </section>
+
+          <section className="card">
+            <div className="card-head">
+              <h2>Concentration des positions</h2>
+              <Tag tone={concentration.length >= 3 ? 'amber' : 'gray'}>
+                {concentration.length >= 3 ? 'PRUDENCE' : concentration.length ? String(concentration.length) : '—'}
+              </Tag>
+            </div>
+            <div className="allocation-body">
+              <DeskRing
+                parts={concentration.map((c, i) => ({
+                  pct: c.pct,
+                  color: RING_COLORS[i % RING_COLORS.length],
+                }))}
+                value={String(openPos || '—')}
+                label="Positions ouvertes"
+              />
+              <div className="allocation-legend">
+                {concentration.length === 0 ? (
+                  <p className="desk-note">Pas d’exposition ouverte.</p>
+                ) : (
+                  concentration.map((c, i) => (
+                    <Link
+                      key={c.symbol}
+                      to="/app/portefeuille?tab=positions"
+                      className="concentration-row"
+                    >
+                      <span>
+                        <i style={{ background: RING_COLORS[i % RING_COLORS.length] }} />
+                        {c.symbol}
+                      </span>
+                      <b className="mono">{c.pct.toFixed(1).replace('.', ',')} %</b>
+                    </Link>
+                  ))
+                )}
+                <p className="desk-note">100 % de l’exposition en crypto spot.</p>
+              </div>
+            </div>
+            <div className="card-foot">
+              <Link to="/app/portefeuille" className="link">
+                Surveiller la concentration ↗
+              </Link>
+            </div>
+          </section>
+        </div>
+      </div>
+    </>
   )
 }

@@ -1,0 +1,443 @@
+/* IchiVol page layouts — shared sheet (no per-route *Page.css). */
+
+.iv-metrics--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.iv-metric.is-featured {
+  border-color: color-mix(in srgb, var(--bull) 28%, var(--border));
+  background: color-mix(in srgb, var(--bull) 5%, var(--card));
+}
+
+@media (max-width: 1100px) {
+  .iv-metrics--4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .iv-metrics--4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.iv-notice {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, #1a7df5 28%, var(--border));
+  background: color-mix(in srgb, #1a7df5 8%, var(--card));
+  color: color-mix(in srgb, #1a7df5 45%, var(--muted-foreground));
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.desk-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 960px) {
+  .desk-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ops-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.ops-segmented {
+  display: flex;
+  gap: 0.15rem;
+  padding: 0.2rem;
+  border-radius: 6px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+}
+
+.ops-segmented button {
+  border: 0;
+  background: transparent;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  padding: 0.4rem 0.65rem;
+  color: var(--muted-foreground);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.ops-segmented button.is-active {
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.ops-search {
+  min-width: min(250px, 100%);
+  flex: 1;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 7px;
+  padding: 0.55rem 0.75rem;
+  color: var(--foreground);
+}
+
+.journal-tabs {
+  display: flex;
+  gap: 1.25rem;
+  border-bottom: 1px solid var(--border);
+  overflow: auto;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.journal-tabs button {
+  border: 0;
+  background: none;
+  border-radius: 0;
+  padding: 0 0 0.7rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.journal-tabs button.is-active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.iv-card-body {
+  padding: 0.15rem 1.15rem 1.15rem;
+}
+
+.iv-session {
+  display: grid;
+  grid-template-columns: 4.5rem 2.75rem minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: center;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8125rem;
+}
+
+.iv-session:last-of-type {
+  border-bottom: 0;
+}
+
+.iv-step {
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.iv-step:last-child {
+  border-bottom: 0;
+}
+
+.iv-step b {
+  display: block;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.iv-step p {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.iv-pipeline-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.2rem;
+  margin-bottom: 0.75rem;
+}
+
+.iv-pipeline-flow .iv-flow-arrow {
+  color: var(--muted-foreground);
+  margin: 0 0.15rem;
+  font-size: 0.75rem;
+}
+
+.iv-risk-verdict {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.65rem 0 1.25rem;
+  flex-wrap: wrap;
+}
+
+.iv-risk-verdict > b {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 4vw, 2.65rem);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.iv-risk-verdict > b.is-pass {
+  color: var(--bull);
+}
+
+.iv-risk-verdict > b.is-refuse {
+  color: var(--bear);
+}
+
+.iv-risk-verdict > span {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+
+.desk-risk-row {
+  margin-bottom: 0.85rem;
+}
+
+.desk-risk-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.desk-risk-labels .is-warn {
+  color: var(--neutral);
+}
+
+.desk-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-subtle);
+  overflow: hidden;
+}
+
+.desk-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--bull);
+}
+
+.desk-track > span.is-warn {
+  background: var(--neutral);
+}
+
+.desk-statline {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8125rem;
+}
+
+.desk-statline:last-of-type {
+  border-bottom: 0;
+}
+
+.desk-statline span {
+  color: var(--muted-foreground);
+}
+
+.desk-ring {
+  position: relative;
+  width: 11rem;
+  flex-shrink: 0;
+  max-width: 45%;
+}
+
+.desk-ring svg {
+  width: 100%;
+  display: block;
+}
+
+.desk-ring > div {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.desk-ring b {
+  font-family: var(--font-mono);
+  font-size: 1.35rem;
+  letter-spacing: -0.04em;
+}
+
+.desk-ring small {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  text-align: center;
+  padding: 0 0.5rem;
+}
+
+.desk-allocation-body {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.25rem 1.15rem 1rem;
+}
+
+.desk-allocation-legend {
+  flex: 1;
+  min-width: 0;
+}
+
+.opp-count {
+  margin-left: auto;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.opp-matrix-wrap {
+  overflow-x: auto;
+}
+
+.opp-matrix td small {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  font-weight: 400;
+  margin-top: 0.15rem;
+}
+
+.opp-why p {
+  margin: 0 0 0.85rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.lab-chart-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  padding: 0.25rem 1.15rem 0.5rem;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+
+.lab-chart-summary .is-accent {
+  color: var(--bull);
+}
+
+.lab-empty-hint {
+  padding: 1rem 1.15rem 1.25rem;
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.decisions-page,
+.portfolio-page,
+.backtests-page,
+.context-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 1800px;
+  flex-shrink: 0;
+  min-height: min-content;
+}
+
+.decisions-page.is-sheet-open .decisions-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .decisions-page.is-sheet-open .decisions-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.decision-sheet-scroll {
+  max-height: min(70vh, 720px);
+  overflow: auto;
+}
+
+.dec-sheet-summary {
+  margin: 0 0 0.55rem;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  border-radius: 0.4rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--secondary) 75%, transparent);
+}
+
+.dec-sheet-verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.55rem;
+}
+
+.dec-secondary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  margin: 0.75rem 0;
+}
+
+.iv-animate-in {
+  animation: iv-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.iv-animate-in-delay {
+  animation: iv-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+
+.iv-animate-soft {
+  animation: iv-soft-in 0.7s ease both;
+}
+
+@keyframes iv-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes iv-soft-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-animate-in,
+  .iv-animate-in-delay,
+  .iv-animate-soft {
+    animation: none;
+  }
+}

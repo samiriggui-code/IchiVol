@@ -111,24 +111,31 @@ function DashboardShellInner() {
     <div className={`dash-shell${isMobile ? ' is-mobile' : ''}${collapsed ? ' is-nav-collapsed' : ''}`}>
       <aside className={`dash-sidebar${collapsed ? ' is-collapsed' : ''}`} aria-label="Navigation">
         <div className="dash-sidebar-top">
-          <NavLink to="/app/desk" className="dash-side-brand" title="IchiVol">
-            <BrandMark className="dash-side-mark" />
-            <span className="dash-side-name">IchiVol</span>
+          <NavLink to="/app/desk" className="dash-side-brand brand" title="IchiVol">
+            <span className="brandmark dash-side-mark" aria-hidden>
+              ∿
+            </span>
+            <span className="dash-side-name">
+              IchiVol<small>V3</small>
+            </span>
           </NavLink>
 
           <nav className="dash-nav">
-            {NAV_GROUPS.map((group) => (
+            {NAV_GROUPS.filter((g) => g.id !== 'system').map((group) => (
               <div key={group.id} className="dash-nav-group">
-                <p className="dash-nav-label">{group.label}</p>
-                {group.items.map(({ to, label, Icon }) => (
+                <div className="nav-label dash-nav-label">{group.label}</div>
+                {group.items.map(({ to, label, glyph }) => (
                   <NavLink
                     key={to}
                     to={to}
                     title={label}
-                    className={({ isActive }) => `dash-nav-link${isActive ? ' is-active' : ''}`}
+                    className={({ isActive }) => `dash-nav-link${isActive ? ' is-active active' : ''}`}
                   >
-                    <Icon />
-                    <span>{label}</span>
+                    <span className="icon" aria-hidden>
+                      {glyph ?? '·'}
+                    </span>
+                    {label}
+                    {to === '/app/opportunites' ? <em>07</em> : null}
                   </NavLink>
                 ))}
               </div>
@@ -136,16 +143,29 @@ function DashboardShellInner() {
           </nav>
         </div>
 
-        <div className="dash-sidebar-footer">
-          <ThemeToggle />
-          <button
-            type="button"
-            className="dash-collapse-btn"
-            aria-label={collapsed ? 'Déplier' : 'Replier'}
-            onClick={toggleCollapsed}
+        <div className="dash-sidebar-footer side-bottom">
+          <NavLink
+            to="/app/settings"
+            className={({ isActive }) => `settings-link${isActive ? ' active' : ''}`}
           >
-            <IconChevronLeft className={collapsed ? 'is-flipped' : undefined} />
-          </button>
+            <span aria-hidden>⚙</span> Paramètres
+          </NavLink>
+          <strong>Votre espace paper</strong>
+          Ichimoku × RVOL
+          <span style={{ font: "9px 'DM Mono'", display: 'block', marginTop: 15 }}>
+            V3.0 / INTERFACE PREVIEW
+          </span>
+          {!isMobile && (
+            <button
+              type="button"
+              className="dash-collapse-btn"
+              aria-label={collapsed ? 'Déplier' : 'Replier'}
+              onClick={toggleCollapsed}
+              style={{ marginTop: 12 }}
+            >
+              <IconChevronLeft className={collapsed ? 'is-flipped' : undefined} />
+            </button>
+          )}
         </div>
       </aside>
 
@@ -159,13 +179,13 @@ function DashboardShellInner() {
               </NavLink>
             )}
           </div>
-          <div className="dash-header-right">
-            {isMobile && <ThemeToggle />}
+          <div className="dash-header-right header-right">
+            <span className="engine">◌ Moteur non connecté</span>
+            <span className="pill">PAPER · DÉMO</span>
             <KillSwitchButton />
-            <LlmHeaderBadge />
-
-            <NotificationBell onOpen={() => setUserMenuOpen(false)} />
-
+            <Link to="/app/settings" className="header-settings" aria-label="Ouvrir les paramètres" title="Paramètres">
+              ⚙
+            </Link>
             <div className="dash-popover-wrap">
               <button
                 type="button"
@@ -176,8 +196,7 @@ function DashboardShellInner() {
                   setMoreOpen(false)
                 }}
               >
-                <span className="dash-avatar">{email ? email[0].toUpperCase() : '·'}</span>
-                <span className="dash-user-label">{email ?? 'admin'}</span>
+                <span className="avatar dash-avatar">{email ? email[0].toUpperCase() : 'SI'}</span>
               </button>
               {userMenuOpen && (
                 <div className="dash-popover dash-popover-right">

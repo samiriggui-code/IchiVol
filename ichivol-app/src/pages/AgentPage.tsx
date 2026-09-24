@@ -1,14 +1,22 @@
 import { Link } from 'react-router-dom'
 import { AgentPanel } from '../components/AgentPanel'
+import { StatLine, Tag, WorkspacePageHead } from '../components/maquette'
 import { useAgentSession } from '../lib/agentSession'
 import { useMarketSnapshot } from '../lib/marketSnapshot'
 
+const PROMPTS = [
+  'Pourquoi ce symbole attend-il ?',
+  'Quel est le risque du portefeuille ?',
+  'Explique le setup sélectionné',
+] as const
+
 /**
- * Agent Claude : il interroge le moteur en lecture seule (outils) puis explique.
+ * Copilot — maquette `copilot()` : card.chat + explorer.
+ * AgentPanel conserve le streaming / outils LLM.
  */
 export function AgentPage() {
   const { snapshot } = useMarketSnapshot()
-  const { decisionPayload, assumedSymbol, assumedTimeframe, launch } = useAgentSession()
+  const { decisionPayload, assumedSymbol, assumedTimeframe, launch, setInput } = useAgentSession()
 
   const symbol =
     launch?.decision?.symbol ??
@@ -26,61 +34,60 @@ export function AgentPage() {
     '1h'
 
   const hasSession = Boolean(symbol)
+  const llmConnected = Boolean(snapshot) // session live implies engine path; LLM key is in settings
 
   return (
-    <div className="page agent-atelier">
-      <header className="agent-atelier-hero">
-        <div className="agent-atelier-hero-copy">
-          <p className="iv-page-eyebrow">Automatisation · Copilot</p>
-          <h1>Copilot</h1>
-          <p className="iv-page-question">Pourquoi le moteur a-t-il classé ainsi ?</p>
-          <p className="agent-atelier-lede">
-            Le <strong>moteur Python</strong> calcule. Claude <strong>interroge le moteur</strong> avec ses outils, puis explique.
-            Depuis Décisions ou Journal, un clic « Expliquer » t’amène ici avec la
-            question déjà prête.
-          </p>
-          <div className="agent-atelier-roles" aria-label="Rôles">
-            <span className="agent-role-pill is-engine">Moteur = chiffres</span>
-            <span className="agent-role-pill is-llm">Claude = outils + explication</span>
-            <span className="agent-role-pill is-you">Toi = confirmation</span>
-          </div>
-        </div>
+    <div>
+      <WorkspacePageHead
+        path="/app/agent"
+        actions={<Tag tone="gray">{llmConnected ? 'SESSION LIVE' : 'APERÇU DU COPILOT'}</Tag>}
+      />
 
-        <div className="agent-atelier-hero-aside">
-          <div className={`agent-session-chip ${hasSession ? 'is-live' : ''}`}>
-            <span className="agent-session-label">Session</span>
-            {hasSession ? (
-              <span className="agent-session-value">
-                {symbol}
-                <span className="muted"> · {timeframe}</span>
-              </span>
-            ) : (
-              <span className="agent-session-value muted">Aucun symbole — lance depuis Décisions</span>
-            )}
+      <div className="grid">
+        <section className="card chat">
+          <div className="card-head">
+            <h2>Une seconde lecture</h2>
+            <Tag tone="gray">{hasSession ? `${symbol} · ${timeframe}` : 'APERÇU DU COPILOT'}</Tag>
           </div>
-          <nav className="agent-atelier-jump" aria-label="Raccourcis">
-            <Link to="/app/opportunites">Opportunités</Link>
-            <Link to="/app/journal">Journal</Link>
-            <Link to="/app/context">Contexte</Link>
-            <Link to="/app/market">Marché</Link>
-          </nav>
-        </div>
-      </header>
-
-      <div className="agent-atelier-grid">
-        <section className="agent-atelier-chat panel">
-          <header className="agent-atelier-panel-head">
-            <div>
-              <h2>Conversation</h2>
-              <p className="muted">
-                Modes : expliquer une décision, un signal, rechercher, ou une idée —
-                toujours ancré sur les données injectées.
-              </p>
-            </div>
-          </header>
           <AgentPanel snapshot={snapshot} />
         </section>
 
+        <section className="card">
+          <div className="card-head">
+            <h2>Explorer une décision</h2>
+          </div>
+          <div className="card-body">
+            {PROMPTS.map((q) => (
+              <button
+                key={q}
+                type="button"
+                className="suggestion"
+                onClick={() => setInput(q)}
+              >
+                {q}
+              </button>
+            ))}
+            <div style={{ marginTop: 30 }}>
+              <StatLine label="Lire le contexte" value={<Tag tone="gray">DISPONIBLE</Tag>} />
+              <StatLine label="Expliquer un refus" value={<Tag tone="gray">DISPONIBLE</Tag>} />
+              <StatLine label="Passer un ordre" value={<Tag tone="red">BLOQUÉ</Tag>} />
+            </div>
+            <p style={{ fontSize: 11, color: 'var(--muted)' }}>
+              Claude interroge le moteur en lecture seule. La validation reste au Risk Kernel.{' '}
+              <Link to="/app/opportunites" className="link">
+                Opportunités
+              </Link>
+              {' · '}
+              <Link to="/app/journal" className="link">
+                Journal
+              </Link>
+              {' · '}
+              <Link to="/app/settings" className="link">
+                Paramètres LLM
+              </Link>
+            </p>
+          </div>
+        </section>
       </div>
     </div>
   )

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Tag } from './maquette'
 import {
   fetchCorrelations,
   type CorrelationMatrix,
@@ -8,17 +9,6 @@ import { CLASS_LABELS, getEngineUniverse, type EngineAssetClass } from '../lib/u
 
 const MAX_CORR_SYMBOLS = 12
 
-function cellColor(v: number | null): string {
-  if (v == null || Number.isNaN(v)) return 'transparent'
-  const clamped = Math.max(-1, Math.min(1, v))
-  if (clamped >= 0) {
-    const a = 0.1 + clamped * 0.62
-    return `color-mix(in srgb, var(--bull) ${Math.round(a * 100)}%, transparent)`
-  }
-  const a = 0.1 + Math.abs(clamped) * 0.62
-  return `color-mix(in srgb, var(--bear) ${Math.round(a * 100)}%, transparent)`
-}
-
 function fmtCorr(v: number | null): string {
   if (v == null || Number.isNaN(v)) return '—'
   return v.toFixed(2)
@@ -26,11 +16,6 @@ function fmtCorr(v: number | null): string {
 
 function shortSym(symbol: string): string {
   return symbol.replace(/USDT$/i, '').replace(/USD$/i, '')
-}
-
-function peerBarWidth(corr: number | null): string {
-  if (corr == null) return '0%'
-  return `${Math.round(Math.abs(corr) * 100)}%`
 }
 
 function defaultTf(assetClass: EngineAssetClass): string {
@@ -134,19 +119,15 @@ export function CorrelationHeatmap({ assetClass }: Props) {
   const classLabel = CLASS_LABELS[assetClass]
 
   return (
-    <div className="corr-panel panel">
-      <header className="corr-head">
-        <div className="corr-head-copy">
-          <p className="corr-kicker">{classLabel} · lecture seule</p>
-          <h3>Qui bouge avec qui</h3>
-          <p className="muted corr-lede">
-            Corrélation entre paires de la même classe (−1 = inverse, +1 = ensemble). Sert à
-            voir les co-mouvements — pas à voter LONG/SHORT.
-          </p>
-        </div>
-        <div className="corr-controls" role="group" aria-label="Paramètres corrélation">
-          <label className="corr-control">
-            <span>TF</span>
+    <section className="card">
+      <div className="card-head">
+        <h2>Corrélations · {classLabel}</h2>
+        <Tag tone="gray">LIVE</Tag>
+      </div>
+      <div className="card-body">
+        <div className="toolbar" role="group" aria-label="Paramètres corrélation">
+          <label className="field" style={{ marginBottom: 0, minWidth: 100 }}>
+            <span style={{ fontSize: 11 }}>TF</span>
             <select value={timeframe} onChange={(e) => setTimeframe(e.target.value)}>
               <option value="15m">15m</option>
               <option value="1h">1h</option>
@@ -154,8 +135,8 @@ export function CorrelationHeatmap({ assetClass }: Props) {
               <option value="1d">1d</option>
             </select>
           </label>
-          <label className="corr-control">
-            <span>Méthode</span>
+          <label className="field" style={{ marginBottom: 0, minWidth: 140 }}>
+            <span style={{ fontSize: 11 }}>Méthode</span>
             <select
               value={method}
               onChange={(e) => setMethod(e.target.value as CorrelationMethod)}
@@ -165,132 +146,72 @@ export function CorrelationHeatmap({ assetClass }: Props) {
             </select>
           </label>
         </div>
-      </header>
-
-      <div className="corr-legend" aria-hidden>
-        <span>−1 inverse</span>
-        <div className="corr-legend-bar" />
-        <span>0</span>
-        <div className="corr-legend-bar is-pos" />
-        <span>+1 ensemble</span>
-      </div>
 
       {loading && (
-        <div className="corr-loading" aria-live="polite">
-          <div className="corr-skeleton" />
-          <p className="muted">
-            Calcul sur {universeSymbols?.length ?? '…'} symboles {classLabel} ({timeframe})…
-          </p>
-        </div>
+        <p style={{ fontSize: 12, color: 'var(--muted)' }}>
+          Calcul sur {universeSymbols?.length ?? '…'} symboles ({timeframe})…
+        </p>
       )}
       {error && (
-        <div className="banner error" role="alert">
-          {error}
+        <div className="notice" role="alert">
+          <span>△</span>
+          <span>{error}</span>
         </div>
       )}
 
       {emptyMatrix && (
-        <div className="corr-empty">
-          <p>
-            Pas assez de paires {classLabel.toLowerCase()} avec un historique commun
-            {data && data.skipped.length > 0 ? ` (${data.skipped.length} ignorés)` : ''}.
-          </p>
-          <p className="muted">
-            Essaie le TF 1d, ou vérifie que le provider de cette classe est câblé.
-          </p>
-        </div>
+        <p style={{ fontSize: 12, color: 'var(--muted)' }}>
+          Pas assez de paires avec un historique commun
+          {data && data.skipped.length > 0 ? ` (${data.skipped.length} ignorés)` : ''}.
+        </p>
       )}
 
       {data && !loading && n >= 2 && data.matrix.length > 0 && (
         <>
-          <p className="corr-meta">
-            <span>{data.symbols.length} symboles</span>
-            <span className="corr-meta-sep">·</span>
-            <span>n={data.sample_size} barres</span>
-            <span className="corr-meta-sep">·</span>
-            <span>{data.timeframe}</span>
-          </p>
-
-          <div className="corr-focus-block">
-            <div className="corr-focus-bar">
-              <label className="corr-control">
-                <span>Focus</span>
-                <select value={focus ?? ''} onChange={(e) => setFocus(e.target.value || null)}>
-                  {data.symbols.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {focus && (
-                <p className="muted corr-focus-hint">
-                  Top co-mouvements avec <strong>{shortSym(focus)}</strong>
-                </p>
-              )}
-            </div>
-
-            {focus && focusPeers.length > 0 && (
-              <ul className="corr-rank">
-                {focusPeers.map((p, idx) => (
-                  <li key={p.symbol}>
-                    <button
-                      type="button"
-                      className="corr-rank-row"
-                      onClick={() => setFocus(p.symbol)}
-                    >
-                      <span className="corr-rank-idx">{idx + 1}</span>
-                      <span className="corr-rank-sym">{p.symbol}</span>
-                      <span className="corr-rank-track" aria-hidden>
-                        <span
-                          className={`corr-rank-fill ${(p.corr ?? 0) >= 0 ? 'is-pos' : 'is-neg'}`}
-                          style={{ width: peerBarWidth(p.corr) }}
-                        />
-                      </span>
-                      <span className={`mono corr-rank-val ${(p.corr ?? 0) >= 0 ? 'up' : 'down'}`}>
-                        {fmtCorr(p.corr)}
-                      </span>
-                    </button>
-                  </li>
+          {data.symbols.length <= 5 && (
+            <>
+              <div className="chart-labels">
+                {data.symbols.map((s) => (
+                  <span key={s}>{shortSym(s)}</span>
                 ))}
-              </ul>
-            )}
-          </div>
-
-          {showFullGrid ? (
-            <div className="corr-grid-wrap">
-              <table className="corr-grid" aria-label="Matrice de corrélation">
+              </div>
+              <div className="heatmap">
+                {data.symbols.flatMap((_, i) =>
+                  data.symbols.map((colSym, j) => {
+                    const v = data.matrix[i]?.[j] ?? null
+                    const strong = v != null && v > 0.85
+                    return (
+                      <div key={`${i}-${colSym}`} className={strong ? 'strong' : undefined}>
+                        {fmtCorr(v)}
+                      </div>
+                    )
+                  }),
+                )}
+              </div>
+            </>
+          )}
+          {data.symbols.length > 5 && showFullGrid && (
+            <div className="table-wrap">
+              <table aria-label="Matrice de corrélation">
                 <thead>
                   <tr>
-                    <th scope="col" />
+                    <th />
                     {data.symbols.map((s) => (
-                      <th key={s} scope="col" title={s}>
-                        {shortSym(s)}
-                      </th>
+                      <th key={s}>{shortSym(s)}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {data.symbols.map((rowSym, i) => (
-                    <tr key={rowSym} className={rowSym === focus ? 'is-focus' : undefined}>
-                      <th scope="row" title={rowSym}>
-                        <button
-                          type="button"
-                          className="ghost corr-row-btn"
-                          onClick={() => setFocus(rowSym)}
-                        >
-                          {shortSym(rowSym)}
-                        </button>
-                      </th>
+                    <tr key={rowSym}>
+                      <td>
+                        <b>{shortSym(rowSym)}</b>
+                      </td>
                       {data.symbols.map((colSym, j) => {
                         const v = data.matrix[i]?.[j] ?? null
                         return (
-                          <td
-                            key={colSym}
-                            style={{ background: cellColor(v) }}
-                            title={`${rowSym} × ${colSym} = ${fmtCorr(v)}`}
-                          >
-                            <span className="mono corr-cell">{fmtCorr(v)}</span>
+                          <td key={colSym} className="mono">
+                            {fmtCorr(v)}
                           </td>
                         )
                       })}
@@ -299,9 +220,34 @@ export function CorrelationHeatmap({ assetClass }: Props) {
                 </tbody>
               </table>
             </div>
-          ) : null}
+          )}
+          {focusPeers.length > 0 && focus && (
+            <div style={{ marginTop: 12 }}>
+              <div className="eyebrow">FOCUS · {shortSym(focus)}</div>
+              {focusPeers.slice(0, 5).map((p) => (
+                <div key={p.symbol} className="statline">
+                  <span>{shortSym(p.symbol)}</span>
+                  <b className={`mono ${(p.corr ?? 0) >= 0 ? 'up' : 'down'}`}>{fmtCorr(p.corr)}</b>
+                </div>
+              ))}
+              <label className="field" style={{ marginTop: 10 }}>
+                Changer le focus
+                <select value={focus ?? ''} onChange={(e) => setFocus(e.target.value || null)}>
+                  {data.symbols.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+          <p style={{ fontSize: 11, color: 'var(--muted)' }}>
+            {data.symbols.length} symboles · n={data.sample_size} · {data.timeframe}
+          </p>
         </>
       )}
-    </div>
+      </div>
+    </section>
   )
 }

@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CorrelationHeatmap } from '../components/CorrelationHeatmap'
-import { ContextFeedsPanel } from '../components/ContextFeedsPanel'
+import { Metric, StatLine, Tag, WorkspacePageHead } from '../components/maquette'
+import {
+  fetchContextCalendar,
+  fetchSymbolContext,
+  impactLabelFr,
+  type ContextCalendarEvent,
+  type SymbolContextSnapshot,
+} from '../lib/contextFeeds'
 import {
   fetchFearGreed,
   fetchGlobalMarket,
@@ -8,332 +15,323 @@ import {
   type GlobalMarketData,
 } from '../lib/marketContext'
 import {
-  fetchSymbolContext,
-  type SymbolContextSnapshot,
-} from '../lib/contextFeeds'
-import {
-  CLASS_BLURBS,
   CLASS_LABELS,
   getEngineUniverse,
   type EngineAssetClass,
   type EngineInstrument,
 } from '../lib/universe'
-import './ContextPage.css'
 
 const CLASS_ORDER: EngineAssetClass[] = [
-  'forex',
   'crypto',
+  'forex',
   'metal',
   'index',
   'equity',
   'energy',
 ]
 
-const FLAGSHIPS: Record<EngineAssetClass, string[]> = {
-  forex: ['EURUSD', 'GBPUSD', 'USDJPY'],
-  crypto: ['BTCUSDT', 'ETHUSDT'],
-  metal: ['XAUUSD', 'XAGUSD'],
-  index: ['SPX', 'NDX'],
-  equity: [],
-  energy: ['WTI'],
+const FLAGSHIP: Partial<Record<EngineAssetClass, string>> = {
+  crypto: 'BTCUSDT',
+  forex: 'EURUSD',
+  metal: 'XAUUSD',
+  index: 'SPX',
+  energy: 'WTI',
 }
 
-const CLASS_HINT: Record<EngineAssetClass, string> = {
-  forex: 'Calendrier macro + régime technique des paires majeures + corrélations FX.',
-  crypto: 'Climat CoinGecko / Fear & Greed, RSS crypto, puis corrélations spot.',
-  metal: 'Or / argent : calendrier USD + régime ATR/RSI + co-mouvements.',
-  index: 'Indices risk-on : calendrier + régime + corrélations.',
-  equity: 'Actions (quota Twelve Data) — calendrier macro US en priorité.',
-  energy: 'Énergie si le provider est câblé — sinon calendrier seul.',
-}
+type ClassVerdict = 'PASSE' | 'PRUDENCE' | 'NEUTRE'
 
-function fmtUsd(n: number): string {
-  if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`
-  return `$${n.toFixed(0)}`
-}
-
-function regimeLabel(regime: string): string {
+function regimeVolLabel(regime: string): string {
   switch (regime.toLowerCase()) {
     case 'extreme':
-      return 'Volatilité extrême'
+      return 'Élevée'
     case 'dead':
-      return 'Volatilité morte'
+      return 'Faible'
     case 'normal':
-      return 'Volatilité normale'
+      return 'Modérée'
     case 'unknown':
-      return 'Régime inconnu'
+      return '—'
     default:
       return regime || '—'
   }
 }
 
-function biasLabel(bias: string): string {
-  switch (bias.toLowerCase()) {
-    case 'bullish':
-    case 'overbought':
-      return 'hausse'
-    case 'bearish':
-    case 'oversold':
-      return 'baisse'
-    default:
-      return bias || 'neutre'
+function climateFromFng(fng: FearGreed | null, market: GlobalMarketData | null): string {
+  if (fng) {
+    if (fng.value >= 55) return 'Tendance'
+    if (fng.value <= 45) return 'Prudence'
+    return 'Neutre'
+  }
+  if (market && market.marketCapChangePercent24h >= 1) return 'Tendance'
+  if (market && market.marketCapChangePercent24h <= -1) return 'Pression'
+  return 'Observation'
+}
+
+function classVerdictFromSnap(snap: SymbolContextSnapshot | null): ClassVerdict {
+  if (!snap) return 'NEUTRE'
+  const r = snap.atr.regime.toLowerCase()
+  if (r === 'extreme') return 'PRUDENCE'
+  if (r === 'dead') return 'NEUTRE'
+  if (snap.rsi.bias === 'overbought' || snap.rsi.bias === 'oversold') return 'PRUDENCE'
+  if (r === 'normal') return 'PASSE'
+  return 'NEUTRE'
+}
+
+function verdictTone(v: ClassVerdict): 'green' | 'amber' | 'gray' {
+  switch (v) {
+    case 'PASSE':
+      return 'green'
+    case 'PRUDENCE':
+      return 'amber'
+    case 'NEUTRE':
+      return 'gray'
+    default: {
+      const _exhaustive: never = v
+      return _exhaustive
+    }
   }
 }
 
-function CryptoClimate() {
-  const [market, setMarket] = useState<GlobalMarketData | null>(null)
-  const [fng, setFng] = useState<FearGreed | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    void Promise.allSettled([
-      fetchGlobalMarket().then((m) => {
-        if (!cancelled) setMarket(m)
-      }),
-      fetchFearGreed().then((f) => {
-        if (!cancelled) setFng(f)
-      }),
-    ]).then((results) => {
-      if (cancelled) return
-      if (results[0].status === 'rejected') {
-        setError(
-          results[0].reason instanceof Error
-            ? results[0].reason.message
-            : 'Climat crypto indisponible',
-        )
-      }
-    })
-    return () => {
-      cancelled = true
+function fmtEventWhen(iso: string): string {
+  try {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return iso
+    const now = new Date()
+    const sameDay =
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate()
+    if (sameDay) {
+      return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
     }
-  }, [])
-
-  return (
-    <section className="panel ctx-climate" aria-label="Climat crypto">
-      <header className="panel-head">
-        <h2>Climat crypto</h2>
-        <span className="panel-meta">CoinGecko · Fear &amp; Greed — pas le screener IchiVol</span>
-      </header>
-      {error && !market && (
-        <p className="muted ctx-pad">{error}</p>
-      )}
-      {market && (
-        <div className="context-grid ctx-pad">
-          <div className="context-card">
-            <span className="context-label">Capitalisation mondiale</span>
-            <strong className="context-value">{fmtUsd(market.totalMarketCapUsd)}</strong>
-            <span className={market.marketCapChangePercent24h >= 0 ? 'up' : 'down'}>
-              {market.marketCapChangePercent24h >= 0 ? '+' : ''}
-              {market.marketCapChangePercent24h.toFixed(2)} % (24 h)
-            </span>
-          </div>
-          <div className="context-card">
-            <span className="context-label">Volume 24 h</span>
-            <strong className="context-value">{fmtUsd(market.totalVolumeUsd)}</strong>
-            <span className="muted">activité spot agrégée</span>
-          </div>
-          {fng && (
-            <div className="context-card">
-              <span className="context-label">Sentiment (Fear &amp; Greed)</span>
-              <strong className="context-value">{fng.value}</strong>
-              <span className="muted">{fng.classification} · 0 peur → 100 greed</span>
-            </div>
-          )}
-        </div>
-      )}
-      {market && market.dominance.length > 0 && (
-        <div className="context-dominance ctx-pad">
-          <h3>Part de marché (dominance)</h3>
-          <div className="dominance-bars">
-            {market.dominance.slice(0, 5).map((d) => (
-              <div key={d.symbol} className="dominance-row">
-                <span className="dominance-symbol">{d.symbol}</span>
-                <div className="dominance-track">
-                  <div className="dominance-fill" style={{ width: `${Math.min(d.percent, 100)}%` }} />
-                </div>
-                <span className="dominance-pct">{d.percent.toFixed(1)} %</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </section>
-  )
+    const tomorrow = new Date(now)
+    tomorrow.setDate(now.getDate() + 1)
+    if (
+      d.getFullYear() === tomorrow.getFullYear() &&
+      d.getMonth() === tomorrow.getMonth() &&
+      d.getDate() === tomorrow.getDate()
+    ) {
+      return 'Demain'
+    }
+    return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+  } catch {
+    return iso
+  }
 }
 
-function RegimeStrip({
-  assetClass,
-  instruments,
-}: {
-  assetClass: EngineAssetClass
-  instruments: EngineInstrument[]
-}) {
-  const wanted = FLAGSHIPS[assetClass]
-  const symbols = useMemo(() => {
-    if (wanted.length === 0) return []
-    const wired = new Set(instruments.filter((i) => i.wired).map((i) => i.id))
-    return wanted.filter((s) => wired.has(s)).slice(0, 3)
-  }, [wanted, instruments])
+function countryCode(country: string): string {
+  const c = country.trim().toUpperCase()
+  if (c.length <= 3) return c
+  if (/united states|usa|u\.s/i.test(country)) return 'USD'
+  if (/euro|ecb|germany|france|italy/i.test(country)) return 'EUR'
+  if (/japan|boj/i.test(country)) return 'JPY'
+  if (/uk|britain|boe/i.test(country)) return 'GBP'
+  return country.slice(0, 3).toUpperCase()
+}
 
-  const [rows, setRows] = useState<(SymbolContextSnapshot | { symbol: string; error: string })[]>(
-    [],
-  )
-  const [loading, setLoading] = useState(false)
+/** Contexte — maquette `contexte()`. */
+export function ContextPage() {
+  const [instruments, setInstruments] = useState<EngineInstrument[]>([])
+  const [market, setMarket] = useState<GlobalMarketData | null>(null)
+  const [fng, setFng] = useState<FearGreed | null>(null)
+  const [events, setEvents] = useState<ContextCalendarEvent[]>([])
+  const [classSnaps, setClassSnaps] = useState<
+    Partial<Record<EngineAssetClass, SymbolContextSnapshot | null>>
+  >({})
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (symbols.length === 0) {
-      setRows([])
-      return
-    }
     let cancelled = false
     setLoading(true)
-    void Promise.all(
-      symbols.map((s) =>
-        fetchSymbolContext(s, assetClass === 'crypto' ? '1h' : '1h')
-          .then((snap) => snap)
-          .catch((e: unknown) => ({
-            symbol: s,
-            error: e instanceof Error ? e.message : 'indisponible',
-          })),
-      ),
-    ).then((res) => {
+    void Promise.allSettled([
+      getEngineUniverse(),
+      fetchGlobalMarket(),
+      fetchFearGreed(),
+      fetchContextCalendar({ limit: 12 }),
+    ]).then(async (results) => {
+      if (cancelled) return
+      const [uni, mkt, fear, cal] = results
+      if (uni.status === 'fulfilled') setInstruments(uni.value.instruments)
+      if (mkt.status === 'fulfilled') setMarket(mkt.value)
+      if (fear.status === 'fulfilled') setFng(fear.value)
+      if (cal.status === 'fulfilled') setEvents(cal.value)
+      if (
+        mkt.status === 'rejected' &&
+        fear.status === 'rejected' &&
+        cal.status === 'rejected'
+      ) {
+        setError('Contexte indisponible')
+      } else {
+        setError(null)
+      }
+
+      const wired = uni.status === 'fulfilled' ? uni.value.instruments : []
+      const snaps: Partial<Record<EngineAssetClass, SymbolContextSnapshot | null>> = {}
+      await Promise.all(
+        CLASS_ORDER.map(async (cls) => {
+          const flag = FLAGSHIP[cls]
+          if (!flag) {
+            snaps[cls] = null
+            return
+          }
+          const ok = wired.some((i) => i.id === flag && i.wired)
+          if (!ok && cls !== 'crypto') {
+            snaps[cls] = null
+            return
+          }
+          try {
+            snaps[cls] = await fetchSymbolContext(flag, '1h')
+          } catch {
+            snaps[cls] = null
+          }
+        }),
+      )
       if (!cancelled) {
-        setRows(res)
+        setClassSnaps(snaps)
         setLoading(false)
       }
     })
     return () => {
       cancelled = true
     }
-  }, [symbols, assetClass])
-
-  if (symbols.length === 0) return null
-
-  return (
-    <section className="panel ctx-regime" aria-label="Régime technique">
-      <header className="panel-head">
-        <h2>Régime technique</h2>
-        <span className="panel-meta">RSI · ATR — analyse seule, pas un vote</span>
-      </header>
-      {loading && <p className="muted ctx-pad">Chargement…</p>}
-      {!loading && (
-        <div className="ctx-regime-grid">
-          {rows.map((r) => {
-            if ('error' in r) {
-              return (
-                <div key={r.symbol} className="context-card">
-                  <span className="context-label mono">{r.symbol}</span>
-                  <span className="muted">{r.error}</span>
-                </div>
-              )
-            }
-            return (
-              <div key={r.symbol} className="context-card">
-                <span className="context-label mono">{r.symbol}</span>
-                <strong className="context-value">{regimeLabel(r.atr.regime)}</strong>
-                <span className="muted">
-                  RSI {r.rsi.value != null ? r.rsi.value.toFixed(0) : '—'} (
-                  {biasLabel(r.rsi.bias)}) · ATR{' '}
-                  {r.atr.value != null ? r.atr.value.toFixed(r.atr.value >= 10 ? 1 : 4) : '—'}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </section>
-  )
-}
-
-export function ContextPage() {
-  const [instruments, setInstruments] = useState<EngineInstrument[]>([])
-  const [assetClass, setAssetClass] = useState<EngineAssetClass>('forex')
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    getEngineUniverse()
-      .then((u) => {
-        if (cancelled) return
-        setInstruments(u.instruments)
-        const present = CLASS_ORDER.filter((c) =>
-          u.instruments.some((i) => i.asset_class === c && i.wired),
-        )
-        const preferred = present.includes('forex')
-          ? 'forex'
-          : (present[0] ?? 'crypto')
-        setAssetClass(preferred)
-        setReady(true)
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setAssetClass('crypto')
-          setReady(true)
-        }
-      })
-    return () => {
-      cancelled = true
-    }
   }, [])
 
-  const visibleClasses = useMemo(() => {
-    const present = new Set(
-      instruments.filter((i) => i.wired).map((i) => i.asset_class),
-    )
-    const list = CLASS_ORDER.filter((c) => present.has(c))
-    return list.length > 0 ? list : (['crypto'] as EngineAssetClass[])
-  }, [instruments])
+  const btcDom = useMemo(() => {
+    const hit = market?.dominance.find((d) => d.symbol.toUpperCase() === 'BTC')
+    return hit?.percent ?? null
+  }, [market])
 
-  const isCrypto = assetClass === 'crypto'
+  const climate = climateFromFng(fng, market)
+  const volSnap = classSnaps.crypto
+  const volLabel = volSnap ? regimeVolLabel(volSnap.atr.regime) : loading ? '…' : '—'
+  const cryptoRegime = classVerdictFromSnap(volSnap ?? null)
+  const agenda = events.slice(0, 5)
+
+  const regimeRows = useMemo(
+    () =>
+      CLASS_ORDER.filter((c) => CLASS_LABELS[c]).map((cls) => ({
+        cls,
+        label: CLASS_LABELS[cls],
+        verdict: classVerdictFromSnap(classSnaps[cls] ?? null),
+      })),
+    [classSnaps],
+  )
+
+  const wiredCrypto = instruments.filter((i) => i.asset_class === 'crypto' && i.wired).length
 
   return (
-    <div className="context-page">
-      <header className="page-head overview-head">
-        <div>
-          <p className="iv-page-eyebrow">Recherche · Contexte</p>
-          <h1>Contexte</h1>
-          <p className="iv-page-question">Dans quel environnement évolue le marché ?</p>
-          <p className="muted">{CLASS_HINT[assetClass]}</p>
+    <div>
+      <WorkspacePageHead path="/app/context" />
+
+      {error && (
+        <div className="notice" role="alert">
+          <span>△</span>
+          <span>{error}</span>
         </div>
-        <div className="market-class-tabs" role="tablist" aria-label="Classe d’actif">
-          {visibleClasses.map((c) => (
-            <button
-              key={c}
-              type="button"
-              role="tab"
-              aria-selected={c === assetClass}
-              className={c === assetClass ? 'is-active' : undefined}
-              onClick={() => setAssetClass(c)}
-              disabled={!ready}
-            >
-              {CLASS_LABELS[c]}
-            </button>
-          ))}
-        </div>
-      </header>
+      )}
 
-      <p className="muted ctx-blurb">{CLASS_BLURBS[assetClass]}</p>
+      <div className="metrics" aria-label="Climat & régime">
+        <Metric
+          label="Climat du marché"
+          value={climate}
+          hint={
+            fng
+              ? `Fear & Greed ${fng.value} · ${fng.classification}`
+              : 'Lecture CoinGecko / sentiment'
+          }
+        />
+        <Metric
+          label="Dominance BTC"
+          value={btcDom != null ? `${btcDom.toFixed(1)} %` : '—'}
+          hint="Part de marché · CoinGecko"
+        />
+        <Metric label="Volatilité" value={volLabel} hint="ATR / prix · BTC" />
+        <Metric
+          label="Régime crypto"
+          value={<Tag tone={verdictTone(cryptoRegime)}>{cryptoRegime}</Tag>}
+          hint="Concentration à surveiller"
+        />
+      </div>
 
-      {isCrypto && <CryptoClimate />}
+      <div className="grid">
+        <section className="card" aria-label="Agenda économique">
+          <div className="card-head">
+            <h2>Agenda économique</h2>
+            <Tag tone="gray">LIVE</Tag>
+          </div>
+          <div className="card-body">
+            <div className="eyebrow">ÉVÉNEMENTS À VENIR</div>
+            {agenda.length === 0 ? (
+              <p style={{ fontSize: 12, color: 'var(--muted)' }}>
+                {loading ? 'Chargement…' : 'Aucun événement macro.'}
+              </p>
+            ) : (
+              agenda.map((e, i) => (
+                <div key={`${e.date}-${e.title}-${i}`} className="session">
+                  <span className="mono">{fmtEventWhen(e.date)}</span>
+                  <b>{countryCode(e.country)}</b>
+                  <span>{e.title}</span>
+                  <Tag tone={e.impact.toLowerCase() === 'high' ? 'amber' : 'gray'}>
+                    {impactLabelFr(e.impact)}
+                  </Tag>
+                </div>
+              ))
+            )}
+            <p style={{ fontSize: 11, color: 'var(--muted)' }}>
+              Le contexte macro éclaire la décision, sans voter dans le signal technique.
+            </p>
+          </div>
+        </section>
 
-      <ContextFeedsPanel
-        showNews
-        calendarFirst={!isCrypto}
-        defaultImpact={isCrypto ? 'high_medium' : 'high'}
-        calendarLimit={isCrypto ? 24 : 30}
-      />
+        <section className="card" aria-label="Régime par classe d’actifs">
+          <div className="card-head">
+            <h2>Régime par classe d’actifs</h2>
+          </div>
+          <div className="card-body">
+            {regimeRows.map((r) => (
+              <StatLine
+                key={r.cls}
+                label={r.label}
+                value={<Tag tone={verdictTone(r.verdict)}>{r.verdict}</Tag>}
+              />
+            ))}
+          </div>
+        </section>
+      </div>
 
-      <RegimeStrip assetClass={assetClass} instruments={instruments} />
-
-      <CorrelationHeatmap assetClass={assetClass} />
-
-      <p className="context-note">
-        Cette page lit l’environnement (macro, sentiment, co-mouvements). Elle ne décide
-        jamais LONG/SHORT — ça reste sur Marché et Décisions.
-      </p>
+      <div className="grid equal">
+        <CorrelationHeatmap assetClass="crypto" />
+        <section className="card" aria-label="Points de vigilance">
+          <div className="card-head">
+            <h2>Points de vigilance</h2>
+          </div>
+          <div className="card-body">
+            <div className="step">
+              <b>Exposition corrélée</b>
+              <p>
+                Plusieurs positions crypto peuvent réagir au même mouvement de BTC
+                {btcDom != null ? ` (dominance ${btcDom.toFixed(0)} %)` : ''}.
+              </p>
+            </div>
+            <div className="step">
+              <b>Volume inhabituel</b>
+              <p>
+                Un pic de volume peut accompagner un événement. Vérifier le calendrier avant
+                d’agir.
+              </p>
+            </div>
+            <div className="step">
+              <b>Gap et volatilité</b>
+              <p>
+                {volSnap
+                  ? `Régime ATR actuel : ${regimeVolLabel(volSnap.atr.regime)}. Relire le plan de risque si les conditions changent.`
+                  : 'Relire le plan de risque si les conditions de marché changent.'}
+                {wiredCrypto > 0 ? ` · ${wiredCrypto} paires crypto câblées.` : ''}
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   )
 }

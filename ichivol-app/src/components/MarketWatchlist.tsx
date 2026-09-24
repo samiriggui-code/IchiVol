@@ -26,6 +26,8 @@ export interface WatchlistProps {
   showEngine?: boolean
   /** Hide Score column (mobile list). */
   hideScore?: boolean
+  /** Compact left-rail buttons (maquette market-layout). */
+  variant?: 'table' | 'rail'
 }
 
 const DESKTOP_COLS: { key: WatchlistSortKey; label: string }[] = [
@@ -100,6 +102,7 @@ export function MarketWatchlist({
   scanLoading,
   showEngine = true,
   hideScore = false,
+  variant = 'table',
 }: WatchlistProps) {
   const byId = useMemo(() => new Map(instruments.map((i) => [i.id, i])), [instruments])
   const cols = hideScore ? MOBILE_COLS : DESKTOP_COLS
@@ -121,6 +124,78 @@ export function MarketWatchlist({
     }
     return [...list].sort((a, b) => compareRows(a, b, sortKey, sortDir))
   }, [rows, classFilter, contextActiveOnly, byId, sortKey, sortDir])
+
+  if (variant === 'rail') {
+    return (
+      <section className="market-watchlist market-watchlist--rail watchlist">
+        <div className="mw-toolbar">
+          <div className="mw-class-filters" role="group" aria-label="Classe d’actif">
+            <button
+              type="button"
+              className={classFilter == null ? 'is-active' : undefined}
+              onClick={() => onClassFilter(null)}
+            >
+              Tous
+            </button>
+            {classes.slice(0, 3).map((c) => (
+              <button
+                key={c}
+                type="button"
+                className={classFilter === c ? 'is-active' : undefined}
+                onClick={() => onClassFilter(c)}
+              >
+                {CLASS_LABELS[c]}
+              </button>
+            ))}
+          </div>
+          {onRescan && (
+            <button
+              type="button"
+              className="ghost mw-rescan"
+              disabled={scanLoading}
+              onClick={onRescan}
+            >
+              {scanLoading ? '…' : '↻'}
+            </button>
+          )}
+        </div>
+        <div className="mw-rail-list">
+          {filtered.map((r) => {
+            const pct = r.change24h
+            const pctCls = pct > 0 ? 'up' : pct < 0 ? 'down' : ''
+            const pctLabel =
+              pct === 0 && !r.price
+                ? '—'
+                : `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`
+            return (
+              <button
+                key={r.symbol}
+                type="button"
+                className={r.symbol === selected ? 'active' : undefined}
+                onClick={() => onSelect(r.symbol)}
+              >
+                <b>{displaySymbol(r.symbol)}</b>
+                <span className={pctCls}>{pctLabel}</span>
+                <small>
+                  {r.price > 0
+                    ? r.price.toLocaleString(undefined, {
+                        maximumFractionDigits: r.price >= 100 ? 2 : 6,
+                      })
+                    : '—'}
+                </small>
+              </button>
+            )
+          })}
+          {loading && filtered.length === 0 ? (
+            <p className="muted mw-rail-empty">Scan…</p>
+          ) : null}
+          {!loading && filtered.length === 0 ? (
+            <p className="muted mw-rail-empty">Aucun symbole</p>
+          ) : null}
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section className="market-watchlist">

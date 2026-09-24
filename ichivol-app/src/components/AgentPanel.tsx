@@ -354,46 +354,49 @@ export function AgentPanel({ snapshot }: Props) {
   }, [launch])
 
   return (
-    <div className="agent-panel-body">
-      <div className="agent-history">
+    <>
+      <div className="chat-log" id="chat-log">
         {history.length === 0 && !loading && (
-          <div className="agent-empty">
-            <p className="agent-empty-title">Pose ta question au moteur</p>
-            <p className="muted">
-              Claude interroge le moteur IchiVol (scan, décision, multi-timeframe,
-              backtest, walk-forward) en lecture seule, puis explique. Tu peux aussi
-              lancer « Expliquer » depuis une page métier.
+          <div className="bubble">
+            <b>Votre décision, rendue lisible.</b>
+            <p>
+              Claude interroge le moteur IchiVol (scan, décision, multi-TF, backtest) en lecture
+              seule, puis explique. Lance « Expliquer » depuis Opportunités ou le Journal.
             </p>
-            <div className="agent-empty-actions">
-              <Link to="/app/opportunites" className="ghost">
-                Ouvrir Opportunités
+            <span className="tag gray">
+              {connections.length === 0 ? 'Claude non connecté' : 'Prêt'}
+            </span>
+            <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Link to="/app/opportunites" className="link">
+                Opportunités ↗
               </Link>
-              <Link to="/app/market?filter=pinned" className="ghost">
-                Épinglés
-              </Link>
-              <Link to="/app/journal" className="ghost">
-                Ouvrir Journal
+              <Link to="/app/journal" className="link">
+                Journal ↗
               </Link>
             </div>
           </div>
         )}
         {history.map((entry, i) => (
-          <div key={i} className={`agent-msg agent-msg-${entry.role}`}>
-            <p>{entry.content}</p>
+          <div key={i} className={entry.role === 'user' ? 'bubble user' : 'bubble'}>
+            {entry.role !== 'user' && (
+              <span className="eyebrow">LECTURE</span>
+            )}
+            <p style={{ margin: entry.role !== 'user' ? '6px 0 0' : 0 }}>{entry.content}</p>
             {entry.toolCalls && entry.toolCalls.length > 0 && (
-              <p className="muted" style={{ fontSize: '0.78rem' }}>
-                Moteur interrogé :{' '}
+              <p style={{ fontSize: 11, color: 'var(--muted)' }}>
+                Moteur :{' '}
                 {entry.toolCalls
                   .map((t) => `${t.name}${t.ok ? '' : ' ✗'} (${(t.ms / 1000).toFixed(1)}s)`)
                   .join(' · ')}
               </p>
             )}
-            {entry.disclaimer && <p className="agent-disclaimer">{entry.disclaimer}</p>}
+            {entry.disclaimer && (
+              <p style={{ fontSize: 11, color: 'var(--muted)' }}>{entry.disclaimer}</p>
+            )}
             {entry.pendingAction && (
-              <div className="agent-action-bar" style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                 <button
                   type="button"
-                  className="ghost"
                   disabled={actionBusy || !!paperSheet}
                   onClick={() => void onConfirmAction(entry.pendingAction!, true, i)}
                 >
@@ -403,7 +406,6 @@ export function AgentPanel({ snapshot }: Props) {
                 </button>
                 <button
                   type="button"
-                  className="ghost"
                   disabled={actionBusy || !!paperSheet}
                   onClick={() => void onConfirmAction(entry.pendingAction!, false, i)}
                 >
@@ -412,10 +414,10 @@ export function AgentPanel({ snapshot }: Props) {
               </div>
             )}
             {entry.citations && entry.citations.length > 0 && (
-              <ul className="agent-citations">
+              <ul style={{ fontSize: 12, margin: '8px 0 0', paddingLeft: 18 }}>
                 {entry.citations.map((c) => (
                   <li key={c.id}>
-                    <a href={c.url} target="_blank" rel="noreferrer">
+                    <a href={c.url} target="_blank" rel="noreferrer" className="link">
                       {c.title}
                     </a>
                   </li>
@@ -425,23 +427,35 @@ export function AgentPanel({ snapshot }: Props) {
           </div>
         ))}
         {loading && liveText && (
-          <div className="agent-msg agent-msg-assistant">
+          <div className="bubble">
+            <span className="eyebrow">EN COURS</span>
             <p>{liveText}</p>
           </div>
         )}
         {loading && liveTool && (
-          <p className="muted">Interrogation du moteur : {liveTool}…</p>
+          <div className="bubble">
+            <p style={{ margin: 0, color: 'var(--muted)' }}>
+              Interrogation du moteur : {liveTool}…
+            </p>
+          </div>
         )}
         {loading && !liveText && !liveTool && (
-          <p className="muted">L&apos;agent réfléchit…</p>
+          <div className="bubble">
+            <p style={{ margin: 0, color: 'var(--muted)' }}>L&apos;agent réfléchit…</p>
+          </div>
         )}
-        {error && <div className="banner error">{error}</div>}
+        {error && (
+          <div className="notice" role="alert">
+            <span>△</span>
+            <span>{error}</span>
+          </div>
+        )}
       </div>
 
       {connections.length > 1 && (
-        <div className="agent-provider" style={{ padding: '0 0.65rem 0.35rem' }}>
-          <label className="muted" style={{ fontSize: '0.78rem' }}>
-            Modèle :{' '}
+        <div className="card-body" style={{ paddingTop: 0, paddingBottom: 0 }}>
+          <label className="field">
+            Modèle
             <select
               value={chosenProvider ?? ''}
               onChange={(e) => onProviderChange(e.target.value as LlmProvider)}
@@ -457,23 +471,24 @@ export function AgentPanel({ snapshot }: Props) {
         </div>
       )}
 
-      <div className="agent-input">
-        <textarea
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          void send()
+        }}
+      >
+        <input
+          id="chat-input"
           value={input}
-          rows={input.length > 80 ? 3 : 2}
-          placeholder="Ex. : BTCUSDT en 1h, qu'en dit le moteur ? Compare 15m/1h/4h."
+          placeholder="Pourquoi BTC n’est-il pas encore déclenché ?"
+          aria-label="Votre question"
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              void send()
-            }
-          }}
+          required
         />
-        <button type="button" className="ghost" disabled={loading} onClick={() => void send()}>
-          {loading ? '…' : 'Envoyer'}
+        <button className="primary" type="submit" disabled={loading}>
+          {loading ? '…' : 'Envoyer ↗'}
         </button>
-      </div>
+      </form>
 
       {paperSheet && (
         <PaperIntentConfirmSheet
@@ -485,6 +500,6 @@ export function AgentPanel({ snapshot }: Props) {
           onCancel={() => void cancelPaperSheet()}
         />
       )}
-    </div>
+    </>
   )
 }

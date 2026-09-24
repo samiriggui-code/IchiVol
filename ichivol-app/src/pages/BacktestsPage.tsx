@@ -1,7 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { BacktestRunsList } from '../components/BacktestRunsPanel'
 import { LabResearchPanel } from '../components/LabResearchPanel'
-import './BacktestsPage.css'
 import {
   compareStoredRulesets,
   getAblation,
@@ -33,7 +32,9 @@ import {
   type EngineAssetClass,
   type EngineInstrument,
 } from '../lib/universe'
+import { workspaceEyebrow, workspacePageMeta } from '../lib/workspaceNav'
 
+const META = workspacePageMeta('/app/strategy-lab')!
 const EXPERIMENT_ORDER: ExperimentName[] = [
   'ICHIMOKU_ONLY',
   'ICHIMOKU_RVOL',
@@ -50,15 +51,31 @@ const EXPERIMENT_LABELS: Record<ExperimentName, string> = {
 
 const TIMEFRAMES = ['15m', '1h', '4h', '1d']
 
-type LabTab = 'compare' | 'regimes' | 'experiments' | 'live' | 'research'
+type LabTab = 'backtests' | 'ablations' | 'walkforward' | 'regimes' | 'matrice'
 
 const LAB_TABS: { id: LabTab; label: string }[] = [
-  { id: 'compare', label: 'Compare' },
-  { id: 'regimes', label: 'Regimes' },
-  { id: 'experiments', label: 'Experiments' },
-  { id: 'live', label: 'Live' },
-  { id: 'research', label: 'Research' },
+  { id: 'backtests', label: 'Backtests' },
+  { id: 'ablations', label: 'Ablations' },
+  { id: 'walkforward', label: 'Walk-forward' },
+  { id: 'regimes', label: 'Régimes' },
+  { id: 'matrice', label: 'Matrice A–F' },
 ]
+
+const MATRIX_ROWS: { id: string; label: string; variable: string }[] = [
+  { id: 'A', label: 'A · Ichimoku seul', variable: 'Direction' },
+  { id: 'B', label: 'B · Ichimoku × RVOL', variable: 'Volume relatif' },
+  { id: 'C', label: 'C · + Structure', variable: 'Swings / pivots' },
+  { id: 'D', label: 'D · + Emplacement', variable: 'Distance au nuage' },
+  { id: 'E', label: 'E · + Régime', variable: 'ADX / Donchian' },
+  { id: 'F', label: 'F · Multi-timeframe', variable: 'Confluence' },
+]
+
+const PROOF_STEPS = [
+  ['01', 'Hypothèse', 'Définir ce que l’on cherche à améliorer.'],
+  ['02', 'Backtest', 'Mesurer rendement, risque et coûts.'],
+  ['03', 'Walk-forward', 'Vérifier hors échantillon.'],
+  ['04', 'Paper', 'Observer avant toute exécution réelle.'],
+] as const
 
 const REGIME_FILTERS = ['ALL', 'GLOBAL', 'TRENDING', 'RANGING', 'HIGH_VOL', 'LOW_VOL', 'BULL', 'BEAR'] as const
 
@@ -233,7 +250,7 @@ export function BacktestsPage() {
   const [walkForwardOpt, setWalkForwardOpt] = useState<WalkForwardOptResult | null>(null)
   const [evidence, setEvidence] = useState<BacktestEvidenceSummary | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [labTab, setLabTab] = useState<LabTab>('compare')
+  const [labTab, setLabTab] = useState<LabTab>('backtests')
   const [dbCompare, setDbCompare] = useState<StoredExperimentSummary[]>([])
   const [dbLoading, setDbLoading] = useState(false)
   const [dbError, setDbError] = useState<string | null>(null)
@@ -302,7 +319,6 @@ export function BacktestsPage() {
   }, [])
 
   useEffect(() => {
-    if (labTab === 'live' || labTab === 'research') return
     const sym = symbol.trim().toUpperCase()
     if (!sym) return
     let cancelled = false
@@ -326,7 +342,7 @@ export function BacktestsPage() {
           }
         }),
     ]
-    if (labTab === 'compare' && ids.length > 0) {
+    if ((labTab === 'backtests' || labTab === 'matrice') && ids.length > 0) {
       tasks.push(
         compareStoredRulesets({
           symbol: sym,
@@ -434,20 +450,13 @@ export function BacktestsPage() {
       : '—'
 
   return (
-    <div className="backtests-page">
-      <header className="page-head market-head">
+    <div className="backtests-page lab-page">
+      <header className="page-head market-head iv-animate-soft">
         <div className="market-head-copy">
-          <p className="iv-page-eyebrow">Recherche · Strategy Lab</p>
-          <h1>Strategy Lab</h1>
-          <p className="iv-page-question">Est-ce que cette méthode tient historiquement ?</p>
-          <p className="muted">
-            Chiffres depuis la Performance DB (expériences persistées). Onglet{' '}
-            <strong>Live</strong> = recalcul ponctuel ; <strong>Research</strong> = T5–T7 /
-            Researcher (observation only). Pas un conseil financier.
-          </p>
-          {current && (
-            <p className="muted">{CLASS_BLURBS[current.asset_class]}</p>
-          )}
+          <p className="iv-page-eyebrow">{workspaceEyebrow('/app/strategy-lab')}</p>
+          <h1>{META.label}</h1>
+          <p className="iv-page-question">{META.subtitle}</p>
+          {current && <p className="muted">{CLASS_BLURBS[current.asset_class]}</p>}
         </div>
         <div className="bt-head-actions">
         {visibleClasses.length > 0 && (
@@ -477,7 +486,7 @@ export function BacktestsPage() {
         </div>
       </header>
 
-      <div className="market-class-tabs" role="tablist" aria-label="Strategy Lab" style={{ marginBottom: '0.75rem' }}>
+      <div className="journal-tabs" role="tablist" aria-label="Strategy Lab">
         {LAB_TABS.map((tab) => (
           <button
             key={tab.id}
@@ -492,18 +501,49 @@ export function BacktestsPage() {
         ))}
       </div>
 
+      <div className="iv-notice" role="status">
+        <span aria-hidden>◈</span>
+        <span>
+          Résultats issus du moteur ou de la Performance DB · bougies clôturées · edge pipeline{' '}
+          {edgeLabel}. Pas un conseil financier.
+        </span>
+      </div>
+
+      <section className="iv-metrics iv-metrics--4 iv-animate-in" aria-label="Cadre lab">
+        <div className="iv-metric is-featured">
+          <div className="iv-metric-label">Univers</div>
+          <div className="iv-metric-value mono">{classInstruments.length || '—'}</div>
+          <small>{CLASS_LABELS[marketClass]} · instruments câblés</small>
+        </div>
+        <div className="iv-metric">
+          <div className="iv-metric-label">Fenêtre</div>
+          <div className="iv-metric-value mono">{timeframe}</div>
+          <small>TF actif · limit {limit}</small>
+        </div>
+        <div className="iv-metric">
+          <div className="iv-metric-label">Validation</div>
+          <div className="iv-metric-value">Causale</div>
+          <small>Bougies clôturées uniquement</small>
+        </div>
+        <div className="iv-metric">
+          <div className="iv-metric-label">Hypothèse</div>
+          <div className="iv-metric-value">Ichi × RVOL</div>
+          <small>Seuil volume ≥ 1,5</small>
+        </div>
+      </section>
+
       <div className={`bt-split${historyOpen ? ' is-open' : ''}`}>
         <div className="bt-main">
 
-      {labTab !== 'live' && labTab !== 'research' && (
+      {labTab !== 'walkforward' && labTab !== 'ablations' && (
         <section className="panel">
           <header className="panel-head">
             <h2>
-              {labTab === 'compare'
-                ? 'Compare (DB)'
+              {labTab === 'backtests'
+                ? 'Expériences comparées'
                 : labTab === 'regimes'
-                  ? 'Regimes (DB)'
-                  : 'Experiments (DB)'}
+                  ? 'Régimes'
+                  : 'Matrice A–F'}
             </h2>
             <span className="panel-meta">
               {symbol} · {timeframe}
@@ -540,7 +580,7 @@ export function BacktestsPage() {
                 ))}
               </select>
             </label>
-            {(labTab === 'regimes' || labTab === 'experiments') && (
+            {(labTab === 'regimes' || labTab === 'matrice') && (
               <label>
                 Régime
                 <select
@@ -568,13 +608,13 @@ export function BacktestsPage() {
               {universeError}
             </p>
           )}
-          {labTab === 'compare' && (
+          {labTab === 'backtests' && (
             <StoredMetricsTable
               rows={dbCompare}
               emptyHint="Aucun run persisté pour ces rulesets (GLOBAL). Lance un Live avec persist, ou un event-study ruleset."
             />
           )}
-          {(labTab === 'regimes' || labTab === 'experiments') && (
+          {(labTab === 'regimes' || labTab === 'matrice') && (
             <StoredMetricsTable
               rows={stored}
               showRegime
@@ -584,23 +624,87 @@ export function BacktestsPage() {
         </section>
       )}
 
-      {labTab === 'research' && (
-        <LabResearchPanel
-          symbol={symbol}
-          setSymbol={setSymbol}
-          timeframe={timeframe}
-          setTimeframe={setTimeframe}
-          rulesetId={rulesetId}
-          setRulesetId={setRulesetId}
-          limit={limit}
-          setLimit={setLimit}
-          classInstruments={classInstruments}
-          rulesets={rulesets}
-          universeError={universeError}
-        />
+      {labTab === 'ablations' && (
+        <section className="panel">
+          <header className="panel-head">
+            <h2>Ablations</h2>
+            <span className="iv-badge">STRUCTURE</span>
+          </header>
+          {ablation ? (
+            <div className="iv-card-body">
+              <p className="muted">Ablation chargée pour {symbol} · {timeframe}.</p>
+            </div>
+          ) : (
+            <p className="lab-empty-hint">
+              Aucune ablation en mémoire. Lance un backtest Live pour peupler les retraits de
+              variables — sinon la matrice reste « À évaluer ».
+            </p>
+          )}
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Expérience</th>
+                  <th>Périmètre</th>
+                  <th>Retrait</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                {MATRIX_ROWS.map((r) => (
+                  <tr key={r.id}>
+                    <td>
+                      <b>{r.label}</b>
+                    </td>
+                    <td>{classInstruments.length || '—'} paires</td>
+                    <td>Retrait : {r.variable}</td>
+                    <td>
+                      <span className="iv-badge">À ÉVALUER</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
 
-      {labTab === 'live' && (
+      {labTab === 'walkforward' && (
+        <section className="panel">
+          <header className="panel-head">
+            <h2>Walk-forward</h2>
+            <span className="iv-badge">HORS ÉCHANTILLON</span>
+          </header>
+          {walkForward || walkForwardOpt ? (
+            <div className="iv-card-body">
+              <p className="muted">
+                Walk-forward {walkForward ? 'dispo' : ''}
+                {walkForwardOpt ? ' · optimisation dispo' : ''} pour {symbol}.
+              </p>
+            </div>
+          ) : (
+            <p className="lab-empty-hint">
+              Pas encore de walk-forward pour {symbol} · {timeframe}. Exécute un run Live pour
+              remplir cette vue. Researcher (T5–T7) reste accessible ci-dessous.
+            </p>
+          )}
+          <LabResearchPanel
+            symbol={symbol}
+            setSymbol={setSymbol}
+            timeframe={timeframe}
+            setTimeframe={setTimeframe}
+            rulesetId={rulesetId}
+            setRulesetId={setRulesetId}
+            limit={limit}
+            setLimit={setLimit}
+            classInstruments={classInstruments}
+            rulesets={rulesets}
+            universeError={universeError}
+          />
+        </section>
+      )}
+
+      {labTab === 'backtests' && (
       <>
       <section className="panel">
         <header className="panel-head">
@@ -1371,13 +1475,48 @@ export function BacktestsPage() {
         </section>
       )}
 
-      {!result && !loading && !error && (
+      {!result && !loading && !error && labTab === 'backtests' && (
         <div className="panel placeholder-page">
           <p className="muted">Choisis un instrument et lance un backtest pour voir la comparaison.</p>
         </div>
       )}
       </>
       )}
+
+      <div className="desk-grid" style={{ marginTop: '1rem' }}>
+        <section className="panel" aria-label="Comparer les trajectoires">
+          <header className="panel-head">
+            <h2>Comparer les trajectoires</h2>
+            <span className="iv-badge">ILLUSTRATION</span>
+          </header>
+          <div className="lab-chart-summary">
+            <span className="is-accent">— Ichimoku × RVOL</span>
+            <span>— Ichimoku seul</span>
+            <span>┄ Buy & hold</span>
+          </div>
+          <p className="lab-empty-hint">
+            {best
+              ? `Meilleur edge live : ${EXPERIMENT_LABELS[best]} (Sharpe).`
+              : 'Lance un backtest pour comparer les courbes.'}{' '}
+            Edge pipeline vs Ichimoku : {edgeLabel}.
+          </p>
+        </section>
+        <section className="panel" aria-label="De l’idée à la preuve">
+          <header className="panel-head">
+            <h2>De l’idée à la preuve</h2>
+          </header>
+          <div className="iv-card-body">
+            {PROOF_STEPS.map((step) => (
+              <div key={step[0]} className="iv-step">
+                <b>
+                  {step[0]} · {step[1]}
+                </b>
+                <p>{step[2]}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
         </div>
 
         {historyOpen && (
