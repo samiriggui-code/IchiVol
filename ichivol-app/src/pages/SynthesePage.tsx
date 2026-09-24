@@ -326,8 +326,8 @@ export function SynthesePage() {
           <h1>Synthèse</h1>
           <p className="muted">
             Compte virtuel baseline depuis sa création : liquidités, engagé, latent, réalisé.
-            Positions techniques → <Link to="/app/paper">Paper</Link>. Circuit auto →{' '}
-            <Link to="/app/activite">Activité</Link>.
+            Positions techniques → <Link to="/app/portefeuille?tab=positions">Positions</Link>. Circuit auto →{' '}
+            <Link to="/app/operations">Opérations</Link>.
           </p>
         </div>
         <div className="market-class-tabs" role="tablist" aria-label="Volets synthèse">
@@ -366,7 +366,7 @@ export function SynthesePage() {
       {!overview && !loading && (
         <div className="panel">
           <p className="muted">
-            Compte pas encore prêt. <Link to="/app/decisions">Décisions</Link>
+            Compte pas encore prêt. <Link to="/app/opportunites">Opportunités</Link>
           </p>
         </div>
       )}
@@ -510,7 +510,7 @@ export function SynthesePage() {
               <h2>Mouvements paper</h2>
               <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
                 Ordres du compte — pas la page{' '}
-                <Link to="/app/activite">Activité</Link> (circuit auto).
+                <Link to="/app/operations">Opérations</Link> (circuit auto).
               </p>
             </header>
             <div className="synthese-panel-body">

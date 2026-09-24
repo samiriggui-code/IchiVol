@@ -160,6 +160,14 @@ function DashboardShellInner() {
           </div>
           <div className="dash-header-right">
             {isMobile && <ThemeToggle />}
+            <button
+              type="button"
+              className="dash-kill-stub"
+              disabled
+              title="Kill switch — disponible avec T13c"
+            >
+              Arrêt d’urgence
+            </button>
             <LlmHeaderBadge />
 
             <NotificationBell onOpen={() => setUserMenuOpen(false)} />

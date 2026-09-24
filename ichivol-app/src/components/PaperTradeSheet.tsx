@@ -262,7 +262,7 @@ export function PaperTradeSheet({
               )}
               {(p.decision_id || p.evidence_id) && (
                 <p>
-                  <Link to={`/app/decisions?symbol=${encodeURIComponent(p.symbol)}`}>
+                  <Link to={`/app/opportunites?symbol=${encodeURIComponent(p.symbol)}`}>
                     Revoir la décision et l’evidence d’origine
                   </Link>
                 </p>

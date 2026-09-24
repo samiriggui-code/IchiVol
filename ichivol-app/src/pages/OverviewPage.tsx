@@ -259,9 +259,10 @@ export function OverviewPage() {
         <div>
           <h1>Desk</h1>
           <p className="muted">
+            Votre marché, en un regard.
             {circuitAlive
-              ? `Circuit actif · ${fmtInt(summary?.decisions.last_24h ?? 0)} décisions / 24 h`
-              : 'Desk paper · décisions live · preuves automatiques'}
+              ? ` · ${fmtInt(summary?.decisions.last_24h ?? 0)} décisions / 24 h`
+              : ''}
             {cacheAge != null ? ` · screener ${fmtCacheAge(cacheAge)}` : ''}
           </p>
         </div>
@@ -280,7 +281,7 @@ export function OverviewPage() {
 
       <section className="panel ov-desk" aria-label="Compte baseline">
         <header className="panel-head">
-          <h2>Desk · {BASELINE}</h2>
+          <h2>Capital · {BASELINE}</h2>
           <Link to="/app/portefeuille" className="ghost">
             Portefeuille →
           </Link>

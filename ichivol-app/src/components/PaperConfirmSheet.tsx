@@ -334,7 +334,7 @@ export function PaperConfirmSheet({
 
           <p className="muted paper-confirm-note">
             Un seul lot par marché. Pour vendre une ligne, fermez-la depuis la{' '}
-            <Link to="/app/synthese">Synthèse</Link> (le résultat net et les frais y sont affichés) ·{' '}
+            <Link to="/app/portefeuille">Portefeuille</Link> (le résultat net et les frais y sont affichés) ·{' '}
             <Link to="/app/journal">Journal</Link>.
           </p>
 
