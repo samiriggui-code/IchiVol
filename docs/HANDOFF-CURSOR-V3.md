@@ -10,7 +10,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T11a-bis EN COURS — quality/provenance leftovers
 
 - Branche : `cursor/t11a-bis-quality-a2fe`
-- PR : (à ouvrir)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/82
 - Base : `main` @ `71c162c` (#81 T13c **MERGÉE**)
 
 ### Livré
