@@ -48,7 +48,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T9a** #52 — **MERGÉE** squash `985c4e5` (validé Claude ; suite PG **955 ok / 1 skip**). **Vérifié** `origin/main` tip contenait `985c4e5`.
 - **UI-MARKET** #54 — **MERGÉE** squash `10631ef` (Cursor solo, Claude restreint ; CI verte). **À auditer Claude 12h10.**
 - **T10a** #55 — **MERGÉE** squash `2e3ebc1` (Cursor solo ; CI verte). **À auditer Claude 12h10.**
-- **Job en cours** : **T9b** — CHoCH + break quality — rebase sur `main`@`2e3ebc1` — draft [#53](https://github.com/samiriggui-code/IchiVol/pull/53).
+- **Job en cours** : **T9b** — CHoCH + break quality — rebasé sur `main`@`2e3ebc1` — draft [#53](https://github.com/samiriggui-code/IchiVol/pull/53). **Cursor solo** (Claude restreint).
 - **T9** (structure / FVG / Fib) — T9a+T10a OK ; T9b en rebase.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol². **Ne pas comparer** partiels vs non-partiels sur le DD avant correction.
 - ⚠️ **Caveat historique SHORT** : positions SHORT **CLOSED avant** `b9f8421` (#51, mergedAt `2026-09-24T07:02:48Z`) ont un `realized` **surévalué de `entry_fee`**. Compte local Cursor : **CLOSED_SHORT = 0**. Script ponctuel : `scripts/recalc_short_entry_fee.py` — filtre par **horodatage exact**, journal `SHORT_FEE_RECALC` idempotent ; **ne pas lancer `--apply`** sans revue ; **pas de migration auto**.
