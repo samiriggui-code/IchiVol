@@ -64,6 +64,85 @@
         "title": "AblationBody",
         "type": "object"
       },
+      "AblationOosStudyBody": {
+        "properties": {
+          "compare_mode": {
+            "default": "additive",
+            "title": "Compare Mode",
+            "type": "string"
+          },
+          "direction": {
+            "default": "LONG",
+            "title": "Direction",
+            "type": "string"
+          },
+          "ladder": {
+            "default": "default",
+            "title": "Ladder",
+            "type": "string"
+          },
+          "limit": {
+            "default": 500,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "min_oos_trades": {
+            "default": 5,
+            "title": "Min Oos Trades",
+            "type": "integer"
+          },
+          "step_bars": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Bars"
+          },
+          "stop_atr": {
+            "default": 1.0,
+            "title": "Stop Atr",
+            "type": "number"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "target_atr": {
+            "default": 2.0,
+            "title": "Target Atr",
+            "type": "number"
+          },
+          "test_bars": {
+            "default": 40,
+            "title": "Test Bars",
+            "type": "integer"
+          },
+          "timeframe": {
+            "default": "1h",
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "train_bars": {
+            "default": 100,
+            "title": "Train Bars",
+            "type": "integer"
+          },
+          "warmup_bars": {
+            "default": 52,
+            "title": "Warmup Bars",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "title": "AblationOosStudyBody",
+        "type": "object"
+      },
       "AgentBatchItem": {
         "properties": {
           "args": {
@@ -4451,6 +4530,50 @@
           }
         },
         "summary": "Post Strategy Lab Ablation",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/strategy-lab/ablation-oos/study": {
+      "post": {
+        "description": "T9g \u2014 ablation \u00d7 walk-forward OOS recommendations (observation only).",
+        "operationId": "post_ablation_oos_study_api_engine_strategy_lab_ablation_oos_study_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AblationOosStudyBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Ablation Oos Study Api Engine Strategy Lab Ablation Oos Study Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Ablation Oos Study",
         "tags": [
           "engine"
         ]

@@ -290,6 +290,13 @@
     "methods": [
       "POST"
     ],
+    "path": "/api/engine/strategy-lab/ablation-oos/study",
+    "endpoint": "post_ablation_oos_study"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
     "path": "/api/engine/strategy-lab/audit-report",
     "endpoint": "post_audit_report"
   },

@@ -7,6 +7,10 @@ Phase 8: Optimization (grid-search IS → OOS via walk-forward-opt)
 """
 
 from app.strategy_lab.ablation import AblationResult, run_ablation
+from app.strategy_lab.ablation_oos import (
+    AblationOosReport,
+    run_ablation_oos_study_on_candles,
+)
 from app.strategy_lab.event_study import EventStudyResult, run_event_study
 from app.strategy_lab.optimization import (
     OptimizeReport,
@@ -32,6 +36,7 @@ from app.strategy_lab.run_ruleset import RulesetStudyResult, run_ruleset_event_s
 from app.strategy_lab.walk_forward import WalkForwardReport, run_walk_forward
 
 __all__ = [
+    "AblationOosReport",
     "AblationResult",
     "ENGINE_VERSION",
     "EventStudyResult",
@@ -49,6 +54,7 @@ __all__ = [
     "persist_study_result",
     "ruleset_complexity",
     "run_ablation",
+    "run_ablation_oos_study_on_candles",
     "run_event_study",
     "run_feature_redundancy_study",
     "run_optimize",
