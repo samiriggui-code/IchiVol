@@ -5,6 +5,43 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 **Convention** : à chaque PR, ajouter une nouvelle entrée **en haut** ; ne jamais effacer les anciennes.
 
+---
+
+## 2026-09-24 — T10b EN COURS — hypothesis_id + lineage + complexité (display-only)
+
+- Branche : `cursor/t10b-hypothesis-lineage-a2fe`
+- PR : *(draft — lien après push)*
+- Base : `main` @ `6d1968a` (#53 T9b)
+- Statut : **EN COURS** — Cursor solo (Claude restreint). **Pas d’auto-reject.**
+
+### Livré
+
+1. Migration alembic `f2a3b4c5d6e7` : `strategy_lab_experiments.hypothesis_id` nullable + index (non-UNIQUE — plusieurs essais / hyp)
+2. ORM + `save_experiment(..., hypothesis_id=)` / aussi via `parameters.hypothesis_id`
+3. `ruleset_complexity(rules_json)` — score display-only (`entry_leaves` / `exit_leaves` / `exit_extras`) ; note « no auto-reject »
+4. `lineage_count` : COUNT par `hypothesis_id` si set, sinon `ruleset_id+symbol+timeframe`
+5. API list/get/compare + agent channel enrichis ; filtre `hypothesis_id` sur list
+6. UI Lab : colonnes **Essais** + **Cx** sur tables Perf DB / StoredMetrics
+7. Tests : `test_t10b_hypothesis_lineage.py` (unit complexity always ; DB lineage skip sans PG)
+
+### Hors scope
+T10c redondance ; T9g ablation OOS ; aucun rejet automatique sur complexité / essais.
+
+**Claude** : auditer post-12h10 avec #54/#55/#53.
+
+---
+
+## 2026-09-24 — T9b MERGÉE (#53) — squash `6d1968a` — CHoCH + break quality
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/53 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `6d1968a`
+- Cursor solo (Claude restreint) ; CI verte avant merge.
+- Notes : `bos_bullish` bit-identique (non scindé) ; `choch_*` / `break_quality` EXPERIMENTAL ; `recalc_short_entry_fee` dry-run + idempotent.
+
+**Claude** : auditer #53 à 12h10 (post-merge).
+
+---
+
 ### Suite de tests — Postgres (supervision 2026-09-23)
 
 - **Claude** (revue) : PostgreSQL 16 `ichivol_engine_dev`, migrations alembic appliquées → lance la suite **complète** (paper, backtest evidence, brokerage, market_data inclus).
@@ -48,8 +85,9 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T9a** #52 — **MERGÉE** squash `985c4e5` (validé Claude ; suite PG **955 ok / 1 skip**). **Vérifié** `origin/main` tip contenait `985c4e5`.
 - **UI-MARKET** #54 — **MERGÉE** squash `10631ef` (Cursor solo, Claude restreint ; CI verte). **À auditer Claude 12h10.**
 - **T10a** #55 — **MERGÉE** squash `2e3ebc1` (Cursor solo ; CI verte). **À auditer Claude 12h10.**
-- **Job en cours** : **T9b** — CHoCH + break quality — rebasé sur `main`@`2e3ebc1` — draft [#53](https://github.com/samiriggui-code/IchiVol/pull/53). **Cursor solo** (Claude restreint).
-- **T9** (structure / FVG / Fib) — T9a+T10a OK ; T9b en rebase.
+- **T9b** #53 — **MERGÉE** squash `6d1968a` (Cursor solo, Claude restreint ; CI verte). **À auditer Claude 12h10.**
+- **Job en cours** : **T10b** — compteur d’essais + complexité — branche `cursor/t10b-hypothesis-lineage-a2fe` — draft PR. **Cursor solo** (Claude restreint).
+- **T9** (structure / FVG / Fib) — T9a+T9b+T10a OK ; T9c next after T10b.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol². **Ne pas comparer** partiels vs non-partiels sur le DD avant correction.
 - ⚠️ **Caveat historique SHORT** : positions SHORT **CLOSED avant** `b9f8421` (#51, mergedAt `2026-09-24T07:02:48Z`) ont un `realized` **surévalué de `entry_fee`**. Compte local Cursor : **CLOSED_SHORT = 0**. Script ponctuel : `scripts/recalc_short_entry_fee.py` — filtre par **horodatage exact**, journal `SHORT_FEE_RECALC` idempotent ; **ne pas lancer `--apply`** sans revue ; **pas de migration auto**.
 - ⚠️ **Caveat migration #48** : backfill `initial_entry_fee = entry_fee` courant — **faux pour lots déjà partialisés avant migration**.

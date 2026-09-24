@@ -152,6 +152,8 @@ function StoredMetricsTable({
             <th>Ruleset</th>
             {showRegime && <th>Régime</th>}
             <th>Base</th>
+            <th>Essais</th>
+            <th>Cx</th>
             <th>Trades</th>
             <th>WR</th>
             <th>PF</th>
@@ -166,6 +168,11 @@ function StoredMetricsTable({
             <tr key={e.experiment_id}>
               <td className="mono" style={{ fontSize: '0.8em' }}>
                 {e.ruleset_id}
+                {e.hypothesis_id ? (
+                  <div className="muted" style={{ fontSize: '0.85em' }}>
+                    hyp:{e.hypothesis_id}
+                  </div>
+                ) : null}
               </td>
               {showRegime && (
                 <td className="mono" style={{ fontSize: '0.8em' }}>
@@ -174,6 +181,19 @@ function StoredMetricsTable({
               )}
               <td className="mono" style={{ fontSize: '0.75em' }}>
                 {metricsBasisLabel(e.metrics_basis)}
+              </td>
+              <td className="mono" title="Compteur d'essais (ligneage T10b)">
+                {e.lineage_count ?? '—'}
+              </td>
+              <td
+                className="mono"
+                title={
+                  e.complexity
+                    ? `complexité ${e.complexity.score} (entry ${e.complexity.entry_leaves} / exit ${e.complexity.exit_leaves} / extras ${e.complexity.exit_extras}) — display-only`
+                    : 'complexité display-only'
+                }
+              >
+                {e.complexity?.score ?? '—'}
               </td>
               <td className="mono">{e.number_of_trades}</td>
               <td className="mono">{fmtPct(e.win_rate)}</td>
@@ -1303,6 +1323,8 @@ export function BacktestsPage() {
                 <tr>
                   <th>Ruleset</th>
                   <th>Base</th>
+                  <th>Essais</th>
+                  <th>Cx</th>
                   <th>Trades</th>
                   <th>WR</th>
                   <th>PF</th>
@@ -1317,9 +1339,18 @@ export function BacktestsPage() {
                   <tr key={e.experiment_id}>
                     <td className="mono" style={{ fontSize: '0.8em' }}>
                       {e.ruleset_id}
+                      {e.hypothesis_id ? (
+                        <div className="muted" style={{ fontSize: '0.85em' }}>
+                          hyp:{e.hypothesis_id}
+                        </div>
+                      ) : null}
                     </td>
                     <td className="mono" style={{ fontSize: '0.75em' }}>
                       {metricsBasisLabel(e.metrics_basis)}
+                    </td>
+                    <td className="mono">{e.lineage_count ?? '—'}</td>
+                    <td className="mono" title="complexité display-only (T10b)">
+                      {e.complexity?.score ?? '—'}
                     </td>
                     <td className="mono">{e.number_of_trades}</td>
                     <td className="mono">{fmtPct(e.win_rate)}</td>

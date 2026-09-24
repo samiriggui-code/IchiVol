@@ -14,7 +14,13 @@ from app.strategy_lab.optimization import (
     run_optimize,
     run_walk_forward_opt,
 )
-from app.strategy_lab.perf_db import ENGINE_VERSION, experiment_dict, list_experiments, persist_study_result
+from app.strategy_lab.perf_db import (
+    ENGINE_VERSION,
+    experiment_dict,
+    list_experiments,
+    persist_study_result,
+    ruleset_complexity,
+)
 from app.strategy_lab.regime_slices import RegimeSliceReport, run_regime_slices
 from app.strategy_lab.ruleset import Ruleset, parse_ruleset
 from app.strategy_lab.ruleset_backtest import RulesetBacktestResult, run_ruleset_backtest
@@ -36,6 +42,7 @@ __all__ = [
     "list_experiments",
     "parse_ruleset",
     "persist_study_result",
+    "ruleset_complexity",
     "run_ablation",
     "run_event_study",
     "run_optimize",

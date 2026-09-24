@@ -181,6 +181,18 @@ export interface StoredExperimentSummary {
   created_at: string | null
   /** "net_v1" (ruleset), "net_v2" (engine), null/undefined = legacy gross. */
   metrics_basis?: string | null
+  /** T10b — optional research-hypothesis lineage tag. */
+  hypothesis_id?: string | null
+  /** T10b — how many Perf DB rows share this lineage (display-only). */
+  lineage_count?: number | null
+  /** T10b — display-only complexity; never auto-rejects. */
+  complexity?: {
+    score: number
+    entry_leaves: number
+    exit_leaves: number
+    exit_extras: number
+    note?: string
+  } | null
 }
 
 export interface RulesetStudyResult {

@@ -90,3 +90,6 @@ def test_save_and_list_experiment(_session):
     assert payload["experiment_id"] == row.id
     assert "event_study" in payload
     assert payload["stop_rule"].endswith("*ATR")
+    assert "complexity" in payload
+    assert payload["complexity"]["score"] >= 1
+    assert payload["hypothesis_id"] is None
