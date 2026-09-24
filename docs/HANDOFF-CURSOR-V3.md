@@ -11,14 +11,17 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 Audit UI ajouté à la feuille de route (**section T14**).
 
-**Ordre** : … T12e → **T14a** → T13a → T13b + T14c → …  
+**Ordre** (rév.56, remplace le enchaînement T12e→T13a de rév.49) :  
+… T12e → **T14a** → T13a → T13b + T14c → …  
 Aucune fusion ni suppression de page avant T14a. **Ne pas démarrer T14 maintenant.**
 
 ### Exception autorisée (petite PR séparée, APRÈS merge de T12b #73)
 
 Front only — **aucun changement moteur** :
-1. `lib/decisionPipeline.ts` (~L110) : libellé matrice **« Risque » → « Régime »** (étape ADX/Donchian/ATR)
-2. Colonne DIR : afficher **↑ / ↓** au lieu de « OK »
+1. `ichivol-app/src/lib/decisionPipeline.ts:110` (`stageMatrixLabel` case `regime`) : libellé matrice **« Risque » → « Régime »** (étape ADX/Donchian/ATR, pas le sizing risque)
+2. Colonne DIR (`GateMatrix` cellule `direction`) : afficher **↑ / ↓** au lieu de « OK » (pas un remplacement global de `stageStatusLabel`)
+
+**File d’attente** : exception **pas ouverte** tant que #73 n’est pas squash-MERGÉE.
 
 ---
 
@@ -27,7 +30,7 @@ Front only — **aucun changement moteur** :
 - Branche : `cursor/t12b-lab-live-parity-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/73 (**draft**)
 - Base : `main` @ `5bc1e9c` (#72 T12a **MERGÉE**)
-- Statut : **DRAFT** — CI verte @ `3bb922b` ; attente revue Claude avant merge.
+- Statut : **DRAFT** — CI verte @ tip `368bf72` ; attente revue Claude avant merge. **Pas de merge solo.**
 
 ### Livré
 
