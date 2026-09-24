@@ -115,3 +115,37 @@ def test_family_weights_compare_monkeypatched(monkeypatch):
     assert body["symbol"] == "BTCUSDT"
     assert "profiles" in body
     assert "observation" in body["disclaimer"].lower()
+
+
+def test_feature_redundancy_study_monkeypatched(monkeypatch):
+    from app.api import strategy_lab_research as mod
+    from app.strategy_lab.redundancy import FeatureRedundancyReport
+
+    fake = FeatureRedundancyReport(
+        symbol="BTCUSDT",
+        timeframe="1h",
+        n_bars=100,
+        direction="LONG",
+        keys=["bos_bullish", "tk_cross_bullish"],
+    )
+    monkeypatch.setattr(
+        mod,
+        "resolve_and_fetch",
+        lambda *a, **k: ("binance", "BTCUSDT", []),
+    )
+    monkeypatch.setattr(mod, "run_feature_redundancy_study", lambda *a, **k: fake)
+
+    res = client.get(
+        "/api/engine/strategy-lab/feature-redundancy/study",
+        params={"symbol": "BTCUSDT", "timeframe": "1h", "limit": 100},
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["symbol"] == "BTCUSDT"
+    assert "no auto-reject" in body["disclaimer"].lower()
+    assert body["n_bars"] == 100
+
+
+def test_feature_redundancy_study_rejects_missing_symbol():
+    res = client.get("/api/engine/strategy-lab/feature-redundancy/study")
+    assert res.status_code == 422

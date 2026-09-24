@@ -21,6 +21,10 @@ from app.strategy_lab.perf_db import (
     persist_study_result,
     ruleset_complexity,
 )
+from app.strategy_lab.redundancy import (
+    FeatureRedundancyReport,
+    run_feature_redundancy_study,
+)
 from app.strategy_lab.regime_slices import RegimeSliceReport, run_regime_slices
 from app.strategy_lab.ruleset import Ruleset, parse_ruleset
 from app.strategy_lab.ruleset_backtest import RulesetBacktestResult, run_ruleset_backtest
@@ -31,6 +35,7 @@ __all__ = [
     "AblationResult",
     "ENGINE_VERSION",
     "EventStudyResult",
+    "FeatureRedundancyReport",
     "OptimizeReport",
     "RegimeSliceReport",
     "Ruleset",
@@ -45,6 +50,7 @@ __all__ = [
     "ruleset_complexity",
     "run_ablation",
     "run_event_study",
+    "run_feature_redundancy_study",
     "run_optimize",
     "run_regime_slices",
     "run_ruleset_backtest",
