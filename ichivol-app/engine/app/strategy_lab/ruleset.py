@@ -70,12 +70,16 @@ class ConditionGroup:
 
 @dataclass(frozen=True)
 class ReinforceSpec:
-    """DSL reinforce (T0-MANAGE-e): ConditionGroup trigger + sizing of the add."""
+    """DSL reinforce (T0-MANAGE-e/f): ConditionGroup trigger + sizing of the add."""
 
     condition_group: ConditionGroup
     add_fraction: float
     max_adds: int = 1
     risk_policy: RiskPolicy = "tighten_stop"
+    max_exposure: float = 1.0
+    """Lab: cap on ``qty / initial_qty`` (1 unit = 100 % capital). Default 1.0
+    blocks adds unless raised. Values > 1 imply **levier** — mark results.
+    Paper uses a separate notional/equity cap with the same field name."""
 
 
 @dataclass(frozen=True)
@@ -195,6 +199,7 @@ class Ruleset:
                     "add_fraction": rf.add_fraction,
                     "max_adds": rf.max_adds,
                     "risk_policy": rf.risk_policy,
+                    "max_exposure": rf.max_exposure,
                 }
             out["exit"] = exit_payload
         return out
@@ -278,7 +283,9 @@ def _parse_condition_group(conditions_raw: Mapping[str, Any]) -> ConditionGroup:
 _EXIT_KEYS = frozenset({"max_hold_bars", "conditions", "trail", "partial_tp", "reinforce"})
 _TRAIL_KEYS = frozenset({"breakeven_at_r", "atr_trail_mult"})
 _PARTIAL_TP_KEYS = frozenset({"r_multiple", "fraction"})
-_REINFORCE_KEYS = frozenset({"conditions", "add_fraction", "max_adds", "risk_policy"})
+_REINFORCE_KEYS = frozenset(
+    {"conditions", "add_fraction", "max_adds", "risk_policy", "max_exposure"}
+)
 _RISK_POLICIES = frozenset({"reduce_qty", "tighten_stop"})
 
 
@@ -398,11 +405,21 @@ def _parse_reinforce(raw: Any) -> ReinforceSpec:
             )
         policy = rp  # type: ignore[assignment]
 
+    max_exposure = 1.0
+    if "max_exposure" in raw:
+        me = raw["max_exposure"]
+        if isinstance(me, bool) or not isinstance(me, (int, float)) or float(me) <= 0:
+            raise ValueError(
+                "ruleset.exit.reinforce.max_exposure must be a number > 0"
+            )
+        max_exposure = float(me)
+
     return ReinforceSpec(
         condition_group=group,
         add_fraction=add_fraction,
         max_adds=max_adds,
         risk_policy=policy,
+        max_exposure=max_exposure,
     )
 
 

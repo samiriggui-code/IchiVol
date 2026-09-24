@@ -25,6 +25,11 @@ Trailing / breakeven (T0-MANAGE-b): opt-in via ``protection_trail`` on
 Uses ``app.strategy_lab.stop_trail.update_trailing_stop`` (same math as Lab);
 check-then-ratchet per closed bar; watermark always advances on the trail path
 so past bars are never re-scored against a ratcheted stop.
+
+Partial TP (T0-MANAGE-d) / reinforce (T0-MANAGE-f): opt-in
+``protection_partial_tp`` / ``protection_reinforce`` (mutually exclusive).
+Manage priority matches Lab: stop > partials > target > reinforce > trail.
+Reinforce paper trigger is price ``at_r_multiple`` (no FeatureBars).
 """
 
 from __future__ import annotations
@@ -40,7 +45,13 @@ from sqlalchemy.orm import Session
 
 from app.agents.types import Direction
 from app.brokerage.execution import resolve_bar_exit
-from app.db.models import PaperJournalEvent, PaperPartialExit, PaperPortfolio, PaperPosition
+from app.db.models import (
+    PaperJournalEvent,
+    PaperPartialExit,
+    PaperPortfolio,
+    PaperPosition,
+    PaperReinforceAdd,
+)
 from app.market_data.binance import BASE_URL
 from app.paper import broker as paper_broker
 from app.paper.protection_partial_tp import (
@@ -53,6 +64,16 @@ from app.paper.protection_partial_tp import (
     qty_for_step,
     resolve_paper_partial_tp,
 )
+from app.paper.protection_reinforce import (
+    PaperReinforceConfig,
+    adds_done as reinforce_adds_done,
+    bar_hits_reinforce,
+    freeze_reinforce_anchor,
+    level_for_reinforce,
+    persist_reinforce_prev_match,
+    reinforce_prev_match,
+    resolve_paper_reinforce,
+)
 from app.paper.protection_trail import (
     TRAIL_EVENT,
     PaperTrailConfig,
@@ -60,7 +81,9 @@ from app.paper.protection_trail import (
     resolve_paper_trail,
 )
 from app.strategy_lab.partial_tp import PartialTpStep
+from app.strategy_lab.reinforce import apply_reinforce_add, cap_add_by_notional_equity
 from app.strategy_lab.stop_trail import update_trailing_stop
+from app.paper.risk import apply_entry_friction
 from app.universe.catalog import get_instrument
 
 logger = logging.getLogger(__name__)
@@ -183,6 +206,13 @@ class PendingPartial:
 
 
 @dataclass(frozen=True)
+class PendingReinforce:
+    time_ms: int
+    price: float
+    r_multiple: float
+
+
+@dataclass(frozen=True)
 class ManageScanResult:
     breach: Breach | None
     checked_through_ms: int
@@ -190,6 +220,8 @@ class ManageScanResult:
     bars_seen: int = 0
     bars_expected: int = 0
     partials: tuple[PendingPartial, ...] = ()
+    reinforces: tuple[PendingReinforce, ...] = ()
+    reinforce_prev_match: bool = False
 
 
 def _hit_stop_only(direction: str, stop: float, high: float, low: float) -> bool:
@@ -211,15 +243,25 @@ def find_breach_manage(
     trail_cfg: PaperTrailConfig | None,
     partial_cfg: PaperPartialTpConfig | None,
     pending: Sequence[PartialTpStep],
+    reinforce_cfg: PaperReinforceConfig | None = None,
+    adds_already: int = 0,
+    reinforce_prev: bool = False,
+    open_qty: float | None = None,
+    open_notional: float | None = None,
+    equity: float | None = None,
+    spread_bps: float = 0.0,
+    slippage_bps: float = 0.0,
     symbol: str,
     since_ms: int,
     until_ms: int,
     klines_fn: KlinesFn,
     trades_fn: TradesFn | None,
 ) -> ManageScanResult:
-    """Bar-by-bar: stop > partials (asc R) > target > trail update.
+    """Bar-by-bar: stop > partials (asc R) > target > reinforce > trail.
 
-    Same no-lookahead contract as Lab / trail path.
+    Same no-lookahead contract as Lab / trail path. Reinforce uses rising-edge
+    ``at_r_multiple`` on frozen ``initial_entry``; stop is simulated forward
+    after each add with the same entry-friction fill as the broker.
     """
     dir_enum = _direction_enum(direction)
     minute0 = since_ms - since_ms % MINUTE_MS
@@ -227,6 +269,26 @@ def find_breach_manage(
     cur_stop = stop
     remaining_steps = list(pending)
     found_partials: list[PendingPartial] = []
+    found_reinforces: list[PendingReinforce] = []
+    adds_done_n = int(adds_already)
+    rf_prev = bool(reinforce_prev)
+    sim_avg = float(entry)
+    if reinforce_cfg is not None:
+        sim_qty = (
+            float(open_qty)
+            if open_qty is not None and open_qty > 0
+            else float(reinforce_cfg.initial_qty)
+        )
+        sim_notional = (
+            float(open_notional)
+            if open_notional is not None and open_notional > 0
+            else sim_qty * sim_avg
+        )
+        sim_equity = float(equity) if equity is not None and equity > 0 else sim_notional
+    else:
+        sim_qty = 0.0
+        sim_notional = 0.0
+        sim_equity = 0.0
 
     if since_ms % MINUTE_MS:
         entry_minute_end = minute0 + MINUTE_MS
@@ -237,7 +299,7 @@ def find_breach_manage(
                 for t, p in trades_fn(symbol, since_ms, entry_minute_end)
                 if t >= since_ms
             ]
-            # Ticks: stop only (conservative); no partial from incomplete minute mix.
+            # Ticks: stop only (conservative); no partial/reinforce from incomplete minute.
             b = _scan_ticks(direction, cur_stop, target, ticks)
             if b and b.reason.startswith("stop"):
                 return ManageScanResult(b, entry_minute_end, cur_stop)
@@ -249,7 +311,7 @@ def find_breach_manage(
                 cur_stop = update_trailing_stop(
                     dir_enum,
                     cur_stop,
-                    entry=entry,
+                    entry=sim_avg if reinforce_cfg is not None else entry,
                     initial_stop=trail_cfg.initial_stop,
                     high=highs,
                     low=lows,
@@ -269,6 +331,8 @@ def find_breach_manage(
             max(checked, min(start, end_closed)),
             cur_stop,
             partials=tuple(found_partials),
+            reinforces=tuple(found_reinforces),
+            reinforce_prev_match=rf_prev,
         )
 
     rows = klines_fn(symbol, start, end_closed)
@@ -294,6 +358,8 @@ def find_breach_manage(
                 seen,
                 expected,
                 tuple(found_partials),
+                tuple(found_reinforces),
+                rf_prev,
             )
 
         # 2) Partials ascending R
@@ -322,14 +388,64 @@ def find_breach_manage(
                 seen,
                 expected,
                 tuple(found_partials),
+                tuple(found_reinforces),
+                rf_prev,
             )
 
-        # 4) Trail after checks
+        # 4) Reinforce (rising-edge at_r on frozen initial_entry) — before trail
+        if (
+            reinforce_cfg is not None
+            and adds_done_n < reinforce_cfg.max_adds
+        ):
+            hit = bar_hits_reinforce(direction, reinforce_cfg, h, l)
+            rising = hit and not rf_prev
+            rf_prev = hit
+            if rising:
+                level = level_for_reinforce(direction, reinforce_cfg)
+                # Same fill as broker.reinforce_add_capital_position
+                fill = apply_entry_friction(
+                    level,
+                    direction=direction.upper(),
+                    spread_bps=spread_bps,
+                    slippage_bps=slippage_bps,
+                )
+                requested = cap_add_by_notional_equity(
+                    open_notional=sim_notional,
+                    requested_add_qty=float(reinforce_cfg.initial_qty)
+                    * float(reinforce_cfg.add_fraction),
+                    fill_price=float(fill),
+                    equity=sim_equity,
+                    max_exposure=float(reinforce_cfg.max_exposure),
+                )
+                if requested > 1e-15:
+                    actual, sim_avg, new_stop, sim_qty, _clamped = apply_reinforce_add(
+                        direction=dir_enum,
+                        avg_entry=sim_avg,
+                        qty=sim_qty,
+                        stop=cur_stop,
+                        add_price=float(fill),
+                        requested_add=requested,
+                        initial_risk=float(reinforce_cfg.initial_risk),
+                        policy=reinforce_cfg.risk_policy,
+                    )
+                    if actual > 1e-15:
+                        found_reinforces.append(
+                            PendingReinforce(
+                                open_ms, float(level), reinforce_cfg.at_r_multiple
+                            )
+                        )
+                        adds_done_n += 1
+                        cur_stop = new_stop
+                        sim_notional = sim_qty * sim_avg
+        elif reinforce_cfg is not None:
+            rf_prev = bar_hits_reinforce(direction, reinforce_cfg, h, l)
+
+        # 5) Trail after checks
         if trail_cfg is not None:
             cur_stop = update_trailing_stop(
                 dir_enum,
                 cur_stop,
-                entry=entry,
+                entry=sim_avg if reinforce_cfg is not None else entry,
                 initial_stop=trail_cfg.initial_stop,
                 high=h,
                 low=l,
@@ -341,7 +457,14 @@ def find_breach_manage(
             )
 
     return ManageScanResult(
-        None, checked, cur_stop, seen, expected, tuple(found_partials)
+        None,
+        checked,
+        cur_stop,
+        seen,
+        expected,
+        tuple(found_partials),
+        tuple(found_reinforces),
+        rf_prev,
     )
 
 
@@ -351,6 +474,16 @@ def _load_partial_exits(session: Session, position_id: str) -> list[PaperPartial
             select(PaperPartialExit)
             .where(PaperPartialExit.position_id == position_id)
             .order_by(PaperPartialExit.seq)
+        ).scalars()
+    )
+
+
+def _load_reinforce_adds(session: Session, position_id: str) -> list[PaperReinforceAdd]:
+    return list(
+        session.execute(
+            select(PaperReinforceAdd)
+            .where(PaperReinforceAdd.position_id == position_id)
+            .order_by(PaperReinforceAdd.seq)
         ).scalars()
     )
 
@@ -630,6 +763,7 @@ def _process_position(
     portfolio = session.get(PaperPortfolio, pos.portfolio_id)
     trail_cfg = None if legacy else resolve_paper_trail(pos, portfolio)
     partial_cfg = None if legacy else resolve_paper_partial_tp(pos, portfolio)
+    reinforce_cfg = None if legacy else resolve_paper_reinforce(pos, portfolio)
 
     if trail_cfg is not None and not dry_run:
         freeze_trail_anchor(pos, trail_cfg)
@@ -637,14 +771,22 @@ def _process_position(
     if partial_cfg is not None and not dry_run:
         freeze_partial_tp_anchor(pos, partial_cfg)
         partial_cfg = resolve_paper_partial_tp(pos, portfolio) or partial_cfg
-    # Align partial R-base with trail's frozen initial_stop when both are active.
-    if partial_cfg is not None and trail_cfg is not None:
+    if reinforce_cfg is not None and not dry_run:
+        freeze_reinforce_anchor(pos, reinforce_cfg)
+        reinforce_cfg = resolve_paper_reinforce(pos, portfolio) or reinforce_cfg
+    # Align R-base with trail's frozen initial_stop when both are active.
+    if trail_cfg is not None:
         from dataclasses import replace as _dc_replace
 
-        if abs(partial_cfg.initial_stop - trail_cfg.initial_stop) > 1e-12:
+        if partial_cfg is not None and abs(partial_cfg.initial_stop - trail_cfg.initial_stop) > 1e-12:
             partial_cfg = _dc_replace(partial_cfg, initial_stop=trail_cfg.initial_stop)
+        if (
+            reinforce_cfg is not None
+            and abs(reinforce_cfg.initial_stop - trail_cfg.initial_stop) > 1e-12
+        ):
+            reinforce_cfg = _dc_replace(reinforce_cfg, initial_stop=trail_cfg.initial_stop)
 
-    use_manage = partial_cfg is not None
+    use_manage = partial_cfg is not None or reinforce_cfg is not None
     manage: ManageScanResult | None = None
     scan: ScanResult | None = None
     new_stop = float(pos.stop_price)
@@ -654,8 +796,19 @@ def _process_position(
     checked_through = since_ms
 
     if use_manage:
-        existing = _load_partial_exits(session, pos.id)
-        pending = pending_steps(partial_cfg, fired_r_multiples(existing))
+        existing_partials = _load_partial_exits(session, pos.id) if partial_cfg else []
+        pending = (
+            pending_steps(partial_cfg, fired_r_multiples(existing_partials))
+            if partial_cfg is not None
+            else []
+        )
+        existing_adds = _load_reinforce_adds(session, pos.id) if reinforce_cfg else []
+        eq = None
+        spr = 0.0
+        slp = 0.0
+        if reinforce_cfg is not None and portfolio is not None:
+            eq = paper_broker.estimate_equity(session, portfolio)
+            spr, slp = paper_broker.portfolio_friction_bps(portfolio, pos.symbol)
         manage = find_breach_manage(
             pos.direction,
             float(pos.stop_price),
@@ -664,6 +817,14 @@ def _process_position(
             trail_cfg=trail_cfg,
             partial_cfg=partial_cfg,
             pending=pending,
+            reinforce_cfg=reinforce_cfg,
+            adds_already=reinforce_adds_done(existing_adds),
+            reinforce_prev=reinforce_prev_match(pos) if reinforce_cfg else False,
+            open_qty=float(pos.qty) if pos.qty else None,
+            open_notional=float(pos.notional) if pos.notional else None,
+            equity=eq,
+            spread_bps=spr,
+            slippage_bps=slp,
             symbol=inst.provider_symbol,
             since_ms=since_ms,
             until_ms=now_ms,
@@ -746,6 +907,69 @@ def _process_position(
             if applied_partials:
                 row["partials_applied"] = applied_partials
 
+    # Apply newly discovered reinforces (after partials; before full close).
+    applied_reinforces = 0
+    if manage is not None and reinforce_cfg is not None:
+        if manage.reinforces:
+            row["reinforces"] = [
+                {
+                    "r_multiple": r.r_multiple,
+                    "price": r.price,
+                    "at_ms": r.time_ms,
+                }
+                for r in manage.reinforces
+            ]
+            if dry_run:
+                if "status" not in row or row.get("status") in (None, "ok"):
+                    row["status"] = (
+                        "would_reinforce"
+                        if scan_breach is None
+                        else "would_reinforce_then_close"
+                    )
+            elif not (legacy and not enforce_legacy):
+                for pend in manage.reinforces:
+                    if pos.status != "OPEN" or not pos.qty:
+                        break
+                    at = datetime.fromtimestamp(pend.time_ms / 1000, timezone.utc)
+                    added = paper_broker.reinforce_add_capital_position(
+                        session,
+                        pos,
+                        price=pend.price,
+                        add_fraction=reinforce_cfg.add_fraction,
+                        r_multiple=pend.r_multiple,
+                        initial_qty=reinforce_cfg.initial_qty,
+                        initial_risk=reinforce_cfg.initial_risk,
+                        max_exposure=reinforce_cfg.max_exposure,
+                        risk_policy=reinforce_cfg.risk_policy,
+                        reason="reinforce",
+                        signal={
+                            "protection": {
+                                "reason": "reinforce",
+                                "r_multiple": pend.r_multiple,
+                                "fraction": reinforce_cfg.add_fraction,
+                            }
+                        },
+                        at=at,
+                        time_ms=pend.time_ms,
+                    )
+                    if added is not None:
+                        applied_reinforces += 1
+                if applied_reinforces:
+                    row["reinforces_applied"] = applied_reinforces
+                    # Broker stop is authoritative; keep scan stop only if trail may have
+                    # ratcheted further after the add within the same walk.
+                    new_stop = (
+                        manage.new_stop
+                        if trail_cfg is not None
+                        else float(pos.stop_price)
+                    )
+        if not dry_run:
+            if manage.reinforces and applied_reinforces == 0:
+                # Broker refused (cash / exposure / risk) — do not consume rising edge.
+                pass
+            else:
+                persist_reinforce_prev_match(pos, manage.reinforce_prev_match)
+
     if scan_breach is None:
         if bars_seen == 0 and bars_expected >= 5:
             row["status"] = "no_data"
@@ -755,7 +979,14 @@ def _process_position(
             if not dry_run:
                 _write_check(session, pos, checked_through, legacy, now)
             return
-        row["status"] = "ok" if applied_partials == 0 else "partialed"
+        if applied_partials and applied_reinforces:
+            row["status"] = "partialed_reinforced"
+        elif applied_partials:
+            row["status"] = "partialed"
+        elif applied_reinforces:
+            row["status"] = "reinforced"
+        else:
+            row["status"] = "ok"
         if trail_cfg is not None and new_stop != float(pos.stop_price) and pos.status == "OPEN":
             old = float(pos.stop_price)
             row["trail_stop"] = {"from": old, "to": new_stop}
@@ -764,10 +995,11 @@ def _process_position(
                     session, pos, old, new_stop, now=now, through_ms=checked_through,
                 )
         if not dry_run:
-            # Trail / partial path always advances watermark (no re-walk against ratcheted state).
+            # Trail / manage path always advances watermark (no re-walk against ratcheted state).
             if (
                 trail_cfg is not None
                 or partial_cfg is not None
+                or reinforce_cfg is not None
                 or now_ms - since_ms >= CHECK_EVENT_EVERY_MS
             ):
                 _write_check(session, pos, checked_through, legacy, now)
@@ -794,7 +1026,9 @@ def _process_position(
         at=at,
     )
     row["status"] = "closed" if pos.status == "CLOSED" else "already_closed_elsewhere"
-    if not dry_run and (trail_cfg is not None or partial_cfg is not None):
+    if not dry_run and (
+        trail_cfg is not None or partial_cfg is not None or reinforce_cfg is not None
+    ):
         _write_check(session, pos, checked_through, legacy, now)
 
 

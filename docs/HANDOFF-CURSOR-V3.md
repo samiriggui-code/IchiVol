@@ -42,12 +42,81 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-MANAGE-b** #46 — **MERGÉE** (validé par Claude — watermark, gate legacy/auto et isolation des tests vérifiés ; 2 réserves non bloquantes notées).
 - **T0-MANAGE-c** #47 — **MERGÉE** (validé par Claude — invariant 1e-9 revérifié indépendamment ; **résidu de Jensen mesuré et non borné, voir entrée dédiée**).
 - **T0-MANAGE-d** #48 — **MERGÉE** squash `a941539` (validé Claude ; suite PG 918→928 ok / 1 skip). **Incident process** : handoff avait annoncé MERGÉE avant que `main` ne contienne le squash — corrigé.
-- **Job en cours** : **T0-MANAGE-e** — renforcement Lab — PR draft #49. **Pas de merge / pas de T0-MANAGE-f** avant re-revue Claude.
+- **T0-MANAGE-e** #49 — **MERGÉE** squash `389fc40` (validé Claude adff686 ; suite PG **935 ok / 1 skip**, 0 régression). Sondes : `tighten_stop` en profit → risque = R0 (LONG/SHORT) ; risque signé OK ; combo `partial_tp`+`reinforce` rejeté ; fuzz 300 seeds → 135 adds, jamais > R0, invariant Σnet=Σbars 3,5e-16. **Vérifié** `git log origin/main` contient `389fc40`.
+- **Job en cours** : **T0-MANAGE-f** — renforcement paper — PR draft [#50](https://github.com/samiriggui-code/IchiVol/pull/50) (**CHANGES REQUESTED** → corrections poussées ; **re-revue**). **Pas de merge** avant ok Claude.
+- **T9** (structure / FVG / Fib) — **ajoutée à la feuille de route** ; **ne pas démarrer avant la fin de T0-MANAGE**.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol². **Ne pas comparer** partiels vs non-partiels sur le DD avant correction.
 - ⚠️ **Dette ouverte (préexistante)** : SHORT `realized` n'inclut pas `entry_fee`.
 - ⚠️ **Caveat migration #48** : backfill `initial_entry_fee = entry_fee` courant — **faux pour lots déjà partialisés avant migration**.
-- ⚠️ **Dette T0-MANAGE-e** : exposition > 1× après ajouts = levier implicite Lab — ajouter `max_exposure` (défaut 1.0) ou documenter avant comparaison de rulesets ; **obligatoire pour paper (T0-MANAGE-f)**.
+- ⚠️ **Dette max_exposure** : sémantiques **divergentes** Lab vs paper — Lab = `qty/initial_qty` (1 unité = 100 % capital ; `levier: true` si > 1) ; paper = `notional ≤ max_exposure × equity`. **Ne pas comparer** rulesets Lab `max_exposure>1` aux paper sans le flag `levier`.
 
+
+---
+
+## 2026-09-24 — T0-MANAGE-f CORRECTIONS revue Claude #50
+
+- Branche : `cursor/t0-manage-f-reinforce-paper-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/50 (**draft**)
+- Statut : **ATTENTE RE-REVUE CLAUDE** — **ne pas merger** ; **pas de T9**.
+- Suite PG Claude (passe 1) : **941 ok / 1 skip**, 0 régression ; conservation cash = réalisé OK.
+
+### Corrections demandées (fait)
+
+1. **Paper `max_exposure`** : plafond **notional / equity** (`notional_après_add ≤ max_exposure × equity`) via `cap_add_by_notional_equity` — défaut 1.0 **autorise** les ajouts tant que le notional reste ≤ equity. Lab garde `cap_add_by_exposure` (qty) ; résultats/expériences avec `max_exposure > 1` marqués **`levier: true`**.
+2. **CLOSE** : `qty` / `entry_fee` / `notional` = `initial_*` + Σ `paper_reinforce_adds` (pas le seul open initial).
+3. **Trigger `at_r_multiple`** : ancré sur `initial_entry` figé dans le blob (jamais `pos.entry_price` post-VWAP).
+4. **Watcher** : simulation d'add avec le **même fill** que le broker (`apply_entry_friction`) ; plus de fallback silencieux sur prix brut (l'erreur remonte).
+
+### Tests ajoutés
+
+- Renfort effectif avec défaut paper (`max_exposure` omis)
+- Ligne fermée = Σ fills (qty/fee/notional)
+- 2 renforts successifs au niveau R figé (dip entre rising-edges)
+- SHORT tighten + CLOSED totals
+- Lab `is_leverage_exposure` / flag `levier`
+
+**Cursor s’arrête ici** — pas de merge #50, pas de T9.
+
+---
+
+## 2026-09-24 — T0-MANAGE-f EN COURS — renforcement paper (PR draft)
+
+- Branche : `cursor/t0-manage-f-reinforce-paper-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/50 (**draft**)
+- Base : `main` @ `389fc40` (#49 squash)
+- Statut : **SUPERSEDÉ** par corrections ci-dessus — re-revue en cours.
+
+### Prérequis tranche (livrés)
+
+1. **`max_exposure` défaut 1.0** — Lab qty-unit ; paper **notional/equity** (corrigé revue #50)
+2. **Contrôle cash/marge** dans `reinforce_add_capital_position` — refuse (`None`) si `notional+fee > cash` ; jamais de partial-fill silencieux
+3. Gate `user_confirmed` + `protection_reinforce` ; exclusif vs `protection_partial_tp`
+4. Trigger paper : `at_r_multiple` sur **entrée initiale figée** ; rising-edge latch `prev_match`
+5. Priorité manage : stop > partials > target > reinforce > trail (même ordre Lab)
+6. Migration `paper_reinforce_adds` ; journal `REINFORCE`
+
+### Tests (Cursor)
+
+- Lab `test_t0_manage_e_reinforce` + `tests/paper/test_protection.py` (dont reinforce) : **verts** sur ce HEAD
+- PG local : migration `e1f2a3b4c5d6` appliquée ; tests reinforce paper OK
+
+### Attente Claude
+
+1. Relire le diff PR (corrections)
+2. Suite Postgres complète
+3. Valider notional/equity + CLOSE totals + R figé + fill friction
+4. **Pas de merge** / pas de T9 sans ok explicite
+
+**Cursor s’arrête ici.**
+
+---
+
+## 2026-09-24 — T0-MANAGE-e MERGÉ (#49) — squash `389fc40`
+
+- Branche : `cursor/t0-manage-e-reinforce-lab-a2fe` — PR #49 — **MERGÉE** `389fc40` (= tip validé adff686)
+- Suite PG Claude : **935 ok / 1 skip**, 0 régression
+- Sondes : tighten_stop en profit → R0 ; risque signé ; rejet combo partial+reinforce ; fuzz 300 seeds / 135 adds jamais > R0 ; Σnet=Σbars 3,5e-16
+- **Vérifié post-merge** : `origin/main` tip = `389fc40`
 
 ---
 
@@ -55,7 +124,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `cursor/t0-manage-e-reinforce-lab-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/49 (**draft**)
-- Statut : **ATTENTE RE-REVUE CLAUDE** — **ne pas merger** ; **pas de T0-MANAGE-f**.
+- Statut : **SUPERSEDÉ** — corrigé puis **MERGÉ** `389fc40` (voir entrée ci-dessus).
 - Process : #48 squash-mergé sur `main` (`a941539`) ; #49 rebasé.
 
 ### Corrections demandées (fait)
@@ -67,7 +136,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ### Non-bloquant
 
-- `max_exposure` (défaut 1.0) — dette avant comparaison rulesets / obligatoire paper
+- `max_exposure` (défaut 1.0) — dette avant comparaison rulesets / obligatoire paper → **implémenté dans #49 + T0-MANAGE-f** ; dette documentation / comparaisons **conservée**
 
 ---
 
@@ -301,7 +370,12 @@ Rien de ça n'existe en code aujourd'hui. Découpage en 6 sous-tranches, **une P
 ### T0-MANAGE-f — Renforcement — paper (après validation Lab)
 
 - Brancher sur `app/paper/broker.py` (ordre d'ajout) avec la même vérification d'invariant *avant* exécution — refuser l'ordre plutôt que l'exécuter hors invariant.
+- **Prérequis tranche** : `max_exposure` (défaut **1.0**) + contrôle cash/marge disponible **avant chaque ajout**.
 - Isolation : ne touche pas aux positions `auto_watchlist` sans confirmation utilisateur explicite (même logique que T2c pour les user trade points).
+
+### Après T0-MANAGE — T9 (roadmap, ne pas démarrer avant)
+
+- **T9** — structure / FVG / Fib (nouvelle tranche feuille de route). **Bloquée** jusqu'à clôture complète de T0-MANAGE (f inclus, revue Claude + merge).
 
 ### Grille commune (rappel garde-fous projet, s'applique aux 6 sous-tranches)
 

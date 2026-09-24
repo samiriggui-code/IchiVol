@@ -34,6 +34,14 @@ def _dataset_version(symbol: str, timeframe: str, n_bars: int, start: int | None
     return f"{symbol}:{timeframe}:bars={n_bars}:t={start or 0}-{end or 0}"
 
 
+def _parameters_with_levier(bt, parameters: dict[str, Any] | None) -> dict[str, Any]:
+    """Stamp ``levier: true`` when Lab reinforce.max_exposure > 1."""
+    out = dict(parameters or {})
+    if bt is not None and getattr(bt, "levier", False):
+        out["levier"] = True
+    return out
+
+
 def save_experiment(
     session: Session,
     study: RulesetStudyResult,
@@ -108,7 +116,7 @@ def save_experiment(
         n_resolved_r=es.n_resolved_r,
         exit_reasons_json=exit_reasons,
         event_study_json=event_study_dict(es, include_events=False),
-        parameters_json=parameters or {},
+        parameters_json=_parameters_with_levier(bt, parameters),
         dataset_version=_dataset_version(
             study.symbol, study.timeframe, study.n_bars, start, end
         ),

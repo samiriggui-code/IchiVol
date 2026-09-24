@@ -40,6 +40,8 @@ from app.strategy_lab.partial_tp import (
 from app.strategy_lab.reinforce import (
     ReinforceAdd,
     apply_reinforce_add,
+    cap_add_by_exposure,
+    is_leverage_exposure,
     open_risk,
 )
 from app.strategy_lab.ruleset import ConditionGroup, ReinforceSpec, Ruleset, parse_ruleset
@@ -87,6 +89,8 @@ class RulesetBacktestResult:
     n_signals: int
     n_skipped_in_position: int
     rejected: tuple[RejectedSignal, ...] = ()
+    # True when exit.reinforce.max_exposure > 1 (Lab unit capital exceeded).
+    levier: bool = False
 
 
 def _levels(
@@ -456,33 +460,43 @@ def simulate_ruleset_trades(
                 if rising:
                     add_px = float(candles[j].close)
                     if add_px > 0:
-                        actual, avg_entry, stop, open_qty, clamped = apply_reinforce_add(
-                            direction=direction,
-                            avg_entry=avg_entry,
-                            qty=open_qty,
-                            stop=stop,
-                            add_price=add_px,
+                        requested = cap_add_by_exposure(
+                            open_qty=open_qty,
                             requested_add=reinforce.add_fraction,
-                            initial_risk=risk0,
-                            policy=reinforce.risk_policy,
+                            initial_qty=1.0,
+                            max_exposure=reinforce.max_exposure,
                         )
-                        if actual > 1e-15:
-                            entry_lots.append((j, add_px, actual))
-                            reinforce_adds.append(
-                                ReinforceAdd(
-                                    bar_index=j,
-                                    price=add_px,
-                                    fraction=actual,
-                                    requested_fraction=reinforce.add_fraction,
-                                    stop_after=stop,
-                                    avg_entry_after=avg_entry,
-                                    open_risk_after=open_risk(
-                                        direction, avg_entry, stop, open_qty
-                                    ),
-                                    clamped=clamped,
-                                )
+                        if requested <= 1e-15:
+                            pass
+                        else:
+                            actual, avg_entry, stop, open_qty, clamped = apply_reinforce_add(
+                                direction=direction,
+                                avg_entry=avg_entry,
+                                qty=open_qty,
+                                stop=stop,
+                                add_price=add_px,
+                                requested_add=requested,
+                                initial_risk=risk0,
+                                policy=reinforce.risk_policy,
                             )
-                            adds_done += 1
+                            if actual > 1e-15:
+                                entry_lots.append((j, add_px, actual))
+                                reinforce_adds.append(
+                                    ReinforceAdd(
+                                        bar_index=j,
+                                        price=add_px,
+                                        fraction=actual,
+                                        requested_fraction=reinforce.add_fraction,
+                                        stop_after=stop,
+                                        avg_entry_after=avg_entry,
+                                        open_risk_after=open_risk(
+                                            direction, avg_entry, stop, open_qty
+                                        ),
+                                        clamped=clamped
+                                        or requested + 1e-12 < reinforce.add_fraction,
+                                    )
+                                )
+                                adds_done += 1
             elif reinforce is not None and feature_bars is not None:
                 reinforce_prev_match = bar_matches_group(
                     feature_bars[j], reinforce.condition_group, direction
@@ -666,6 +680,10 @@ def run_ruleset_backtest_on_features(
         n_signals=len(signals),
         n_skipped_in_position=skipped,
         rejected=tuple(rejected),
+        levier=bool(
+            ruleset.exit.reinforce is not None
+            and is_leverage_exposure(ruleset.exit.reinforce.max_exposure)
+        ),
     )
 
 
