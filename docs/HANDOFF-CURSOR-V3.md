@@ -12,7 +12,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - Branche : `cursor/t12a-deep-history-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/72 (**draft**)
 - Base : `main` @ `9490e4b` (#71 T9g-fix **MERGÉE**)
-- Statut : **DRAFT** — correctif rév.54 couverture @ poussé ; attente re-revue Claude avant merge.
+- Statut : **DRAFT** — correctif rév.54 @ `607b5da` ; CI verte ; attente re-revue Claude avant merge.
 
 ### Livré
 
