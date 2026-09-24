@@ -25,6 +25,10 @@ from app.evidence.engine import EvidenceEngine, EvidenceReport
 from app.confluence.observe import FamilyWeightsObservation
 from app.events.types import EventContextBundle, MarketAnomalyObservation
 from app.strategy_lab.lab_context import LabContextObservation
+from app.market_data.observe_quality import (
+    DataProvenanceObservation,
+    DataQualityObservation,
+)
 from app.indicators.atr import AtrParams, AtrState
 from app.indicators.ichimoku import Candle, IchimokuParams
 from app.indicators.location import LocationParams
@@ -142,6 +146,10 @@ class ScreenerRow:
     """T5a: versioned family-weight observation. Never alters decision/confidence."""
     lab_context: LabContextObservation | None = None
     """T9f: CHoCH/FVG/Fib/impulse Lab snapshot. Never alters decision/confidence."""
+    data_quality: DataQualityObservation | None = None
+    """T11a: candle quality gate observation. Never alters decision/confidence."""
+    data_provenance: DataProvenanceObservation | None = None
+    """T11a: series provenance stamp (provider / fingerprint). Audit only."""
 
 
 def scan_symbol(
@@ -287,19 +295,54 @@ def scan_symbol(
     except Exception:
         logger.exception("lab_context observe failed for %s — leaving unset", symbol)
 
+    # T11a data quality + provenance — observation only.
+    from app.market_data.observe_quality import (
+        observe_data_provenance,
+        observe_data_quality,
+    )
+    from app.screener.timing import SignalTiming
+
+    now_ts = int(time.time())
+    timing_obj: SignalTiming | None = None
+    signal_timing_dict = None
+    if timeframe in TF_SECONDS:
+        timing_obj = compute_signal_timing(
+            candles,
+            TF_SECONDS[timeframe],
+            now_ts,
+            live_price,
+            timeframe,
+            settings.decide_on_closed_candles,
+        )
+        signal_timing_dict = timing_obj.to_dict()
+
+    data_quality = None
+    data_provenance = None
+    try:
+        if timeframe in TF_SECONDS:
+            data_quality = observe_data_quality(
+                candles,
+                TF_SECONDS[timeframe],
+                now=now_ts,
+                timing=timing_obj,
+            )
+        data_provenance = observe_data_provenance(
+            candles,
+            provider=provider.id,
+            symbol=symbol,
+            timeframe=timeframe,
+            closed_only=bool(settings.decide_on_closed_candles),
+            transforms=("closed_only",) if settings.decide_on_closed_candles else (),
+        )
+    except Exception:
+        logger.exception("data_quality/provenance observe failed for %s — leaving unset", symbol)
+
     return ScreenerRow(
         symbol=symbol,
         exchange=provider.id,
         timeframe=timeframe,
         price=live_price,
-        signal_timing=(
-            compute_signal_timing(
-                candles, TF_SECONDS[timeframe], int(time.time()), live_price, timeframe,
-                settings.decide_on_closed_candles,
-            ).to_dict()
-            if timeframe in TF_SECONDS
-            else None
-        ),
+        signal_timing=signal_timing_dict,
         candles=candles,
         ichimoku=ichimoku_output,
         rvol=rvol_output,
@@ -312,6 +355,8 @@ def scan_symbol(
         event_context=event_context,
         family_weights=family_weights,
         lab_context=lab_context,
+        data_quality=data_quality,
+        data_provenance=data_provenance,
     )
 
 def scan_watchlist(

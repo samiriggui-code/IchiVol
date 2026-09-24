@@ -7,6 +7,34 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — T11a EN COURS — quality gate + provenance
+
+- Branche : `cursor/t11a-quality-provenance-a2fe`
+- PR : *(draft à ouvrir)*
+- Base : `main` @ `934f3e4` (#60 T9f)
+- Statut : **EN COURS** — Cursor solo. **Observation-only** (pas de `bad→NO_TRADE` pipeline).
+
+### Livré (prévu)
+
+1. `observe_data_quality` / `observe_data_provenance` (`market_data/observe_quality.py`)
+2. Gate display `pass|watch|fail` + `dataset_fingerprint` ; disclaimer no vote
+3. `ScreenerRow.data_quality` / `data_provenance` + serializers
+4. `AnalysisStage` DATA_QUALITY + prepend optionnel sur handoff (décision pipeline inchangée)
+5. Tests `test_t11a_quality_provenance.py`
+
+### Hors scope
+Hard gate pipeline · T10c redondance · T9g ablation OOS · T11b+.
+
+---
+
+## 2026-09-24 — T9f MERGÉE (#60) — squash `934f3e4` — Lab fib_* + watchlist badges
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/60 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `934f3e4`
+- Cursor solo ; CI verte. Observation-only.
+
+---
+
 ## 2026-09-24 — T9f EN COURS — Lab fib_* + lab_context watchlist
 
 - Branche : `cursor/t9f-lab-features-a2fe`

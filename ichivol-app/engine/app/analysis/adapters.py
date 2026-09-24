@@ -79,10 +79,15 @@ def handoff_from_pipeline(
     market_data_hash: str | None = None,
     config: dict[str, Any] | None = None,
     engine_version: str = ENGINE_VERSION,
+    data_quality_stage: AnalysisStage | None = None,
 ) -> AnalysisHandoff:
-    """Build a deterministic handoff from an existing PipelineResult."""
+    """Build a deterministic handoff from an existing PipelineResult.
+
+    Optional ``data_quality_stage`` (T11a) is prepended — observation only;
+    it never rewrites ``pipeline.decision``.
+    """
     cfg = dict(config or {})
-    stages = tuple(
+    mapped = [
         pipeline_stage_to_analysis(
             s,
             symbol=symbol,
@@ -90,6 +95,11 @@ def handoff_from_pipeline(
             stage_version=pipeline.strategy_version,
         )
         for s in pipeline.stages
+    ]
+    stages = (
+        (data_quality_stage, *mapped)
+        if data_quality_stage is not None
+        else tuple(mapped)
     )
     run_id = compute_run_id(
         engine_version=engine_version,
@@ -109,6 +119,54 @@ def handoff_from_pipeline(
         market_data_hash=market_data_hash,
         decision=pipeline.decision,
         config=cfg,
+    )
+
+
+def analysis_stage_from_data_quality(
+    obs: Any,
+    *,
+    symbol: str = "",
+    timeframe: str = "",
+) -> AnalysisStage:
+    """Map a T11a ``DataQualityObservation`` → ``AnalysisStage`` (DATA_QUALITY).
+
+    FAIL/WATCH here are handoff statuses for audit — they do not change the
+    live pipeline decision when only attached as an additive stage.
+    """
+    from app.market_data.observe_quality import DataQualityObservation
+
+    if not isinstance(obs, DataQualityObservation):
+        raise TypeError("expected DataQualityObservation")
+    gate = obs.gate
+    if gate == "fail":
+        status = AnalysisStatus.FAIL
+    elif gate == "watch":
+        status = AnalysisStatus.WATCH
+    else:
+        status = AnalysisStatus.PASS
+    reason = (
+        "clean series"
+        if obs.ok and not obs.issue_codes
+        else f"gate={gate}; issues={list(obs.issue_codes)[:8]}"
+    )
+    return AnalysisStage(
+        stage_id=AnalysisStageId.DATA_QUALITY,
+        stage_version=obs.version,
+        status=status,
+        reason=reason,
+        symbol=symbol,
+        timeframe=timeframe,
+        evidence=list(obs.issue_codes),
+        metrics={
+            "ok": obs.ok,
+            "gate": obs.gate,
+            "n_candles": obs.n_candles,
+            "issue_count": obs.issue_count,
+            "stale": obs.stale,
+            "data_late": obs.data_late,
+            "lag_bars": obs.lag_bars,
+        },
+        warnings=[i["detail"] for i in obs.issues[:8]],
     )
 
 

@@ -94,6 +94,31 @@ def summary_dict(row: ScreenerRow) -> dict:
     if lab is not None:
         # Watchlist badges need the full flag set; still observation-only.
         body["lab_context"] = lab
+    from app.market_data.observe_quality import (
+        data_provenance_observation_dict,
+        data_quality_observation_dict,
+    )
+
+    dq = data_quality_observation_dict(getattr(row, "data_quality", None))
+    if dq is not None:
+        # Summary: gate + codes only (detail has full issues list).
+        body["data_quality"] = {
+            "version": dq["version"],
+            "ok": dq["ok"],
+            "gate": dq["gate"],
+            "issue_codes": dq["issue_codes"],
+            "stale": dq["stale"],
+            "data_late": dq["data_late"],
+        }
+    dp = data_provenance_observation_dict(getattr(row, "data_provenance", None))
+    if dp is not None:
+        body["data_provenance"] = {
+            "version": dp["version"],
+            "provider": dp["provider"],
+            "dataset_fingerprint": dp["dataset_fingerprint"],
+            "n_bars": dp["n_bars"],
+            "closed_only": dp["closed_only"],
+        }
     return body
 
 
@@ -155,6 +180,17 @@ def detail_dict(row: ScreenerRow) -> dict:
     lab = lab_context_observation_dict(getattr(row, "lab_context", None))
     if lab is not None:
         body["lab_context"] = lab
+    from app.market_data.observe_quality import (
+        data_provenance_observation_dict,
+        data_quality_observation_dict,
+    )
+
+    dq = data_quality_observation_dict(getattr(row, "data_quality", None))
+    if dq is not None:
+        body["data_quality"] = dq
+    dp = data_provenance_observation_dict(getattr(row, "data_provenance", None))
+    if dp is not None:
+        body["data_provenance"] = dp
     if row.context is not None:
         body["context"] = row.context.to_dict()
     if row.evidence is not None:
