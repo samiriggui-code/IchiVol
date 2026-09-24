@@ -10,9 +10,9 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T9f EN COURS — Lab fib_* + lab_context watchlist
 
 - Branche : `cursor/t9f-lab-features-a2fe`
-- PR : *(draft à ouvrir)*
+- PR : https://github.com/samiriggui-code/IchiVol/pull/60 (**draft**)
 - Base : `main` @ `84efa9d` (#59 T9e)
-- Statut : **EN COURS** — Cursor solo. **Observation-only** (pas de pipeline / pas d’auto-reject).
+- Statut : **DRAFT** — Cursor solo. **Observation-only** (pas de pipeline / pas d’auto-reject). CI en cours.
 
 ### Livré
 
