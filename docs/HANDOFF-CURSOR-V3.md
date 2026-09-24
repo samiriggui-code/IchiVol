@@ -10,9 +10,9 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T11a EN COURS — quality gate + provenance
 
 - Branche : `cursor/t11a-quality-provenance-a2fe`
-- PR : *(draft à ouvrir)*
+- PR : https://github.com/samiriggui-code/IchiVol/pull/61 (**draft**)
 - Base : `main` @ `934f3e4` (#60 T9f)
-- Statut : **EN COURS** — Cursor solo. **Observation-only** (pas de `bad→NO_TRADE` pipeline).
+- Statut : **DRAFT** — Cursor solo. **Observation-only** (pas de `bad→NO_TRADE` pipeline). CI en cours.
 
 ### Livré (prévu)
 
