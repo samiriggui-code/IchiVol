@@ -10,7 +10,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T9e EN COURS — Fib ancré sur ImpulseEvent
 
 - Branche : `cursor/t9e-fib-anchor-a2fe`
-- PR : *(draft — lien après push)*
+- PR : https://github.com/samiriggui-code/IchiVol/pull/59 (**draft**)
 - Base : `main` @ `534ee80` (#58 T9d)
 - Statut : **EN COURS** — Cursor solo. Gate paper reste `anchor=naive` (compat).
 
