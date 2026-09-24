@@ -7,12 +7,43 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — SYNC Claude rév.51 — complétude T12a/b + T11a-bis (après #71)
+
+Contrôle de complétude Claude — **à appliquer après merge de #71**,  
+**sans changer l’ordre** : T9g-fix → T12a → T12b → T12c → T12d → T12e → T13…  
+puis T11a-bis (petite PR post-T12e).
+
+### T12a — ajouts obligatoires (brief)
+
+- Jeu versionné : passe **`validate_candles`** (`market_data/quality.py`) à la construction
+- Rapport qualité (**codes + compte par code**) écrit dans le **manifeste**, à côté des sha256
+- Études Lab (`walk-forward`, `ablation_oos`, `regime_slices`) **renvoient** ce rapport avec leurs résultats
+- Jeu marqué défaillant : **toujours utilisable**, mais **avertissement affiché**
+
+### T12b — ajout
+
+- Bandes RVOL **booléennes** (faible / normal / élevé / fort / extrême)  
+  → pour que la redondance T10c puisse aussi les mesurer
+
+### T11a-bis (après T12e, une petite PR) — oublis T11a
+
+1. `resolution = "raw_fallback"` dans `resolve.py` quand un symbole hors catalogue retombe sur Binance
+2. Bougies DB : `volume_type` + `taker_buy_volume` (migration unique ; anciennes lignes `NULL`)
+3. Test d’imports garde production : `decision/pipeline.py` et `decision/combiner.py` ne doivent importer, même indirectement, **ni** `strategy_lab.lab_context` **ni** un indicateur hors `PRODUCTION`
+
+### Noté ailleurs
+
+- Cache `observe_lab_context` → avec **T11b** (~49 % overhead, ~0,7 s/cycle : pas urgent)
+- #71 CI verte @ `2e959f2` — **pas de merge** tant que Claude n’a pas re-validé le correctif `min(trades)`
+
+---
+
 ## 2026-09-24 — T9g-fix EN COURS — review_candidate + gates
 
 - Branche : `cursor/t9g-fix-gate-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/71 (**draft**)
 - Base : `main` @ `33684c0` (#70 Wyckoff)
-- Statut : **DRAFT** — correctif bloquant rév.50 poussé ; **attente re-revue Claude** (pas de merge).
+- Statut : **DRAFT** — correctif rév.50 + CI verte ; **attente re-revue Claude** (pas de merge). Brief T12/T11a-bis : voir SYNC rév.51.
 
 ### Livré
 
