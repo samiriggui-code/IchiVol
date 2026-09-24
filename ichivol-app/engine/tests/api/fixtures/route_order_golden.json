@@ -66,6 +66,13 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/providers/capabilities",
+    "endpoint": "get_provider_capabilities"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/ohlcv/{symbol}",
     "endpoint": "get_ohlcv"
   },

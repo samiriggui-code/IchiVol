@@ -11,6 +11,7 @@ from app.api.serializers import metrics_dict, summary_dict
 from app.config import settings
 from app.correlation.engine import compute_correlation_matrix
 from app.market_data import twelve_data
+from app.market_data.capabilities import get_capabilities, list_capabilities
 from app.screener.cache import screener_cache
 from app.screener.service import scan_watchlist
 from app.universe.catalog import UNIVERSE, default_watchlist
@@ -43,6 +44,29 @@ def get_universe() -> dict:
             }
             for i in UNIVERSE
         ],
+    }
+
+
+@router_head.get("/providers/capabilities")
+def get_provider_capabilities(provider: str | None = None) -> dict:
+    """V3 — declared provider capabilities (observation / routing honesty)."""
+    if provider:
+        caps = get_capabilities(provider.strip().lower())
+        if caps is None:
+            raise HTTPException(status_code=404, detail=f"unknown provider: {provider}")
+        return {
+            "providers": [caps.to_dict()],
+            "disclaimer": (
+                "Provider capabilities — declarative inventory of what the "
+                "engine wires today; not a live data guarantee."
+            ),
+        }
+    return {
+        "providers": [c.to_dict() for c in list_capabilities()],
+        "disclaimer": (
+            "Provider capabilities — declarative inventory of what the "
+            "engine wires today; not a live data guarantee."
+        ),
     }
 
 

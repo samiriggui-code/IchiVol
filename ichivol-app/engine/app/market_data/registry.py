@@ -9,6 +9,12 @@ from __future__ import annotations
 
 from app.market_data.binance import BinanceSpotProvider
 from app.market_data.biquote import BiquoteProvider
+from app.market_data.capabilities import (
+    ProviderCapabilities,
+    capabilities_dict,
+    get_capabilities,
+    list_capabilities,
+)
 from app.market_data.provider import MarketDataProvider
 from app.market_data.twelve_data import TwelveDataProvider
 
@@ -21,3 +27,12 @@ _PROVIDERS: dict[str, MarketDataProvider] = {
 
 def get_provider(provider_id: str) -> MarketDataProvider | None:
     return _PROVIDERS.get(provider_id)
+
+
+__all__ = [
+    "ProviderCapabilities",
+    "capabilities_dict",
+    "get_capabilities",
+    "get_provider",
+    "list_capabilities",
+]
