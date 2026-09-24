@@ -225,8 +225,13 @@ def _coerce_leaf(key_s: str, value: Any) -> ConditionValue:
             raise ValueError(f"condition {key_s} must be str")
         allowed = CONDITION_ENUMS.get(key_s)
         upper = value.strip().upper()
-        if allowed is not None and upper not in allowed:
-            raise ValueError(f"condition {key_s} must be one of {sorted(allowed)}")
+        if allowed is not None:
+            # Enums may be stored lowercase (FeatureBar / StageStatus.value);
+            # accept any case and return the canonical allowed spelling.
+            canon = {a.upper(): a for a in allowed}
+            if upper not in canon:
+                raise ValueError(f"condition {key_s} must be one of {sorted(allowed)}")
+            return canon[upper]
         return upper
     # float
     if isinstance(value, bool) or not isinstance(value, (int, float)):
