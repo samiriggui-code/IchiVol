@@ -892,8 +892,8 @@ T10c redondance ; T9g ablation OOS ; aucun rejet automatique sur complexité / e
 - **T0-MANAGE-f** #50 — **MERGÉE** squash `7a77424` (validé Claude 102caee ; suite PG **944 ok / 1 skip**, 0 régression). **T0-MANAGE a→f terminé.**
 - **T0-FIX-SHORT-FEE** #51 — **MERGÉE** squash `b9f8421` (validé Claude ; suite PG **948 ok / 1 skip**, 0 régression). Sondes SHORT (close / partiel→target / renfort→target / épuisement / stop) : cash = réalisé ≤ 5e-13. **Vérifié** `git log origin/main` contient `b9f8421`. **Dette SHORT entry_fee soldée** pour clôtures post-fix.
 - **T9a** #52 — **MERGÉE** squash `985c4e5` (validé Claude ; suite PG **955 ok / 1 skip**). **Vérifié** `origin/main` tip contenait `985c4e5`.
-- **UI-MARKET** #54 — **MERGÉE** squash `10631ef` (Cursor solo, Claude restreint ; CI verte). **À auditer Claude 12h10.**
-- **T10a** #55 — **MERGÉE** squash `2e3ebc1` (Cursor solo ; CI verte). **À auditer Claude 12h10.**
+- **UI-MARKET** #54 — **MERGÉE** squash `10631ef` — **VALIDÉE PAR CLAUDE** (rév.47 ; suite PG 957 ok / 1 skip).
+- **T10a** #55 — **MERGÉE** squash `2e3ebc1` (Cursor solo ; CI verte). Déjà en place avant rév.47.
 - **T9b** #53 — **MERGÉE** squash `6d1968a` (Cursor solo, Claude restreint ; CI verte). **À auditer Claude 12h10.**
 - **T10b** #56 — **MERGÉE** squash `82e980e` (Cursor solo ; CI verte). **À auditer Claude 12h10.**
 - **T9c** #57 — **MERGÉE** squash `ef062c2` (Cursor solo ; CI verte). **À auditer Claude 12h10.**
