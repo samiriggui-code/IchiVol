@@ -32,7 +32,8 @@ import {
   type EngineAssetClass,
   type EngineInstrument,
 } from '../lib/universe'
-import { workspaceEyebrow, workspacePageMeta } from '../lib/workspaceNav'
+import { Tag, WorkspacePageHead, Metric } from '../components/maquette'
+import { workspacePageMeta } from '../lib/workspaceNav'
 
 const META = workspacePageMeta('/app/strategy-lab')!
 const EXPERIMENT_ORDER: ExperimentName[] = [
@@ -148,7 +149,7 @@ function StoredMetricsTable({
 }) {
   if (rows.length === 0) {
     return (
-      <div className="panel placeholder-page">
+      <div className="card placeholder-page">
         <p className="muted">{emptyHint}</p>
       </div>
     )
@@ -451,23 +452,23 @@ export function BacktestsPage() {
 
   return (
     <div className="backtests-page lab-page">
-      <header className="page-head market-head iv-animate-soft">
+      <header className="page-head market-head ">
         <div className="market-head-copy">
-          <p className="iv-page-eyebrow">{workspaceEyebrow('/app/strategy-lab')}</p>
+          <p className="eyebrow">{workspaceEyebrow('/app/strategy-lab')}</p>
           <h1>{META.label}</h1>
-          <p className="iv-page-question">{META.subtitle}</p>
+          <p className="subtitle">{META.subtitle}</p>
           {current && <p className="muted">{CLASS_BLURBS[current.asset_class]}</p>}
         </div>
         <div className="bt-head-actions">
         {visibleClasses.length > 0 && (
-          <div className="market-class-tabs" role="tablist" aria-label="Classe d’actif">
+          <div className="segmented" role="tablist" aria-label="Classe d’actif">
             {visibleClasses.map((c) => (
               <button
                 key={c}
                 type="button"
                 role="tab"
                 aria-selected={c === marketClass}
-                className={c === marketClass ? 'is-active' : undefined}
+                className={c === marketClass ? 'active' : undefined}
                 onClick={() => selectClass(c)}
               >
                 {CLASS_LABELS[c]}
@@ -486,14 +487,14 @@ export function BacktestsPage() {
         </div>
       </header>
 
-      <div className="journal-tabs" role="tablist" aria-label="Strategy Lab">
+      <div className="tabs" role="tablist" aria-label="Strategy Lab">
         {LAB_TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             role="tab"
             aria-selected={labTab === tab.id}
-            className={labTab === tab.id ? 'is-active' : undefined}
+            className={labTab === tab.id ? 'active' : undefined}
             onClick={() => setLabTab(tab.id)}
           >
             {tab.label}
@@ -501,7 +502,7 @@ export function BacktestsPage() {
         ))}
       </div>
 
-      <div className="iv-notice" role="status">
+      <div className="notice blue" role="status">
         <span aria-hidden>◈</span>
         <span>
           Résultats issus du moteur ou de la Performance DB · bougies clôturées · edge pipeline{' '}
@@ -509,25 +510,25 @@ export function BacktestsPage() {
         </span>
       </div>
 
-      <section className="iv-metrics iv-metrics--4 iv-animate-in" aria-label="Cadre lab">
-        <div className="iv-metric is-featured">
-          <div className="iv-metric-label">Univers</div>
-          <div className="iv-metric-value mono">{classInstruments.length || '—'}</div>
+      <section className="metrics " aria-label="Cadre lab">
+        <div className="metric featured">
+          <div className="metric-label">Univers</div>
+          <div className="metric-value mono">{classInstruments.length || '—'}</div>
           <small>{CLASS_LABELS[marketClass]} · instruments câblés</small>
         </div>
-        <div className="iv-metric">
-          <div className="iv-metric-label">Fenêtre</div>
-          <div className="iv-metric-value mono">{timeframe}</div>
+        <div className="metric">
+          <div className="metric-label">Fenêtre</div>
+          <div className="metric-value mono">{timeframe}</div>
           <small>TF actif · limit {limit}</small>
         </div>
-        <div className="iv-metric">
-          <div className="iv-metric-label">Validation</div>
-          <div className="iv-metric-value">Causale</div>
+        <div className="metric">
+          <div className="metric-label">Validation</div>
+          <div className="metric-value">Causale</div>
           <small>Bougies clôturées uniquement</small>
         </div>
-        <div className="iv-metric">
-          <div className="iv-metric-label">Hypothèse</div>
-          <div className="iv-metric-value">Ichi × RVOL</div>
+        <div className="metric">
+          <div className="metric-label">Hypothèse</div>
+          <div className="metric-value">Ichi × RVOL</div>
           <small>Seuil volume ≥ 1,5</small>
         </div>
       </section>
@@ -536,8 +537,8 @@ export function BacktestsPage() {
         <div className="bt-main">
 
       {labTab !== 'walkforward' && labTab !== 'ablations' && (
-        <section className="panel">
-          <header className="panel-head">
+        <section className="card">
+          <header className="card-head">
             <h2>
               {labTab === 'backtests'
                 ? 'Expériences comparées'
@@ -625,13 +626,13 @@ export function BacktestsPage() {
       )}
 
       {labTab === 'ablations' && (
-        <section className="panel">
-          <header className="panel-head">
+        <section className="card">
+          <header className="card-head">
             <h2>Ablations</h2>
-            <span className="iv-badge">STRUCTURE</span>
+            <span className="tag gray">STRUCTURE</span>
           </header>
           {ablation ? (
-            <div className="iv-card-body">
+            <div className="card-body">
               <p className="muted">Ablation chargée pour {symbol} · {timeframe}.</p>
             </div>
           ) : (
@@ -659,7 +660,7 @@ export function BacktestsPage() {
                     <td>{classInstruments.length || '—'} paires</td>
                     <td>Retrait : {r.variable}</td>
                     <td>
-                      <span className="iv-badge">À ÉVALUER</span>
+                      <span className="tag gray">À ÉVALUER</span>
                     </td>
                   </tr>
                 ))}
@@ -670,13 +671,13 @@ export function BacktestsPage() {
       )}
 
       {labTab === 'walkforward' && (
-        <section className="panel">
-          <header className="panel-head">
+        <section className="card">
+          <header className="card-head">
             <h2>Walk-forward</h2>
-            <span className="iv-badge">HORS ÉCHANTILLON</span>
+            <span className="tag gray">HORS ÉCHANTILLON</span>
           </header>
           {walkForward || walkForwardOpt ? (
-            <div className="iv-card-body">
+            <div className="card-body">
               <p className="muted">
                 Walk-forward {walkForward ? 'dispo' : ''}
                 {walkForwardOpt ? ' · optimisation dispo' : ''} pour {symbol}.
@@ -706,8 +707,8 @@ export function BacktestsPage() {
 
       {labTab === 'backtests' && (
       <>
-      <section className="panel">
-        <header className="panel-head">
+      <section className="card">
+        <header className="card-head">
           <h2>Comparaison manuelle</h2>
           {current?.provider && (
             <span className="panel-meta">
@@ -788,14 +789,14 @@ export function BacktestsPage() {
       </section>
 
       {(error || universeError) && (
-        <div className="banner error" role="alert">
+        <div className="notice" role="alert">
           {error ?? universeError}
         </div>
       )}
 
       {result && (
-        <section className="panel">
-          <header className="panel-head">
+        <section className="card">
+          <header className="card-head">
             <h2>
               {result.symbol} · {result.timeframe}
             </h2>
@@ -910,8 +911,8 @@ export function BacktestsPage() {
       )}
 
       {eventStudy && (
-        <section className="panel">
-          <header className="panel-head">
+        <section className="card">
+          <header className="card-head">
             <h2>Event Study · {eventStudy.variant}</h2>
             <span className="panel-meta">
               {eventStudy.n_events} signaux · {eventStudy.n_bars} bougies · sans capital
@@ -973,8 +974,8 @@ export function BacktestsPage() {
       )}
 
       {rulesetStudy && (
-        <section className="panel">
-          <header className="panel-head">
+        <section className="card">
+          <header className="card-head">
             <h2>Ruleset · {rulesetStudy.ruleset.id}</h2>
             <span className="panel-meta">
               {rulesetStudy.n_signals} signaux · {rulesetStudy.n_matching_bars} barres match ·{' '}
@@ -1095,8 +1096,8 @@ export function BacktestsPage() {
       )}
 
       {ablation && (
-        <section className="panel">
-          <header className="panel-head">
+        <section className="card">
+          <header className="card-head">
             <h2>Ablation · {ablation.mode}</h2>
             <span className="panel-meta">
               {ablation.steps.length} étapes · {ablation.n_bars} bougies · même fenêtre
@@ -1181,8 +1182,8 @@ export function BacktestsPage() {
       )}
 
       {regimeSlices && (
-        <section className="panel">
-          <header className="panel-head">
+        <section className="card">
+          <header className="card-head">
             <h2>Régimes · {regimeSlices.ruleset.id}</h2>
             <span className="panel-meta">
               {regimeSlices.slices.length} slices · {regimeSlices.n_bars} bougies
@@ -1233,8 +1234,8 @@ export function BacktestsPage() {
       )}
 
       {walkForward && (
-        <section className="panel">
-          <header className="panel-head">
+        <section className="card">
+          <header className="card-head">
             <h2>Walk-forward · {walkForward.mode}</h2>
             <span className="panel-meta">
               {walkForward.folds.length} folds · train {walkForward.train_bars} / test{' '}
@@ -1318,8 +1319,8 @@ export function BacktestsPage() {
       )}
 
       {walkForwardOpt && (
-        <section className="panel">
-          <header className="panel-head">
+        <section className="card">
+          <header className="card-head">
             <h2>Walk-forward opt · {walkForwardOpt.objective}</h2>
             <span className="panel-meta">
               {walkForwardOpt.folds.length} folds · {walkForwardOpt.base_ruleset.id} · grid{' '}
@@ -1412,8 +1413,8 @@ export function BacktestsPage() {
       )}
 
       {stored.length > 0 && (
-        <section className="panel">
-          <header className="panel-head">
+        <section className="card">
+          <header className="card-head">
             <h2>Performance DB</h2>
             <span className="panel-meta">{stored.length} expériences stockées</span>
           </header>
@@ -1476,18 +1477,18 @@ export function BacktestsPage() {
       )}
 
       {!result && !loading && !error && labTab === 'backtests' && (
-        <div className="panel placeholder-page">
+        <div className="card placeholder-page">
           <p className="muted">Choisis un instrument et lance un backtest pour voir la comparaison.</p>
         </div>
       )}
       </>
       )}
 
-      <div className="desk-grid" style={{ marginTop: '1rem' }}>
-        <section className="panel" aria-label="Comparer les trajectoires">
-          <header className="panel-head">
+      <div className="grid" style={{ marginTop: '1rem' }}>
+        <section className="card" aria-label="Comparer les trajectoires">
+          <header className="card-head">
             <h2>Comparer les trajectoires</h2>
-            <span className="iv-badge">ILLUSTRATION</span>
+            <span className="tag gray">ILLUSTRATION</span>
           </header>
           <div className="lab-chart-summary">
             <span className="is-accent">— Ichimoku × RVOL</span>
@@ -1501,13 +1502,13 @@ export function BacktestsPage() {
             Edge pipeline vs Ichimoku : {edgeLabel}.
           </p>
         </section>
-        <section className="panel" aria-label="De l’idée à la preuve">
-          <header className="panel-head">
+        <section className="card" aria-label="De l’idée à la preuve">
+          <header className="card-head">
             <h2>De l’idée à la preuve</h2>
           </header>
-          <div className="iv-card-body">
+          <div className="card-body">
             {PROOF_STEPS.map((step) => (
-              <div key={step[0]} className="iv-step">
+              <div key={step[0]} className="step">
                 <b>
                   {step[0]} · {step[1]}
                 </b>
@@ -1520,8 +1521,8 @@ export function BacktestsPage() {
         </div>
 
         {historyOpen && (
-          <aside className="panel decision-sheet bt-sheet" aria-label="Historique des backtests automatiques">
-            <header className="panel-head decision-sheet-head">
+          <aside className="card decision-sheet bt-sheet" aria-label="Historique des backtests automatiques">
+            <header className="card-head decision-sheet-head">
               <div>
                 <h2>Historique automatique</h2>
                 <span className="panel-meta">backtests quotidiens · preuve C1</span>
@@ -1532,7 +1533,7 @@ export function BacktestsPage() {
             </header>
             <div className="decision-sheet-scroll">
       <section className="overview-collect backtests-evidence" aria-label="Collecte automatique">
-        <div className="panel overview-stat">
+        <div className="card overview-stat">
           <span className="overview-stat-label muted">Collecte auto (C1)</span>
           <strong className="mono">
             {evidence?.enabled === false
@@ -1552,7 +1553,7 @@ export function BacktestsPage() {
               : ''}
           </span>
         </div>
-        <div className="panel overview-stat">
+        <div className="card overview-stat">
           <span className="overview-stat-label muted">PIPELINE &gt; Ichimoku (Sharpe)</span>
           <strong className="mono">{edgeLabel}</strong>
           <span className="overview-stat-meta muted">

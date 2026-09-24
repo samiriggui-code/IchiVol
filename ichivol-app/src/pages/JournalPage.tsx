@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Tag, WorkspacePageHead } from '../components/maquette'
 import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { labelDecision, labelDirection, labelPipelineGate } from '../lib/decisionLabels'
@@ -192,9 +193,9 @@ export function JournalPage() {
     <div className="journal-page">
       <header className="page-head market-head">
         <div className="market-head-copy">
-          <p className="iv-page-eyebrow">Recherche · Journal</p>
+          <p className="eyebrow">Recherche · Journal</p>
           <h1>Journal</h1>
-          <p className="iv-page-question">
+          <p className="subtitle">
             La mémoire de vos décisions — trades paper et décisions sauvegardées.
           </p>
           <p className="muted">
@@ -202,12 +203,12 @@ export function JournalPage() {
             <Link to="/app/operations">Opérations</Link>.
           </p>
         </div>
-        <div className="market-class-tabs" role="tablist" aria-label="Volets journal">
+        <div className="segmented" role="tablist" aria-label="Volets journal">
           <button
             type="button"
             role="tab"
             aria-selected={journalTab === 'trades'}
-            className={journalTab === 'trades' ? 'is-active' : undefined}
+            className={journalTab === 'trades' ? 'active' : undefined}
             onClick={() => setJournalTab('trades')}
           >
             Trades
@@ -216,7 +217,7 @@ export function JournalPage() {
             type="button"
             role="tab"
             aria-selected={journalTab === 'decisions' && !showArchived}
-            className={journalTab === 'decisions' && !showArchived ? 'is-active' : undefined}
+            className={journalTab === 'decisions' && !showArchived ? 'active' : undefined}
             onClick={() => {
               setJournalTab('decisions')
               setShowArchived(false)
@@ -228,7 +229,7 @@ export function JournalPage() {
             type="button"
             role="tab"
             aria-selected={journalTab === 'decisions' && showArchived}
-            className={journalTab === 'decisions' && showArchived ? 'is-active' : undefined}
+            className={journalTab === 'decisions' && showArchived ? 'active' : undefined}
             onClick={() => {
               setJournalTab('decisions')
               setShowArchived(true)
@@ -243,8 +244,8 @@ export function JournalPage() {
       </header>
 
       {journalTab === 'trades' ? (
-        <section className="panel">
-          <header className="panel-head">
+        <section className="card">
+          <header className="card-head">
             <h2>Trades paper</h2>
           </header>
           <p className="muted" style={{ padding: '0 1rem 1rem' }}>
@@ -254,18 +255,18 @@ export function JournalPage() {
           </p>
         </section>
       ) : (
-      <section className="panel">
-        <header className="panel-head">
+      <section className="card">
+        <header className="card-head">
           <h2>{showArchived ? 'Archivées' : 'Décisions sauvegardées'}</h2>
         </header>
 
         {error && (
-          <div className="banner error" role="alert">
+          <div className="notice" role="alert">
             {error}
           </div>
         )}
         {info && !error && (
-          <div className="banner" role="status">
+          <div className="notice" role="status">
             {info}
           </div>
         )}

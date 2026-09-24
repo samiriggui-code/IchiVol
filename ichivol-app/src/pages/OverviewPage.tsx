@@ -766,7 +766,7 @@ export function OverviewPage() {
           </section>
         </div>
 
-        <div className={`notice${error ? '' : ' blue'}`}>
+        <div className="notice">
           <span>△</span>
           <span>
             {error ? (

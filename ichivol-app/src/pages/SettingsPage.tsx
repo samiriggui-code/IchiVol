@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
+import { Tag, WorkspacePageHead, StatLine } from '../components/maquette'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import {
   invalidateEngineThresholdsCache,
@@ -301,9 +302,9 @@ export function SettingsPage() {
 
       <div className="settings-main">
         <header className="page-head">
-          <p className="iv-page-eyebrow">Système · Paramètres</p>
+          <p className="eyebrow">Système · Paramètres</p>
           <h1>{SECTIONS.find((s) => s.id === section)?.label}</h1>
-          <p className="iv-page-question">Quels réglages gouvernent le cockpit ?</p>
+          <p className="subtitle">Quels réglages gouvernent le cockpit ?</p>
           <p className="muted">
             {section === 'llm'
               ? 'LLM actif en haut. Ajoute ou remplace la clé seulement si tu changes de provider.'
@@ -314,12 +315,12 @@ export function SettingsPage() {
         </header>
 
         {apiMissing && (
-          <div className="banner error" role="alert">
+          <div className="notice" role="alert">
             API <code>/api/settings</code> indisponible — {error}.
           </div>
         )}
         {!apiMissing && error && (
-          <div className="banner error" role="alert">
+          <div className="notice" role="alert">
             {error}
           </div>
         )}
@@ -337,8 +338,8 @@ export function SettingsPage() {
         <form className="settings-form" onSubmit={onSubmit}>
           {section === 'llm' && (
             <>
-              <section className="panel settings-section">
-                <header className="panel-head">
+              <section className="card settings-section">
+                <header className="card-head">
                   <h2>LLM connectés</h2>
                   <span className={`panel-meta llm-pill is-${llmStatus.state}`}>{connLabel}</span>
                 </header>
@@ -453,8 +454,8 @@ export function SettingsPage() {
               </section>
 
               {(showKeyForm || !hasActiveLlm) && (
-                <section className="panel settings-section">
-                  <header className="panel-head">
+                <section className="card settings-section">
+                  <header className="card-head">
                     <h2>{hasActiveLlm ? 'Remplacer le LLM' : 'Nouveau LLM'}</h2>
                     <span className="panel-meta">Provider · modèle · clé</span>
                   </header>
@@ -561,8 +562,8 @@ export function SettingsPage() {
           )}
 
           {section === 'sources' && (
-            <section className="panel settings-section">
-              <header className="panel-head">
+            <section className="card settings-section">
+              <header className="card-head">
                 <h2>Feeds de données actifs</h2>
                 <span className="panel-meta">Public · pas de trading</span>
               </header>
@@ -599,8 +600,8 @@ export function SettingsPage() {
           )}
 
           {section === 'sources' && (
-            <section className="panel settings-section">
-              <header className="panel-head">
+            <section className="card settings-section">
+              <header className="card-head">
                 <h2>Twelve Data (actions)</h2>
                 <span className="panel-meta">{twelveDataApiKeySet ? 'Clé perso active' : 'Clé opérateur'}</span>
               </header>
@@ -650,8 +651,8 @@ export function SettingsPage() {
           )}
 
           {section === 'indicators' && (
-            <section className="panel settings-section">
-              <header className="panel-head">
+            <section className="card settings-section">
+              <header className="card-head">
                 <h2>Ichimoku · RVOL · thème</h2>
               </header>
               <div className="settings-body controls">
@@ -820,8 +821,8 @@ export function SettingsPage() {
           )}
 
           {section === 'alerts' && (
-            <section className="panel">
-              <header className="panel-head">
+            <section className="card">
+              <header className="card-head">
                 <h2>Alertes push (téléphone)</h2>
                 <span className="panel-meta">T0-NOTIF · informatif only</span>
               </header>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Tag, WorkspacePageHead } from '../components/maquette'
 import { Link } from 'react-router-dom'
 import {
   EXPERIMENT_LABELS,
@@ -15,7 +16,6 @@ import {
   type EvidenceOutcomes,
 } from '../lib/activity'
 import { getShadowStats, type ShadowStats } from '../lib/paper'
-import './ActivityPage.css'
 
 type Filter = 'all' | 'paper' | 'shadow' | 'backtest'
 
@@ -205,26 +205,40 @@ export function ActivityPage() {
 
   return (
     <div className="act-page">
-      <header className="page-head market-head">
-        <div className="market-head-copy">
-          <p className="iv-page-eyebrow">Automatisation · Opérations</p>
-          <h1>Opérations</h1>
-          <p className="iv-page-question">
-            L’activité du système, sans angle mort — décisions, paper, filtres, backtests.
-          </p>
+      <WorkspacePageHead
+        path="/app/operations"
+        actions={
+          <>
+            <Link to="/app/strategy-lab" className="link">
+              Strategy Lab →
+            </Link>
+            <button type="button" onClick={() => void load()} disabled={loading}>
+              {loading ? '…' : 'Actualiser'}
+            </button>
+          </>
+        }
+      />
+
+      <div className="toolbar">
+        <div className="segmented" role="tablist" aria-label="Filtre">
+          {FILTERS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              role="tab"
+              aria-selected={filter === f.id}
+              className={filter === f.id ? 'active' : undefined}
+              onClick={() => setFilter(f.id)}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
-        <div className="market-class-tabs">
-          <Link to="/app/strategy-lab" className="ghost">
-            Strategy Lab →
-          </Link>
-          <button type="button" onClick={() => void load()} disabled={loading}>
-            {loading ? '…' : 'Actualiser'}
-          </button>
-        </div>
-      </header>
+        <input id="log-search" type="search" placeholder="Rechercher dans le journal…" />
+      </div>
 
       {error && (
-        <div className="banner error" role="alert">
+        <div className="notice" role="alert">
           {error}
         </div>
       )}
@@ -296,8 +310,8 @@ export function ActivityPage() {
         />
       </section>
 
-      <section className="panel act-eff" aria-label="Efficacité">
-        <header className="panel-head">
+      <section className="card act-eff" aria-label="Efficacité">
+        <header className="card-head">
           <h2>Ce que ça prouve</h2>
           <span className="panel-meta">filtres · edge backtest · signaux suivis</span>
         </header>
@@ -429,17 +443,17 @@ export function ActivityPage() {
         </div>
       </section>
 
-      <section className="panel act-history" aria-label="Historique">
-        <header className="panel-head">
+      <section className="card act-history" aria-label="Historique">
+        <header className="card-head">
           <h2>Historique</h2>
-          <div className="market-class-tabs act-filters" role="tablist" aria-label="Filtre historique">
+          <div className="segmented act-filters" role="tablist" aria-label="Filtre historique">
             {FILTERS.map((f) => (
               <button
                 key={f.id}
                 type="button"
                 role="tab"
                 aria-selected={filter === f.id}
-                className={filter === f.id ? 'is-active' : undefined}
+                className={filter === f.id ? 'active' : undefined}
                 onClick={() => setFilter(f.id)}
               >
                 {f.label}

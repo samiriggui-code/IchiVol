@@ -663,85 +663,81 @@ export function DecisionsPage() {
 
   return (
     <div className={`decisions-page${sheetOpen ? ' is-sheet-open' : ''}`}>
-      <header className="page-head market-head iv-animate-soft">
-        <div className="market-head-copy">
-          <p className="iv-page-eyebrow">{workspaceEyebrow('/app/opportunites')}</p>
-          <h1>{META.label}</h1>
-          <p className="iv-page-question">
-            {META.subtitle}
-            {pinnedOnly ? ' · Filtre Épinglés actif.' : ''}
-          </p>
-          <p className="muted">{CLASS_BLURBS[marketClass]}</p>
-        </div>
-        {visibleClasses.length > 0 && (
-          <div className="market-class-tabs" role="tablist" aria-label="Classe d’actif">
-            {pinnedOnly && (
-              <Link to="/app/opportunites" className="ghost" style={{ alignSelf: 'center' }}>
-                Tout voir
-              </Link>
-            )}
-            {!pinnedOnly && (
-              <Link to="/app/opportunites?filter=pinned" className="ghost" style={{ alignSelf: 'center' }}>
-                Épinglés
-              </Link>
-            )}
-            {visibleClasses.map((c) => (
-              <button
-                key={c}
-                type="button"
-                role="tab"
-                aria-selected={c === marketClass}
-                className={c === marketClass ? 'is-active' : undefined}
-                onClick={() => selectClass(c)}
+      <WorkspacePageHead
+        path="/app/opportunites"
+        subtitleExtra={pinnedOnly ? ' · Filtre Épinglés actif.' : undefined}
+        actions={
+          visibleClasses.length > 0 ? (
+            <div className="segmented" role="tablist" aria-label="Classe d’actif">
+              {pinnedOnly && (
+                <Link to="/app/opportunites" className="link">
+                  Tout voir
+                </Link>
+              )}
+              {!pinnedOnly && (
+                <Link to="/app/opportunites?filter=pinned" className="link">
+                  Épinglés
+                </Link>
+              )}
+              {visibleClasses.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  role="tab"
+                  aria-selected={c === marketClass}
+                  className={c === marketClass ? 'active' : undefined}
+                  onClick={() => selectClass(c)}
+                >
+                  {CLASS_LABELS[c]}
+                </button>
+              ))}
+              <select
+                value={timeframe}
+                onChange={(e) => setTimeframe(e.target.value)}
+                aria-label="Timeframe"
               >
-                {CLASS_LABELS[c]}
-              </button>
-            ))}
-            <select
-              value={timeframe}
-              onChange={(e) => setTimeframe(e.target.value)}
-              aria-label="Timeframe"
-              style={{ marginLeft: '0.5rem' }}
-            >
-              <option value="15m">15m</option>
-              <option value="1h">1H</option>
-              <option value="4h">4H</option>
-              <option value="1d">1D</option>
-            </select>
-            {marketClass !== 'equity' && (
-              <button type="button" className="ghost" onClick={() => load(true)} disabled={loading}>
-                {loading ? '…' : 'Actualiser'}
-              </button>
-            )}
-          </div>
-        )}
-      </header>
+                <option value="15m">15m</option>
+                <option value="1h">1H</option>
+                <option value="4h">4H</option>
+                <option value="1d">1D</option>
+              </select>
+              {marketClass !== 'equity' && (
+                <button type="button" onClick={() => load(true)} disabled={loading}>
+                  {loading ? '…' : 'Actualiser'}
+                </button>
+              )}
+            </div>
+          ) : (
+            <span className="subtitle">{CLASS_BLURBS[marketClass]}</span>
+          )
+        }
+      />
 
       {error && (
-        <div className="banner error" role="alert">
+        <div className="notice" role="alert">
           {error.includes('engine_unreachable') || error.includes('502')
             ? 'Moteur Python injoignable — vérifie que le service tourne (voir ichivol-app/engine/README).'
             : error}
         </div>
       )}
 
-      <div className="ops-toolbar" role="toolbar" aria-label="Filtres opportunités">
+      <div className="toolbar" role="toolbar" aria-label="Filtres opportunités">
         <input
           type="search"
-          className="ops-search"
+          
           placeholder="Rechercher un actif…"
           value={symbolQuery}
           onChange={(e) => setSymbolQuery(e.target.value)}
           aria-label="Rechercher un actif"
         />
-        <div className="ops-segmented" role="tablist" aria-label="Cycle">
+        <div className="segmented" role="tablist" aria-label="Cycle">
           {CYCLE_FILTERS.map((f) => (
             <button
               key={f}
               type="button"
               role="tab"
               aria-selected={cycleFilter === f}
-              className={cycleFilter === f ? 'is-active' : undefined}
+              className={cycleFilter === f ? 'active' : undefined}
               onClick={() => setCycleFilter(f)}
             >
               {f}
@@ -757,10 +753,10 @@ export function DecisionsPage() {
       </div>
 
       <div className="decisions-split">
-        <section className="panel decisions-table-panel iv-animate-in" aria-label="Matrice de décision">
-          <header className="panel-head">
+        <section className="card decisions-table-panel " aria-label="Matrice de décision">
+          <header className="card-head">
             <h2>Matrice de décision</h2>
-            <span className="iv-badge">5 PORTES</span>
+            <span className="tag gray">5 PORTES</span>
           </header>
           <div className="table-wrap opp-matrix-wrap">
             <table className="data-table opp-matrix" aria-label="Matrice de décision">
@@ -784,7 +780,7 @@ export function DecisionsPage() {
                   return (
                     <tr
                       key={row.symbol}
-                      className={row.symbol === selected ? 'is-active' : undefined}
+                      className={row.symbol === selected ? 'active' : undefined}
                       onClick={() => onSelect(row.symbol)}
                       style={{ cursor: 'pointer' }}
                     >
@@ -834,8 +830,8 @@ export function DecisionsPage() {
         </section>
 
         {sheetOpen && (
-          <aside className="panel decision-sheet" aria-label={`Détail ${selected}`}>
-            <header className="panel-head decision-sheet-head">
+          <aside className="card decision-sheet" aria-label={`Détail ${selected}`}>
+            <header className="card-head decision-sheet-head">
               <div>
                 <h2>{selected ? instrumentLabel(selected) : ''}</h2>
                 <span className="panel-meta">
@@ -865,7 +861,7 @@ export function DecisionsPage() {
 
             <div className="decision-sheet-scroll">
               {detailError && (
-                <div className="banner error" role="alert">
+                <div className="notice" role="alert">
                   {detailError}
                 </div>
               )}
@@ -973,24 +969,24 @@ export function DecisionsPage() {
         )}
       </div>
 
-      <div className="desk-grid iv-animate-in-delay" style={{ marginTop: '1.25rem' }}>
-        <section className="panel" aria-label="De l’observation à la décision">
-          <header className="panel-head">
+      <div className="grid " style={{ marginTop: '1.25rem' }}>
+        <section className="card" aria-label="De l’observation à la décision">
+          <header className="card-head">
             <h2>De l’observation à la décision</h2>
           </header>
-          <div className="iv-card-body">
-            <div className="iv-pipeline-flow">
+          <div className="card-body">
+            <div className="toolbar">
               {FLOW_STAGES.map((s, i) => (
-                <span key={s} className="iv-pipeline-flow">
-                  {i > 0 && <span className="iv-flow-arrow">→</span>}
+                <span key={s} className="toolbar">
+                  {i > 0 && <span className="">→</span>}
                   <span
                     className={
                       s === 'REFUSÉ'
-                        ? 'iv-badge is-refuse'
+                        ? 'tag red'
                         : s === 'TRIGGERED' || s === 'ACCEPTÉ'
-                          ? 'iv-badge is-caution'
+                          ? 'tag amber'
                           : s === 'ARMED'
-                            ? 'iv-badge is-pass'
+                            ? 'tag green'
                             : 'iv-badge'
                     }
                   >
@@ -1006,14 +1002,14 @@ export function DecisionsPage() {
           </div>
         </section>
 
-        <section className="panel opp-why" aria-label="Pourquoi cet actif">
-          <header className="panel-head">
+        <section className="card opp-why" aria-label="Pourquoi cet actif">
+          <header className="card-head">
             <h2>{highlightSym ? `Pourquoi ${highlightSym} ?` : 'Pourquoi ?'}</h2>
             {highlightCycle && (
               <span className={cycleBadgeClass(highlightCycle)}>{highlightCycle}</span>
             )}
           </header>
-          <div className="iv-card-body">
+          <div className="card-body">
             {highlightRow ? (
               <>
                 <p>

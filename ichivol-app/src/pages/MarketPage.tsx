@@ -68,7 +68,8 @@ import {
   type ScreenerRow,
   type Signal,
 } from '../lib/types'
-import { workspaceEyebrow, workspacePageMeta } from '../lib/workspaceNav'
+import { WorkspacePageHead } from '../components/maquette'
+import { workspacePageMeta } from '../lib/workspaceNav'
 
 const META = workspacePageMeta('/app/market')!
 const ENGINE_TIMEFRAMES = new Set<Interval>(['15m', '1h', '4h', '1d'])
@@ -996,13 +997,7 @@ export function MarketPage() {
       }
       data-drawer={layout.drawerPos}
     >
-      <header className="page-head market-head">
-        <div className="market-head-copy">
-          <p className="iv-page-eyebrow">{workspaceEyebrow('/app/market')}</p>
-          <h1>{META.label}</h1>
-          <p className="iv-page-question">{META.subtitle}</p>
-        </div>
-      </header>
+      <WorkspacePageHead path="/app/market" />
 
       {/* —— Desktop tools bar —— */}
       {!isMobile && (
