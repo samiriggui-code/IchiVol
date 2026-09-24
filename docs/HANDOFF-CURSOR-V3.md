@@ -58,9 +58,6 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-
----
-
 ## 2026-09-24 — ORDRE DU JOUR CONSOLIDÉ (rév. feuille de route 46)
 
 Réf. Claude « IchiVol V3 — Feuille de route » rév. 46. Chantier principal **T9**. **T10** / **T11** uniquement là où prérequis de T9. Rien d’autre.
@@ -97,9 +94,10 @@ Règles : une PR à la fois ; pas de merge sans Claude ; vérifier `main` après
 
 ### État exact #54 (pour revue Claude)
 
-- Branche : `cursor/ui-market-tradingview-a2fe` @ `96b1eff` (+ ce commit handoff)  
+- Branche : `cursor/ui-market-tradingview-a2fe` @ `3d79eed`  
 - PR : https://github.com/samiriggui-code/IchiVol/pull/54 (**draft**, OPEN)  
 - Base : `main` @ `985c4e5`  
+- Tip code UI : `96b1eff` ; tip handoff : `3d79eed` (docs only)  
 - **`npm run build`** : **OK** (tsc + vite, 2026-09-24)  
 - **`tests/chart_objects/test_chart_object_layer.py`** : **2 passed** (layer additive, id inchangé, rétrocompat source→layer)  
 - Captures 01→07 : artifacts `/opt/cursor/artifacts/0{1..7}-*.png`  
