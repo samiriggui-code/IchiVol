@@ -7,6 +7,16 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — Wyckoff REJECTED (rév.48) — EN COURS
+
+- Branche : `cursor/wyckoff-rejected-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/70 (**draft** → merge Claude validé)
+- Base : `main` @ `ebd1b2a` (#69 handoff)
+- Statut : **EN COURS merge** — `FeatureStatus.REJECTED` ; toujours calculable Lab.
+- Golden : **inchangés**.
+
+---
+
 ## 2026-09-24 — SYNC Claude rév.49 — T13 ajoutée (NE PAS DÉMARRER)
 
 Addendum feuille de route : tranche **T13 « couche de trading contrôlée »**.  
@@ -89,6 +99,7 @@ Benchmark local synthétique (300 barres × 20 symboles × 3 reps, pas de résea
 
 1. PR Wyckoff `FeatureStatus.REJECTED` (commit séparé, golden inchangés)  
 2. PR **T9g-fix** — `promote` → `review_candidate` + gates (revue Claude avant merge)
+
 
 ---
 

@@ -785,10 +785,11 @@ def _build_registry() -> IndicatorRegistry:
             visualization=Visualization.NONE,
             description=(
                 "Wyckoff phase from Donchian + volume climax; depends on donchian. "
-                "EXPERIMENTAL — README moteur: non promu (pas d'edge démontré)."
+                "REJECTED — README moteur verdict table: pas d'edge démontré "
+                "(toujours calculable Lab ; aucun droit de vote pipeline)."
             ),
             depends_on=("donchian",),
-            status=FeatureStatus.EXPERIMENTAL,
+            status=FeatureStatus.REJECTED,
             source=INTERNAL,
             family="structure",
             confirmation_lag_bars=0,
