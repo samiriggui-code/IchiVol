@@ -7,6 +7,43 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — T12c EN COURS — références buy&hold / Donchian / structure
+
+- Branche : `cursor/t12c-reference-baselines-a2fe`
+- Base : `main` @ `36ff85f` (#74 UI exception **MERGÉE**)
+- ADD-ONLY Lab — **aucun changement live / seuils**
+
+### Livré
+1. `strategy_lab/reference_baselines.py` — `run_reference_baselines_on_candles`  
+   - buy&hold (`run_backtest` toujours LONG)  
+   - Donchian breakout UP seul (ruleset ATR 1R/2R)  
+   - structure BOS haussier seul (ruleset ATR 1R/2R)  
+   - **mêmes** `commission_bps` / `slippage_bps` (défaut Lab 5+3)
+2. Catalog : `IV_REF_DONCHIAN_BO_LONG_001`, `IV_REF_STRUCTURE_BOS_LONG_001` (`meta.reference`/`t12c`)
+3. Tests `test_t12c_reference_baselines.py` (frais partagés, bords 0/1 barre, fee override)
+
+### DÉCISION CURSOR — à relire par Claude
+« Structure seule » = rising-edge **`bos_bullish`** (ablation `C_BOS`), **pas** `IV_ICHIMOKU_ONLY_*`.
+
+### Hors scope
+HTTP route (appelants = module Python) · T12d/e · live
+
+### Sonde manuelle
+Série synthétique drift : buy&hold exposure > 0.9, ≥1 trade.
+
+---
+
+## 2026-09-24 — UI exception MERGÉE (#74) — squash `36ff85f`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/74 — **MERGÉE** squash (solo rév.58)
+- **Vérifié** : `origin/main` tip = `36ff85f`
+- Matrice : libellé **Régime** ; DIR **↑/↓** ; captures `ui74-*-matrix.png`
+- Auto-revue : pytest 1074 ON / 1073+1 skip OFF ; npm build OK ; moteur inchangé
+
+**Suite** : T12c…
+
+---
+
 ## 2026-09-24 — UI exception EN COURS — Risque→Régime + DIR ↑/↓ (rév.56/58)
 
 - Branche : `cursor/ui-regime-dir-a2fe`
