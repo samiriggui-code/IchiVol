@@ -33,6 +33,8 @@ _FLOAT_SAMPLES = {
     "ppo_min": [-1.0, 0.0, 1.0],
     "ppo_max": [-1.0, 0.0, 1.0],
     "impulse_displacement_atr_min": [0.5, 1.0, 2.0],
+    "ichimoku_score_min": [-50.0, 0.0, 50.0],
+    "adx_min": [15.0, 25.0, 40.0],
 }
 _INT_SAMPLES = {
     "tk_cross_age_max": [3, 10, 20],

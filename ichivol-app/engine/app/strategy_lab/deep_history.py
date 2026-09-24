@@ -167,8 +167,17 @@ def _coverage_warning(
     # No warning if within one bar of the request.
     if coverage >= int(requested_seconds) - int(tf_seconds):
         return coverage, None
+    shortfall = int(requested_seconds) - int(coverage)
     got_days = int(round(coverage / 86400))
     want_days = int(round(int(requested_seconds) / 86400))
+    # Cosmétique T12a (rév.55): if the gap is under 2 days, show missing bars.
+    if shortfall < 2 * 86400:
+        missing_bars = max(1, int(round(shortfall / float(tf_seconds))))
+        return (
+            coverage,
+            f"historique obtenu {got_days} j pour {want_days} demandés "
+            f"({missing_bars} bougie(s) manquante(s))",
+        )
     return coverage, f"historique obtenu {got_days} j pour {want_days} demandés"
 
 

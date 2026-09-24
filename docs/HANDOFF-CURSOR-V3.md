@@ -7,40 +7,53 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-24 — T12a EN COURS — historique profond versionné (Strategy Lab)
+## 2026-09-24 — SYNC Claude rév.56 — T14 Interface V3 (NE PAS DÉMARRER)
 
-- Branche : `cursor/t12a-deep-history-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/72 (**draft**)
-- Base : `main` @ `9490e4b` (#71 T9g-fix **MERGÉE**)
-- Statut : **DRAFT** — correctif rév.54 @ `607b5da` ; CI verte ; attente re-revue Claude avant merge.
+Audit UI ajouté à la feuille de route (**section T14**).
+
+**Ordre** (rév.56, remplace le enchaînement T12e→T13a de rév.49) :  
+… T12e → **T14a** → T13a → T13b + T14c → …  
+Aucune fusion ni suppression de page avant T14a. **Ne pas démarrer T14 maintenant.**
+
+### Exception autorisée (petite PR séparée, APRÈS merge de T12b #73)
+
+Front only — **aucun changement moteur** :
+1. `ichivol-app/src/lib/decisionPipeline.ts:110` (`stageMatrixLabel` case `regime`) : libellé matrice **« Risque » → « Régime »** (étape ADX/Donchian/ATR, pas le sizing risque)
+2. Colonne DIR (`GateMatrix` cellule `direction`) : afficher **↑ / ↓** au lieu de « OK » (pas un remplacement global de `stageStatusLabel`)
+
+**File d’attente** : exception **pas ouverte** tant que #73 n’est pas squash-MERGÉE.
+
+---
+
+## 2026-09-24 — T12b EN COURS — parité Lab / live (FeatureBar + stages)
+
+- Branche : `cursor/t12b-lab-live-parity-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/73 (**draft**)
+- Base : `main` @ `5bc1e9c` (#72 T12a **MERGÉE**)
+- Statut : **DRAFT** — CI verte @ tip `368bf72` ; attente revue Claude avant merge. **Pas de merge solo.**
 
 ### Livré
 
-1. `strategy_lab/deep_history.py` — jeux versionnés (`manifest.json` + sha256), pagination Binance `startTime`, plafond Twelve Data **5 000**, défaut crypto **≥ 2 ans** en 1h
-2. `validate_candles` à la construction ; rapport qualité (**codes + code_counts**) dans le manifeste
-3. Études Lab (`walk-forward`, `ablation_oos`, `regime_slices`) renvoient `quality_report` / `data_warning` / `dataset_id` / `history_*` ; jeu défaillant **utilisable** avec avertissement
-4. API / agent : `deep_history`, `years`, `dataset_id`
-5. **Réserve #71** : test étude `test_study_inconclusive_when_variant_has_few_trades_mocked_wf` — `_run_wf` mocké base=40 / variante=5 → `inconclusive` (échoue si `max()` remis)
-
-### Correctifs rév.53 (bloquants)
-
-1. Routes Lab : monkeypatch `resolve_lab_history` / `run_*` (suite hermétique hors réseau)
-2. `dataset_id` day-aligned (minuit UTC pour 1h/4h/1d) → cache effectif
-3. `load_dataset` / cache hit : vérification sha256 (refus si empreinte diffère)
-4. Couverture courte : `history_warning` « historique obtenu X j pour Y demandés » (biquote 100 barres)
-
-### Correctif rév.54 (bloquant)
-
-Couverture = `(last.time + tf) − first.time` + tolérance 1 bougie — plus de faux positif sur séries parfaites (2 ans 1h / 1000 barres).
-
-### Non bloquant (plus tard)
-
-- Écriture concurrente du manifeste sans verrou
-- `LAB_DATASETS_DIR` configurable (volume Docker persistant)
-- Chemin non profond : bougie en formation encore présente (existant pré-T12a → T11a-bis)
+1. Ichimoku live dans FeatureBar/DSL : `chikou_state`, `future_kumo`, `ichimoku_score`, `ichimoku_direction` (via `ichimoku_agent.state_to_agent_output`)
+2. Régime : `adx` / `plus_di` / `minus_di` / `donchian_breakout` + labels `classify_regimes` + `regime_stage_pass` (= `_regime_stage`)
+3. Location : VWAP / AVWAP / VA / HVN + `location_stage_pass` (= `_location_stage`)
+4. Participation : `cvd_bias` + bandes RVOL booléennes (faible…extrême) + `participation_stage_pass`
+5. Test de parité obligatoire : Lab `*_stage_pass` == pipeline live (bar par bar)
+6. Tout via REGISTRY ; test de causalité sur les nouvelles features
+7. Cosmétique T12a : écart < 2 j → message avec bougies manquantes
 
 ### Hors scope
-T12b–e · T13 · FeatureStatus · pipeline · microstructure
+T12c–e · T13 · microstructure · seuils live
+
+---
+
+## 2026-09-24 — T12a MERGÉE (#72) — squash `5bc1e9c`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/72 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `5bc1e9c`
+- Historique profond versionné + validate_candles + qualité Lab ; correctifs rév.53/54.
+
+**Suite** : T12b EN COURS (parité Lab / live).
 
 ---
 
