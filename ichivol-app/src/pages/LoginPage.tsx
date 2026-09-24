@@ -124,16 +124,17 @@ export function LoginPage() {
 
           <div className="camap-login-brand-mid">
             <div className="camap-login-brand-copy">
+              <p className="camap-login-brand-lockup">IchiVol</p>
               <p className="camap-eyebrow">
                 <KeenIcon icon="abstract-26" style="outline" className="camap-eyebrow-icon" />
-                Trading crypto · Ichimoku confirmé par le volume
+                Trading · Desk paper
               </p>
               <h1>
-                Le cockpit du signal <em>confirmé</em>.
+                Observer. Qualifier. <em>Décider.</em>
               </h1>
               <p className="camap-login-brand-lede">
-                Accès sécurisé au cockpit : décisions, journal, watchlist et Copilot
-                ancré sur le moteur déterministe.
+                Accès au Desk : opportunités, portefeuille, journal et Copilot ancré sur le
+                moteur — sans jamais inventer le BUY.
               </p>
             </div>
 

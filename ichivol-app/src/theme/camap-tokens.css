@@ -23,15 +23,16 @@
   --shadow-lg: 0 4px 8px rgba(20, 18, 30, 0.04), 0 18px 48px rgba(20, 18, 30, 0.06);
   color-scheme: light;
 
-  /* Sémantique trading (cockpit) — distincte de --primary, convention verte/rouge universelle */
-  --bull: #0ea89a;
-  --bear: #dc4c3f;
-  --neutral: #c9822f;
+  /* Sémantique trading — aligné design-reference IchiVol */
+  --bull: #0b8f83;
+  --bear: #c8412f;
+  --neutral: #a76c17;
   --weak: #9aa1ab;
   --tenkan: #c9702f;
   --kijun: #4f8fc0;
   --span-a: var(--bull);
   --span-b: var(--bear);
+  --amber: #a76c17;
 }
 
 html.dark {
@@ -62,4 +63,5 @@ html.dark {
   --kijun: #7eb8da;
   --span-a: var(--bull);
   --span-b: var(--bear);
+  --amber: #e8b86d;
 }

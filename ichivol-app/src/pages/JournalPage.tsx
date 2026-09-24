@@ -192,9 +192,12 @@ export function JournalPage() {
     <div className="journal-page">
       <header className="page-head market-head">
         <div className="market-head-copy">
+          <p className="iv-page-eyebrow">Recherche · Journal</p>
           <h1>Journal</h1>
+          <p className="iv-page-question">
+            La mémoire de vos décisions — trades paper et décisions sauvegardées.
+          </p>
           <p className="muted">
-            La mémoire de vos décisions. Trades paper (MFE/MAE, frais) et décisions sauvegardées.
             Capital → <Link to="/app/portefeuille">Portefeuille</Link> · circuit auto →{' '}
             <Link to="/app/operations">Opérations</Link>.
           </p>

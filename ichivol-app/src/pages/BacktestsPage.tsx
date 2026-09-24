@@ -437,7 +437,9 @@ export function BacktestsPage() {
     <div className="backtests-page">
       <header className="page-head market-head">
         <div className="market-head-copy">
+          <p className="iv-page-eyebrow">Recherche · Strategy Lab</p>
           <h1>Strategy Lab</h1>
+          <p className="iv-page-question">Est-ce que cette méthode tient historiquement ?</p>
           <p className="muted">
             Chiffres depuis la Performance DB (expériences persistées). Onglet{' '}
             <strong>Live</strong> = recalcul ponctuel ; <strong>Research</strong> = T5–T7 /

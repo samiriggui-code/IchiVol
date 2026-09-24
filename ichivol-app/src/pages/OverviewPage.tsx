@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { ContextPanel } from '../components/ContextPanel'
 import { VerdictBadge } from '../components/VerdictBadge'
@@ -66,14 +66,30 @@ function summarize(rows: ScreenerDecisionRow[]) {
   let buy = 0
   let sell = 0
   let watch = 0
+  const stagePass: Record<string, number> = {
+    direction: 0,
+    participation: 0,
+    structure: 0,
+    location: 0,
+    regime: 0,
+  }
   for (const r of rows) {
     const bucket = verdictBucket(r)
     if (bucket === 'buy') buy += 1
     else if (bucket === 'sell') sell += 1
     else if (bucket === 'watch') watch += 1
+    const stages = r.pipeline?.stages
+    if (Array.isArray(stages)) {
+      for (const s of stages) {
+        if (s.id in stagePass && s.status === 'pass') {
+          stagePass[s.id] += 1
+        }
+      }
+    }
   }
   const top = [...rows].sort((a, b) => b.confidence - a.confidence).slice(0, 6)
-  return { buy, sell, watch, top, total: rows.length }
+  const none = Math.max(0, rows.length - buy - sell - watch)
+  return { buy, sell, watch, none, top, total: rows.length, stagePass }
 }
 
 function fmtPct(v: number | null | undefined, digits = 1): string {
@@ -255,11 +271,12 @@ export function OverviewPage() {
 
   return (
     <div className="overview-page">
-      <header className="page-head overview-head">
+      <header className="page-head overview-head iv-animate-soft">
         <div>
+          <p className="iv-page-eyebrow">Trading · Desk</p>
           <h1>Desk</h1>
-          <p className="muted">
-            Votre marché, en un regard.
+          <p className="iv-page-question">
+            Que se passe-t-il maintenant ?
             {circuitAlive
               ? ` · ${fmtInt(summary?.decisions.last_24h ?? 0)} décisions / 24 h`
               : ''}
@@ -278,6 +295,166 @@ export function OverviewPage() {
           {error}
         </div>
       )}
+
+      <section className="iv-metrics iv-animate-in" aria-label="Synthèse marché">
+        <div className="iv-metric">
+          <div className="iv-metric-label">Marchés analysés</div>
+          <div className="iv-metric-value mono">{loading && !rows.length ? '—' : fmtInt(stats.total)}</div>
+          <small>Screener 1h</small>
+        </div>
+        <div className="iv-metric">
+          <div className="iv-metric-label">Opportunités</div>
+          <div className={`iv-metric-value mono${stats.buy > 0 ? ' is-bull' : ''}`}>
+            {loading && !rows.length ? '—' : fmtInt(stats.buy + stats.sell)}
+          </div>
+          <small>BUY + SELL actionnables</small>
+        </div>
+        <div className="iv-metric">
+          <div className="iv-metric-label">WATCH</div>
+          <div className="iv-metric-value mono">{loading && !rows.length ? '—' : fmtInt(stats.watch)}</div>
+          <small>Prudence — pas d’entrée</small>
+        </div>
+        <div className="iv-metric">
+          <div className="iv-metric-label">Positions paper</div>
+          <div className="iv-metric-value mono">{acct ? fmtInt(acct.open_positions) : '—'}</div>
+          <small>{BASELINE}</small>
+        </div>
+        <div className="iv-metric">
+          <div className="iv-metric-label">Risque engagé</div>
+          <div className="iv-metric-value mono">
+            {overview?.risk?.open_risk_pct != null
+              ? `${(overview.risk.open_risk_pct * 100).toFixed(1)} %`
+              : acct
+                ? fmtEur(acct.invested, 0)
+                : '—'}
+          </div>
+          <small>
+            {overview?.risk
+              ? `ouvert ${fmtEur(overview.risk.open_risk_amount, 0)} / exposé ${fmtEur(overview.risk.exposed, 0)}`
+              : acct
+                ? `exposé ${fmtEur(acct.invested, 0)}`
+                : '—'}
+          </small>
+        </div>
+      </section>
+
+      <div className="iv-desk-grid iv-animate-in-delay">
+        <section className="panel" aria-label="Market pulse">
+          <header className="panel-head">
+            <h2>Market pulse</h2>
+            <span className="muted">Distribution actuelle</span>
+          </header>
+          <div className="card-body iv-pulse" style={{ padding: '0.75rem 1rem 1.1rem' }}>
+            <div
+              className="iv-donut"
+              style={
+                {
+                  ['--buy' as string]: stats.total
+                    ? ((stats.buy / stats.total) * 100).toFixed(2)
+                    : 0,
+                  ['--watch' as string]: stats.total
+                    ? ((stats.watch / stats.total) * 100).toFixed(2)
+                    : 0,
+                } as CSSProperties
+              }
+              data-center={loading && !rows.length ? '—' : String(stats.total)}
+              role="img"
+              aria-label={`${stats.total} marchés : ${stats.buy} buy, ${stats.watch} watch, ${stats.none + stats.sell} autres`}
+            />
+            <div className="iv-pulse-legend">
+              <span>
+                <span>
+                  <i className="is-buy" aria-hidden />
+                  BUY
+                </span>
+                <b className="mono">{stats.buy}</b>
+              </span>
+              <span>
+                <span>
+                  <i className="is-watch" aria-hidden />
+                  WATCH
+                </span>
+                <b className="mono">{stats.watch}</b>
+              </span>
+              <span>
+                <span>
+                  <i className="is-none" aria-hidden />
+                  NO TRADE / autre
+                </span>
+                <b className="mono">{stats.none + stats.sell}</b>
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <section className="panel" aria-label="Top opportunités">
+          <header className="panel-head">
+            <h2>Top opportunités</h2>
+            <Link to="/app/opportunites" className="ghost">
+              Voir tout →
+            </Link>
+          </header>
+          {stats.top.length === 0 ? (
+            <p className="muted overview-empty" style={{ padding: '0.75rem 1rem' }}>
+              {loading ? 'Scan screener…' : 'Aucune ligne — vérifie le moteur.'}
+            </p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Symbole</th>
+                    <th>Décision</th>
+                    <th>Conf.</th>
+                    <th>RVOL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.top.map((r) => (
+                    <tr key={r.symbol}>
+                      <td>
+                        <Link to={`/app/opportunites?symbol=${encodeURIComponent(r.symbol)}`}>
+                          <strong>{r.symbol.replace(/USDT$/i, '')}</strong>
+                        </Link>
+                      </td>
+                      <td>
+                        <VerdictBadge decision={r.decision} pipeline={r.pipeline} />
+                      </td>
+                      <td className="mono">{(r.confidence * 100).toFixed(0)}%</td>
+                      <td className="mono">{r.rvol != null ? `${r.rvol.toFixed(2)}×` : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
+
+      <section className="panel" aria-label="Pipeline health" style={{ marginBottom: '1rem' }}>
+        <header className="panel-head">
+          <h2>Pipeline health</h2>
+          <span className="muted">Marchés ayant passé chaque porte</span>
+        </header>
+        <ul className="iv-pipeline" style={{ margin: '0 0.75rem 1rem' }}>
+          {(
+            [
+              ['analysés', stats.total],
+              ['direction', stats.stagePass.direction || stats.buy + stats.sell + stats.watch],
+              ['participation', stats.stagePass.participation],
+              ['structure', stats.stagePass.structure],
+              ['location', stats.stagePass.location],
+              ['régime', stats.stagePass.regime],
+              ['opportunités', stats.buy + stats.sell],
+            ] as const
+          ).map(([label, n]) => (
+            <li key={label}>
+              <strong className="mono">{loading && !rows.length ? '—' : fmtInt(n)}</strong>
+              <span>{label}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <section className="panel ov-desk" aria-label="Compte baseline">
         <header className="panel-head">
