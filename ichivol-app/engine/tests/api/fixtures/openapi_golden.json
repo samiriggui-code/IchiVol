@@ -4991,6 +4991,117 @@
         ]
       }
     },
+    "/api/engine/strategy-lab/feature-redundancy/study": {
+      "get": {
+        "description": "T10c \u2014 pairwise boolean feature redundancy (observation only).",
+        "operationId": "get_feature_redundancy_study_api_engine_strategy_lab_feature_redundancy_study_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "default": "LONG",
+              "title": "Direction",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keys",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Keys"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_true",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "title": "Min True",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "top_n",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "title": "Top N",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Feature Redundancy Study Api Engine Strategy Lab Feature Redundancy Study Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Feature Redundancy Study",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
     "/api/engine/strategy-lab/monte-carlo": {
       "post": {
         "description": "T7 \u2014 bootstrap Monte Carlo / risk-of-ruin (research only).",

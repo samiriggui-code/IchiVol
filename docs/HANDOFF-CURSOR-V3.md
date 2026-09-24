@@ -7,13 +7,32 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — T10c EN COURS — redondance feature×feature
+
+- Branche : `cursor/t10c-feature-redundancy-a2fe`
+- PR : *(draft à ouvrir)*
+- Base : `main` @ `1a9fb2a` (handoff T11a)
+- Statut : **EN COURS** — Cursor solo. **Observation-only** ; **pas d’auto-reject**.
+
+### Livré
+
+1. `strategy_lab/redundancy.py` — overlap / Jaccard / φ sur conditions bool Lab
+2. `GET /strategy-lab/feature-redundancy/study` + agent `run_feature_redundancy_study`
+3. Annote family/status T10a ; disclaimer no pipeline / no auto-reject
+4. Tests `test_t10c_feature_redundancy.py` + route research
+
+### Hors scope
+Auto-reject · mutation FeatureStatus · T9g OOS · UI Lab tab · pipeline vote.
+
+---
+
 ## 2026-09-24 — T11a MERGÉE (#61) — squash `ff43f17` — quality + provenance (obs)
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/61 — **MERGÉE** squash
 - **Vérifié** : `origin/main` tip = `ff43f17`
 - Cursor solo ; CI verte. **Observation-only** (pas de hard `bad→NO_TRADE`).
 
-**Suite (audit DELTA-ONLY validé par user)** : T10c → T9g — *en attente validation roadmap*.
+**Suite** : T10c EN COURS → T9g.
 
 ---
 

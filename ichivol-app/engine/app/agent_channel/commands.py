@@ -698,6 +698,49 @@ def cmd_run_family_weights_study(args: dict) -> dict:
     return report.to_dict()
 
 
+def cmd_run_feature_redundancy_study(args: dict) -> dict:
+    """T10c — pairwise boolean feature redundancy (observation, no auto-reject)."""
+    from app.agents.types import Direction
+    from app.strategy_lab.redundancy import run_feature_redundancy_study
+
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = str(args.get("timeframe", "1h"))
+    limit = int(args.get("limit", 500))
+    direction_raw = str(args.get("direction", "LONG")).upper()
+    try:
+        direction = Direction(direction_raw)
+    except ValueError as exc:
+        raise CommandError("direction must be LONG, SHORT, or NEUTRAL") from exc
+    keys_arg = args.get("keys")
+    key_list = None
+    if keys_arg is not None:
+        if isinstance(keys_arg, str):
+            key_list = [k.strip() for k in keys_arg.split(",") if k.strip()]
+        elif isinstance(keys_arg, list):
+            key_list = [str(k) for k in keys_arg]
+        else:
+            raise CommandError("keys must be a comma-string or list")
+    min_true = int(args.get("min_true", 5))
+    top_n = int(args.get("top_n", 20))
+    try:
+        _prov, _sym, candles = resolve_and_fetch(symbol, timeframe, limit)
+    except (ValueError, ProviderNotWiredError) as exc:
+        raise CommandError(str(exc)) from exc
+    try:
+        report = run_feature_redundancy_study(
+            candles,
+            symbol=symbol,
+            timeframe=timeframe,
+            direction=direction,
+            keys=key_list,
+            min_true=min_true,
+            top_n=top_n,
+        )
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+    return report.to_dict()
+
+
 def cmd_build_audit_report(args: dict) -> dict:
     """T6 — post-outcome AuditReport for one ruleset backtest trade.
 

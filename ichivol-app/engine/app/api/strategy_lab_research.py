@@ -19,8 +19,10 @@ from app.confluence.study import run_family_weights_study
 from app.market_data.resolve import ProviderNotWiredError, resolve_and_fetch
 from app.screener.service import scan_symbol
 from app.strategy_lab.catalog import get_builtin_ruleset
+from app.strategy_lab.redundancy import run_feature_redundancy_study
 from app.strategy_lab.ruleset import parse_ruleset
 from app.strategy_lab.ruleset_backtest import run_ruleset_backtest_on_candles
+from app.agents.types import Direction
 
 router = APIRouter(prefix=settings.engine_api_prefix, tags=["engine"])
 
@@ -92,6 +94,51 @@ def get_family_weights_study(
         step=step,
         sample_limit=sample_limit,
     )
+    return report.to_dict()
+
+
+@router.get("/strategy-lab/feature-redundancy/study")
+def get_feature_redundancy_study(
+    symbol: str,
+    timeframe: str = "1h",
+    limit: int = 500,
+    direction: str = "LONG",
+    keys: str | None = None,
+    min_true: int = 5,
+    top_n: int = 20,
+) -> dict:
+    """T10c — pairwise boolean feature redundancy (observation only)."""
+    if limit < 50 or limit > 5000:
+        raise HTTPException(status_code=422, detail="limit must be between 50 and 5000")
+    if min_true < 1:
+        raise HTTPException(status_code=422, detail="min_true must be >= 1")
+    try:
+        dir_enum = Direction(direction.upper())
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422, detail="direction must be LONG, SHORT, or NEUTRAL"
+        ) from exc
+    key_list = None
+    if keys:
+        key_list = [k.strip() for k in keys.split(",") if k.strip()]
+        if not key_list:
+            raise HTTPException(status_code=422, detail="keys is empty")
+    try:
+        _prov, _sym, candles = resolve_and_fetch(symbol.upper(), timeframe, limit)
+    except (ValueError, ProviderNotWiredError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    try:
+        report = run_feature_redundancy_study(
+            candles,
+            symbol=symbol.upper(),
+            timeframe=timeframe,
+            direction=dir_enum,
+            keys=key_list,
+            min_true=min_true,
+            top_n=top_n,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return report.to_dict()
 
 
