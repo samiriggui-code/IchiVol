@@ -10,9 +10,9 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T9c EN COURS — impulsion / displacement causal
 
 - Branche : `cursor/t9c-impulsion-a2fe`
-- PR : *(draft — lien après push)*
+- PR : https://github.com/samiriggui-code/IchiVol/pull/57 (**draft**)
 - Base : `main` @ `82e980e` (#56 T10b)
-- Statut : **EN COURS** — Cursor solo (Claude restreint). Pas de FVG / pas de Fib rewrite / pas de pipeline.
+- Statut : **DRAFT** — Cursor solo (Claude restreint). Pas de FVG / pas de Fib rewrite / pas de pipeline. CI en cours.
 
 ### Livré (prévu / en cours)
 
