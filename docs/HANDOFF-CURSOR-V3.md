@@ -7,12 +7,66 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — SYNC Claude rév.48 — bilan #53→#67 + reprise
+
+Revue Claude a posteriori sur `main` @ `23dc4ba` : **rien à revert**  
+(suite PG 1 049 ok / 1 skip ; golden additifs ; décision inchangée).
+
+### Règle merge (rétablie)
+
+**Fin du mode solo.** Une PR à la fois ; **aucun merge sans revue Claude**,  
+sauf autorisation utilisateur explicite pour une tranche nommée.  
+Vérifier `origin/main` avant d’écrire MERGÉE.
+
+### #67 — MERGÉE (correction handoff)
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/67 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `23dc4ba`
+- (L’entrée « EN COURS / draft » plus bas est **obsolète** — squash déjà dans main.)
+
+### #68 trade VP
+
+**Différée** jusqu’après T12e (rév.48 §6).  
+PR draft : https://github.com/samiriggui-code/IchiVol/pull/68 — ne pas merger.
+
+### Ordre du jour (rév. 48)
+
+1. T9g-fix  
+2. T12a  
+3. T12b  
+4. T12c  
+5. T12d  
+6. T12e  
+7. Ensuite : T11b-c, T10d-e, T11d-f, T3e MTF, modèle G  
+
+(microstructure : plus rien avant T12e)
+
+### Point mesuré — `observe_lab_context` (sans code)
+
+Benchmark local synthétique (300 barres × 20 symboles × 3 reps, pas de réseau) :
+
+| Path | ms / cycle 20 symboles |
+|---|---|
+| `observe_lab_context` seul | ~238 ms |
+| scan_like (agents + REGISTRY + pipeline) | ~489 ms |
+| scan_like + observe | ~717 ms |
+
+**Overhead observe / scan_like ≈ 49 %** (part du total ≈ 33 %).  
+**> 10 %** → candidat cache (tranche dédiée, pas dans T9g-fix).
+
+### Suite immédiate
+
+1. PR Wyckoff `FeatureStatus.REJECTED` (commit séparé, golden inchangés)  
+2. PR **T9g-fix** — `promote` → `review_candidate` + gates (revue Claude avant merge)
+
+---
+
 ## 2026-09-24 — Chart layer=breaks EN COURS — BOS / CHoCH producer
 
 - Branche : `cursor/breaks-chart-producer-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/67 (**draft**)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/67
 - Base : `main` @ `35e14f3` (#66 microstructure)
-- Statut : **DRAFT** — Cursor solo. Markers ENGINE `layer=breaks` ; **pas** de vote pipeline.
+- Statut : **MERGÉE** squash `23dc4ba` — voir entrée SYNC rév.48 en tête.
 
 ### Livré (prévu)
 
