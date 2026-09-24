@@ -225,12 +225,19 @@ function renderChartObjects(
 
   for (const z of chartObjectZones(objects)) {
     const color = z.side === 'support' ? colors.bull : colors.bear
-    const label = z.label || `${z.side === 'support' ? 'S' : 'R'} ×${z.touch_count}`
+    const alpha = z.faded ? '55' : 'b3'
+    const label =
+      z.label ||
+      (z.touch_count
+        ? `${z.side === 'support' ? 'S' : 'R'} ×${z.touch_count}`
+        : z.side === 'support'
+          ? 'S'
+          : 'R')
     for (const [price, title] of [[z.high, label], [z.low, '']] as const) {
       priceLinesRef.current.push(
         series.candle.createPriceLine({
           price,
-          color: `${color}b3`,
+          color: `${color}${alpha}`,
           lineWidth: 1,
           lineStyle: LineStyle.Dotted,
           axisLabelVisible: title !== '',

@@ -33,6 +33,7 @@ from app.indicators.obv import ObvParams, compute_obv
 from app.indicators.ppo import PpoParams, compute_ppo
 from app.indicators.rsi import RsiParams, compute_rsi
 from app.indicators.rvol import RvolParams, compute_rvol
+from app.indicators.fvg import FvgParams, compute_fvg
 from app.indicators.impulse import ImpulseParams, compute_impulse
 from app.indicators.structure import StructureParams, compute_structure
 from app.indicators.wyckoff import WyckoffParams, compute_wyckoff
@@ -714,6 +715,26 @@ def _build_registry() -> IndicatorRegistry:
             source=INTERNAL,
             family="structure",
             confirmation_lag_bars=_impulse_lag,
+        )
+    )
+    reg.register(
+        IndicatorDefinition(
+            id="fvg",
+            name="Fair Value Gap",
+            category=IndicatorCategory.STRUCTURE,
+            params_cls=FvgParams,
+            compute_fn=compute_fvg,
+            warmup_fn=lambda _p: 3,
+            primary_output="event",
+            visualization=Visualization.NONE,
+            description=(
+                "T9d causal 3-candle ICT imbalance (FVG) with fill/invalidation. "
+                "EXPERIMENTAL — Lab / chart layer=fvg; not a live pipeline vote."
+            ),
+            status=FeatureStatus.EXPERIMENTAL,
+            source=INTERNAL,
+            family="structure",
+            confirmation_lag_bars=0,
         )
     )
     reg.register(

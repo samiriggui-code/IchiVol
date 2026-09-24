@@ -164,23 +164,36 @@ export async function deleteUserChartObject(objectId: string): Promise<void> {
   }
 }
 
-/** Zones usable by PriceChart (visual parity with former StructureOverlay.zones). */
+/** Zones usable by PriceChart (visual parity with former StructureOverlay.zones).
+ * Also includes FVG rectangles (T9d) as dual price-line bands. */
 export function chartObjectZones(objects: ChartObject[]): Array<{
   side: 'support' | 'resistance'
   low: number
   high: number
   touch_count: number
   label: string
+  faded?: boolean
 }> {
   return objects
-    .filter((o) => o.type === 'zone' && o.price_low != null && o.price_high != null)
-    .map((o) => ({
-      side: (o.side === 'resistance' ? 'resistance' : 'support') as 'support' | 'resistance',
-      low: o.price_low as number,
-      high: o.price_high as number,
-      touch_count: Number(o.origin?.touch_count ?? 0),
-      label: o.label ?? '',
-    }))
+    .filter(
+      (o) =>
+        (o.type === 'zone' || o.type === 'rectangle') &&
+        o.price_low != null &&
+        o.price_high != null,
+    )
+    .map((o) => {
+      const status = typeof o.origin?.status === 'string' ? o.origin.status : ''
+      const faded = status === 'filled' || status === 'invalidated' || status === 'partial'
+      const kind = o.origin?.kind === 'fvg' ? 'FVG' : o.side === 'support' ? 'S' : 'R'
+      return {
+        side: (o.side === 'resistance' ? 'resistance' : 'support') as 'support' | 'resistance',
+        low: o.price_low as number,
+        high: o.price_high as number,
+        touch_count: Number(o.origin?.touch_count ?? 0),
+        label: o.label ?? (o.origin?.kind === 'fvg' ? kind : ''),
+        faded,
+      }
+    })
 }
 
 /** Horizontal / entry / stop / target → single price lines. */
