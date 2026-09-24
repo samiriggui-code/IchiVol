@@ -306,7 +306,10 @@ def test_short_close_realized_matches_unrealized_minus_exit_costs(session):
     sim = preview_close_cash_delta(pos, mark_price=mark, profile=p.strategy_profile)
     broker.close_capital_position(session, pos, price=mark, reason="fidelity_short_match")
     session.flush()
-    # realized == price PnL − exit_fee (− financing 0) ; matches preview
+    # realized == price PnL − exit_fee − entry_fee (− financing 0) ; matches preview
     assert float(pos.realized_pnl) == pytest.approx(sim["realized"], abs=1e-4)
-    # Mid-mark unrealized ignores exit friction; gap ≈ exit_fee + friction on fill.
+    # Mid-mark unrealized ignores fees/friction; realized is strictly lower once fees apply.
     assert float(pos.realized_pnl) <= unrealized + 1e-6
+    entry_fee = float(pos.initial_entry_fee or pos.entry_fee or 0.0)
+    if entry_fee > 0:
+        assert float(pos.realized_pnl) <= unrealized - entry_fee + 1e-4
