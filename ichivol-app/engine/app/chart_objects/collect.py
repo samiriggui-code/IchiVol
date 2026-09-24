@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.chart_objects.from_fibonacci import fibonacci_to_chart_objects
 from app.chart_objects.from_fvg import fvg_to_chart_objects
 from app.chart_objects.from_structure import structure_to_chart_objects
 from app.chart_objects.store import list_chart_objects
@@ -66,6 +67,10 @@ def collect_chart_objects(
         )
         objects.extend(
             o.to_dict() for o in fvg_to_chart_objects(window, sym, timeframe)
+        )
+        objects.extend(
+            o.to_dict()
+            for o in fibonacci_to_chart_objects(window, sym, timeframe, key_only=True)
         )
 
     persist_sources = [

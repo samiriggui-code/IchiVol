@@ -89,9 +89,8 @@ export const OBJECT_LAYER_META: {
   {
     key: 'fibonacci',
     label: 'Fibonacci',
-    subtitle: 'Retracements impulsifs (T9)',
+    subtitle: 'Retracements impulsifs (T9e)',
     color: 'var(--tenkan)',
-    emptyUntil: 'T9',
   },
   {
     key: 'fvg',
