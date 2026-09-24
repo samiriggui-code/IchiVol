@@ -73,23 +73,39 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ## 2026-09-24 — T10a EN COURS — registry status + source (PR draft)
 
-- Branche : `cursor/t10a-registry-status-a2fe`
-- Base : `main` @ `10631ef` (#54)
-- Statut : **EN COURS** — Cursor solo jusqu’à revue Claude 12h10+
+- Branche : `cursor/t10a-registry-status-a2fe` @ `e49e602`
+- PR : (draft à ouvrir) — base `main` @ `10631ef` (#54)
+- Statut : **ATTENTE REVUE CLAUDE** (implémentation Cursor solo — Claude revient 12h10)
+- Tests locaux : `test_t10a_registry_status` + `test_registry` + `test_indicators_route` + `test_ppo_best_cloud_lab` **OK**
 
 ### Objectif
 Chaque `IndicatorDefinition` porte `status` / `source` / `confirmation_lag_bars` / `family` / `experiment_refs`. **Aucune sortie de calcul changée.**
 
-### Plan
-1. Enums `FeatureStatus` / `FeatureSource` + champs sur `IndicatorDefinition`
-2. Statuts depuis le code (PRODUCTION = lu pipeline/screener/evidence…)
-3. PPO + BEST Cloud → REJECTED (rév. sim §5) ; BEST Cloud source external Daveatt
-4. Wyckoff → EXPERIMENTAL (README moteur tableau non promu) — Claude peut retrancher
-5. `confirmation_lag_bars` structure = `swing_lookback` + test cohérence
-6. Garde-fou : ids productifs doivent être PRODUCTION
-7. `catalog()` / `describe()` / GET `/indicators` exposent les champs
+### Statuts (justifiés par le code)
 
-**Cursor poursuit l’implémentation.**
+| id | status | Justification |
+| --- | --- | --- |
+| ichimoku | PRODUCTION | `agents/ichimoku_agent.py` → combiner + `evidence/context.py` |
+| rvol | PRODUCTION | `agents/rvol_agent.py` → combiner + pipeline participation |
+| atr | PRODUCTION | `decision/pipeline.py` (AtrState) + `screener/service.py` + `evidence/catalog.py` |
+| adx | PRODUCTION | `decision/pipeline.py` (AdxState) + screener |
+| cvd | PRODUCTION | `decision/pipeline.py` (CvdState) + screener |
+| donchian | PRODUCTION | `decision/pipeline.py` (DonchianState) + screener |
+| structure | PRODUCTION | `decision/pipeline.py` (StructureState) + screener ; lag = `swing_lookback` |
+| location | PRODUCTION | `decision/pipeline.py` (LocationState) + screener |
+| rsi / cmf / obv | CANDIDATE | `api/context.py` seulement (pas chemin décision) |
+| ichimoku_analytics | EXPERIMENTAL | couche Lab |
+| wyckoff | EXPERIMENTAL | README moteur : **non promu** — **Claude tranche** |
+| ppo / best_cloud | REJECTED | `docs/REVUE-SIM-ET-COUTS-…§5` ; Lab toujours calculable |
+| best_cloud source | external | Daveatt « BEST Cloud ALL MA » — TV open-source / House Rules ; URL script ; licence relevée 2026-09-24 |
+
+### Garde-fou
+`tests/indicators/test_t10a_registry_status.py` : ids string/AST dans les modules production → doivent être PRODUCTION ; ban import PPO/BEST Cloud conservé.
+
+### Hors scope
+T10b compteur d’essais ; T10c redondance ; fiches candidats.
+
+**Cursor s’arrête sur T10a (draft).** Prochaine après merge Claude : rebase #53 T9b.
 
 ---
 
