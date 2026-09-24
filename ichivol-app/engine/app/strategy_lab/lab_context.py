@@ -2,10 +2,16 @@
 
 Surfaces CHoCH / FVG / Fib / impulse flags from the last closed bar without
 touching the decision pipeline, combiner confidence, or paper gates.
+
+T11b — short TTL process cache (same last bar + params) to cut the ~49 %
+overhead measured on 20-symbol cycles. Observation only; never imported by
+pipeline/combiner.
 """
 
 from __future__ import annotations
 
+import threading
+import time
 from dataclasses import dataclass
 from typing import Sequence
 
@@ -29,6 +35,13 @@ from app.strategy_lab.features import (
 _DISCLAIMER = (
     "Lab context observation (T9f) — does not alter decision or confidence."
 )
+
+# T11b — bar-stable cache (one observation per last closed bar + params).
+_CACHE_TTL_SEC = 55.0
+_cache: dict[tuple, tuple[float, "LabContextObservation"]] = {}
+_cache_lock = threading.Lock()
+_cache_hits = 0
+_cache_misses = 0
 
 
 @dataclass(frozen=True)
@@ -77,6 +90,37 @@ class LabContextObservation:
         }
 
 
+def clear_lab_context_cache() -> None:
+    """Test / ops helper — drop all cached observations."""
+    global _cache_hits, _cache_misses
+    with _cache_lock:
+        _cache.clear()
+        _cache_hits = 0
+        _cache_misses = 0
+
+
+def lab_context_cache_stats() -> dict[str, int]:
+    with _cache_lock:
+        return {"hits": _cache_hits, "misses": _cache_misses, "size": len(_cache)}
+
+
+def _cache_key(
+    candles: Sequence[Candle],
+    structure_params: StructureParams,
+    impulse_params: ImpulseParams,
+    fvg_params: FvgParams,
+) -> tuple:
+    last = candles[-1]
+    return (
+        int(last.time),
+        len(candles),
+        float(last.close),
+        repr(structure_params),
+        repr(impulse_params),
+        repr(fvg_params),
+    )
+
+
 def observe_lab_context(
     candles: Sequence[Candle],
     *,
@@ -85,8 +129,18 @@ def observe_lab_context(
     fvg_params: FvgParams = FvgParams(),
 ) -> LabContextObservation | None:
     """Last-bar Lab snapshot. Returns None on empty series."""
+    global _cache_hits, _cache_misses
     if not candles:
         return None
+    key = _cache_key(candles, structure_params, impulse_params, fvg_params)
+    now = time.monotonic()
+    with _cache_lock:
+        hit = _cache.get(key)
+        if hit is not None and now - hit[0] < _CACHE_TTL_SEC:
+            _cache_hits += 1
+            return hit[1]
+        _cache_misses += 1
+
     computed = REGISTRY.compute_many(
         ["structure", "impulse", "fvg"],
         candles,
@@ -102,7 +156,7 @@ def observe_lab_context(
     fvg = computed["fvg"][i]
     fib = _fib_kwargs_from_impulse(impulse, candles, i)
     active = fvg.active
-    return LabContextObservation(
+    obs = LabContextObservation(
         choch_bullish=_choch_bullish(structure),
         choch_bearish=_choch_bearish(structure),
         break_quality=_break_quality(structure),
@@ -122,6 +176,9 @@ def observe_lab_context(
         fib_anchor_impulse=bool(fib["fib_anchor_impulse"]),
         fib_nearest_ratio=fib["fib_nearest_ratio"],
     )
+    with _cache_lock:
+        _cache[key] = (time.monotonic(), obs)
+    return obs
 
 
 def lab_context_observation_dict(

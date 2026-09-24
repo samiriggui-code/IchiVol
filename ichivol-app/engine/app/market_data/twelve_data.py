@@ -87,6 +87,28 @@ def _credits_hint(message: str) -> str:
     return message
 
 
+def credits_used_in_window(window_sec: float = 60.0) -> int:
+    """How many Twelve Data credits were reserved in the last ``window_sec``.
+
+    T11b measurement helper — does not change live rate limiting.
+    """
+    with _lock:
+        now = time.monotonic()
+        return sum(1 for t in _credit_times if now - t < window_sec)
+
+
+def clear_ohlcv_cache() -> None:
+    """Drop in-process OHLCV cache (measurement / tests)."""
+    with _lock:
+        _cache.clear()
+
+
+def reset_credit_window() -> None:
+    """Clear credit timestamps (tests only)."""
+    with _lock:
+        _credit_times.clear()
+
+
 def _try_acquire_credit_slot() -> bool:
     """Non-blocking credit take. True if a credit was reserved; False if budget full."""
     with _lock:
