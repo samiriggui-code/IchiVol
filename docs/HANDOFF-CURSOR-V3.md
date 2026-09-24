@@ -7,24 +7,41 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — Chart layer=breaks EN COURS — BOS / CHoCH producer
+
+- Branche : `cursor/breaks-chart-producer-a2fe`
+- PR : *(draft à ouvrir)*
+- Base : `main` @ `35e14f3` (#66 microstructure)
+- Statut : **EN COURS** — Cursor solo. Markers ENGINE `layer=breaks` ; **pas** de vote pipeline.
+
+### Livré (prévu)
+
+1. `chart_objects/from_breaks.py` — StructureEvent BOS/CHoCH via REGISTRY + breakouts
+2. `collect.py` merge ; breakouts retirés de `from_structure` (layer structure = zones/TL)
+3. Front : retire `emptyUntil: T9` sur couche Cassures
+4. Tests `test_from_breaks.py`
+
+### Hors scope
+Trade VP · order book · décision / paper / broker.
+
+---
+
+## 2026-09-24 — Binance microstructure Lab MERGÉE (#66) — squash `35e14f3`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/66 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `35e14f3`
+- Cursor solo ; CI verte. Lab-only trade CVD compare.
+
+**Suite solo** : chart `layer=breaks` producer → trade VP Lab → doc sync.
+
+---
+
 ## 2026-09-24 — Binance microstructure Lab EN COURS — trade CVD compare
 
 - Branche : `cursor/binance-microstructure-lab-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/66 (**draft**)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/66
 - Base : `main` @ `8c6af5e` (#65 ProviderCapabilities)
-- Statut : **DRAFT** — Cursor solo (**pas d’attente validation**). Lab-only ; **pas** de REGISTRY / pipeline / FeatureStatus.
-
-### Livré
-
-1. `microstructure/trade_cvd.py` — bucket aggTrades → bar deltas + compare vs kline CVD
-2. `microstructure/binance_trades.py` — fetch aggTrades paginé (aggressor side)
-3. `GET /strategy-lab/microstructure/cvd-compare` + agent `compare_trade_cvd`
-4. Tests unit + routes research ; OpenAPI / route_order goldens (ajouts)
-
-### Hors scope
-Volume profile trade · order book depth · live CVD swap · auto FeatureStatus · paper/fills.
-
-**Suite solo** : CI → merge → P1 leftovers (trade VP, breaks producer, doc sync).
+- Statut : **MERGÉE** via entrée ci-dessus.
 
 ---
 

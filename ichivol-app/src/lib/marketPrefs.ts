@@ -82,9 +82,8 @@ export const OBJECT_LAYER_META: {
   {
     key: 'breaks',
     label: 'Cassures',
-    subtitle: 'BOS / breakouts (T9)',
+    subtitle: 'BOS / CHoCH / breakouts (T9b)',
     color: 'var(--neutral)',
-    emptyUntil: 'T9',
   },
   {
     key: 'fibonacci',

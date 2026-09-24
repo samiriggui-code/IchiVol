@@ -141,37 +141,6 @@ def structure_to_chart_objects(
                 )
             )
 
-    # --- breakout candidates → MARKER at last candle ---
-    last = candles[-1]
-    for b in snapshot.breakout_candidates:
-        score = float(getattr(b.zone, "score", 0.0) or 0.0)
-        out.append(
-            ChartObject(
-                type=ChartObjectType.MARKER,
-                source=ChartObjectSource.ENGINE,
-                layer=ChartObjectLayer.STRUCTURE,
-                symbol=sym,
-                timeframe=timeframe,
-                points=(ChartPoint(time=as_of, price=float(b.close)),),
-                as_of=as_of,
-                side=b.side.value,
-                label="BO" if b.confirmed else "BO?",
-                confidence=_normalize_confidence(score, max(score, 1.0)),
-                origin={
-                    "kind": "breakout_candidate",
-                    "detector": "consensus",
-                    "confirmed": b.confirmed,
-                    "reason": b.reason,
-                    "distance_atr": b.distance_atr,
-                    "body_ratio": b.body_ratio,
-                    "rvol": b.rvol,
-                    "score": score,
-                    "last_open": last.open,
-                },
-                subtype="breakout",
-            )
-        )
-
     return out
 
 
