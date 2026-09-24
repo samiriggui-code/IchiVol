@@ -5654,6 +5654,91 @@
         ]
       }
     },
+    "/api/engine/strategy-lab/microstructure/vp-compare": {
+      "get": {
+        "description": "Binance trade-tape VP vs kline OHLCV VP \u2014 Lab research only.\n\nBounded window. Does **not** alter location indicator, decision, or REGISTRY.",
+        "operationId": "get_microstructure_vp_compare_api_engine_strategy_lab_microstructure_vp_compare_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_trade_pages",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "title": "Max Trade Pages",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "num_bins",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "title": "Num Bins",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Microstructure Vp Compare Api Engine Strategy Lab Microstructure Vp Compare Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Microstructure Vp Compare",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
     "/api/engine/strategy-lab/monte-carlo": {
       "post": {
         "description": "T7 \u2014 bootstrap Monte Carlo / risk-of-ruin (research only).",

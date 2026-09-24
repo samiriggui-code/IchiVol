@@ -39,6 +39,7 @@ from app.agent_channel.commands import (
     cmd_run_feature_redundancy_study,
     cmd_run_ablation_oos_study,
     cmd_compare_trade_cvd,
+    cmd_compare_trade_vp,
     cmd_build_audit_report,
     cmd_run_monte_carlo,
     cmd_list_condition_catalog,
@@ -423,6 +424,19 @@ TOOLS: dict[str, ToolSpec] = {
                 "sample_limit": "int, défaut 20",
             },
             cmd_compare_trade_cvd,
+        ),
+        ToolSpec(
+            "compare_trade_vp",
+            "Binance trade-tape Volume Profile vs kline OHLCV VP (Lab research). POC/VAH/VAL; no location/pipeline vote.",
+            True,
+            {
+                "symbol": "str, requis (binance)",
+                "timeframe": "str, défaut '1h'",
+                "limit": "int, défaut 24 (max 48)",
+                "max_trade_pages": "int, défaut 10",
+                "num_bins": "int, défaut 24",
+            },
+            cmd_compare_trade_vp,
         ),
         ToolSpec(
             "build_audit_report",

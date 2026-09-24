@@ -345,3 +345,77 @@ def test_microstructure_cvd_compare_rejects_non_binance(monkeypatch):
 def test_microstructure_cvd_compare_rejects_missing_symbol():
     res = client.get("/api/engine/strategy-lab/microstructure/cvd-compare")
     assert res.status_code == 422
+
+
+def test_microstructure_vp_compare_monkeypatched(monkeypatch):
+    from app.api import strategy_lab_research as mod
+    from app.indicators.ichimoku import Candle
+    from app.microstructure.trade_vp import TradeVpParams, VolumeProfileLevels, VpCompareReport
+    from app.universe.types import AssetClass, Instrument
+
+    candles = [
+        Candle(
+            time=1_700_000_000,
+            open=1,
+            high=2,
+            low=0.5,
+            close=1.5,
+            volume=100.0,
+        ),
+        Candle(
+            time=1_700_003_600,
+            open=1.5,
+            high=2.5,
+            low=1.0,
+            close=2.0,
+            volume=100.0,
+        ),
+    ]
+    levels = VolumeProfileLevels(
+        poc=1.5, vah=2.0, val=1.0, total_volume=100.0, n_samples=2
+    )
+    fake = VpCompareReport(
+        symbol="BTCUSDT",
+        timeframe="1h",
+        n_bars=2,
+        n_trades=4,
+        kline=levels,
+        trade=levels,
+        poc_abs_diff=0.0,
+        vah_abs_diff=0.0,
+        val_abs_diff=0.0,
+    )
+    monkeypatch.setattr(
+        mod,
+        "get_instrument",
+        lambda _s: Instrument(
+            id="BTCUSDT",
+            asset_class=AssetClass.CRYPTO,
+            label="BTC",
+            provider="binance",
+            provider_symbol="BTCUSDT",
+            quote="USDT",
+        ),
+    )
+    monkeypatch.setattr(
+        mod,
+        "resolve_and_fetch",
+        lambda *a, **k: ("binance", "BTCUSDT", candles),
+    )
+    monkeypatch.setattr(mod, "fetch_binance_agg_trades", lambda *a, **k: [])
+    monkeypatch.setattr(mod, "compare_kline_vs_trade_vp", lambda *a, **k: fake)
+
+    res = client.get(
+        "/api/engine/strategy-lab/microstructure/vp-compare",
+        params={"symbol": "BTCUSDT", "timeframe": "1h", "limit": 2},
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["symbol"] == "BTCUSDT"
+    assert body["trade"]["poc"] == 1.5
+    assert "research only" in body["disclaimer"].lower()
+
+
+def test_microstructure_vp_compare_rejects_missing_symbol():
+    res = client.get("/api/engine/strategy-lab/microstructure/vp-compare")
+    assert res.status_code == 422
