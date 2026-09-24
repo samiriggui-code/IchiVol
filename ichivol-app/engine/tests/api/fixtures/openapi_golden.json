@@ -76,6 +76,17 @@
             "title": "Direction",
             "type": "string"
           },
+          "hypothesis_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hypothesis Id"
+          },
           "ladder": {
             "default": "default",
             "title": "Ladder",
@@ -87,7 +98,7 @@
             "type": "integer"
           },
           "min_oos_trades": {
-            "default": 5,
+            "default": 30,
             "title": "Min Oos Trades",
             "type": "integer"
           },

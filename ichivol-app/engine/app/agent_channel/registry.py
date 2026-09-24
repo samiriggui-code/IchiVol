@@ -395,7 +395,7 @@ TOOLS: dict[str, ToolSpec] = {
         ),
         ToolSpec(
             "run_ablation_oos_study",
-            "T9g — ablation × walk-forward OOS (promote/reject/inconclusive display-only). No FeatureStatus mutation; no pipeline vote.",
+            "T9g-fix — ablation × WF OOS (review_candidate|reject|inconclusive). Never promotes; no FeatureStatus mutation; no pipeline vote.",
             True,
             {
                 "symbol": "str, requis",
@@ -406,7 +406,8 @@ TOOLS: dict[str, ToolSpec] = {
                 "direction": "str, défaut 'LONG'",
                 "train_bars": "int, défaut 100",
                 "test_bars": "int, défaut 40",
-                "min_oos_trades": "int, défaut 5",
+                "min_oos_trades": "int, défaut 30",
+                "hypothesis_id": "str, optionnel — lignée T10b (compteur affiché)",
             },
             cmd_run_ablation_oos_study,
         ),

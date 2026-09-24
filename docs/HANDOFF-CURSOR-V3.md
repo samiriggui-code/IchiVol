@@ -7,6 +7,29 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — T9g-fix EN COURS — review_candidate + gates
+
+- Branche : `cursor/t9g-fix-gate-a2fe`
+- PR : *(draft à ouvrir)*
+- Base : `main` @ `23dc4ba`
+- Statut : **EN COURS** — Cursor. **Pas de merge** avant revue Claude.
+
+### Livré
+
+1. `promote` → **`review_candidate`** (Lab ne promeut jamais)
+2. Gates : min_oos_trades défaut **30** ; majorité stricte de plis ; coûts défavorables (10/8 bps) ; PF OOS non dégradé
+3. Affichage : `hypothesis_id` / `lineage_trial_count` (T10b), `n_bars`, `history_warning` si < 1 an
+4. Tests limite par règle ; OpenAPI golden (défaut min_oos_trades)
+
+### Changement non additif (seul autorisé)
+
+Enum recommandation : `promote` → `review_candidate` — justifié dans la PR.
+
+### Hors scope
+T12 · FeatureStatus mutation · pipeline · microstructure
+
+---
+
 ## 2026-09-24 — Chart layer=breaks EN COURS — BOS / CHoCH producer
 
 - Branche : `cursor/breaks-chart-producer-a2fe`

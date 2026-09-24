@@ -793,9 +793,14 @@ def cmd_run_ablation_oos_study(args: dict) -> dict:
             test_bars=int(args.get("test_bars", 40)),
             step_bars=(int(args["step_bars"]) if args.get("step_bars") is not None else None),
             warmup_bars=int(args.get("warmup_bars", 52)),
-            min_oos_trades=int(args.get("min_oos_trades", 5)),
+            min_oos_trades=int(args.get("min_oos_trades", 30)),
             stop_atr=float(args.get("stop_atr", 1.0)),
             target_atr=float(args.get("target_atr", 2.0)),
+            hypothesis_id=(
+                str(args["hypothesis_id"]).strip()
+                if args.get("hypothesis_id") is not None
+                else None
+            ),
         )
     except ValueError as exc:
         raise CommandError(str(exc)) from exc
