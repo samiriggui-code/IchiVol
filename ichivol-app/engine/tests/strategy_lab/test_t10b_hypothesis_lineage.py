@@ -144,10 +144,11 @@ def test_hypothesis_lineage_count_and_complexity_payload():
         assert payload["complexity"]["score"] >= 1
         assert "no auto-reject" in payload["complexity"]["note"]
 
-        # Untagged row: lineage falls back to ruleset_id+symbol+tf among NULL hyp rows.
+        # Untagged row: fallback counts all trials for ruleset+symbol+tf
+        # (tagged + untagged) — total essais on that ruleset window.
         row3 = save_experiment(session, study, parameters={"source": "t10b-null"})
         assert row3.hypothesis_id is None
-        assert lineage_count_for(session, row3) == 1
+        assert lineage_count_for(session, row3) == 3
 
         listed = list_experiments(session, symbol=symbol, hypothesis_id="h_t10b_demo")
         assert len(listed) == 2
