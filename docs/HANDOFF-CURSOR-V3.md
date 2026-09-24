@@ -12,13 +12,14 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - Branche : `cursor/trade-volume-profile-lab-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/68 (**draft**)
 - Base : `main` @ `9c0c0cc` (rebase)
-- Statut : **DRAFT** — Cursor solo. Lab-only ; **pas** de mutation `location` / pipeline.
+- Statut : **DRAFT** — Cursor solo. Lab-only ; **pas** de mutation sémantique `location` / pipeline.
 
 ### Livré
 
 1. `microstructure/trade_vp.py` — POC/VAH/VAL trade-tape + compare kline
 2. `GET /strategy-lab/microstructure/vp-compare` + agent `compare_trade_vp`
 3. Tests + OpenAPI / route_order goldens (ajouts)
+4. **Revue Claude** : rebase sur `main` ; primitive partagée `volume_profile_core` (location + Lab) ; grille commune high/low bougies pour le compare ; golden location verrouillé ; test écart nul si mêmes samples
 
 ### Hors scope
 Remplacer location VP · order book · FeatureStatus · paper.

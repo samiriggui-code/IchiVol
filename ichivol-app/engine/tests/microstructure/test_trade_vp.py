@@ -59,4 +59,37 @@ def test_compare_report():
     assert d["symbol"] == "BTCUSDT"
     assert d["n_trades"] == 4
     assert d["trade"]["poc"] is not None
+    assert d["price_lo"] == 99.0
+    assert d["price_hi"] == 102.0
     assert "research only" in d["disclaimer"].lower()
+
+
+def test_identical_samples_on_shared_grid_yield_exact_zero_diff():
+    """Lock: same (price, volume) both sides + common candle grid → zero diffs.
+
+    Without a shared grid this would be non-zero (typical-price span ≠ high/low).
+    """
+    candles = [
+        Candle(time=0, open=100, high=105, low=95, close=100, volume=40.0),
+        Candle(time=60, open=100, high=110, low=90, close=102, volume=10.0),
+        Candle(time=120, open=102, high=108, low=98, close=104, volume=50.0),
+        Candle(time=180, open=104, high=112, low=100, close=106, volume=20.0),
+    ]
+    trades = [
+        AggressorTrade(
+            i * 1000,
+            (c.high + c.low + c.close) / 3.0,
+            float(c.volume),
+            True,
+        )
+        for i, c in enumerate(candles)
+    ]
+    report = compare_kline_vs_trade_vp(
+        candles, trades, symbol="BTCUSDT", timeframe="1h", params=TradeVpParams(num_bins=24)
+    )
+    assert report.kline.poc == report.trade.poc
+    assert report.kline.vah == report.trade.vah
+    assert report.kline.val == report.trade.val
+    assert report.poc_abs_diff == 0.0
+    assert report.vah_abs_diff == 0.0
+    assert report.val_abs_diff == 0.0

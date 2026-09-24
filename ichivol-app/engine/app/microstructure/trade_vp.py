@@ -1,8 +1,8 @@
 """Trade-tape Volume Profile — research candidate (Binance micro).
 
 POC / VAH / VAL from aggressor trades vs OHLCV typical-price approx.
-Does **not** replace ``indicators.location`` VP and never votes in the
-live pipeline.
+Uses the same binning primitive as ``indicators.location`` (T1 single path).
+Does **not** replace location VP and never votes in the live pipeline.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Sequence
 
 from app.indicators.ichimoku import Candle
+from app.indicators.volume_profile_core import compute_volume_profile_bins
 from app.microstructure.trade_cvd import AggressorTrade
 
 
@@ -38,77 +39,81 @@ class VolumeProfileLevels:
         }
 
 
-def _profile_from_pairs(
+def _levels_from_pairs(
     pairs: Sequence[tuple[float, float]],
+    *,
+    lo: float,
+    hi: float,
     params: TradeVpParams,
 ) -> VolumeProfileLevels:
-    """``pairs`` = (price, volume) samples."""
-    if len(pairs) < 2:
-        return VolumeProfileLevels(None, None, None, 0.0, len(pairs))
-    prices = [p for p, v in pairs if v > 0]
-    if len(prices) < 2:
-        return VolumeProfileLevels(None, None, None, 0.0, len(pairs))
-    lo = min(prices)
-    hi = max(prices)
-    if hi <= lo:
-        return VolumeProfileLevels(None, None, None, 0.0, len(pairs))
-    num_bins = max(1, params.num_bins)
-    bin_width = (hi - lo) / num_bins
-    volumes = [0.0] * num_bins
-
-    def bin_index(price: float) -> int:
-        idx = int((price - lo) / bin_width)
-        return min(max(idx, 0), num_bins - 1)
-
-    for price, vol in pairs:
-        if vol <= 0:
-            continue
-        volumes[bin_index(price)] += vol
-
-    total = sum(volumes)
-    if total <= 0:
-        return VolumeProfileLevels(None, None, None, 0.0, len(pairs))
-
-    poc_idx = max(range(num_bins), key=lambda b: volumes[b])
-    poc = lo + (poc_idx + 0.5) * bin_width
-    lo_idx, hi_idx = poc_idx, poc_idx
-    covered = volumes[poc_idx]
-    target = params.value_area_pct * total
-    while covered < target and (lo_idx > 0 or hi_idx < num_bins - 1):
-        left = volumes[lo_idx - 1] if lo_idx > 0 else -1.0
-        right = volumes[hi_idx + 1] if hi_idx < num_bins - 1 else -1.0
-        if right >= left:
-            hi_idx += 1
-            covered += volumes[hi_idx]
-        else:
-            lo_idx -= 1
-            covered += volumes[lo_idx]
-    return VolumeProfileLevels(
-        poc=poc,
-        vah=lo + (hi_idx + 1) * bin_width,
-        val=lo + lo_idx * bin_width,
-        total_volume=total,
-        n_samples=len(pairs),
+    """``pairs`` = (price, volume) on a caller-fixed ``[lo, hi]`` grid."""
+    n = len(pairs)
+    if n < 2 or hi <= lo:
+        return VolumeProfileLevels(None, None, None, 0.0, n)
+    bins = compute_volume_profile_bins(
+        pairs,
+        lo=lo,
+        hi=hi,
+        num_bins=params.num_bins,
+        value_area_pct=params.value_area_pct,
     )
+    return VolumeProfileLevels(
+        poc=bins.poc,
+        vah=bins.vah,
+        val=bins.val,
+        total_volume=bins.total_volume,
+        n_samples=n,
+    )
+
+
+def candle_price_range(candles: Sequence[Candle]) -> tuple[float, float] | None:
+    """High/low extent of the candle window — natural common grid for compares."""
+    if not candles:
+        return None
+    lo = min(c.low for c in candles)
+    hi = max(c.high for c in candles)
+    if hi <= lo:
+        return None
+    return lo, hi
 
 
 def compute_trade_volume_profile(
     trades: Sequence[AggressorTrade],
     params: TradeVpParams = TradeVpParams(),
+    *,
+    price_lo: float | None = None,
+    price_hi: float | None = None,
 ) -> VolumeProfileLevels:
-    pairs = [(t.price, float(t.size)) for t in trades]
-    return _profile_from_pairs(pairs, params)
+    pairs = [(float(t.price), float(t.size)) for t in trades]
+    if price_lo is None or price_hi is None:
+        priced = [p for p, v in pairs if v > 0]
+        if len(priced) < 2:
+            return VolumeProfileLevels(None, None, None, 0.0, len(pairs))
+        price_lo = min(priced)
+        price_hi = max(priced)
+    return _levels_from_pairs(pairs, lo=float(price_lo), hi=float(price_hi), params=params)
 
 
 def compute_kline_volume_profile(
     candles: Sequence[Candle],
     params: TradeVpParams = TradeVpParams(),
+    *,
+    price_lo: float | None = None,
+    price_hi: float | None = None,
 ) -> VolumeProfileLevels:
-    """OHLCV approx — typical price × bar volume (same idea as location VP)."""
+    """OHLCV approx — typical price × bar volume on the candle high/low grid.
+
+    Same sample rule and grid convention as ``location._volume_profile``.
+    """
     pairs = [
         ((c.high + c.low + c.close) / 3.0, float(c.volume)) for c in candles
     ]
-    return _profile_from_pairs(pairs, params)
+    if price_lo is None or price_hi is None:
+        span = candle_price_range(candles)
+        if span is None:
+            return VolumeProfileLevels(None, None, None, 0.0, len(pairs))
+        price_lo, price_hi = span
+    return _levels_from_pairs(pairs, lo=float(price_lo), hi=float(price_hi), params=params)
 
 
 @dataclass(frozen=True)
@@ -122,6 +127,8 @@ class VpCompareReport:
     poc_abs_diff: float | None
     vah_abs_diff: float | None
     val_abs_diff: float | None
+    price_lo: float | None = None
+    price_hi: float | None = None
     disclaimer: str = (
         "Trade VP vs kline VP compare — research only; does not alter "
         "decision, confidence, fills, or gates."
@@ -138,6 +145,8 @@ class VpCompareReport:
             "poc_abs_diff": self.poc_abs_diff,
             "vah_abs_diff": self.vah_abs_diff,
             "val_abs_diff": self.val_abs_diff,
+            "price_lo": self.price_lo,
+            "price_hi": self.price_hi,
             "disclaimer": self.disclaimer,
         }
 
@@ -156,8 +165,26 @@ def compare_kline_vs_trade_vp(
     timeframe: str,
     params: TradeVpParams = TradeVpParams(),
 ) -> VpCompareReport:
-    kline = compute_kline_volume_profile(candles, params)
-    trade = compute_trade_volume_profile(trades, params)
+    """Compare trade-tape VP to kline VP on one shared candle high/low grid."""
+    span = candle_price_range(candles)
+    if span is None:
+        empty = VolumeProfileLevels(None, None, None, 0.0, 0)
+        return VpCompareReport(
+            symbol=symbol,
+            timeframe=timeframe,
+            n_bars=len(candles),
+            n_trades=len(trades),
+            kline=empty,
+            trade=empty,
+            poc_abs_diff=None,
+            vah_abs_diff=None,
+            val_abs_diff=None,
+            price_lo=None,
+            price_hi=None,
+        )
+    lo, hi = span
+    kline = compute_kline_volume_profile(candles, params, price_lo=lo, price_hi=hi)
+    trade = compute_trade_volume_profile(trades, params, price_lo=lo, price_hi=hi)
     return VpCompareReport(
         symbol=symbol,
         timeframe=timeframe,
@@ -168,4 +195,6 @@ def compare_kline_vs_trade_vp(
         poc_abs_diff=_abs_diff(kline.poc, trade.poc),
         vah_abs_diff=_abs_diff(kline.vah, trade.vah),
         val_abs_diff=_abs_diff(kline.val, trade.val),
+        price_lo=lo,
+        price_hi=hi,
     )
