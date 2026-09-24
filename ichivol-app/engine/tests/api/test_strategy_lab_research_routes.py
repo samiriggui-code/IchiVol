@@ -350,7 +350,7 @@ def test_microstructure_cvd_compare_rejects_missing_symbol():
 def test_microstructure_vp_compare_monkeypatched(monkeypatch):
     from app.api import strategy_lab_research as mod
     from app.indicators.ichimoku import Candle
-    from app.microstructure.trade_vp import TradeVpParams, VolumeProfileLevels, VpCompareReport
+    from app.microstructure.trade_vp import VolumeProfileLevels, VpCompareReport
     from app.universe.types import AssetClass, Instrument
 
     candles = [

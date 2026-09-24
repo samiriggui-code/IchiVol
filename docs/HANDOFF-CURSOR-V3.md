@@ -9,14 +9,16 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ## 2026-09-24 — Trade VP Lab EN COURS — compare vs kline OHLCV VP
 
-- Branche : \cursor/trade-volume-profile-lab-a2fe- PR : https://github.com/samiriggui-code/IchiVol/pull/68
-- Base : \main\ @ \9c0c0cc\ (rebase)
-- Statut : **EN COURS** — Cursor solo. Lab-only ; **pas** de mutation \location\ / pipeline.
+- Branche : `cursor/trade-volume-profile-lab-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/68 (**draft**)
+- Base : `main` @ `9c0c0cc` (rebase)
+- Statut : **DRAFT** — Cursor solo. Lab-only ; **pas** de mutation `location` / pipeline.
 
 ### Livré
 
-1. \microstructure/trade_vp.py\ — POC/VAH/VAL trade-tape + compare kline
-2. \GET /strategy-lab/microstructure/vp-compare\ + agent \compare_trade_vp3. Tests + OpenAPI / route_order goldens (ajouts)
+1. `microstructure/trade_vp.py` — POC/VAH/VAL trade-tape + compare kline
+2. `GET /strategy-lab/microstructure/vp-compare` + agent `compare_trade_vp`
+3. Tests + OpenAPI / route_order goldens (ajouts)
 
 ### Hors scope
 Remplacer location VP · order book · FeatureStatus · paper.
