@@ -451,8 +451,11 @@ def close_capital_position(
             portfolio.cash += proceeds - exit_fee
         else:
             # Correct SHORT return (entry − exit) / entry — NOT entry/exit − 1.
+            # Entry fees (open + renforts) must leave realized like LONG.
             pnl_currency = short_realized_currency(position.qty, position.entry_price, exit_fill)
-            slice_realized = pnl_currency - exit_fee - financing_paid
+            slice_realized = (
+                pnl_currency - exit_fee - (position.entry_fee or 0.0) - financing_paid
+            )
             # Return reserved short margin + PnL (financing already left cash day by day)
             portfolio.cash += entry_notional + pnl_currency - exit_fee
         realized = prior_realized + slice_realized
@@ -682,7 +685,7 @@ def partial_close_capital_position(
         portfolio.cash += proceeds - exit_fee
     else:
         pnl_currency = short_realized_currency(qty, position.entry_price, exit_fill)
-        slice_realized = pnl_currency - exit_fee
+        slice_realized = pnl_currency - exit_fee - entry_fee_share
         portfolio.cash += entry_notional_share + pnl_currency - exit_fee
 
     portfolio.realized_pnl += slice_realized

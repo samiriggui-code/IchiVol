@@ -43,13 +43,46 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-MANAGE-c** #47 — **MERGÉE** (validé par Claude — invariant 1e-9 revérifié indépendamment ; **résidu de Jensen mesuré et non borné, voir entrée dédiée**).
 - **T0-MANAGE-d** #48 — **MERGÉE** squash `a941539` (validé Claude ; suite PG 918→928 ok / 1 skip). **Incident process** : handoff avait annoncé MERGÉE avant que `main` ne contienne le squash — corrigé.
 - **T0-MANAGE-e** #49 — **MERGÉE** squash `389fc40` (validé Claude adff686 ; suite PG **935 ok / 1 skip**, 0 régression). Sondes : `tighten_stop` en profit → risque = R0 (LONG/SHORT) ; risque signé OK ; combo `partial_tp`+`reinforce` rejeté ; fuzz 300 seeds → 135 adds, jamais > R0, invariant Σnet=Σbars 3,5e-16. **Vérifié** `git log origin/main` contient `389fc40`.
-- **Job en cours** : **T0-MANAGE-f** — renforcement paper — PR draft [#50](https://github.com/samiriggui-code/IchiVol/pull/50) (**CHANGES REQUESTED** → corrections poussées ; **re-revue**). **Pas de merge** avant ok Claude.
-- **T9** (structure / FVG / Fib) — **ajoutée à la feuille de route** ; **ne pas démarrer avant la fin de T0-MANAGE**.
+- **T0-MANAGE-f** #50 — **MERGÉE** squash `7a77424` (validé Claude 102caee ; suite PG **944 ok / 1 skip**, 0 régression). **T0-MANAGE a→f terminé.**
+- **Job en cours** : **T0-FIX-SHORT-FEE** — PR draft [#51](https://github.com/samiriggui-code/IchiVol/pull/51). **Pas de merge** avant revue Claude. **Pas de T9** avant clôture de cette fix.
+- **T9** (structure / FVG / Fib) — feuille de route ; **seulement après T0-FIX-SHORT-FEE**.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol². **Ne pas comparer** partiels vs non-partiels sur le DD avant correction.
-- ⚠️ **Dette ouverte (préexistante)** : SHORT `realized` n'inclut pas `entry_fee`.
+- ⚠️ **Dette SHORT entry_fee** : en cours de correction (T0-FIX-SHORT-FEE) — `realized` SHORT doit déduire frais d'entrée (open + renforts).
 - ⚠️ **Caveat migration #48** : backfill `initial_entry_fee = entry_fee` courant — **faux pour lots déjà partialisés avant migration**.
 - ⚠️ **Dette max_exposure** : sémantiques **divergentes** Lab vs paper — Lab = `qty/initial_qty` (1 unité = 100 % capital ; `levier: true` si > 1) ; paper = `notional ≤ max_exposure × equity`. **Ne pas comparer** rulesets Lab `max_exposure>1` aux paper sans le flag `levier`.
 
+
+---
+
+## 2026-09-24 — T0-FIX-SHORT-FEE EN COURS — SHORT realized − entry fees (PR draft)
+
+- Branche : `cursor/t0-fix-short-fee-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/51 (**draft**)
+- Base : `main` @ `7a77424` (#50 squash)
+- Statut : **ATTENTE REVUE CLAUDE** — **ne pas merger** ; **pas de T9**.
+
+### Problème
+
+SHORT `realized` omettait `entry_fee` (open + renforts) sur close / partiel / épuisement → écart cash vs réalisé (~1,24 sur sonde Claude). LONG déjà correct.
+
+### Livré
+
+1. `close_capital_position` SHORT : `slice_realized = pnl − exit_fee − entry_fee − financing`
+2. `partial_close_capital_position` SHORT : déduit `entry_fee_share` (épuisement via close → hérite du fix)
+3. `liquidation.preview_close_cash_delta` SHORT : aligné
+4. Tests : conservation `cash − cash0 == realized` plain / partiel+close / reinforce+close / épuisement
+
+**Cursor s’arrête ici.**
+
+---
+
+## 2026-09-24 — T0-MANAGE-f MERGÉ (#50) — squash `7a77424` — T0-MANAGE terminé
+
+- Branche : `cursor/t0-manage-f-reinforce-paper-a2fe` — PR #50 — **MERGÉE** `7a77424`
+- Suite PG Claude (re-revue) : **944 ok / 1 skip**, 0 régression
+- Sondes LONG+SHORT : défaut sans max_exposure → 2 renforts ; niveau 1R figé (friction) ; risque après add = R0 ; ligne fermée = Σ fills ; LONG cash = réalisé
+- **Vérifié post-merge** : `origin/main` tip = `7a77424`
+- **T0-MANAGE a→f = terminé**
 
 ---
 
@@ -57,7 +90,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche : `cursor/t0-manage-f-reinforce-paper-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/50 (**draft**)
-- Statut : **ATTENTE RE-REVUE CLAUDE** — **ne pas merger** ; **pas de T9**.
+- Statut : **SUPERSEDÉ** — corrigé puis **MERGÉ** `7a77424` (voir entrée ci-dessus).
 - Suite PG Claude (passe 1) : **941 ok / 1 skip**, 0 régression ; conservation cash = réalisé OK.
 
 ### Corrections demandées (fait)
@@ -75,8 +108,6 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - SHORT tighten + CLOSED totals
 - Lab `is_leverage_exposure` / flag `levier`
 
-**Cursor s’arrête ici** — pas de merge #50, pas de T9.
-
 ---
 
 ## 2026-09-24 — T0-MANAGE-f EN COURS — renforcement paper (PR draft)
@@ -84,7 +115,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - Branche : `cursor/t0-manage-f-reinforce-paper-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/50 (**draft**)
 - Base : `main` @ `389fc40` (#49 squash)
-- Statut : **SUPERSEDÉ** par corrections ci-dessus — re-revue en cours.
+- Statut : **SUPERSEDÉ** — voir MERGÉ ci-dessus.
 
 ### Prérequis tranche (livrés)
 
