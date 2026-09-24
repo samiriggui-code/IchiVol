@@ -36,6 +36,45 @@ class ChartObjectSource(str, Enum):
     BACKTEST = "backtest"
 
 
+class ChartObjectLayer(str, Enum):
+    """Visual layer for chart overlays (UI-MARKET / T9 prep).
+
+    Not part of the deterministic id fingerprint — additive and
+    retrocompatible. When omitted on load, deduced from ``source``.
+    """
+
+    STRUCTURE = "structure"
+    FIBONACCI = "fibonacci"
+    FVG = "fvg"
+    BREAKS = "breaks"
+    CLAUDE = "claude"
+    USER_TRADES = "user_trades"
+    BACKTEST = "backtest"
+
+
+def layer_from_source(source: ChartObjectSource) -> ChartObjectLayer:
+    """Default layer when producers omit ``layer`` (retrocompat)."""
+    if source == ChartObjectSource.USER:
+        return ChartObjectLayer.USER_TRADES
+    if source == ChartObjectSource.CLAUDE:
+        return ChartObjectLayer.CLAUDE
+    if source == ChartObjectSource.BACKTEST:
+        return ChartObjectLayer.BACKTEST
+    # ENGINE + STRATEGY → structure (structure producer is the live ENGINE path)
+    return ChartObjectLayer.STRUCTURE
+
+
+def resolve_layer(
+    layer: ChartObjectLayer | str | None,
+    source: ChartObjectSource,
+) -> ChartObjectLayer:
+    if layer is None or layer == "":
+        return layer_from_source(source)
+    if isinstance(layer, ChartObjectLayer):
+        return layer
+    return ChartObjectLayer(str(layer).strip().lower())
+
+
 @dataclass(frozen=True)
 class ChartPoint:
     time: int
@@ -174,6 +213,10 @@ class ChartObject:
     ``id`` is a hash of (type, source, symbol, timeframe, rounded coordinates,
     subtype). Callers may pass ``id=None`` to compute it; an explicit id that
     disagrees with the fingerprint raises ``ValueError``.
+
+    ``layer`` is UI grouping (structure / fibonacci / …). It is **not** part of
+    the id fingerprint. Omitted → deduced from ``source`` via
+    ``layer_from_source``.
     """
 
     type: ChartObjectType
@@ -190,6 +233,7 @@ class ChartObject:
     confidence: float = 0.0
     origin: dict[str, Any] = field(default_factory=dict)
     subtype: str | None = None
+    layer: ChartObjectLayer | None = None
 
     def __post_init__(self) -> None:
         expected = deterministic_chart_object_id(
@@ -211,13 +255,16 @@ class ChartObject:
             )
         # Normalize symbol casing for stable serialization.
         object.__setattr__(self, "symbol", self.symbol.upper())
+        object.__setattr__(self, "layer", resolve_layer(self.layer, self.source))
         _validate(self)
 
     def to_dict(self) -> dict[str, Any]:
+        layer = self.layer if self.layer is not None else layer_from_source(self.source)
         return {
             "id": self.id,
             "type": self.type.value,
             "source": self.source.value,
+            "layer": layer.value,
             "symbol": self.symbol,
             "timeframe": self.timeframe,
             "points": [{"time": p.time, "price": p.price} for p in self.points],
@@ -237,6 +284,7 @@ class ChartObject:
         points = tuple(
             ChartPoint(time=int(p["time"]), price=float(p["price"])) for p in points_raw
         )
+        raw_layer = data.get("layer")
         return cls(
             id=str(data.get("id") or ""),
             type=ChartObjectType(data["type"]),
@@ -252,4 +300,5 @@ class ChartObject:
             as_of=int(data["as_of"]),
             origin=dict(data.get("origin") or {}),
             subtype=data.get("subtype"),
+            layer=None if raw_layer in (None, "") else ChartObjectLayer(str(raw_layer)),
         )

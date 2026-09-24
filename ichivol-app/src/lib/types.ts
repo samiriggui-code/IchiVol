@@ -79,7 +79,25 @@ export interface ScreenerRow {
   engineConfidence?: number
   /** Verdict portes (Option B) — même contrat que ScreenerDecisionRow.pipeline. */
   enginePipeline?: DecisionPipelinePayload
+  /** Watchlist Contexte badges (UI-MARKET). */
+  context?: ContextBadge[]
 }
+
+export type ContextBadgeKind =
+  | 'bias'
+  | 'bos'
+  | 'sr_break'
+  | 'fvg'
+  | 'fib'
+  | 'choch'
+
+export interface ContextBadge {
+  kind: ContextBadgeKind
+  label: string
+  /** Placeholder until T9 produces data. */
+  placeholder?: boolean
+}
+
 
 export const DEFAULT_ICHI: IchimokuParams = {
   tenkan: 9,

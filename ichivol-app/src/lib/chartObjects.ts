@@ -15,6 +15,15 @@ export type ChartObjectType =
 
 export type ChartObjectSource = 'user' | 'engine' | 'claude' | 'strategy' | 'backtest'
 
+export type ChartObjectLayer =
+  | 'structure'
+  | 'fibonacci'
+  | 'fvg'
+  | 'breaks'
+  | 'claude'
+  | 'user_trades'
+  | 'backtest'
+
 export type UserTradePointType = 'entry' | 'stop' | 'target'
 
 export interface ChartPoint {
@@ -26,6 +35,8 @@ export interface ChartObject {
   id: string
   type: ChartObjectType
   source: ChartObjectSource
+  /** UI layer — absent on older payloads → deduce from source. */
+  layer?: ChartObjectLayer | null
   symbol: string
   timeframe: string
   points: ChartPoint[]

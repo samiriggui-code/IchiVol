@@ -12,6 +12,7 @@ from typing import Sequence
 
 from app.chart_objects.types import (
     ChartObject,
+    ChartObjectLayer,
     ChartObjectSource,
     ChartObjectType,
     ChartPoint,
@@ -121,6 +122,7 @@ def structure_to_chart_objects(
                 ChartObject(
                     type=ChartObjectType.TREND_LINE,
                     source=ChartObjectSource.ENGINE,
+                    layer=ChartObjectLayer.STRUCTURE,
                     symbol=sym,
                     timeframe=timeframe,
                     points=pts,
@@ -147,6 +149,7 @@ def structure_to_chart_objects(
             ChartObject(
                 type=ChartObjectType.MARKER,
                 source=ChartObjectSource.ENGINE,
+                layer=ChartObjectLayer.STRUCTURE,
                 symbol=sym,
                 timeframe=timeframe,
                 points=(ChartPoint(time=as_of, price=float(b.close)),),
@@ -183,6 +186,7 @@ def _zone_object(
     return ChartObject(
         type=ChartObjectType.ZONE,
         source=ChartObjectSource.ENGINE,
+        layer=ChartObjectLayer.STRUCTURE,
         symbol=symbol,
         timeframe=timeframe,
         points=(),
