@@ -10,7 +10,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T13a EN COURS — TradePlan OrderIntent sérialisation
 
 - Branche : `cursor/t13a-tradeplan-intent-a2fe`
-- PR : (à ouvrir)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/79
 - Base : `main` @ `bbcb5f4` (#78 T12e **MERGÉE**)
 - Paper DTO only — **aucun changement des chemins d’ouverture**
 
