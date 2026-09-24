@@ -10,7 +10,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T12b EN COURS — parité Lab / live (FeatureBar + stages)
 
 - Branche : `cursor/t12b-lab-live-parity-a2fe`
-- PR : *(draft — à renseigner)*
+- PR : https://github.com/samiriggui-code/IchiVol/pull/73 (**draft**)
 - Base : `main` @ `5bc1e9c` (#72 T12a **MERGÉE**)
 - Statut : **DRAFT** — attente revue Claude avant merge.
 
