@@ -76,6 +76,33 @@ export interface OrderIntent {
     status: string
     calibration_note?: string
   } | null
+  /** T0 timing — lag / stale closed bar. */
+  signal_timing?: Record<string, unknown> | null
+  /** T13a TradePlan — serialization only until T13b. */
+  trigger?: {
+    kind: string
+    pipeline_decision: string
+    direction: string | null
+  } | null
+  invalidation?: string[] | null
+  stop?: {
+    price: number | null
+    distance: number | null
+    source: string
+  } | null
+  targets?: Array<{
+    price: number
+    r_multiple: number | null
+    fraction: number
+  }> | null
+  expiration?: Record<string, unknown> | null
+  session?: { id: string; class: string } | null
+  codes?: string[] | null
+  versions?: {
+    strategy: string
+    intent: string
+    portfolio: string
+  } | null
 }
 
 export interface PaperPerformance {

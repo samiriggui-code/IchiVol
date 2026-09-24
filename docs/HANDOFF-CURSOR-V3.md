@@ -7,7 +7,41 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-24 — T12e EN COURS — ADN matrice A→F (#78)
+## 2026-09-24 — T13a EN COURS — TradePlan OrderIntent sérialisation
+
+- Branche : `cursor/t13a-tradeplan-intent-a2fe`
+- PR : (à ouvrir)
+- Base : `main` @ `bbcb5f4` (#78 T12e **MERGÉE**)
+- Paper DTO only — **aucun changement des chemins d’ouverture**
+
+### Livré
+1. `OrderIntent` + champs T13a : trigger · invalidation · stop · targets · expiration · session · codes · versions
+2. `from_dict` rétro-compatible (clés absentes → None)
+3. Remplissage depuis screener row (pipeline codes, decision.invalidation, ATR stop, timing)
+4. Front `paper.ts` types optionnels · tests round-trip / stale / legacy
+
+### Hors scope
+T13b Risk Kernel · confirm path consommant l’intent · persistence DB · calendrier session réel
+
+### Auto-revue
+- [x] pytest paper intent + timing (DATABASE_URL engine)
+- [x] `npm run build`
+- [ ] pytest PG16 CI
+- [x] decision/screener/brokerage : non touchés ; paper = intent.py seul
+
+---
+
+## 2026-09-24 — T12e MERGÉE (#78) — squash `bbcb5f4`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/78 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `bbcb5f4`
+- ADN A→F + ETUDE ; deep_history VPS encore à remplir
+
+**Suite** : T13a.
+
+---
+
+## 2026-09-24 — T12e (archive) — ADN matrice A→F (#78)
 
 - Branche : `cursor/t12e-adn-ichivol-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/78
