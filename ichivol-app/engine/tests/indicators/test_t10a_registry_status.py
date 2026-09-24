@@ -73,9 +73,11 @@ def test_ppo_and_best_cloud_are_rejected():
     assert "AU4EZIb9" in src.url
 
 
-def test_wyckoff_experimental_pending_claude():
-    """README moteur: non promu — Cursor propose EXPERIMENTAL; Claude tranche."""
-    assert REGISTRY.get("wyckoff").status is FeatureStatus.EXPERIMENTAL
+def test_wyckoff_rejected_per_claude_rev48():
+    """README moteur verdict table — Claude rév.48: REJECTED (Lab still computable)."""
+    assert REGISTRY.get("wyckoff").status is FeatureStatus.REJECTED
+    assert REGISTRY.get("ppo").status is FeatureStatus.REJECTED
+    assert REGISTRY.get("best_cloud").status is FeatureStatus.REJECTED
 
 
 def test_structure_confirmation_lag_matches_swing_lookback():

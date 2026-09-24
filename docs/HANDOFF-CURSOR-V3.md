@@ -7,6 +7,16 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — Wyckoff REJECTED (rév.48) — EN COURS
+
+- Branche : `cursor/wyckoff-rejected-a2fe`
+- PR : *(draft à ouvrir)*
+- Base : `main` @ `23dc4ba`
+- Statut : **EN COURS** — Cursor. `FeatureStatus.REJECTED` ; toujours calculable Lab.
+- Golden : **inchangés**.
+
+---
+
 ## 2026-09-24 — Chart layer=breaks EN COURS — BOS / CHoCH producer
 
 - Branche : `cursor/breaks-chart-producer-a2fe`
