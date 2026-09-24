@@ -38,6 +38,7 @@ from app.indicators.rvol import RvolParams, RvolState
 from app.indicators.structure import (
     BosEvent,
     StructureBias,
+    StructureEventType,
     StructureParams,
     StructureState,
 )
@@ -109,6 +110,11 @@ class FeatureBar:
     best_cloud_cross_age_bullish: int | None = None
     best_cloud_cross_age_bearish: int | None = None
     best_cloud_distance_pct: float | None = None
+    # --- T9b CHoCH / break quality (alongside legacy bos_*; no decision change) ---
+    choch_bullish: bool = False
+    choch_bearish: bool = False
+    break_quality: str | None = None
+    """wick | close | confirmed when a StructureEvent is known this bar."""
 
 
 @dataclass(frozen=True)
@@ -161,6 +167,28 @@ def _best_cloud_kwargs(b: BestCloudState) -> dict:
         best_cloud_cross_age_bearish=b.bars_since_cross if bearish else None,
         best_cloud_distance_pct=b.distance_price_cloud_pct,
     )
+
+
+def _choch_bullish(s: StructureState) -> bool:
+    ev = s.event
+    return (
+        ev is not None
+        and ev.type == StructureEventType.CHOCH
+        and ev.direction == "bullish"
+    )
+
+
+def _choch_bearish(s: StructureState) -> bool:
+    ev = s.event
+    return (
+        ev is not None
+        and ev.type == StructureEventType.CHOCH
+        and ev.direction == "bearish"
+    )
+
+
+def _break_quality(s: StructureState) -> str | None:
+    return s.event.break_quality.value if s.event is not None else None
 
 
 def build_feature_series(
@@ -245,6 +273,9 @@ def build_feature_series(
                 bos_bearish=structure[i].bos == BosEvent.BEARISH,
                 structure_bias_bullish=structure[i].bias == StructureBias.BULLISH,
                 structure_bias_bearish=structure[i].bias == StructureBias.BEARISH,
+                choch_bullish=_choch_bullish(structure[i]),
+                choch_bearish=_choch_bearish(structure[i]),
+                break_quality=_break_quality(structure[i]),
                 atr=atr_now,
                 atr_percentile=atr[i].percentile,
                 atr_expansion=expansion,
