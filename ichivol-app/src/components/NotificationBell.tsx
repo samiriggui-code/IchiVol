@@ -141,14 +141,14 @@ export function NotificationBell({ onOpen }: { onOpen?: () => void }) {
       if (positionId) q.set('position', positionId)
       const interval = payloadInterval(n)
       if (interval) q.set('interval', interval)
-      navigate(`/app/paper?${q.toString()}`)
+      navigate(`/app/portefeuille?tab=positions&${q.toString()}`)
       return
     }
     if (symbol) {
       const interval = payloadInterval(n)
       const q = new URLSearchParams({ symbol })
       if (interval) q.set('interval', interval)
-      navigate(`/app/decisions?${q.toString()}`)
+      navigate(`/app/opportunites?${q.toString()}`)
       return
     }
     if (n.kind === 'journal_confirm') navigate('/app/journal')

@@ -40,6 +40,7 @@ import {
   type EngineInstrument,
 } from '../lib/universe'
 import { confirmUserDecision } from '../lib/userDecisions'
+import { listWatchlist } from '../lib/watchlist'
 import {
   getPaperOverview,
   listPaperPositions,
@@ -241,6 +242,8 @@ type PaperConfirmState = {
 
 export function DecisionsPage() {
   const [searchParams] = useSearchParams()
+  const pinnedOnly = searchParams.get('filter') === 'pinned'
+  const [pinnedSymbols, setPinnedSymbols] = useState<Set<string> | null>(null)
   const [instruments, setInstruments] = useState<EngineInstrument[]>([])
   const [marketClass, setMarketClass] = useState<EngineAssetClass>('crypto')
   const [rows, setRows] = useState<ScreenerDecisionRow[]>([])
@@ -303,6 +306,24 @@ export function DecisionsPage() {
     return m
   }, [instruments])
 
+  useEffect(() => {
+    if (!pinnedOnly) {
+      setPinnedSymbols(null)
+      return
+    }
+    let cancelled = false
+    listWatchlist()
+      .then((wl) => {
+        if (!cancelled) setPinnedSymbols(new Set(wl.map((r) => r.symbol)))
+      })
+      .catch(() => {
+        if (!cancelled) setPinnedSymbols(new Set())
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [pinnedOnly])
+
   const visibleClasses = useMemo(() => {
     const present = new Set(instruments.filter((i) => i.wired).map((i) => i.asset_class))
     return CLASS_ORDER.filter((c) => present.has(c))
@@ -316,16 +337,22 @@ export function DecisionsPage() {
 
   /** Crypto/FX/métaux/indices : cache screener. Equity : placeholders (détail au clic). */
   const classRows = useMemo(() => {
+    let base: ScreenerDecisionRow[]
     if (marketClass === 'equity') {
-      return instruments
+      base = instruments
         .filter((i) => i.asset_class === 'equity' && i.wired)
         .map((i) => {
           const hit = rows.find((r) => r.symbol === i.id)
           return hit ?? placeholderRow(i)
         })
+    } else {
+      base = rows.filter((r) => byId.get(r.symbol)?.asset_class === marketClass)
     }
-    return rows.filter((r) => byId.get(r.symbol)?.asset_class === marketClass)
-  }, [marketClass, instruments, rows, byId])
+    if (pinnedOnly && pinnedSymbols) {
+      return base.filter((r) => pinnedSymbols.has(r.symbol))
+    }
+    return base
+  }, [marketClass, instruments, rows, byId, pinnedOnly, pinnedSymbols])
 
   const visibleRows = useMemo(() => {
     const q = symbolQuery.trim().toLowerCase()
@@ -683,15 +710,25 @@ export function DecisionsPage() {
     <div className={`decisions-page${sheetOpen ? ' is-sheet-open' : ''}`}>
       <header className="page-head market-head">
         <div className="market-head-copy">
-          <h1>Décisions</h1>
+          <h1>Opportunités</h1>
           <p className="muted">
-            Filtre actionnable · comprendre les portes · confirmer paper. Vue Liste ou Matrice —
-            clic = détail.
+            Chaque décision commence par une preuve. Vue Liste ou Matrice — clic = détail.
+            {pinnedOnly ? ' · Filtre Épinglés actif.' : ''}
           </p>
           <p className="muted">{CLASS_BLURBS[marketClass]}</p>
         </div>
         {visibleClasses.length > 0 && (
           <div className="market-class-tabs" role="tablist" aria-label="Classe d’actif">
+            {pinnedOnly && (
+              <Link to="/app/opportunites" className="ghost" style={{ alignSelf: 'center' }}>
+                Tout voir
+              </Link>
+            )}
+            {!pinnedOnly && (
+              <Link to="/app/opportunites?filter=pinned" className="ghost" style={{ alignSelf: 'center' }}>
+                Épinglés
+              </Link>
+            )}
             {visibleClasses.map((c) => (
               <button
                 key={c}
@@ -1111,9 +1148,9 @@ export function DecisionsPage() {
                         Enregistré{confirmMsg.slice(2)} ·{' '}
                         <Link to="/app/journal">journal</Link>
                         {' · '}
-                        <Link to="/app/synthese">synthèse</Link>
+                        <Link to="/app/portefeuille">synthèse</Link>
                         {' · '}
-                        <Link to="/app/paper">paper</Link>
+                        <Link to="/app/portefeuille?tab=positions">paper</Link>
                       </span>
                     ) : (
                       confirmMsg && <span className="panel-meta">{confirmMsg}</span>

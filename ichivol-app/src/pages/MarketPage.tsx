@@ -43,6 +43,7 @@ import {
 } from '../lib/backtestOverlay'
 import type { BacktestMetrics } from '../lib/backtest'
 import { useMarketSnapshot } from '../lib/marketSnapshot'
+import { listWatchlist } from '../lib/watchlist'
 import {
   OBJECT_LAYER_META,
   countObjectsByLayer,
@@ -136,6 +137,8 @@ function isAssetClass(v: string | null): v is EngineAssetClass {
 export function MarketPage() {
   const { setSnapshot } = useMarketSnapshot()
   const [searchParams] = useSearchParams()
+  const pinnedOnly = searchParams.get('filter') === 'pinned'
+  const [pinnedSymbols, setPinnedSymbols] = useState<Set<string> | null>(null)
   const [instruments, setInstruments] = useState<EngineInstrument[]>([])
   const [universeError, setUniverseError] = useState<string | null>(null)
   const [marketClass, setMarketClass] = useState<EngineAssetClass>('crypto')
@@ -260,6 +263,24 @@ export function MarketPage() {
     mq.addEventListener('change', apply)
     return () => mq.removeEventListener('change', apply)
   }, [])
+
+  useEffect(() => {
+    if (!pinnedOnly) {
+      setPinnedSymbols(null)
+      return
+    }
+    let cancelled = false
+    listWatchlist()
+      .then((rows) => {
+        if (!cancelled) setPinnedSymbols(new Set(rows.map((r) => r.symbol)))
+      })
+      .catch(() => {
+        if (!cancelled) setPinnedSymbols(new Set())
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [pinnedOnly])
 
   useEffect(() => {
     if (!indicatorsOpen && !infoOpen) return
@@ -811,9 +832,11 @@ export function MarketPage() {
           : ''
 
   const watchlistProps = {
-    rows,
+    rows: pinnedOnly && pinnedSymbols
+      ? rows.filter((r) => pinnedSymbols.has(r.symbol))
+      : rows,
     instruments,
-    loading: scanLoading,
+    loading: scanLoading || (pinnedOnly && pinnedSymbols == null),
     selected: symbol,
     onSelect: selectSymbol,
     sortKey: layout.sortKey,
@@ -1134,6 +1157,12 @@ export function MarketPage() {
       {(error || universeError) && (
         <div className="banner error mkt-error-toast" role="alert">
           {error ?? universeError}
+        </div>
+      )}
+      {pinnedOnly && (
+        <div className="banner mkt-pinned-banner" role="status">
+          Filtre <strong>Épinglés</strong> (watchlist) —{' '}
+          <a href="/app/market">voir tout le marché</a>
         </div>
       )}
 

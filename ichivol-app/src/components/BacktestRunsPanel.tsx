@@ -119,7 +119,7 @@ export function BacktestRunsList() {
         </>
       )}
       <p className="muted">
-        Vue d’ensemble de tout le circuit automatique : <Link to="/app/activite">Activité</Link>.
+        Vue d’ensemble de tout le circuit automatique : <Link to="/app/operations">Opérations</Link>.
       </p>
     </>
   )

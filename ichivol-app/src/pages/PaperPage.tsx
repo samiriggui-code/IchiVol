@@ -186,7 +186,7 @@ function PositionsTable({
               <td>
                 {p.evidence_id || p.decision_id ? (
                   <Link
-                    to={`/app/decisions?symbol=${encodeURIComponent(p.symbol)}`}
+                    to={`/app/opportunites?symbol=${encodeURIComponent(p.symbol)}`}
                     className="paper-evidence-link"
                   >
                     Voir
@@ -329,9 +329,9 @@ export function PaperPage() {
           <h1>Paper</h1>
           <p className="muted">
             Positions paper techniques (sources, %, ShadowBroker). Compte clair →{' '}
-            <Link to="/app/synthese">Synthèse</Link>. Snapshots de décisions →{' '}
+            <Link to="/app/portefeuille">Portefeuille</Link>. Snapshots de décisions →{' '}
             <Link to="/app/journal">Journal</Link>. Circuit auto →{' '}
-            <Link to="/app/activite">Activité</Link>.
+            <Link to="/app/operations">Opérations</Link>.
           </p>
         </div>
         <div className="market-class-tabs" role="tablist" aria-label="Source paper">

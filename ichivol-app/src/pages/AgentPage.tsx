@@ -58,7 +58,7 @@ export function AgentPage() {
             )}
           </div>
           <nav className="agent-atelier-jump" aria-label="Raccourcis">
-            <Link to="/app/decisions">Décisions</Link>
+            <Link to="/app/opportunites">Opportunités</Link>
             <Link to="/app/journal">Journal</Link>
             <Link to="/app/context">Contexte</Link>
             <Link to="/app/market">Marché</Link>

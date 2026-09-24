@@ -11,11 +11,9 @@ import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { MarketPage } from './pages/MarketPage'
 import { OverviewPage } from './pages/OverviewPage'
-import { PaperPage } from './pages/PaperPage'
+import { PortfolioPage } from './pages/PortfolioPage'
 import { RequireAuth } from './pages/RequireAuth'
 import { SettingsPage } from './pages/SettingsPage'
-import { SynthesePage } from './pages/SynthesePage'
-import { WatchlistPage } from './pages/WatchlistPage'
 import './theme/camap-tokens.css'
 import './theme/keenicons.css'
 import './theme/camap-landing.css'
@@ -31,22 +29,37 @@ export function Root() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<RequireAuth />}>
           <Route path="/app" element={<DashboardShell />}>
-            <Route index element={<Navigate to="overview" replace />} />
-            <Route path="overview" element={<OverviewPage />} />
+            <Route index element={<Navigate to="desk" replace />} />
+            {/* T14a canonical routes */}
+            <Route path="desk" element={<OverviewPage />} />
             <Route path="market" element={<MarketPage />} />
+            <Route path="opportunites" element={<DecisionsPage />} />
+            <Route path="portefeuille" element={<PortfolioPage />} />
             <Route path="context" element={<ContextPage />} />
-            <Route path="decisions" element={<DecisionsPage />} />
             <Route path="journal" element={<JournalPage />} />
-            <Route path="watchlist" element={<WatchlistPage />} />
-            <Route path="synthese" element={<SynthesePage />} />
-            <Route path="paper" element={<PaperPage />} />
-            <Route path="paper/tech" element={<Navigate to="/app/paper" replace />} />
-            <Route path="activite" element={<ActivityPage />} />
+            <Route path="operations" element={<ActivityPage />} />
             <Route path="strategy-lab" element={<BacktestsPage />} />
-            <Route path="backtests" element={<Navigate to="/app/strategy-lab" replace />} />
             <Route path="agent" element={<AgentPage />} />
             <Route path="settings" element={<SettingsPage />} />
-            <Route path="*" element={<Navigate to="overview" replace />} />
+            {/* Legacy redirects — no page deletion without redirect (T14a) */}
+            <Route path="overview" element={<Navigate to="/app/desk" replace />} />
+            <Route path="decisions" element={<Navigate to="/app/opportunites" replace />} />
+            <Route path="activite" element={<Navigate to="/app/operations" replace />} />
+            <Route path="synthese" element={<Navigate to="/app/portefeuille" replace />} />
+            <Route
+              path="paper"
+              element={<Navigate to="/app/portefeuille?tab=positions" replace />}
+            />
+            <Route
+              path="paper/tech"
+              element={<Navigate to="/app/portefeuille?tab=positions" replace />}
+            />
+            <Route
+              path="watchlist"
+              element={<Navigate to="/app/market?filter=pinned" replace />}
+            />
+            <Route path="backtests" element={<Navigate to="/app/strategy-lab" replace />} />
+            <Route path="*" element={<Navigate to="desk" replace />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -26,6 +26,7 @@ export function JournalPage() {
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
   const [showArchived, setShowArchived] = useState(false)
+  const [journalTab, setJournalTab] = useState<'trades' | 'decisions'>('decisions')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<UserDecisionRow | null>(null)
   const [pendingArchive, setPendingArchive] = useState<UserDecisionRow | null>(null)
@@ -193,28 +194,42 @@ export function JournalPage() {
         <div className="market-head-copy">
           <h1>Journal</h1>
           <p className="muted">
-            Snapshot de tes décisions confirmées (observation manuelle). Ce n’est pas le compte
-            paper — pour le capital voir <Link to="/app/synthese">Synthèse</Link>, pour les
-            positions techniques <Link to="/app/paper">Paper</Link>. Le circuit auto est dans{' '}
-            <Link to="/app/activite">Activité</Link>.
+            La mémoire de vos décisions. Trades paper (MFE/MAE, frais) et décisions sauvegardées.
+            Capital → <Link to="/app/portefeuille">Portefeuille</Link> · circuit auto →{' '}
+            <Link to="/app/operations">Opérations</Link>.
           </p>
         </div>
         <div className="market-class-tabs" role="tablist" aria-label="Volets journal">
           <button
             type="button"
             role="tab"
-            aria-selected={!showArchived}
-            className={!showArchived ? 'is-active' : undefined}
-            onClick={() => setShowArchived(false)}
+            aria-selected={journalTab === 'trades'}
+            className={journalTab === 'trades' ? 'is-active' : undefined}
+            onClick={() => setJournalTab('trades')}
           >
-            Confirmées
+            Trades
           </button>
           <button
             type="button"
             role="tab"
-            aria-selected={showArchived}
-            className={showArchived ? 'is-active' : undefined}
-            onClick={() => setShowArchived(true)}
+            aria-selected={journalTab === 'decisions' && !showArchived}
+            className={journalTab === 'decisions' && !showArchived ? 'is-active' : undefined}
+            onClick={() => {
+              setJournalTab('decisions')
+              setShowArchived(false)
+            }}
+          >
+            Décisions sauvegardées
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={journalTab === 'decisions' && showArchived}
+            className={journalTab === 'decisions' && showArchived ? 'is-active' : undefined}
+            onClick={() => {
+              setJournalTab('decisions')
+              setShowArchived(true)
+            }}
           >
             Archivées
           </button>
@@ -224,9 +239,21 @@ export function JournalPage() {
         </div>
       </header>
 
+      {journalTab === 'trades' ? (
+        <section className="panel">
+          <header className="panel-head">
+            <h2>Trades paper</h2>
+          </header>
+          <p className="muted" style={{ padding: '0 1rem 1rem' }}>
+            Historique MFE/MAE et frais : onglet Positions du{' '}
+            <Link to="/app/portefeuille?tab=positions">Portefeuille</Link>. Un journal trades dédié
+            arrivera avec T13x.
+          </p>
+        </section>
+      ) : (
       <section className="panel">
         <header className="panel-head">
-          <h2>{showArchived ? 'Archivées' : 'Confirmées'}</h2>
+          <h2>{showArchived ? 'Archivées' : 'Décisions sauvegardées'}</h2>
         </header>
 
         {error && (
@@ -344,7 +371,7 @@ export function JournalPage() {
                       'Aucune entrée archivée.'
                     ) : (
                       <>
-                        Vide — sur <Link to="/app/decisions">Décisions</Link>, confirme une ligne.
+                        Vide — sur <Link to="/app/opportunites">Opportunités</Link>, confirme une ligne.
                       </>
                     )}
                   </td>
@@ -354,6 +381,7 @@ export function JournalPage() {
           </table>
         </div>
       </section>
+      )}
 
       {pendingDelete && (
         <ConfirmDialog

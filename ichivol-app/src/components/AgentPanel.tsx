@@ -365,14 +365,14 @@ export function AgentPanel({ snapshot }: Props) {
               lancer « Expliquer » depuis une page métier.
             </p>
             <div className="agent-empty-actions">
-              <Link to="/app/decisions" className="ghost">
-                Ouvrir Décisions
+              <Link to="/app/opportunites" className="ghost">
+                Ouvrir Opportunités
+              </Link>
+              <Link to="/app/market?filter=pinned" className="ghost">
+                Épinglés
               </Link>
               <Link to="/app/journal" className="ghost">
                 Ouvrir Journal
-              </Link>
-              <Link to="/app/watchlist" className="ghost">
-                Watchlist
               </Link>
             </div>
           </div>

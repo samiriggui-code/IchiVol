@@ -151,8 +151,8 @@ export function PaperIntentConfirmSheet({
 
           <p className="muted paper-confirm-note">
             Un seul lot par symbole sur le compte. Confirmer ouvre la position paper et un snapshot
-            journal. Ensuite : <Link to="/app/synthese">Synthèse</Link> ·{' '}
-            <Link to="/app/paper">Paper</Link> · <Link to="/app/journal">Journal</Link>.
+            journal. Ensuite : <Link to="/app/portefeuille">Portefeuille</Link> ·{' '}
+            <Link to="/app/portefeuille?tab=positions">Positions</Link> · <Link to="/app/journal">Journal</Link>.
           </p>
 
           <div className="paper-confirm-actions">

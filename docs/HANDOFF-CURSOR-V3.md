@@ -7,10 +7,50 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-24 — T12d EN COURS — fausses cassures du nuage
+## 2026-09-24 — T14a polish — PR #77
+
+- Branche : `cursor/t14a-interface-workspace-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/77
+- Base : `main` @ `69a11f6` (#76 T12d **MERGÉE**)
+- Front only — **aucun changement moteur**
+- Réf. visuelle : `design-reference/ichivol-workspace/`
+
+### DÉCISION CURSOR — à relire par Claude
+Dérogation utilisateur : T14a avant T12e (maquette jointe). Tokens camap conservés.
+Peaufinage demandé (« on peaufine puis on revient sur le t12e »).
+
+### Livré
+1. Nav 4 groupes + renoms Desk / Opportunités / Opérations / Portefeuille onglets
+2. Redirects legacy + mobile Desk·Opportunités·Portefeuille·Copilot·Plus
+3. **Polish** : libellés maquette · Journal Trades/Décisions · `?filter=pinned` Marché+Opportunités · liens canoniques · stub kill switch (disabled, T13c) · headers Portefeuille imbriqués masqués
+
+### Hors scope
+T12e · T13a–c · redesign pixel-perfect · Agents/Sessions
+
+### Auto-revue
+- [x] `npm run build` OK
+- [x] moteur decision/agents/paper/screener/brokerage : **vide**
+- [ ] pytest PG16 (front-only)
+- [ ] captures mobile/desktop clair/sombre avant merge
+
+**Suite** : merge #77 → **T12e** matrice A→F + `docs/ETUDE-T12-ADN-ICHIVOL.md`.
+
+---
+
+## 2026-09-24 — T12d MERGÉE (#76) — squash `69a11f6`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/76 — **MERGÉE** squash (solo rév.58)
+- **Vérifié** : `origin/main` tip = `69a11f6`
+- Fausses cassures nuage à N ; ventilation RVOL/ADX/structure/location/CVD
+
+**Suite** : T14a (shell) en parallèle de T12e…
+
+---
+
+## 2026-09-24 — T12d (archive) — fausses cassures du nuage
 
 - Branche : `cursor/t12d-false-breaks-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/76 (**draft**)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/76
 - Base : `main` @ `abe6177` (#75 T12c **MERGÉE**)
 - ADD-ONLY Lab — **aucun changement live**
 
@@ -26,6 +66,13 @@ FeatureBar fields · HTTP · T12e · live
 
 ### Sonde manuelle
 Cassure haussière + prix sous nuage à i+N → `failure` ; toujours au-dessus → `continuation`.
+
+### Auto-revue (§2) — FAIT
+- [x] pytest PG16 : **1086 passed**
+- [x] pytest réseau coupé : **1085 passed, 1 skipped**
+- [x] `npm run build` OK
+- [x] golden : N/A (aucun golden touché)
+- [x] `git diff` decision/agents/paper/screener/brokerage : **vide**
 
 ---
 

@@ -68,7 +68,7 @@ export function BiasPanel({
           <h3 className="subhead">Moteur IchiVol</h3>
           {engineAvailable && engineDetail && (
             <Link
-              to="/app/decisions"
+              to="/app/opportunites"
               className="ghost bias-engine-link"
               title="Ouvrir la page Décisions"
             >
