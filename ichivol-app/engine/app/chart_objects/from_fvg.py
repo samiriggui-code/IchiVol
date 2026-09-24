@@ -1,4 +1,8 @@
-"""Produce ChartObjects from FVG states (T9d) — layer=fvg rectangles."""
+"""Produce ChartObjects from FVG states (T9d) — layer=fvg rectangles.
+
+Uses ``REGISTRY.compute("fvg", ...)`` (T1e — no direct ``compute_fvg`` outside
+``app/indicators/``).
+"""
 
 from __future__ import annotations
 
@@ -11,8 +15,9 @@ from app.chart_objects.types import (
     ChartObjectType,
     ChartPoint,
 )
-from app.indicators.fvg import FvgParams, compute_fvg
+from app.indicators.fvg import FvgParams, FvgState
 from app.indicators.ichimoku import Candle
+from app.indicators.registry import REGISTRY
 
 
 def fvg_to_chart_objects(
@@ -29,7 +34,7 @@ def fvg_to_chart_objects(
     """
     if not candles:
         return []
-    states = compute_fvg(candles, params)
+    states: list[FvgState] = REGISTRY.compute("fvg", candles, params or FvgParams())
     as_of = int(candles[-1].time)
     sym = symbol.upper()
     out: list[ChartObject] = []
