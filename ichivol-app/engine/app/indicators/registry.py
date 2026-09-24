@@ -57,6 +57,40 @@ class Visualization(str, Enum):
     NONE = "NONE"
 
 
+class FeatureStatus(str, Enum):
+    """Lifecycle of a registry feature (T10a) — status does NOT live in tags."""
+
+    CANDIDATE = "CANDIDATE"
+    EXPERIMENTAL = "EXPERIMENTAL"
+    VALIDATED = "VALIDATED"
+    PRODUCTION = "PRODUCTION"
+    REJECTED = "REJECTED"
+    DEPRECATED = "DEPRECATED"
+
+
+@dataclass(frozen=True)
+class FeatureSource:
+    """Provenance of a feature (T10a). ``kind`` is internal|external."""
+
+    kind: str = "internal"
+    url: str = ""
+    author: str = "IchiVol"
+    license: str = "proprietary"
+    notes: str = ""
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "kind": self.kind,
+            "url": self.url,
+            "author": self.author,
+            "license": self.license,
+            "notes": self.notes,
+        }
+
+
+INTERNAL = FeatureSource()
+
+
 class UnknownIndicatorError(KeyError):
     """Raised when an indicator id is not registered."""
 
@@ -154,8 +188,13 @@ class IndicatorDefinition:
     primary_output: str
     visualization: Visualization
     description: str = ""
-    tags: tuple[str, ...] = ()
+    tags: tuple[str, ...] = ()  # kept for API compat; status lives in ``status``
     depends_on: tuple[str, ...] = ()
+    status: FeatureStatus = FeatureStatus.CANDIDATE
+    source: FeatureSource = INTERNAL
+    confirmation_lag_bars: int = 0
+    family: str = ""
+    experiment_refs: tuple[str, ...] = ()
 
     def parameters(self) -> list[dict[str, Any]]:
         """Describe Params dataclass fields (name, type, default)."""
@@ -248,6 +287,11 @@ class IndicatorDefinition:
             "description": self.description,
             "tags": list(self.tags),
             "depends_on": list(self.depends_on),
+            "status": self.status.value,
+            "source": self.source.to_dict(),
+            "confirmation_lag_bars": int(self.confirmation_lag_bars),
+            "family": self.family,
+            "experiment_refs": list(self.experiment_refs),
             "parameters": self.parameters(),
             "outputs": self.outputs(),
             "warmup_default": self.warmup(),
@@ -413,6 +457,18 @@ class IndicatorRegistry:
 
 
 def _build_registry() -> IndicatorRegistry:
+    """Register all indicators with T10a status/source (justified from call sites).
+
+    PRODUCTION justifications (file:line at registration time — see handoff T10a):
+    - ichimoku: agents/ichimoku_agent.py REGISTRY.compute; combiner + evidence/context
+    - rvol: agents/rvol_agent.py; pipeline participation; evidence/context
+    - atr: decision/pipeline.py AtrState; screener/service.py; evidence/catalog.py
+    - adx: decision/pipeline.py AdxState; screener/service.py
+    - cvd: decision/pipeline.py CvdState; screener/service.py
+    - donchian: decision/pipeline.py DonchianState; screener/service.py
+    - structure: decision/pipeline.py StructureState; screener/service.py
+    - location: decision/pipeline.py LocationState; screener/service.py
+    """
     reg = IndicatorRegistry()
 
     reg.register(
@@ -426,6 +482,10 @@ def _build_registry() -> IndicatorRegistry:
             primary_output="price_vs_kumo",
             visualization=Visualization.OVERLAY,
             description="Ichimoku cloud / TK / Chikou-causal structure",
+            status=FeatureStatus.PRODUCTION,
+            source=INTERNAL,
+            family="tendance",
+            confirmation_lag_bars=0,
         )
     )
     reg.register(
@@ -439,6 +499,10 @@ def _build_registry() -> IndicatorRegistry:
             primary_output="rvol",
             visualization=Visualization.PANE,
             description="Relative volume participation",
+            status=FeatureStatus.PRODUCTION,
+            source=INTERNAL,
+            family="participation",
+            confirmation_lag_bars=0,
         )
     )
     reg.register(
@@ -452,6 +516,10 @@ def _build_registry() -> IndicatorRegistry:
             primary_output="atr",
             visualization=Visualization.PANE,
             description="ATR volatility + regime",
+            status=FeatureStatus.PRODUCTION,
+            source=INTERNAL,
+            family="volatilité",
+            confirmation_lag_bars=0,
         )
     )
     reg.register(
@@ -465,6 +533,10 @@ def _build_registry() -> IndicatorRegistry:
             primary_output="adx",
             visualization=Visualization.PANE,
             description="ADX trend strength",
+            status=FeatureStatus.PRODUCTION,
+            source=INTERNAL,
+            family="régime",
+            confirmation_lag_bars=0,
         )
     )
     reg.register(
@@ -478,6 +550,10 @@ def _build_registry() -> IndicatorRegistry:
             primary_output="rsi",
             visualization=Visualization.PANE,
             description="RSI momentum",
+            status=FeatureStatus.CANDIDATE,
+            source=INTERNAL,
+            family="momentum",
+            confirmation_lag_bars=0,
         )
     )
     reg.register(
@@ -491,6 +567,10 @@ def _build_registry() -> IndicatorRegistry:
             primary_output="cmf",
             visualization=Visualization.PANE,
             description="Chaikin Money Flow",
+            status=FeatureStatus.CANDIDATE,
+            source=INTERNAL,
+            family="flux",
+            confirmation_lag_bars=0,
         )
     )
     reg.register(
@@ -504,6 +584,10 @@ def _build_registry() -> IndicatorRegistry:
             primary_output="obv",
             visualization=Visualization.PANE,
             description="On-Balance Volume",
+            status=FeatureStatus.CANDIDATE,
+            source=INTERNAL,
+            family="flux",
+            confirmation_lag_bars=0,
         )
     )
     reg.register(
@@ -517,6 +601,10 @@ def _build_registry() -> IndicatorRegistry:
             primary_output="cumulative",
             visualization=Visualization.PANE,
             description="OHLCV-approximated cumulative volume delta",
+            status=FeatureStatus.PRODUCTION,
+            source=INTERNAL,
+            family="participation",
+            confirmation_lag_bars=0,
         )
     )
     reg.register(
@@ -530,6 +618,10 @@ def _build_registry() -> IndicatorRegistry:
             primary_output="upper",
             visualization=Visualization.OVERLAY,
             description="Donchian high/low channel",
+            status=FeatureStatus.PRODUCTION,
+            source=INTERNAL,
+            family="régime",
+            confirmation_lag_bars=0,
         )
     )
     reg.register(
@@ -542,8 +634,15 @@ def _build_registry() -> IndicatorRegistry:
             warmup_fn=lambda p: int(p.slow) + int(p.signal),
             primary_output="ppo",
             visualization=Visualization.PANE,
-            description="PPO momentum (experimental Lab feature)",
-            tags=("experimental",),
+            description="PPO momentum — REJECTED as entry filter (Lab only)",
+            tags=("lab",),
+            status=FeatureStatus.REJECTED,
+            source=INTERNAL,
+            family="momentum",
+            confirmation_lag_bars=0,
+            experiment_refs=(
+                "docs/REVUE-SIM-ET-COUTS-ichivol-36-2026-09-20.md#5",
+            ),
         )
     )
     reg.register(
@@ -556,10 +655,28 @@ def _build_registry() -> IndicatorRegistry:
             warmup_fn=lambda p: int(p.slow_period),
             primary_output="cross",
             visualization=Visualization.OVERLAY,
-            description="Two-MA cloud confirmation (experimental)",
-            tags=("experimental",),
+            description="Two-MA cloud — REJECTED as entry filter (Lab only)",
+            tags=("lab",),
+            status=FeatureStatus.REJECTED,
+            source=FeatureSource(
+                kind="external",
+                url="https://www.tradingview.com/script/AU4EZIb9-BEST-Cloud-ALL-MA/",
+                author="Daveatt",
+                license=(
+                    "TradingView open-source (free use; republishing subject to "
+                    "House Rules). Math re-implemented in-engine without Pine."
+                ),
+                notes="Concept after BEST Cloud ALL MA; licence relevée 2026-09-24.",
+            ),
+            family="tendance",
+            confirmation_lag_bars=0,
+            experiment_refs=(
+                "docs/REVUE-SIM-ET-COUTS-ichivol-36-2026-09-20.md#5",
+            ),
         )
     )
+    # confirmation_lag_bars = swing_lookback (right bars of the causal fractal).
+    _structure_lag = int(StructureParams().swing_lookback)
     reg.register(
         IndicatorDefinition(
             id="structure",
@@ -571,6 +688,10 @@ def _build_registry() -> IndicatorRegistry:
             primary_output="bias",
             visualization=Visualization.NONE,
             description="Swing HH/HL bias + BOS (live pipeline)",
+            status=FeatureStatus.PRODUCTION,
+            source=INTERNAL,
+            family="structure",
+            confirmation_lag_bars=_structure_lag,
         )
     )
     reg.register(
@@ -585,6 +706,10 @@ def _build_registry() -> IndicatorRegistry:
             visualization=Visualization.NONE,
             description="Kijun/Kumo research layer (Lab); depends on ichimoku+atr",
             depends_on=("ichimoku", "atr"),
+            status=FeatureStatus.EXPERIMENTAL,
+            source=INTERNAL,
+            family="tendance",
+            confirmation_lag_bars=0,
         )
     )
     reg.register(
@@ -599,6 +724,10 @@ def _build_registry() -> IndicatorRegistry:
             visualization=Visualization.NONE,
             description="Volume profile + VWAP/AVWAP location; depends on structure",
             depends_on=("structure",),
+            status=FeatureStatus.PRODUCTION,
+            source=INTERNAL,
+            family="localisation",
+            confirmation_lag_bars=0,
         )
     )
     reg.register(
@@ -611,8 +740,16 @@ def _build_registry() -> IndicatorRegistry:
             warmup_fn=lambda p: int(p.volume_lookback),
             primary_output="phase",
             visualization=Visualization.NONE,
-            description="Wyckoff phase from Donchian + volume climax; depends on donchian",
+            description=(
+                "Wyckoff phase from Donchian + volume climax; depends on donchian. "
+                "EXPERIMENTAL — README moteur: non promu (pas d'edge démontré)."
+            ),
             depends_on=("donchian",),
+            status=FeatureStatus.EXPERIMENTAL,
+            source=INTERNAL,
+            family="structure",
+            confirmation_lag_bars=0,
+            experiment_refs=("ichivol-app/engine/README.md#wyckoff",),
         )
     )
     return reg
@@ -624,6 +761,9 @@ REGISTRY = _build_registry()
 __all__ = [
     "REGISTRY",
     "DependencyCycleError",
+    "FeatureSource",
+    "FeatureStatus",
+    "INTERNAL",
     "IndicatorCategory",
     "IndicatorDefinition",
     "IndicatorRegistry",

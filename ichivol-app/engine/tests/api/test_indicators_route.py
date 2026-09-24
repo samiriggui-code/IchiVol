@@ -45,6 +45,12 @@ def test_indicators_catalog():
         assert "warmup_default" in row
         assert "parameters" in row
         assert "outputs" in row
+        assert "status" in row
+        assert "source" in row
+        assert "confirmation_lag_bars" in row
+        assert "family" in row
+        assert "experiment_refs" in row
+        assert isinstance(row["source"], dict)
 
 
 def test_indicator_series_warmup_and_limit(monkeypatch):
