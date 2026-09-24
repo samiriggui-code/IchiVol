@@ -66,13 +66,14 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ### Livré
 
-1. Barre haute 52 px (symbole→recherche, prix, %, TF unique, Calques, Indicateurs, « i » Twelve Data, Marquer un trade)
-2. Graphe max height ; volume ~150 px redimensionnable (persisté)
-3. Watchlist triable Symbole / % / RVOL / Score / Contexte + filtres classe
+1. Barre haute 52 px (symbole→recherche, prix, %, TF unique, Calques, Indicateurs, « i » source, Marquer un trade)
+2. Graphe max height ; volume ~150 px desktop / ~120 px mobile, redimensionnable (persisté)
+3. Watchlist triable Symbole / % / RVOL / Score / Contexte + filtres classe + « Contexte actif »
 4. Desktop : colonne droite ~380 px repliable/redim. ; barre bas 44 px (Backtest / Marquer / Journal)
-5. Mobile : tiroir 3 positions Liste / Analyse / Backtest ; feuilles Calques + Recherche
-6. Moteur : `ChartObject.layer` (structure|fibonacci|fvg|breaks|claude|user_trades|backtest) — rétrocompat ; id inchangé
-7. Pastilles calques + menu (FVG/Fib/Cassures vides jusqu’à T9) ; prefs globales
+5. Desktop Backtest docké (~250 px) : stratégie, Tous/Gains/Pertes/Rejetés, 4 chiffres clés, liste trades
+6. Mobile : tiroir 3 positions Liste / Analyse / Backtest (poignée au-dessus de la tabbar shell) ; feuilles Calques + Recherche
+7. Moteur : `ChartObject.layer` (structure|fibonacci|fvg|breaks|claude|user_trades|backtest) — rétrocompat ; id inchangé
+8. Pastilles calques + menu (FVG/Fib/Cassures vides jusqu’à T9) ; prefs globales
 
 ### Écarts volontaires vs captures 01–07
 
@@ -80,8 +81,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 | --- | --- | --- |
 | 01 | Pas de TF **5m** | `INTERVALS` moteur = 15m/1h/4h/1d |
 | 01–07 | Couleurs / polices **camap-tokens** | Contrainte IchiVol (pas maquette pixel) |
-| 02 | Backtest bas = résumé + sheet existante | Réutilise `BacktestOverlaySheet` |
-| 05 | Analyse = BiasPanel + CTA paper | Pipeline déjà dans BiasPanel |
+| 05 | Analyse = BiasPanel (pipeline Direction→Régime) + CTA paper | Réutilise le pipeline existant |
 | Journal | Placeholder « bientôt » | Hors scope UI-MARKET |
 
 ### Captures (états 01→07)
