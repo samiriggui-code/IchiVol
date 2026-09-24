@@ -10,9 +10,9 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T9g-fix EN COURS — review_candidate + gates
 
 - Branche : `cursor/t9g-fix-gate-a2fe`
-- PR : *(draft à ouvrir)*
+- PR : https://github.com/samiriggui-code/IchiVol/pull/71 (**draft**)
 - Base : `main` @ `23dc4ba`
-- Statut : **EN COURS** — Cursor. **Pas de merge** avant revue Claude.
+- Statut : **DRAFT** — **attente revue Claude** (pas de merge solo).
 
 ### Livré
 
