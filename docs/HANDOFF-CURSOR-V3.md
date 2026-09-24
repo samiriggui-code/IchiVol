@@ -10,9 +10,9 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — Chart layer=breaks EN COURS — BOS / CHoCH producer
 
 - Branche : `cursor/breaks-chart-producer-a2fe`
-- PR : *(draft à ouvrir)*
+- PR : https://github.com/samiriggui-code/IchiVol/pull/67 (**draft**)
 - Base : `main` @ `35e14f3` (#66 microstructure)
-- Statut : **EN COURS** — Cursor solo. Markers ENGINE `layer=breaks` ; **pas** de vote pipeline.
+- Statut : **DRAFT** — Cursor solo. Markers ENGINE `layer=breaks` ; **pas** de vote pipeline.
 
 ### Livré (prévu)
 
