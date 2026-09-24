@@ -44,35 +44,54 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-MANAGE-d** #48 — **MERGÉE** squash `a941539` (validé Claude ; suite PG 918→928 ok / 1 skip). **Incident process** : handoff avait annoncé MERGÉE avant que `main` ne contienne le squash — corrigé.
 - **T0-MANAGE-e** #49 — **MERGÉE** squash `389fc40` (validé Claude adff686 ; suite PG **935 ok / 1 skip**, 0 régression). Sondes : `tighten_stop` en profit → risque = R0 (LONG/SHORT) ; risque signé OK ; combo `partial_tp`+`reinforce` rejeté ; fuzz 300 seeds → 135 adds, jamais > R0, invariant Σnet=Σbars 3,5e-16. **Vérifié** `git log origin/main` contient `389fc40`.
 - **T0-MANAGE-f** #50 — **MERGÉE** squash `7a77424` (validé Claude 102caee ; suite PG **944 ok / 1 skip**, 0 régression). **T0-MANAGE a→f terminé.**
-- **Job en cours** : **T0-FIX-SHORT-FEE** — PR draft [#51](https://github.com/samiriggui-code/IchiVol/pull/51). **Pas de merge** avant revue Claude. **Pas de T9** avant clôture de cette fix.
-- **T9** (structure / FVG / Fib) — feuille de route ; **seulement après T0-FIX-SHORT-FEE**.
+- **T0-FIX-SHORT-FEE** #51 — **MERGÉE** squash `b9f8421` (validé Claude ; suite PG **948 ok / 1 skip**, 0 régression). Sondes SHORT (close / partiel→target / renfort→target / épuisement / stop) : cash = réalisé ≤ 5e-13. **Vérifié** `git log origin/main` contient `b9f8421`. **Dette SHORT entry_fee soldée** pour clôtures post-fix.
+- **Job en cours** : **T9a** — détecteur de swings causal unique — PR draft (voir entrée ci-dessous). **Pas de merge** avant revue Claude. **Pas de CHoCH / FVG** dans T9a.
+- **T9** (structure / FVG / Fib) — feuille de route ; T9a = pivots partagés seulement.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol². **Ne pas comparer** partiels vs non-partiels sur le DD avant correction.
-- ⚠️ **Dette SHORT entry_fee** : en cours de correction (T0-FIX-SHORT-FEE) — `realized` SHORT doit déduire frais d'entrée (open + renforts).
+- ⚠️ **Caveat historique SHORT** : positions SHORT **CLOSED avant** `b9f8421` (#51) ont un `realized` **surévalué de `entry_fee`**. Compte local Cursor : **CLOSED_SHORT = 0** → pas de recalcul nécessaire ici. Script ponctuel (dry-run) : `ichivol-app/engine/scripts/recalc_short_entry_fee.py` — **pas de migration auto** ; si une base avec historique a `CLOSED_SHORT > 0`, proposer `--apply` après revue.
 - ⚠️ **Caveat migration #48** : backfill `initial_entry_fee = entry_fee` courant — **faux pour lots déjà partialisés avant migration**.
 - ⚠️ **Dette max_exposure** : sémantiques **divergentes** Lab vs paper — Lab = `qty/initial_qty` (1 unité = 100 % capital ; `levier: true` si > 1) ; paper = `notional ≤ max_exposure × equity`. **Ne pas comparer** rulesets Lab `max_exposure>1` aux paper sans le flag `levier`.
 
 
 ---
 
-## 2026-09-24 — T0-FIX-SHORT-FEE EN COURS — SHORT realized − entry fees (PR draft)
+## 2026-09-24 — T9a EN COURS — un seul détecteur de swings causal (PR draft)
 
-- Branche : `cursor/t0-fix-short-fee-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/51 (**draft**)
-- Base : `main` @ `7a77424` (#50 squash)
-- Statut : **ATTENTE REVUE CLAUDE** — **ne pas merger** ; **pas de T9**.
+- Branche : `cursor/t9a-causal-swings-a2fe`
+- Base : `main` @ `b9f8421` (#51 squash)
+- Statut : **ATTENTE REVUE CLAUDE** — **ne pas merger**. Pas de CHoCH / FVG.
 
-### Problème
+### Inventaire (3 détecteurs → 1 core)
 
-SHORT `realized` omettait `entry_fee` (open + renforts) sur close / partiel / épuisement → écart cash vs réalisé (~1,24 sur sonde Claude). LONG déjà correct.
+| Avant | Après |
+| --- | --- |
+| `indicators/structure.py` boucle fractal inline | consomme `app.indicators.pivots.fractal_confirmed_at` |
+| `fibonacci/context.py` `_fractal_pivots` | wrapper mince → `detect_causal_ohlc_fractals` |
+| `structure/adapters/{mvpp,trendln,pytrendline}` boucles propres | confirment via `fractal_confirmed_at` / `detect_causal_extrema` |
 
-### Livré
+Spécifique **conservé** (doc `structure/T9A_ADAPTERS.md`) : MVPP prix adaptatifs + qualité volume ; trendln clusters/diagonales ; pytrendline ancres provisoires ; structure HH/HL+BOS ; Fib impulse + ratios (defaults 2/2).
 
-1. `close_capital_position` SHORT : `slice_realized = pnl − exit_fee − entry_fee − financing`
-2. `partial_close_capital_position` SHORT : déduit `entry_fee_share` (épuisement via close → hérite du fix)
-3. `liquidation.preview_close_cash_delta` SHORT : aligné
-4. Tests : conservation `cash − cash0 == realized` plain / partiel+close / reinforce+close / épuisement
+### Contrat causal
+
+Pivot à `j` connu seulement à `i = j + right`. Test anti-lookahead : `tests/indicators/test_t9a_causal_pivots.py`. Goldens structure + fibonacci **inchangées** (parity inline / seed).
 
 **Cursor s’arrête ici.**
+
+---
+
+## 2026-09-24 — T0-FIX-SHORT-FEE MERGÉE (#51) — squash `b9f8421` — dette SHORT soldée
+
+- Branche merge : squash sur `main` → `b9f8421`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/51 — **MERGÉE** (validé Claude)
+- **Vérifié** : `git rev-parse origin/main` == `b9f8421` ; `git log` tip = fix SHORT fee.
+
+### Effet
+
+SHORT `realized` déduit désormais `entry_fee` (open + renforts) sur close / partiel / épuisement / preview — aligné cash.
+
+### Historique pré-fix
+
+Lots SHORT CLOSED **avant** ce squash : realized **surévalué de entry_fee**. Compte Cursor (DB locale) : **0** CLOSED SHORT. Script one-off (pas Alembic) : `scripts/recalc_short_entry_fee.py` (dry-run par défaut ; `--apply` si base avec historique > 0).
 
 ---
 

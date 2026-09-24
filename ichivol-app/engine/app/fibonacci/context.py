@@ -1,8 +1,9 @@
 """Causal Fibonacci retracement context from swing high/low.
 
 Levels: 23.6 · 38.2 · 50 · 61.8 · 78.6 of the last confirmed impulse.
-Uses fractal pivots (same left/right as MVPP defaults) — does not invent
-swings outside structure logic.
+Uses fractal pivots via ``app.indicators.pivots`` (T9a shared causal core).
+Impulse selection + Fib levels remain fibonacci-specific.
+Default left/right = 2 (historical Fib defaults — not MVPP's 5).
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from dataclasses import dataclass
 from typing import Sequence
 
 from app.indicators.ichimoku import Candle
+from app.indicators.pivots import detect_causal_ohlc_fractals
 from app.structure.atr_utils import last_atr
 
 FIB_RATIOS: tuple[float, ...] = (0.236, 0.382, 0.5, 0.618, 0.786)
@@ -63,24 +65,9 @@ def _fractal_pivots(
     left: int,
     right: int,
 ) -> tuple[list[tuple[int, float]], list[tuple[int, float]]]:
-    """Return (high_pivots, low_pivots) as (bar_index, price), causal."""
-    n = len(highs)
-    highs_out: list[tuple[int, float]] = []
-    lows_out: list[tuple[int, float]] = []
-    for i in range(n):
-        j = i - right
-        if j - left < 0:
-            continue
-        h_win = highs[j - left : j + right + 1]
-        l_win = lows[j - left : j + right + 1]
-        if len(h_win) < left + right + 1:
-            continue
-        if highs[j] == max(h_win):
-            highs_out.append((j, float(highs[j])))
-        if lows[j] == min(l_win):
-            lows_out.append((j, float(lows[j])))
-    return highs_out, lows_out
-
+    """Return (high_pivots, low_pivots) as (bar_index, price), causal (T9a)."""
+    hi, lo = detect_causal_ohlc_fractals(highs, lows, left=left, right=right)
+    return [(p.bar_index, p.price) for p in hi], [(p.bar_index, p.price) for p in lo]
 
 def _pick_impulse_swings(
     high_pivots: list[tuple[int, float]],

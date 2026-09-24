@@ -31,40 +31,39 @@ def _extrema(
     candles: Sequence[Candle],
     lookback: int,
 ) -> tuple[list[PivotPoint], list[PivotPoint]]:
-    """Causal local extrema: confirmed at i when j = i - lookback is extremum."""
-    n = len(candles)
-    highs: list[PivotPoint] = []
-    lows: list[PivotPoint] = []
-    for i in range(n):
-        j = i - lookback
-        if j - lookback < 0:
-            continue
-        window = candles[j - lookback : j + lookback + 1]
-        if candles[j].high == max(c.high for c in window):
-            highs.append(
-                PivotPoint(
-                    bar_index=j,
-                    time=candles[j].time,
-                    price=candles[j].high,
-                    side=LevelSide.RESISTANCE,
-                    quality=1.0,
-                    confirmed_bar=i,
-                    provisional=False,
-                )
-            )
-        if candles[j].low == min(c.low for c in window):
-            lows.append(
-                PivotPoint(
-                    bar_index=j,
-                    time=candles[j].time,
-                    price=candles[j].low,
-                    side=LevelSide.SUPPORT,
-                    quality=1.0,
-                    confirmed_bar=i,
-                    provisional=False,
-                )
-            )
-    return lows, highs
+    """Causal local extrema via T9a core; clustering remains adapter-specific."""
+    from app.indicators.pivots import detect_causal_ohlc_fractals
+
+    highs = [c.high for c in candles]
+    lows = [c.low for c in candles]
+    hi_piv, lo_piv = detect_causal_ohlc_fractals(
+        highs, lows, left=lookback, right=lookback
+    )
+    high_pts = [
+        PivotPoint(
+            bar_index=p.bar_index,
+            time=candles[p.bar_index].time,
+            price=p.price,
+            side=LevelSide.RESISTANCE,
+            quality=1.0,
+            confirmed_bar=p.confirmed_bar,
+            provisional=False,
+        )
+        for p in hi_piv
+    ]
+    low_pts = [
+        PivotPoint(
+            bar_index=p.bar_index,
+            time=candles[p.bar_index].time,
+            price=p.price,
+            side=LevelSide.SUPPORT,
+            quality=1.0,
+            confirmed_bar=p.confirmed_bar,
+            provisional=False,
+        )
+        for p in lo_piv
+    ]
+    return low_pts, high_pts
 
 
 def _cluster_horizontals(
