@@ -90,10 +90,12 @@ class DataProvenanceObservation:
     closed_only: bool
     transforms: tuple[str, ...]
     dataset_fingerprint: str
+    resolution: str | None = None
+    """T11a-bis: ``catalog`` | ``raw_fallback`` from ``resolve()``."""
     disclaimer: str = _DISCLAIMER_PROVENANCE
 
     def to_dict(self) -> dict:
-        return {
+        out = {
             "version": self.version,
             "provider": self.provider,
             "symbol": self.symbol,
@@ -106,6 +108,9 @@ class DataProvenanceObservation:
             "dataset_fingerprint": self.dataset_fingerprint,
             "disclaimer": self.disclaimer,
         }
+        if self.resolution is not None:
+            out["resolution"] = self.resolution
+        return out
 
 
 def _gate_from_report(
@@ -171,6 +176,7 @@ def observe_data_provenance(
     timeframe: str,
     closed_only: bool,
     transforms: Sequence[str] = (),
+    resolution: str | None = None,
 ) -> DataProvenanceObservation:
     """Stamp series identity for audit / Lab replay (no decision effect)."""
     return DataProvenanceObservation(
@@ -184,6 +190,7 @@ def observe_data_provenance(
         closed_only=closed_only,
         transforms=tuple(transforms),
         dataset_fingerprint=dataset_fingerprint(candles),
+        resolution=resolution,
     )
 
 

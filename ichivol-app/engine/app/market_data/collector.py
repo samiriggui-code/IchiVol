@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Asset
 from app.db.models import Candle as CandleRow
 from app.indicators.ichimoku import Candle
+from app.market_data.volume_semantics import VolumeType
 
 
 def fetch_stored_candles(
@@ -40,17 +41,26 @@ def fetch_stored_candles(
         .limit(limit)
     ).scalars().all()
 
-    return [
-        Candle(
-            time=int(row.timestamp.timestamp()),
-            open=row.open,
-            high=row.high,
-            low=row.low,
-            close=row.close,
-            volume=row.volume,
+    out: list[Candle] = []
+    for row in reversed(rows):
+        vt_raw = getattr(row, "volume_type", None)
+        try:
+            vt = VolumeType(vt_raw) if vt_raw else VolumeType.NONE
+        except ValueError:
+            vt = VolumeType.NONE
+        out.append(
+            Candle(
+                time=int(row.timestamp.timestamp()),
+                open=row.open,
+                high=row.high,
+                low=row.low,
+                close=row.close,
+                volume=row.volume,
+                taker_buy_volume=getattr(row, "taker_buy_volume", None),
+                volume_type=vt,
+            )
         )
-        for row in reversed(rows)
-    ]
+    return out
 
 
 def get_or_create_asset(session: Session, symbol: str, exchange: str) -> Asset:
@@ -88,6 +98,10 @@ def upsert_candles(
             "low": c.low,
             "close": c.close,
             "volume": c.volume,
+            "volume_type": (
+                c.volume_type.value if getattr(c, "volume_type", None) is not None else None
+            ),
+            "taker_buy_volume": getattr(c, "taker_buy_volume", None),
         }
         for c in candles
     ]

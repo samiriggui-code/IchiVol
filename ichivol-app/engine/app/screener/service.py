@@ -38,13 +38,14 @@ from app.indicators.rvol import RvolParams
 from app.indicators.structure import StructureParams
 from app.market_data import binance_futures
 from app.market_data.accumulator import fetch_with_accumulation, needs_accumulation
-from app.market_data.resolve import resolve_and_fetch
+from app.market_data.resolve import resolve, resolve_and_fetch
 from app.config import settings
 from app.market_data.quality import closed_candles
 from app.screener.timing import compute_signal_timing
 from app.market_data.timeframes import HIGHER_TIMEFRAME, TF_SECONDS
 from app.universe.catalog import default_watchlist, get_instrument
 from app.universe.types import AssetClass
+
 logger = logging.getLogger(__name__)
 
 _OI_PERIODS = {"15m", "1h", "4h", "1d"}
@@ -163,6 +164,7 @@ def scan_symbol(
     atr_params: AtrParams = AtrParams(),
     location_params: LocationParams = LocationParams(),
 ) -> ScreenerRow:
+    resolved = resolve(symbol, default_provider=exchange)
     provider, provider_symbol, candles = resolve_and_fetch(
         symbol, timeframe, limit, default_provider=exchange
     )
@@ -333,6 +335,7 @@ def scan_symbol(
             timeframe=timeframe,
             closed_only=bool(settings.decide_on_closed_candles),
             transforms=("closed_only",) if settings.decide_on_closed_candles else (),
+            resolution=resolved.resolution,
         )
     except Exception:
         logger.exception("data_quality/provenance observe failed for %s — leaving unset", symbol)
