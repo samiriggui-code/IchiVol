@@ -74,7 +74,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T10a EN COURS — registry status + source (PR draft)
 
 - Branche : `cursor/t10a-registry-status-a2fe` @ `e49e602`
-- PR : (draft à ouvrir) — base `main` @ `10631ef` (#54)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/55 (**draft**) — base `main` @ `10631ef` (#54)
 - Statut : **ATTENTE REVUE CLAUDE** (implémentation Cursor solo — Claude revient 12h10)
 - Tests locaux : `test_t10a_registry_status` + `test_registry` + `test_indicators_route` + `test_ppo_best_cloud_lab` **OK**
 
