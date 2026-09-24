@@ -388,6 +388,11 @@ def open_paper_position(
             signal_extra={
                 "evidence_id": evidence_id,
                 "context": row.context.to_dict() if row.context else None,
+                **(
+                    {"bar_time": int(row.candles[-1].time)}
+                    if row.candles
+                    else {}
+                ),
                 **extra_signal,
             },
             manual_notional=manual_notional,

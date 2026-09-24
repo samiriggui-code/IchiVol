@@ -381,6 +381,20 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/paper/portfolios/{code}/orders",
+    "endpoint": "list_paper_orders"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/paper/portfolios/{code}/orders/{order_id}",
+    "endpoint": "get_paper_order"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/paper/portfolios/{code}/activity",
     "endpoint": "get_paper_portfolio_activity"
   },

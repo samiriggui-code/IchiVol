@@ -96,6 +96,7 @@ def _open_short(s, *, price=100.0, notional=1000.0, stop_distance=5.0):
         decision="SELL",
         stop_distance=stop_distance,
         manual_notional=notional,
+        signal={"bar_time": f"short-fee-{price}-{notional}"},
     )
 
 

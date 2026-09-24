@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { OrdersPanel } from '../components/OrdersPanel'
 import { getPaperOverview, type PaperOverview } from '../lib/paper'
 import { PaperPage } from './PaperPage'
 import { SynthesePage } from './SynthesePage'
 import './PortfolioPage.css'
 
-type PortfolioTab = 'synthese' | 'compte' | 'positions' | 'risque' | 'tests'
+type PortfolioTab = 'synthese' | 'compte' | 'positions' | 'ordres' | 'risque' | 'tests'
 
 function normalizeTab(raw: string | null): PortfolioTab {
   if (raw === 'positions' || raw === 'paper') return 'positions'
   if (raw === 'compte' || raw === 'account') return 'compte'
+  if (raw === 'ordres' || raw === 'orders') return 'ordres'
   if (raw === 'risque' || raw === 'risk') return 'risque'
   if (raw === 'tests') return 'tests'
   return 'synthese'
@@ -79,6 +81,7 @@ export function PortfolioPage() {
             ['synthese', 'Synthèse'],
             ['compte', 'Compte'],
             ['positions', 'Positions'],
+            ['ordres', 'Ordres'],
             ['risque', 'Risque'],
             ['tests', 'Tests'],
           ] as const
@@ -114,6 +117,14 @@ export function PortfolioPage() {
         {active === 'positions' && (
           <div className="portfolio-embed">
             <PaperPage />
+          </div>
+        )}
+        {active === 'ordres' && (
+          <div className="portfolio-embed">
+            <p className="muted portfolio-embed-hint">
+              Cycle de vie des ordres paper (T13d) — lecture seule. Tap = timeline des events.
+            </p>
+            <OrdersPanel />
           </div>
         )}
         {active === 'risque' && (

@@ -93,6 +93,7 @@ def _open(
         decision="BUY",
         stop_distance=sd,
         manual_notional=notional,
+        signal={"bar_time": f"fid-{symbol}-{direction}-{price}"},
     )
 
 
@@ -246,6 +247,7 @@ def test_short_pnl_correct_percent_and_currency(session):
         decision="SELL",
         stop_distance=5.0,
         manual_notional=500.0,
+        signal={"bar_time": "fid-short-1"},
     )
     assert pos is not None
     session.flush()
@@ -272,6 +274,7 @@ def test_short_pnl_correct_percent_and_currency(session):
         decision="SELL",
         stop_distance=5.0,
         manual_notional=500.0,
+        signal={"bar_time": "fid-short-2"},
     )
     assert pos2 is not None
     session.flush()
@@ -296,6 +299,7 @@ def test_short_close_realized_matches_unrealized_minus_exit_costs(session):
         decision="SELL",
         stop_distance=5.0,
         manual_notional=400.0,
+        signal={"bar_time": "fid-short-3"},
     )
     assert pos is not None and pos.qty
     session.flush()

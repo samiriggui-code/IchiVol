@@ -45,6 +45,8 @@ SYMBOL = "PAPERTEST"
 TIMEFRAME = "1h"
 # Match test_fwd_profiles: keep mark moves inside the stop/TP band (tp_r=2 → ±2×STOP).
 STOP = 2.0
+_BAR_EXTRA = {"bar_time": 1_700_000_000}
+
 
 
 def _pipeline(decision: str, direction: Direction = Direction.LONG) -> PipelineResult:
@@ -226,8 +228,7 @@ def test_sync_position_opens_a_long_on_buy_with_no_existing_position(_session):
         result = paper.sync_position(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
             user_id=None, price=100.0, pipeline=_pipeline("BUY"),
-            stop_distance=STOP, portfolio=pf,
-        )
+            stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         assert result is not None
         assert result.direction == "LONG"
         assert result.status == "OPEN"
@@ -243,8 +244,7 @@ def test_sync_position_does_nothing_on_watch_with_no_existing_position(_session)
         result = paper.sync_position(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
             user_id=None, price=100.0, pipeline=_pipeline("WATCH"),
-            stop_distance=STOP, portfolio=pf,
-        )
+            stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         assert result is None
         assert paper._get_open_position(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
@@ -260,8 +260,7 @@ def test_sync_position_holds_an_open_position_while_still_supported(_session):
         opened = paper.sync_position(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
             user_id=None, price=100.0, pipeline=_pipeline("BUY"),
-            stop_distance=STOP, portfolio=pf,
-        )
+            stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         assert opened is not None
         _session.commit()
         entry = opened.entry_price
@@ -269,8 +268,7 @@ def test_sync_position_holds_an_open_position_while_still_supported(_session):
         result = paper.sync_position(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
             user_id=None, price=100.5, pipeline=_pipeline("BUY"),
-            stop_distance=STOP, portfolio=pf,
-        )
+            stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         assert result is None  # nothing changed -- still open, untouched
 
         open_position = paper._get_open_position(
@@ -291,16 +289,14 @@ def test_sync_position_closes_when_decision_downgrades_to_watch(_session):
         opened = paper.sync_position(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
             user_id=None, price=100.0, pipeline=_pipeline("BUY"),
-            stop_distance=STOP, portfolio=pf,
-        )
+            stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         assert opened is not None and opened.status == "OPEN"
         _session.flush()
 
         result = paper.sync_position(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
             user_id=None, price=101.0, pipeline=_pipeline("WATCH"),
-            stop_distance=STOP, portfolio=pf,
-        )
+            stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         assert result is not None
         assert result.status == "CLOSED"
         assert result.exit_reason == "pipeline_downgraded"
@@ -315,15 +311,13 @@ def test_sync_position_closes_when_pipeline_direction_flips(_session):
         paper.sync_position(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
             user_id=None, price=100.0, pipeline=_pipeline("BUY"),
-            stop_distance=STOP, portfolio=pf,
-        )
+            stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         _session.commit()
 
         result = paper.sync_position(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
             user_id=None, price=99.0, pipeline=_pipeline("SELL", Direction.SHORT),
-            stop_distance=STOP, portfolio=pf,
-        )
+            stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         assert result is not None
         assert result.status == "CLOSED"
         assert result.exit_reason == "direction_flipped"
@@ -344,8 +338,7 @@ def test_short_position_pnl_is_positive_when_price_falls(_session):
         opened = paper.sync_position(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
             user_id=None, price=100.0, pipeline=_pipeline("SELL", Direction.SHORT),
-            stop_distance=STOP, portfolio=pf,
-        )
+            stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         assert opened is not None and opened.direction == "SHORT"
         _session.flush()
 
@@ -360,8 +353,7 @@ def test_short_position_pnl_is_positive_when_price_falls(_session):
         opened2 = paper.sync_position(
             _session, symbol=f"{SYMBOL}_L", timeframe=TIMEFRAME, source="auto_watchlist",
             user_id=None, price=100.0, pipeline=_pipeline("SELL", Direction.SHORT),
-            stop_distance=STOP, portfolio=pf,
-        )
+            stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         assert opened2 is not None
         _session.flush()
         closed2 = paper_broker.close_capital_position(
@@ -389,7 +381,7 @@ def test_sync_auto_watchlist_processes_multiple_rows_and_commits(_session):
             self.price = price
             self.pipeline = _pipeline(decision)
             self.atr = SimpleNamespace(suggested_stop_distance=STOP)
-            self.candles = []
+            self.candles = [SimpleNamespace(time=1_700_000_000)]
             self.rvol = None
             self.signal_timing = None
 
@@ -404,8 +396,7 @@ def test_sync_auto_watchlist_processes_multiple_rows_and_commits(_session):
         direct = paper.sync_position(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
             user_id=None, price=100.0, pipeline=_pipeline("BUY"),
-            stop_distance=STOP, portfolio=pf,
-        )
+            stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         assert direct is not None
         _session.commit()
         paper_gates.reset_run_memory()
@@ -430,12 +421,10 @@ def test_open_user_confirmed_is_idempotent(_session):
     try:
         first, created1 = paper.open_user_confirmed(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, user_id="user-1", price=100.0,
-            pipeline=_pipeline("BUY"), stop_distance=STOP, portfolio=pf,
-        )
+            pipeline=_pipeline("BUY"), stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         second, created2 = paper.open_user_confirmed(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, user_id="user-1", price=105.0,
-            pipeline=_pipeline("BUY"), stop_distance=STOP, portfolio=pf,
-        )
+            pipeline=_pipeline("BUY"), stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         assert created1 is True
         assert created2 is False
         assert first is not None and second is not None
@@ -450,8 +439,7 @@ def test_open_user_confirmed_does_not_open_on_a_non_actionable_decision(_session
     try:
         result, created = paper.open_user_confirmed(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, user_id="user-1", price=100.0,
-            pipeline=_pipeline("WATCH"), stop_distance=STOP, portfolio=pf,
-        )
+            pipeline=_pipeline("WATCH"), stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         assert result is None
         assert created is False
     finally:
@@ -463,8 +451,7 @@ def test_close_manually_closes_an_open_position(_session):
     try:
         position, _ = paper.open_user_confirmed(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, user_id="user-1", price=100.0,
-            pipeline=_pipeline("BUY"), stop_distance=STOP, portfolio=pf,
-        )
+            pipeline=_pipeline("BUY"), stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         assert position is not None
         closed = paper.close_manually(_session, position.id, price=103.0)
         assert closed.status == "CLOSED"
@@ -479,8 +466,7 @@ def test_close_manually_returns_none_for_an_already_closed_position(_session):
     try:
         position, _ = paper.open_user_confirmed(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, user_id="user-1", price=100.0,
-            pipeline=_pipeline("BUY"), stop_distance=STOP, portfolio=pf,
-        )
+            pipeline=_pipeline("BUY"), stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         assert position is not None
         paper.close_manually(_session, position.id, price=120.0)
         assert paper.close_manually(_session, position.id, price=130.0) is None
@@ -493,14 +479,12 @@ def test_list_positions_filters_by_source_user_and_status(_session):
     try:
         paper.open_user_confirmed(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, user_id="user-1", price=100.0,
-            pipeline=_pipeline("BUY"), stop_distance=STOP, portfolio=pf,
-        )
+            pipeline=_pipeline("BUY"), stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         auto_sym = f"{SYMBOL}_AUTO"
         paper.sync_position(
             _session, symbol=auto_sym, timeframe=TIMEFRAME, source="auto_watchlist",
             user_id=None, price=100.0, pipeline=_pipeline("BUY"),
-            stop_distance=STOP, portfolio=pf,
-        )
+            stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         _session.commit()
 
         user_positions = [
@@ -535,12 +519,10 @@ def test_open_user_confirmed_locks_symbol_already_open_on_portfolio(_session):
     try:
         first, created1 = paper.open_user_confirmed(
             _session, symbol=SYMBOL, timeframe=TIMEFRAME, user_id="user-1", price=100.0,
-            pipeline=_pipeline("BUY"), stop_distance=STOP, portfolio=pf,
-        )
+            pipeline=_pipeline("BUY"), stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         second, created2 = paper.open_user_confirmed(
             _session, symbol=SYMBOL, timeframe="4h", user_id="user-1", price=110.0,
-            pipeline=_pipeline("BUY"), stop_distance=STOP, portfolio=pf,
-        )
+            pipeline=_pipeline("BUY"), stop_distance=STOP, portfolio=pf, signal_extra=_BAR_EXTRA)
         assert created1 is True and first is not None
         assert created2 is False and second is not None
         assert first.id == second.id

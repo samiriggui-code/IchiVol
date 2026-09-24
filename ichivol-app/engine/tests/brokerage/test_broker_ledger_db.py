@@ -51,6 +51,7 @@ def _open(s, direction="LONG"):
     return broker.open_capital_position(
         s, portfolio=s.info["portfolio"], symbol="LEDGERX", timeframe="1h", source="test", user_id=None,
         direction=direction, price=100.0, decision="BUY", stop_distance=2.0,
+        signal={"bar_time": f"ledger-{direction}"},
     )
 
 

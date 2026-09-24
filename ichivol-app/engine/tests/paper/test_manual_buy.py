@@ -114,7 +114,7 @@ def test_manual_buy_opens_exactly_the_chosen_amount_and_is_journaled(s):
     position, created = paper_engine.open_user_confirmed(
         s, symbol="BTCUSDT", timeframe="1h", user_id="u1", price=100.0,
         pipeline=PipelineResult(decision="BUY", direction=Direction.LONG, stages=[]), stop_distance=2.0,
-        signal_extra={"discretionary": True}, manual_notional=800.0, take_profit_r=3.0,
+        signal_extra={"discretionary": True, "bar_time": 1_700_000_100}, manual_notional=800.0, take_profit_r=3.0,
     )
     assert created and position.status == "OPEN" and position.source == "user_confirmed"
     assert position.notional == pytest.approx(800.0, rel=1e-6)

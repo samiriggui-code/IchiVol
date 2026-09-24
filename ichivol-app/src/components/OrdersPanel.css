@@ -1,0 +1,168 @@
+.orders-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.orders-divergences {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--amber, #a76c17) 40%, var(--border));
+  background: color-mix(in srgb, var(--amber, #a76c17) 10%, var(--card));
+  border-radius: var(--radius, 10px);
+  font-size: 0.8125rem;
+}
+
+.orders-divergences ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.orders-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: flex-end;
+}
+
+.orders-toolbar label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.orders-toolbar select {
+  min-height: 2.25rem;
+  min-width: 9rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--foreground);
+}
+
+.orders-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 800px) {
+  .orders-layout {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  }
+}
+
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: min(70vh, 560px);
+  overflow: auto;
+}
+
+.orders-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: left;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  cursor: pointer;
+  color: inherit;
+  min-height: 44px;
+}
+
+.orders-row.is-selected {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  background: color-mix(in srgb, var(--primary) 6%, var(--card));
+}
+
+.orders-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.orders-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  font-size: 0.75rem;
+}
+
+.orders-timeline {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-subtle, var(--card));
+  padding: 0.85rem 1rem;
+  min-height: 12rem;
+}
+
+.orders-events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.orders-events li {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  gap: 0.55rem;
+  align-items: start;
+}
+
+.orders-event-seq {
+  font-size: 0.7rem;
+  color: var(--muted-foreground);
+  padding-top: 0.2rem;
+}
+
+.orders-event-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+}
+
+.orders-event-meta {
+  font-size: 0.7rem;
+  margin-top: 0.2rem;
+}
+
+.iv-badge.is-filled {
+  background: color-mix(in srgb, var(--bull) 12%, var(--card));
+  border-color: color-mix(in srgb, var(--bull) 35%, var(--border));
+  color: var(--bull);
+}
+
+.iv-badge.is-reject {
+  background: color-mix(in srgb, var(--bear) 12%, var(--card));
+  border-color: color-mix(in srgb, var(--bear) 35%, var(--border));
+  color: var(--bear);
+}
+
+.iv-badge.is-cancel,
+.iv-badge.is-unknown {
+  background: var(--surface-subtle);
+  color: var(--muted-foreground);
+}
+
+.iv-badge.is-partial,
+.iv-badge.is-pending {
+  background: color-mix(in srgb, var(--neutral, var(--amber)) 14%, var(--card));
+  border-color: color-mix(in srgb, var(--neutral, var(--amber)) 40%, var(--border));
+  color: var(--neutral, var(--amber));
+}

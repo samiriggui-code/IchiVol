@@ -112,6 +112,7 @@ def _open(s, source="user_confirmed"):
     return broker.open_capital_position(
         s, portfolio=s.info["p"], symbol="BTCUSDT", timeframe="1h", source=source, user_id=None,
         direction="LONG", price=80000.0, decision="BUY", stop_distance=1000.0,
+        signal={"bar_time": f"prot-{source}"},
     )
 
 
@@ -181,6 +182,7 @@ def _open_sym(s, symbol):
         s, portfolio=s.info["p"], symbol=symbol, timeframe="1h", source="auto_watchlist", user_id=None,
         direction="LONG", price=80000.0 if symbol == "BTCUSDT" else 2600.0, decision="BUY",
         stop_distance=1000.0 if symbol == "BTCUSDT" else 40.0,
+        signal={"bar_time": f"prot-sym-{symbol}"},
     )
 
 
@@ -909,6 +911,7 @@ def test_reinforce_short_tighten_stop_and_closed_totals(session):
         price=80000.0,
         decision="SELL",
         stop_distance=1000.0,
+        signal={"bar_time": "prot-reinforce-short"},
     )
     assert pos is not None and pos.direction == "SHORT"
     qty0 = float(pos.qty)

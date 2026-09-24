@@ -7,6 +7,60 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — T13d + T14d CORRECTIONS revue Claude (#88) — attendre re-revue
+
+- Branche : `cursor/t13d-order-lifecycle-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/88 — **DRAFT** (pas de merge ; attendre revue Claude)
+- Base : `main` @ `9c0c0cc`
+
+### Corrections bloquantes (revue #88)
+1. **Close retry + cash guard** — `client_order_id` = `close:{position_id}:{n}` ; non-terminal = reprise ; REJECTED/CANCELLED = n+1. Broker (open/close/partial/reinforce) : **zéro cash / ledger / mutation position** si l’ordre n’atteint pas FILLED dans l’appel.
+2. **Vrai chemin d’échec de clôture** — fill fail (`apply_exit_friction` / prix non fini) → `reject_order` + position `OPEN` + `close_requested_at` effacé + journal `CLOSE_REJECTED` + zéro cash. Test monkeypatch + retry (REJECTED puis FILLED, cash une fois, lifecycle OK).
+3. **Idempotence open** — `signal_extra["bar_time"]` sur sync auto / confirmation manuelle / quote_paper ; **plus de repli horloge**. Sans barre → `decision_id` / `intent_ref` sinon refus `no_bar_key`. Test via vrai `_signal_payload`.
+
+### Non-bloquants (même PR)
+4. Bandeau Ordres : uniquement les 5 checks lifecycle T13d (API + UI).
+5. `test_migration_backfill_legacy_order` : downgrade −1 → insert legacy → upgrade → `legacy-{id}` + event FILLED daté `created_at`.
+6. `resolve_unknown` → FILLED renseigne `filled_qty` / `avg_fill_price`.
+
+### Hors scope
+T13e · T11c · Sessions / Agents · **UI-DETAIL** (PR2 **après** merge de #88).
+
+---
+
+## 2026-09-24 — T13d + T14d (draft) — cycle de vie ordres paper + onglet Ordres
+
+- Branche : `cursor/t13d-order-lifecycle-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/88 — **DRAFT** (attendre revue Claude, pas de merge solo)
+- Base : `main` @ `9c0c0cc`
+
+### Livré
+1. `paper/orders.py` — machine d’états déclarée, transitions illégales → exception, terminaux immuables, UNKNOWN → résolution réconciliation seule
+2. Création unique `PaperOrder` via `orders.create_order` ; AST ratchet (app/)
+3. Table `paper_order_events` append-only + migration `i5j6k7l8m9n0` (backfill `legacy-{id}` + event)
+4. Champs `client_order_id`, `filled_qty`, `avg_fill_price`, `expires_at`, `intent_ref` ; UNIQUE `(portfolio_id, client_order_id)`
+5. Idempotence open/close/partial/reinforce ; market CREATED→SUBMITTED→ACK→FILLED même transaction
+6. Position `CLOSING` + `close_requested_at` ; CLOSED seulement au FILLED close
+7. Kill switch arm → cancel non-terminaux
+8. Reconcile étendu (rapport) + `apply_stale_order_reconciliation` (UNKNOWN/ledger)
+9. API GET `/orders` + `/orders/{id}` (lecture seule) ; OpenAPI goldens régénérés
+10. T14d : Portefeuille `?tab=ordres` — liste, filtre statut, timeline, divergences en tête
+
+### DÉCISION CURSOR — à relire
+- FK `paper_order_events.order_id` en **ON DELETE CASCADE** (cleanup tests existants qui DELETE orders sans toucher fixtures).
+- `bar_key` open : `bar_time` (signal) / `decision_id` / `intent_ref` — **pas** de fallback horloge (refus `no_bar_key`).
+- PARTIAL / EXPIRED : machine + tests unitaires seulement (pas de liquidité inventée en broker market).
+- OpenAPI / `route_order_golden` mis à jour (routes GET nouvelles) — fixtures paper/ golden inchangées.
+
+### Tests
+- `tests/paper/test_order_lifecycle.py` (transitions, `_signal_payload` idempotence, UNKNOWN+qty, close fail+retry, kill, AST, migration backfill réelle)
+- `pytest tests/paper/` vert ; `npm run build` OK
+
+### Hors scope (STOP partiel)
+T13e · T11c · Sessions / Agents · UI-DETAIL (PR 2 après merge de celle-ci).
+
+---
+
 ## 2026-09-24 — UI workspace refonte MERGÉE (#86) — squash `92f43f7`
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/86 — **MERGÉE** squash
