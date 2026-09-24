@@ -7,7 +7,37 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-24 — T12a EN COURS — historique profond versionné (Strategy Lab)
+## 2026-09-24 — T12b EN COURS — parité Lab / live (FeatureBar + stages)
+
+- Branche : `cursor/t12b-lab-live-parity-a2fe`
+- PR : *(draft — à renseigner)*
+- Base : `main` @ `5bc1e9c` (#72 T12a **MERGÉE**)
+- Statut : **DRAFT** — attente revue Claude avant merge.
+
+### Livré
+
+1. Ichimoku live dans FeatureBar/DSL : `chikou_state`, `future_kumo`, `ichimoku_score`, `ichimoku_direction` (via `ichimoku_agent.state_to_agent_output`)
+2. Régime : `adx` / `plus_di` / `minus_di` / `donchian_breakout` + labels `classify_regimes` + `regime_stage_pass` (= `_regime_stage`)
+3. Location : VWAP / AVWAP / VA / HVN + `location_stage_pass` (= `_location_stage`)
+4. Participation : `cvd_bias` + bandes RVOL booléennes (faible…extrême) + `participation_stage_pass`
+5. Test de parité obligatoire : Lab `*_stage_pass` == pipeline live (bar par bar)
+6. Tout via REGISTRY ; test de causalité sur les nouvelles features
+7. Cosmétique T12a : écart < 2 j → message avec bougies manquantes
+
+### Hors scope
+T12c–e · T13 · microstructure · seuils live
+
+---
+
+## 2026-09-24 — T12a MERGÉE (#72) — squash `5bc1e9c`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/72 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `5bc1e9c`
+- Historique profond versionné + validate_candles + qualité Lab ; correctifs rév.53/54.
+
+**Suite** : T12b EN COURS (parité Lab / live).
+
+---
 
 - Branche : `cursor/t12a-deep-history-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/72 (**draft**)

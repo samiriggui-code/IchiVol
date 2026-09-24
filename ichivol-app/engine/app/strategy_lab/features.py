@@ -50,6 +50,7 @@ from app.fibonacci.context import (
     swings_from_impulse,
 )
 from app.structure.atr_utils import last_atr
+from app.strategy_lab.live_parity import live_parity_kwargs
 
 
 @dataclass(frozen=True)
@@ -140,6 +141,40 @@ class FeatureBar:
     fib_impulse_down: bool = False
     fib_anchor_impulse: bool = False
     fib_nearest_ratio: float | None = None
+    # --- T12b Lab ↔ live parity (ADD-ONLY; no live threshold changes) ---
+    chikou_state: str = "UNKNOWN"
+    future_kumo: str = "UNKNOWN"
+    ichimoku_score: float | None = None
+    ichimoku_direction: str = "NEUTRAL"
+    adx: float | None = None
+    plus_di: float | None = None
+    minus_di: float | None = None
+    donchian_breakout: str = "UNKNOWN"
+    regime_trending: bool = False
+    regime_ranging: bool = False
+    regime_high_volatility: bool = False
+    regime_low_volatility: bool = False
+    regime_normal_volatility: bool = False
+    regime_bull: bool = False
+    regime_bear: bool = False
+    regime_sideways: bool = False
+    regime_stage_pass: str = "pending"
+    above_vwap: bool = False
+    below_vwap: bool = False
+    avwap_aligned: bool = False
+    avwap_opposed: bool = False
+    inside_value_area: bool = False
+    beyond_value_area: bool = False
+    wrong_side_value_area: bool = False
+    congestion_hvn: bool = False
+    location_stage_pass: str = "pending"
+    cvd_bias: str = "UNKNOWN"
+    rvol_faible: bool = False
+    rvol_normal: bool = False
+    rvol_eleve: bool = False
+    rvol_fort: bool = False
+    rvol_extreme: bool = False
+    participation_stage_pass: str = "pending"
 
 
 @dataclass(frozen=True)
@@ -310,6 +345,10 @@ def build_feature_series(
             "ppo",
             "best_cloud",
             "ichimoku_analytics",
+            "location",
+            "adx",
+            "donchian",
+            "cvd",
         ],
         candles,
         params_by_id={
@@ -337,6 +376,10 @@ def build_feature_series(
     ppo = computed["ppo"]
     best_cloud = computed["best_cloud"]
     analytics = computed["ichimoku_analytics"]
+    location = computed["location"]
+    adx = computed["adx"]
+    donchian = computed["donchian"]
+    cvd = computed["cvd"]
 
     bars: list[FeatureBar] = []
     for i, c in enumerate(candles):
@@ -352,6 +395,15 @@ def build_feature_series(
         atr_now = atr[i].atr
         expansion = (
             atr_now is not None and atr_prev is not None and atr_now > atr_prev
+        )
+        parity = live_parity_kwargs(
+            ichi=s,
+            rvol=rvol[i],
+            atr=atr[i],
+            adx=adx[i],
+            donchian=donchian[i],
+            location=location[i],
+            cvd=cvd[i],
         )
         bars.append(
             FeatureBar(
@@ -404,6 +456,7 @@ def build_feature_series(
                 kumo_thickness_pct=a.kumo_thickness_pct,
                 **_ppo_kwargs(ppo[i]),
                 **_best_cloud_kwargs(best_cloud[i]),
+                **parity,
             )
         )
 
