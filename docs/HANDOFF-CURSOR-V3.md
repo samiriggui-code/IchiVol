@@ -10,7 +10,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **Claude** (revue) : PostgreSQL 16 `ichivol_engine_dev`, migrations alembic appliquées → lance la suite **complète** (paper, backtest evidence, brokerage, market_data inclus).
 - **Cursor** (implémentation) : **pas** d’install Postgres local ; suite sans base comme d’habitude ; reporter les résultats dans le handoff. Les échecs liés à la base sont détectés / renvoyés par Claude.
 - **Baseline avec base propre** (référence courante, post T0-CI #14) : **0 échec, 1 skip** réseau Binance. Toute base **non vierge** (ex. `ichivol_engine_dev` local avec de l'historique réel de paper trading) peut faire échouer des tests qui supposent un état propre (`test_account_identity_after_refresh`, `test_open_paper_position_reports_no_atr_stop_honestly`, `test_protection.py`, `test_overview_marks_budget` timing) — **vérifier contre `main` avant merge** avant de conclure à une régression, ne pas comparer à cette baseline si la base contient déjà des données.
-- **Règle de merge** : avec une base propre, **0 échec** attendu. Tout échec **nouveau par rapport à `main`** bloque le merge.
+- **Règle de merge** : avec une base propre, **0 échec** attendu. Tout échec **nouveau par rapport à `main`** bloque le merge. **Toujours vérifier `git log origin/main` après un merge** avant d’annoncer MERGÉE dans le handoff.
 - **T0-CI** : greening + isolation baseline — **mergé** (PR #14) — **validé par Claude**.
 - **T2a** : ChartObject — **mergé** (PR #15) — **validé par Claude**.
 - **T0-BROKER** #16 — **MERGÉE** (validé Claude).
@@ -41,72 +41,42 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-MANAGE-a** #45 — **MERGÉE** (validé par Claude, revue exécutée en local Laragon/Postgres — diff réel + no-lookahead vérifié bar par bar).
 - **T0-MANAGE-b** #46 — **MERGÉE** (validé par Claude — watermark, gate legacy/auto et isolation des tests vérifiés ; 2 réserves non bloquantes notées).
 - **T0-MANAGE-c** #47 — **MERGÉE** (validé par Claude — invariant 1e-9 revérifié indépendamment ; **résidu de Jensen mesuré et non borné, voir entrée dédiée**).
-- **Job en cours** : **T0-MANAGE-d** — prise de profit partielle **paper** — PR draft #48. **Pas de merge / pas de T0-MANAGE-e** avant nouvelle revue Claude.
-- ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol² (jusqu'à ~2,2 % par trade à 10 % de volatilité). **Ne pas comparer un ruleset avec partiels à un ruleset sans partiels sur le drawdown** avant correction — le total de performance, lui, est exact.
-- ⚠️ **Dette préexistante (hors #48)** : SHORT `realized` n'inclut pas `entry_fee` (noté revue Claude).
+- **T0-MANAGE-d** #48 — **MERGÉE** squash `a941539` (validé Claude ; suite PG 918→928 ok / 1 skip). **Incident process** : handoff avait annoncé MERGÉE avant que `main` ne contienne le squash — corrigé.
+- **Job en cours** : **T0-MANAGE-e** — renforcement Lab — PR draft #49. **Pas de merge / pas de T0-MANAGE-f** avant re-revue Claude.
+- ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol². **Ne pas comparer** partiels vs non-partiels sur le DD avant correction.
+- ⚠️ **Dette ouverte (préexistante)** : SHORT `realized` n'inclut pas `entry_fee`.
+- ⚠️ **Caveat migration #48** : backfill `initial_entry_fee = entry_fee` courant — **faux pour lots déjà partialisés avant migration**.
+- ⚠️ **Dette T0-MANAGE-e** : exposition > 1× après ajouts = levier implicite Lab — ajouter `max_exposure` (défaut 1.0) ou documenter avant comparaison de rulesets ; **obligatoire pour paper (T0-MANAGE-f)**.
 
 
 ---
 
-## 2026-09-24 — T0-MANAGE-d CORRECTIONS revue Claude #48
+## 2026-09-24 — T0-MANAGE-e CORRECTIONS revue Claude #49
 
-- Branche : `cursor/t0-manage-d-partial-tp-paper-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/48 (**draft**)
-- Statut : **ATTENTE RE-REVUE CLAUDE** — **ne pas merger** ; **pas de T0-MANAGE-e**.
+- Branche : `cursor/t0-manage-e-reinforce-lab-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/49 (**draft**)
+- Statut : **ATTENTE RE-REVUE CLAUDE** — **ne pas merger** ; **pas de T0-MANAGE-f**.
+- Process : #48 squash-mergé sur `main` (`a941539`) ; #49 rebasé.
 
 ### Corrections demandées (fait)
 
-1. **Épuisement partial → `close_capital_position`** : si `qty` couvre le reliquat (`new_qty≈0`), `partial_close_capital_position` délègue le règlement à `close_capital_position` (financing déduit une fois, restore qty/entry_fee). Journal `PaperPartialExit` + event `PARTIAL_TP` conservés pour le tracking des steps.
-2. **`initial_entry_fee`** (alembic `d0e1f2a3b4c5`) : figé à l'open ; `entry_fee` shrink sur partiels ; **restauré à `initial_entry_fee` sur CLOSE** (chemins full close et exhaustion). Même contrat que `qty` / `initial_qty`.
-3. **Tests** : assert tautologique remplacé par `cash_delta == realized` (LONG, sans financement, depuis cash pré-open). Nouveau test steps somme=1 + financement crypto forcé non nul → financing dans le slice d'épuisement.
+1. Défaut `risk_policy` → **`tighten_stop`** (`reduce_qty` reste option)
+2. `open_risk` **signé** : LONG `max(0, avg−stop)×qty` ; SHORT `max(0, stop−avg)×qty`
+3. Parse **rejette** `partial_tp` + `reinforce` ensemble (message clair)
+4. Tests : tighten_stop en profit ; rejet combo ; open_risk stop au-delà du prix moyen ; reduce_qty bloque add au-dessus du avg (structurel)
 
-### Non-bloquant (fait)
+### Non-bloquant
 
-- `pnl_pct` à la clôture = VWAP qty-pondéré des fills (partiels + reliquat), via `vwap_exit`.
-- `initial_stop` partial : priorité au `protection_trail.initial_stop` figé (resolve + alignement runtime si trail+partial actifs).
-- **`initial_qty`** : colonne stable = taille d'entrée ; pendant OPEN, `qty` = restant ; à CLOSE, `qty` restauré à `initial_qty` (consommateurs fees/ledger/T0-METRICS). Ne jamais shrink `initial_qty`. Fraction de step = `initial_qty * fraction`, capée au restant.
-
-### Dette hors scope
-
-- SHORT realized sans `entry_fee` (préexistant).
-
-### Tests locaux (Cursor, Postgres)
-
-```text
-pytest tests/paper/test_protection.py tests/paper/test_broker_fidelity.py -q
-# 28 passed
-```
-
+- `max_exposure` (défaut 1.0) — dette avant comparaison rulesets / obligatoire paper
 
 ---
 
-## 2026-09-23 — T0-MANAGE-d EN COURS — partial TP paper
+## 2026-09-24 — T0-MANAGE-d MERGÉ (#48) — squash `a941539`
 
-- Branche : `cursor/t0-manage-d-partial-tp-paper-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/48 (**draft**)
-- Statut : **ATTENTE CLAUDE** — CI à confirmer ; **ne pas merger** ; **pas de T0-MANAGE-e**.
-
-### Livré
-
-1. Table `paper_partial_exits` (alembic `b8c9d0e1f2a3`, `time_ms` BIGINT) + modèle `PaperPartialExit`
-2. `broker.partial_close_capital_position` — qty/notional/entry_fee shrink ; `realized_pnl` cumule ; OPEN tant que qty > 0 ; refuse qty > remaining ; ledger `partial:{id}:{seq}`
-3. `close_capital_position` — ajoute le PnL du reliquat au réalisé déjà cumulé (ne l’écrase plus)
-4. `protection_partial_tp.py` — gate `user_confirmed` + `protection_partial_tp` ; réutilise `partial_tp.py` (niveaux / MFE)
-5. `protection.find_breach_manage` — priorité **stop > partials > target > trail** ; watermark avancé sur chemin partial
-6. API `partial_exits` sur les positions ; UI fiche (`PaperTradeSheet` étape 3b)
-7. Tests protection : gate, scale-out puis close reliquat, qty jamais négative, auto ignore ; assertions par `position.id`
-8. `initial_qty` (alembic `c9d0e1f2a3b4`) — taille d'entrée stable ; `qty` = restant tant qu'OPEN ; restauré à CLOSE
-
-### Non-fait
-
-- Renforcement (T0-MANAGE-e/f) ; dette Jensen Lab
-
-### Tests locaux (Cursor)
-
-```text
-pytest tests/paper/test_protection.py -q
-# 20 passed
-```
+- Branche : `cursor/t0-manage-d-partial-tp-paper-a2fe` — PR #48 — **MERGÉE** `a941539`
+- Suite PG Claude : **918 ok / 1 skip** (re-revue), puis baseline post-merge **928 ok / 1 skip**
+- Sondes : financement à l'épuisement ; `entry_fee` restauré ; cash=réalisé LONG ; `pnl_pct` VWAP ; épuisement+target même barre → une clôture
+- Caveat backfill `initial_entry_fee` (lots déjà partialisés avant migration)
 
 ---
 

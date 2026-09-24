@@ -32,6 +32,7 @@ from typing import Any, Mapping
 from app.agents.types import Direction
 from app.strategy_lab.conditions import CONDITION_REGISTRY
 from app.strategy_lab.partial_tp import PartialTpStep
+from app.strategy_lab.reinforce import RiskPolicy
 from app.strategy_lab.stop_trail import TrailSpec
 
 # Derived from CONDITION_REGISTRY (T3c) — keep name for optimization.py / api/rulesets.py.
@@ -68,19 +69,31 @@ class ConditionGroup:
 
 
 @dataclass(frozen=True)
+class ReinforceSpec:
+    """DSL reinforce (T0-MANAGE-e): ConditionGroup trigger + sizing of the add."""
+
+    condition_group: ConditionGroup
+    add_fraction: float
+    max_adds: int = 1
+    risk_policy: RiskPolicy = "tighten_stop"
+
+
+@dataclass(frozen=True)
 class ExitSpec:
-    """Optional lab exit beyond ATR stop/target (T3 + T0-MANAGE-a/c).
+    """Optional lab exit beyond ATR stop/target (T3 + T0-MANAGE-a/c/e).
 
     Empty / omitted ≡ today's ATR-only behaviour.
     ``condition_group`` None = no signal exit.
     ``trail`` None = fixed stop at entry (legacy).
     ``partial_tp`` empty = no scale-out (legacy single-fill exit).
+    ``reinforce`` None = no scale-in (legacy).
     """
 
     max_hold_bars: int | None = None
     condition_group: ConditionGroup | None = None
     trail: TrailSpec | None = None
     partial_tp: tuple[PartialTpStep, ...] = ()
+    reinforce: ReinforceSpec | None = None
 
     def is_empty(self) -> bool:
         return (
@@ -88,6 +101,7 @@ class ExitSpec:
             and self.condition_group is None
             and (self.trail is None or self.trail.is_empty())
             and not self.partial_tp
+            and self.reinforce is None
         )
 
 
@@ -165,6 +179,23 @@ class Ruleset:
                     {"r_multiple": s.r_multiple, "fraction": s.fraction}
                     for s in self.exit.partial_tp
                 ]
+            if self.exit.reinforce is not None:
+                rf = self.exit.reinforce
+                rg = rf.condition_group
+                if rg.is_legacy_flat():
+                    rf_conds: dict[str, Any] = dict(rg.all_of)
+                elif rg.all_of and rg.any_of:
+                    rf_conds = {"all": dict(rg.all_of), "any": dict(rg.any_of)}
+                elif rg.any_of:
+                    rf_conds = {"any": dict(rg.any_of)}
+                else:
+                    rf_conds = {"all": dict(rg.all_of)}
+                exit_payload["reinforce"] = {
+                    "conditions": rf_conds,
+                    "add_fraction": rf.add_fraction,
+                    "max_adds": rf.max_adds,
+                    "risk_policy": rf.risk_policy,
+                }
             out["exit"] = exit_payload
         return out
 
@@ -244,9 +275,11 @@ def _parse_condition_group(conditions_raw: Mapping[str, Any]) -> ConditionGroup:
     return ConditionGroup(all_of=all_of, any_of={})
 
 
-_EXIT_KEYS = frozenset({"max_hold_bars", "conditions", "trail", "partial_tp"})
+_EXIT_KEYS = frozenset({"max_hold_bars", "conditions", "trail", "partial_tp", "reinforce"})
 _TRAIL_KEYS = frozenset({"breakeven_at_r", "atr_trail_mult"})
 _PARTIAL_TP_KEYS = frozenset({"r_multiple", "fraction"})
+_REINFORCE_KEYS = frozenset({"conditions", "add_fraction", "max_adds", "risk_policy"})
+_RISK_POLICIES = frozenset({"reduce_qty", "tighten_stop"})
 
 
 def _parse_trail_spec(raw: Any) -> TrailSpec:
@@ -325,6 +358,54 @@ def _parse_partial_tp(raw: Any) -> tuple[PartialTpStep, ...]:
     return tuple(steps)
 
 
+def _parse_reinforce(raw: Any) -> ReinforceSpec:
+    if not isinstance(raw, Mapping) or not raw:
+        raise ValueError("ruleset.exit.reinforce must be a non-empty object")
+    keys = {str(k) for k in raw.keys()}
+    unknown = keys - _REINFORCE_KEYS
+    if unknown:
+        raise ValueError(f"unknown ruleset.exit.reinforce keys: {sorted(unknown)}")
+    if "conditions" not in raw or "add_fraction" not in raw:
+        raise ValueError(
+            "ruleset.exit.reinforce requires conditions and add_fraction"
+        )
+    cond_raw = raw["conditions"]
+    if not isinstance(cond_raw, Mapping) or not cond_raw:
+        raise ValueError("ruleset.exit.reinforce.conditions must be a non-empty object")
+    group = _parse_condition_group(cond_raw)
+
+    af = raw["add_fraction"]
+    if isinstance(af, bool) or not isinstance(af, (int, float)):
+        raise ValueError("ruleset.exit.reinforce.add_fraction must be a number in ]0, 1]")
+    add_fraction = float(af)
+    if not (0.0 < add_fraction <= 1.0):
+        raise ValueError("ruleset.exit.reinforce.add_fraction must be in ]0, 1]")
+
+    max_adds = 1
+    if "max_adds" in raw:
+        ma = raw["max_adds"]
+        if isinstance(ma, bool) or not isinstance(ma, int) or ma < 1:
+            raise ValueError("ruleset.exit.reinforce.max_adds must be an int >= 1")
+        max_adds = ma
+
+    policy: RiskPolicy = "tighten_stop"
+    if "risk_policy" in raw:
+        rp = raw["risk_policy"]
+        if not isinstance(rp, str) or rp not in _RISK_POLICIES:
+            raise ValueError(
+                "ruleset.exit.reinforce.risk_policy must be "
+                f"one of {sorted(_RISK_POLICIES)}"
+            )
+        policy = rp  # type: ignore[assignment]
+
+    return ReinforceSpec(
+        condition_group=group,
+        add_fraction=add_fraction,
+        max_adds=max_adds,
+        risk_policy=policy,
+    )
+
+
 def _parse_exit_spec(raw: Any) -> ExitSpec:
     if raw is None:
         return ExitSpec()
@@ -365,11 +446,16 @@ def _parse_exit_spec(raw: Any) -> ExitSpec:
     if "partial_tp" in raw:
         partial_tp = _parse_partial_tp(raw["partial_tp"])
 
+    reinforce: ReinforceSpec | None = None
+    if "reinforce" in raw:
+        reinforce = _parse_reinforce(raw["reinforce"])
+
     if (
         max_hold is None
         and cond_group is None
         and trail is None
         and not partial_tp
+        and reinforce is None
     ):
         return ExitSpec()
     return ExitSpec(
@@ -377,6 +463,7 @@ def _parse_exit_spec(raw: Any) -> ExitSpec:
         condition_group=cond_group,
         trail=trail,
         partial_tp=partial_tp,
+        reinforce=reinforce,
     )
 
 
@@ -410,6 +497,12 @@ def parse_ruleset(raw: Mapping[str, Any]) -> Ruleset:
         raise ValueError("stop_atr and target_atr must be > 0")
 
     exit_spec = _parse_exit_spec(raw.get("exit"))
+    if exit_spec.partial_tp and exit_spec.reinforce is not None:
+        raise ValueError(
+            "ruleset.exit cannot combine partial_tp and reinforce in this tranche "
+            "(T0-MANAGE-e); use one or the other — FIFO allocation deferred to a "
+            "later tranche / T0-MANAGE-f"
+        )
     if exit_spec.partial_tp:
         target_r = target_atr / stop_atr
         for i, step in enumerate(exit_spec.partial_tp):
