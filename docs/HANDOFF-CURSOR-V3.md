@@ -10,9 +10,9 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T10b EN COURS — hypothesis_id + lineage + complexité (display-only)
 
 - Branche : `cursor/t10b-hypothesis-lineage-a2fe`
-- PR : *(draft — lien après push)*
+- PR : https://github.com/samiriggui-code/IchiVol/pull/56 (**draft**)
 - Base : `main` @ `6d1968a` (#53 T9b)
-- Statut : **EN COURS** — Cursor solo (Claude restreint). **Pas d’auto-reject.**
+- Statut : **DRAFT** — Cursor solo (Claude restreint). **Pas d’auto-reject.** CI en cours.
 
 ### Livré
 
