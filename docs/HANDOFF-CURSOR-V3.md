@@ -45,10 +45,11 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-MANAGE-e** #49 — **MERGÉE** squash `389fc40` (validé Claude adff686 ; suite PG **935 ok / 1 skip**, 0 régression). Sondes : `tighten_stop` en profit → risque = R0 (LONG/SHORT) ; risque signé OK ; combo `partial_tp`+`reinforce` rejeté ; fuzz 300 seeds → 135 adds, jamais > R0, invariant Σnet=Σbars 3,5e-16. **Vérifié** `git log origin/main` contient `389fc40`.
 - **T0-MANAGE-f** #50 — **MERGÉE** squash `7a77424` (validé Claude 102caee ; suite PG **944 ok / 1 skip**, 0 régression). **T0-MANAGE a→f terminé.**
 - **T0-FIX-SHORT-FEE** #51 — **MERGÉE** squash `b9f8421` (validé Claude ; suite PG **948 ok / 1 skip**, 0 régression). Sondes SHORT (close / partiel→target / renfort→target / épuisement / stop) : cash = réalisé ≤ 5e-13. **Vérifié** `git log origin/main` contient `b9f8421`. **Dette SHORT entry_fee soldée** pour clôtures post-fix.
-- **T9a** #52 — **MERGÉE** squash `985c4e5` (validé Claude ; suite PG **955 ok / 1 skip**). **Vérifié** `origin/main` tip = `985c4e5`.
-- **Job en cours** : **UI-MARKET** — page Marché TradingView — PR draft [#54](https://github.com/samiriggui-code/IchiVol/pull/54). **Avant T9b.** **Pas de merge** avant revue Claude.
-- **T9b** — CHoCH + break quality — **en pause** (draft #53) jusqu’à clôture UI-MARKET.
-- **T9** (structure / FVG / Fib) — feuille de route ; T9a pivots OK ; T9b après UI-MARKET.
+- **T9a** #52 — **MERGÉE** squash `985c4e5` (validé Claude ; suite PG **955 ok / 1 skip**). **Vérifié** `origin/main` tip = `985c4e5` (2026-09-24).
+- **Job en cours** : **UI-MARKET** draft [#54](https://github.com/samiriggui-code/IchiVol/pull/54) — **ATTENTE REVUE CLAUDE** (Cursor ne touche plus au code). **Pas de merge** sans Claude.
+- **T9b** draft [#53](https://github.com/samiriggui-code/IchiVol/pull/53) — **brouillon figé** ; **aucun rebase** avant merge de **T10a**. Hors ordre (ouverte avant UI-MARKET).
+- **Prochaine** après merge #54 : **T10a** (registry status/source) — **ne pas démarrer** tant que #54 n’est pas mergée.
+- **T9** (structure / FVG / Fib) — feuille de route ; T9a pivots OK ; T9b après T10a.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol². **Ne pas comparer** partiels vs non-partiels sur le DD avant correction.
 - ⚠️ **Caveat historique SHORT** : positions SHORT **CLOSED avant** `b9f8421` (#51) ont un `realized` **surévalué de `entry_fee`**. Compte local Cursor : **CLOSED_SHORT = 0** → pas de recalcul nécessaire ici. Script ponctuel (dry-run) : `ichivol-app/engine/scripts/recalc_short_entry_fee.py` — **pas de migration auto** ; si une base avec historique a `CLOSED_SHORT > 0`, proposer `--apply` après revue.
 - ⚠️ **Caveat migration #48** : backfill `initial_entry_fee = entry_fee` courant — **faux pour lots déjà partialisés avant migration**.
@@ -57,12 +58,89 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+
+---
+
+## 2026-09-24 — ORDRE DU JOUR CONSOLIDÉ (rév. feuille de route 46)
+
+Réf. Claude « IchiVol V3 — Feuille de route » rév. 46. Chantier principal **T9**. **T10** / **T11** uniquement là où prérequis de T9. Rien d’autre.
+
+### État constaté
+
+| Item | État |
+| --- | --- |
+| `main` | `985c4e5` — T9a #52 **MERGÉE** |
+| #54 UI-MARKET | **brouillon** — Cursor **ne touche plus** ; Claude relit |
+| #53 T9b | **brouillon figé** — hors ordre ; **pas de rebase** avant T10a |
+| T10a | **après** merge #54 uniquement |
+
+### Ordre (une sous-tranche à la fois)
+
+1. **#54 UI-MARKET** — revue Claude → merge  
+2. **T10a** — statut + source des features dans le registry  
+3. **#53 T9b** — rebase sur T10a (CHoCH avec statut) → revue Claude → merge  
+4. **T10b** — compteur d’essais + complexité (prérequis T9g)  
+5. **T9c** impulsion → **T9d** FVG → **T9e** Fib ancré → **T9f** features Lab  
+6. **T11a** — quality gate + provenance (avant T9g)  
+7. **T10c** — redondance feature × feature  
+8. **T9g** — ablation walk-forward OOS → décision  
+9. Plus tard : T11b-c, T10d-e, T11d-f, T3e MTF  
+
+Règles : une PR à la fois ; pas de merge sans Claude ; vérifier `main` après chaque merge ; handoff à jour ; suite PG sans régression + `npm run build` ; golden = ajouts seulement sauf décision explicite ; aucun lookahead / ordre broker / trading réel.
+
+### Actions Cursor (2a–d) — FAIT
+
+- **a)** Handoff corrigé : #52 mergée ; #54 / #53 brouillons ; ordre recopié ci-dessus.  
+- **b)** #54 : **aucun commit code supplémentaire** (seul ce handoff docs).  
+- **c)** #53 : reste brouillon ; **pas de rebase**.  
+- **d)** **T10a non démarrée**.
+
+### État exact #54 (pour revue Claude)
+
+- Branche : `cursor/ui-market-tradingview-a2fe` @ `96b1eff` (+ ce commit handoff)  
+- PR : https://github.com/samiriggui-code/IchiVol/pull/54 (**draft**, OPEN)  
+- Base : `main` @ `985c4e5`  
+- **`npm run build`** : **OK** (tsc + vite, 2026-09-24)  
+- **`tests/chart_objects/test_chart_object_layer.py`** : **2 passed** (layer additive, id inchangé, rétrocompat source→layer)  
+- Captures 01→07 : artifacts `/opt/cursor/artifacts/0{1..7}-*.png`  
+- Front : chrome TradingView (barre 52 / volume dock / colonne 380 / bas 44 / tiroir mobile) ; camap-tokens  
+- Moteur : `ChartObject.layer` (structure|fibonacci|fvg|breaks|claude|user_trades|backtest)  
+- Écarts volontaires : pas de TF 5m ; Journal placeholder ; Analyse = BiasPanel + CTA paper  
+
+<img alt="01 Desktop défaut" src="/opt/cursor/artifacts/01-desktop-default.png" />
+<img alt="02 Desktop Calques + Backtest" src="/opt/cursor/artifacts/02-desktop-layers-backtest.png" />
+<img alt="03 Mobile graphe" src="/opt/cursor/artifacts/03-mobile-chart.png" />
+<img alt="04 Mobile tiroir Liste" src="/opt/cursor/artifacts/04-mobile-drawer-list.png" />
+<img alt="05 Mobile tiroir Analyse" src="/opt/cursor/artifacts/05-mobile-drawer-analysis.png" />
+<img alt="06 Mobile feuille Calques" src="/opt/cursor/artifacts/06-mobile-layers-sheet.png" />
+<img alt="07 Mobile recherche" src="/opt/cursor/artifacts/07-mobile-search.png" />
+
+### Note #53 (pré-examen, sans action)
+
+- Golden : ajouts seulement (`choch_bullish`, `choch_bearish`, `break_quality`) — bon signe.  
+- **`bos_bullish` non scindé BOS/CHoCH** : un « BOS haussier » en structure baissière reste compté BOS. À documenter dans la PR (compat golden) **ou** proposer scission en feature séparée **sans** modifier `bos_bullish` — au rebase post-T10a.  
+- `recalc_short_entry_fee.py` embarqué : prouver idempotence (2× `--apply` = 1×) + couverture SHORT clôturés le jour du fix ; dry-run défaut ; sinon PR à part.
+
+### Doutes Cursor avant T10a (après merge #54)
+
+1. **Périmètre PRODUCTION** : scanner `decision/pipeline.py`, `combiner.py`, screener, paper, `evidence/context.py` — risque de faux positifs (import transitif vs lecture réelle d’un `id`). Critère strict : l’**id** string du registry apparaît dans le chemin décisionnel, pas seulement le module indicateur.  
+2. **Wyckoff** : statut à proposer depuis le tableau de verdict README moteur — **Claude tranche** (Cursor ne décide pas seul).  
+3. **BEST Cloud licence** : relever licence sur la page Daveatt au moment du commit (peut avoir changé) ; documenter URL + date.  
+4. **`confirmation_lag_bars` structure** : aligner sur lookback **droit** du fractal causal T9a ; test de cohérence params ↔ champ — OK conceptuellement ; vérifier qu’aucun autre indicateur « provisional » ne nécessite un lag non nul dès T10a.  
+5. **Garde-fou production** : généraliser `test_ppo_best_cloud_lab.py:242` — liste des ids productifs à construire par grep/AST, pas à la main, pour éviter la dérive.  
+6. **OpenAPI golden** : ajouts seulement sur `GET /indicators` — OK ; s’assurer que `catalog()` / `describe()` ne cassent pas les clients Lab existants (champs optionnels avec défauts).
+
+**Brief T10a** (rappel, démarrage **uniquement** post-merge #54) : branche `cursor/t10a-registry-status` ; `IndicatorDefinition` += status / source / confirmation_lag_bars / family / experiment_refs ; aucune sortie de calcul changée ; PPO+BEST Cloud → REJECTED (rév. sim §5) ; hors scope T10b/c.
+
+**Cursor s’arrête ici.** Claude relit #54 dès que l’utilisateur écrit « Handoff ».
+
+
 ## 2026-09-24 — UI-MARKET EN COURS — Marché TradingView (PR draft)
 
 - Branche : `cursor/ui-market-tradingview-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/54 (**draft**)
 - Base : `main` @ `985c4e5` (#52)
-- Statut : **ATTENTE REVUE CLAUDE** — **ne pas merger**. T9b en pause.
+- Statut : **ATTENTE REVUE CLAUDE** — Cursor **ne touche plus au code**. T9b brouillon figé (#53).
 
 ### Livré
 
@@ -94,17 +172,16 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 <img alt="06 Mobile feuille Calques" src="/opt/cursor/artifacts/06-mobile-layers-sheet.png" />
 <img alt="07 Mobile recherche" src="/opt/cursor/artifacts/07-mobile-search.png" />
 
-**Cursor s’arrête ici.**
+**Cursor s’arrête ici** (entrée historique ; voir ORDRE DU JOUR CONSOLIDÉ en tête).
 
 
 ---
 
-## 2026-09-24 — T9a EN COURS — un seul détecteur de swings causal (PR draft)
+## 2026-09-24 — T9a MERGÉE (#52) — squash `985c4e5` — un seul détecteur de swings causal
 
-- Branche : `cursor/t9a-causal-swings-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/52 (**draft**)
-- Base : `main` @ `b9f8421` (#51 squash)
-- Statut : **ATTENTE REVUE CLAUDE** — **ne pas merger**. Pas de CHoCH / FVG.
+- Branche merge : squash sur `main` → `985c4e5`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/52 — **MERGÉE** (validé Claude)
+- **Vérifié** : `git rev-parse origin/main` == `985c4e5`
 
 ### Inventaire (3 détecteurs → 1 core)
 
@@ -120,7 +197,7 @@ Spécifique **conservé** (doc `structure/T9A_ADAPTERS.md`) : MVPP prix adaptati
 
 Pivot à `j` connu seulement à `i = j + right`. Test anti-lookahead : `tests/indicators/test_t9a_causal_pivots.py`. Goldens structure + fibonacci **inchangées** (parity inline / seed).
 
-**Cursor s’arrête ici.**
+**(Entrée historique « EN COURS » corrigée → MERGÉE.)**
 
 ---
 
