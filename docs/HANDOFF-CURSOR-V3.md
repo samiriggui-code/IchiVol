@@ -7,6 +7,17 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — UI workspace refonte (post-STOP)
+
+- Branche : `cursor/ui-workspace-refonte-a2fe`
+- Base : `main` @ `ccc1433` (#85 handoff STOP)
+- **Périmètre** : front only — Desk enrichi (metrics / pulse / pipeline / top opps depuis screener + paper), chrome pages (eyebrow + question), landing brand-first, auth alignée tokens IchiVol. Pas d’API inventée. Tokens camap conservés (bull/bear/amber alignés design-reference).
+
+### Hors scope (respect STOP)
+T13d · T13e · T11c · Sessions / Agents.
+
+---
+
 ## 2026-09-24 — T10d/e MERGÉE (#84) — squash `9b2991a`
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/84 — **MERGÉE** squash
