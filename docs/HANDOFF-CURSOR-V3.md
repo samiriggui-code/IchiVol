@@ -7,23 +7,30 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-24 — T11b EN COURS — TD vs biquote + cache lab_context
+## 2026-09-24 — T10d/e EN COURS — fiches candidats + critères promo
 
-- Branche : `cursor/t11b-twelve-cache-a2fe`
+- Branche : `cursor/t10de-candidate-promo-a2fe`
 - PR : (à ouvrir)
-- Base : `main` @ `a033960` (#82 T11a-bis **MERGÉE**)
+- Base : `main` @ `f877e0b` (#83 T11b **MERGÉE**)
+- **Docs only** — aucun changement `FeatureStatus` / pipeline
 
 ### Livré
-1. Cache TTL process `observe_lab_context` (clé last bar + params) — observation only
-2. Script `scripts/t11b_td_vs_biquote.py` + rapport `docs/T11B-TD-VS-BIQUOTE.md` (dry-run CI-safe ; live avec clé TD)
-3. Helpers crédits Twelve Data (`credits_used_in_window`) — mesure, pas de changement live
+1. `docs/research/PROMOTION-CRITERIA.md` (T10e)
+2. Fiches T10d : `rsi.md` · `cmf.md` · `obv.md` + `README.md`
+3. Rappel : Lab `review_candidate` ≠ promotion ; humain only
 
-### Hors scope
-Changement catalogue / fournisseur live · T11c WebSocket
+### STOP rév.58
+Fin de la liste solo (§5 point 11). **Ne pas démarrer** T13d / T13e / T11c / Sessions / Agents.
 
-### Auto-revue
-- [ ] pytest PG16 CI
-- [x] tests cache + t9f + twelve_data helpers
+---
+
+## 2026-09-24 — T11b MERGÉE (#83) — squash `f877e0b`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/83 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `f877e0b`
+- Cache `observe_lab_context` + mesure TD vs biquote (dry-run report)
+
+**Suite** : T10d/e puis **STOP**.
 
 ---
 
@@ -31,8 +38,6 @@ Changement catalogue / fournisseur live · T11c WebSocket
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/82 — **MERGÉE** squash
 - **Vérifié** : `origin/main` tip = `a033960`
-
-**Suite** : T11b → T10d/e.
 
 ---
 
