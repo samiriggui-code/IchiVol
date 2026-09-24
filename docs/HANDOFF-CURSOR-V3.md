@@ -7,6 +7,45 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — SYNC Claude rév.49 — T13 ajoutée (NE PAS DÉMARRER)
+
+Addendum feuille de route : tranche **T13 « couche de trading contrôlée »**.  
+**Aucun code T13 dans cette session.**
+
+### Ordre du jour (rév. 49) — inchangé jusqu’à T12e
+
+1. T9g-fix  
+2. T12a  
+3. T12b  
+4. T12c  
+5. T12d  
+6. T12e  
+7. **T13a** → **T13b** → …  
+8. Ensuite : T11b-c, T10d-e, T11d-f, T3e MTF, modèle G  
+
+(microstructure : toujours rien avant T12e)
+
+### Contraintes T13 à respecter dès maintenant (sans coder)
+
+- **Risk Kernel** = **une** fonction pure **obligatoire** ; tous les chemins d’ouverture paper devront y passer :
+  - `sync_auto_watchlist`
+  - `open_user_confirmed`
+  - action agent `open_paper_position`
+- **Ne pas** ajouter de nouveau chemin d’ouverture qui contournerait le kernel.
+- **Aucun** ordre réel, identifiant broker, ni adaptateur broker réel dans T13.
+- Réutiliser (pas dupliquer) : `paper/gates.py`, `paper/risk.py`, `quote_paper.py`, `brokerage/execution.py`.
+
+### PR ouvertes (attente revue Claude, une à la fois)
+
+| PR | Objet |
+|---|---|
+| #69 | ce handoff (rév.48 + rév.49) |
+| #70 | Wyckoff REJECTED |
+| #71 | T9g-fix |
+| #68 | trade VP — différée post-T12e |
+
+---
+
 ## 2026-09-24 — SYNC Claude rév.48 — bilan #53→#67 + reprise
 
 Revue Claude a posteriori sur `main` @ `23dc4ba` : **rien à revert**  
@@ -29,17 +68,9 @@ Vérifier `origin/main` avant d’écrire MERGÉE.
 **Différée** jusqu’après T12e (rév.48 §6).  
 PR draft : https://github.com/samiriggui-code/IchiVol/pull/68 — ne pas merger.
 
-### Ordre du jour (rév. 48)
+### Ordre du jour (rév. 48) — **supersédé par rév.49** (ci-dessus)
 
-1. T9g-fix  
-2. T12a  
-3. T12b  
-4. T12c  
-5. T12d  
-6. T12e  
-7. Ensuite : T11b-c, T10d-e, T11d-f, T3e MTF, modèle G  
-
-(microstructure : plus rien avant T12e)
+Voir entrée SYNC rév.49 : T9g-fix → T12a–e → **T13a…** ; microstructure après T12e.
 
 ### Point mesuré — `observe_lab_context` (sans code)
 
