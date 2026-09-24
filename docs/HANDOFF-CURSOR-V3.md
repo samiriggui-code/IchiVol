@@ -10,7 +10,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T13d + T14d (draft) — cycle de vie ordres paper + onglet Ordres
 
 - Branche : `cursor/t13d-order-lifecycle-a2fe`
-- PR : (draft — attendre revue Claude, **pas de merge solo**)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/88 — **DRAFT** (attendre revue Claude, pas de merge solo)
 - Base : `main` @ `9c0c0cc`
 
 ### Livré
