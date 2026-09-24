@@ -185,3 +185,100 @@ def test_ablation_oos_study_monkeypatched(monkeypatch):
 def test_ablation_oos_study_rejects_missing_symbol():
     res = client.post("/api/engine/strategy-lab/ablation-oos/study", json={})
     assert res.status_code == 422
+
+
+def test_microstructure_cvd_compare_monkeypatched(monkeypatch):
+    from app.api import strategy_lab_research as mod
+    from app.indicators.ichimoku import Candle
+    from app.microstructure.trade_cvd import CvdCompareReport
+    from app.universe.types import AssetClass, Instrument
+
+    candles = [
+        Candle(
+            time=1_700_000_000,
+            open=1,
+            high=2,
+            low=0.5,
+            close=1.5,
+            volume=100.0,
+            taker_buy_volume=60.0,
+        ),
+        Candle(
+            time=1_700_003_600,
+            open=1.5,
+            high=2.5,
+            low=1.0,
+            close=2.0,
+            volume=100.0,
+            taker_buy_volume=40.0,
+        ),
+    ]
+    fake = CvdCompareReport(
+        symbol="BTCUSDT",
+        timeframe="1h",
+        n_bars=2,
+        n_trades=4,
+        bars_with_trades=2,
+        bars_with_kline_cvd=2,
+        bias_agreement_rate=1.0,
+        delta_corr=0.99,
+        sample=[],
+    )
+    monkeypatch.setattr(
+        mod,
+        "get_instrument",
+        lambda _s: Instrument(
+            id="BTCUSDT",
+            asset_class=AssetClass.CRYPTO,
+            label="BTC",
+            provider="binance",
+            provider_symbol="BTCUSDT",
+            quote="USDT",
+        ),
+    )
+    monkeypatch.setattr(
+        mod,
+        "resolve_and_fetch",
+        lambda *a, **k: ("binance", "BTCUSDT", candles),
+    )
+    monkeypatch.setattr(mod, "fetch_binance_agg_trades", lambda *a, **k: [])
+    monkeypatch.setattr(mod, "compare_kline_vs_trade_cvd", lambda *a, **k: fake)
+
+    res = client.get(
+        "/api/engine/strategy-lab/microstructure/cvd-compare",
+        params={"symbol": "BTCUSDT", "timeframe": "1h", "limit": 2},
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["symbol"] == "BTCUSDT"
+    assert "research only" in body["disclaimer"].lower()
+    assert body["bias_agreement_rate"] == 1.0
+
+
+def test_microstructure_cvd_compare_rejects_non_binance(monkeypatch):
+    from app.api import strategy_lab_research as mod
+    from app.universe.types import AssetClass, Instrument
+
+    monkeypatch.setattr(
+        mod,
+        "get_instrument",
+        lambda _s: Instrument(
+            id="EURUSD",
+            asset_class=AssetClass.FOREX,
+            label="EURUSD",
+            provider="biquote",
+            provider_symbol="EURUSD",
+            quote="USD",
+        ),
+    )
+    res = client.get(
+        "/api/engine/strategy-lab/microstructure/cvd-compare",
+        params={"symbol": "EURUSD", "limit": 2},
+    )
+    assert res.status_code == 422
+    assert "binance" in res.json()["detail"].lower()
+
+
+def test_microstructure_cvd_compare_rejects_missing_symbol():
+    res = client.get("/api/engine/strategy-lab/microstructure/cvd-compare")
+    assert res.status_code == 422

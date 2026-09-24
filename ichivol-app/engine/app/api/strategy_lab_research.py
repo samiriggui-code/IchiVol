@@ -24,6 +24,10 @@ from app.strategy_lab.redundancy import run_feature_redundancy_study
 from app.strategy_lab.ruleset import parse_ruleset
 from app.strategy_lab.ruleset_backtest import run_ruleset_backtest_on_candles
 from app.agents.types import Direction
+from app.market_data.timeframes import TF_SECONDS
+from app.microstructure.binance_trades import fetch_binance_agg_trades
+from app.microstructure.trade_cvd import compare_kline_vs_trade_cvd
+from app.universe.catalog import get_instrument
 
 router = APIRouter(prefix=settings.engine_api_prefix, tags=["engine"])
 
@@ -328,3 +332,68 @@ def post_propose_experiment_plan(body: ProposeExperimentPlanBody) -> dict:
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return plan.to_dict()
+
+
+@router.get("/strategy-lab/microstructure/cvd-compare")
+def get_microstructure_cvd_compare(
+    symbol: str,
+    timeframe: str = "1h",
+    limit: int = 24,
+    max_trade_pages: int = 10,
+    sample_limit: int = 20,
+) -> dict:
+    """Binance trade-tape CVD vs kline CVD — Lab research only.
+
+    Bounded window (few bars) because aggTrades volume is large.
+    Does **not** alter decision, confidence, fills, FeatureStatus, or REGISTRY.
+    """
+    if limit < 2 or limit > 48:
+        raise HTTPException(status_code=422, detail="limit must be between 2 and 48")
+    if max_trade_pages < 1 or max_trade_pages > 20:
+        raise HTTPException(
+            status_code=422, detail="max_trade_pages must be between 1 and 20"
+        )
+    if timeframe not in TF_SECONDS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"timeframe must be one of {sorted(TF_SECONDS)}",
+        )
+    instrument = get_instrument(symbol.upper())
+    if instrument is None:
+        raise HTTPException(status_code=422, detail=f"unknown symbol: {symbol}")
+    if instrument.provider != "binance":
+        raise HTTPException(
+            status_code=422,
+            detail="trade CVD compare requires a binance-wired symbol",
+        )
+    try:
+        _prov, provider_symbol, candles = resolve_and_fetch(
+            symbol.upper(), timeframe, limit
+        )
+    except (ValueError, ProviderNotWiredError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if not candles:
+        raise HTTPException(status_code=422, detail="no candles")
+    tf_sec = TF_SECONDS[timeframe]
+    start_ms = int(candles[0].time) * 1000
+    end_ms = (int(candles[-1].time) + tf_sec) * 1000
+    try:
+        trades = fetch_binance_agg_trades(
+            provider_symbol,
+            start_ms,
+            end_ms,
+            max_pages=max_trade_pages,
+        )
+    except Exception as exc:  # network / provider
+        raise HTTPException(
+            status_code=502, detail=f"aggTrades fetch failed: {exc}"
+        ) from exc
+    report = compare_kline_vs_trade_cvd(
+        candles,
+        trades,
+        symbol=symbol.upper(),
+        timeframe=timeframe,
+        tf_seconds=tf_sec,
+        sample_limit=sample_limit,
+    )
+    return report.to_dict()

@@ -802,6 +802,58 @@ def cmd_run_ablation_oos_study(args: dict) -> dict:
     return report.to_dict()
 
 
+def cmd_compare_trade_cvd(args: dict) -> dict:
+    """Binance trade CVD vs kline CVD — Lab research; never pipeline vote."""
+    from app.market_data.timeframes import TF_SECONDS
+    from app.microstructure.binance_trades import fetch_binance_agg_trades
+    from app.microstructure.trade_cvd import compare_kline_vs_trade_cvd
+    from app.universe.catalog import get_instrument
+
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = str(args.get("timeframe", "1h"))
+    limit = int(args.get("limit", 24))
+    max_trade_pages = int(args.get("max_trade_pages", 10))
+    sample_limit = int(args.get("sample_limit", 20))
+    if limit < 2 or limit > 48:
+        raise CommandError("limit must be between 2 and 48")
+    if max_trade_pages < 1 or max_trade_pages > 20:
+        raise CommandError("max_trade_pages must be between 1 and 20")
+    if timeframe not in TF_SECONDS:
+        raise CommandError(f"timeframe must be one of {sorted(TF_SECONDS)}")
+    instrument = get_instrument(symbol)
+    if instrument is None:
+        raise CommandError(f"unknown symbol: {symbol}")
+    if instrument.provider != "binance":
+        raise CommandError("trade CVD compare requires a binance-wired symbol")
+    try:
+        _prov, provider_symbol, candles = resolve_and_fetch(symbol, timeframe, limit)
+    except (ValueError, ProviderNotWiredError) as exc:
+        raise CommandError(str(exc)) from exc
+    if not candles:
+        raise CommandError("no candles")
+    tf_sec = TF_SECONDS[timeframe]
+    start_ms = int(candles[0].time) * 1000
+    end_ms = (int(candles[-1].time) + tf_sec) * 1000
+    try:
+        trades = fetch_binance_agg_trades(
+            provider_symbol,
+            start_ms,
+            end_ms,
+            max_pages=max_trade_pages,
+        )
+    except Exception as exc:
+        raise CommandError(f"aggTrades fetch failed: {exc}") from exc
+    report = compare_kline_vs_trade_cvd(
+        candles,
+        trades,
+        symbol=symbol,
+        timeframe=timeframe,
+        tf_seconds=tf_sec,
+        sample_limit=sample_limit,
+    )
+    return report.to_dict()
+
+
 def cmd_build_audit_report(args: dict) -> dict:
     """T6 — post-outcome AuditReport for one ruleset backtest trade.
 

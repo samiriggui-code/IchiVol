@@ -325,6 +325,13 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/strategy-lab/microstructure/cvd-compare",
+    "endpoint": "get_microstructure_cvd_compare"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/backtest/{symbol}",
     "endpoint": "get_backtest"
   },

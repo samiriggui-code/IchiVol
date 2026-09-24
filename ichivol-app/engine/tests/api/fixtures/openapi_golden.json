@@ -5277,6 +5277,91 @@
         ]
       }
     },
+    "/api/engine/strategy-lab/microstructure/cvd-compare": {
+      "get": {
+        "description": "Binance trade-tape CVD vs kline CVD \u2014 Lab research only.\n\nBounded window (few bars) because aggTrades volume is large.\nDoes **not** alter decision, confidence, fills, FeatureStatus, or REGISTRY.",
+        "operationId": "get_microstructure_cvd_compare_api_engine_strategy_lab_microstructure_cvd_compare_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_trade_pages",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "title": "Max Trade Pages",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sample_limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "title": "Sample Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Microstructure Cvd Compare Api Engine Strategy Lab Microstructure Cvd Compare Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Microstructure Cvd Compare",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
     "/api/engine/strategy-lab/monte-carlo": {
       "post": {
         "description": "T7 \u2014 bootstrap Monte Carlo / risk-of-ruin (research only).",

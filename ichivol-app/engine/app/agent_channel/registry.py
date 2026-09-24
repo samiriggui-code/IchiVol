@@ -38,6 +38,7 @@ from app.agent_channel.commands import (
     cmd_run_family_weights_study,
     cmd_run_feature_redundancy_study,
     cmd_run_ablation_oos_study,
+    cmd_compare_trade_cvd,
     cmd_build_audit_report,
     cmd_run_monte_carlo,
     cmd_list_condition_catalog,
@@ -408,6 +409,19 @@ TOOLS: dict[str, ToolSpec] = {
                 "min_oos_trades": "int, défaut 5",
             },
             cmd_run_ablation_oos_study,
+        ),
+        ToolSpec(
+            "compare_trade_cvd",
+            "Binance trade-tape CVD vs kline CVD (Lab research). Bounded window; no REGISTRY/pipeline vote; no FeatureStatus mutation.",
+            True,
+            {
+                "symbol": "str, requis (binance)",
+                "timeframe": "str, défaut '1h'",
+                "limit": "int, défaut 24 (max 48)",
+                "max_trade_pages": "int, défaut 10",
+                "sample_limit": "int, défaut 20",
+            },
+            cmd_compare_trade_cvd,
         ),
         ToolSpec(
             "build_audit_report",

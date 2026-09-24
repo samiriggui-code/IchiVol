@@ -7,6 +7,35 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — Binance microstructure Lab EN COURS — trade CVD compare
+
+- Branche : `cursor/binance-microstructure-lab-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/66 (**draft**)
+- Base : `main` @ `8c6af5e` (#65 ProviderCapabilities)
+- Statut : **DRAFT** — Cursor solo (**pas d’attente validation**). Lab-only ; **pas** de REGISTRY / pipeline / FeatureStatus.
+
+### Livré
+
+1. `microstructure/trade_cvd.py` — bucket aggTrades → bar deltas + compare vs kline CVD
+2. `microstructure/binance_trades.py` — fetch aggTrades paginé (aggressor side)
+3. `GET /strategy-lab/microstructure/cvd-compare` + agent `compare_trade_cvd`
+4. Tests unit + routes research ; OpenAPI / route_order goldens (ajouts)
+
+### Hors scope
+Volume profile trade · order book depth · live CVD swap · auto FeatureStatus · paper/fills.
+
+**Suite solo** : CI → merge → P1 leftovers (trade VP, breaks producer, doc sync).
+
+---
+
+## 2026-09-24 — ProviderCapabilities MERGÉE (#65) — squash `8c6af5e`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/65 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `8c6af5e`
+- Cursor solo ; CI verte. Inventaire déclaratif only.
+
+---
+
 ## 2026-09-24 — ProviderCapabilities EN COURS — inventaire providers
 
 - Branche : `cursor/provider-capabilities-a2fe`
