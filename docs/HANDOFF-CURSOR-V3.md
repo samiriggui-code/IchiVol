@@ -46,7 +46,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - **T0-MANAGE-f** #50 — **MERGÉE** squash `7a77424` (validé Claude 102caee ; suite PG **944 ok / 1 skip**, 0 régression). **T0-MANAGE a→f terminé.**
 - **T0-FIX-SHORT-FEE** #51 — **MERGÉE** squash `b9f8421` (validé Claude ; suite PG **948 ok / 1 skip**, 0 régression). Sondes SHORT (close / partiel→target / renfort→target / épuisement / stop) : cash = réalisé ≤ 5e-13. **Vérifié** `git log origin/main` contient `b9f8421`. **Dette SHORT entry_fee soldée** pour clôtures post-fix.
 - **T9a** #52 — **MERGÉE** squash `985c4e5` (validé Claude ; suite PG **955 ok / 1 skip**). **Vérifié** `origin/main` tip = `985c4e5`.
-- **Job en cours** : **UI-MARKET** — page Marché TradingView — PR draft (voir entrée). **Avant T9b.** **Pas de merge** avant revue Claude.
+- **Job en cours** : **UI-MARKET** — page Marché TradingView — PR draft [#54](https://github.com/samiriggui-code/IchiVol/pull/54). **Avant T9b.** **Pas de merge** avant revue Claude.
 - **T9b** — CHoCH + break quality — **en pause** (draft #53) jusqu’à clôture UI-MARKET.
 - **T9** (structure / FVG / Fib) — feuille de route ; T9a pivots OK ; T9b après UI-MARKET.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol². **Ne pas comparer** partiels vs non-partiels sur le DD avant correction.
@@ -60,6 +60,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — UI-MARKET EN COURS — Marché TradingView (PR draft)
 
 - Branche : `cursor/ui-market-tradingview-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/54 (**draft**)
 - Base : `main` @ `985c4e5` (#52)
 - Statut : **ATTENTE REVUE CLAUDE** — **ne pas merger**. T9b en pause.
 
