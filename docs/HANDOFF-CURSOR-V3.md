@@ -10,7 +10,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T13c EN COURS — kill switch + verrou perte journalière
 
 - Branche : `cursor/t13c-kill-switch-a2fe`
-- PR : (à ouvrir)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/81
 - Base : `main` @ `7d7d767` (#80 T13b **MERGÉE**)
 - Persisté · humain seul pour rouvrir · **aucun auto-lift**
 
