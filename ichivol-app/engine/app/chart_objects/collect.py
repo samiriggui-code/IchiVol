@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.chart_objects.from_breaks import breaks_to_chart_objects
 from app.chart_objects.from_fibonacci import fibonacci_to_chart_objects
 from app.chart_objects.from_fvg import fvg_to_chart_objects
 from app.chart_objects.from_structure import structure_to_chart_objects
@@ -64,6 +65,12 @@ def collect_chart_objects(
         objects.extend(
             o.to_dict()
             for o in structure_to_chart_objects(snap, sym, timeframe, window)
+        )
+        objects.extend(
+            o.to_dict()
+            for o in breaks_to_chart_objects(
+                window, sym, timeframe, snapshot=snap
+            )
         )
         objects.extend(
             o.to_dict() for o in fvg_to_chart_objects(window, sym, timeframe)
