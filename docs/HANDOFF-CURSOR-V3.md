@@ -7,7 +7,39 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-24 — T12c EN COURS — références buy&hold / Donchian / structure
+## 2026-09-24 — T12d EN COURS — fausses cassures du nuage
+
+- Branche : `cursor/t12d-false-breaks-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/76 (**draft**)
+- Base : `main` @ `abe6177` (#75 T12c **MERGÉE**)
+- ADD-ONLY Lab — **aucun changement live**
+
+### Livré
+1. `strategy_lab/kumo_false_breaks.py` — `study_kumo_false_breaks_on_candles`  
+   - rising-edge `kumo_breakout_*`  
+   - étiquette à **N** barres explicite : continuation / failure / inside / incomplete  
+   - ventilation : RVOL bande, ADX (trending/ranging), structure, location, CVD
+2. Tests `test_t12d_kumo_false_breaks.py` (continuation, failure, incomplete, bearish miroir, série réelle)
+
+### Hors scope
+FeatureBar fields · HTTP · T12e · live
+
+### Sonde manuelle
+Cassure haussière + prix sous nuage à i+N → `failure` ; toujours au-dessus → `continuation`.
+
+---
+
+## 2026-09-24 — T12c MERGÉE (#75) — squash `abe6177`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/75 — **MERGÉE** squash (solo rév.58)
+- **Vérifié** : `origin/main` tip = `abe6177`
+- Références Lab buy&hold / Donchian / BOS ; golden additif ; 1080/1079+1skip
+
+**Suite** : T12d fausses cassures…
+
+---
+
+## 2026-09-24 — T12c (archive EN COURS) — références buy&hold / Donchian / structure
 
 - Branche : `cursor/t12c-reference-baselines-a2fe`
 - Base : `main` @ `36ff85f` (#74 UI exception **MERGÉE**)
