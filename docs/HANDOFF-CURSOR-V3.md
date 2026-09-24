@@ -7,21 +7,23 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-24 — UI workspace refonte — corrections revue Claude (#86)
+## 2026-09-24 — UI workspace refonte MERGÉE (#86) — squash `92f43f7`
 
-- Branche : `cursor/ui-workspace-refonte-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/86
-- **Corrections Desk (`OverviewPage`)** :
-  1. Top opportunités = BUY/SELL only (pas de repli WATCH) ; vide → « Aucune opportunité actionnable »
-  2. Pipeline `direction` = vraie valeur `stagePass` (0 compris), sans fallback
-  3. Short désactivé baseline : carte Opportunités = BUY ; sous-titre SELL N (short désactivé) ; donut BUY/SELL/WATCH/NO TRADE ; pipeline fin « opportunités (BUY) »
-  4. Sans `overview.risk` → libellé « Exposé » (jamais montant investi sous « Risque engagé »)
-- Build : `npm run build` OK
-- **STOP rév.58** toujours actif
+- PR : https://github.com/samiriggui-code/IchiVol/pull/86 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `92f43f7`
+- Front only : Desk (metrics / pulse / pipeline / top opps), chrome pages, landing brand-first, auth tokens IchiVol
+- **Corrections revue Claude (incluses dans le squash)** :
+  1. Top opportunités = BUY/SELL only ; vide → « Aucune opportunité actionnable »
+  2. Pipeline `direction` = vraie valeur `stagePass` (0 compris)
+  3. Short off baseline : Opportunités = BUY ; SELL N en sous-titre ; donut BUY/SELL/WATCH/NO TRADE ; pipeline « opportunités (BUY) »
+  4. Sans `overview.risk` → libellé « Exposé » (jamais investi sous « Risque engagé »)
+
+### STOP solo rév.58
+**Toujours actif.** Ne pas démarrer : T13d · T13e · T11c · Sessions / Agents.
 
 ---
 
-## 2026-09-24 — UI workspace refonte (post-STOP)
+## 2026-09-24 — UI workspace refonte (archive) — post-STOP + corrections
 
 - Branche : `cursor/ui-workspace-refonte-a2fe`
 - Base : `main` @ `ccc1433` (#85 handoff STOP)
