@@ -10,7 +10,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-24 — T13b EN COURS — Risk Kernel + onglet Risque
 
 - Branche : `cursor/t13b-risk-kernel-a2fe`
-- PR : (à ouvrir)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/80
 - Base : `main` @ `30b5968` (#79 T13a **MERGÉE**)
 - Paper + UI — **défauts = comportement actuel** (pas plus strict)
 
