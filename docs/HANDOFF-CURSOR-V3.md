@@ -7,25 +7,32 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-24 — T11a-bis EN COURS — quality/provenance leftovers
+## 2026-09-24 — T11b EN COURS — TD vs biquote + cache lab_context
 
-- Branche : `cursor/t11a-bis-quality-a2fe`
-- PR : https://github.com/samiriggui-code/IchiVol/pull/82
-- Base : `main` @ `71c162c` (#81 T13c **MERGÉE**)
+- Branche : `cursor/t11b-twelve-cache-a2fe`
+- PR : (à ouvrir)
+- Base : `main` @ `a033960` (#82 T11a-bis **MERGÉE**)
 
 ### Livré
-1. `resolve()` → `ResolvedSymbol` + `resolution="catalog"|"raw_fallback"` (unpack 2-tuple inchangé)
-2. Provenance screener : champ `resolution` (observation only)
-3. Migration `h4i5j6k7l8m9` — `candles.volume_type` + `taker_buy_volume` nullable ; collector round-trip
-4. Test garde imports : `pipeline` + `combiner` n’importent ni `lab_context` ni indicateur hors PRODUCTION
-5. Lab : `LAB_DATASETS_DIR` · verrou `fcntl` sur manifeste · drop bougie en formation (`closed_candles`)
+1. Cache TTL process `observe_lab_context` (clé last bar + params) — observation only
+2. Script `scripts/t11b_td_vs_biquote.py` + rapport `docs/T11B-TD-VS-BIQUOTE.md` (dry-run CI-safe ; live avec clé TD)
+3. Helpers crédits Twelve Data (`credits_used_in_window`) — mesure, pas de changement live
 
 ### Hors scope
-T11b Twelve Data mesure · cache `observe_lab_context` · changement live decision
+Changement catalogue / fournisseur live · T11c WebSocket
 
 ### Auto-revue
 - [ ] pytest PG16 CI
-- [x] tests ciblés T11a-bis / resolve / deep_history / import guard
+- [x] tests cache + t9f + twelve_data helpers
+
+---
+
+## 2026-09-24 — T11a-bis MERGÉE (#82) — squash `a033960`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/82 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `a033960`
+
+**Suite** : T11b → T10d/e.
 
 ---
 
