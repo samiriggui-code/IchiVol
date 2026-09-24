@@ -140,35 +140,53 @@ def _load_verified_candles(series_path: Path, expected_sha: str) -> list[Candle]
     return _candles_from_jsonable(rows)
 
 
-def _span_seconds(candles: Sequence[Candle]) -> int | None:
-    if len(candles) < 2:
-        return 0 if candles else None
-    return int(candles[-1].time) - int(candles[0].time)
+def _coverage_seconds(candles: Sequence[Candle], tf_seconds: int) -> int | None:
+    """Wall-clock coverage including the last bar's duration."""
+    if not candles:
+        return None
+    if len(candles) == 1:
+        return int(tf_seconds)
+    return int(candles[-1].time) + int(tf_seconds) - int(candles[0].time)
 
 
 def _coverage_warning(
     candles: Sequence[Candle],
     *,
     requested_seconds: int | None,
+    tf_seconds: int,
 ) -> tuple[int | None, str | None]:
-    """Warn when obtained span is shorter than requested coverage."""
-    span = _span_seconds(candles)
-    if span is None or requested_seconds is None or requested_seconds <= 0:
-        return span, None
-    if span >= int(requested_seconds):
-        return span, None
-    got_days = max(0, int(span) // 86400)
-    want_days = max(1, int(requested_seconds) // 86400)
-    return span, f"historique obtenu {got_days} j pour {want_days} demandés"
+    """Warn when obtained coverage is shorter than requested by more than one bar.
+
+    Coverage = (last.open + bar_duration) − first.open so a full N-bar series
+    matches N × tf_seconds. Tolerance of one bar avoids false positives from
+    open-to-open span off-by-one.
+    """
+    coverage = _coverage_seconds(candles, tf_seconds)
+    if coverage is None or requested_seconds is None or requested_seconds <= 0:
+        return coverage, None
+    # No warning if within one bar of the request.
+    if coverage >= int(requested_seconds) - int(tf_seconds):
+        return coverage, None
+    got_days = int(round(coverage / 86400))
+    want_days = int(round(int(requested_seconds) / 86400))
+    return coverage, f"historique obtenu {got_days} j pour {want_days} demandés"
 
 
 def _with_coverage(
     bundle: LabHistoryBundle,
     *,
     requested_seconds: int | None,
+    timeframe: str | None = None,
 ) -> LabHistoryBundle:
+    tf = timeframe or str(bundle.manifest.get("timeframe") or "")
+    tf_sec = TF_SECONDS.get(tf)
+    if tf_sec is None:
+        # Unknown TF — keep prior span fields, skip coverage gate.
+        return bundle
     span, hist_warn = _coverage_warning(
-        bundle.candles, requested_seconds=requested_seconds
+        bundle.candles,
+        requested_seconds=requested_seconds,
+        tf_seconds=tf_sec,
     )
     if (
         span == bundle.history_span_seconds
@@ -507,7 +525,9 @@ def _persist_bundle(
         quality=quality,
         data_warning=warning,
     )
-    return _with_coverage(bundle, requested_seconds=req)
+    return _with_coverage(
+        bundle, requested_seconds=req, timeframe=timeframe
+    )
 
 
 def twelve_data_max_bars() -> int:
@@ -556,7 +576,9 @@ def bundle_from_live_candles(
         quality=quality,
         data_warning=warning,
     )
-    return _with_coverage(bundle, requested_seconds=requested_seconds)
+    return _with_coverage(
+        bundle, requested_seconds=requested_seconds, timeframe=timeframe
+    )
 
 
 def resolve_lab_history(

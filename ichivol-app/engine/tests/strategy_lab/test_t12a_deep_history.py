@@ -10,6 +10,7 @@ from app.strategy_lab.ablation_oos import run_ablation_oos_study_on_candles
 from app.strategy_lab.catalog import get_builtin_ruleset
 from app.strategy_lab.deep_history import (
     TWELVE_DATA_MAX_BARS,
+    _coverage_warning,
     build_or_load_binance_history,
     build_or_load_from_candles,
     bundle_from_live_candles,
@@ -21,6 +22,27 @@ from app.strategy_lab.regime_slices import regime_slices_dict, run_regime_slices
 from app.strategy_lab.walk_forward import run_walk_forward_on_candles, walk_forward_dict
 from tests.indicators.test_ichimoku_lookahead import _make_candles
 
+
+def _make_tf_candles(n: int, *, tf_seconds: int = 3600, seed: int = 42, start: int = 1_700_000_000):
+    """Synthetic series with correct timeframe spacing (for coverage tests)."""
+    from app.indicators.ichimoku import Candle
+
+    base = _make_candles(n, seed=seed)
+    out = []
+    for i, c in enumerate(base):
+        out.append(
+            Candle(
+                time=start + i * tf_seconds,
+                open=c.open,
+                high=c.high,
+                low=c.low,
+                close=c.close,
+                volume=c.volume,
+                taker_buy_volume=c.taker_buy_volume,
+                volume_type=c.volume_type,
+            )
+        )
+    return out
 
 def test_twelve_data_max_bars_cap():
     assert TWELVE_DATA_MAX_BARS == 5_000
@@ -244,7 +266,7 @@ def test_load_dataset_rejects_tampered_sha256(tmp_path: Path):
 
 def test_short_history_warning_biquote_100_bars(monkeypatch, tmp_path: Path):
     """deep_history on biquote (~100 bars) → coverage warning (rév.53)."""
-    candles = _make_candles(100, seed=6)
+    candles = _make_tf_candles(100, tf_seconds=3600, seed=6)
 
     class _Prov:
         id = "biquote"
@@ -273,3 +295,61 @@ def test_short_history_warning_biquote_100_bars(monkeypatch, tmp_path: Path):
     assert bundle.history_warning is not None
     assert "demandés" in bundle.history_warning
     assert "historique obtenu" in bundle.history_warning
+
+
+def test_perfect_two_years_1h_no_coverage_warning():
+    """rév.54 — full 2y @ 1h (incl. last bar) → no false-positive warning."""
+    tf = 3600
+    years_s = int(2.0 * 365.25 * 86400)
+    n = years_s // tf
+    candles = _make_tf_candles(n, tf_seconds=tf, seed=1)
+    span, warn = _coverage_warning(
+        candles, requested_seconds=years_s, tf_seconds=tf
+    )
+    assert span == years_s
+    assert warn is None
+    bundle = bundle_from_live_candles(
+        candles,
+        symbol="BTCUSDT",
+        timeframe="1h",
+        dataset_id="perfect_2y",
+        now=int(candles[-1].time) + tf,
+        requested_seconds=years_s,
+    )
+    assert bundle.history_warning is None
+    assert bundle.history_span_seconds == years_s
+
+
+def test_perfect_1000_bars_1h_limit_no_coverage_warning():
+    """rév.54 — 1000 perfect 1h bars with limit=1000 → no warning."""
+    tf = 3600
+    n = 1000
+    candles = _make_tf_candles(n, tf_seconds=tf, seed=2)
+    req = n * tf
+    span, warn = _coverage_warning(
+        candles, requested_seconds=req, tf_seconds=tf
+    )
+    assert span == req
+    assert warn is None
+    bundle = bundle_from_live_candles(
+        candles,
+        symbol="BTCUSDT",
+        timeframe="1h",
+        dataset_id="perfect_1k",
+        now=int(candles[-1].time) + tf,
+        requested_seconds=req,
+    )
+    assert bundle.history_warning is None
+    assert bundle.history_span_seconds == req
+
+
+def test_coverage_tolerance_one_bar_no_warning():
+    """One bar short of request → still no warning (rév.54 tolerance)."""
+    tf = 3600
+    req = 100 * tf
+    candles = _make_tf_candles(99, tf_seconds=tf, seed=3)
+    span, warn = _coverage_warning(
+        candles, requested_seconds=req, tf_seconds=tf
+    )
+    assert span == 99 * tf
+    assert warn is None

@@ -12,7 +12,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - Branche : `cursor/t12a-deep-history-a2fe`
 - PR : https://github.com/samiriggui-code/IchiVol/pull/72 (**draft**)
 - Base : `main` @ `9490e4b` (#71 T9g-fix **MERGÉE**)
-- Statut : **DRAFT** — correctifs rév.53 @ `fbad298` ; CI verte ; attente re-revue Claude avant merge.
+- Statut : **DRAFT** — correctif rév.54 couverture @ poussé ; attente re-revue Claude avant merge.
 
 ### Livré
 
@@ -28,6 +28,10 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 2. `dataset_id` day-aligned (minuit UTC pour 1h/4h/1d) → cache effectif
 3. `load_dataset` / cache hit : vérification sha256 (refus si empreinte diffère)
 4. Couverture courte : `history_warning` « historique obtenu X j pour Y demandés » (biquote 100 barres)
+
+### Correctif rév.54 (bloquant)
+
+Couverture = `(last.time + tf) − first.time` + tolérance 1 bougie — plus de faux positif sur séries parfaites (2 ans 1h / 1000 barres).
 
 ### Non bloquant (plus tard)
 
