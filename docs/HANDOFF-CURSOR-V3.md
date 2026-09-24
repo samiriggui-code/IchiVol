@@ -7,6 +7,34 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-24 — T9e EN COURS — Fib ancré sur ImpulseEvent
+
+- Branche : `cursor/t9e-fib-anchor-a2fe`
+- PR : *(draft — lien après push)*
+- Base : `main` @ `534ee80` (#58 T9d)
+- Statut : **EN COURS** — Cursor solo. Gate paper reste `anchor=naive` (compat).
+
+### Livré
+
+1. `compute_fib_context(..., anchor=naive|impulse|auto)` + `swings_from_impulse`
+2. `FibContext` additif : `anchor_source` / bars / `displacement_atr`
+3. `from_fibonacci.py` → `layer=fibonacci` (key ratios) ; collect merge
+4. Calque Fib sans `emptyUntil`
+5. Tests anti-lookahead + gate naive inchangé
+
+### Hors scope
+T9f Lab badges · pipeline · changer le gate paper vers impulse (Claude tranche).
+
+---
+
+## 2026-09-24 — T9d MERGÉE (#58) — squash `534ee80` — FVG causal
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/58 — **MERGÉE** squash
+- **Vérifié** : `origin/main` tip = `534ee80`
+- Cursor solo ; CI verte (fix T1e ratchet via REGISTRY.compute).
+
+---
+
 ## 2026-09-24 — T9d EN COURS — FVG (Fair Value Gap) causal
 
 - Branche : `cursor/t9d-fvg-a2fe`
@@ -150,7 +178,8 @@ T10c redondance ; T9g ablation OOS ; aucun rejet automatique sur complexité / e
 - **T9b** #53 — **MERGÉE** squash `6d1968a` (Cursor solo, Claude restreint ; CI verte). **À auditer Claude 12h10.**
 - **T10b** #56 — **MERGÉE** squash `82e980e` (Cursor solo ; CI verte). **À auditer Claude 12h10.**
 - **T9c** #57 — **MERGÉE** squash `ef062c2` (Cursor solo ; CI verte). **À auditer Claude 12h10.**
-- **Job en cours** : **T9d** — FVG — branche `cursor/t9d-fvg-a2fe`. **Cursor solo**.
+- **T9d** #58 — **MERGÉE** squash `534ee80`.
+- **Job en cours** : **T9e** — Fib ancré — `cursor/t9e-fib-anchor-a2fe`. **Cursor solo**.
 - **T9** (structure / FVG / Fib) — T9a+T9b+T9c+T10a+T10b OK ; T9d en cours.
 - ⚠️ **Dette ouverte (T0-MANAGE-c)** : le max drawdown des rulesets à `partial_tp` est **surestimé** d'un montant qui croît en vol². **Ne pas comparer** partiels vs non-partiels sur le DD avant correction.
 - ⚠️ **Caveat historique SHORT** : positions SHORT **CLOSED avant** `b9f8421` (#51, mergedAt `2026-09-24T07:02:48Z`) ont un `realized` **surévalué de `entry_fee`**. Compte local Cursor : **CLOSED_SHORT = 0**. Script ponctuel : `scripts/recalc_short_entry_fee.py` — filtre par **horodatage exact**, journal `SHORT_FEE_RECALC` idempotent ; **ne pas lancer `--apply`** sans revue ; **pas de migration auto**.
