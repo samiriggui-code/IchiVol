@@ -335,7 +335,7 @@ def cmd_run_ruleset_event_study(args: dict) -> dict:
 
 def cmd_list_strategy_lab_experiments(args: dict) -> dict:
     from app.db.session import SessionLocal
-    from app.strategy_lab.perf_db import experiment_dict, list_experiments
+    from app.strategy_lab.perf_db import experiments_dicts, list_experiments
 
     session = SessionLocal()
     try:
@@ -344,9 +344,10 @@ def cmd_list_strategy_lab_experiments(args: dict) -> dict:
             symbol=args.get("symbol"),
             timeframe=args.get("timeframe"),
             ruleset_id=args.get("ruleset_id"),
+            hypothesis_id=args.get("hypothesis_id"),
             limit=int(args.get("limit", 50)),
         )
-        return {"experiments": [experiment_dict(r) for r in rows], "count": len(rows)}
+        return {"experiments": experiments_dicts(session, rows), "count": len(rows)}
     finally:
         session.close()
 

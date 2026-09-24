@@ -540,6 +540,10 @@ class StrategyLabExperiment(Base):
     timeframe: Mapped[str] = mapped_column(String(8), index=True)
     market_regime: Mapped[str] = mapped_column(String(32), default="GLOBAL", index=True)
 
+    # T10b — optional research-hypothesis tag for trial lineage (compteur d'essais).
+    # Multiple rows may share the same id; NULL falls back to ruleset_id+symbol+tf.
+    hypothesis_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+
     date_range_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
     date_range_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
 

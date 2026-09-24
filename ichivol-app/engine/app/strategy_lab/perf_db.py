@@ -3,13 +3,16 @@
 Persist ruleset study results (event study + ATR backtest) so experiments
 can be listed, compared, and re-read without recomputing. Does not vote in
 the live pipeline.
+
+T10b — optional ``hypothesis_id`` lineage tag + display-only complexity.
+Complexity never auto-rejects a study (prerequisite for T9g ablation).
 """
 
 from __future__ import annotations
 
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import StrategyLabExperiment
@@ -18,6 +21,8 @@ from app.strategy_lab.run_ruleset import RulesetStudyResult
 
 ENGINE_VERSION = "strategy_lab_v1"
 METRICS_BASIS_NET_V1 = "net_v1"
+
+_COMPOSITION_KEYS = frozenset({"all", "any"})
 
 
 def _exit_rule_label(rs) -> str:
@@ -42,6 +47,145 @@ def _parameters_with_levier(bt, parameters: dict[str, Any] | None) -> dict[str, 
     return out
 
 
+def _count_condition_leaves(raw: Any) -> int:
+    """Count leaf condition keys in flat or all/any composition."""
+    if not isinstance(raw, Mapping) or not raw:
+        return 0
+    keys = {str(k) for k in raw.keys()}
+    if keys & _COMPOSITION_KEYS:
+        n = 0
+        for group in ("all", "any"):
+            block = raw.get(group)
+            if isinstance(block, Mapping):
+                n += len(block)
+        return n
+    return len(raw)
+
+
+def ruleset_complexity(rules_json: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Display-only complexity score derived from persisted ``rules_json``.
+
+    Never used to auto-reject experiments (T10b hard rule — T9g may warn later).
+    """
+    if not rules_json:
+        return {
+            "score": 0,
+            "entry_leaves": 0,
+            "exit_leaves": 0,
+            "exit_extras": 0,
+            "note": "display-only; no auto-reject",
+        }
+    entry_leaves = _count_condition_leaves(rules_json.get("conditions"))
+    exit_block = rules_json.get("exit")
+    exit_leaves = 0
+    exit_extras = 0
+    if isinstance(exit_block, Mapping):
+        exit_leaves = _count_condition_leaves(exit_block.get("conditions"))
+        if exit_block.get("max_hold_bars") is not None:
+            exit_extras += 1
+        trail = exit_block.get("trail")
+        if isinstance(trail, Mapping) and trail:
+            exit_extras += 1
+        partial = exit_block.get("partial_tp")
+        if isinstance(partial, list):
+            exit_extras += len(partial)
+        reinforce = exit_block.get("reinforce")
+        if isinstance(reinforce, Mapping) and reinforce:
+            exit_extras += 1
+            exit_leaves += _count_condition_leaves(reinforce.get("conditions"))
+    score = entry_leaves + exit_leaves + exit_extras
+    return {
+        "score": score,
+        "entry_leaves": entry_leaves,
+        "exit_leaves": exit_leaves,
+        "exit_extras": exit_extras,
+        "note": "display-only; no auto-reject",
+    }
+
+
+def _resolve_hypothesis_id(
+    *,
+    hypothesis_id: str | None,
+    parameters: dict[str, Any] | None,
+) -> str | None:
+    if hypothesis_id is not None:
+        hid = str(hypothesis_id).strip()
+        return hid or None
+    if parameters and parameters.get("hypothesis_id") is not None:
+        hid = str(parameters["hypothesis_id"]).strip()
+        return hid or None
+    return None
+
+
+def lineage_count_for(
+    session: Session,
+    row: StrategyLabExperiment,
+) -> int:
+    """How many Perf DB rows share this experiment's lineage key.
+
+    Prefer ``hypothesis_id`` when set; else ``ruleset_id`` + symbol + timeframe.
+    """
+    if row.hypothesis_id:
+        stmt = (
+            select(func.count())
+            .select_from(StrategyLabExperiment)
+            .where(StrategyLabExperiment.hypothesis_id == row.hypothesis_id)
+        )
+    else:
+        stmt = (
+            select(func.count())
+            .select_from(StrategyLabExperiment)
+            .where(
+                StrategyLabExperiment.ruleset_id == row.ruleset_id,
+                StrategyLabExperiment.symbol == row.symbol,
+                StrategyLabExperiment.timeframe == row.timeframe,
+            )
+        )
+    return int(session.scalar(stmt) or 0)
+
+
+def _lineage_counts_batch(
+    session: Session,
+    rows: Sequence[StrategyLabExperiment],
+) -> dict[str, int]:
+    """Map experiment id → lineage_count without N+1 when listing."""
+    if not rows:
+        return {}
+    by_hyp: dict[str, list[str]] = {}
+    by_ruleset: dict[tuple[str, str, str], list[str]] = {}
+    for r in rows:
+        if r.hypothesis_id:
+            by_hyp.setdefault(r.hypothesis_id, []).append(r.id)
+        else:
+            key = (r.ruleset_id, r.symbol, r.timeframe)
+            by_ruleset.setdefault(key, []).append(r.id)
+
+    out: dict[str, int] = {}
+    for hid, ids in by_hyp.items():
+        n = session.scalar(
+            select(func.count())
+            .select_from(StrategyLabExperiment)
+            .where(StrategyLabExperiment.hypothesis_id == hid)
+        )
+        count = int(n or 0)
+        for eid in ids:
+            out[eid] = count
+    for (rid, sym, tf), ids in by_ruleset.items():
+        n = session.scalar(
+            select(func.count())
+            .select_from(StrategyLabExperiment)
+            .where(
+                StrategyLabExperiment.ruleset_id == rid,
+                StrategyLabExperiment.symbol == sym,
+                StrategyLabExperiment.timeframe == tf,
+            )
+        )
+        count = int(n or 0)
+        for eid in ids:
+            out[eid] = count
+    return out
+
+
 def save_experiment(
     session: Session,
     study: RulesetStudyResult,
@@ -49,6 +193,7 @@ def save_experiment(
     market_regime: str = "GLOBAL",
     parameters: dict[str, Any] | None = None,
     engine_version: str = ENGINE_VERSION,
+    hypothesis_id: str | None = None,
 ) -> StrategyLabExperiment:
     """Insert one StrategyLabExperiment row from a completed RulesetStudyResult."""
     rs = study.ruleset
@@ -82,12 +227,16 @@ def save_experiment(
         cagr = m.cagr
         exposure = m.exposure
 
+    params = _parameters_with_levier(bt, parameters)
+    hid = _resolve_hypothesis_id(hypothesis_id=hypothesis_id, parameters=params)
+
     row = StrategyLabExperiment(
         ruleset_id=rs.id,
         ruleset_version=rs.version,
         symbol=study.symbol,
         timeframe=study.timeframe,
         market_regime=market_regime,
+        hypothesis_id=hid,
         date_range_start=start,
         date_range_end=end,
         rules_json=rs.to_dict(),
@@ -116,7 +265,7 @@ def save_experiment(
         n_resolved_r=es.n_resolved_r,
         exit_reasons_json=exit_reasons,
         event_study_json=event_study_dict(es, include_events=False),
-        parameters_json=_parameters_with_levier(bt, parameters),
+        parameters_json=params,
         dataset_version=_dataset_version(
             study.symbol, study.timeframe, study.n_bars, start, end
         ),
@@ -129,7 +278,12 @@ def save_experiment(
     return row
 
 
-def experiment_dict(row: StrategyLabExperiment) -> dict:
+def experiment_dict(
+    row: StrategyLabExperiment,
+    *,
+    lineage_count: int | None = None,
+) -> dict:
+    complexity = ruleset_complexity(row.rules_json)
     return {
         "experiment_id": row.id,
         "ruleset_id": row.ruleset_id,
@@ -137,6 +291,9 @@ def experiment_dict(row: StrategyLabExperiment) -> dict:
         "symbol": row.symbol,
         "timeframe": row.timeframe,
         "market_regime": row.market_regime,
+        "hypothesis_id": row.hypothesis_id,
+        "lineage_count": lineage_count,
+        "complexity": complexity,
         "date_range_start": row.date_range_start,
         "date_range_end": row.date_range_end,
         "rules_json": row.rules_json,
@@ -173,6 +330,18 @@ def experiment_dict(row: StrategyLabExperiment) -> dict:
     }
 
 
+def experiments_dicts(
+    session: Session,
+    rows: Sequence[StrategyLabExperiment],
+) -> list[dict]:
+    """Serialize rows with batched lineage_count (T10b)."""
+    counts = _lineage_counts_batch(session, rows)
+    return [
+        experiment_dict(r, lineage_count=counts.get(r.id))
+        for r in rows
+    ]
+
+
 def get_experiment(session: Session, experiment_id: str) -> StrategyLabExperiment | None:
     return session.get(StrategyLabExperiment, experiment_id)
 
@@ -185,6 +354,7 @@ def list_experiments(
     ruleset_id: str | None = None,
     market_regime: str | None = None,
     engine_version: str | None = None,
+    hypothesis_id: str | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> list[StrategyLabExperiment]:
@@ -199,6 +369,8 @@ def list_experiments(
         stmt = stmt.where(StrategyLabExperiment.market_regime == market_regime)
     if engine_version:
         stmt = stmt.where(StrategyLabExperiment.engine_version == engine_version)
+    if hypothesis_id:
+        stmt = stmt.where(StrategyLabExperiment.hypothesis_id == hypothesis_id)
     stmt = stmt.offset(max(0, offset)).limit(min(limit, 200))
     return list(session.scalars(stmt))
 
@@ -232,6 +404,7 @@ def persist_study_result(
     *,
     market_regime: str = "GLOBAL",
     parameters: dict[str, Any] | None = None,
+    hypothesis_id: str | None = None,
 ) -> dict:
     """Open a session, save, return experiment_dict. Caller-facing helper."""
     from app.db.session import SessionLocal
@@ -239,8 +412,12 @@ def persist_study_result(
     session = SessionLocal()
     try:
         row = save_experiment(
-            session, study, market_regime=market_regime, parameters=parameters
+            session,
+            study,
+            market_regime=market_regime,
+            parameters=parameters,
+            hypothesis_id=hypothesis_id,
         )
-        return experiment_dict(row)
+        return experiment_dict(row, lineage_count=lineage_count_for(session, row))
     finally:
         session.close()

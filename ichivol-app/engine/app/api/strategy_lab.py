@@ -12,7 +12,9 @@ from app.strategy_lab.catalog import get_builtin_ruleset
 from app.strategy_lab.perf_db import (
     compare_rulesets,
     experiment_dict,
+    experiments_dicts,
     get_experiment,
+    lineage_count_for,
     list_experiments,
 )
 from app.strategy_lab.regime_slices import regime_slices_dict, run_regime_slices
@@ -26,6 +28,7 @@ def get_strategy_lab_experiments(
     timeframe: str | None = None,
     ruleset_id: str | None = None,
     market_regime: str | None = None,
+    hypothesis_id: str | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> dict:
@@ -38,11 +41,12 @@ def get_strategy_lab_experiments(
             timeframe=timeframe,
             ruleset_id=ruleset_id,
             market_regime=market_regime,
+            hypothesis_id=hypothesis_id,
             limit=limit,
             offset=offset,
         )
         return {
-            "experiments": [experiment_dict(r) for r in rows],
+            "experiments": experiments_dicts(session, rows),
             "count": len(rows),
         }
     finally:
@@ -56,7 +60,7 @@ def get_strategy_lab_experiment(experiment_id: str) -> dict:
         row = get_experiment(session, experiment_id)
         if row is None:
             raise HTTPException(status_code=404, detail="experiment_not_found")
-        return experiment_dict(row)
+        return experiment_dict(row, lineage_count=lineage_count_for(session, row))
     finally:
         session.close()
 
@@ -85,7 +89,7 @@ def get_strategy_lab_compare(
             "symbol": symbol.upper(),
             "timeframe": timeframe,
             "market_regime": market_regime,
-            "experiments": [experiment_dict(r) for r in rows],
+            "experiments": experiments_dicts(session, rows),
         }
     finally:
         session.close()
