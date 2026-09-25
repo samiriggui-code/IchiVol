@@ -1,4 +1,48 @@
 {
-  "390": [],
-  "1440": []
+  "390": [
+    {
+      "classe": "up",
+      "type": "taille police",
+      "maquette": 14,
+      "app": 12
+    },
+    {
+      "classe": "up",
+      "type": "graisse",
+      "maquette": "400",
+      "app": "500"
+    },
+    {
+      "classe": "up",
+      "type": "hauteur",
+      "maquette": 140,
+      "app": 17
+    },
+    {
+      "classe": "notice",
+      "type": "hauteur",
+      "maquette": 62,
+      "app": 44
+    }
+  ],
+  "1440": [
+    {
+      "classe": "up",
+      "type": "taille police",
+      "maquette": 14,
+      "app": 12
+    },
+    {
+      "classe": "up",
+      "type": "graisse",
+      "maquette": "400",
+      "app": "500"
+    },
+    {
+      "classe": "up",
+      "type": "hauteur",
+      "maquette": 134,
+      "app": 17
+    }
+  ]
 }

@@ -7,53 +7,41 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-25 — Chantier 2 E1 Eve runtime (P1) — draft
+## 2026-09-25 — merge main → Eve #111 (prêt merge)
 
-- Branche `cursor/eve-runtime-a2fe` (suite E0 @ `cac24f4` / tip handoff précédent)
-- **E1 livré (server only, paper)** :
-  1. Outil `schedule_recheck` (reason ≥10, next_closed_candle +60s, upsert open recheck) + wiring Claude tools
-  2. Skills markdown on-demand (`server/src/agent/skills/*.md` + `loadSkills`)
-  3. Missions **1 symbole** (`createMission`) — Eve chat = **threads Copilot** (pas de 2e chat)
-  4. `missionRunner` : gate fraîcheur `stale`/`data_late` → **pas de wake LLM**, defer + log ; condition → defer E2 (plus de stub-complete)
-  5. API stubs : `GET /api/agents`, `GET /api/agents/:id/tasks`, `GET /api/agents/logs`, `POST /api/agents/missions`
-- Garde-fous : paper only ; LLM sans DB/broker direct ; `humanConfirmDefault` / `autoOpen: false`
-- Tests : `npm test` dans `ichivol-app/server` — **56 pass** (E0 + E1 `e1Runtime.test.ts`)
-- **Draft PR #111 — pas de merge**
-
-### Gaps / suite E2
-1. `evaluate_watch_condition` engine (RVOL/ADX/pipeline DSL) — wake LLM seulement si met
-2. Budget LLM journalier / max rechecks symbole (contrainte partielle via upsert)
-3. UI AgentsPage brancher sur `/api/agents*`
+- Intègre main (thème + copilot context #116) dans `cursor/eve-runtime-a2fe`
+- E0+E1 AgentTask / schedule_recheck / API agents — **à merger puis page Agents 2b**
 
 ---
 
-## 2026-09-25 — Chantier 2 E0 Eve runtime (P0) — draft
+## 2026-09-25 — Copilot : « Pourquoi BTC attend » charge le moteur (draft)
 
-- Branche `cursor/eve-runtime-a2fe` depuis `main` @ `225549d` (#109 squash-merged)
-- **Option D hybride** : patterns Comp AI (file Postgres + SKIP LOCKED + leases + poke) dans IchiVol server — **pas** de container Eve
-- Prisma : `AgentTask` (`agent_tasks`) + `AgentLog` (`agent_logs`) — migration `20260925143000_agent_runtime_e0`
-- Runtime server : `tasks.ts` (schedule/claim/complete/reconcile), `staleTasks.ts`, `runtime/dispatcher.ts` (worker minute + stub process), `POST /api/agent/runtime/poke` (Bearer `AGENT_BRIDGE_SECRET`)
-- Paper only ; LLM non réveillé en E0 ; `evaluate_watch_condition` / `schedule_recheck` → **E1/E2**
-- Tests : `npm test` dans `ichivol-app/server` — 41 pass (dont 6 E0 : claim concurrent, stale lease, idempotency)
-- **Draft PR — pas de merge** ; parent ManagePullRequest
-
-### Gaps / suite E1
-1. Outil `schedule_recheck` (raison ≥10 car.) + wiring Claude tools
-2. Ne plus stub-compléter les tâches à condition — attendre E2 `evaluate_watch_condition`
-3. `missionRunner` borné (budget LLM) sur wake réel
+- Branche `cursor/copilot-context-a2fe`
+- **Cause** : question → mode `research` + prompt « si pas de LIVE_DATA → théorie » + OpenRouter sans prefetch décision → RAG + hallucination `!status`
+- **Fix** : planner `attendre/WAIT` → `explain_decision` ; research+symbole prefetch DECISION+LIVE ; prompt research n’impose plus la théorie si données présentes
+- Tests planner OK ; `npm test` server PASS
 
 ---
 
-## 2026-09-25 — UI-port #109 MERGÉE + VPS — tip `225549d`
+## 2026-09-25 — Fix thème farci #2 — fuite CSS virgule (light = light)
 
-- PR : https://github.com/samiriggui-code/IchiVol/pull/109 — **MERGÉE** (squash) → tip `225549d`
-- Contenu : 11 pages portées + correctifs Portefeuille (toutes positions) + Opportunités « Enregistrer la décision »
-- **VPS** : https://ichivol.global-it-ss.com — `RELEASE=225549d main` · rebuild `web` · public/health **200**
-- Backup : `/opt/ichivol-backup/pre-uiport-merge-20260925-141927.tgz` (+ `pre-uiport-merge-src-*`)
-- #108 fermée (incluse dans #109) ; remotes `cursor/ui-port-marche-a2fe` + `cursor/ui-clean-a2fe` supprimées
+- Bug : dans `maquette-theme.css`, sélecteurs après `,` perdaient le préfixe `html.dark` → `.segmented` restait sombre en mode clair (bandeau Tous/PASSE/…)
+- Fix : réécriture sans fuite ; light → shell/card/segmented/th tous clairs ; dark → tous sombres
+- Smoke local PASS ; VPS à déployer
+
+---
+
+## 2026-09-25 — Fix thème farci dark/light (draft → merge autonome)
+
+- Branche `cursor/theme-fix-a2fe` depuis `main` @ `225549d`
+- **Cause** : shell (`camap-tokens` html.dark) sombre + pages maquette figent `--bg/--card/--ink` en clair → cartes crème sur fond noir
+- **Fix** : `theme/maquette-theme.css` resync vars + surfaces sous `html.dark` pour les 11 `*-page` ; défaut thème = **light** (ignore prefers-color-scheme iOS) ; `theme-color` meta dynamique
+- Smoke `scripts/smoke-theme-switch.mjs` : dark + light → shell/card même famille (**PASS**)
+- compare-maquette : 10 pages 0 ; desk écarts `.up`/notice data-dépendants (hors thème, script non modifié)
+- **VPS** : déployer après merge — corrige le téléphone Samir (Opérations)
 
 ### Suite
-Chantier 1 fiches (parallèle) + Chantier 2 E0 runtime (cette branche) — draft, pas de merge.
+Chantiers fiches (#110) + Eve (#111) continuent en parallèle.
 
 ---
 
@@ -3607,3 +3595,53 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
 - RAPPORT 11×0 · ACTIONS-METIER.md · paper open/close smoke PASS
 - VPS `RELEASE=ab33224` backup `pre-uiport-paper-20260925-140655.tgz`
 - **Pas de merge** avant Claude + Samir OK
+## 2026-09-25 — Chantier 2 E1 Eve runtime (P1) — draft
+
+- Branche `cursor/eve-runtime-a2fe` (suite E0 @ `cac24f4` / tip handoff précédent)
+- **E1 livré (server only, paper)** :
+  1. Outil `schedule_recheck` (reason ≥10, next_closed_candle +60s, upsert open recheck) + wiring Claude tools
+  2. Skills markdown on-demand (`server/src/agent/skills/*.md` + `loadSkills`)
+  3. Missions **1 symbole** (`createMission`) — Eve chat = **threads Copilot** (pas de 2e chat)
+  4. `missionRunner` : gate fraîcheur `stale`/`data_late` → **pas de wake LLM**, defer + log ; condition → defer E2 (plus de stub-complete)
+  5. API stubs : `GET /api/agents`, `GET /api/agents/:id/tasks`, `GET /api/agents/logs`, `POST /api/agents/missions`
+- Garde-fous : paper only ; LLM sans DB/broker direct ; `humanConfirmDefault` / `autoOpen: false`
+- Tests : `npm test` dans `ichivol-app/server` — **56 pass** (E0 + E1 `e1Runtime.test.ts`)
+- **Draft PR #111 — pas de merge**
+
+### Gaps / suite E2
+1. `evaluate_watch_condition` engine (RVOL/ADX/pipeline DSL) — wake LLM seulement si met
+2. Budget LLM journalier / max rechecks symbole (contrainte partielle via upsert)
+3. UI AgentsPage brancher sur `/api/agents*`
+
+---
+
+## 2026-09-25 — Chantier 2 E0 Eve runtime (P0) — draft
+
+- Branche `cursor/eve-runtime-a2fe` depuis `main` @ `225549d` (#109 squash-merged)
+- **Option D hybride** : patterns Comp AI (file Postgres + SKIP LOCKED + leases + poke) dans IchiVol server — **pas** de container Eve
+- Prisma : `AgentTask` (`agent_tasks`) + `AgentLog` (`agent_logs`) — migration `20260925143000_agent_runtime_e0`
+- Runtime server : `tasks.ts` (schedule/claim/complete/reconcile), `staleTasks.ts`, `runtime/dispatcher.ts` (worker minute + stub process), `POST /api/agent/runtime/poke` (Bearer `AGENT_BRIDGE_SECRET`)
+- Paper only ; LLM non réveillé en E0 ; `evaluate_watch_condition` / `schedule_recheck` → **E1/E2**
+- Tests : `npm test` dans `ichivol-app/server` — 41 pass (dont 6 E0 : claim concurrent, stale lease, idempotency)
+- **Draft PR — pas de merge** ; parent ManagePullRequest
+
+### Gaps / suite E1
+1. Outil `schedule_recheck` (raison ≥10 car.) + wiring Claude tools
+2. Ne plus stub-compléter les tâches à condition — attendre E2 `evaluate_watch_condition`
+3. `missionRunner` borné (budget LLM) sur wake réel
+
+---
+
+## 2026-09-25 — UI-port #109 MERGÉE + VPS — tip `225549d`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/109 — **MERGÉE** (squash) → tip `225549d`
+- Contenu : 11 pages portées + correctifs Portefeuille (toutes positions) + Opportunités « Enregistrer la décision »
+- **VPS** : https://ichivol.global-it-ss.com — `RELEASE=225549d main` · rebuild `web` · public/health **200**
+- Backup : `/opt/ichivol-backup/pre-uiport-merge-20260925-141927.tgz` (+ `pre-uiport-merge-src-*`)
+- #108 fermée (incluse dans #109) ; remotes `cursor/ui-port-marche-a2fe` + `cursor/ui-clean-a2fe` supprimées
+
+### Suite
+Chantier 1 fiches (parallèle) + Chantier 2 E0 runtime (cette branche) — draft, pas de merge.
+
+---
+
