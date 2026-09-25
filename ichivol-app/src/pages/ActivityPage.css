@@ -591,15 +591,35 @@
   color:var(--muted);
   margin-top:6px;
 }
-.ops-page dialog {
+.ops-page .ops-fiche-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: #18263255;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 6vh 16px 24px;
+  overflow: auto;
+}
+.ops-page dialog,
+.ops-page .ops-dossier {
   border:1px solid var(--line);
   border-radius:16px;
   padding:0;
-  width:550px;
+  width:min(820px, 94vw);
   max-width:94vw;
+  max-height:92vh;
+  overflow:auto;
   background:var(--card);
   color:var(--ink);
   box-shadow:0 25px 100px #0003;
+}
+.ops-page table td small {
+  display:block;
+  color:var(--muted);
+  font-size:11px;
+  margin-top:3px;
 }
 .ops-page dialog::backdrop {
   background:#18263255;

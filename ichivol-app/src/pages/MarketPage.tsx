@@ -5,7 +5,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
 import { PriceChart } from '../components/PriceChart'
+import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
+import '../components/engineEvidence.css'
 import { confirmAgentAction } from '../lib/agent'
 import { getChartObjects, type ChartObject } from '../lib/chartObjects'
 import { fetchTickers24h } from '../lib/binance'
@@ -19,6 +22,7 @@ import {
   pipelineFromDecisionDetail,
   type PipelineStageId,
 } from '../lib/decisionPipeline'
+import { buildDecisionSummary } from '../lib/decisionLabels'
 import {
   loadLayerPrefs,
   saveLayerPrefs,
@@ -27,8 +31,10 @@ import {
 } from '../lib/marketPrefs'
 import type { Candle, Interval } from '../lib/types'
 import {
+  CLASS_LABELS,
   getEngineOhlcv,
   getEngineUniverse,
+  type EngineAssetClass,
   type EngineInstrument,
 } from '../lib/universe'
 import {
@@ -77,6 +83,7 @@ export function MarketPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [instruments, setInstruments] = useState<EngineInstrument[]>([])
+  const [assetClass, setAssetClass] = useState<EngineAssetClass | 'all'>('all')
   const [screenerRows, setScreenerRows] = useState<ScreenerDecisionRow[]>([])
   const [tickers24h, setTickers24h] = useState<Map<string, { price: number; change24h: number }>>(
     () => new Map(),
@@ -241,10 +248,17 @@ export function MarketPage() {
     return m
   }, [screenerRows])
 
+  const classOptions = useMemo(() => {
+    const present = new Set(instruments.map((i) => i.asset_class))
+    return (Object.keys(CLASS_LABELS) as EngineAssetClass[]).filter((c) => present.has(c))
+  }, [instruments])
+
   const watchRows: WatchRow[] = useMemo(() => {
     const list =
       instruments.length > 0
-        ? instruments.filter((i) => i.asset_class === 'crypto').slice(0, 40)
+        ? instruments
+            .filter((i) => assetClass === 'all' || i.asset_class === assetClass)
+            .slice(0, 60)
         : []
     return list.map((inst) => {
       const row = screenerById.get(inst.id)
@@ -263,7 +277,7 @@ export function MarketPage() {
         rvol: row?.rvol ?? null,
       }
     })
-  }, [instruments, screenerById, tickers24h])
+  }, [instruments, screenerById, tickers24h, assetClass])
 
   const selectedTick = tickers24h.get(symbol)
   const change24h =
@@ -298,9 +312,9 @@ export function MarketPage() {
 
   const setupState = useMemo(() => {
     const g = pipeline?.gateDecision
-    if (g === 'BUY' || g === 'SELL') return { text: 'TRIGGERED', tone: 'green' as const }
-    if (g === 'WATCH') return { text: 'ARMED', tone: '' as const }
-    if (g === 'NO_TRADE') return { text: 'WATCH', tone: 'gray' as const }
+    if (g === 'BUY' || g === 'SELL') return { text: 'Déclenché', tone: 'green' as const }
+    if (g === 'WATCH') return { text: 'Armé', tone: '' as const }
+    if (g === 'NO_TRADE') return { text: 'Veille', tone: 'gray' as const }
     return { text: '—', tone: 'gray' as const }
   }, [pipeline])
 
@@ -350,6 +364,26 @@ export function MarketPage() {
           <span>{error}</span>
         </div>
       )}
+
+      <div className="class-chips" role="tablist" aria-label="Classe d’actifs">
+        <button
+          type="button"
+          className={assetClass === 'all' ? 'active' : undefined}
+          onClick={() => setAssetClass('all')}
+        >
+          Tous
+        </button>
+        {classOptions.map((c) => (
+          <button
+            key={c}
+            type="button"
+            className={assetClass === c ? 'active' : undefined}
+            onClick={() => setAssetClass(c)}
+          >
+            {CLASS_LABELS[c]}
+          </button>
+        ))}
+      </div>
 
       <div className="market-layout">
         <section className="card watchlist" aria-label="Watchlist">
@@ -438,7 +472,7 @@ export function MarketPage() {
             )}
           </div>
 
-          <div className="card-body">
+          <div className="card-body chart-tools">
             <div className="checkrow">
               <label>
                 <input
@@ -463,51 +497,64 @@ export function MarketPage() {
         <section className="card analysis-panel">
           <div className="card-head">
             <h2>Lecture du marché</h2>
-          </div>
-          <div className="card-body">
-            {GATE_ORDER.map((id) => {
-              const stage = pipeline?.stages.find((s) => s.id === id)
-              const badge = maquetteGateBadge(stage?.status)
-              return (
-                <div className="statline" key={id}>
-                  <span>{GATE_LABELS[id]}</span>
-                  <b>
-                    <span className={`tag ${badge.tone}`.trim()}>{badge.text}</span>
-                  </b>
-                </div>
-              )
-            })}
-            <p className="lecture-synthesis">{synthesis}</p>
-            <div className="step">
-              <b>{setupName}</b>
-              <p>RVOL attendu ≥ 1,5</p>
-              <span className={`tag ${setupState.tone}`.trim()}>{setupState.text}</span>
+            <div className="analysis-actions">
+              <button
+                type="button"
+                className="primary"
+                onClick={() =>
+                  navigate(`/app/opportunites?symbol=${encodeURIComponent(symbol)}&open=1`)
+                }
+              >
+                Préparer le trade →
+              </button>
+              <button
+                type="button"
+                className="suggestion"
+                disabled={watchBusy}
+                onClick={() => void onAddWatchlist()}
+              >
+                Watchlist
+              </button>
             </div>
-            <button
-              type="button"
-              className="primary"
-              onClick={() =>
-                navigate(
-                  `/app/opportunites?symbol=${encodeURIComponent(symbol)}&open=1`,
+          </div>
+          <div className="card-body analysis-body">
+            <div className="analysis-gates">
+              {GATE_ORDER.map((id) => {
+                const stage = pipeline?.stages.find((s) => s.id === id)
+                const badge = maquetteGateBadge(stage?.status)
+                return (
+                  <div className="statline" key={id}>
+                    <span>{GATE_LABELS[id]}</span>
+                    <b>
+                      <span className={`tag ${badge.tone}`.trim()}>{badge.text}</span>
+                    </b>
+                  </div>
                 )
-              }
-            >
-              Préparer le trade →
-            </button>
-            <button
-              type="button"
-              className="suggestion"
-              disabled={watchBusy}
-              onClick={() => void onAddWatchlist()}
-            >
-              Ajouter à la watchlist
-            </button>
-            {watchMsg && <p className="watch-msg">{watchMsg}</p>}
-            <p className="fiche-link">
-              <Link className="link" to={`/app/opportunites?symbol=${encodeURIComponent(symbol)}`}>
-                Voir la fiche décision ↗
-              </Link>
-            </p>
+              })}
+            </div>
+            <p className="lecture-synthesis">{synthesis}</p>
+            {detail && pipeline ? (
+              <div className="engine-evidence is-wide">
+                <p className="argumentaire">{buildDecisionSummary(detail)}</p>
+                <DecisionPipelinePanel view={pipeline} />
+                <SignalEvidenceCard detail={detail} />
+              </div>
+            ) : (
+              <p className="lecture-synthesis">—</p>
+            )}
+            <div className="analysis-foot">
+              <div className="step">
+                <b>{setupName}</b>
+                <p>RVOL attendu ≥ 1,5</p>
+                <span className={`tag ${setupState.tone}`.trim()}>{setupState.text}</span>
+              </div>
+              {watchMsg && <p className="watch-msg">{watchMsg}</p>}
+              <p className="fiche-link">
+                <Link className="link" to={`/app/opportunites?symbol=${encodeURIComponent(symbol)}`}>
+                  Voir la fiche décision ↗
+                </Link>
+              </p>
+            </div>
           </div>
         </section>
       </div>

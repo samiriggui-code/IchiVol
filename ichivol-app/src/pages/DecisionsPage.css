@@ -595,8 +595,10 @@
   border:1px solid var(--line);
   border-radius:16px;
   padding:0;
-  width:550px;
+  width:min(760px, 94vw);
   max-width:94vw;
+  max-height:92vh;
+  overflow:auto;
   background:var(--card);
   color:var(--ink);
   box-shadow:0 25px 100px #0003;

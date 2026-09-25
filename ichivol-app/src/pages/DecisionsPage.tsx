@@ -6,7 +6,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
 import { PaperConfirmSheet } from '../components/PaperConfirmSheet'
+import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
+import '../components/engineEvidence.css'
 import {
   getDecisionDetail,
   getScreener,
@@ -14,6 +17,7 @@ import {
   type ScreenerDecisionRow,
 } from '../lib/decisions'
 import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
+import { buildDecisionSummary } from '../lib/decisionLabels'
 import { displaySymbol } from '../lib/markets'
 import {
   getPaperOverview,
@@ -34,6 +38,22 @@ type OppFilter = 'Tous' | 'WATCH' | 'ARMED' | 'TRIGGERED'
 
 type CycleLabel = 'WATCH' | 'ARMED' | 'TRIGGERED' | 'ACCEPTÉ' | 'REFUSÉ' | '—'
 
+const CYCLE_FR: Record<CycleLabel, string> = {
+  WATCH: 'Veille',
+  ARMED: 'Armé',
+  TRIGGERED: 'Déclenché',
+  ACCEPTÉ: 'Accepté',
+  REFUSÉ: 'Refusé',
+  '—': '—',
+}
+
+const FILTER_FR: Record<OppFilter, string> = {
+  Tous: 'Tous',
+  WATCH: 'Veille',
+  ARMED: 'Armé',
+  TRIGGERED: 'Déclenché',
+}
+
 type PaperConfirmState = {
   symbol: string
   timeframe: string
@@ -43,11 +63,11 @@ type PaperConfirmState = {
 function badge(text: string, tone: MaquetteBadgeTone | string = ''): ReactNode {
   let inferred = tone
   if (!inferred) {
-    inferred = /PASSE|ACCEPTÉ|OUVERTE|VALIDÉ|TRIGGERED/i.test(text)
+    inferred = /PASSE|ACCEPTÉ|OUVERTE|VALIDÉ|DÉCLENCHÉ|DECLENCHE/i.test(text)
       ? 'green'
       : /REFUS|BLOQU|ERREUR|ÉCHEC/i.test(text)
         ? 'red'
-        : /PRUDENCE|ARMED|WATCH/i.test(text)
+        : /PRUDENCE|ARMÉ|ARME|VEILLE/i.test(text)
           ? 'amber'
           : ''
   }
@@ -103,7 +123,13 @@ function normalizeSymbolParam(raw: string | null): string | null {
   if (!raw) return null
   const s = raw.trim().toUpperCase()
   if (!s) return null
-  return s.endsWith('USDT') ? s : `${s}USDT`
+  if (s.endsWith('USDT') || s.length >= 6) return s
+  return `${s}USDT`
+}
+
+function pairTitle(symbol: string): string {
+  if (symbol.endsWith('USDT')) return `${displaySymbol(symbol)} / USDT`
+  return displaySymbol(symbol)
 }
 
 export function DecisionsPage() {
@@ -114,6 +140,7 @@ export function DecisionsPage() {
   const [query, setQuery] = useState('')
   const [oppFilter, setOppFilter] = useState<OppFilter>('Tous')
   const [detail, setDetail] = useState<DecisionDetail | null>(null)
+  const [whyDetail, setWhyDetail] = useState<DecisionDetail | null>(null)
   const [detailSym, setDetailSym] = useState<string | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [openPaperSymbols, setOpenPaperSymbols] = useState<ReadonlySet<string>>(() => new Set())
@@ -183,6 +210,25 @@ export function DecisionsPage() {
     if (!pool.length) return null
     return [...pool].sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))[0] ?? null
   }, [rows])
+
+  useEffect(() => {
+    const symbol = whyRow?.symbol
+    if (!symbol) {
+      setWhyDetail(null)
+      return
+    }
+    let cancelled = false
+    getDecisionDetail(symbol, '1h', false)
+      .then((d) => {
+        if (!cancelled) setWhyDetail(d)
+      })
+      .catch(() => {
+        if (!cancelled) setWhyDetail(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [whyRow?.symbol])
 
   const closeDialog = useCallback(() => {
     dialogRef.current?.close()
@@ -378,7 +424,7 @@ export function DecisionsPage() {
           <h1>Opportunités</h1>
           <p className="subtitle">Chaque décision commence par une preuve.</p>
         </div>
-        <div className="actions">{badge('DONNÉES LIVE', 'gray')}</div>
+        <div className="actions">{badge('CLOTURE 1H', 'gray')}</div>
       </div>
 
       <div className="toolbar">
@@ -397,7 +443,7 @@ export function DecisionsPage() {
               className={oppFilter === t ? 'active' : ''}
               onClick={() => setOppFilter(t)}
             >
-              {t}
+              {FILTER_FR[t]}
             </button>
           ))}
         </div>
@@ -452,14 +498,14 @@ export function DecisionsPage() {
                     >
                       <td>
                         <b>{base}</b>
-                        <small>{base} · USDT</small>
+                        <small>{r.symbol}</small>
                       </td>
                       <td>{directionCell(r)}</td>
                       <td>{participationBadge(r)}</td>
                       <td>{stageBadge(r, 'structure')}</td>
                       <td>{stageBadge(r, 'location')}</td>
                       <td>{stageBadge(r, 'regime')}</td>
-                      <td>{badge(cycle === '—' ? '—' : cycle)}</td>
+                      <td>{badge(CYCLE_FR[cycle])}</td>
                       <td>
                         <span className="mono">{confidencePct(r)} %</span>
                       </td>
@@ -484,13 +530,14 @@ export function DecisionsPage() {
               {(['WATCH', 'ARMED', 'TRIGGERED', 'ACCEPTÉ', 'REFUSÉ'] as const).map((s, i) => (
                 <span key={s}>
                   {i ? ' → ' : ''}
-                  {badge(s)}
+                  {badge(CYCLE_FR[s])}
                 </span>
               ))}
             </div>
             <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-              Un signal traverse chaque contrôle. La confiance complète la lecture ; elle ne
-              remplace jamais le verdict du Risk Kernel.
+              Veille : pas d’entrée. Armé : le setup est prêt, le volume ou une porte retient.
+              Déclenché : les cinq portes autorisent une lecture d’achat ou de vente. Accepté ou
+              refusé : vous avez tranché. La confiance ne remplace pas le contrôle du risque.
             </p>
           </div>
         </section>
@@ -502,9 +549,11 @@ export function DecisionsPage() {
           </div>
           <div className="card-body">
             <p style={{ fontSize: 12 }}>
-              {whyRow
-                ? 'Direction, volume et structure lus par le moteur. Le plan attend une validation finale du risque.'
-                : '—'}
+              {whyDetail
+                ? buildDecisionSummary(whyDetail)
+                : whyRow
+                  ? 'Lecture moteur en cours…'
+                  : '—'}
             </p>
             {whyRow ? (
               <button
@@ -537,9 +586,7 @@ export function DecisionsPage() {
         {detailSym ? (
           <div className="dialog-body">
             <div className="dialog-head">
-              <h2>
-                {displaySymbol(detailSym)} / USDT
-              </h2>
+              <h2>{pairTitle(detailSym)}</h2>
               <button type="button" onClick={closeDialog} aria-label="Fermer">
                 ×
               </button>
@@ -584,6 +631,13 @@ export function DecisionsPage() {
               <span>Invalidation</span>
               <b>{detail?.invalidation?.[0] ?? '—'}</b>
             </div>
+            {detail && detailPipeline && (
+              <div className="engine-evidence">
+                <p className="argumentaire">{buildDecisionSummary(detail)}</p>
+                <DecisionPipelinePanel view={detailPipeline} />
+                <SignalEvidenceCard detail={detail} />
+              </div>
+            )}
             <div className="notice blue" style={{ marginTop: 20 }}>
               {alreadyOpen
                 ? 'Position paper déjà ouverte sur ce symbole.'

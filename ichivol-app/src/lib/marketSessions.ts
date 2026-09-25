@@ -4,19 +4,32 @@
  * Positions % = ancrage carte world-map (layout), pas des métriques marché.
  */
 
-export type SessionId = 'tokyo' | 'london' | 'newyork'
+export type SessionId =
+  | 'sydney'
+  | 'hongkong'
+  | 'singapore'
+  | 'tokyo'
+  | 'frankfurt'
+  | 'london'
+  | 'newyork'
+  | 'chicago'
+  | 'crypto'
 
 export type SessionStatus = 'open' | 'closed' | 'upcoming'
+
+export type SessionKind = 'cash' | 'futures_cme' | 'always'
 
 export type MarketSessionDef = {
   id: SessionId
   region: string
   city: string
+  venue: string
   /** IANA timezone of the venue. */
   timeZone: string
-  /** Local open hour (decimal, e.g. 9.5 = 09:30). */
+  kind: SessionKind
+  /** Local open hour (decimal, e.g. 9.5 = 09:30). Cash sessions only. */
   openLocal: number
-  /** Local close hour (exclusive end as decimal). */
+  /** Local close hour (exclusive end as decimal). Cash sessions only. */
   closeLocal: number
   /** Marker position on world-map.svg (percent). */
   mapLeftPct: number
@@ -25,34 +38,112 @@ export type MarketSessionDef = {
 
 export const MARKET_SESSIONS: MarketSessionDef[] = [
   {
-    id: 'tokyo',
-    region: 'Asie',
-    city: 'Tokyo',
-    timeZone: 'Asia/Tokyo',
+    id: 'sydney',
+    region: 'Sydney',
+    city: 'Sydney',
+    venue: 'ASX',
+    timeZone: 'Australia/Sydney',
+    kind: 'cash',
+    openLocal: 10,
+    closeLocal: 16,
+    mapLeftPct: 84,
+    mapTopPct: 72,
+  },
+  {
+    id: 'hongkong',
+    region: 'Hong Kong',
+    city: 'Hong Kong',
+    venue: 'HKEX',
+    timeZone: 'Asia/Hong_Kong',
+    kind: 'cash',
+    openLocal: 9.5,
+    closeLocal: 16,
+    mapLeftPct: 74.2,
+    mapTopPct: 42,
+  },
+  {
+    id: 'singapore',
+    region: 'Singapour',
+    city: 'Singapour',
+    venue: 'SGX',
+    timeZone: 'Asia/Singapore',
+    kind: 'cash',
     openLocal: 9,
-    closeLocal: 18,
+    closeLocal: 17,
+    mapLeftPct: 72.4,
+    mapTopPct: 56,
+  },
+  {
+    id: 'tokyo',
+    region: 'Tokyo',
+    city: 'Tokyo',
+    venue: 'TSE',
+    timeZone: 'Asia/Tokyo',
+    kind: 'cash',
+    openLocal: 9,
+    closeLocal: 15,
     mapLeftPct: 77.6,
     mapTopPct: 34.6,
   },
   {
+    id: 'frankfurt',
+    region: 'Francfort',
+    city: 'Francfort',
+    venue: 'Xetra',
+    timeZone: 'Europe/Berlin',
+    kind: 'cash',
+    openLocal: 9,
+    closeLocal: 17.5,
+    mapLeftPct: 51.6,
+    mapTopPct: 28,
+  },
+  {
     id: 'london',
-    region: 'Europe',
+    region: 'Londres',
     city: 'Londres',
+    venue: 'LSE',
     timeZone: 'Europe/London',
+    kind: 'cash',
     openLocal: 8,
-    closeLocal: 17,
-    mapLeftPct: 50,
-    mapTopPct: 23.1,
+    closeLocal: 16.5,
+    mapLeftPct: 48.2,
+    mapTopPct: 26,
   },
   {
     id: 'newyork',
-    region: 'États-Unis',
+    region: 'New York',
     city: 'New York',
+    venue: 'NYSE',
     timeZone: 'America/New_York',
+    kind: 'cash',
     openLocal: 9.5,
     closeLocal: 16,
     mapLeftPct: 29.4,
-    mapTopPct: 30.6,
+    mapTopPct: 34,
+  },
+  {
+    id: 'chicago',
+    region: 'Chicago',
+    city: 'Chicago',
+    venue: 'CME',
+    timeZone: 'America/Chicago',
+    kind: 'futures_cme',
+    openLocal: 17,
+    closeLocal: 16,
+    mapLeftPct: 23.2,
+    mapTopPct: 32,
+  },
+  {
+    id: 'crypto',
+    region: 'Crypto',
+    city: 'Crypto',
+    venue: '24/7',
+    timeZone: 'UTC',
+    kind: 'always',
+    openLocal: 0,
+    closeLocal: 24,
+    mapLeftPct: 50,
+    mapTopPct: 78,
   },
 ]
 
@@ -141,13 +232,35 @@ export function wallTimeToUtc(
   return new Date(guess)
 }
 
-export function sessionStatus(def: MarketSessionDef, now: Date = new Date()): SessionStatus {
-  const parts = zonedParts(now, def.timeZone)
-  if (isWeekendLocal(parts)) return 'closed'
+function cmeStatus(now: Date): SessionStatus {
+  const parts = zonedParts(now, 'America/Chicago')
   const h = localHourDecimal(parts)
-  if (inWindow(h, def.openLocal, def.closeLocal)) return 'open'
-  if (h < def.openLocal) return 'upcoming'
-  return 'closed'
+  if (parts.weekday === 6) return 'closed'
+  if (parts.weekday === 0) return h >= 17 ? 'open' : 'upcoming'
+  if (parts.weekday === 5) return h < 16 ? 'open' : 'closed'
+  if (h >= 16 && h < 17) return 'upcoming'
+  return 'open'
+}
+
+export function sessionStatus(def: MarketSessionDef, now: Date = new Date()): SessionStatus {
+  switch (def.kind) {
+    case 'always':
+      return 'open'
+    case 'futures_cme':
+      return cmeStatus(now)
+    case 'cash': {
+      const parts = zonedParts(now, def.timeZone)
+      if (isWeekendLocal(parts)) return 'closed'
+      const h = localHourDecimal(parts)
+      if (inWindow(h, def.openLocal, def.closeLocal)) return 'open'
+      if (h < def.openLocal) return 'upcoming'
+      return 'closed'
+    }
+    default: {
+      const _e: never = def.kind
+      return _e
+    }
+  }
 }
 
 export function sessionStatusLabel(status: SessionStatus): string {
@@ -189,8 +302,52 @@ export function formatSessionHoursLocal(def: MarketSessionDef, now: Date = new D
   return `${fmt(open)}–${fmt(close)}`
 }
 
+export function formatVenueClock(def: MarketSessionDef, now: Date = new Date()): string {
+  return now.toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: def.timeZone,
+  })
+}
+
+function nextWeekdayOpen(def: MarketSessionDef, now: Date): Date {
+  const openH = Math.floor(def.openLocal)
+  const openMin = Math.round((def.openLocal - openH) * 60)
+  for (let i = 0; i < 8; i++) {
+    const probe = new Date(now.getTime() + i * 86_400_000)
+    const p = zonedParts(probe, def.timeZone)
+    if (p.weekday === 0 || p.weekday === 6) continue
+    const open = wallTimeToUtc(p.year, p.month, p.day, openH, openMin, def.timeZone)
+    if (open.getTime() > now.getTime() + 30_000) return open
+  }
+  return now
+}
+
+function nextCmeOpen(now: Date): Date {
+  const tz = 'America/Chicago'
+  for (let i = 0; i < 8; i++) {
+    const probe = new Date(now.getTime() + i * 86_400_000)
+    const p = zonedParts(probe, tz)
+    if (p.weekday === 6 || p.weekday === 5) continue
+    const open = wallTimeToUtc(p.year, p.month, p.day, 17, 0, tz)
+    if (open.getTime() > now.getTime() + 30_000) return open
+  }
+  return now
+}
+
+/** Next opening, or null when the venue does not close. */
+export function nextSessionOpen(def: MarketSessionDef, now: Date = new Date()): Date | null {
+  if (def.kind === 'always') return null
+  if (sessionStatus(def, now) === 'open') return null
+  if (def.kind === 'futures_cme') return nextCmeOpen(now)
+  return nextWeekdayOpen(def, now)
+}
+
 /** Format open–close in UTC (maquette Desk session detail). */
 export function formatSessionHoursUtc(def: MarketSessionDef, now: Date = new Date()): string {
+  if (def.kind === 'always') return 'Continu'
+  if (def.kind === 'futures_cme') return 'Dim 17:00 – Ven 16:00 CT'
   const { open, close } = sessionOpenCloseUtc(def, now)
   const fmt = (d: Date) =>
     d.toLocaleTimeString('fr-FR', {

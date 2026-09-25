@@ -412,8 +412,8 @@ export function AgentsPage() {
             <span>Prochain recheck Eve</span>
             <b>
               {eveCard?.nextTaskDue
-                ? `${eveCard.nextTaskKind ?? 'task'}${eveCard.nextTaskSymbol ? ` · ${eveCard.nextTaskSymbol}` : ''} · ${fmtDue(eveCard.nextTaskDue)}`
-                : '— (aucune tâche ouverte · annulation API non exposée)'}
+                ? `${eveCard.nextTaskKind === 'recheck' ? 'Contrôle' : 'Tâche'}${eveCard.nextTaskSymbol ? ` · ${eveCard.nextTaskSymbol}` : ''} · ${fmtDue(eveCard.nextTaskDue)}`
+                : 'Aucune surveillance en cours'}
             </b>
           </div>
           {missionMsg ? (
@@ -422,7 +422,7 @@ export function AgentsPage() {
             </p>
           ) : (
             <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-              POST /api/agents/missions · cancel mission = follow-up (pas d’endpoint E1).
+              Eve surveille un seul symbole en paper. Une ouverture attend votre confirmation.
             </p>
           )}
         </div>

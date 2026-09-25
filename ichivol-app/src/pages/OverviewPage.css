@@ -388,11 +388,17 @@
   display: inline-block;
 }
 .desk-page .desk-eq-legend-dot.is-tx{
-  background: var(--green, #0b8f83);
-  box-shadow: inset 0 0 0 2px #fefdfb, 0 0 0 1px var(--green, #0b8f83);
+  background: #fefdfb;
+  box-shadow: none;
+  border: 1.6px solid #478f83;
 }
 .desk-page .desk-eq-legend-dot.is-action{
   background: #6b7c86;
+  box-shadow: none;
+}
+.desk-page .desk-eq-marker.is-tx circle{
+  cursor: pointer;
+  outline: none;
 }
 .desk-page .chart-summary{
   display: flex;
@@ -870,6 +876,7 @@
   padding: 2px 4px;
   white-space: nowrap;
 }
+.desk-page .map-marker.is-open span,
 .desk-page .map-marker.selected span{
   background: var(--green);
   box-shadow: 0 0 0 5px #0b8f831a;
@@ -886,6 +893,9 @@
   gap: 5px;
   margin: 10px 20px;
 }
+.desk-page .session-selector small.is-open{ color: var(--green); }
+.desk-page .session-selector small.is-closed{ color: var(--muted); }
+.desk-page .session-selector small.is-soon{ color: var(--amber); }
 .desk-page .session-selector button{
   padding: 10px 4px;
   font-size: 14px;
@@ -902,8 +912,14 @@
   background: #edf3ef;
   border-color: #d6e3dc;
 }
-.desk-page .session-selector button.active small{
+.desk-page .session-selector button.active small.is-open{
   color: var(--green);
+}
+.desk-page .session-selector button.active small.is-closed{
+  color: var(--muted);
+}
+.desk-page .session-selector button.active small.is-soon{
+  color: var(--amber);
 }
 .desk-page .session-detail{
   display: flex;
