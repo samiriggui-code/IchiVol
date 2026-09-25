@@ -164,6 +164,21 @@ export async function runReadOnlyToolsForMode(
     }
   }
 
+  // Research avec symbole : prefetch décision + live (évite RAG théorique « aucune donnée »)
+  if (mode === 'research' && symbol) {
+    if (!opts.hasClientDecision) {
+      const brief = await fetchDecisionBriefBatch(symbol, timeframe)
+      results.push(brief.context)
+      results.push(brief.compare)
+      if (brief.context.ok) decisionFromTool = brief.context.data
+    }
+    if (!opts.hasClientLive) {
+      const live = await getLiveSnapshotTool(symbol, timeframe)
+      results.push(live)
+      if (live.ok) liveFromTool = live.data
+    }
+  }
+
   if (mode === 'research' || mode === 'explain_decision' || mode === 'explain_signal') {
     const kb = searchKbTool(ctx.question || `${symbol ?? ''} ${mode}`, 4)
     results.push(kb)

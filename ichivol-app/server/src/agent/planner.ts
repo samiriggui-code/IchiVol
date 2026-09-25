@@ -96,7 +96,10 @@ const RULES: Rule[] = [
     anyOf: [
       /\b(explique|expliquer|pourquoi|why)\b.*\b(d[eé]cision|verdict|porte|pipeline|combiner|buy|sell|watch|no[_ ]?trade)\b/i,
       /\b(d[eé]cision|verdict|pipeline|portes?)\b.*\b(explique|pourquoi|why)\b/i,
-      /\bpourquoi\b.*\b(ce|cette)?\s*(buy|sell|watch|strong[_ ]?buy)/i,
+      /\bpourquoi\b.*\b(ce|cette)?\s*(buy|sell|watch|strong[_ ]?buy)\b/i,
+      // « Pourquoi BTC attend-il ? » / WAIT / no trade — charge DECISION_DATA, pas la théorie KB
+      /\b(pourquoi|why|explique|expliquer)\b.*\b(attend|attendre|attente|wait|waiting|temporise|no[\s_-]?trade|standby)\b/i,
+      /\b(attend|attendre|attente|wait|waiting|temporise)\b.*\b(pourquoi|why)\b/i,
     ],
   },
   {
@@ -105,6 +108,8 @@ const RULES: Rule[] = [
       /\b(explique|expliquer)\b.*\b(signal|biais|rvol|march[eé])\b/i,
       /\b(signal|biais)\b.*\b(explique|pourquoi)\b/i,
       /\bichimoku\b.*\b(maintenant|actuel|live)\b/i,
+      // Prix / état live d'un symbole sans « décision »
+      /\b(quel|quelle|combien|prix|rvol|biais)\b.*\b(btc|eth|sol|[a-z]{2,10}usdt)\b/i,
     ],
   },
   {

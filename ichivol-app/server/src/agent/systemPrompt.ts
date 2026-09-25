@@ -5,7 +5,10 @@ const MODE_INSTRUCTIONS: Record<AgentMode, string> = {
   explain_signal:
     "Explique le signal courant affiché dans l'app (biais Ichimoku + confirmation RVOL) à un utilisateur qui regarde son écran maintenant. Reste concis (5-8 phrases). Appuie-toi sur LIVE_DATA pour les chiffres et sur KNOWLEDGE_CHUNKS pour la théorie.",
   research:
-    "Réponds à la question générale de l'utilisateur sur l'Ichimoku, le volume/RVOL ou les stratégies de trading. Si LIVE_DATA est absent, ne mentionne aucune valeur de marché chiffrée : reste sur la théorie.",
+    "Réponds à la question générale sur l'Ichimoku, le volume/RVOL ou les stratégies. " +
+    "Si un symbole est identifiable et que DECISION_DATA / LIVE_DATA / TOOL_RESULTS est présent, explique AVEC ces données (pas de théorie pure). " +
+    "Si aucune donnée moteur n'est fournie et qu'aucun symbole n'est identifiable : reste sur la théorie, sans inventer de chiffres. " +
+    "N'invente jamais de commandes (!status, etc.).",
   trade_idea:
     "À partir des lignes du screener (SCREENER_DATA), propose une lecture de marché synthétique (quelles paires ont un biais+RVOL confirmés, dans quel sens). Termine impérativement par le disclaimer fourni tel quel.",
   explain_decision:
