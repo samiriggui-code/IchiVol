@@ -193,6 +193,13 @@
   font-family: Manrope, Arial, sans-serif;
   font-weight: 400;
 }
+.desk-page .is-open,
+.desk-page .is-up{
+  color: var(--green)!important;
+}
+.desk-page .is-down{
+  color: var(--red)!important;
+}
 .desk-page .chart-summary b{
   font-family: Manrope, Arial, sans-serif;
   font-weight: 400;

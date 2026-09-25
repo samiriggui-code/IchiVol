@@ -184,7 +184,7 @@ function drawdownRatio(
 function sessionStatusClass(st: SessionStatus): string {
   switch (st) {
     case 'open':
-      return 'up'
+      return 'is-open'
     case 'closed':
     case 'upcoming':
       return 'muted'
@@ -626,7 +626,13 @@ export function OverviewPage() {
                 const base = r.symbol.replace(/USDT$/i, '')
                 const chg = changeBySymbol[r.symbol.toUpperCase()]
                 const chgCls =
-                  chg == null || Number.isNaN(chg) ? '' : chg > 0 ? 'up' : chg < 0 ? 'down' : ''
+                  chg == null || Number.isNaN(chg)
+                    ? ''
+                    : chg > 0
+                      ? 'is-up'
+                      : chg < 0
+                        ? 'is-down'
+                        : ''
                 return (
                   <button
                     key={r.symbol}
@@ -824,9 +830,9 @@ export function OverviewPage() {
                     const perf = p.unrealized_pct
                     const pnl = p.unrealized_pnl
                     const perfCls =
-                      perf == null ? '' : perf > 0 ? 'up' : perf < 0 ? 'down' : ''
+                      perf == null ? '' : perf > 0 ? 'is-up' : perf < 0 ? 'is-down' : ''
                     const pnlCls =
-                      pnl == null ? '' : pnl > 0 ? 'up' : pnl < 0 ? 'down' : ''
+                      pnl == null ? '' : pnl > 0 ? 'is-up' : pnl < 0 ? 'is-down' : ''
                     const strat =
                       p.timeframe != null
                         ? `Ichimoku × RVOL · ${String(p.timeframe).toUpperCase()}`
