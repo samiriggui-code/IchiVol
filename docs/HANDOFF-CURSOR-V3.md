@@ -7,15 +7,16 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-25 — UI-11p smoke secrets (PR à venir)
+## 2026-09-25 — UI-11p smoke secrets (PR #91)
 
-- Branche : `cursor/ui11p-smoke-secrets-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/91 — `cursor/ui11p-smoke-secrets-a2fe`
 - **Sécurité** : `scripts/smoke-ui11p.mjs` + `smoke-ui11p-mobile.mjs` — `SMOKE_EMAIL` / `SMOKE_PASS` **obligatoires** via env (exit 2 si absents ; plus aucun mot de passe par défaut dans le repo).
 - Compte local `ui11p-smoke@ichivol.local` : mot de passe **rotaté** (ancien hash invalidé). Identifiants hors repo uniquement.
-- Prod (`ichivol.global-it-ss.com`) : login avec l’ancien mot de passe exposé → **401** (pas de session). Vérif SQL User en cours via VPS.
+- Prod (`ichivol.global-it-ss.com`) : login avec l’ancien mot de passe exposé → **401**. Bundle prod encore sur nav legacy (Cockpit/Décisions/…) — **déploiement main (post-#89) requis** pour la barre Desk·Opportunités·Portefeuille·Copilot·Plus.
+- Lint + build OK ; smoke mobile 390px local **PASS**.
 
 ### Suite
-Déployer main sur VPS → vérif mobile barre + Copilot LLM prod → onglet Journal Market + indicateurs moteur.
+Merge #91 → déployer main sur VPS → vérif mobile barre + Copilot LLM prod → onglet Journal Market + indicateurs moteur.
 
 ---
 
