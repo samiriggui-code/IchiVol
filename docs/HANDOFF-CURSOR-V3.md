@@ -10,7 +10,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-25 — UI-P1 Desk maquette (option A) — PR draft #96
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/96 — **draft** (attendre Claude avant merge)
-- Branche : `cursor/ui-p1-desk-maquette-a2fe` · tip `b915b3b`
+- Branche : `cursor/ui-p1-desk-maquette-a2fe` · tip `53dae89`
 - **Périmètre front only** — Desk conforme maquette (`desk` / `deskOverview`), blocs déménagés ; `engine/` · `server/` intouchés.
 - Desk : KPI paper · sessions Tokyo/Londres/NY (statut UTC, heures locales, week-end fermé, crypto 24/7) · marchés screener · lecture CoinGecko/F&G · equity 1J/1S/1M/3M · à surveiller · notice fraîcheur (`data_quality` / `mark_stale`) · positions · budget risque · tape · prochain contrôle 1H + RVOL BTC · état système (`/api/engine/health` + risk-lock) · anneaux allocation / concentration.
 - Relocalisation : Market pulse → Opportunités ; Pipeline / Circuit 24h / Preuves → Opérations ; Labs paper → Portefeuille ; Contexte compact retiré du Desk (déjà `CryptoClimate` sur Contexte).
