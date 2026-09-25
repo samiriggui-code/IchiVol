@@ -309,7 +309,7 @@ function EquityViz({
 
 export function OverviewPage() {
   const navigate = useNavigate()
-  const { openDecisionFiche } = useFicheNav()
+  const { openDecisionFiche, openPositionFiche } = useFicheNav()
   const [rows, setRows] = useState<ScreenerDecisionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [overview, setOverview] = useState<PaperOverview | null>(null)
@@ -494,8 +494,22 @@ export function OverviewPage() {
     openDecisionFiche(full, '1h')
   }
 
-  const openPosition = (symbol: string) => {
-    navigate(`/app/portefeuille?tab=positions&symbol=${encodeURIComponent(symbol)}`)
+  const openPosition = (idOrSymbol: string, id?: string) => {
+    if (id) {
+      openPositionFiche(id)
+      return
+    }
+    const full = /USDT$/i.test(idOrSymbol)
+      ? idOrSymbol.toUpperCase()
+      : `${idOrSymbol.toUpperCase()}USDT`
+    const match = (overview?.positions ?? []).find(
+      (p) => p.symbol.toUpperCase() === full && String(p.status).toUpperCase() === 'OPEN',
+    )
+    if (match?.id) {
+      openPositionFiche(match.id)
+      return
+    }
+    navigate(`/app/portefeuille?tab=positions&symbol=${encodeURIComponent(full)}`)
   }
 
   return (
@@ -842,11 +856,11 @@ export function OverviewPage() {
                         key={p.id ?? p.symbol}
                         className="clickable"
                         tabIndex={0}
-                        onClick={() => openPosition(p.symbol)}
+                        onClick={() => openPosition(p.symbol, p.id)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault()
-                            openPosition(p.symbol)
+                            openPosition(p.symbol, p.id)
                           }
                         }}
                       >

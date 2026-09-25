@@ -1,6 +1,6 @@
 /**
  * Hôte shell des fiches deep-link (`?fiche=`).
- * Back / fermeture → retire le param. Phase B stubs pour position/run/agent.
+ * Back / fermeture → retire le param. FicheRun / agent = stubs phase B.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -11,6 +11,7 @@ import {
 } from '../../lib/actionFeedback'
 import { useFicheNav } from '../../lib/useFicheNav'
 import { FicheDecision } from './FicheDecision'
+import { FichePosition } from './FichePosition'
 import './ficheDialog.css'
 
 function PhaseBStub({
@@ -118,16 +119,16 @@ export function FicheHost() {
       )}
 
       {fiche?.kind === 'position' && (
-        <PhaseBStub
-          title="Fiche position"
-          detail={`Phase B — position ${fiche.id}. Retour navigateur pour fermer.`}
+        <FichePosition
+          key={fiche.id}
+          positionId={fiche.id}
           onClose={handleClose}
         />
       )}
       {fiche?.kind === 'run' && (
         <PhaseBStub
           title="Fiche run"
-          detail={`Phase B — run ${fiche.id}. Retour navigateur pour fermer.`}
+          detail={`Phase B — run ${fiche.id}. Stub OK ; détail Lab plus tard. Retour navigateur pour fermer.`}
           onClose={handleClose}
         />
       )}

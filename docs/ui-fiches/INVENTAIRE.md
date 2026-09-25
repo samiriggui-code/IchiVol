@@ -195,7 +195,7 @@ Vocabulaire : chaque terme technique → une ligne muted sous la valeur via `lib
 |---|---|
 | `?fiche=decision:<SYMBOL>:<tf>` | Ouvre `FicheDecision` (tf défaut `1h`) |
 | `?fiche=decision:…` + `tab=plan\|synthese\|portes\|preuves\|historique` | Onglet initial |
-| `?fiche=position:<id>` | Stub « Phase B » (ferme au back) |
+| `?fiche=position:<id>` | `FichePosition` (skeleton phase B) |
 | `?fiche=run:<id>` | Stub « Phase B » |
 | `?fiche=agent:<id>` | Stub « Phase B » |
 | Browser back | Ferme la fiche (push history à l’ouverture) |
@@ -214,7 +214,10 @@ Toute page peut ouvrir n’importe quelle fiche via helper `openFiche`.
 | Opportunités | Clic ligne matrice | FD (remplace dialog local) |
 | Opportunités | « Pourquoi X ? » / Ouvrir la fiche | FD |
 | Desk | Chaque opportunité listée | FD |
+| Desk | Positions ouvertes / concentration | `FichePosition` (`?fiche=position:id`) |
+| Portefeuille | Ligne position ouverte | `FichePosition` |
 | Journal | Chaque décision sauvegardée | FD (as-of si moteur le permet ; sinon live + mention) |
+| Journal | Trades clôturés / « Rejouer » | `FichePosition` (trades) ou FD (décisions) |
 | Copilot | Symbole mentionné dans une réponse | Lien → FD |
 
 ---

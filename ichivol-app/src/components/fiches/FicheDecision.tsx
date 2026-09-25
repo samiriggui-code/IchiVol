@@ -482,7 +482,7 @@ export function FicheDecision({
       const text = already
         ? `${displaySymbol(pos.symbol)} · déjà en portefeuille — achat verrouillé`
         : `${displaySymbol(pos.symbol)} · paper ${pos.direction} @ ${pos.entry_price}`
-      setLocalNotice({ ok: !already || already, text })
+      setLocalNotice({ ok: true, text })
       afterPaperOrJournalAction(true, text)
       setOpenSymbols((prev) => new Set([...prev, pos.symbol]))
       setPaperConfirm(null)

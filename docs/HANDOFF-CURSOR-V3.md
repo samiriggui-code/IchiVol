@@ -7,6 +7,19 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — Chantier 1 polish A + amorce B — fiches
+
+- Branche `cursor/ui-fiches-a2fe` (suite phase A)
+- **Thème** : défaut `light` (ignore `prefers-color-scheme`) ; `theme/maquette-theme.css` — overrides `html.dark` pour les 11 `*-page` + `.fiche-dialog` (segmented/tags/notices/tables)
+- **FicheDecision** : fix notice paper (`ok` toujours cohérent) ; `openDecisionFiche` normalise le symbole
+- **Phase B amorcée** : `FichePosition` skeleton (paper, marks overview, partials, scénarios, clôture via `PaperCloseConfirmSheet`) ; câblé Portefeuille / Desk / Journal trades ; `FicheRun` reste stub
+- Surface maquette inchangée (détail uniquement dans dialogs)
+- `npx tsc --noEmit` OK · `compare-maquette.mjs` : **11×0** (script non modifié)
+- Gaps : mini-chart / calques ; as-of journal toujours live ; CHoCH moteur souvent absent
+- **Pas de merge**
+
+---
+
 ## 2026-09-25 — Chantier 1 phase A — fiches décision (draft PR)
 
 - Branche `cursor/ui-fiches-a2fe` depuis `origin/main` @ **`225549d`** (#109 squash MERGÉ)

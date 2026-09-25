@@ -3,6 +3,7 @@
 import { useCallback } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
+  normalizeFicheSymbol,
   parseFicheParam,
   parseFicheTab,
   serializeFicheParam,
@@ -46,7 +47,18 @@ export function useFicheNav() {
       timeframe = '1h',
       opts?: { tab?: FicheDecisionTab; replace?: boolean; asOf?: string | null },
     ) => {
-      openFiche({ kind: 'decision', symbol, timeframe }, opts)
+      const sym = normalizeFicheSymbol(symbol)
+      if (!sym) return
+      openFiche({ kind: 'decision', symbol: sym, timeframe }, opts)
+    },
+    [openFiche],
+  )
+
+  const openPositionFiche = useCallback(
+    (id: string, opts?: { replace?: boolean }) => {
+      const trimmed = id.trim()
+      if (!trimmed) return
+      openFiche({ kind: 'position', id: trimmed }, opts)
     },
     [openFiche],
   )
@@ -73,6 +85,7 @@ export function useFicheNav() {
     asOf: searchParams.get('asOf'),
     openFiche,
     openDecisionFiche,
+    openPositionFiche,
     closeFiche,
   }
 }

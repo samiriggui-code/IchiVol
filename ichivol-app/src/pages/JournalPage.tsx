@@ -115,8 +115,8 @@ function downloadCsv(filename: string, headers: string[], rows: string[][]) {
 }
 
 export function JournalPage() {
+  const { openDecisionFiche, openPositionFiche } = useFicheNav()
   const navigate = useNavigate()
-  const { openDecisionFiche } = useFicheNav()
   const [journalTab, setJournalTab] = useState<JournalTab>('Trades')
   const [query, setQuery] = useState('')
   const [trades, setTrades] = useState<PaperPosition[]>([])
@@ -201,6 +201,8 @@ export function JournalPage() {
             ? 'Un plan suivi jusqu’à son objectif.'
             : 'Une sortie à relire.',
         body: '—',
+        kind: 'position' as const,
+        positionId: t.id,
         symbol: t.symbol,
       }
     }
@@ -210,7 +212,10 @@ export function JournalPage() {
       eyebrow: `${displaySymbol(d.symbol)} · ${fmtDate(d.createdAt).toUpperCase()}`,
       title: 'Décision sauvegardée.',
       body: d.note?.trim() || '—',
+      kind: 'decision' as const,
+      positionId: null as string | null,
       symbol: d.symbol,
+      interval: d.interval || '1h',
     }
   }, [journalTab, visibleTrades, trades, selectedDecision])
 
@@ -331,8 +336,9 @@ export function JournalPage() {
     }
   }
 
-  const openTrade = (symbol: string) => {
-    navigate(`/app/market?symbol=${encodeURIComponent(symbol)}`)
+  const openTrade = (t: PaperPosition) => {
+    if (t.id) openPositionFiche(t.id)
+    else navigate(`/app/market?symbol=${encodeURIComponent(t.symbol)}`)
   }
 
   const openSavedDecision = (d: UserDecisionRow) => {
@@ -351,11 +357,11 @@ export function JournalPage() {
               key={t.id}
               className="clickable"
               tabIndex={0}
-              onClick={() => openTrade(t.symbol)}
+              onClick={() => openTrade(t)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
-                  openTrade(t.symbol)
+                  openTrade(t)
                 }
               }}
             >
@@ -536,7 +542,16 @@ export function JournalPage() {
               type="button"
               className="primary"
               disabled={!replay}
-              onClick={() => replay && openTrade(replay.symbol)}
+              onClick={() => {
+                if (!replay) return
+                if (replay.kind === 'position' && replay.positionId) {
+                  openPositionFiche(replay.positionId)
+                } else if (replay.kind === 'decision') {
+                  openDecisionFiche(replay.symbol, replay.interval || '1h', {
+                    asOf: 'journal',
+                  })
+                }
+              }}
             >
               Ouvrir le détail du trade →
             </button>
