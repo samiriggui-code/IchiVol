@@ -272,3 +272,121 @@ html.dark .fiche-dialog {
   color: #f1eee6;
   border-color: #333944;
 }
+
+/* Bulles chat / suggestions — hex crème hardcodés (#f2f3ef, #e8f0fd) */
+html.dark
+  :is(
+    .desk-page,
+    .market-page,
+    .opps-page,
+    .pf-page,
+    .journal-page,
+    .ops-page,
+    .lab-page,
+    .ctx-page,
+    .copilot-page,
+    .agents-page,
+    .params-page
+  )
+  .bubble {
+  background: #22262f;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+html.dark
+  :is(
+    .desk-page,
+    .market-page,
+    .opps-page,
+    .pf-page,
+    .journal-page,
+    .ops-page,
+    .lab-page,
+    .ctx-page,
+    .copilot-page,
+    .agents-page,
+    .params-page
+  )
+  .bubble.user {
+  background: #1a2433;
+  color: var(--ink);
+}
+
+html.dark
+  :is(
+    .desk-page,
+    .market-page,
+    .opps-page,
+    .pf-page,
+    .journal-page,
+    .ops-page,
+    .lab-page,
+    .ctx-page,
+    .copilot-page,
+    .agents-page,
+    .params-page
+  )
+  :is(.suggestion, .empty, .chat-log) {
+  background: transparent;
+  color: var(--ink);
+}
+
+html.dark
+  :is(
+    .desk-page,
+    .market-page,
+    .opps-page,
+    .pf-page,
+    .journal-page,
+    .ops-page,
+    .lab-page,
+    .ctx-page,
+    .copilot-page,
+    .agents-page,
+    .params-page
+  )
+  .suggestion {
+  background: #22262f;
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+html.dark
+  :is(
+    .desk-page,
+    .market-page,
+    .opps-page,
+    .pf-page,
+    .journal-page,
+    .ops-page,
+    .lab-page,
+    .ctx-page,
+    .copilot-page,
+    .agents-page,
+    .params-page
+  )
+  .bubble .eyebrow {
+  color: var(--muted);
+}
+
+html.dark
+  :is(
+    .desk-page,
+    .market-page,
+    .opps-page,
+    .pf-page,
+    .journal-page,
+    .ops-page,
+    .lab-page,
+    .ctx-page,
+    .copilot-page,
+    .agents-page,
+    .params-page
+  )
+  button:not(.primary):not(.kill) {
+  background: var(--card);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
