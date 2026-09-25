@@ -7,6 +7,18 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — Audit Agent Runtime VALIDÉ (Claude) — merge docs
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/102 — squash merge (docs only)
+- Amendements Claude dans `docs/AGENT-RUNTIME-AUDIT.md` § « Décisions validées » :
+  Option D hybride · idempotence · fraîcheur data_quality · next_closed_candle+60s · paper confirm humaine par défaut · mono-agent
+- **Ordre gelé** : P4 draft → puis runtime P0→P2 en draft/phase. **Pas** de runtime agents maintenant.
+
+### Suite
+Terminer UI-P4 (#103) draft pour relecture Claude ; runtime agents ensuite.
+
+---
+
 ## 2026-09-25 — UI-P3 MERGÉE (#101) + VPS — tip `dfe14da`
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/101 — **MERGÉE** (squash) · tip `main` = `dfe14da`

@@ -534,3 +534,48 @@ Cela transforme le système « Utilisateur → Claude → réponse » en agent d
 - IchiVol : `engine/app/indicators/*`, `agents/*`, `agent_channel/*`, `paper/risk_kernel.py`, `paper/kill_switch.py`, `main.py` lifespan, `server/src/agent/*`, `src/pages/AgentsPage.tsx`
 - Comp AI : `apps/agent/agent/lib/tasks.ts`, `stale-tasks.ts`, `dispatch.ts`, `dispatch-config.ts`, `schedules/dispatch.ts`, `tools/schedule_recheck.ts`, Prisma `AgentTask`
 - Eve : docs agent-files, default-harness, patterns/dynamic-scheduling ; packages `eve` schedules/skills runtime
+
+---
+
+## Décisions validées (Claude, 2026-09-25)
+
+Amendements retenus après relecture Claude. Ces points fixent le cadre avant toute implémentation runtime (phases P0→P2) — **après** clôture UI-P4.
+
+### Option D hybride
+
+- **Pas d’Eve en runtime** (référence conceptuelle uniquement).
+- File **`AgentTask` Postgres** de type Comp AI, côté **server**.
+- Claude reste dans `server/src/agent`.
+- Conditions évaluées par l’**engine**.
+- **`risk_kernel`** = autorité finale via **`execution_gateway`**.
+
+### Idempotence
+
+Chaque tâche porte une **clé d’idempotence**. Un retry après crash **ne peut pas** recréer une order intent, une mission ou un recheck déjà créés par la même tentative.
+
+### Fraîcheur des données
+
+`evaluate_watch_condition` vérifie **`data_quality`** (`stale` / `data_late`) :
+
+- données périmées → **pas de réveil LLM** ;
+- tâche **reprogrammée** ;
+- raison **journalisée**.
+
+### Clôture de bougie
+
+Trigger `next_closed_candle` : `dueAt` fixé à la **clôture + 60 s** ; évaluation sur **bougies fermées uniquement**.
+
+### Ordres paper
+
+- **Confirmation humaine activée par défaut**.
+- Ouverture automatique = réglage **explicite**, **désactivé**, activable plus tard.
+
+### Mono-agent
+
+**Mono-agent + sous-tâches** jusqu’à preuve du contraire. **Pas** de multi-agents LLM.
+
+### Ordre de travail (gelé)
+
+1. UI-P2 / UI-P3 — corrections, merge, VPS *(fait)*.
+2. UI-P4 — PR **draft**, merge seulement après relecture Claude.
+3. Runtime agents — phases **P0 → P2** de cet audit, **une PR draft par phase** (file + dispatcher + audit log ; `schedule_recheck` ; recheck conditionnel engine). **Ne pas démarrer** tant que P4 n’est pas validée.
