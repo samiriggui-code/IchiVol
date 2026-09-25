@@ -221,3 +221,334 @@
   font-size: 0.7rem;
   margin: 0;
 }
+
+/* —— UI-P1 Desk maquette layout —— */
+.desk-workspace { gap: 1rem; }
+.desk-kpis .iv-metric.is-bull .iv-metric-value { color: var(--bull); }
+.desk-kpis .iv-metric.is-bear .iv-metric-value { color: var(--bear); }
+
+.desk-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: stretch;
+}
+@media (max-width: 1200px) {
+  .desk-overview { grid-template-columns: 1.2fr 1fr; }
+  .desk-overview > .desk-card:last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 720px) {
+  .desk-overview { grid-template-columns: 1fr; }
+}
+
+.desk-card .card-body { padding: 0.65rem 0.9rem 0.9rem; }
+.desk-card .card-foot {
+  padding: 0.45rem 0.9rem 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.world-view {
+  position: relative;
+  margin: 0.15rem 0 0.5rem;
+  aspect-ratio: 720 / 290;
+}
+.world-view img {
+  width: 100%;
+  height: auto;
+  display: block;
+  opacity: 0.92;
+}
+.map-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border: 0;
+  background: none;
+  padding: 0.35rem;
+  display: grid;
+  justify-items: center;
+  gap: 0.15rem;
+  z-index: 1;
+  color: inherit;
+}
+.map-marker span {
+  display: block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--weak);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--card) 75%, transparent);
+}
+.map-marker span.is-open { background: var(--bull); }
+.map-marker span.is-upcoming { background: var(--neutral); }
+.map-marker span.is-closed { background: var(--weak); }
+.map-marker.selected span {
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--bull) 22%, transparent);
+}
+.map-marker b {
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  border-radius: 3px;
+  padding: 0.1rem 0.25rem;
+  white-space: nowrap;
+}
+.map-marker.selected b { color: var(--bull); }
+
+.session-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+  margin: 0.35rem 0;
+}
+.session-selector button {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  align-items: flex-start;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.78rem;
+}
+.session-selector button small { color: var(--muted); font-size: 0.68rem; }
+.session-selector button.active {
+  border-color: color-mix(in srgb, var(--bull) 45%, var(--border));
+  background: color-mix(in srgb, var(--bull) 8%, var(--card));
+}
+.session-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1rem;
+  align-items: baseline;
+  font-size: 0.82rem;
+  margin-top: 0.35rem;
+}
+.map-foot { font-size: 0.72rem; margin: 0.55rem 0 0; }
+
+.desk-tickers { display: flex; flex-direction: column; }
+.desk-ticker {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--border);
+  color: inherit;
+  text-decoration: none;
+}
+.desk-ticker:first-child { border-top: none; }
+.desk-ticker:hover { background: color-mix(in srgb, var(--primary) 5%, transparent); }
+.desk-ticker .right { text-align: right; display: flex; flex-direction: column; gap: 0.1rem; }
+.desk-ticker b { font-size: 0.88rem; }
+.desk-ticker small { display: block; font-size: 0.68rem; color: var(--muted); }
+
+.desk-climate-head,
+.climate-head {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.65rem;
+}
+.climate-symbol {
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--bull);
+}
+.climate-head small { display: block; font-size: 0.65rem; letter-spacing: 0.04em; color: var(--muted); }
+.climate-head h3 { margin: 0.1rem 0 0; font-size: 1.15rem; }
+
+.desk-climate-stats {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0 0 0.65rem;
+}
+.desk-climate-stats > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+}
+.desk-climate-stats dt { color: var(--muted); margin: 0; }
+.desk-climate-stats dd { margin: 0; font-weight: 600; }
+
+.desk-equity-periods {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+.desk-equity-periods button {
+  padding: 0.3rem 0.55rem;
+  font-size: 0.72rem;
+}
+.desk-equity-periods button.is-active {
+  border-color: color-mix(in srgb, var(--bull) 40%, var(--border));
+  background: color-mix(in srgb, var(--bull) 10%, var(--card));
+}
+.desk-equity-svg {
+  width: 100%;
+  height: auto;
+  max-height: 160px;
+}
+.desk-equity-svg polyline { stroke: var(--bull); fill: none; }
+.desk-equity-svg.is-down polyline { stroke: var(--bear); }
+
+.desk-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+@media (max-width: 900px) {
+  .desk-grid-2 { grid-template-columns: 1fr; }
+}
+
+.desk-watch-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.desk-watch-list li a {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--border);
+  color: inherit;
+  text-decoration: none;
+}
+.desk-watch-list li:first-child a { border-top: none; }
+.desk-watch-list strong { min-width: 3.5rem; }
+
+.desk-freshness {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  align-items: baseline;
+}
+
+.desk-risk-bars { display: flex; flex-direction: column; gap: 0.85rem; }
+.desk-risk-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  margin-bottom: 0.3rem;
+}
+.desk-risk-track {
+  height: 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border) 80%, transparent);
+  overflow: hidden;
+}
+.desk-risk-track i {
+  display: block;
+  height: 100%;
+  background: var(--bull);
+  border-radius: inherit;
+}
+.desk-note { font-size: 0.75rem; color: var(--muted); margin: 0.35rem 0 0; }
+
+.desk-system-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.desk-system-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+  padding: 0.25rem 0;
+  border-top: 1px solid var(--border);
+}
+.desk-system-list li:first-child { border-top: none; }
+
+.desk-allocation {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+@media (max-width: 900px) {
+  .desk-allocation { grid-template-columns: 1fr; }
+}
+.allocation-body {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.desk-ring {
+  position: relative;
+  width: 150px;
+  flex-shrink: 0;
+}
+.desk-ring svg { width: 100%; height: auto; display: block; }
+.desk-ring > div {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+.desk-ring b { font-size: 1.25rem; display: block; }
+.desk-ring small { font-size: 0.68rem; color: var(--muted); }
+.allocation-legend { flex: 1; min-width: 10rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.statline {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+}
+.legend-dot {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
+.legend-dot.teal { background: #548f87; }
+.legend-dot.neutral { background: var(--weak); }
+
+.ov-pipeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 0.9rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.ov-pipeline-list li {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.78rem;
+}
+.ov-pipeline-bar {
+  height: 0.35rem;
+  background: color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.ov-pipeline-bar i {
+  display: block;
+  height: 100%;
+  background: var(--bull);
+}
+.ov-circuit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  padding: 0.5rem 0.9rem 0.9rem;
+}
+.ov-circuit-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.75rem;
+}
+@media (max-width: 640px) {
+  .ov-circuit-grid { grid-template-columns: 1fr; }
+  .ov-pipeline-list li { grid-template-columns: 5rem minmax(0, 1fr) auto; }
+}

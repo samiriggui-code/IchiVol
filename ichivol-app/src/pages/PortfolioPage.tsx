@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { getPaperOverview, type PaperOverview } from '../lib/paper'
+import { getPaperOverview, listPaperPortfolios, type PaperOverview, type PaperPortfolioRow } from '../lib/paper'
+import { LabsPaperCard } from '../components/desk/DeskRelocatedCards'
 import { PaperPage } from './PaperPage'
 import { SynthesePage } from './SynthesePage'
 import './PortfolioPage.css'
@@ -33,6 +34,26 @@ export function PortfolioPage() {
   const active = useMemo(() => normalizeTab(params.get('tab')), [params])
   const [overview, setOverview] = useState<PaperOverview | null>(null)
   const [riskError, setRiskError] = useState<string | null>(null)
+  const [labs, setLabs] = useState<PaperPortfolioRow[]>([])
+  const [labsLoading, setLabsLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    setLabsLoading(true)
+    listPaperPortfolios()
+      .then((rows) => {
+        if (!cancelled) setLabs(rows.filter((p) => p.is_active))
+      })
+      .catch(() => {
+        if (!cancelled) setLabs([])
+      })
+      .finally(() => {
+        if (!cancelled) setLabsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (active !== 'risque') return
@@ -94,6 +115,10 @@ export function PortfolioPage() {
             {label}
           </button>
         ))}
+      </div>
+
+      <div className="desk-relocated-stack">
+        <LabsPaperCard portfolios={labs} loading={labsLoading} />
       </div>
 
       <div className="portfolio-tab-panel" role="tabpanel">

@@ -7,6 +7,20 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — UI-P1 Desk maquette (option A) — PR draft
+
+- Branche : `cursor/ui-p1-desk-maquette-a2fe`
+- **Périmètre front only** — Desk conforme maquette (`desk` / `deskOverview`), blocs déménagés ; `engine/` · `server/` intouchés.
+- Desk : KPI paper · sessions Tokyo/Londres/NY (statut UTC, heures locales, week-end fermé, crypto 24/7) · marchés screener · lecture CoinGecko/F&G · equity 1J/1S/1M/3M · à surveiller · notice fraîcheur (`data_quality` / `mark_stale`) · positions · budget risque · tape · prochain contrôle 1H + RVOL BTC · état système · anneaux allocation / concentration.
+- Relocalisation : Market pulse → Opportunités ; Pipeline / Circuit 24h / Preuves → Opérations ; Labs paper → Portefeuille ; Contexte compact retiré du Desk (déjà `CryptoClimate` sur Contexte).
+- Tests : `npm run lint` / `npm run build` ; `scripts/check-market-sessions.mjs` (2 heures UTC + week-end) ; `scripts/smoke-ui-p1-desk.mjs` desktop + mobile 390 — **PASS**.
+- Captures : `/opt/cursor/artifacts/ui-p1-desk/` (`01-desk-desktop.png`, `02-desk-mobile-390.png`, …).
+
+### Suite
+**Attendre relecture Claude avant merge.** Puis portage pages suivantes selon `UI-MAQUETTE-GAP.md`.
+
+---
+
 ## 2026-09-25 — VPS déployé UI-11p — tip `35ddce0`
 
 - **FQDN** : https://ichivol.global-it-ss.com — stack rebuild (`web`/`server`/`engine`) depuis `main` @ `35ddce0`

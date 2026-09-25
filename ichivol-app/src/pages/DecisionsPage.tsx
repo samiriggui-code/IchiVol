@@ -7,6 +7,7 @@ import { ProposePaperTradePanel } from '../components/ProposePaperTradePanel'
 import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
 import { TradePlanCard } from '../components/TradePlanCard'
 import { VerdictBadge } from '../components/VerdictBadge'
+import { MarketPulseCard } from '../components/desk/DeskRelocatedCards'
 import {
   buildDecisionSummary,
   labelDecision,
@@ -747,6 +748,10 @@ export function DecisionsPage() {
       </header>
 
       <MethodBanner rows={classRows} />
+
+      <div className="desk-relocated-stack">
+        <MarketPulseCard rows={classRows} loading={loading} />
+      </div>
 
       <section className="dec-gate-stats" aria-label="Résumé Portes">
         <button
