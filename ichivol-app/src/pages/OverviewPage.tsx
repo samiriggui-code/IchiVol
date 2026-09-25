@@ -1,102 +1,46 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ContextPanel } from '../components/ContextPanel'
 import { VerdictBadge } from '../components/VerdictBadge'
 import {
   getActivityFeed,
-  getActivitySummary,
   type ActivityItem,
-  type ActivitySummary,
 } from '../lib/activity'
 import {
-  getBacktestEvidence,
-  type BacktestEvidenceSummary,
-} from '../lib/backtest'
-import {
   getScreener,
-  type DecisionLabel,
   type ScreenerDecisionRow,
 } from '../lib/decisions'
+import { fetchTickers24h } from '../lib/binance'
+import {
+  fetchFearGreed,
+  fetchGlobalMarket,
+  type FearGreed,
+  type GlobalMarketData,
+} from '../lib/marketContext'
+import {
+  MARKET_SESSIONS,
+  formatCountdown,
+  formatSessionHoursLocal,
+  nextHourlyClose,
+  sessionStatus,
+  sessionStatusLabel,
+  type MarketSessionDef,
+  type SessionId,
+} from '../lib/marketSessions'
 import {
   getPaperOverview,
-  listPaperPortfolios,
   type PaperOverview,
-  type PaperPortfolioRow,
+  type PaperOverviewPosition,
 } from '../lib/paper'
-import { asGate } from '../lib/verdict'
+import { getRiskLock, type RiskLockState } from '../lib/riskLock'
+import { verdictBucket } from '../lib/deskSummarize'
 import './OverviewPage.css'
 
 const BASELINE = 'ICHIVOL_BASELINE_V1'
 const REFRESH_MS = 60_000
 const TAPE_LIMIT = 8
+const PRIMARY_SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'LINKUSDT']
 
-function fmtCacheAge(seconds: number): string {
-  if (seconds < 5) return 'à l’instant'
-  if (seconds < 60) return `il y a ${Math.floor(seconds)}s`
-  return `il y a ${Math.floor(seconds / 60)} min`
-}
-
-function isBuy(d: DecisionLabel): boolean {
-  return d === 'BUY' || d === 'STRONG_BUY'
-}
-
-function isSell(d: DecisionLabel): boolean {
-  return d === 'SELL' || d === 'STRONG_SELL'
-}
-
-function isWatch(d: DecisionLabel): boolean {
-  return d === 'WATCH' || d === 'WAIT'
-}
-
-function verdictBucket(r: ScreenerDecisionRow): 'buy' | 'sell' | 'watch' | 'none' {
-  const gate = asGate(r.pipeline?.decision as string | undefined)
-  if (gate) {
-    if (gate === 'BUY') return 'buy'
-    if (gate === 'SELL') return 'sell'
-    if (gate === 'WATCH') return 'watch'
-    return 'none'
-  }
-  if (isBuy(r.decision)) return 'buy'
-  if (isSell(r.decision)) return 'sell'
-  if (isWatch(r.decision)) return 'watch'
-  return 'none'
-}
-
-function summarize(rows: ScreenerDecisionRow[]) {
-  let buy = 0
-  let sell = 0
-  let watch = 0
-  const stagePass: Record<string, number> = {
-    direction: 0,
-    participation: 0,
-    structure: 0,
-    location: 0,
-    regime: 0,
-  }
-  for (const r of rows) {
-    const bucket = verdictBucket(r)
-    if (bucket === 'buy') buy += 1
-    else if (bucket === 'sell') sell += 1
-    else if (bucket === 'watch') watch += 1
-    const stages = r.pipeline?.stages
-    if (Array.isArray(stages)) {
-      for (const s of stages) {
-        if (s.id in stagePass && s.status === 'pass') {
-          stagePass[s.id] += 1
-        }
-      }
-    }
-  }
-  const top = rows
-    .filter((r) => {
-      const b = verdictBucket(r)
-      return b === 'buy' || b === 'sell'
-    })
-    .sort((a, b) => b.confidence - a.confidence)
-    .slice(0, 6)
-  const none = Math.max(0, rows.length - buy - sell - watch)
-  return { buy, sell, watch, none, top, total: rows.length, stagePass }
-}
+type EquityPeriod = '1J' | '1S' | '1M' | '3M'
 
 function fmtPct(v: number | null | undefined, digits = 1): string {
   if (v == null || Number.isNaN(v)) return '—'
@@ -114,22 +58,15 @@ function fmtEur(v: number | null | undefined, digits = 0): string {
   }).format(v)
 }
 
-function fmtInt(n: number): string {
-  return n.toLocaleString('fr-FR')
-}
-
-function fmtWhen(iso: string | null): string {
-  if (!iso) return 'jamais'
-  const t = Date.parse(iso)
-  if (Number.isNaN(t)) return '—'
-  const ageSec = (Date.now() - t) / 1000
-  if (ageSec < 3600) return `il y a ${Math.max(1, Math.floor(ageSec / 60))} min`
-  if (ageSec < 86400) return `il y a ${Math.floor(ageSec / 3600)} h`
-  return `il y a ${Math.floor(ageSec / 86400)} j`
+function fmtPrice(v: number | null | undefined): string {
+  if (v == null || Number.isNaN(v)) return '—'
+  if (v >= 1000) return v.toLocaleString('fr-FR', { maximumFractionDigits: 0 })
+  if (v >= 1) return v.toLocaleString('fr-FR', { maximumFractionDigits: 2 })
+  return v.toLocaleString('fr-FR', { maximumFractionDigits: 5 })
 }
 
 function fmtClock(iso: string): string {
-  return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
 }
 
 function toneClass(tone: ActivityItem['tone']): string {
@@ -149,76 +86,232 @@ function toneClass(tone: ActivityItem['tone']): string {
   }
 }
 
-function EquitySpark({ points, initial }: { points: { equity: number }[]; initial: number }) {
-  if (points.length < 2) {
-    return <div className="ov-spark ov-spark--empty muted">Courbe en construction</div>
-  }
-  const vals = points.map((p) => p.equity)
-  const min = Math.min(...vals, initial)
-  const max = Math.max(...vals, initial)
-  const span = Math.max(1e-6, max - min)
-  const w = 160
-  const h = 40
-  const poly = vals
-    .map((v, i) => {
-      const x = (i / (vals.length - 1)) * w
-      const y = h - ((v - min) / span) * (h - 4) - 2
-      return `${x.toFixed(1)},${y.toFixed(1)}`
-    })
-    .join(' ')
-  const up = vals[vals.length - 1] >= initial
-  return (
-    <svg className={`ov-spark ${up ? 'is-up' : 'is-down'}`} viewBox={`0 0 ${w} ${h}`} aria-hidden>
-      <polyline fill="none" strokeWidth="1.6" points={poly} />
-    </svg>
-  )
+function filterEquityCurve(
+  points: { t: string; equity: number }[],
+  period: EquityPeriod,
+  now = Date.now(),
+): { t: string; equity: number }[] {
+  const ms =
+    period === '1J'
+      ? 86_400_000
+      : period === '1S'
+        ? 7 * 86_400_000
+        : period === '1M'
+          ? 30 * 86_400_000
+          : 90 * 86_400_000
+  const cutoff = now - ms
+  return points.filter((p) => {
+    const t = Date.parse(p.t)
+    return !Number.isNaN(t) && t >= cutoff
+  })
 }
 
-function DeskKpi({
-  label,
-  value,
-  meta,
-  tone,
+function EquityChart({
+  points,
+  initial,
+  period,
+  onPeriod,
 }: {
-  label: string
-  value: string
-  meta?: string
-  tone?: 'bull' | 'bear' | 'flat'
+  points: { t: string; equity: number }[]
+  initial: number
+  period: EquityPeriod
+  onPeriod: (p: EquityPeriod) => void
 }) {
+  const filtered = filterEquityCurve(points, period)
   return (
-    <div className={`ov-desk-kpi${tone && tone !== 'flat' ? ` is-${tone}` : ''}`}>
-      <span className="overview-stat-label muted">{label}</span>
-      <strong className="mono">{value}</strong>
-      {meta ? <span className="overview-stat-meta muted">{meta}</span> : null}
+    <div className="desk-equity">
+      <div className="desk-equity-periods" role="group" aria-label="Période">
+        {(['1J', '1S', '1M', '3M'] as const).map((p) => (
+          <button
+            key={p}
+            type="button"
+            className={period === p ? 'is-active' : undefined}
+            onClick={() => onPeriod(p)}
+          >
+            {p}
+          </button>
+        ))}
+      </div>
+      {filtered.length < 2 ? (
+        <div className="ov-spark ov-spark--empty muted">Courbe en construction</div>
+      ) : (
+        (() => {
+          const vals = filtered.map((p) => p.equity)
+          const min = Math.min(...vals, initial)
+          const max = Math.max(...vals, initial)
+          const span = Math.max(1e-6, max - min)
+          const w = 640
+          const h = 160
+          const poly = vals
+            .map((v, i) => {
+              const x = (i / (vals.length - 1)) * w
+              const y = h - ((v - min) / span) * (h - 8) - 4
+              return `${x.toFixed(1)},${y.toFixed(1)}`
+            })
+            .join(' ')
+          const up = vals[vals.length - 1] >= initial
+          return (
+            <svg
+              className={`desk-equity-svg ${up ? 'is-up' : 'is-down'}`}
+              viewBox={`0 0 ${w} ${h}`}
+              role="img"
+              aria-label={`Trajectoire equity ${period}`}
+            >
+              <polyline fill="none" strokeWidth="2" points={poly} />
+            </svg>
+          )
+        })()
+      )}
     </div>
   )
 }
 
+function Ring({
+  parts,
+  center,
+  label,
+}: {
+  parts: { pct: number; color: string }[]
+  center: string
+  label: string
+}) {
+  const offsets: number[] = []
+  let acc = 0
+  for (const p of parts) {
+    offsets.push(acc)
+    acc += p.pct
+  }
+  return (
+    <div className="desk-ring">
+      <svg viewBox="0 0 200 200" role="img" aria-label={`${label} : ${center}`}>
+        <circle cx="100" cy="100" r="80" fill="none" stroke="var(--line)" strokeWidth="19" />
+        {parts.map((p, i) => (
+          <circle
+            key={i}
+            cx="100"
+            cy="100"
+            r="80"
+            pathLength="100"
+            fill="none"
+            stroke={p.color}
+            strokeWidth="19"
+            strokeDasharray={`${p.pct} ${100 - p.pct}`}
+            strokeDashoffset={-offsets[i]}
+            transform="rotate(-90 100 100)"
+          />
+        ))}
+      </svg>
+      <div>
+        <b>{center}</b>
+        <small>{label}</small>
+      </div>
+    </div>
+  )
+}
+
+function CardShell({
+  title,
+  meta,
+  children,
+  className,
+  footer,
+}: {
+  title: string
+  meta?: ReactNode
+  children: ReactNode
+  className?: string
+  footer?: ReactNode
+}) {
+  return (
+    <section className={`panel desk-card ${className ?? ''}`.trim()}>
+      <header className="panel-head">
+        <h2>{title}</h2>
+        {meta ? <span className="panel-meta">{meta}</span> : null}
+      </header>
+      <div className="card-body">{children}</div>
+      {footer ? <div className="card-foot">{footer}</div> : null}
+    </section>
+  )
+}
+
+function pickPrimaryMarkets(rows: ScreenerDecisionRow[]): ScreenerDecisionRow[] {
+  const bySym = new Map(rows.map((r) => [r.symbol.toUpperCase(), r]))
+  const preferred = PRIMARY_SYMBOLS.map((s) => bySym.get(s)).filter(
+    (r): r is ScreenerDecisionRow => Boolean(r),
+  )
+  if (preferred.length >= 4) return preferred.slice(0, 6)
+  const rest = [...rows]
+    .filter((r) => !PRIMARY_SYMBOLS.includes(r.symbol.toUpperCase()))
+    .sort((a, b) => b.confidence - a.confidence)
+  return [...preferred, ...rest].slice(0, 6)
+}
+
 export function OverviewPage() {
   const [rows, setRows] = useState<ScreenerDecisionRow[]>([])
-  const [cacheAge, setCacheAge] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [overview, setOverview] = useState<PaperOverview | null>(null)
-  const [summary, setSummary] = useState<ActivitySummary | null>(null)
+  const [ovError, setOvError] = useState<string | null>(null)
   const [tape, setTape] = useState<ActivityItem[]>([])
-  const [evidence, setEvidence] = useState<BacktestEvidenceSummary | null>(null)
-  const [portfolios, setPortfolios] = useState<PaperPortfolioRow[]>([])
+  const [tapeError, setTapeError] = useState<string | null>(null)
+  const [lock, setLock] = useState<RiskLockState | null>(null)
+  const [engineOk, setEngineOk] = useState<boolean | null>(null)
+  const [market, setMarket] = useState<GlobalMarketData | null>(null)
+  const [fng, setFng] = useState<FearGreed | null>(null)
+  const [climateError, setClimateError] = useState<string | null>(null)
+  const [changeBySymbol, setChangeBySymbol] = useState<Record<string, number>>({})
+  const [sessionId, setSessionId] = useState<SessionId>('london')
+  const [equityPeriod, setEquityPeriod] = useState<EquityPeriod>('1M')
+  const [nowTick, setNowTick] = useState(() => Date.now())
 
   const load = useCallback(async (force = false) => {
     setLoading(true)
     type ScreenerOk = Awaited<ReturnType<typeof getScreener>>
-    const [screenerRes, ovRes, sumRes, feedRes, evRes, pfRes] = await Promise.all([
+    const [screenerRes, ovRes, feedRes, lockRes, healthRes, mktRes, fngRes, tickersRes] =
+      await Promise.all([
       getScreener('1h', force)
         .then((r): ScreenerOk | Error => r)
         .catch((err: unknown): ScreenerOk | Error =>
           err instanceof Error ? err : new Error('Screener indisponible'),
         ),
-      getPaperOverview(BASELINE).catch(() => null),
-      getActivitySummary().catch(() => null),
-      getActivityFeed(40).catch(() => ({ items: [] as ActivityItem[] })),
-      getBacktestEvidence().catch(() => null),
-      listPaperPortfolios().catch(() => [] as PaperPortfolioRow[]),
+      getPaperOverview(BASELINE)
+        .then((r) => ({ ok: true as const, data: r }))
+        .catch((err: unknown) => ({
+          ok: false as const,
+          error: err instanceof Error ? err.message : 'Overview indisponible',
+        })),
+      getActivityFeed(40)
+        .then((r) => ({ ok: true as const, items: r.items }))
+        .catch((err: unknown) => ({
+          ok: false as const,
+          error: err instanceof Error ? err.message : 'Feed indisponible',
+          items: [] as ActivityItem[],
+        })),
+      getRiskLock(BASELINE).catch(() => null),
+      fetch('/api/engine/health', { credentials: 'include' })
+        .then(async (res) => {
+          if (!res.ok) return { engine: false }
+          const j = (await res.json().catch(() => null)) as { status?: string; ok?: boolean } | null
+          const ok = j?.ok === true || j?.status === 'ok' || j?.status === 'healthy'
+          return { engine: Boolean(ok) }
+        })
+        .catch(() => ({ engine: false })),
+      fetchGlobalMarket()
+        .then((m) => ({ ok: true as const, data: m }))
+        .catch((err: unknown) => ({
+          ok: false as const,
+          error: err instanceof Error ? err.message : 'CoinGecko indisponible',
+        })),
+      fetchFearGreed()
+        .then((f) => ({ ok: true as const, data: f }))
+        .catch(() => ({ ok: false as const })),
+      fetchTickers24h()
+        .then((list) => {
+          const map: Record<string, number> = {}
+          for (const t of list) map[t.symbol.toUpperCase()] = t.priceChangePercent
+          return map
+        })
+        .catch(() => ({} as Record<string, number>)),
     ])
 
     if (screenerRes instanceof Error) {
@@ -229,70 +322,128 @@ export function OverviewPage() {
           : msg,
       )
       setRows([])
-      setCacheAge(null)
     } else {
       setError(null)
       setRows(screenerRes.rows)
-      setCacheAge(screenerRes.cache_age_seconds)
     }
 
-    setOverview(ovRes)
-    setSummary(sumRes)
-    setTape(feedRes.items.slice(0, TAPE_LIMIT))
-    setEvidence(evRes)
-    setPortfolios(pfRes.filter((p) => p.is_active))
+    if (ovRes.ok) {
+      setOverview(ovRes.data)
+      setOvError(null)
+    } else {
+      setOverview(null)
+      setOvError(ovRes.error)
+    }
+
+    if (feedRes.ok) {
+      setTape(feedRes.items.slice(0, TAPE_LIMIT))
+      setTapeError(null)
+    } else {
+      setTape([])
+      setTapeError(feedRes.error)
+    }
+
+    setLock(lockRes)
+    setEngineOk(healthRes.engine)
+
+    if (mktRes.ok) {
+      setMarket(mktRes.data)
+      setClimateError(null)
+    } else {
+      setMarket(null)
+      setClimateError(mktRes.error)
+    }
+    if (fngRes.ok) setFng(fngRes.data)
+    else setFng(null)
+
+    setChangeBySymbol(tickersRes)
     setLoading(false)
   }, [])
 
   useEffect(() => {
     void load()
     const id = window.setInterval(() => void load(), REFRESH_MS)
-    return () => window.clearInterval(id)
+    const tick = window.setInterval(() => setNowTick(Date.now()), 15_000)
+    return () => {
+      window.clearInterval(id)
+      window.clearInterval(tick)
+    }
   }, [load])
 
-  const stats = useMemo(() => summarize(rows), [rows])
-
+  const now = useMemo(() => new Date(nowTick), [nowTick])
   const acct = overview?.account
+  const risk = overview?.risk
+  const dayTone: 'bull' | 'bear' | 'flat' =
+    acct?.day_change == null ? 'flat' : acct.day_change > 0 ? 'bull' : acct.day_change < 0 ? 'bear' : 'flat'
   const dayPct =
     acct?.day_change != null && acct.equity
       ? acct.day_change / Math.max(1e-9, acct.equity - acct.day_change)
       : null
-  const totalPct =
-    acct != null && acct.initial_cash > 0 ? acct.total_pnl / acct.initial_cash : null
-  const dayTone: 'bull' | 'bear' | 'flat' =
-    acct?.day_change == null ? 'flat' : acct.day_change > 0 ? 'bull' : acct.day_change < 0 ? 'bear' : 'flat'
 
-  const circuitAlive = (summary?.decisions.last_24h ?? 0) > 0
-  const edgeHint = evidence?.pipeline_beats_ichimoku_sharpe
+  const watchList = useMemo(() => {
+    return rows
+      .filter((r) => {
+        const b = verdictBucket(r)
+        return b === 'buy' || b === 'sell'
+      })
+      .sort((a, b) => b.confidence - a.confidence)
+      .slice(0, 6)
+  }, [rows])
 
-  const labs = useMemo(() => {
-    return [...portfolios].sort((a, b) => {
-      if (a.code === BASELINE) return -1
-      if (b.code === BASELINE) return 1
-      return b.realized_pnl - a.realized_pnl
-    })
-  }, [portfolios])
+  const primaryMarkets = useMemo(() => pickPrimaryMarkets(rows), [rows])
 
-  const openBook = overview?.positions.slice(0, 6) ?? []
+  const freshnessIssues = useMemo(() => {
+    const staleSyms = rows
+      .filter((r) => r.data_quality?.stale || r.data_quality?.data_late)
+      .map((r) => r.symbol.replace(/USDT$/i, ''))
+    const markStale = (overview?.positions ?? [])
+      .filter((p) => p.mark_stale)
+      .map((p) => p.symbol.replace(/USDT$/i, ''))
+    const uniq = [...new Set([...staleSyms, ...markStale])]
+    return uniq
+  }, [rows, overview?.positions])
+
+  const btcRow = rows.find((r) => r.symbol.toUpperCase() === 'BTCUSDT')
+  const nextClose = nextHourlyClose(now)
+
+  const selectedSession: MarketSessionDef =
+    MARKET_SESSIONS.find((s) => s.id === sessionId) ?? MARKET_SESSIONS[1]
+
+  const investedPct =
+    acct && acct.equity > 0 ? Math.min(100, Math.max(0, (acct.invested / acct.equity) * 100)) : 0
+
+  const concentration = useMemo(() => {
+    const positions = overview?.positions ?? []
+    const values = positions
+      .map((p) => ({
+        symbol: p.symbol.replace(/USDT$/i, ''),
+        mv: Math.abs(p.market_value ?? (p.current_price != null ? p.current_price * (p.qty ?? 0) : 0)),
+      }))
+      .filter((p) => p.mv > 0)
+    const total = values.reduce((s, v) => s + v.mv, 0)
+    if (total <= 0) return [] as { symbol: string; pct: number }[]
+    return values
+      .map((v) => ({ symbol: v.symbol, pct: (v.mv / total) * 100 }))
+      .sort((a, b) => b.pct - a.pct)
+  }, [overview?.positions])
+
+  const RING_COLORS = ['#548f87', '#8c9eb4', '#c2b596', '#a9bdb2', '#7d8288']
 
   return (
-    <div className="overview-page">
+    <div className="overview-page desk-workspace">
       <header className="iv-page-header page-head overview-head iv-animate-soft">
         <div>
           <p className="iv-page-eyebrow">Trading · Desk</p>
           <h1>Desk</h1>
-          <p className="iv-page-question">
-            Que se passe-t-il maintenant ?
-            {circuitAlive
-              ? ` · ${fmtInt(summary?.decisions.last_24h ?? 0)} décisions / 24 h`
-              : ''}
-            {cacheAge != null ? ` · screener ${fmtCacheAge(cacheAge)}` : ''}
-          </p>
+          <p className="iv-page-question">Votre marché, en un regard.</p>
         </div>
-        <div className="market-class-tabs">
-          <button type="button" onClick={() => void load(true)} disabled={loading}>
-            {loading ? '…' : 'Actualiser'}
+        <div className="page-head-actions">
+          <button type="button" className="ghost" onClick={() => void load(true)} disabled={loading}>
+            {loading ? 'Actualisation…' : 'Actualiser'}
           </button>
+          <Link to="/app/market" className="link">
+            Ouvrir le marché ↗
+          </Link>
         </div>
       </header>
 
@@ -302,401 +453,417 @@ export function OverviewPage() {
         </div>
       )}
 
-      <section className="iv-metrics iv-animate-in" aria-label="Synthèse marché">
-        <div className="iv-metric">
-          <div className="iv-metric-label">Marchés analysés</div>
-          <div className="iv-metric-value mono">{loading && !rows.length ? '—' : fmtInt(stats.total)}</div>
-          <small>Screener 1h</small>
-        </div>
-        <div className="iv-metric">
-          <div className="iv-metric-label">Opportunités</div>
-          <div className={`iv-metric-value mono${stats.buy > 0 ? ' is-bull' : ''}`}>
-            {loading && !rows.length ? '—' : fmtInt(stats.buy)}
-          </div>
-          <small>
-            {loading && !rows.length
-              ? 'BUY actionnables'
-              : `SELL : ${fmtInt(stats.sell)} signaux (short désactivé)`}
-          </small>
-        </div>
-        <div className="iv-metric">
-          <div className="iv-metric-label">WATCH</div>
-          <div className="iv-metric-value mono">{loading && !rows.length ? '—' : fmtInt(stats.watch)}</div>
-          <small>Prudence — pas d’entrée</small>
-        </div>
-        <div className="iv-metric">
-          <div className="iv-metric-label">Positions paper</div>
-          <div className="iv-metric-value mono">{acct ? fmtInt(acct.open_positions) : '—'}</div>
-          <small>{BASELINE}</small>
-        </div>
-        <div className="iv-metric">
-          <div className="iv-metric-label">
-            {overview?.risk ? 'Risque engagé' : 'Exposé'}
-          </div>
+      {/* 1. KPIs */}
+      <section className="iv-metrics desk-kpis iv-animate-in" aria-label="Indicateurs clés">
+        <div className={`iv-metric${acct ? '' : ''}`}>
+          <div className="iv-metric-label">Capital total</div>
           <div className="iv-metric-value mono">
-            {overview?.risk?.open_risk_pct != null
-              ? `${(overview.risk.open_risk_pct * 100).toFixed(1)} %`
-              : overview?.risk
-                ? fmtEur(overview.risk.open_risk_amount, 0)
-                : acct
-                  ? fmtEur(acct.invested, 0)
-                  : '—'}
+            {loading && !acct ? '—' : acct ? fmtEur(acct.equity, 0) : '—'}
+          </div>
+          <small>Portefeuille paper · EUR</small>
+        </div>
+        <div className="iv-metric">
+          <div className="iv-metric-label">Disponible</div>
+          <div className="iv-metric-value mono">
+            {acct ? fmtEur(acct.cash, 0) : '—'}
           </div>
           <small>
-            {overview?.risk
-              ? `ouvert ${fmtEur(overview.risk.open_risk_amount, 0)} / exposé ${fmtEur(overview.risk.exposed, 0)}`
-              : acct
-                ? `capital engagé ${fmtEur(acct.invested, 0)}`
+            {acct && acct.equity > 0
+              ? `${((acct.cash / acct.equity) * 100).toFixed(1)} % du capital`
+              : 'Cash libre'}
+          </small>
+        </div>
+        <div className={`iv-metric${dayTone === 'bull' ? ' is-bull' : dayTone === 'bear' ? ' is-bear' : ''}`}>
+          <div className="iv-metric-label">P&amp;L du jour</div>
+          <div className="iv-metric-value mono">
+            {acct?.day_change != null ? fmtEur(acct.day_change, 0) : '—'}
+          </div>
+          <small>{dayPct != null ? fmtPct(dayPct) : 'Variation journalière'}</small>
+        </div>
+        <div className="iv-metric">
+          <div className="iv-metric-label">Risque utilisé</div>
+          <div className="iv-metric-value mono">
+            {risk?.open_risk_pct != null
+              ? `${(risk.open_risk_pct * 100).toFixed(1)} %`
+              : risk
+                ? fmtEur(risk.open_risk_amount, 0)
                 : '—'}
+          </div>
+          <small>
+            {risk?.max_open_risk_pct != null
+              ? `Limite ${(risk.max_open_risk_pct * 100).toFixed(0)} %`
+              : 'Risque ouvert'}
           </small>
         </div>
       </section>
-
-      <div className="iv-desk-grid iv-animate-in-delay">
-        <section className="panel" aria-label="Market pulse">
-          <header className="panel-head">
-            <h2>Market pulse</h2>
-            <span className="muted">Distribution actuelle</span>
-          </header>
-          <div className="card-body iv-pulse" style={{ padding: '0.75rem 1rem 1.1rem' }}>
-            <div
-              className="iv-donut"
-              style={
-                {
-                  ['--buy' as string]: stats.total
-                    ? ((stats.buy / stats.total) * 100).toFixed(2)
-                    : 0,
-                  ['--sell' as string]: stats.total
-                    ? ((stats.sell / stats.total) * 100).toFixed(2)
-                    : 0,
-                  ['--watch' as string]: stats.total
-                    ? ((stats.watch / stats.total) * 100).toFixed(2)
-                    : 0,
-                } as CSSProperties
-              }
-              data-center={loading && !rows.length ? '—' : String(stats.total)}
-              role="img"
-              aria-label={`${stats.total} marchés : ${stats.buy} buy, ${stats.sell} sell, ${stats.watch} watch, ${stats.none} no trade`}
-            />
-            <div className="iv-pulse-legend">
-              <span>
-                <span>
-                  <i className="is-buy" aria-hidden />
-                  BUY
-                </span>
-                <b className="mono">{stats.buy}</b>
-              </span>
-              <span>
-                <span>
-                  <i className="is-sell" aria-hidden />
-                  SELL
-                </span>
-                <b className="mono">{stats.sell}</b>
-              </span>
-              <span>
-                <span>
-                  <i className="is-watch" aria-hidden />
-                  WATCH
-                </span>
-                <b className="mono">{stats.watch}</b>
-              </span>
-              <span>
-                <span>
-                  <i className="is-none" aria-hidden />
-                  NO TRADE
-                </span>
-                <b className="mono">{stats.none}</b>
-              </span>
-            </div>
-          </div>
-        </section>
-
-        <section className="panel" aria-label="Top opportunités">
-          <header className="panel-head">
-            <h2>Top opportunités</h2>
-            <Link to="/app/opportunites" className="ghost">
-              Voir tout →
-            </Link>
-          </header>
-          {stats.top.length === 0 ? (
-            <p className="muted overview-empty" style={{ padding: '0.75rem 1rem' }}>
-              {loading ? 'Scan screener…' : 'Aucune opportunité actionnable'}
-            </p>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Symbole</th>
-                    <th>Décision</th>
-                    <th>Conf.</th>
-                    <th>RVOL</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.top.map((r) => (
-                    <tr key={r.symbol}>
-                      <td>
-                        <Link to={`/app/opportunites?symbol=${encodeURIComponent(r.symbol)}`}>
-                          <strong>{r.symbol.replace(/USDT$/i, '')}</strong>
-                        </Link>
-                      </td>
-                      <td>
-                        <VerdictBadge decision={r.decision} pipeline={r.pipeline} />
-                      </td>
-                      <td className="mono">{(r.confidence * 100).toFixed(0)}%</td>
-                      <td className="mono">{r.rvol != null ? `${r.rvol.toFixed(2)}×` : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </div>
-
-      <section className="panel" aria-label="Pipeline health" style={{ marginBottom: '1rem' }}>
-        <header className="panel-head">
-          <h2>Pipeline health</h2>
-          <span className="muted">Marchés ayant passé chaque porte</span>
-        </header>
-        <ul className="iv-pipeline" style={{ margin: '0 0.75rem 1rem' }}>
-          {(
-            [
-              ['analysés', stats.total],
-              ['direction', stats.stagePass.direction],
-              ['participation', stats.stagePass.participation],
-              ['structure', stats.stagePass.structure],
-              ['location', stats.stagePass.location],
-              ['régime', stats.stagePass.regime],
-              ['opportunités (BUY)', stats.buy],
-            ] as const
-          ).map(([label, n]) => (
-            <li key={label}>
-              <strong className="mono">{loading && !rows.length ? '—' : fmtInt(n)}</strong>
-              <span>{label}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="panel ov-desk" aria-label="Compte baseline">
-        <header className="panel-head">
-          <h2>Capital · {BASELINE}</h2>
-          <Link to="/app/portefeuille" className="ghost">
-            Portefeuille →
-          </Link>
-        </header>
-        <div className="ov-desk-body">
-          <div className="ov-desk-hero">
-            <DeskKpi
-              label="Equity"
-              value={acct ? fmtEur(acct.equity, 0) : '—'}
-              meta={totalPct != null ? `depuis départ ${fmtPct(totalPct)}` : undefined}
-              tone={
-                totalPct == null ? 'flat' : totalPct > 0 ? 'bull' : totalPct < 0 ? 'bear' : 'flat'
-              }
-            />
-            <DeskKpi
-              label="Jour"
-              value={acct?.day_change != null ? fmtEur(acct.day_change, 0) : '—'}
-              meta={dayPct != null ? fmtPct(dayPct) : undefined}
-              tone={dayTone}
-            />
-            <DeskKpi
-              label="Cash / engagé"
-              value={acct ? `${fmtEur(acct.cash, 0)} / ${fmtEur(acct.invested, 0)}` : '—'}
-              meta={acct ? `${acct.open_positions} ouvertes` : undefined}
-            />
-            <DeskKpi
-              label="P&L latent"
-              value={acct ? fmtEur(acct.unrealized_pnl, 0) : '—'}
-              meta={acct ? `réalisé ${fmtEur(acct.realized_pnl, 0)}` : undefined}
-              tone={
-                acct == null
-                  ? 'flat'
-                  : acct.unrealized_pnl > 0
-                    ? 'bull'
-                    : acct.unrealized_pnl < 0
-                      ? 'bear'
-                      : 'flat'
-              }
-            />
-          </div>
-          <EquitySpark points={overview?.equity_curve ?? []} initial={acct?.initial_cash ?? 5000} />
+      {ovError && (
+        <div className="banner error" role="alert">
+          Compte paper : {ovError}
         </div>
-      </section>
-
-      <section className="ov-circuit" aria-label="Circuit 24 h">
-        <article className={`panel overview-stat ov-pulse ${circuitAlive ? 'is-ok' : 'is-warn'}`}>
-          <span className="overview-stat-label muted">Décisions 24 h</span>
-          <strong className="mono">{summary ? fmtInt(summary.decisions.last_24h) : '—'}</strong>
-          <span className="overview-stat-meta muted">
-            {summary ? `${fmtInt(summary.decisions.total)} total · ${fmtWhen(summary.decisions.last_at)}` : '…'}
-          </span>
-          <Link to="/app/operations" className="overview-stat-link">
-            Opérations →
-          </Link>
-        </article>
-        <article className="panel overview-stat ov-pulse is-ok">
-          <span className="overview-stat-label muted">Paper 24 h</span>
-          <strong className="mono">
-            {summary
-              ? `${fmtInt(summary.paper.opened_24h)} / ${fmtInt(summary.paper.closed_24h)}`
-              : '—'}
-          </strong>
-          <span className="overview-stat-meta muted">
-            {summary
-              ? `ouv. / clôt. · ${summary.paper.open_now} en cours`
-              : '…'}
-          </span>
-        </article>
-        <article className="panel overview-stat ov-pulse">
-          <span className="overview-stat-label muted">Strategy Lab</span>
-          <strong className="mono">{summary ? fmtInt(summary.backtest.runs_total) : '—'}</strong>
-          <span className="overview-stat-meta muted">
-            {summary ? `dernier ${fmtWhen(summary.backtest.last_at)}` : '…'}
-          </span>
-        </article>
-      </section>
-
-      <div className="ov-main">
-        <section className="panel ov-book" aria-label="Livre live">
-          <header className="panel-head">
-            <h2>Livre live · 1h</h2>
-            <Link to="/app/opportunites" className="ghost">
-              Opportunités →
-            </Link>
-          </header>
-          <div className="ov-book-stats">
-            <div className="panel overview-stat overview-stat--bull">
-              <span className="overview-stat-label muted">Achats</span>
-              <strong className="mono">{loading && !rows.length ? '—' : stats.buy}</strong>
-            </div>
-            <div className="panel overview-stat overview-stat--bear">
-              <span className="overview-stat-label muted">Ventes</span>
-              <strong className="mono">{loading && !rows.length ? '—' : stats.sell}</strong>
-            </div>
-            <div className="panel overview-stat">
-              <span className="overview-stat-label muted">Watch</span>
-              <strong className="mono">{loading && !rows.length ? '—' : stats.watch}</strong>
-            </div>
-            <div className="panel overview-stat">
-              <span className="overview-stat-label muted">Scannées</span>
-              <strong className="mono">{loading && !rows.length ? '—' : stats.total}</strong>
-            </div>
-          </div>
-          {stats.top.length === 0 ? (
-            <p className="muted overview-empty">
-              {loading ? 'Scan screener…' : 'Aucune ligne — vérifie le moteur.'}
-            </p>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Symbole</th>
-                    <th>Porte</th>
-                    <th>Conf.</th>
-                    <th>RVOL</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.top.map((r) => (
-                    <tr key={r.symbol}>
-                      <td>
-                        <Link to={`/app/opportunites?symbol=${encodeURIComponent(r.symbol)}`}>
-                          <strong>{r.symbol.replace(/USDT$/i, '')}</strong>
-                        </Link>
-                      </td>
-                      <td>
-                        <VerdictBadge decision={r.decision} pipeline={r.pipeline} />
-                      </td>
-                      <td className="mono">{(r.confidence * 100).toFixed(0)}%</td>
-                      <td className="mono">{r.rvol != null ? `${r.rvol.toFixed(2)}×` : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        {/* T14a — preuves / filtres / signaux suivis : détail dans Opérations (plus sur le Desk). */}
-        <section className="panel ov-proof" aria-label="Preuves">
-          <header className="panel-head">
-            <h2>Preuves & opérations</h2>
-            <Link to="/app/operations" className="ghost">
-              Opérations →
-            </Link>
-          </header>
-          <div className="ov-proof-body">
-            <p className="muted ov-proof-note">
-              Filtres shadow, signaux suivis et journal d’audit vivent dans{' '}
-              <Link to="/app/operations">Opérations</Link>. Edge backtest :{' '}
-              <Link to="/app/strategy-lab">Strategy Lab</Link>
-              {edgeHint
-                ? ` · pipeline bat Ichimoku sur ${edgeHint.beats}/${edgeHint.compared} paires`
-                : ''}
-              .
-            </p>
-          </div>
-        </section>
-      </div>
-
-      {openBook.length > 0 && (
-        <section className="panel ov-positions" aria-label="Positions ouvertes">
-          <header className="panel-head">
-            <h2>Livre ouvert</h2>
-            <span className="panel-meta">{acct?.open_positions ?? openBook.length} positions</span>
-          </header>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Symbole</th>
-                  <th>Sens</th>
-                  <th>Notional</th>
-                  <th>Latent</th>
-                </tr>
-              </thead>
-              <tbody>
-                {openBook.map((p) => (
-                  <tr key={p.id}>
-                    <td>
-                      <strong>{p.symbol.replace(/USDT$/i, '')}</strong>
-                      <span className="muted"> · {p.timeframe}</span>
-                    </td>
-                    <td className="mono">{p.direction}</td>
-                    <td className="mono">{fmtEur(p.notional ?? null, 0)}</td>
-                    <td
-                      className={`mono ${
-                        (p.unrealized_pnl ?? 0) > 0 ? 'up' : (p.unrealized_pnl ?? 0) < 0 ? 'down' : ''
-                      }`}
-                    >
-                      {p.unrealized_pnl != null ? fmtEur(p.unrealized_pnl, 0) : '—'}
-                      {p.unrealized_pct != null ? (
-                        <span className="muted"> {fmtPct(p.unrealized_pct)}</span>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
       )}
 
-      <div className="ov-bottom">
-        <section className="panel ov-tape" aria-label="Derniers événements">
-          <header className="panel-head">
-            <h2>Tape</h2>
-            <Link to="/app/operations" className="ghost">
-              Historique →
+      {/* 2–4. Overview row */}
+      <div className="desk-overview iv-animate-in-delay">
+        <CardShell title="Sessions de marché" meta="Horaires locaux · crypto 24/7">
+          <div className="world-view">
+            <img src="/world-map.svg" alt="" width={720} height={290} />
+            {MARKET_SESSIONS.map((s) => {
+              const st = sessionStatus(s, now)
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={`map-marker${sessionId === s.id ? ' selected' : ''}`}
+                  style={{ left: `${s.mapLeftPct}%`, top: `${s.mapTopPct}%` }}
+                  aria-label={`Session ${s.city}`}
+                  aria-pressed={sessionId === s.id}
+                  onClick={() => setSessionId(s.id)}
+                >
+                  <span className={`is-${st}`} />
+                  <b>{s.city}</b>
+                </button>
+              )
+            })}
+          </div>
+          <div className="session-selector">
+            {MARKET_SESSIONS.map((s) => {
+              const st = sessionStatus(s, now)
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={sessionId === s.id ? 'active' : undefined}
+                  aria-pressed={sessionId === s.id}
+                  onClick={() => setSessionId(s.id)}
+                >
+                  {s.region}
+                  <small>{sessionStatusLabel(st)}</small>
+                </button>
+              )
+            })}
+          </div>
+          <div className="session-detail" id="desk-session-detail">
+            <strong>
+              {selectedSession.city}{' '}
+              <span
+                className={
+                  sessionStatus(selectedSession, now) === 'open'
+                    ? 'up'
+                    : 'muted'
+                }
+              >
+                {sessionStatusLabel(sessionStatus(selectedSession, now))}
+              </span>
+            </strong>
+            <span className="mono">{formatSessionHoursLocal(selectedSession, now)}</span>
+          </div>
+          <p className="map-foot muted">
+            Crypto <b>24/7</b> · sessions FX fermées le week-end
+          </p>
+        </CardShell>
+
+        <CardShell
+          title="Marchés principaux"
+          footer={
+            <Link to="/app/market" className="link">
+              Tout le marché ↗
             </Link>
-          </header>
-          {tape.length === 0 ? (
-            <p className="muted overview-empty">Aucun événement récent.</p>
+          }
+        >
+          {loading && !primaryMarkets.length ? (
+            <p className="muted">Chargement…</p>
+          ) : !primaryMarkets.length ? (
+            <p className="muted">Aucun ticker screener.</p>
+          ) : (
+            <div className="desk-tickers">
+              {primaryMarkets.map((r) => (
+                <Link
+                  key={r.symbol}
+                  className="desk-ticker"
+                  to={`/app/market?symbol=${encodeURIComponent(r.symbol)}`}
+                >
+                  <span>
+                    <b>
+                      {r.symbol.replace(/USDT$/i, '')}
+                      <small> / USDT</small>
+                    </b>
+                    <small>
+                      <VerdictBadge decision={r.decision} pipeline={r.pipeline} hideDiagnostic />
+                    </small>
+                  </span>
+                  <span className="right">
+                    <b className="mono">{fmtPrice(r.price)}</b>
+                    {(() => {
+                      const chg = changeBySymbol[r.symbol.toUpperCase()]
+                      if (chg == null || Number.isNaN(chg)) {
+                        return (
+                          <small className="muted">
+                            {r.rvol != null
+                              ? `RVOL ${r.rvol.toFixed(2)}×`
+                              : `conf ${(r.confidence * 100).toFixed(0)}`}
+                          </small>
+                        )
+                      }
+                      const sign = chg > 0 ? '+' : ''
+                      const tone = chg > 0 ? 'is-up' : chg < 0 ? 'is-down' : ''
+                      return (
+                        <small className={`mono desk-chg ${tone}`.trim()}>
+                          {sign}
+                          {chg.toFixed(2)} %
+                        </small>
+                      )
+                    })()}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </CardShell>
+
+        <CardShell title="Lecture du marché">
+          {climateError && !market ? (
+            <p className="muted">{climateError}</p>
+          ) : loading && !market && !fng ? (
+            <p className="muted">Chargement…</p>
+          ) : !market && !fng ? (
+            <p className="muted">Climat crypto indisponible.</p>
+          ) : (
+            <div className="desk-climate">
+              {fng ? (
+                <div className="climate-head">
+                  <span className="climate-symbol" aria-hidden>
+                    {fng.value >= 55 ? '↗' : fng.value <= 45 ? '↘' : '→'}
+                  </span>
+                  <div>
+                    <small>SENTIMENT (FEAR &amp; GREED)</small>
+                    <h3>{fng.classification}</h3>
+                  </div>
+                </div>
+              ) : null}
+              {market ? (
+                <dl className="desk-climate-stats">
+                  <div>
+                    <dt>Volatilité (mcap 24h)</dt>
+                    <dd className={market.marketCapChangePercent24h >= 0 ? 'up' : 'down'}>
+                      {market.marketCapChangePercent24h >= 0 ? '+' : ''}
+                      {market.marketCapChangePercent24h.toFixed(2)} %
+                    </dd>
+                  </div>
+                  {(() => {
+                    const btc = market.dominance.find((d) => d.symbol.toUpperCase() === 'BTC')
+                    if (!btc) return null
+                    return (
+                      <div>
+                        <dt>Dominance BTC</dt>
+                        <dd className="mono">{btc.percent.toFixed(1)} %</dd>
+                      </div>
+                    )
+                  })()}
+                </dl>
+              ) : null}
+              <Link to="/app/context" className="link">
+                Ouvrir le contexte ↗
+              </Link>
+            </div>
+          )}
+        </CardShell>
+      </div>
+
+      {/* 5. Trajectoire */}
+      <CardShell title="Trajectoire du portefeuille" meta={BASELINE}>
+        {ovError ? (
+          <p className="muted">{ovError}</p>
+        ) : (
+          <EquityChart
+            points={overview?.equity_curve ?? []}
+            initial={acct?.initial_cash ?? 0}
+            period={equityPeriod}
+            onPeriod={setEquityPeriod}
+          />
+        )}
+      </CardShell>
+
+      <div className="desk-grid-2">
+        {/* 6. À surveiller */}
+        <CardShell
+          title="À surveiller"
+          footer={
+            <Link to="/app/opportunites" className="link">
+              Toutes les opportunités ↗
+            </Link>
+          }
+        >
+          {loading && !watchList.length ? (
+            <p className="muted">Chargement…</p>
+          ) : !watchList.length ? (
+            <p className="muted">Aucune opportunité actionnable (BUY/SELL).</p>
+          ) : (
+            <ul className="desk-watch-list">
+              {watchList.map((r) => (
+                <li key={r.symbol}>
+                  <Link to={`/app/opportunites?symbol=${encodeURIComponent(r.symbol)}`}>
+                    <strong>{r.symbol.replace(/USDT$/i, '')}</strong>
+                    <VerdictBadge decision={r.decision} pipeline={r.pipeline} hideDiagnostic />
+                    <span className="mono muted">{(r.confidence * 100).toFixed(0)} %</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardShell>
+
+        {/* 7. Notice fraîcheur — only if issues */}
+        {freshnessIssues.length > 0 ? (
+          <div className="banner desk-freshness" role="status">
+            <strong>Fraîcheur données</strong>
+            <span>
+              {' '}
+              {freshnessIssues.slice(0, 6).join(', ')}
+              {freshnessIssues.length > 6 ? ` (+${freshnessIssues.length - 6})` : ''} — données
+              stale / tardives ou mark position périmé.
+            </span>
+            <Link to="/app/operations" className="link">
+              Voir Opérations ↗
+            </Link>
+          </div>
+        ) : null}
+
+        {/* 8. Positions */}
+        <CardShell
+          title="Positions ouvertes"
+          meta={acct ? `${acct.open_positions} ouvertes` : undefined}
+          footer={
+            <Link to="/app/portefeuille?tab=positions" className="link">
+              Portefeuille ↗
+            </Link>
+          }
+        >
+          {ovError ? (
+            <p className="muted">{ovError}</p>
+          ) : !(overview?.positions.length) ? (
+            <p className="muted">Aucune position ouverte.</p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Actif</th>
+                    <th>Engagé</th>
+                    <th>P&amp;L latent</th>
+                    <th>État</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(overview?.positions ?? []).slice(0, 8).map((p: PaperOverviewPosition) => (
+                    <tr key={p.id ?? p.symbol}>
+                      <td>
+                        <b>{p.symbol.replace(/USDT$/i, '')}</b>
+                        <small className="muted"> {p.direction}</small>
+                      </td>
+                      <td className="mono">
+                        {fmtEur(
+                          p.market_value ??
+                            (p.current_price != null && p.qty != null
+                              ? p.current_price * Math.abs(p.qty)
+                              : null),
+                          0,
+                        )}
+                      </td>
+                      <td
+                        className={`mono ${
+                          (p.unrealized_pnl ?? 0) > 0
+                            ? 'up'
+                            : (p.unrealized_pnl ?? 0) < 0
+                              ? 'down'
+                              : ''
+                        }`}
+                      >
+                        {fmtEur(p.unrealized_pnl, 0)}
+                      </td>
+                      <td>{p.mark_stale ? 'Mark stale' : 'Ouverte'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardShell>
+
+        {/* 9. Budget risque */}
+        <CardShell title="Votre budget de risque">
+          {!risk ? (
+            <p className="muted">{ovError ?? (loading ? 'Chargement…' : 'Risque indisponible.')}</p>
+          ) : (
+            <div className="desk-risk-bars">
+              <div>
+                <div className="desk-risk-label">
+                  <span>Exposition / limite</span>
+                  <span className="mono">
+                    {risk.open_risk_pct != null ? `${(risk.open_risk_pct * 100).toFixed(1)} %` : '—'}
+                    {risk.max_open_risk_pct != null
+                      ? ` / ${(risk.max_open_risk_pct * 100).toFixed(0)} %`
+                      : ''}
+                  </span>
+                </div>
+                <div className="desk-risk-track" aria-hidden>
+                  <i
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        risk.max_open_risk_pct && risk.open_risk_pct != null
+                          ? (risk.open_risk_pct / risk.max_open_risk_pct) * 100
+                          : 0,
+                      )}%`,
+                    }}
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="desk-risk-label">
+                  <span>Slots positions</span>
+                  <span className="mono">
+                    {risk.open_positions} / {risk.max_open_positions}
+                  </span>
+                </div>
+                <div className="desk-risk-track" aria-hidden>
+                  <i
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        risk.max_open_positions
+                          ? (risk.open_positions / risk.max_open_positions) * 100
+                          : 0,
+                      )}%`,
+                    }}
+                  />
+                </div>
+              </div>
+              <p className="desk-note">
+                Perte journalière :{' '}
+                <strong>
+                  {lock?.daily_loss_locked ? 'verrouillée' : 'ouverte'}
+                </strong>
+                {lock?.kill_switch_armed ? ' · kill-switch armé' : ''}
+              </p>
+            </div>
+          )}
+        </CardShell>
+      </div>
+
+      <div className="desk-grid-2">
+        {/* 10. Événements */}
+        <CardShell
+          title="Derniers événements"
+          footer={
+            <Link to="/app/operations" className="link">
+              Historique ↗
+            </Link>
+          }
+        >
+          {tapeError ? (
+            <p className="muted">{tapeError}</p>
+          ) : !tape.length ? (
+            <p className="muted">Aucun événement récent.</p>
           ) : (
             <ul className="ov-tape-list">
               {tape.map((it) => (
@@ -711,48 +878,146 @@ export function OverviewPage() {
               ))}
             </ul>
           )}
-        </section>
+        </CardShell>
 
-        <section className="panel ov-labs" aria-label="Laboratoires paper">
-          <header className="panel-head">
-            <h2>Labs paper</h2>
-            <Link to="/app/portefeuille?tab=positions" className="ghost">
-              Portefeuille →
-            </Link>
-          </header>
-          {labs.length === 0 ? (
-            <p className="muted overview-empty">Aucun portefeuille actif.</p>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Code</th>
-                    <th>Cash</th>
-                    <th>Réalisé</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {labs.slice(0, 8).map((p) => (
-                    <tr key={p.code} className={p.code === BASELINE ? 'is-baseline' : undefined}>
-                      <td>
-                        <strong className="mono">{p.code.replace(/^ICHIVOL_/, '')}</strong>
-                        <span className="muted ov-lab-label"> {p.label}</span>
-                      </td>
-                      <td className="mono">{fmtEur(p.cash, 0)}</td>
-                      <td className={`mono ${p.realized_pnl > 0 ? 'up' : p.realized_pnl < 0 ? 'down' : ''}`}>
-                        {fmtEur(p.realized_pnl, 0)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* 11. Prochain contrôle */}
+        <CardShell title="Le prochain contrôle">
+          <dl className="desk-climate-stats">
+            <div>
+              <dt>Clôture bougie 1H</dt>
+              <dd className="mono">
+                {nextClose.toLocaleTimeString(undefined, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}{' '}
+                <small className="muted">({formatCountdown(nextClose, now)})</small>
+              </dd>
             </div>
-          )}
-        </section>
+            <div>
+              <dt>RVOL BTC</dt>
+              <dd className="mono">
+                {btcRow?.rvol != null ? `${btcRow.rvol.toFixed(2)}×` : '—'}
+              </dd>
+            </div>
+          </dl>
+          {!btcRow && !loading ? (
+            <p className="muted">BTCUSDT absent du screener.</p>
+          ) : null}
+        </CardShell>
+
+        {/* 12. État système */}
+        <CardShell title="État du système">
+          <ul className="desk-system-list">
+            <li>
+              <span>Moteur</span>
+              <strong className={engineOk ? 'up' : 'down'}>
+                {engineOk == null ? '…' : engineOk ? 'OK' : 'Hors ligne'}
+              </strong>
+            </li>
+            <li>
+              <span>Risk Kernel</span>
+              <strong>{risk?.kernel ?? '—'}</strong>
+            </li>
+            <li>
+              <span>Kill-switch</span>
+              <strong>{lock?.kill_switch_armed ? 'Armé' : 'Désarmé'}</strong>
+            </li>
+            <li>
+              <span>Mode</span>
+              <strong>PAPER</strong>
+            </li>
+            <li>
+              <span>Exécution réelle</span>
+              <strong>Désactivée</strong>
+            </li>
+          </ul>
+        </CardShell>
       </div>
 
-      <ContextPanel variant="compact" />
+      {/* 13–14. Anneaux */}
+      <div className="desk-allocation">
+        <CardShell
+          title="Répartition du capital"
+          meta={acct ? fmtEur(acct.equity, 0) : undefined}
+          footer={
+            <Link to="/app/portefeuille" className="link">
+              Voir l’allocation ↗
+            </Link>
+          }
+        >
+          {!acct ? (
+            <p className="muted">{loading ? 'Chargement…' : ovError ?? 'Compte indisponible.'}</p>
+          ) : (
+            <div className="allocation-body">
+              <Ring
+                parts={[{ pct: investedPct, color: '#548f87' }]}
+                center={`${investedPct.toFixed(1)} %`}
+                label="Capital engagé"
+              />
+              <div className="allocation-legend">
+                <div className="statline">
+                  <span>
+                    <i className="legend-dot teal" aria-hidden /> Engagé
+                  </span>
+                  <b className="mono">{fmtEur(acct.invested, 0)}</b>
+                </div>
+                <div className="statline">
+                  <span>
+                    <i className="legend-dot neutral" aria-hidden /> Disponible
+                  </span>
+                  <b className="mono">{fmtEur(acct.cash, 0)}</b>
+                </div>
+                <p className="desk-note">
+                  {acct.equity > 0
+                    ? `${((acct.cash / acct.equity) * 100).toFixed(1)} % du capital reste disponible.`
+                    : null}
+                </p>
+              </div>
+            </div>
+          )}
+        </CardShell>
+
+        <CardShell
+          title="Concentration des positions"
+          footer={
+            <Link to="/app/portefeuille?tab=positions" className="link">
+              Surveiller la concentration ↗
+            </Link>
+          }
+        >
+          {!concentration.length ? (
+            <p className="muted">
+              {loading ? 'Chargement…' : 'Aucune position valorisée pour calculer la concentration.'}
+            </p>
+          ) : (
+            <div className="allocation-body">
+              <Ring
+                parts={concentration.slice(0, 5).map((c, i) => ({
+                  pct: c.pct,
+                  color: RING_COLORS[i % RING_COLORS.length],
+                }))}
+                center={String(concentration.length)}
+                label="Positions"
+              />
+              <div className="allocation-legend">
+                {concentration.slice(0, 5).map((c, i) => (
+                  <div key={c.symbol} className="statline concentration-row">
+                    <span>
+                      <i
+                        className="legend-dot"
+                        style={{ background: RING_COLORS[i % RING_COLORS.length] }}
+                        aria-hidden
+                      />
+                      {c.symbol}
+                    </span>
+                    <b className="mono">{c.pct.toFixed(1)} %</b>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardShell>
+      </div>
     </div>
   )
 }

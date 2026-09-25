@@ -21,6 +21,16 @@ export interface DecisionPipelinePayload {
   }>
 }
 
+/** T11a — observation qualité bougies (screener summary). */
+export interface ScreenerDataQuality {
+  version?: string
+  ok?: boolean
+  gate?: string
+  issue_codes?: string[]
+  stale?: boolean
+  data_late?: boolean
+}
+
 export interface ScreenerDecisionRow {
   symbol: string
   timeframe: string
@@ -35,6 +45,8 @@ export interface ScreenerDecisionRow {
   pipeline?: DecisionPipelinePayload
   /** T9f Lab snapshot — observation only (watchlist Contexte badges). */
   lab_context?: LabContextPayload
+  /** T11a — stale / data_late pour notice fraîcheur Desk. */
+  data_quality?: ScreenerDataQuality | null
 }
 
 export interface AgentDetail {

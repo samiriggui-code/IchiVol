@@ -15,6 +15,13 @@ import {
   type EvidenceOutcomes,
 } from '../lib/activity'
 import { getShadowStats, type ShadowStats } from '../lib/paper'
+import { getScreener, type ScreenerDecisionRow } from '../lib/decisions'
+import { getBacktestEvidence, type BacktestEvidenceSummary } from '../lib/backtest'
+import {
+  Circuit24Strip,
+  EvidenceOpsCard,
+  PipelineHealthCard,
+} from '../components/desk/DeskRelocatedCards'
 import './ActivityPage.css'
 
 type Filter = 'all' | 'paper' | 'shadow' | 'backtest'
@@ -140,16 +147,20 @@ export function ActivityPage() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<Filter>('all')
   const [openRun, setOpenRun] = useState<string | null>(null)
+  const [screenerRows, setScreenerRows] = useState<ScreenerDecisionRow[]>([])
+  const [evidenceSummary, setEvidenceSummary] = useState<BacktestEvidenceSummary | null>(null)
 
   const load = useCallback(async () => {
     try {
-      const [s, f, r, sh, oc, cov] = await Promise.all([
+      const [s, f, r, sh, oc, cov, scr, ev] = await Promise.all([
         getActivitySummary(),
         getActivityFeed(150),
         getBacktestRuns(30),
         getShadowStats().catch(() => null),
         getEvidenceOutcomes().catch(() => null),
         getBacktestCoverage().catch(() => null),
+        getScreener('1h').catch(() => null),
+        getBacktestEvidence().catch(() => null),
       ])
       setSummary(s)
       setFeed(f.items)
@@ -157,6 +168,8 @@ export function ActivityPage() {
       setShadow(sh)
       setOutcomes(oc)
       setCoverage(cov)
+      setScreenerRows(scr?.rows ?? [])
+      setEvidenceSummary(ev)
       setError(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Activité indisponible')
@@ -228,6 +241,14 @@ export function ActivityPage() {
           {error}
         </div>
       )}
+
+      <div className="desk-relocated-stack">
+        <Circuit24Strip summary={summary} loading={loading} />
+        <div className="desk-relocated-row">
+          <PipelineHealthCard rows={screenerRows} loading={loading} />
+          <EvidenceOpsCard evidence={evidenceSummary} summary={summary} loading={loading} />
+        </div>
+      </div>
 
       <section className="act-circuit" aria-label="Le circuit automatique">
         <CircuitCard

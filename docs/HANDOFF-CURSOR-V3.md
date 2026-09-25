@@ -7,6 +7,20 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — UI-P1 Desk maquette (option A) — PR #96
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/96 — branche `cursor/ui-p1-desk-maquette-a2fe`
+- **Périmètre front only** — Desk conforme maquette ; `engine/` · `server/` intouchés.
+- Desk : KPI paper · sessions Tokyo/Londres/NY (**IANA** `Asia/Tokyo` · `Europe/London` · `America/New_York`, horaires locaux 09–18 / 08–17 / 09:30–16, week-end **par place**, DST auto) · marchés screener + variation Binance · lecture CoinGecko/F&G · equity 1J/1S/1M/3M · à surveiller · notice fraîcheur · positions · budget risque · tape · prochain contrôle 1H + RVOL BTC · état système (`/api/engine/health` + risk-lock) · anneaux.
+- Relocalisation : Market pulse → Opportunités ; Pipeline / Circuit 24h / Preuves → Opérations ; Labs paper → Portefeuille.
+- Tests : `npm run lint` / `npm run build` ; `scripts/check-market-sessions.mjs` (été + DST Londres 23/26 oct + NY 30 oct/2 nov + ven/dim soir UTC) ; `scripts/smoke-ui-p1-desk.mjs` — **PASS**.
+- Captures (repo) : [`docs/ui-p1/01-desk-desktop.png`](./ui-p1/01-desk-desktop.png) · [`docs/ui-p1/02-desk-mobile-390.png`](./ui-p1/02-desk-mobile-390.png)
+
+### Suite
+Merge + déploiement VPS → portage pages suivantes selon `UI-MAQUETTE-GAP.md`.
+
+---
+
 ## 2026-09-25 — VPS déployé UI-11p — tip `35ddce0`
 
 - **FQDN** : https://ichivol.global-it-ss.com — stack rebuild (`web`/`server`/`engine`) depuis `main` @ `35ddce0`
