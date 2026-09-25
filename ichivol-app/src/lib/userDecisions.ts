@@ -66,6 +66,19 @@ export async function patchUserDecisionStatus(
   return res.json() as Promise<UserDecisionRow>
 }
 
+/** Note personnelle — PATCH par id (pas d’upsert : pas de doublon archivé). */
+export async function patchUserDecisionNote(id: string, note: string): Promise<UserDecisionRow> {
+  const trimmed = note.trim().slice(0, 500)
+  const res = await fetch(`/api/decisions/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ note: trimmed }),
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+  return res.json() as Promise<UserDecisionRow>
+}
+
 export async function deleteUserDecision(id: string): Promise<void> {
   const res = await fetch(`/api/decisions/${encodeURIComponent(id)}`, {
     method: 'DELETE',

@@ -364,7 +364,7 @@ export function ActivityPage() {
           </p>
         </div>
         <div className="market-class-tabs">
-          <Link to="/app/strategy-lab" className="ghost">
+          <Link to="/app/strategy-lab" className="link">
             Strategy Lab →
           </Link>
           <button type="button" onClick={() => void load()} disabled={loading}>
@@ -383,7 +383,12 @@ export function ActivityPage() {
         <Circuit24Strip summary={summary} loading={loading} />
         <div className="desk-relocated-row">
           <PipelineHealthCard rows={screenerRows} loading={loading} />
-          <EvidenceOpsCard evidence={evidenceSummary} summary={summary} loading={loading} />
+          <EvidenceOpsCard
+            evidence={evidenceSummary}
+            summary={summary}
+            loading={loading}
+            showOpsLink={false}
+          />
         </div>
       </div>
 
@@ -425,7 +430,13 @@ export function ActivityPage() {
           title="Backtests"
           what="Collecte quotidienne · 5 méthodes · couverture actuelle (souvent crypto)."
           value={summary ? `${fmtInt(summary.backtest.runs_total)} runs` : '…'}
-          sub={summary ? `dernier ${fmtAgo(summary.backtest.last_at)}` : ''}
+          sub={
+            summary
+              ? summary.backtest.last_at
+                ? `dernier ${fmtAgo(summary.backtest.last_at)}`
+                : 'Aucun run'
+              : ''
+          }
           state={summary && summary.backtest.runs_total > 0 ? 'ok' : 'warn'}
         />
         <CircuitCard

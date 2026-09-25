@@ -14,6 +14,7 @@ import {
   confirmUserDecision,
   deleteUserDecision,
   listUserDecisions,
+  patchUserDecisionNote,
   patchUserDecisionStatus,
   type UserDecisionRow,
 } from '../lib/userDecisions'
@@ -269,20 +270,8 @@ export function JournalPage() {
     setInfo(null)
     try {
       const note = noteDraft.trim().slice(0, NOTE_MAX)
-      const updated = await confirmUserDecision({
-        symbol: row.symbol,
-        interval: row.interval,
-        bias: row.bias,
-        rvol: row.rvol,
-        signalKind: row.signalKind ?? undefined,
-        gateDecision: row.gateDecision ?? undefined,
-        confidence: row.confidence ?? undefined,
-        note: note || undefined,
-      })
-      setRows((prev) =>
-        prev.map((r) => (r.id === row.id || r.id === updated.id ? { ...updated } : r)),
-      )
-      setSelectedId(updated.id)
+      const updated = await patchUserDecisionNote(row.id, note)
+      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...updated } : r)))
       setNoteDraft(updated.note ?? '')
       setInfo('Note enregistrée.')
     } catch (err: unknown) {
