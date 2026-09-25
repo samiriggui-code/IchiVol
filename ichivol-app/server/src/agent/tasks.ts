@@ -156,6 +156,30 @@ export async function failTask(taskId: string, error: string): Promise<boolean> 
   return count > 0
 }
 
+/**
+ * E1 — push dueAt forward and release lease without completing.
+ * Used for stale/data_late (no LLM wake) and condition deferred to E2.
+ */
+export async function deferTask(
+  taskId: string,
+  newDueAt: Date,
+  reason: string,
+): Promise<boolean> {
+  const { count } = await db.agentTask.updateMany({
+    where: {
+      id: taskId,
+      status: { in: [TASK_STATUS.leased, TASK_STATUS.pending] },
+    },
+    data: {
+      status: TASK_STATUS.pending,
+      leaseUntil: null,
+      dueAt: newDueAt,
+      error: reason.slice(0, 2000),
+    },
+  })
+  return count > 0
+}
+
 /** Release expired leases so claimDue can pick them up again (crash recovery). */
 export async function releaseStaleLeases(limit: number = TASK_STALE_SCAN): Promise<number> {
   const now = new Date()

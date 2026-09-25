@@ -2,6 +2,12 @@ import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import express from 'express'
 import { handleConfirmAgentAction } from './agent/actionsRoute.js'
+import {
+  handleCreateAgentMission,
+  handleListAgentLogs,
+  handleListAgents,
+  handleListAgentTasks,
+} from './agent/agentsRoute.js'
 import { handleAgentChat } from './agent/route.js'
 import { handleAgentRuntimePoke } from './agent/runtimePokeRoute.js'
 import { startAgentTaskWorker } from './agent/runtime/dispatcher.js'
@@ -76,6 +82,11 @@ app.get('/api/agent/threads', requireAuth, handleListAgentThreads)
 app.get('/api/agent/threads/:id', requireAuth, handleGetAgentThread)
 /** E0 poke — Bearer AGENT_BRIDGE_SECRET (not session auth). */
 app.post('/api/agent/runtime/poke', handleAgentRuntimePoke)
+/** E1 — agent control stubs (UI later); Eve chat remains Copilot threads. */
+app.get('/api/agents', requireAuth, handleListAgents)
+app.get('/api/agents/logs', requireAuth, handleListAgentLogs)
+app.get('/api/agents/:id/tasks', requireAuth, handleListAgentTasks)
+app.post('/api/agents/missions', requireAuth, handleCreateAgentMission)
 
 app.get('/api/engine/*', requireAuth, proxyToEngine)
 app.post('/api/engine/*', requireAuth, proxyToEngine)

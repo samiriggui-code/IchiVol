@@ -7,6 +7,26 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — Chantier 2 E1 Eve runtime (P1) — draft
+
+- Branche `cursor/eve-runtime-a2fe` (suite E0 @ `cac24f4` / tip handoff précédent)
+- **E1 livré (server only, paper)** :
+  1. Outil `schedule_recheck` (reason ≥10, next_closed_candle +60s, upsert open recheck) + wiring Claude tools
+  2. Skills markdown on-demand (`server/src/agent/skills/*.md` + `loadSkills`)
+  3. Missions **1 symbole** (`createMission`) — Eve chat = **threads Copilot** (pas de 2e chat)
+  4. `missionRunner` : gate fraîcheur `stale`/`data_late` → **pas de wake LLM**, defer + log ; condition → defer E2 (plus de stub-complete)
+  5. API stubs : `GET /api/agents`, `GET /api/agents/:id/tasks`, `GET /api/agents/logs`, `POST /api/agents/missions`
+- Garde-fous : paper only ; LLM sans DB/broker direct ; `humanConfirmDefault` / `autoOpen: false`
+- Tests : `npm test` dans `ichivol-app/server` — **56 pass** (E0 + E1 `e1Runtime.test.ts`)
+- **Draft PR #111 — pas de merge**
+
+### Gaps / suite E2
+1. `evaluate_watch_condition` engine (RVOL/ADX/pipeline DSL) — wake LLM seulement si met
+2. Budget LLM journalier / max rechecks symbole (contrainte partielle via upsert)
+3. UI AgentsPage brancher sur `/api/agents*`
+
+---
+
 ## 2026-09-25 — Chantier 2 E0 Eve runtime (P0) — draft
 
 - Branche `cursor/eve-runtime-a2fe` depuis `main` @ `225549d` (#109 squash-merged)

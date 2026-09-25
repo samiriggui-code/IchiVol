@@ -595,3 +595,20 @@ Livré (server only, paper) :
 | Tests | `server/src/agent/tasks.test.ts` |
 
 **Hors E0 (suivi)** : `schedule_recheck` tool (E1) ; `evaluate_watch_condition` engine (E2) ; `missionRunner` LLM wake ; `execution_gateway` ; UI Agents.
+
+---
+
+## Implémentation E1 / P1 (2026-09-25) — même branche `cursor/eve-runtime-a2fe`
+
+| Pièce | Emplacement |
+|---|---|
+| `schedule_recheck` | `server/src/agent/tools/scheduleRecheck.ts` + wiring `claudeAgent.ts` |
+| next_closed_candle +60s | `server/src/agent/candleDue.ts` |
+| Skills on-demand | `server/src/agent/skills/*.md` + `loadSkills.ts` |
+| Mission 1 symbole | `server/src/agent/missions.ts` |
+| missionRunner + freshness gate | `runtime/missionRunner.ts`, `runtime/dataQualityGate.ts` |
+| deferTask (no LLM) | `tasks.ts` |
+| API stubs | `agentsRoute.ts` → `/api/agents*` |
+| Tests | `e1Runtime.test.ts` |
+
+**Hors E1 (suivi E2+)** : `evaluate_watch_condition` DSL engine ; execution_gateway ; UI Agents.
