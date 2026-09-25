@@ -7,6 +7,16 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — Outil de contrôle maquette ↔ app (Claude)
+
+- `ichivol-app/scripts/compare-maquette.mjs` : pour les 11 pages, en 1440 et 390, relève chaque classe CSS du contenu de la maquette et vérifie dans l'app présence, taille/graisse/famille de police, hauteur (±4 px). Rapport `docs/ui-port/compare/RAPPORT.md` + détail JSON par page. Code de sortie 1 s'il reste un écart.
+- Classes d'état/données (up, down, active, green…) et graphiques SVG de démo : non exigées, comparées si présentes.
+- Validé par Claude : Marché (#108 + patchs) = **0 écart** en 1440 et 390 ; Desk non porté = 50 écarts.
+- Dépendance : `npm i -D puppeteer-core@23` dans `ichivol-app/` (pas dans ce commit, pour ne pas figer le lockfile ici).
+- Règle : aucune page n'est « conforme » tant que ce script ne renvoie pas 0 écart pour elle.
+
+---
+
 ## 2026-09-25 — UI-port Marché (#108) — correctif Claude n°2 (portes + bouton)
 
 - Base : `pr/108` @ `8203b04`
