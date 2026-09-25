@@ -808,7 +808,7 @@ export function OverviewPage() {
               ? `${freshnessIssues.slice(0, 4).join(', ')}${
                   freshnessIssues.length > 4 ? ` (+${freshnessIssues.length - 4})` : ''
                 } : fraîcheur ou mark périmé.`
-              : '—'}
+              : 'Pas d’alerte fraîcheur pour le moment.'}
           </span>
           <Link to="/app/operations">Vérifier →</Link>
         </div>
