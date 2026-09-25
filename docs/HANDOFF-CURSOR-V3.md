@@ -7,15 +7,16 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-25 — UI-P4 remaining — PR #103 (rebasée post fix-opps)
+## 2026-09-25 — UI-P4 MERGÉE (#103) + VPS
 
-- PR : https://github.com/samiriggui-code/IchiVol/pull/103
+- PR : https://github.com/samiriggui-code/IchiVol/pull/103 — squash merge après smoke PASS
 - Branche : `cursor/ui-p4-remaining-a2fe`
-- **Périmètre front only** — Marché · Strategy Lab · Contexte · Copilot · Agents · Paramètres · pill PAPER
-- Base : `main` @ `fbfe3f2` (fix opps sheet #105)
+- Pages : Marché · Strategy Lab · Contexte · Copilot · Agents · Paramètres · pill PAPER
+- Smoke desktop+mobile 390 + 11 pages + Plus — **PASS** · captures [`docs/ui-p4/`](./ui-p4/)
+- Base : `main` @ `fbfe3f2` (fix opps #105) puis tip post-merge
 
 ### Suite
-Smoke P4 → merge squash + VPS si PASS. Nettoyage front ensuite (draft). **Pas** de runtime agents.
+Nettoyage front (`ui-clean`) en **PR draft** — ne pas merger avant Claude. **Pas** de runtime agents.
 
 ---
 

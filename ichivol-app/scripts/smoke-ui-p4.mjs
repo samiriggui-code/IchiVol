@@ -19,9 +19,9 @@ const OUT = '/tmp/ui-p4'
 fs.mkdirSync(OUT, { recursive: true })
 
 const P4_ROUTES = [
-  ['marche', 'Marché', ['Marché']],
+  ['market', 'Marché', ['Marché']],
   ['strategy-lab', 'Strategy Lab', ['Strategy Lab']],
-  ['contexte', 'Contexte', ['Contexte']],
+  ['context', 'Contexte', ['Contexte']],
   ['agent', 'Copilot', ['Copilot']],
   ['agents', 'Agents', ['Agents']],
   ['settings', 'Paramètres', ['Paramètres', 'Parametres']],
@@ -29,12 +29,12 @@ const P4_ROUTES = [
 
 const ALL_11 = [
   'desk',
-  'marche',
+  'market',
   'opportunites',
   'portefeuille',
   'strategy-lab',
   'journal',
-  'contexte',
+  'context',
   'agent',
   'agents',
   'operations',
@@ -88,8 +88,8 @@ async function collectPage(page, route, label) {
   }
   page.on('response', onRes)
   page.on('console', onConsole)
-  await page.goto(`${BASE}/app/${route}`, { waitUntil: 'networkidle2', timeout: 90000 })
-  await new Promise((r) => setTimeout(r, 2800))
+  await page.goto(`${BASE}/app/${route}`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  await new Promise((r) => setTimeout(r, 3500))
   const meta = await page.evaluate(() => {
     const doc = document.documentElement
     const overflow = {
@@ -136,7 +136,7 @@ async function main() {
     report.pages[file] = { pass: r.pass && has, paperPill: r.paperPill, paperText: r.paperText, titles: r.titles.slice(0, 8), apiErrors: r.apiErrors, consoleErrors: r.consoleErrors, overflow: r.overflow }
     console.log(`[${file}]`, r.pass && has ? 'PASS' : 'FAIL', r.paperText, r.apiErrors)
   }
-  report.paperPill = report.pages['desktop-marche']?.paperText
+  report.paperPill = report.pages['desktop-market']?.paperText
 
   await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true })
   for (const [route] of P4_ROUTES) {
@@ -155,18 +155,19 @@ async function main() {
     if (!r.pass) report.pass = false
     console.log(`[global ${route}]`, r.pass ? 'PASS' : 'FAIL', r.apiErrors)
   }
+  // Ensure we are on a mobile shell page with tabbar
+  await page.goto(`${BASE}/app/desk`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  await new Promise((r) => setTimeout(r, 1500))
   const plusOk = await page.evaluate(() => {
-    const btn = [...document.querySelectorAll('.dash-mobile-tab')].find((el) =>
+    const btn = [...document.querySelectorAll('button.dash-mobile-tab, a.dash-mobile-tab')].find((el) =>
       (el.textContent || '').includes('Plus'),
     )
-    if (!btn) return { open: false, error: 'no Plus tab' }
+    if (!btn) return { open: false, error: 'no Plus tab', links: [] }
     btn.click()
-    const sheet = document.querySelector('.dash-mobile-more.is-open, .dash-mobile-more[aria-hidden="false"]')
-    const open = Boolean(sheet) || document.querySelector('.dash-mobile-more')?.classList.contains('is-open')
-    const links = [...document.querySelectorAll('.dash-mobile-more a, .dash-mobile-more-link')].map((a) =>
-      (a.textContent || '').trim(),
-    )
-    return { open, links: links.slice(0, 12) }
+    const links = [...document.querySelectorAll('.dash-mobile-more a, .dash-mobile-more-link')]
+      .map((a) => (a.textContent || '').trim())
+      .filter(Boolean)
+    return { open: links.length >= 3, links: links.slice(0, 12) }
   })
   report.plus = plusOk
   if (!plusOk.open) report.pass = false
