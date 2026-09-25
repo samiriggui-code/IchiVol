@@ -23,15 +23,17 @@
   --shadow-lg: 0 4px 8px rgba(20, 18, 30, 0.04), 0 18px 48px rgba(20, 18, 30, 0.06);
   color-scheme: light;
 
-  /* Sémantique trading — aligné design-reference IchiVol */
-  --bull: #0b8f83;
-  --bear: #c8412f;
+  /* Sémantique trading — maquette ichivol-workspace (candles / TK) */
+  --bull: #318d80;
+  --bear: #bf6c61;
   --neutral: #a76c17;
   --weak: #9aa1ab;
-  --tenkan: #c9702f;
-  --kijun: #4f8fc0;
-  --span-a: var(--bull);
-  --span-b: var(--bear);
+  --tenkan: #a4a9c2;
+  --kijun: #baa37e;
+  --span-a: #7a9e90;
+  --span-b: #b08a7a;
+  --cloud: #d5e8df;
+  --chart-grid: #eeece7;
   --amber: #a76c17;
 }
 
@@ -55,13 +57,15 @@ html.dark {
   --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.18);
   color-scheme: dark;
 
-  --bull: #2dd4bf;
-  --bear: #f07167;
+  --bull: #3aa99a;
+  --bear: #d48478;
   --neutral: #e8b86d;
   --weak: #5b6b73;
-  --tenkan: #f4a261;
-  --kijun: #7eb8da;
-  --span-a: var(--bull);
-  --span-b: var(--bear);
+  --tenkan: #b8bdd4;
+  --kijun: #cbb892;
+  --span-a: #6a9e8e;
+  --span-b: #c49488;
+  --cloud: #2a3d36;
+  --chart-grid: #2a3038;
   --amber: #e8b86d;
 }
