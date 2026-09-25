@@ -39,6 +39,16 @@ Compte test : `ui11p-smoke@ichivol.local`. Script : `ichivol-app/scripts/smoke-u
 
 Bruit unique observé : `POST /api/settings/llm-test` → **422** (pas de clé LLM dans `.env`) — attendu, non bloquant pour les pages.
 
+#### Mobile ≤768 px (viewport **390×844**)
+Script : `ichivol-app/scripts/smoke-ui11p-mobile.mjs` · captures `/opt/cursor/artifacts/ui11p-mobile/`.
+
+| Check | Verdict | Détail |
+|---|---|---|
+| Barre du bas | **PASS** | Desk · Opportunités · Portefeuille · Copilot · Plus (`display:grid`, largeur 390) |
+| Plus ouvrir | **PASS** | sheet + backdrop ; liens Marché, Strategy Lab, Journal, Contexte, Agents, Opérations, Paramètres |
+| Plus fermer | **PASS** | clic backdrop → sheet fermé (`hidden` / sans `is-open`) |
+| Overflow horizontal | **PASS** | 11/11 routes : `scrollWidth=390`, 0 offender hors viewport |
+
 #### Actions
 | Action | Verdict | Détail |
 |---|---|---|
