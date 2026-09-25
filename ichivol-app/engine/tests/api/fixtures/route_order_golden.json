@@ -346,6 +346,13 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/cycle/{symbol}",
+    "endpoint": "get_cycle_state"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/paper/positions",
     "endpoint": "list_paper_positions"
   },

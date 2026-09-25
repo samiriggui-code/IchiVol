@@ -15,6 +15,7 @@ from app.api import backtest as backtest_routes
 from app.api import backtest_overlay as backtest_overlay_routes
 from app.api import chart_objects as chart_objects_routes
 from app.api import context as context_routes
+from app.api import cycle as cycle_routes
 from app.api import decisions as decisions_routes
 from app.api import market as market_routes
 from app.api import paper as paper_routes
@@ -32,6 +33,7 @@ router = APIRouter()
 # Original order of routes formerly defined in this module (see T1g golden).
 # T2a: chart_objects appended at the end of engine routes (before /health on main).
 # T4a: backtest-overlay after strategy-lab (additions only in route_order golden).
+# T-CYCLE: cycle observe-only after correlations (additive; never touches pipeline).
 for _sub in (
     market_routes.router_head,
     context_routes.router,
@@ -46,6 +48,7 @@ for _sub in (
     strategy_lab_research_routes.router,
     backtest_routes.router_symbol,
     market_routes.router_correlations,
+    cycle_routes.router,
     paper_routes.router_before_shadow,
     backtest_routes.router_shadow,
     paper_orders_routes.router_after_shadow,

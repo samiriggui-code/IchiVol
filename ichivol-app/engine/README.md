@@ -252,6 +252,10 @@ Pas encore fait : `volatility_agent`/`structure_agent` comme `StrategyAgentOutpu
 
 Stateless comme `/backtest` : recalculée à chaque appel sur l'historique dispo, rien de caché ni persisté.
 
+## Cycle / Spectral Engine (T-CYCLE, V0, observe-only)
+
+`app/cycle/` — FFT + Hilbert/Ehlers-style + ACF → `CycleState` (période, phase, stabilité, régime). Stdlib only, causal, **jamais** branché sur le pipeline. Ref : `docs/CYCLE_ENGINE_AUDIT.md`.
+
 ## Routes
 
 ```
@@ -262,6 +266,7 @@ GET  /api/engine/decisions/{symbol}?timeframe=1h&persist=true
 POST /api/engine/decisions/batch
 GET  /api/engine/backtest/{symbol}?timeframe=1h&limit=1000
 GET  /api/engine/correlations?timeframe=1h&method=log_returns&symbols=
+GET  /api/engine/cycle/{symbol}?timeframe=1h&limit=300&window=128
 GET  /api/engine/agent/tools
 GET  /api/engine/agent/capabilities
 POST /api/engine/agent/command
