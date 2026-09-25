@@ -7,6 +7,20 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — Fix thème farci dark/light (draft → merge autonome)
+
+- Branche `cursor/theme-fix-a2fe` depuis `main` @ `225549d`
+- **Cause** : shell (`camap-tokens` html.dark) sombre + pages maquette figent `--bg/--card/--ink` en clair → cartes crème sur fond noir
+- **Fix** : `theme/maquette-theme.css` resync vars + surfaces sous `html.dark` pour les 11 `*-page` ; défaut thème = **light** (ignore prefers-color-scheme iOS) ; `theme-color` meta dynamique
+- Smoke `scripts/smoke-theme-switch.mjs` : dark + light → shell/card même famille (**PASS**)
+- compare-maquette : 10 pages 0 ; desk écarts `.up`/notice data-dépendants (hors thème, script non modifié)
+- **VPS** : déployer après merge — corrige le téléphone Samir (Opérations)
+
+### Suite
+Chantiers fiches (#110) + Eve (#111) continuent en parallèle.
+
+---
+
 ## 2026-09-25 — UI-port (#109) — correctifs bugs avant merge
 
 - Branche `cursor/ui-port-pages-a2fe` (même PR #109 draft)
