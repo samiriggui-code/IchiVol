@@ -20,18 +20,112 @@
   padding: 0 0.75rem 0.75rem;
 }
 
-.ctx-climate .context-grid,
-.ctx-regime-grid {
+.ctx-climate-kpis {
+  margin-bottom: 0.15rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+@media (max-width: 900px) {
+  .ctx-climate-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.ctx-climate-kpis .iv-metric-value {
+  font-size: clamp(0.95rem, 1.6vw, 1.3rem);
+}
+
+.ctx-climate .context-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.45rem;
   padding: 0 0.75rem 0.75rem;
 }
 @media (max-width: 800px) {
-  .ctx-climate .context-grid,
-  .ctx-regime-grid {
+  .ctx-climate .context-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.ctx-regime-badges {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.ctx-regime-row {
+  display: grid;
+  grid-template-columns: 6.5rem auto 1fr;
+  align-items: center;
+  gap: 0.55rem 0.75rem;
+}
+@media (max-width: 640px) {
+  .ctx-regime-row {
+    grid-template-columns: 1fr auto;
+  }
+  .ctx-regime-detail {
+    grid-column: 1 / -1;
+  }
+}
+.ctx-regime-class {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.ctx-regime-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 5.5rem;
+  padding: 0.18rem 0.45rem;
+  border-radius: 3px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  color: var(--muted-foreground, var(--muted));
+  background: color-mix(in srgb, var(--muted-foreground, #888) 8%, transparent);
+}
+.ctx-regime-badge.is-pass {
+  color: var(--bull);
+  border-color: color-mix(in srgb, var(--bull) 35%, var(--border));
+  background: color-mix(in srgb, var(--bull) 10%, transparent);
+}
+.ctx-regime-badge.is-caution {
+  color: var(--neutral, #b8860b);
+  border-color: color-mix(in srgb, var(--neutral, #b8860b) 40%, var(--border));
+  background: color-mix(in srgb, var(--neutral, #b8860b) 12%, transparent);
+}
+.ctx-regime-badge.is-neutral {
+  color: var(--muted-foreground, var(--muted));
+}
+.ctx-regime-badge.is-unavailable {
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 0.68rem;
+}
+.ctx-regime-detail {
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+
+.ctx-vigilance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0 0.75rem 0.85rem;
+}
+.ctx-vigilance-item b {
+  display: block;
+  font-size: 0.82rem;
+  margin-bottom: 0.2rem;
+}
+.ctx-vigilance-item p {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--muted-foreground, var(--muted));
 }
 
 .context-feeds.is-cal-first .context-feeds-grid.is-single {

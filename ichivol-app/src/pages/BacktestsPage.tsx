@@ -3,6 +3,10 @@ import { BacktestRunsList } from '../components/BacktestRunsPanel'
 import { LabResearchPanel } from '../components/LabResearchPanel'
 import './BacktestsPage.css'
 import {
+  getBacktestCoverage,
+  type BacktestCoverage,
+} from '../lib/activity'
+import {
   compareStoredRulesets,
   getAblation,
   getBacktestComparison,
@@ -52,13 +56,157 @@ const TIMEFRAMES = ['15m', '1h', '4h', '1d']
 
 type LabTab = 'compare' | 'regimes' | 'experiments' | 'live' | 'research'
 
+/** Maquette labels mapped onto existing views (content unchanged). */
 const LAB_TABS: { id: LabTab; label: string }[] = [
-  { id: 'compare', label: 'Compare' },
-  { id: 'regimes', label: 'Regimes' },
-  { id: 'experiments', label: 'Experiments' },
-  { id: 'live', label: 'Live' },
+  { id: 'compare', label: 'Backtests' },
+  { id: 'regimes', label: 'Régimes' },
+  { id: 'experiments', label: 'Expériences' },
+  { id: 'live', label: 'Ablations / WF' },
   { id: 'research', label: 'Research' },
 ]
+
+const IDEA_TO_PROOF_STEPS: { title: string; body: string }[] = [
+  { title: 'Hypothèse', body: 'Définir ce que l’on cherche à améliorer.' },
+  { title: 'Backtest', body: 'Mesurer rendement, risque et coûts.' },
+  { title: 'Walk-forward', body: 'Vérifier hors échantillon.' },
+  { title: 'Paper', body: 'Observer avant toute exécution réelle.' },
+]
+
+type EquitySeries = { label: string; points: number[] }
+
+function asRecord(v: unknown): Record<string, unknown> | null {
+  return v != null && typeof v === 'object' && !Array.isArray(v)
+    ? (v as Record<string, unknown>)
+    : null
+}
+
+/** Pull numeric equity path from a payload field if present (no invention). */
+function pointsFromUnknown(raw: unknown): number[] | null {
+  if (!Array.isArray(raw) || raw.length < 2) return null
+  const nums: number[] = []
+  for (const item of raw) {
+    if (typeof item === 'number' && Number.isFinite(item)) {
+      nums.push(item)
+      continue
+    }
+    if (Array.isArray(item) && typeof item[1] === 'number' && Number.isFinite(item[1])) {
+      nums.push(item[1] as number)
+      continue
+    }
+    const row = asRecord(item)
+    if (!row) return null
+    const v =
+      typeof row.equity === 'number'
+        ? row.equity
+        : typeof row.value === 'number'
+          ? row.value
+          : typeof row.v === 'number'
+            ? row.v
+            : null
+    if (v == null || !Number.isFinite(v)) return null
+    nums.push(v)
+  }
+  return nums.length >= 2 ? nums : null
+}
+
+function collectEquitySeries(payloads: unknown[]): EquitySeries[] {
+  const out: EquitySeries[] = []
+  const seen = new Set<string>()
+
+  function visit(node: unknown, fallbackLabel: string, depth: number) {
+    if (depth > 4 || node == null) return
+    if (Array.isArray(node)) {
+      const pts = pointsFromUnknown(node)
+      if (pts) {
+        const key = `${fallbackLabel}:${pts.length}:${pts[0]}:${pts[pts.length - 1]}`
+        if (!seen.has(key)) {
+          seen.add(key)
+          out.push({ label: fallbackLabel, points: pts })
+        }
+      }
+      return
+    }
+    const rec = asRecord(node)
+    if (!rec) return
+    for (const key of ['equity_curve', 'equity_series'] as const) {
+      if (!(key in rec)) continue
+      const pts = pointsFromUnknown(rec[key])
+      if (pts) {
+        const label =
+          typeof rec.name === 'string'
+            ? rec.name
+            : typeof rec.ruleset_id === 'string'
+              ? rec.ruleset_id
+              : typeof rec.variant === 'string'
+                ? rec.variant
+                : fallbackLabel
+        const id = `${label}:${pts.length}:${pts[0]}:${pts[pts.length - 1]}`
+        if (!seen.has(id)) {
+          seen.add(id)
+          out.push({ label, points: pts })
+        }
+      }
+    }
+    if (rec.experiments && typeof rec.experiments === 'object') {
+      for (const [name, exp] of Object.entries(rec.experiments as Record<string, unknown>)) {
+        visit(exp, name, depth + 1)
+        const er = asRecord(exp)
+        if (er?.backtest) visit(er.backtest, name, depth + 1)
+      }
+    }
+    if (Array.isArray(rec.steps)) {
+      for (const step of rec.steps) {
+        const sr = asRecord(step)
+        visit(step, typeof sr?.label === 'string' ? sr.label : fallbackLabel, depth + 1)
+      }
+    }
+  }
+
+  for (const p of payloads) visit(p, 'Série', 0)
+  return out
+}
+
+function EquitySparkline({ series }: { series: EquitySeries[] }) {
+  const w = 320
+  const h = 96
+  const pad = 6
+  const colors = ['var(--bull)', 'var(--muted-foreground)', 'var(--primary)']
+  return (
+    <div className="bt-equity-chart" aria-hidden>
+      <svg viewBox={`0 0 ${w} ${h}`} className="bt-equity-svg" role="img">
+        {series.slice(0, 3).map((s, si) => {
+          const min = Math.min(...s.points)
+          const max = Math.max(...s.points)
+          const span = max - min || 1
+          const d = s.points
+            .map((v, i) => {
+              const x = pad + (i / (s.points.length - 1)) * (w - pad * 2)
+              const y = h - pad - ((v - min) / span) * (h - pad * 2)
+              return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`
+            })
+            .join(' ')
+          return (
+            <path
+              key={`${s.label}-${si}`}
+              d={d}
+              fill="none"
+              stroke={colors[si % colors.length]}
+              strokeWidth={1.6}
+              strokeDasharray={si === 2 ? '4 3' : undefined}
+            />
+          )
+        })}
+      </svg>
+      <div className="bt-equity-legend">
+        {series.slice(0, 3).map((s, si) => (
+          <span key={`${s.label}-${si}`} style={{ color: colors[si % colors.length] }}>
+            — {s.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 const REGIME_FILTERS = ['ALL', 'GLOBAL', 'TRENDING', 'RANGING', 'HIGH_VOL', 'LOW_VOL', 'BULL', 'BEAR'] as const
 
@@ -238,6 +386,8 @@ export function BacktestsPage() {
   const [dbLoading, setDbLoading] = useState(false)
   const [dbError, setDbError] = useState<string | null>(null)
   const [regimeFilter, setRegimeFilter] = useState<(typeof REGIME_FILTERS)[number]>('ALL')
+  const [coverage, setCoverage] = useState<BacktestCoverage | null>(null)
+  const [kpiExperiments, setKpiExperiments] = useState<StoredExperimentSummary[]>([])
 
   const visibleClasses = useMemo(() => {
     const present = new Set(
@@ -284,6 +434,20 @@ export function BacktestsPage() {
       })
       .catch(() => {
         if (!cancelled) setEvidence(null)
+      })
+    getBacktestCoverage()
+      .then((cov) => {
+        if (!cancelled) setCoverage(cov)
+      })
+      .catch(() => {
+        if (!cancelled) setCoverage(null)
+      })
+    listStoredExperiments({ limit: 40 })
+      .then((hist) => {
+        if (!cancelled) setKpiExperiments(hist.experiments)
+      })
+      .catch(() => {
+        if (!cancelled) setKpiExperiments([])
       })
     listRulesets()
       .then((payload) => {
@@ -433,6 +597,103 @@ export function BacktestsPage() {
       ? 'en cours'
       : '—'
 
+  const experimentsForKpi = useMemo(() => {
+    const byId = new Map<string, StoredExperimentSummary>()
+    for (const row of [...kpiExperiments, ...stored, ...dbCompare]) {
+      byId.set(row.experiment_id, row)
+    }
+    return [...byId.values()]
+  }, [kpiExperiments, stored, dbCompare])
+
+  const labKpis = useMemo(() => {
+    const othersCovered = coverage
+      ? coverage.others.filter((o) => o.covered).length
+      : null
+
+    let universValue: string | null = null
+    let universMeta: string | null = null
+    if (coverage) {
+      if (coverage.pairs_covered > 0) {
+        universValue = `${coverage.pairs_covered} paires`
+        universMeta =
+          coverage.crypto_symbols > 0
+            ? `${coverage.crypto_symbols} cryptos`
+            : othersCovered != null && coverage.others.length > 0
+              ? `${othersCovered}/${coverage.others.length} hors crypto`
+              : null
+      } else if (coverage.crypto_symbols > 0) {
+        universValue = `${coverage.crypto_symbols} cryptos`
+        universMeta =
+          othersCovered != null && coverage.others.length > 0
+            ? `${othersCovered}/${coverage.others.length} hors crypto`
+            : null
+      }
+    }
+
+    let fenetreValue: string | null = null
+    let fenetreMeta: string | null = null
+    if (coverage?.timeframes?.length) {
+      fenetreValue = coverage.timeframes.join(' · ')
+      fenetreMeta = coverage.min_bars > 0 ? `≥ ${coverage.min_bars} bougies` : null
+    } else if (experimentsForKpi.length > 0) {
+      const tfs = [...new Set(experimentsForKpi.map((e) => e.timeframe).filter(Boolean))]
+      if (tfs.length) fenetreValue = tfs.join(' · ')
+    }
+
+    let validationValue: string | null = null
+    let validationMeta: string | null = null
+    if (coverage && coverage.min_bars > 0) {
+      validationValue = `≥ ${coverage.min_bars}`
+      validationMeta = 'bougies min. couverture'
+    } else {
+      const bases = experimentsForKpi
+        .map((e) => e.metrics_basis)
+        .filter((b): b is string => Boolean(b))
+      if (bases.length) {
+        const unique = [...new Set(bases)]
+        validationValue = unique.map(metricsBasisLabel).join(' · ')
+        validationMeta = `${bases.length} run${bases.length > 1 ? 's' : ''} mesurés`
+      }
+    }
+
+    let hypotheseValue: string | null = null
+    let hypotheseMeta: string | null = null
+    const withHyp = experimentsForKpi.filter((e) => e.hypothesis_id)
+    if (withHyp.length) {
+      const latest = [...withHyp].sort((a, b) =>
+        (b.created_at ?? '').localeCompare(a.created_at ?? ''),
+      )[0]
+      hypotheseValue = latest.hypothesis_id ?? null
+      hypotheseMeta = latest.ruleset_id
+    } else if (experimentsForKpi.length) {
+      const latest = [...experimentsForKpi].sort((a, b) =>
+        (b.created_at ?? '').localeCompare(a.created_at ?? ''),
+      )[0]
+      hypotheseValue = latest.ruleset_id
+      hypotheseMeta = latest.symbol ? `${latest.symbol} · ${latest.timeframe}` : null
+    }
+
+    return [
+      { label: 'Univers', value: universValue, meta: universMeta },
+      { label: 'Fenêtre', value: fenetreValue, meta: fenetreMeta },
+      { label: 'Validation', value: validationValue, meta: validationMeta },
+      { label: 'Hypothèse', value: hypotheseValue, meta: hypotheseMeta },
+    ]
+  }, [coverage, experimentsForKpi])
+
+  const equitySeries = useMemo(
+    () =>
+      collectEquitySeries([
+        result,
+        ablation,
+        walkForward,
+        walkForwardOpt,
+        ...dbCompare,
+        ...stored,
+      ]),
+    [result, ablation, walkForward, walkForwardOpt, dbCompare, stored],
+  )
+
   return (
     <div className="backtests-page">
       <header className="iv-page-header page-head market-head">
@@ -442,7 +703,7 @@ export function BacktestsPage() {
           <p className="iv-page-question">Est-ce que cette méthode tient historiquement ?</p>
           <p className="muted">
             Chiffres depuis la Performance DB (expériences persistées). Onglet{' '}
-            <strong>Live</strong> = recalcul ponctuel ; <strong>Research</strong> = T5–T7 /
+            <strong>Ablations / WF</strong> = recalcul ponctuel ; <strong>Research</strong> = T5–T7 /
             Researcher (observation only). Pas un conseil financier.
           </p>
           {current && (
@@ -492,22 +753,29 @@ export function BacktestsPage() {
         ))}
       </div>
 
+      <section className="iv-metrics bt-kpis" aria-label="Couverture Strategy Lab">
+        {labKpis.map((kpi) => (
+          <div key={kpi.label} className="iv-metric">
+            <div className="iv-metric-label">{kpi.label}</div>
+            <div className="iv-metric-value mono">
+              {kpi.value ?? 'Non disponible'}
+            </div>
+            {kpi.meta ? <small>{kpi.meta}</small> : null}
+          </div>
+        ))}
+      </section>
+
       <div className={`bt-split${historyOpen ? ' is-open' : ''}`}>
         <div className="bt-main">
 
       {labTab !== 'live' && labTab !== 'research' && (
         <section className="panel">
           <header className="panel-head">
-            <h2>
-              {labTab === 'compare'
-                ? 'Compare (DB)'
-                : labTab === 'regimes'
-                  ? 'Regimes (DB)'
-                  : 'Experiments (DB)'}
-            </h2>
+            <h2>Expériences comparées</h2>
             <span className="panel-meta">
               {symbol} · {timeframe}
               {dbLoading ? ' · chargement…' : ''}
+              {labTab === 'regimes' ? ' · régimes' : ''}
             </span>
           </header>
           <form
@@ -1378,6 +1646,35 @@ export function BacktestsPage() {
       )}
       </>
       )}
+
+      {equitySeries.length > 0 && (
+        <section className="panel bt-trajectories">
+          <header className="panel-head">
+            <h2>Comparer les trajectoires</h2>
+            <span className="panel-meta">
+              {equitySeries.length} série{equitySeries.length > 1 ? 's' : ''}
+            </span>
+          </header>
+          <div className="bt-pad">
+            <EquitySparkline series={equitySeries} />
+          </div>
+        </section>
+      )}
+
+      <section className="panel bt-idea-proof" aria-label="De l’idée à la preuve">
+        <header className="panel-head">
+          <h2>De l’idée à la preuve</h2>
+        </header>
+        <div className="bt-proof-steps">
+          {IDEA_TO_PROOF_STEPS.map((step) => (
+            <div key={step.title} className="bt-proof-step">
+              <b>{step.title}</b>
+              <p>{step.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
         </div>
 
         {historyOpen && (
