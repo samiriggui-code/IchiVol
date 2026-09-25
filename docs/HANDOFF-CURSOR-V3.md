@@ -7,10 +7,22 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — UI-11p smoke secrets (PR à venir)
+
+- Branche : `cursor/ui11p-smoke-secrets-a2fe`
+- **Sécurité** : `scripts/smoke-ui11p.mjs` + `smoke-ui11p-mobile.mjs` — `SMOKE_EMAIL` / `SMOKE_PASS` **obligatoires** via env (exit 2 si absents ; plus aucun mot de passe par défaut dans le repo).
+- Compte local `ui11p-smoke@ichivol.local` : mot de passe **rotaté** (ancien hash invalidé). Identifiants hors repo uniquement.
+- Prod (`ichivol.global-it-ss.com`) : login avec l’ancien mot de passe exposé → **401** (pas de session). Vérif SQL User en cours via VPS.
+
+### Suite
+Déployer main sur VPS → vérif mobile barre + Copilot LLM prod → onglet Journal Market + indicateurs moteur.
+
+---
+
 ## 2026-09-25 — UI-11p MERGÉE (#89) — merge `5d1edfd`
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/89 — **MERGÉE**
-- **Vérifié** : `origin/main` tip = `5d1edfd`
+- **Vérifié** : `origin/main` tip = `5d1edfd` (puis handoff #90 → `929ecae`)
 - Front React 11 pages + design-reference ; smoke desktop + mobile 390px ; cleanup WatchlistPage + keenicons démos
 - Copilot chat bloqué en smoke uniquement faute de clé LLM locale (UI OK)
 
@@ -32,7 +44,7 @@ Onglet **Journal** de Market + indicateurs moteur sur le graphe Market.
 - Supprimé démos keenicons (`demo.html`, `demo-files/`, `selection.json`, Read Me) dans `ichivol-app/public/keenicons/{duotone,outline}/` et le miroir `design-reference/...`.
 
 ### Smoke local (engine :8000 + server :8787 + vite :5173)
-Compte test : `ui11p-smoke@ichivol.local`. Script : `ichivol-app/scripts/smoke-ui11p.mjs` + captures `/opt/cursor/artifacts/ui11p-smoke/`.
+Compte test local : `ui11p-smoke@ichivol.local` (mot de passe **uniquement** via `SMOKE_EMAIL` / `SMOKE_PASS` — pas de défaut dans les scripts). Captures `/opt/cursor/artifacts/ui11p-smoke/`.
 
 #### Pages `/app/*` (données réelles, pas d’erreur console hors bruit LLM)
 | Route | Verdict | Données vues |

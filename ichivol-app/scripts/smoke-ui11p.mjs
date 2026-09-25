@@ -9,8 +9,14 @@ const require = createRequire(import.meta.url)
 const puppeteer = require('puppeteer-core')
 
 const BASE = process.env.SMOKE_BASE || 'http://127.0.0.1:5173'
-const EMAIL = process.env.SMOKE_EMAIL || 'ui11p-smoke@ichivol.local'
-const PASS = process.env.SMOKE_PASS || 'GC9wG_6C5y_HawQBH5zbsmBR'
+const EMAIL = process.env.SMOKE_EMAIL
+const PASS = process.env.SMOKE_PASS
+if (!EMAIL || !PASS) {
+  console.error(
+    'SMOKE_EMAIL et SMOKE_PASS sont obligatoires (variables d’environnement). Aucun identifiant par défaut.',
+  )
+  process.exit(2)
+}
 const OUT = '/tmp/ui11p-smoke'
 const ROUTES = [
   'desk',
