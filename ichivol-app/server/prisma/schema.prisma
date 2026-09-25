@@ -199,3 +199,57 @@ model WatchlistItem {
   @@index([userId, updatedAt])
   @@map("watchlist_items")
 }
+
+/// Chantier 2 E0 — durable agent task queue (Comp AI pattern, Prisma server).
+/// Claim via FOR UPDATE SKIP LOCKED. LLM wake / evaluate_watch = E1/E2.
+model AgentTask {
+  id             String    @id @default(uuid())
+  /// Lane / agent id (mono-agent: "eve" | "copilot" until multi-agent proven).
+  agentId        String
+  /// recheck | mission | digest | …
+  kind           String
+  symbol         String?
+  payload        Json?
+  /// Watch condition DSL — opaque in E0; evaluated by engine in E2.
+  condition      Json?
+  dueAt          DateTime
+  /// pending | leased | completed | failed | retired
+  status         String    @default("pending")
+  leaseUntil     DateTime?
+  attempts       Int       @default(0)
+  /// Unique per logical attempt — retries must reuse, never mint a new key.
+  idempotencyKey String    @unique
+  result         Json?
+  error          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  logs AgentLog[]
+
+  @@index([status, dueAt])
+  @@index([leaseUntil])
+  @@index([agentId, kind, symbol])
+  @@map("agent_tasks")
+}
+
+/// Chantier 2 E0 — agent runtime audit trail (PASSE / PRUDENCE / REFUSÉ).
+model AgentLog {
+  id         String   @id @default(uuid())
+  agentId    String
+  /// PASSE | PRUDENCE | REFUSÉ
+  level      String
+  source     String
+  message    String
+  /// Optional refs — decision is Prisma; position lives in engine DB (string id only).
+  decisionId String?
+  positionId String?
+  taskId     String?
+  task       AgentTask? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  @@index([agentId, createdAt])
+  @@index([taskId, createdAt])
+  @@index([level, createdAt])
+  @@map("agent_logs")
+}

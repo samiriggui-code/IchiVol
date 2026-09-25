@@ -11,6 +11,10 @@ import {
   type ToolExecutor,
 } from './claudeTools.js'
 import { engineAgentCommand, engineAgentTools } from './engineAgentChannel.js'
+import {
+  executeScheduleRecheck,
+  SCHEDULE_RECHECK_TOOL,
+} from './tools/scheduleRecheck.js'
 import type { Citation } from './types.js'
 
 const MANIFEST_TTL_MS = 5 * 60_000
@@ -26,6 +30,14 @@ async function loadEngineTools(): Promise<AnthropicTool[]> {
   return tools
 }
 
+export interface ClaudeAgentToolContext {
+  agentId?: string
+  userId?: string | null
+  threadId?: string | null
+  maxIterations?: number
+  maxTokens?: number
+}
+
 export interface ClaudeAgentInput {
   apiKey: string
   model: string
@@ -34,6 +46,8 @@ export interface ClaudeAgentInput {
   question: string
   onEvent?: (event: AgentStreamEvent) => void
   signal?: AbortSignal
+  /** E1 — schedule_recheck context + mission budget caps. */
+  toolContext?: ClaudeAgentToolContext
 }
 
 export interface ClaudeAgentOutput {
@@ -46,6 +60,7 @@ export interface ClaudeAgentOutput {
 export async function runClaudeAgent(input: ClaudeAgentInput): Promise<ClaudeAgentOutput> {
   const engineTools = await loadEngineTools()
   const kbChunks: ScoredChunk[] = []
+  const ctx = input.toolContext
 
   const execute: ToolExecutor = async (name, args) => {
     if (name === SEARCH_KB_TOOL.name) {
@@ -58,6 +73,14 @@ export async function runClaudeAgent(input: ClaudeAgentInput): Promise<ClaudeAge
         ),
       }
     }
+    if (name === SCHEDULE_RECHECK_TOOL.name) {
+      // Server-side task write — LLM never touches Prisma/broker directly.
+      return executeScheduleRecheck(args, {
+        agentId: ctx?.agentId,
+        userId: ctx?.userId,
+        threadId: ctx?.threadId,
+      })
+    }
     const res = await engineAgentCommand({ cmd: name, args })
     return res.ok
       ? { ok: true, content: JSON.stringify(res.data) }
@@ -69,10 +92,12 @@ export async function runClaudeAgent(input: ClaudeAgentInput): Promise<ClaudeAge
     model: input.model,
     system: input.system,
     messages: [...input.history, { role: 'user', content: input.question }],
-    tools: [...engineTools, SEARCH_KB_TOOL],
+    tools: [...engineTools, SEARCH_KB_TOOL, SCHEDULE_RECHECK_TOOL],
     execute,
     onEvent: input.onEvent,
     signal: input.signal,
+    maxIterations: ctx?.maxIterations,
+    maxTokens: ctx?.maxTokens,
   })
 
   const seen = new Set<string>()
