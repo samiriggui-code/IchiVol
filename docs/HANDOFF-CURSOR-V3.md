@@ -7,18 +7,19 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-25 — UI-P3 corrections + merge + VPS
+## 2026-09-25 — UI-P3 MERGÉE (#101) + VPS — tip `dfe14da`
 
-- PR : https://github.com/samiriggui-code/IchiVol/pull/101 — squash merge après corrections
-- Branche : `cursor/ui-p3-journal-ops-a2fe` · tip `c92201b` (+ captures smoke)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/101 — **MERGÉE** (squash) · tip `main` = `dfe14da`
+- Branche : `cursor/ui-p3-journal-ops-a2fe`
 - **Exception server minimale** : `PATCH /api/decisions/:id` accepte `note` (trim, max 500, vide→null) · ownership user → 404 sinon · update in-place (archivée sans doublon)
 - Client : `patchUserDecisionNote` · Journal n’utilise plus `confirmUserDecision` pour la note
-- Opérations : liens accent (pas de soulignement bleu) · pas de self-link « Opérations → » · « Aucun run » si jamais de backtest
-- Tests : `server/.../patchNote.test.ts` 8/8 · lint/build · `scripts/smoke-ui-p3.mjs` desktop+mobile 390 — **PASS**
-- Captures : [`docs/ui-p3/`](./ui-p3/)
+- Opérations : liens accent · pas de self-link « Opérations → » · « Aucun run » si jamais de backtest
+- Tests : `patchNote.test.ts` 8/8 · lint/build · smoke desktop+mobile 390 — **PASS** · captures [`docs/ui-p3/`](./ui-p3/)
+- **VPS** : https://ichivol.global-it-ss.com — `RELEASE=dfe14da` ; health 200 ; bundle `Aucun run` · `Depuis le plus haut` · `Journal d’audit` · `Qualité des données`
+- Backup : `/opt/ichivol-backup/pre-uip3-20260925-085136.tgz`
 
 ### Suite
-UI-P4 (Marché, Lab, Contexte, Copilot, Agents, Paramètres + pill PAPER) + audit agents en **PR draft** — **ne pas merger** avant relecture Claude.
+UI-P4 + audit agents en **PR draft** — **ne pas merger** avant relecture Claude.
 
 ---
 
