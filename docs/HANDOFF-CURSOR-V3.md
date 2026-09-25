@@ -7,6 +7,18 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — UI-11p MERGÉE (#89) — merge `5d1edfd`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/89 — **MERGÉE**
+- **Vérifié** : `origin/main` tip = `5d1edfd`
+- Front React 11 pages + design-reference ; smoke desktop + mobile 390px ; cleanup WatchlistPage + keenicons démos
+- Copilot chat bloqué en smoke uniquement faute de clé LLM locale (UI OK)
+
+### Suite
+Onglet **Journal** de Market + indicateurs moteur sur le graphe Market.
+
+---
+
 ## 2026-09-25 — UI-11p — smoke réel + nettoyage (PR → merge si vert)
 
 - Branche : `cursor/ui-workspace-pages-a2fe`
