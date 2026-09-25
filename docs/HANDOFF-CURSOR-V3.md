@@ -7,9 +7,10 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-25 — UI-P2 Portefeuille + Opportunités — PR draft
+## 2026-09-25 — UI-P2 Portefeuille + Opportunités — PR draft #100
 
-- Branche : `cursor/ui-p2-portfolio-opps-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/100 — **draft** (attendre Claude avant merge)
+- Branche : `cursor/ui-p2-portfolio-opps-a2fe` · tip `4fb867f`
 - **Périmètre front only** — `engine/` · `server/` intouchés ; style Desk P1 (muted, fr-FR, liens).
 - **Portefeuille** : 4 KPI (Capital / Exposition / Disponible / Drawdown front) · Risk Kernel (PASSE/BLOQUÉ via risk-lock) + barres limites engine · anneaux Allocation / Concentration (composants partagés Desk) · onglets + Labs paper conservés.
 - **Opportunités** : toolbar recherche + filtres Portes réelles (BUY/SELL/WATCH/NO_TRADE) · ruban « De l’observation à la décision » (agrégats screener) · carte « Pourquoi {symbole} ? » si candidat · matrice / pulse / onglets classe inchangés.
