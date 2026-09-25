@@ -66,12 +66,45 @@ export async function drainDueTasks(): Promise<DrainSummary> {
 
 let started = false
 let draining = false
+let workerStartedAt: Date | null = null
+let lastDrainAt: Date | null = null
+let lastDrainSummary: DrainSummary | null = null
+let lastDrainError: string | null = null
+
+/** Snapshot for GET /api/agents — honest worker liveness (no invented metrics). */
+export function getAgentRuntimeSnapshot(): {
+  workerStarted: boolean
+  workerStartedAt: string | null
+  lastDrainAt: string | null
+  lastDrain: DrainSummary | null
+  lastDrainError: string | null
+  intervalMs: number
+  draining: boolean
+} {
+  return {
+    workerStarted: started,
+    workerStartedAt: workerStartedAt?.toISOString() ?? null,
+    lastDrainAt: lastDrainAt?.toISOString() ?? null,
+    lastDrain: lastDrainSummary,
+    lastDrainError,
+    intervalMs: TASK_WORKER_INTERVAL_MS,
+    draining,
+  }
+}
 
 export async function runDispatcherTick(): Promise<DrainSummary | null> {
   if (draining) return null
   draining = true
   try {
-    return await drainDueTasks()
+    const summary = await drainDueTasks()
+    lastDrainAt = new Date()
+    lastDrainSummary = summary
+    lastDrainError = null
+    return summary
+  } catch (err) {
+    lastDrainAt = new Date()
+    lastDrainError = err instanceof Error ? err.message : String(err)
+    throw err
   } finally {
     draining = false
   }
@@ -80,6 +113,7 @@ export async function runDispatcherTick(): Promise<DrainSummary | null> {
 export function startAgentTaskWorker(): void {
   if (started) return
   started = true
+  workerStartedAt = new Date()
   const tick = () => {
     void runDispatcherTick()
       .then((summary) => {
