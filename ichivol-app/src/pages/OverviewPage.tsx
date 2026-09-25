@@ -37,6 +37,8 @@ import {
 } from '../lib/paper'
 import { getRiskLock, type RiskLockState } from '../lib/riskLock'
 import { verdictBucket } from '../lib/deskSummarize'
+import { DATA_REFRESH_EVENT } from '../lib/actionFeedback'
+import { useFicheNav } from '../lib/useFicheNav'
 import { concentrationFromPositions } from '../components/desk/deskMetrics'
 import {
   BASELINE,
@@ -307,6 +309,7 @@ function EquityViz({
 
 export function OverviewPage() {
   const navigate = useNavigate()
+  const { openDecisionFiche } = useFicheNav()
   const [rows, setRows] = useState<ScreenerDecisionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [overview, setOverview] = useState<PaperOverview | null>(null)
@@ -397,6 +400,14 @@ export function OverviewPage() {
     }
   }, [load])
 
+  useEffect(() => {
+    const onRefresh = () => {
+      void load(true)
+    }
+    window.addEventListener(DATA_REFRESH_EVENT, onRefresh)
+    return () => window.removeEventListener(DATA_REFRESH_EVENT, onRefresh)
+  }, [load])
+
   const now = useMemo(() => new Date(nowTick), [nowTick])
   const acct = overview?.account
   const risk = overview?.risk
@@ -480,7 +491,7 @@ export function OverviewPage() {
 
   const openOpp = (symbol: string) => {
     const full = /USDT$/i.test(symbol) ? symbol.toUpperCase() : `${symbol.toUpperCase()}USDT`
-    navigate(`/app/opportunites?symbol=${encodeURIComponent(full)}`)
+    openDecisionFiche(full, '1h')
   }
 
   const openPosition = (symbol: string) => {

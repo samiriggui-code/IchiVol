@@ -11,6 +11,7 @@ import {
   concentrationFromPositions,
   drawdownFromCurve,
 } from '../components/desk/deskMetrics'
+import { DATA_REFRESH_EVENT } from '../lib/actionFeedback'
 import {
   closePaperPosition,
   getPaperOverview,
@@ -113,6 +114,14 @@ export function PortfolioPage() {
 
   useEffect(() => {
     void load()
+  }, [load])
+
+  useEffect(() => {
+    const onRefresh = () => {
+      void load()
+    }
+    window.addEventListener(DATA_REFRESH_EVENT, onRefresh)
+    return () => window.removeEventListener(DATA_REFRESH_EVENT, onRefresh)
   }, [load])
 
   const acct = overview?.account

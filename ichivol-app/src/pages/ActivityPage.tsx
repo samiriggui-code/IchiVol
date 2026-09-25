@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getActivityFeed, type ActivityItem, type FeedTone } from '../lib/activity'
+import { DATA_REFRESH_EVENT } from '../lib/actionFeedback'
 import { getScreener, type ScreenerDecisionRow } from '../lib/decisions'
 import { displaySymbol } from '../lib/markets'
 import './ActivityPage.css'
@@ -115,6 +116,14 @@ export function ActivityPage() {
 
   useEffect(() => {
     void load()
+  }, [load])
+
+  useEffect(() => {
+    const onRefresh = () => {
+      void load()
+    }
+    window.addEventListener(DATA_REFRESH_EVENT, onRefresh)
+    return () => window.removeEventListener(DATA_REFRESH_EVENT, onRefresh)
   }, [load])
 
   const rows: AuditRow[] = useMemo(() => {

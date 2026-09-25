@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { DATA_REFRESH_EVENT, afterPaperOrJournalAction } from '../lib/actionFeedback'
 import { displaySymbol } from '../lib/markets'
 import { listPaperPositions, type PaperPosition } from '../lib/paper'
 import {
@@ -21,6 +22,7 @@ import {
   patchUserDecisionStatus,
   type UserDecisionRow,
 } from '../lib/userDecisions'
+import { useFicheNav } from '../lib/useFicheNav'
 import './JournalPage.css'
 
 type JournalTab = 'Trades' | 'Décisions sauvegardées'
@@ -114,6 +116,7 @@ function downloadCsv(filename: string, headers: string[], rows: string[][]) {
 
 export function JournalPage() {
   const navigate = useNavigate()
+  const { openDecisionFiche } = useFicheNav()
   const [journalTab, setJournalTab] = useState<JournalTab>('Trades')
   const [query, setQuery] = useState('')
   const [trades, setTrades] = useState<PaperPosition[]>([])
@@ -146,6 +149,14 @@ export function JournalPage() {
 
   useEffect(() => {
     void load()
+  }, [load])
+
+  useEffect(() => {
+    const onRefresh = () => {
+      void load()
+    }
+    window.addEventListener(DATA_REFRESH_EVENT, onRefresh)
+    return () => window.removeEventListener(DATA_REFRESH_EVENT, onRefresh)
   }, [load])
 
   const q = query.trim().toLowerCase()
@@ -268,9 +279,13 @@ export function JournalPage() {
       setDecisions((prev) =>
         prev.map((r) => (r.id === row.id ? { ...r, status: 'archived' } : r)),
       )
-      setActionMsg(`${displaySymbol(row.symbol)} · archivée`)
+      const text = `${displaySymbol(row.symbol)} · archivée`
+      setActionMsg(text)
+      afterPaperOrJournalAction(true, text, ['journal'])
     } catch (err: unknown) {
-      setActionMsg(err instanceof Error ? err.message : 'Archivage impossible')
+      const text = err instanceof Error ? err.message : 'Archivage impossible'
+      setActionMsg(text)
+      afterPaperOrJournalAction(false, text)
     } finally {
       setBusyId(null)
     }
@@ -284,9 +299,13 @@ export function JournalPage() {
       setDecisions((prev) =>
         prev.map((r) => (r.id === row.id ? { ...r, status: 'confirmed' } : r)),
       )
-      setActionMsg(`${displaySymbol(row.symbol)} · restaurée`)
+      const text = `${displaySymbol(row.symbol)} · restaurée`
+      setActionMsg(text)
+      afterPaperOrJournalAction(true, text, ['journal'])
     } catch (err: unknown) {
-      setActionMsg(err instanceof Error ? err.message : 'Restauration impossible')
+      const text = err instanceof Error ? err.message : 'Restauration impossible'
+      setActionMsg(text)
+      afterPaperOrJournalAction(false, text)
     } finally {
       setBusyId(null)
     }
@@ -300,9 +319,13 @@ export function JournalPage() {
       await deleteUserDecision(row.id)
       setDecisions((prev) => prev.filter((r) => r.id !== row.id))
       if (selectedDecisionId === row.id) setSelectedDecisionId(null)
-      setActionMsg(`${displaySymbol(row.symbol)} · supprimée`)
+      const text = `${displaySymbol(row.symbol)} · supprimée`
+      setActionMsg(text)
+      afterPaperOrJournalAction(true, text, ['journal'])
     } catch (err: unknown) {
-      setActionMsg(err instanceof Error ? err.message : 'Suppression impossible')
+      const text = err instanceof Error ? err.message : 'Suppression impossible'
+      setActionMsg(text)
+      afterPaperOrJournalAction(false, text)
     } finally {
       setBusyId(null)
     }
@@ -310,6 +333,11 @@ export function JournalPage() {
 
   const openTrade = (symbol: string) => {
     navigate(`/app/market?symbol=${encodeURIComponent(symbol)}`)
+  }
+
+  const openSavedDecision = (d: UserDecisionRow) => {
+    setSelectedDecisionId(d.id)
+    openDecisionFiche(d.symbol, d.interval || '1h', { asOf: 'journal' })
   }
 
   const tableRows =
@@ -349,11 +377,11 @@ export function JournalPage() {
             key={d.id}
             className={`clickable${selectedDecision?.id === d.id ? ' is-selected' : ''}`.trim()}
             tabIndex={0}
-            onClick={() => setSelectedDecisionId(d.id)}
+            onClick={() => openSavedDecision(d)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
-                setSelectedDecisionId(d.id)
+                openSavedDecision(d)
               }
             }}
           >

@@ -171,3 +171,26 @@ export function buildDecisionSummary(d: DecisionDetail): string {
     ` Ce n’est pas un conseil d’investissement : c’est la lecture technique Ichimoku×RVOL au prix ${d.price.toFixed(2)}.`
   )
 }
+
+/** Une ligne muted sous une valeur technique (Tenkan, RVOL, BOS…). */
+const TERM_HINTS: Record<string, string> = {
+  Tenkan: 'Ligne de conversion Ichimoku (//9) — réactivité courte.',
+  Kijun: 'Ligne de base Ichimoku (//26) — équilibre moyen.',
+  Chikou: 'Prix décalé de 26 barres — confirmation de l’espace libre.',
+  Kumo: 'Nuage Ichimoku (Senkou A/B) — zone de support/résistance.',
+  RVOL: 'Volume relatif vs moyenne — participation réelle du marché.',
+  BOS: 'Break of Structure — cassure de swing dans le sens de la tendance.',
+  CHoCH: 'Change of Character — premier retournement de structure.',
+  FVG: 'Fair Value Gap — déséquilibre de prix non comblé.',
+  R: 'Multiple du risque : distance objectif ÷ distance stop.',
+  'walk-forward': 'Validation hors-échantillon glissante — pas un backtest unique.',
+  ATR: 'Average True Range — volatilité récente pour placer le stop.',
+  VWAP: 'Prix moyen pondéré volume — ancrage intraday.',
+  AVWAP: 'VWAP ancré sur un événement (swing, ouverture…).',
+  Location: 'Emplacement du prix vs value area / VWAP / nuage.',
+  Régime: 'État de volatilité / tradabilité (ATR, tendance).',
+}
+
+export function termHint(term: string): string {
+  return TERM_HINTS[term] ?? ''
+}

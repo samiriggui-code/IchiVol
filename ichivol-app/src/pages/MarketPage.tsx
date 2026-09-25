@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { PriceChart } from '../components/PriceChart'
 import { confirmAgentAction } from '../lib/agent'
 import { getChartObjects, type ChartObject } from '../lib/chartObjects'
@@ -19,6 +19,7 @@ import {
   pipelineFromDecisionDetail,
   type PipelineStageId,
 } from '../lib/decisionPipeline'
+import { useFicheNav } from '../lib/useFicheNav'
 import {
   loadLayerPrefs,
   saveLayerPrefs,
@@ -74,8 +75,8 @@ type WatchRow = {
 }
 
 export function MarketPage() {
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { openDecisionFiche } = useFicheNav()
   const [instruments, setInstruments] = useState<EngineInstrument[]>([])
   const [screenerRows, setScreenerRows] = useState<ScreenerDecisionRow[]>([])
   const [tickers24h, setTickers24h] = useState<Map<string, { price: number; change24h: number }>>(
@@ -469,7 +470,20 @@ export function MarketPage() {
               const stage = pipeline?.stages.find((s) => s.id === id)
               const badge = maquetteGateBadge(stage?.status)
               return (
-                <div className="statline" key={id}>
+                <div
+                  className="statline"
+                  key={id}
+                  role="button"
+                  tabIndex={0}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => openDecisionFiche(symbol, interval, { tab: 'portes' })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      openDecisionFiche(symbol, interval, { tab: 'portes' })
+                    }
+                  }}
+                >
                   <span>{GATE_LABELS[id]}</span>
                   <b>
                     <span className={`tag ${badge.tone}`.trim()}>{badge.text}</span>
@@ -486,11 +500,7 @@ export function MarketPage() {
             <button
               type="button"
               className="primary"
-              onClick={() =>
-                navigate(
-                  `/app/opportunites?symbol=${encodeURIComponent(symbol)}&open=1`,
-                )
-              }
+              onClick={() => openDecisionFiche(symbol, interval, { tab: 'plan' })}
             >
               Préparer le trade →
             </button>
@@ -504,9 +514,20 @@ export function MarketPage() {
             </button>
             {watchMsg && <p className="watch-msg">{watchMsg}</p>}
             <p className="fiche-link">
-              <Link className="link" to={`/app/opportunites?symbol=${encodeURIComponent(symbol)}`}>
+              <button
+                type="button"
+                className="link"
+                style={{
+                  border: 0,
+                  background: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  font: 'inherit',
+                }}
+                onClick={() => openDecisionFiche(symbol, interval)}
+              >
                 Voir la fiche décision ↗
-              </Link>
+              </button>
             </p>
           </div>
         </section>

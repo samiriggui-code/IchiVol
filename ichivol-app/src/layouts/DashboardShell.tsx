@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { FicheHost } from '../components/fiches/FicheHost'
 import { NotificationBell } from '../components/NotificationBell'
 import {
   IconChevronLeft,
@@ -213,6 +214,7 @@ function DashboardShellInner() {
         <div className="dash-content">
           <Outlet />
         </div>
+        <FicheHost />
       </div>
 
       {isMobile && (
