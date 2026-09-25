@@ -7,6 +7,20 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — UI-clean front — PR draft
+
+- Branche : `cursor/ui-clean-a2fe` — **draft**, ne pas merger avant Claude
+- `index.css` : 5328 → ~2774 lignes · CSS mort + extractions pages
+- Desk / Opportunités / Marché / Lab / Settings découpés en sections (`pages/desk|opportunites|market|lab|settings`)
+- Orphelins supprimés : `ContextPanel.tsx`, `Screener.tsx`
+- Smoke 11 pages + fiche Opportunités mobile — **PASS** · [`docs/ui-clean/`](./ui-clean/)
+- Journal / Activity / Context encore >400 lignes (suite possible)
+
+### Suite
+Relecture Claude. **Pas** de runtime agents.
+
+---
+
 ## 2026-09-25 — UI-P4 MERGÉE (#103) + VPS
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/103 — squash merge après smoke PASS
