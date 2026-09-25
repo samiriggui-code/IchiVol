@@ -7,6 +7,20 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — VPS déployé UI-11p — tip `35ddce0`
+
+- **FQDN** : https://ichivol.global-it-ss.com — stack rebuild (`web`/`server`/`engine`) depuis `main` @ `35ddce0`
+- Backup hôte : `/opt/ichivol-backup/pre-ui11p-*.tgz` ; `RELEASE` = `35ddce0 main`
+- Bundle prod : routes `/app/desk`, `/app/opportunites`, … + `dash-mobile-tabbar` (Desk · Opportunités · Portefeuille · Copilot · Plus)
+- **Compte smoke** `ui11p-smoke@…` : **absent** en prod (`users` → 0 row) ; seul admin `samiriggui@gmail.com`
+- **Copilot LLM prod** : PASS — `POST /api/agent/chat` mode `research` → `provider=openrouter` / `anthropic/claude-sonnet-4.5` (clé présente, réponse OK). Compte de test éphémère créé puis **supprimé**.
+- Accès agent : clé SSH `cursor-cloud-ichivol-deploy` installée sur le VPS (auth password root utilisée une fois pour bootstrap — **à rotator** côté ops).
+
+### Suite
+Portage UI selon [`UI-MAQUETTE-GAP.md`](./UI-MAQUETTE-GAP.md) · onglet Journal Market + indicateurs moteur.
+
+---
+
 ## 2026-09-25 — UI maquette gap MERGÉE (#93) — tip `8e2ab82`
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/93 — **MERGÉE** (squash)
