@@ -7,10 +7,27 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — UI maquette gap audit + clôture UI-11p secrets
+
+- Branche : `cursor/ui-maquette-gap-a2fe`
+- **Audit (aucun code produit)** : [`docs/UI-MAQUETTE-GAP.md`](./UI-MAQUETTE-GAP.md) — 11 pages maquette (`design-reference/ichivol-workspace`) ↔ React, statut section + endpoint réel ou « à décider », React hors maquette.
+- **Clôture secrets UI-11p** (#91 squash `b73a20b`, handoff #92 → tip `5ab809e`) :
+  - smoke : `SMOKE_EMAIL` / `SMOKE_PASS` obligatoires
+  - compte local `ui11p-smoke@ichivol.local` : MDP rotaté ; ancien secret → 401 local + prod
+  - prod User smoke : **non confirmé SQL** (Hostinger VPS MCP timeout / pas de SSH) — login API ne distingue pas absence/mauvais MDP ; TLD `.local` ; à vérifier au prochain accès VPS : `SELECT email FROM "User" WHERE email LIKE '%smoke%';`
+- **Déploiement VPS** : **bloqué** — MCP Hostinger VPS/DNS timeout répétés ; pas de clé SSH sur le VPS. Clé agent générée (à attacher) : `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMfFMCvkVPm0+l6YcT/PZXwZVqSQCBw0QYfABQ/jdUKJ cursor-cloud-ichivol-deploy`. Prod bundle encore nav legacy (Cockpit/Décisions…).
+
+### Suite
+1. Attacher la clé SSH / réparer Hostinger MCP → `git pull` + `docker compose … up -d --build` sur `/opt/ichivol` → vérif mobile barre + Copilot LLM prod  
+2. Portage UI selon `UI-MAQUETTE-GAP.md` (priorités synthèse)  
+3. Onglet Journal Market + indicateurs moteur (hors scope de cet audit)
+
+---
+
 ## 2026-09-25 — UI-11p smoke secrets MERGÉE (#91) — tip `b73a20b`
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/91 — **MERGÉE** (squash)
-- **Vérifié** : `origin/main` tip = `b73a20b`
+- **Vérifié** : `origin/main` tip = `b73a20b` (handoff #92 → `5ab809e`)
 - Scripts smoke : `SMOKE_EMAIL` / `SMOKE_PASS` obligatoires (exit 2 si absents)
 - Compte local `ui11p-smoke@ichivol.local` : MDP rotaté ; ancien secret → 401 en local et sur prod
 - Prod encore nav legacy au moment du merge — déploiement VPS de `main` à faire pour barre UI-11p
