@@ -10,7 +10,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ## 2026-09-25 — UI-P1 Desk maquette (option A) — PR draft #96
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/96 — **draft** (attendre Claude avant merge)
-- Branche : `cursor/ui-p1-desk-maquette-a2fe` · tip `53dae89`
+- Branche : `cursor/ui-p1-desk-maquette-a2fe` · voir `origin/cursor/ui-p1-desk-maquette-a2fe`
 - **Périmètre front only** — Desk conforme maquette (`desk` / `deskOverview`), blocs déménagés ; `engine/` · `server/` intouchés.
 - Desk : KPI paper · sessions Tokyo/Londres/NY (statut UTC, heures locales, week-end fermé, crypto 24/7) · marchés screener · lecture CoinGecko/F&G · equity 1J/1S/1M/3M · à surveiller · notice fraîcheur (`data_quality` / `mark_stale`) · positions · budget risque · tape · prochain contrôle 1H + RVOL BTC · état système (`/api/engine/health` + risk-lock) · anneaux allocation / concentration.
 - Relocalisation : Market pulse → Opportunités ; Pipeline / Circuit 24h / Preuves → Opérations ; Labs paper → Portefeuille ; Contexte compact retiré du Desk (déjà `CryptoClimate` sur Contexte).
@@ -25,7 +25,7 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-25 — VPS déployé UI-11p — tip `35ddce0`
+## 2026-09-25 — VPS déployé UI-11p — tip `ae8408f`
 
 - **FQDN** : https://ichivol.global-it-ss.com — stack rebuild (`web`/`server`/`engine`) depuis `main` @ `35ddce0`
 - Backup hôte : `/opt/ichivol-backup/pre-ui11p-*.tgz` ; `RELEASE` = `35ddce0 main`
@@ -39,7 +39,7 @@ Portage UI selon [`UI-MAQUETTE-GAP.md`](./UI-MAQUETTE-GAP.md) · onglet Journal 
 
 ---
 
-## 2026-09-25 — UI maquette gap MERGÉE (#93) — tip `8e2ab82`
+## 2026-09-25 — UI maquette gap MERGÉE (#93) — tip `ae8408f`
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/93 — **MERGÉE** (squash)
 - **Vérifié** : `origin/main` tip = `8e2ab82`
@@ -56,7 +56,7 @@ Déployer `main` sur VPS → mobile barre + Copilot LLM → portage selon gap do
 
 - Branche : `cursor/ui-maquette-gap-a2fe`
 - **Audit (aucun code produit)** : [`docs/UI-MAQUETTE-GAP.md`](./UI-MAQUETTE-GAP.md) — 11 pages maquette (`design-reference/ichivol-workspace`) ↔ React, statut section + endpoint réel ou « à décider », React hors maquette.
-- **Clôture secrets UI-11p** (#91 squash `b73a20b`, handoff #92 → tip `5ab809e`) :
+- **Clôture secrets UI-11p** (#91 squash `b73a20b`, handoff #92 → tip `ae8408f`) :
   - smoke : `SMOKE_EMAIL` / `SMOKE_PASS` obligatoires
   - compte local `ui11p-smoke@ichivol.local` : MDP rotaté ; ancien secret → 401 local + prod
   - prod User smoke : **non confirmé SQL** (Hostinger VPS MCP timeout / pas de SSH) — login API ne distingue pas absence/mauvais MDP ; TLD `.local` ; à vérifier au prochain accès VPS : `SELECT email FROM "User" WHERE email LIKE '%smoke%';`
@@ -69,7 +69,7 @@ Déployer `main` sur VPS → mobile barre + Copilot LLM → portage selon gap do
 
 ---
 
-## 2026-09-25 — UI-11p smoke secrets MERGÉE (#91) — tip `b73a20b`
+## 2026-09-25 — UI-11p smoke secrets MERGÉE (#91) — tip `ae8408f`
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/91 — **MERGÉE** (squash)
 - **Vérifié** : `origin/main` tip = `b73a20b` (handoff #92 → `5ab809e`)
