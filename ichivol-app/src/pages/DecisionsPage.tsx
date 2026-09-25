@@ -1,1427 +1,180 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
-import { GateMatrix } from '../components/GateMatrix'
+import { Link } from 'react-router-dom'
 import { PaperConfirmSheet } from '../components/PaperConfirmSheet'
-import { ProposePaperTradePanel } from '../components/ProposePaperTradePanel'
-import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
-import { TradePlanCard } from '../components/TradePlanCard'
-import { VerdictBadge } from '../components/VerdictBadge'
 import { MarketPulseCard } from '../components/desk/DeskRelocatedCards'
-import { DeskCardShell } from '../components/desk/DeskRings'
-import { summarizeScreener } from '../lib/deskSummarize'
-import {
-  buildDecisionSummary,
-  labelDecision,
-  labelDirection,
-  labelPipelineGate,
-  labelReason,
-} from '../lib/decisionLabels'
-import {
-  PIPELINE_STAGE_ORDER,
-  pipelineFromDecisionDetail,
-  stageFullLabel,
-  stageMatrixLabel,
-  stageStatusesFromRow,
-  type PipelineStageId,
-  type PipelineStageStatus,
-} from '../lib/decisionPipeline'
-import {
-  getDecisionDetail,
-  getScreener,
-  type AgentDetail,
-  type DecisionDetail,
-  type DecisionLabel,
-  type PipelineGateLabel,
-  type ScreenerDecisionRow,
-} from '../lib/decisions'
-import {
-  CLASS_BLURBS,
-  CLASS_LABELS,
-  getEngineUniverse,
-  type EngineAssetClass,
-  type EngineInstrument,
-} from '../lib/universe'
-import { confirmUserDecision } from '../lib/userDecisions'
-import { listWatchlist } from '../lib/watchlist'
-import {
-  getPaperOverview,
-  listPaperPositions,
-  openPaperPosition,
-  proposePaperTrade,
-  type ManualOrderInput,
-  type OrderIntent,
-} from '../lib/paper'
-import { decisionPayloadFromDetail } from '../lib/agent'
-import { useCopilotNav } from '../lib/useCopilotNav'
+import { CLASS_BLURBS, CLASS_LABELS } from '../lib/universe'
+import { DecisionSheet } from './opportunites/DecisionSheet'
+import { GateStats } from './opportunites/GateStats'
+import { MethodBanner } from './opportunites/MethodBanner'
+import { PipelineRibbon } from './opportunites/PipelineRibbon'
+import { ScreenerPanel } from './opportunites/ScreenerPanel'
+import { WhyCard } from './opportunites/WhyCard'
+import { useOpportunitesController } from './opportunites/useOpportunitesController'
 import './DecisionsPage.css'
 
-type SortKey = 'symbol' | 'decision' | 'confidence' | 'ichimoku_score' | 'rvol' | 'price'
-type SortDir = 'asc' | 'desc'
-type ListView = 'liste' | 'matrice'
-
-const CLASS_ORDER: EngineAssetClass[] = [
-  'crypto',
-  'forex',
-  'metal',
-  'index',
-  'equity',
-  'energy',
-]
-
-/** Equity Twelve Data : hors cache screener (crédits) — lignes locales, détail au clic. */
-function placeholderRow(inst: EngineInstrument): ScreenerDecisionRow {
-  return {
-    symbol: inst.id,
-    timeframe: '1h',
-    price: 0,
-    decision: 'WAIT',
-    direction: 'NEUTRAL',
-    confidence: 0,
-    probability: 0,
-    ichimoku_score: null,
-    rvol: null,
-  }
-}
-
-const DECISION_FILTERS: Array<'all' | DecisionLabel> = [
-  'all',
-  'STRONG_BUY',
-  'BUY',
-  'WATCH',
-  'WAIT',
-  'SELL',
-  'STRONG_SELL',
-]
-
-const DECISION_RANK: Record<DecisionLabel, number> = {
-  STRONG_BUY: 6,
-  BUY: 5,
-  WATCH: 4,
-  WAIT: 3,
-  SELL: 2,
-  STRONG_SELL: 1,
-}
-
-const GATE_RANK: Record<PipelineGateLabel, number> = {
-  BUY: 4,
-  SELL: 3,
-  WATCH: 2,
-  NO_TRADE: 1,
-}
-
-function rowGate(r: ScreenerDecisionRow): PipelineGateLabel | null {
-  const raw = r.pipeline?.decision
-  if (raw === 'BUY' || raw === 'SELL' || raw === 'WATCH' || raw === 'NO_TRADE') return raw
-  return null
-}
-
-function fmtCacheAge(seconds: number): string {
-  if (seconds < 5) return 'à l’instant'
-  if (seconds < 60) return `il y a ${Math.floor(seconds)}s`
-  return `il y a ${Math.floor(seconds / 60)}min`
-}
-
-function ReasonChips({ codes, risk }: { codes: string[]; risk?: boolean }) {
-  return (
-    <div className="chip-row">
-      {codes.map((code) => (
-        <span key={code} className={`sig-chip${risk ? ' risk-chip' : ''}`} title={code}>
-          {labelReason(code)}
-        </span>
-      ))}
-    </div>
-  )
-}
-
-function AgentBlock({ title, agent }: { title: string; agent: AgentDetail }) {
-  return (
-    <div className="decision-agent">
-      <div className="decision-agent-head">
-        <strong>{title}</strong>
-        <span className="muted">
-          {labelDirection(agent.direction)} · {(agent.confidence * 100).toFixed(0)}%
-        </span>
-      </div>
-      {agent.reasons.length > 0 && <ReasonChips codes={agent.reasons} />}
-    </div>
-  )
-}
-
-function sortMarker(active: boolean, dir: SortDir): string {
-  if (!active) return ''
-  return dir === 'asc' ? ' ↑' : ' ↓'
-}
-
-function compareRows(a: ScreenerDecisionRow, b: ScreenerDecisionRow, key: SortKey, dir: SortDir): number {
-  const mul = dir === 'asc' ? 1 : -1
-  switch (key) {
-    case 'symbol':
-      return mul * a.symbol.localeCompare(b.symbol)
-    case 'decision': {
-      const ga = rowGate(a)
-      const gb = rowGate(b)
-      if (ga && gb) return mul * (GATE_RANK[ga] - GATE_RANK[gb])
-      if (ga) return mul * 1
-      if (gb) return mul * -1
-      return mul * (DECISION_RANK[a.decision] - DECISION_RANK[b.decision])
-    }
-    case 'confidence':
-      return mul * (a.confidence - b.confidence)
-    case 'ichimoku_score': {
-      const av = a.ichimoku_score ?? Number.NEGATIVE_INFINITY
-      const bv = b.ichimoku_score ?? Number.NEGATIVE_INFINITY
-      return mul * (av - bv)
-    }
-    case 'rvol': {
-      const av = a.rvol ?? Number.NEGATIVE_INFINITY
-      const bv = b.rvol ?? Number.NEGATIVE_INFINITY
-      return mul * (av - bv)
-    }
-    case 'price':
-      return mul * (a.price - b.price)
-    default: {
-      const _exhaustive: never = key
-      return _exhaustive
-    }
-  }
-}
-
-function MethodBanner({ rows }: { rows: ScreenerDecisionRow[] }) {
-  const counts = useMemo(() => {
-    const byStage: Record<PipelineStageId, Record<PipelineStageStatus, number>> = {
-      direction: { pass: 0, fail: 0, watch: 0, pending: 0, skip: 0 },
-      participation: { pass: 0, fail: 0, watch: 0, pending: 0, skip: 0 },
-      structure: { pass: 0, fail: 0, watch: 0, pending: 0, skip: 0 },
-      location: { pass: 0, fail: 0, watch: 0, pending: 0, skip: 0 },
-      regime: { pass: 0, fail: 0, watch: 0, pending: 0, skip: 0 },
-    }
-    for (const row of rows) {
-      const st = stageStatusesFromRow(row)
-      for (const id of PIPELINE_STAGE_ORDER) {
-        byStage[id][st[id]] += 1
-      }
-    }
-    return byStage
-  }, [rows])
-
-  return (
-    <section className="panel dec-method" aria-label="Méthode">
-      <p className="dec-method-lead">
-        Cinq portes successives. Seules <strong>Achat</strong> / <strong>Vente</strong> (colonne
-        Portes) autorisent un ordre paper. <strong>Brut</strong> = Ichimoku + RVOL seul — diagnostic,
-        pas un verdict d’action.
-      </p>
-      <ol className="dec-method-steps">
-        {PIPELINE_STAGE_ORDER.map((id) => {
-          const c = counts[id]
-          const ok = c.pass
-          const blocked = c.fail
-          const soft = c.watch + c.pending
-          return (
-            <li key={id} title={stageFullLabel(id)}>
-              <span className="dec-method-n">{stageMatrixLabel(id)}</span>
-              <strong>{stageFullLabel(id)}</strong>
-              <span className="muted dec-method-counts">
-                <span className="up">{ok} ok</span>
-                {' · '}
-                <span className="down">{blocked} bloqué</span>
-                {soft > 0 ? ` · ${soft} prudence` : ''}
-              </span>
-            </li>
-          )
-        })}
-      </ol>
-    </section>
-  )
-}
-
-function PipelineRibbon({ rows, loading }: { rows: ScreenerDecisionRow[]; loading: boolean }) {
-  const summary = useMemo(() => summarizeScreener(rows), [rows])
-  const stages = PIPELINE_STAGE_ORDER.map((id) => ({
-    id,
-    label: stageFullLabel(id),
-    short: stageMatrixLabel(id),
-    pass: summary.stagePass[id] ?? 0,
-  }))
-  return (
-    <section className="panel opp-pipeline-ribbon" aria-label="De l'observation à la décision">
-      <header className="panel-head">
-        <h2>De l’observation à la décision</h2>
-        <span className="panel-meta">
-          {loading && !rows.length ? '…' : `${summary.total} symboles · portes passées`}
-        </span>
-      </header>
-      <ol className="opp-ribbon">
-        {stages.map((s, i) => (
-          <li key={s.id}>
-            {i > 0 ? <span className="opp-ribbon-arrow" aria-hidden>→</span> : null}
-            <div className="opp-ribbon-step">
-              <span className="muted">{s.short}</span>
-              <strong>{s.label}</strong>
-              <b className="mono">{loading && !rows.length ? '—' : s.pass}</b>
-            </div>
-          </li>
-        ))}
-        <li>
-          <span className="opp-ribbon-arrow" aria-hidden>→</span>
-          <div className="opp-ribbon-step is-gate">
-            <span className="muted">Portes</span>
-            <strong>Décision</strong>
-            <b className="mono">
-              {loading && !rows.length
-                ? '—'
-                : `${summary.buy + summary.sell} act.`}
-            </b>
-            <small className="muted">
-              {summary.buy} A · {summary.sell} V · {summary.watch} W · {summary.none} NT
-            </small>
-          </div>
-        </li>
-      </ol>
-    </section>
-  )
-}
-
-type PaperConfirmState = {
-  symbol: string
-  timeframe: string
-  intent: OrderIntent | null
-  source: 'sheet' | 'matrix'
-}
-
 export function DecisionsPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const pinnedOnly = searchParams.get('filter') === 'pinned'
-  const [pinnedSymbols, setPinnedSymbols] = useState<Set<string> | null>(null)
-  const [instruments, setInstruments] = useState<EngineInstrument[]>([])
-  const [marketClass, setMarketClass] = useState<EngineAssetClass>('crypto')
-  const [rows, setRows] = useState<ScreenerDecisionRow[]>([])
-  const [cacheAge, setCacheAge] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const [selected, setSelected] = useState<string | null>(null)
-  const [detail, setDetail] = useState<DecisionDetail | null>(null)
-  const [detailLoading, setDetailLoading] = useState(false)
-  const [detailError, setDetailError] = useState<string | null>(null)
-
-  const [sortKey, setSortKey] = useState<SortKey>('decision')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
-  const [symbolQuery, setSymbolQuery] = useState('')
-  const [decisionFilter, setDecisionFilter] = useState<'all' | DecisionLabel>('all')
-  const [gateFilter, setGateFilter] = useState<'all' | PipelineGateLabel>('all')
-  const [rvolMin, setRvolMin] = useState('')
-  const [actionableOnly, setActionableOnly] = useState(false)
-  const [timeframe, setTimeframe] = useState('1h')
-  const [whyDetail, setWhyDetail] = useState<DecisionDetail | null>(null)
-  const [whyLoading, setWhyLoading] = useState(false)
-  const [whyError, setWhyError] = useState<string | null>(null)
-
-  const [confirming, setConfirming] = useState(false)
-  const [confirmMsg, setConfirmMsg] = useState<string | null>(null)
-  const [listView, setListView] = useState<ListView>('liste')
-  const [paperBusySymbol, setPaperBusySymbol] = useState<string | null>(null)
-  const [paperMsg, setPaperMsg] = useState<string | null>(null)
-  const [paperConfirming, setPaperConfirming] = useState(false)
-  const [paperConfirm, setPaperConfirm] = useState<PaperConfirmState | null>(null)
-  const [paperConfirmError, setPaperConfirmError] = useState<string | null>(null)
-  const [openPaperSymbols, setOpenPaperSymbols] = useState<ReadonlySet<string>>(() => new Set())
-  const paperConfirmLock = useRef(false)
-  const [intentOverride, setIntentOverride] = useState<OrderIntent | null>(null)
-  const [intentLoading, setIntentLoading] = useState(false)
-  const { explainDecision, compareGates } = useCopilotNav()
-
-  const refreshOpenPaperSymbols = useCallback(async () => {
-    try {
-      const ov = await getPaperOverview('ICHIVOL_BASELINE_V1')
-      const fromOverview = ov.positions.filter((p) => p.status === 'OPEN').map((p) => p.symbol)
-      if (fromOverview.length > 0) {
-        setOpenPaperSymbols(new Set(fromOverview))
-        return
-      }
-    } catch {
-      /* fallback below */
-    }
-    try {
-      const [mine, auto] = await Promise.all([
-        listPaperPositions({ source: 'user_confirmed', status: 'OPEN' }),
-        listPaperPositions({ source: 'auto_watchlist', status: 'OPEN' }),
-      ])
-      setOpenPaperSymbols(new Set([...mine, ...auto].map((p) => p.symbol)))
-    } catch {
-      /* keep previous set */
-    }
-  }, [])
-
-  const byId = useMemo(() => {
-    const m = new Map<string, EngineInstrument>()
-    for (const i of instruments) m.set(i.id, i)
-    return m
-  }, [instruments])
-
-  useEffect(() => {
-    if (!pinnedOnly) {
-      setPinnedSymbols(null)
-      return
-    }
-    let cancelled = false
-    listWatchlist()
-      .then((wl) => {
-        if (!cancelled) setPinnedSymbols(new Set(wl.map((r) => r.symbol)))
-      })
-      .catch(() => {
-        if (!cancelled) setPinnedSymbols(new Set())
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [pinnedOnly])
-
-  const visibleClasses = useMemo(() => {
-    const present = new Set(instruments.filter((i) => i.wired).map((i) => i.asset_class))
-    return CLASS_ORDER.filter((c) => present.has(c))
-  }, [instruments])
-
-  const sheetOpen = selected != null
-  const pipelineView = useMemo(
-    () => (detail ? pipelineFromDecisionDetail(detail) : null),
-    [detail],
-  )
-
-  /** Crypto/FX/métaux/indices : cache screener. Equity : placeholders (détail au clic). */
-  const classRows = useMemo(() => {
-    let base: ScreenerDecisionRow[]
-    if (marketClass === 'equity') {
-      base = instruments
-        .filter((i) => i.asset_class === 'equity' && i.wired)
-        .map((i) => {
-          const hit = rows.find((r) => r.symbol === i.id)
-          return hit ?? placeholderRow(i)
-        })
-    } else {
-      base = rows.filter((r) => byId.get(r.symbol)?.asset_class === marketClass)
-    }
-    if (pinnedOnly && pinnedSymbols) {
-      return base.filter((r) => pinnedSymbols.has(r.symbol))
-    }
-    return base
-  }, [marketClass, instruments, rows, byId, pinnedOnly, pinnedSymbols])
-
-  const visibleRows = useMemo(() => {
-    const q = symbolQuery.trim().toLowerCase()
-    const minR = rvolMin.trim() === '' ? null : Number(rvolMin)
-    const filtered = classRows.filter((r) => {
-      if (q) {
-        const sym = r.symbol.toLowerCase()
-        const label = (byId.get(r.symbol)?.label ?? '').toLowerCase()
-        const short = sym.replace(/usdt$/, '')
-        if (!sym.includes(q) && !short.includes(q) && !label.includes(q)) return false
-      }
-      if (decisionFilter !== 'all' && r.decision !== decisionFilter) return false
-      if (gateFilter !== 'all') {
-        const g = rowGate(r)
-        if (g !== gateFilter) return false
-      }
-      if (actionableOnly) {
-        const g = rowGate(r)
-        if (g !== 'BUY' && g !== 'SELL') return false
-      }
-      if (minR != null && Number.isFinite(minR)) {
-        if (r.rvol == null || r.rvol < minR) return false
-      }
-      return true
-    })
-    return [...filtered].sort((a, b) => compareRows(a, b, sortKey, sortDir))
-  }, [
-    classRows,
-    symbolQuery,
-    decisionFilter,
-    gateFilter,
-    rvolMin,
-    actionableOnly,
-    sortKey,
-    sortDir,
-    byId,
-  ])
-
-  const whyCandidate = useMemo(() => {
-    if (selected) {
-      const hit = classRows.find((r) => r.symbol === selected)
-      if (hit) return hit
-    }
-    const actionable = classRows
-      .filter((r) => {
-        const g = rowGate(r)
-        return g === 'BUY' || g === 'SELL'
-      })
-      .sort((a, b) => b.confidence - a.confidence)
-    return actionable[0] ?? null
-  }, [classRows, selected])
-
-  useEffect(() => {
-    if (!whyCandidate) {
-      setWhyDetail(null)
-      setWhyError(null)
-      setWhyLoading(false)
-      return
-    }
-    let cancelled = false
-    setWhyLoading(true)
-    setWhyError(null)
-    getDecisionDetail(whyCandidate.symbol, timeframe)
-      .then((d) => {
-        if (!cancelled) {
-          setWhyDetail(d)
-          setWhyLoading(false)
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setWhyDetail(null)
-          setWhyError(err instanceof Error ? err.message : 'Détail indisponible')
-          setWhyLoading(false)
-        }
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [whyCandidate?.symbol, timeframe])
-
-  function instrumentLabel(id: string): string {
-    return byId.get(id)?.label ?? id.replace(/USDT$/i, '')
-  }
-
-  function load(force = false) {
-    setLoading(true)
-    setError(null)
-    getScreener(timeframe, force)
-      .then((res) => {
-        setRows(res.rows)
-        setCacheAge(res.cache_age_seconds)
-      })
-      .catch((err: unknown) => {
-        const raw = err instanceof Error ? err.message : 'Erreur de chargement'
-        const lower = raw.toLowerCase()
-        setError(
-          lower.includes('timeout') || lower.includes('aborted') || lower.includes('dépassé')
-            ? 'Timeout screener — seuils Settings custom forcent un scan live. Remets les défauts RVOL/ATR pour le cache, ou réessaie.'
-            : raw,
-        )
-      })
-      .finally(() => setLoading(false))
-  }
-
-  useEffect(() => {
-    let cancelled = false
-    getEngineUniverse()
-      .then((u) => {
-        if (cancelled) return
-        setInstruments(u.instruments)
-      })
-      .catch(() => {
-        /* screener seul suffit pour crypto */
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  useEffect(() => {
-    void refreshOpenPaperSymbols()
-  }, [refreshOpenPaperSymbols])
-
-  useEffect(() => {
-    load()
-  }, [timeframe])
-
-  async function onConfirmDetail() {
-    if (!detail) return
-    setConfirming(true)
-    setConfirmMsg(null)
-    try {
-      const journalRow = await confirmUserDecision({
-        symbol: detail.symbol,
-        interval: detail.timeframe,
-        bias: detail.direction,
-        rvol: detail.rvol ?? 0,
-        signalKind: detail.decision,
-        gateDecision: detail.pipeline?.decision,
-        confidence: detail.confidence,
-      })
-      const journalNote = journalRow.deduped ? ' (déjà au journal, mis à jour)' : ''
-      setConfirmMsg(`ok${journalNote}`)
-    } catch (err: unknown) {
-      setConfirmMsg(err instanceof Error ? err.message : 'Échec enregistrement')
-    } finally {
-      setConfirming(false)
-    }
-  }
-
-  async function onConfirmPaperOrder() {
-    const intent = intentOverride ?? detail?.order_intent ?? null
-    if (!detail) return
-    if (openPaperSymbols.has(detail.symbol)) {
-      setPaperMsg(`${detail.symbol} · déjà ouvert — pas de 2ᵉ achat`)
-      setConfirmMsg('Déjà une position ouverte sur ce symbole')
-      return
-    }
-    setPaperConfirmError(null)
-    setPaperConfirm({
-      symbol: detail.symbol,
-      timeframe: detail.timeframe,
-      intent,
-      source: 'sheet',
-    })
-  }
-
-  async function executePaperConfirm(order: ManualOrderInput) {
-    if (!paperConfirm || paperConfirmLock.current) return
-    paperConfirmLock.current = true
-    setPaperConfirming(true)
-    setConfirmMsg(null)
-    setPaperMsg(null)
-    setPaperConfirmError(null)
-    try {
-      const sameDetail = detail?.symbol === paperConfirm.symbol ? detail : null
-      const gate = paperConfirm.intent?.pipeline_decision ?? sameDetail?.pipeline?.decision ?? 'WATCH'
-      // Ordre : le moteur d'abord. Un refus (Portes repassées à Attente, fonds…) lève ici,
-      // avant toute écriture au journal — ni position, ni « confirmation » orpheline.
-      const pos = await openPaperPosition(paperConfirm.symbol, paperConfirm.timeframe, order)
-      let journalWarn = ''
-      try {
-        await confirmUserDecision({
-          symbol: paperConfirm.symbol,
-          interval: paperConfirm.timeframe,
-          bias: 'BULLISH',
-          rvol: sameDetail?.rvol ?? 0,
-          signalKind:
-            sameDetail?.decision ??
-            (gate === 'SELL' ? 'SELL' : gate === 'BUY' ? 'BUY' : 'WATCH'),
-          gateDecision: gate,
-          confidence: sameDetail?.confidence,
-        })
-      } catch {
-        // La position existe : on le dit, on ne prétend pas que le journal est à jour.
-        journalWarn = ' · journal non enregistré (réessayer depuis le Journal)'
-      }
-      const already = pos.already_open === true || pos.created === false
-      const msg = already
-        ? `déjà ouvert · ${pos.symbol} ${pos.direction} (pas de 2ᵉ notional)`
-        : `ok · paper ${pos.direction} qty ${pos.qty != null ? pos.qty.toPrecision(4) : '—'}`
-      setConfirmMsg(msg + journalWarn)
-      setPaperMsg(
-        (already
-          ? `${pos.symbol} · déjà en portefeuille — achat verrouillé`
-          : `${pos.symbol} · paper ${pos.direction} @ ${pos.entry_price}`) + journalWarn,
-      )
-      setOpenPaperSymbols((prev) => new Set([...prev, pos.symbol]))
-      setPaperConfirm(null)
-      void refreshOpenPaperSymbols()
-    } catch (err: unknown) {
-      const raw = err instanceof Error ? err.message : 'Échec paper'
-      const stale = false
-      const msg = raw.replace(/^[a-z_]+: /, '')
-      setConfirmMsg(msg)
-      setPaperMsg(msg)
-      setPaperConfirmError(msg)
-      if (stale) {
-        try {
-          const fresh = await proposePaperTrade(paperConfirm.symbol, paperConfirm.timeframe)
-          setPaperConfirm((cur) => (cur ? { ...cur, intent: fresh } : cur))
-        } catch {
-          /* le message d'erreur reste affiché */
-        }
-      }
-    } finally {
-      setPaperConfirming(false)
-      paperConfirmLock.current = false
-    }
-  }
-
-  async function onOpenPaperFromMatrix(row: ScreenerDecisionRow) {
-    if (openPaperSymbols.has(row.symbol) || paperBusySymbol) return
-    setPaperBusySymbol(row.symbol)
-    setPaperMsg(null)
-    setPaperConfirmError(null)
-    try {
-      // La proposition du moteur sert de taille suggérée ; son absence n'empêche pas d'acheter.
-      const intent = await proposePaperTrade(row.symbol, row.timeframe || timeframe).catch(() => null)
-      setPaperConfirm({
-        symbol: row.symbol,
-        timeframe: row.timeframe || timeframe,
-        intent,
-        source: 'matrix',
-      })
-    } finally {
-      setPaperBusySymbol(null)
-    }
-  }
-
-  async function onRefreshIntent() {
-    if (!detail) return
-    setIntentLoading(true)
-    try {
-      setIntentOverride(await proposePaperTrade(detail.symbol, detail.timeframe || timeframe))
-    } catch {
-      setIntentOverride(null)
-    } finally {
-      setIntentLoading(false)
-    }
-  }
-
-  // Toujours avoir un intent pour afficher « Vérifier l’achat… » → PaperConfirmSheet.
-  useEffect(() => {
-    if (!detail) return
-    if (detail.order_intent || intentOverride) return
-    let cancelled = false
-    setIntentLoading(true)
-    proposePaperTrade(detail.symbol, detail.timeframe || timeframe)
-      .then((intent) => {
-        if (!cancelled) setIntentOverride(intent)
-      })
-      .catch(() => {
-        if (!cancelled) setIntentOverride(null)
-      })
-      .finally(() => {
-        if (!cancelled) setIntentLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when symbol/tf change
-  }, [detail?.symbol, detail?.timeframe, detail?.order_intent])
-
-  function selectClass(next: EngineAssetClass) {
-    setMarketClass(next)
-    setSelected(null)
-    setDetail(null)
-    setDetailError(null)
-    setSymbolQuery('')
-    setIntentOverride(null)
-    setConfirmMsg(null)
-  }
-
-  useEffect(() => {
-    if (!sheetOpen) return
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') closeSheet()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [sheetOpen])
-
-  function closeSheet() {
-    setSelected(null)
-    setDetail(null)
-    setDetailError(null)
-    setDetailLoading(false)
-    setIntentOverride(null)
-    setConfirmMsg(null)
-    if (searchParams.has('symbol')) {
-      const next = new URLSearchParams(searchParams)
-      next.delete('symbol')
-      setSearchParams(next, { replace: true })
-    }
-  }
-
-  function onSelect(symbol: string) {
-    if (selected === symbol) {
-      closeSheet()
-      return
-    }
-    const inst = byId.get(symbol)
-    if (inst) setMarketClass(inst.asset_class)
-    setSelected(symbol)
-    setDetail(null)
-    setDetailError(null)
-    setDetailLoading(true)
-    setIntentOverride(null)
-    setConfirmMsg(null)
-    const next = new URLSearchParams(searchParams)
-    next.set('symbol', symbol)
-    setSearchParams(next, { replace: false })
-    getDecisionDetail(symbol, timeframe)
-      .then(setDetail)
-      .catch((err: unknown) =>
-        setDetailError(err instanceof Error ? err.message : 'Erreur de chargement'),
-      )
-      .finally(() => setDetailLoading(false))
-  }
-
-  useEffect(() => {
-    const fromUrl = searchParams.get('symbol')
-    const classQ = searchParams.get('class')
-    const intervalQ = searchParams.get('interval')
-    if (
-      intervalQ === '15m' ||
-      intervalQ === '1h' ||
-      intervalQ === '4h' ||
-      intervalQ === '1d'
-    ) {
-      setTimeframe(intervalQ)
-    }
-    if (
-      classQ === 'crypto' ||
-      classQ === 'forex' ||
-      classQ === 'metal' ||
-      classQ === 'index' ||
-      classQ === 'equity' ||
-      classQ === 'energy'
-    ) {
-      setMarketClass(classQ)
-    }
-    if (!fromUrl) {
-      if (selected) {
-        setSelected(null)
-        setDetail(null)
-        setDetailError(null)
-        setDetailLoading(false)
-        setIntentOverride(null)
-        setConfirmMsg(null)
-      }
-      return
-    }
-    if (selected === fromUrl) return
-    setSelected(fromUrl)
-    setDetail(null)
-    setDetailError(null)
-    setDetailLoading(true)
-    setIntentOverride(null)
-    setConfirmMsg(null)
-    const tf =
-      intervalQ === '15m' ||
-      intervalQ === '1h' ||
-      intervalQ === '4h' ||
-      intervalQ === '1d'
-        ? intervalQ
-        : timeframe
-    getDecisionDetail(fromUrl, tf)
-      .then((d) => {
-        setDetail(d)
-        const inst = instruments.find((i) => i.id === fromUrl)
-        if (inst) setMarketClass(inst.asset_class)
-      })
-      .catch((err: unknown) =>
-        setDetailError(err instanceof Error ? err.message : 'Erreur de chargement'),
-      )
-      .finally(() => setDetailLoading(false))
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- deep-link once per symbol query
-  }, [searchParams, instruments])
-
-  function toggleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-      return
-    }
-    setSortKey(key)
-    setSortDir(key === 'symbol' ? 'asc' : 'desc')
-  }
-
-  const colCount = sheetOpen ? 3 : 6
-  const activeIntent: OrderIntent | null = intentOverride ?? detail?.order_intent ?? null
-
-  const gateStats = useMemo(() => {
-    let buy = 0
-    let sell = 0
-    let watch = 0
-    let none = 0
-    for (const r of classRows) {
-      const g = rowGate(r)
-      if (g === 'BUY') buy += 1
-      else if (g === 'SELL') sell += 1
-      else if (g === 'WATCH') watch += 1
-      else none += 1
-    }
-    return { buy, sell, watch, none, total: classRows.length }
-  }, [classRows])
+  const c = useOpportunitesController()
 
   return (
-    <div className={`decisions-page${sheetOpen ? ' is-sheet-open' : ''}`}>
-      <div className="decisions-chrome" aria-hidden={sheetOpen || undefined}>
-      <header className="iv-page-header page-head market-head">
-        <div className="market-head-copy">
-          <p className="iv-page-eyebrow">Trading · Opportunités</p>
-          <h1>Opportunités</h1>
-          <p className="iv-page-question">
-            Que dit la méthode ?
-            {pinnedOnly ? ' · Filtre Épinglés actif.' : ''}
-          </p>
-          <p className="muted">{CLASS_BLURBS[marketClass]}</p>
-        </div>
-        {visibleClasses.length > 0 && (
-          <div className="market-class-tabs" role="tablist" aria-label="Classe d’actif">
-            {pinnedOnly && (
-              <Link to="/app/opportunites" className="ghost" style={{ alignSelf: 'center' }}>
-                Tout voir
-              </Link>
-            )}
-            {!pinnedOnly && (
-              <Link to="/app/opportunites?filter=pinned" className="ghost" style={{ alignSelf: 'center' }}>
-                Épinglés
-              </Link>
-            )}
-            {visibleClasses.map((c) => (
-              <button
-                key={c}
-                type="button"
-                role="tab"
-                aria-selected={c === marketClass}
-                className={c === marketClass ? 'is-active' : undefined}
-                onClick={() => selectClass(c)}
-              >
-                {CLASS_LABELS[c]}
-              </button>
-            ))}
+    <div className={`decisions-page${c.sheetOpen ? ' is-sheet-open' : ''}`}>
+      <div className="decisions-chrome" aria-hidden={c.sheetOpen || undefined}>
+        <header className="iv-page-header page-head market-head">
+          <div className="market-head-copy">
+            <p className="iv-page-eyebrow">Trading · Opportunités</p>
+            <h1>Opportunités</h1>
+            <p className="iv-page-question">
+              Que dit la méthode ?
+              {c.pinnedOnly ? ' · Filtre Épinglés actif.' : ''}
+            </p>
+            <p className="muted">{CLASS_BLURBS[c.marketClass]}</p>
           </div>
-        )}
-      </header>
-
-      <MethodBanner rows={classRows} />
-
-      <PipelineRibbon rows={classRows} loading={loading} />
-
-      {whyCandidate ? (
-        <DeskCardShell
-          title={`Pourquoi ${whyCandidate.symbol.replace(/USDT$/i, '')} ?`}
-          meta={
-            (() => {
-              const g = rowGate(whyCandidate)
-              return g ? labelPipelineGate(g) : labelDecision(whyCandidate.decision)
-            })()
-          }
-          footer={
-            <button type="button" className="link" onClick={() => onSelect(whyCandidate.symbol)}>
-              Ouvrir la fiche ↗
-            </button>
-          }
-        >
-          {whyLoading && !whyDetail ? (
-            <p className="muted">Chargement du détail…</p>
-          ) : whyError && !whyDetail ? (
-            <p className="muted">{whyError}</p>
-          ) : whyDetail ? (
-            <div className="opp-why">
-              <p className="opp-why-summary">{buildDecisionSummary(whyDetail)}</p>
-              <ul className="opp-why-stages">
-                {(whyDetail.pipeline?.stages ?? []).map((s) => (
-                  <li key={s.id} className={`is-${s.status}`}>
-                    <span>{stageFullLabel(s.id as PipelineStageId)}</span>
-                    <strong>{s.status === 'pass' ? 'passée' : s.status === 'fail' ? 'bloquée' : s.status}</strong>
-                    {s.summary ? <small className="muted">{s.summary}</small> : null}
-                  </li>
-                ))}
-              </ul>
-              <dl className="opp-why-meta">
-                <div>
-                  <dt>RVOL</dt>
-                  <dd className="mono">
-                    {whyDetail.rvol != null
-                      ? `${new Intl.NumberFormat('fr-FR', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        }).format(whyDetail.rvol)}×`
-                      : '—'}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Invalidation</dt>
-                  <dd>
-                    {(whyDetail.invalidation && whyDetail.invalidation[0]) ||
-                      whyDetail.evidence?.invalidation?.[0] ||
-                      whyDetail.order_intent?.invalidation?.[0] ||
-                      '—'}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          ) : (
-            <p className="muted">Pas encore de détail pour ce symbole.</p>
-          )}
-        </DeskCardShell>
-      ) : null}
-
-      <div className="desk-relocated-stack">
-        <MarketPulseCard rows={classRows} loading={loading} />
-      </div>
-
-      <section className="dec-gate-stats" aria-label="Résumé Portes">
-        <button
-          type="button"
-          className="panel overview-stat overview-stat--bull"
-          onClick={() => {
-            setActionableOnly(true)
-            setDecisionFilter('all')
-          }}
-          title="Filtrer les actionnables Achat"
-        >
-          <span className="overview-stat-label muted">Achats (Portes)</span>
-          <strong className="mono">{loading && !classRows.length ? '—' : gateStats.buy}</strong>
-        </button>
-        <button
-          type="button"
-          className="panel overview-stat overview-stat--bear"
-          onClick={() => {
-            setActionableOnly(true)
-            setDecisionFilter('all')
-          }}
-          title="Filtrer les actionnables Vente"
-        >
-          <span className="overview-stat-label muted">Ventes (Portes)</span>
-          <strong className="mono">{loading && !classRows.length ? '—' : gateStats.sell}</strong>
-        </button>
-        <button
-          type="button"
-          className="panel overview-stat"
-          onClick={() => {
-            setActionableOnly(false)
-            setDecisionFilter('all')
-          }}
-        >
-          <span className="overview-stat-label muted">Surveillance</span>
-          <strong className="mono">{loading && !classRows.length ? '—' : gateStats.watch}</strong>
-        </button>
-        <div className="panel overview-stat">
-          <span className="overview-stat-label muted">Scannées · {timeframe}</span>
-          <strong className="mono">{loading && !classRows.length ? '—' : gateStats.total}</strong>
-          <span className="overview-stat-meta muted">
-            {gateStats.buy + gateStats.sell} actionnables
-          </span>
-        </div>
-      </section>
-
-      {error && (
-        <div className="banner error" role="alert">
-          {error.includes('engine_unreachable') || error.includes('502')
-            ? 'Moteur Python injoignable — vérifie que le service tourne (voir ichivol-app/engine/README).'
-            : error}
-        </div>
-      )}
-      </div>
-
-      <div className="decisions-split">
-        <section className="panel decisions-table-panel">
-          <header className="panel-head">
-            <h2>Screener · {CLASS_LABELS[marketClass]}</h2>
-            <div className="panel-head-actions">
-              <div className="decisions-view-tabs" role="tablist" aria-label="Vue screener">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={listView === 'liste'}
-                  className={listView === 'liste' ? 'is-active' : undefined}
-                  onClick={() => setListView('liste')}
-                >
-                  Liste
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={listView === 'matrice'}
-                  className={listView === 'matrice' ? 'is-active' : undefined}
-                  onClick={() => setListView('matrice')}
-                >
-                  Matrice
-                </button>
-              </div>
-              <span className="panel-meta">
-                {loading
-                  ? 'scan…'
-                  : marketClass === 'equity'
-                    ? `${visibleRows.length} · détail au clic (pas de scan masse)`
-                    : `${visibleRows.length}/${classRows.length}${cacheAge != null ? ` · ${fmtCacheAge(cacheAge)}` : ''}`}
-              </span>
-              {marketClass !== 'equity' && (
-                <button type="button" className="ghost" onClick={() => load(true)} disabled={loading}>
-                  Rafraîchir
-                </button>
+          {c.visibleClasses.length > 0 && (
+            <div className="market-class-tabs" role="tablist" aria-label="Classe d’actif">
+              {c.pinnedOnly && (
+                <Link to="/app/opportunites" className="ghost" style={{ alignSelf: 'center' }}>
+                  Tout voir
+                </Link>
               )}
-            </div>
-          </header>
-
-          <div className="decisions-filters" role="search">
-            <div className="opp-gate-segmented" role="group" aria-label="Filtrer par état Portes">
-              {(
-                [
-                  ['all', 'Tous'],
-                  ['BUY', 'Achat'],
-                  ['SELL', 'Vente'],
-                  ['WATCH', 'Surveillance'],
-                  ['NO_TRADE', 'No trade'],
-                ] as const
-              ).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={gateFilter === id ? 'is-active' : undefined}
-                  aria-pressed={gateFilter === id}
-                  onClick={() => {
-                    setGateFilter(id)
-                    if (id === 'BUY' || id === 'SELL') setActionableOnly(false)
-                  }}
+              {!c.pinnedOnly && (
+                <Link
+                  to="/app/opportunites?filter=pinned"
+                  className="ghost"
+                  style={{ alignSelf: 'center' }}
                 >
-                  {label}
+                  Épinglés
+                </Link>
+              )}
+              {c.visibleClasses.map((cl) => (
+                <button
+                  key={cl}
+                  type="button"
+                  role="tab"
+                  aria-selected={cl === c.marketClass}
+                  className={cl === c.marketClass ? 'is-active' : undefined}
+                  onClick={() => c.selectClass(cl)}
+                >
+                  {CLASS_LABELS[cl]}
                 </button>
               ))}
             </div>
-            <label className="decisions-filter">
-              <span className="muted">TF</span>
-              <select value={timeframe} onChange={(e) => setTimeframe(e.target.value)}>
-                <option value="15m">15m</option>
-                <option value="1h">1h</option>
-                <option value="4h">4h</option>
-                <option value="1d">1d</option>
-              </select>
-            </label>
-            <label className="decisions-filter">
-              <span className="muted">Symbole</span>
-              <input
-                type="search"
-                value={symbolQuery}
-                onChange={(e) => setSymbolQuery(e.target.value)}
-                placeholder="BTC, EUR, XAU…"
-                autoComplete="off"
-              />
-            </label>
-            <label className="decisions-filter">
-              <span className="muted">Décision brute</span>
-              <select
-                value={decisionFilter}
-                onChange={(e) => setDecisionFilter(e.target.value as 'all' | DecisionLabel)}
-              >
-                {DECISION_FILTERS.map((d) => (
-                  <option key={d} value={d}>
-                    {d === 'all' ? 'Toutes' : labelDecision(d)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="decisions-filter">
-              <span className="muted">RVOL ≥</span>
-              <input
-                type="number"
-                min={0}
-                step={0.1}
-                value={rvolMin}
-                onChange={(e) => setRvolMin(e.target.value)}
-                placeholder="ex. 1.5"
-              />
-            </label>
-            <label className="decisions-filter dec-filter-check">
-              <input
-                type="checkbox"
-                checked={actionableOnly}
-                onChange={(e) => setActionableOnly(e.target.checked)}
-              />
-              <span className="muted">Actionnables (Portes Achat/Vente)</span>
-            </label>
-            {(symbolQuery ||
-              decisionFilter !== 'all' ||
-              gateFilter !== 'all' ||
-              rvolMin ||
-              actionableOnly) && (
-              <button
-                type="button"
-                className="ghost decisions-filter-reset"
-                onClick={() => {
-                  setSymbolQuery('')
-                  setDecisionFilter('all')
-                  setGateFilter('all')
-                  setRvolMin('')
-                  setActionableOnly(false)
-                }}
-              >
-                Reset
-              </button>
-            )}
+          )}
+        </header>
+
+        <MethodBanner rows={c.classRows} />
+        <PipelineRibbon rows={c.classRows} loading={c.loading} />
+
+        {c.whyCandidate ? (
+          <WhyCard
+            whyCandidate={c.whyCandidate}
+            whyDetail={c.whyDetail}
+            whyLoading={c.whyLoading}
+            whyError={c.whyError}
+            onOpenSheet={c.onSelect}
+          />
+        ) : null}
+
+        <div className="desk-relocated-stack">
+          <MarketPulseCard rows={c.classRows} loading={c.loading} />
+        </div>
+
+        <GateStats
+          loading={c.loading}
+          empty={!c.classRows.length}
+          buy={c.gateStats.buy}
+          sell={c.gateStats.sell}
+          watch={c.gateStats.watch}
+          total={c.gateStats.total}
+          timeframe={c.timeframe}
+          onFilterBuySell={() => {
+            c.setActionableOnly(true)
+            c.setDecisionFilter('all')
+          }}
+          onClearActionable={() => {
+            c.setActionableOnly(false)
+            c.setDecisionFilter('all')
+          }}
+        />
+
+        {c.error && (
+          <div className="banner error" role="alert">
+            {c.error.includes('engine_unreachable') || c.error.includes('502')
+              ? 'Moteur Python injoignable — vérifie que le service tourne (voir ichivol-app/engine/README).'
+              : c.error}
           </div>
-
-          <div className="table-wrap">
-            {listView === 'matrice' ? (
-              loading && visibleRows.length === 0 ? (
-                <p className="muted center">Chargement du screener…</p>
-              ) : (
-                <>
-                  <GateMatrix
-                    rows={visibleRows}
-                    selected={selected}
-                    onSelect={onSelect}
-                    symbolLabel={instrumentLabel}
-                    onOpenPaper={onOpenPaperFromMatrix}
-                    paperBusySymbol={paperBusySymbol}
-                    openPaperSymbols={openPaperSymbols}
-                    emptyHint={
-                      classRows.length === 0
-                        ? marketClass === 'equity'
-                          ? 'Aucune action câblée'
-                          : 'Aucune ligne pour cette classe — clique Rafraîchir.'
-                        : 'Aucun résultat pour ces filtres'
-                    }
-                  />
-                  {paperMsg && <p className="muted decisions-paper-msg">{paperMsg}</p>}
-                </>
-              )
-            ) : (
-              <table className="decisions-table">
-                <thead>
-                  <tr>
-                    <th>
-                      <button type="button" className="th-sort" onClick={() => toggleSort('symbol')}>
-                        Symbole{sortMarker(sortKey === 'symbol', sortDir)}
-                      </button>
-                    </th>
-                    <th>
-                      <button
-                        type="button"
-                        className="th-sort"
-                        onClick={() => toggleSort('decision')}
-                        title="Tri sur le verdict Portes (pipeline) ; Brut = diagnostic Ichi+RVOL"
-                      >
-                        Portes{sortMarker(sortKey === 'decision', sortDir)}
-                      </button>
-                    </th>
-                    {!sheetOpen && (
-                      <th>
-                        <button
-                          type="button"
-                          className="th-sort"
-                          onClick={() => toggleSort('confidence')}
-                        >
-                          Confiance{sortMarker(sortKey === 'confidence', sortDir)}
-                        </button>
-                      </th>
-                    )}
-                    {!sheetOpen && (
-                      <th>
-                        <button
-                          type="button"
-                          className="th-sort"
-                          onClick={() => toggleSort('ichimoku_score')}
-                        >
-                          Ichimoku{sortMarker(sortKey === 'ichimoku_score', sortDir)}
-                        </button>
-                      </th>
-                    )}
-                    <th>
-                      <button type="button" className="th-sort" onClick={() => toggleSort('rvol')}>
-                        RVOL{sortMarker(sortKey === 'rvol', sortDir)}
-                      </button>
-                    </th>
-                    {!sheetOpen && (
-                      <th>
-                        <button
-                          type="button"
-                          className="th-sort"
-                          onClick={() => toggleSort('price')}
-                        >
-                          Prix{sortMarker(sortKey === 'price', sortDir)}
-                        </button>
-                      </th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleRows.map((r) => (
-                    <tr
-                      key={r.symbol}
-                      className={r.symbol === selected ? 'is-active' : undefined}
-                      onClick={() => onSelect(r.symbol)}
-                    >
-                      <td>
-                        <strong title={r.symbol}>{instrumentLabel(r.symbol)}</strong>
-                      </td>
-                      <td>
-                        <VerdictBadge decision={r.decision} pipeline={r.pipeline} />
-                      </td>
-                      {!sheetOpen && <td className="mono">{(r.confidence * 100).toFixed(0)}%</td>}
-                      {!sheetOpen && (
-                        <td className="mono">
-                          {r.ichimoku_score != null ? r.ichimoku_score.toFixed(0) : '—'}
-                        </td>
-                      )}
-                      <td className="mono">{r.rvol != null ? `${r.rvol.toFixed(2)}×` : '—'}</td>
-                      {!sheetOpen && (
-                        <td className="mono">
-                          {r.price > 0 ? r.price.toFixed(r.price >= 100 ? 2 : 4) : '—'}
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                  {loading && visibleRows.length === 0 && (
-                    <tr>
-                      <td colSpan={colCount} className="muted center">
-                        Chargement du screener…
-                      </td>
-                    </tr>
-                  )}
-                  {!loading && visibleRows.length === 0 && !error && (
-                    <tr>
-                      <td colSpan={colCount} className="muted center">
-                        {classRows.length === 0
-                          ? marketClass === 'equity'
-                            ? 'Aucune action câblée'
-                            : 'Aucune ligne pour cette classe — clique Rafraîchir (le cache se reconstruit après un redémarrage moteur).'
-                          : 'Aucun résultat pour ces filtres'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </section>
-
-        {sheetOpen && (
-          <aside className="panel decision-sheet" aria-label={`Détail ${selected}`}>
-            <header className="panel-head decision-sheet-head">
-              <div>
-                <h2>{selected ? instrumentLabel(selected) : ''}</h2>
-                <span className="panel-meta">
-                  {detailLoading
-                    ? byId.get(selected ?? '')?.provider !== 'binance'
-                      ? 'calcul… (peut être long)'
-                      : 'chargement…'
-                    : detail
-                      ? `${detail.strategy_version} · ${detail.timeframe}`
-                      : ''}
-                </span>
-              </div>
-              <div className="dec-sheet-head-actions">
-                {selected && (
-                  <Link
-                    to={`/app/market?symbol=${encodeURIComponent(selected)}`}
-                    className="ghost"
-                  >
-                    Marché →
-                  </Link>
-                )}
-                <button type="button" className="ghost decision-sheet-close" onClick={closeSheet} aria-label="Retour à la liste">
-                  ← Retour
-                </button>
-              </div>
-            </header>
-
-            <div className="decision-sheet-scroll">
-              {detailError && (
-                <div className="banner error" role="alert">
-                  {detailError}
-                </div>
-              )}
-
-              {detailLoading && !detail && (
-                <p className="muted decision-sheet-loading">
-                  Calcul du pipeline en cours
-                  {selected && byId.get(selected)?.provider !== 'binance'
-                    ? ' — hors crypto ça peut prendre 5–20s (feed + accumulateur).'
-                    : '…'}
-                </p>
-              )}
-
-              {detail && (
-                <div className="decision-detail-body">
-                  <p className="dec-sheet-summary">{buildDecisionSummary(detail)}</p>
-
-                  <div className="dec-sheet-verdict">
-                    <VerdictBadge decision={detail.decision} pipeline={detail.pipeline} />
-                    {detail.pipeline?.decision && (
-                      <span className="muted">
-                        Portes = {labelPipelineGate(detail.pipeline.decision as PipelineGateLabel)} ·
-                        Brut = {labelDecision(detail.decision)}
-                      </span>
-                    )}
-                  </div>
-
-                  <section className="dec-before-open" aria-label="Avant d’ouvrir">
-                    <h3 className="subhead">Avant d’ouvrir (paper)</h3>
-                    <TradePlanCard intent={activeIntent} pipelineView={pipelineView} />
-                    <ProposePaperTradePanel
-                      intent={activeIntent}
-                      loading={intentLoading || detailLoading}
-                      confirming={paperConfirming}
-                      onConfirm={() => void onConfirmPaperOrder()}
-                      onRefresh={() => void onRefreshIntent()}
-                    />
-                  </section>
-
-                  <div className="decision-confirm-row dec-secondary-actions">
-                    <button
-                      type="button"
-                      className="ghost"
-                      disabled={confirming}
-                      onClick={() => void onConfirmDetail()}
-                    >
-                      {confirming ? 'Enregistrement…' : 'Journal seulement'}
-                    </button>
-                    <button
-                      type="button"
-                      className="ghost"
-                      onClick={() => explainDecision(decisionPayloadFromDetail(detail))}
-                      title="Ouvre le Copilot avec un prompt déjà prêt"
-                    >
-                      Expliquer
-                    </button>
-                    <button
-                      type="button"
-                      className="ghost"
-                      onClick={() => compareGates(decisionPayloadFromDetail(detail))}
-                      title="Écart badge Brut vs verdict Portes"
-                    >
-                      Écart Portes / Brut
-                    </button>
-                    <span className="muted">
-                      Paper = position virtuelle (CTA ci-dessus) · Journal = snapshot local.
-                    </span>
-                    {confirmMsg?.startsWith('ok') ? (
-                      <span className="panel-meta">
-                        Enregistré{confirmMsg.slice(2)} ·{' '}
-                        <Link to="/app/journal">journal</Link>
-                        {' · '}
-                        <Link to="/app/portefeuille">synthèse</Link>
-                        {' · '}
-                        <Link to="/app/portefeuille?tab=positions">paper</Link>
-                      </span>
-                    ) : (
-                      confirmMsg && <span className="panel-meta">{confirmMsg}</span>
-                    )}
-                  </div>
-
-                  {pipelineView && (
-                    <details className="decision-agents-details" open>
-                      <summary className="subhead">Pipeline (5 portes)</summary>
-                      <DecisionPipelinePanel view={pipelineView} />
-                    </details>
-                  )}
-
-                  <details className="decision-agents-details">
-                    <summary className="subhead">Evidence &amp; preuves</summary>
-                    <SignalEvidenceCard detail={detail} />
-                  </details>
-
-                  <details className="decision-agents-details">
-                    <summary className="subhead">Agents bruts (Ichimoku / RVOL)</summary>
-                    <div className="decision-agents">
-                      <AgentBlock title="Ichimoku" agent={detail.ichimoku} />
-                      <AgentBlock title="RVOL" agent={detail.rvol_detail} />
-                    </div>
-                  </details>
-                </div>
-              )}
-            </div>
-          </aside>
         )}
       </div>
 
-      {paperConfirm && (
+      <div className="decisions-split">
+        <ScreenerPanel
+          marketClass={c.marketClass}
+          listView={c.listView}
+          setListView={c.setListView}
+          loading={c.loading}
+          visibleRows={c.visibleRows}
+          classRows={c.classRows}
+          cacheAge={c.cacheAge}
+          onRefresh={() => c.load(true)}
+          gateFilter={c.gateFilter}
+          setGateFilter={c.setGateFilter}
+          setActionableOnly={c.setActionableOnly}
+          timeframe={c.timeframe}
+          setTimeframe={c.setTimeframe}
+          symbolQuery={c.symbolQuery}
+          setSymbolQuery={c.setSymbolQuery}
+          decisionFilter={c.decisionFilter}
+          setDecisionFilter={c.setDecisionFilter}
+          rvolMin={c.rvolMin}
+          setRvolMin={c.setRvolMin}
+          actionableOnly={c.actionableOnly}
+          sheetOpen={c.sheetOpen}
+          selected={c.selected}
+          onSelect={c.onSelect}
+          instrumentLabel={c.instrumentLabel}
+          onOpenPaperFromMatrix={(row) => void c.onOpenPaperFromMatrix(row)}
+          paperBusySymbol={c.paperBusySymbol}
+          openPaperSymbols={c.openPaperSymbols}
+          paperMsg={c.paperMsg}
+          error={c.error}
+          sortKey={c.sortKey}
+          sortDir={c.sortDir}
+          toggleSort={c.toggleSort}
+          colCount={c.colCount}
+        />
+
+        {c.sheetOpen && c.selected && (
+          <DecisionSheet
+            selected={c.selected}
+            instrumentLabel={c.instrumentLabel}
+            detailLoading={c.detailLoading}
+            byId={c.byId}
+            detail={c.detail}
+            closeSheet={c.closeSheet}
+            detailError={c.detailError}
+            activeIntent={c.activeIntent}
+            pipelineView={c.pipelineView}
+            intentLoading={c.intentLoading}
+            paperConfirming={c.paperConfirming}
+            onConfirmPaperOrder={() => void c.onConfirmPaperOrder()}
+            onRefreshIntent={() => void c.onRefreshIntent()}
+            confirming={c.confirming}
+            onConfirmDetail={() => void c.onConfirmDetail()}
+            explainDecision={c.explainDecision}
+            compareGates={c.compareGates}
+            confirmMsg={c.confirmMsg}
+          />
+        )}
+      </div>
+
+      {c.paperConfirm && (
         <PaperConfirmSheet
-          symbol={paperConfirm.symbol}
-          timeframe={paperConfirm.timeframe}
-          symbolLabel={instrumentLabel(paperConfirm.symbol)}
-          intent={paperConfirm.intent}
-          confirming={paperConfirming}
-          error={paperConfirmError}
-          onConfirm={(order) => void executePaperConfirm(order)}
+          symbol={c.paperConfirm.symbol}
+          timeframe={c.paperConfirm.timeframe}
+          symbolLabel={c.instrumentLabel(c.paperConfirm.symbol)}
+          intent={c.paperConfirm.intent}
+          confirming={c.paperConfirming}
+          error={c.paperConfirmError}
+          onConfirm={(order) => void c.executePaperConfirm(order)}
           onCancel={() => {
-            if (!paperConfirming) setPaperConfirm(null)
+            if (!c.paperConfirming) c.setPaperConfirm(null)
           }}
         />
       )}

@@ -1,0 +1,16 @@
+{
+  "index_css_lines_before": 5328,
+  "index_css_lines_after": 2774,
+  "files_deleted": 0,
+  "lines_removed_estimate": 2554,
+  "page_line_counts": {
+    "OverviewPage.tsx": 314,
+    "DecisionsPage.tsx": 183,
+    "MarketPage.tsx": 52,
+    "BacktestsPage.tsx": 87,
+    "SettingsPage.tsx": 94,
+    "JournalPage.tsx": 813,
+    "ActivityPage.tsx": 615
+  },
+  "notes": "Page files slimmed via section folders; controllers/sections hold extracted JSX. Journal/Activity only helpers extracted (still >400). CSS page-only blocks moved out of index.css."
+}
