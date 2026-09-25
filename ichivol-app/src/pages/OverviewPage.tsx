@@ -9,6 +9,7 @@ import {
   getScreener,
   type ScreenerDecisionRow,
 } from '../lib/decisions'
+import { fetchTickers24h } from '../lib/binance'
 import {
   fetchFearGreed,
   fetchGlobalMarket,
@@ -258,6 +259,7 @@ export function OverviewPage() {
   const [market, setMarket] = useState<GlobalMarketData | null>(null)
   const [fng, setFng] = useState<FearGreed | null>(null)
   const [climateError, setClimateError] = useState<string | null>(null)
+  const [changeBySymbol, setChangeBySymbol] = useState<Record<string, number>>({})
   const [sessionId, setSessionId] = useState<SessionId>('london')
   const [equityPeriod, setEquityPeriod] = useState<EquityPeriod>('1M')
   const [nowTick, setNowTick] = useState(() => Date.now())
@@ -265,7 +267,8 @@ export function OverviewPage() {
   const load = useCallback(async (force = false) => {
     setLoading(true)
     type ScreenerOk = Awaited<ReturnType<typeof getScreener>>
-    const [screenerRes, ovRes, feedRes, lockRes, healthRes, mktRes, fngRes] = await Promise.all([
+    const [screenerRes, ovRes, feedRes, lockRes, healthRes, mktRes, fngRes, tickersRes] =
+      await Promise.all([
       getScreener('1h', force)
         .then((r): ScreenerOk | Error => r)
         .catch((err: unknown): ScreenerOk | Error =>
@@ -285,11 +288,12 @@ export function OverviewPage() {
           items: [] as ActivityItem[],
         })),
       getRiskLock(BASELINE).catch(() => null),
-      fetch('/api/health', { credentials: 'include' })
+      fetch('/api/engine/health', { credentials: 'include' })
         .then(async (res) => {
           if (!res.ok) return { engine: false }
-          const j = (await res.json()) as { checks?: { engine?: boolean } }
-          return { engine: Boolean(j.checks?.engine) }
+          const j = (await res.json().catch(() => null)) as { status?: string; ok?: boolean } | null
+          const ok = j?.ok === true || j?.status === 'ok' || j?.status === 'healthy'
+          return { engine: Boolean(ok) }
         })
         .catch(() => ({ engine: false })),
       fetchGlobalMarket()
@@ -301,6 +305,13 @@ export function OverviewPage() {
       fetchFearGreed()
         .then((f) => ({ ok: true as const, data: f }))
         .catch(() => ({ ok: false as const })),
+      fetchTickers24h()
+        .then((list) => {
+          const map: Record<string, number> = {}
+          for (const t of list) map[t.symbol.toUpperCase()] = t.priceChangePercent
+          return map
+        })
+        .catch(() => ({} as Record<string, number>)),
     ])
 
     if (screenerRes instanceof Error) {
@@ -345,6 +356,7 @@ export function OverviewPage() {
     if (fngRes.ok) setFng(fngRes.data)
     else setFng(null)
 
+    setChangeBySymbol(tickersRes)
     setLoading(false)
   }, [])
 
@@ -581,9 +593,26 @@ export function OverviewPage() {
                   </span>
                   <span className="right">
                     <b className="mono">{fmtPrice(r.price)}</b>
-                    <small className="muted">
-                      {r.rvol != null ? `RVOL ${r.rvol.toFixed(2)}×` : `conf ${(r.confidence * 100).toFixed(0)}`}
-                    </small>
+                    {(() => {
+                      const chg = changeBySymbol[r.symbol.toUpperCase()]
+                      if (chg == null || Number.isNaN(chg)) {
+                        return (
+                          <small className="muted">
+                            {r.rvol != null
+                              ? `RVOL ${r.rvol.toFixed(2)}×`
+                              : `conf ${(r.confidence * 100).toFixed(0)}`}
+                          </small>
+                        )
+                      }
+                      const sign = chg > 0 ? '+' : ''
+                      const tone = chg > 0 ? 'is-up' : chg < 0 ? 'is-down' : ''
+                      return (
+                        <small className={`mono desk-chg ${tone}`.trim()}>
+                          {sign}
+                          {chg.toFixed(2)} %
+                        </small>
+                      )
+                    })()}
                   </span>
                 </Link>
               ))}
