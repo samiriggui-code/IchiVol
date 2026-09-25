@@ -7,21 +7,17 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-25 — UI-P1 Desk maquette (option A) — PR draft #96
+## 2026-09-25 — UI-P1 Desk maquette (option A) — PR #96
 
-- PR : https://github.com/samiriggui-code/IchiVol/pull/96 — **draft** (attendre Claude avant merge)
-- Branche : `cursor/ui-p1-desk-maquette-a2fe` · HEAD `e5aa4df`
-- **Périmètre front only** — Desk conforme maquette (`desk` / `deskOverview`), blocs déménagés ; `engine/` · `server/` intouchés.
-- Desk : KPI paper · sessions Tokyo/Londres/NY (statut UTC, heures locales, week-end fermé, crypto 24/7) · marchés screener · lecture CoinGecko/F&G · equity 1J/1S/1M/3M · à surveiller · notice fraîcheur (`data_quality` / `mark_stale`) · positions · budget risque · tape · prochain contrôle 1H + RVOL BTC · état système (`/api/engine/health` + risk-lock) · anneaux allocation / concentration.
-- Relocalisation : Market pulse → Opportunités ; Pipeline / Circuit 24h / Preuves → Opérations ; Labs paper → Portefeuille ; Contexte compact retiré du Desk (déjà `CryptoClimate` sur Contexte).
-- **Note** : variation % 24h des Marchés principaux ← ticker Binance via proxy `/binance` (pas de champ screener / pas de valeur inventée).
-- Tests : `npm run lint` / `npm run build` ; `scripts/check-market-sessions.mjs` (2 heures UTC + week-end) ; `scripts/smoke-ui-p1-desk.mjs` desktop + mobile 390 — **PASS**.
-- Captures :
-  - <img alt="Desk desktop" src="/opt/cursor/artifacts/ui-p1-desk/01-desk-desktop.png" />
-  - <img alt="Desk mobile 390" src="/opt/cursor/artifacts/ui-p1-desk/02-desk-mobile-390.png" />
+- PR : https://github.com/samiriggui-code/IchiVol/pull/96 — branche `cursor/ui-p1-desk-maquette-a2fe`
+- **Périmètre front only** — Desk conforme maquette ; `engine/` · `server/` intouchés.
+- Desk : KPI paper · sessions Tokyo/Londres/NY (**IANA** `Asia/Tokyo` · `Europe/London` · `America/New_York`, horaires locaux 09–18 / 08–17 / 09:30–16, week-end **par place**, DST auto) · marchés screener + variation Binance · lecture CoinGecko/F&G · equity 1J/1S/1M/3M · à surveiller · notice fraîcheur · positions · budget risque · tape · prochain contrôle 1H + RVOL BTC · état système (`/api/engine/health` + risk-lock) · anneaux.
+- Relocalisation : Market pulse → Opportunités ; Pipeline / Circuit 24h / Preuves → Opérations ; Labs paper → Portefeuille.
+- Tests : `npm run lint` / `npm run build` ; `scripts/check-market-sessions.mjs` (été + DST Londres 23/26 oct + NY 30 oct/2 nov + ven/dim soir UTC) ; `scripts/smoke-ui-p1-desk.mjs` — **PASS**.
+- Captures (repo) : [`docs/ui-p1/01-desk-desktop.png`](./ui-p1/01-desk-desktop.png) · [`docs/ui-p1/02-desk-mobile-390.png`](./ui-p1/02-desk-mobile-390.png)
 
 ### Suite
-**Attendre relecture Claude avant merge.** Puis portage pages suivantes selon `UI-MAQUETTE-GAP.md`.
+Merge + déploiement VPS → portage pages suivantes selon `UI-MAQUETTE-GAP.md`.
 
 ---
 
