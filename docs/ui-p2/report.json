@@ -1,0 +1,97 @@
+{
+  "pass": true,
+  "pages": {
+    "01-portefeuille-desktop": {
+      "route": "portefeuille",
+      "pass": true,
+      "apiErrors": [],
+      "consoleErrors": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440
+      },
+      "titles": [
+        "Portefeuille",
+        "Risk Kernel",
+        "Allocation du capital",
+        "Concentration des positions",
+        "Labs paper",
+        "Synthèse",
+        "Compte · IchiVol baseline V1 (paper broker)",
+        "Progression du test en direct",
+        "Bénéfice net et frais",
+        "Investissements",
+        "Valeur du portefeuille€ · depuis création · 1d",
+        "Mouvements paper"
+      ],
+      "bodyText": "IchiVol\n\nTRADING\n\nDesk\nMarché\nOpportunités\nPortefeuille\n\nRECHERCHE\n\nStrategy Lab\nJournal\nContexte\n\nAUTOMATISATION\n\nCopilot\nAgents\nOpérations\n\nSYSTÈME\n\nParamètres\nArrêt d’urgence\nLLM : clé manquante\nU\nui11p-smoke@ichivol.local\n\nTRADING · PORTEFEUILLE\n\nPortefeuille\n\nLe capital d’abord. Le risque toujours.\n\nCapital\n9 184 €\nEquity paper · EUR\nExposition\n0 €\n0,0 % du capital\nDisponible\n9 184 €\nCash libre\nDrawdown\n-16,5 %\nDepuis le plus haut\nRisk Kernel\nrisk_kernel_v1\nVERDICT\nPASSE\nentrées autorisées\nRisque ouvert / limite\n0,0 % / 4 %\nPositions / max\n0 / 10\nAllocation du capital\n9 184 €\n0,0 %\nCapital engagé\n Engagé\n0 €\n Liquidités\n9 184 €\nConcentration des positions\n\nAucune position valorisée pour calculer la concentration.\n\nSynthèse\nCompte\nPositions\nRisque\nTests\nLabs paper\nPortefeuille →\nCODE\tCASH\tRÉALISÉ\nBASELINE_V1\nIchiVol baseline V1 (paper broker)\n\t9 184 €\t-15 €\nCompte · IchiVol baseline V1 (paper broker)\nComptabilité : 2 anomalies\nEQUITY (VALEUR DE MARCHÉ)\n9 184,20 €\n−815,80 € (-8.16 %) depuis la création · capital 10 000 €\n\nVALEUR SI TOUT EST CLÔTURÉ MAINTENANT\n9 184,20 €\n\nLiquidités + coût des positions + latent mark-to-market. La valeur de clôture déduit les frais de sortie estimés. Période de perf = depuis le capital initial.\n\nLIQUIDITÉS\n9 184,20 €\nENGAGÉ (COÛT)\n0,00 €\nLATENT\n0,00 €\nRÉALISÉ (NET FRAIS)\n−15,20 €\nRÉCONCILIATION P&L\nRéalisé + latent\n−15,20 €\n− Frais d’entrée ouverts\n0,00 €\n= P&L compte\n−815,80 €\n\nLes frais d’entrée des positions encore ouvertes réduisent déjà les liquidités ; ils n’entrent dans le « réalisé » qu’à la clôture. Le latent n’inclut pas les frais de sortie futurs.\n\nProgression du test en direct\nle système tourne seul — verdict quand l’échantillon est assez grand\n\nPas assez de données pour juger · au rythme actuel (1.5 transactions/jour), 150 transactions atteintes dans ~98 j\n\nTransactions clôturées\n3 / 150\nDurée du test\n2 / 56 jours\n· Bénéfice net positif\n· Positif même sans les 3 meilleures transactions\n· Positif sur 2 périodes sur 3\n· Perte maximale sous 15 %\n\nRésultat des trades clos : −15,20 € · sans les 3 meilleurs : 0,00 € · perte maximale -50 %\n\n150 transactions clôturées ET 8 semaines ; puis net > 0 (y compris sans les 3 meilleures transactions), positif sur au moins 2 des 3 sous-périodes, drawdown < 15 %. Aucune annualisation.\n\nBénéfice net et frais\ndu brut au net, frais courtier inclus\nRésultat brut\nce que les trades auraient rapporté sans aucun frais\n−813,68 €\nCommissions courtier\nprélevées à chaque achat et vente\n−1,35 €\nÉcart et glissement\ncoût d’exécution, déjà inclus dans les prix\n−0,78 €\nFrais de détention\novernight CFD ASSUMPTION — long 1.86 bps/j · short 0.49 bps/j · 0 crypto spot\n0,00 €\nBénéfice net\ncapital actuel − capital de départ\n−815,80 €\nFrais totaux\n2,13 €\nRendement net\n-8.16 %\nOrdres passés\n6\nVolume échangé\n3 786 €\nInvesti maintenant\n0 € · 0 ligne\nTrades clos\n0 gagnant (0,00 €) · 3 perdants (−15,20 €)\nMARCHÉ\tORDRES\tVOLUME\tCOMMISSIONS\tÉCART + GLISSEMENT\tTOTAL FRAIS\ncrypto\t4\t1 800 €\t1,35 €\t0,18 €\t1,53 €\nautres marchés\t2\t1 986 €\t0,00 €\t0,60 €\t0,60 €\n\nFrais de sortie des positions ouvertes non inclus (pas encore payés). Écarts et glissement sont déjà dans les prix d'exécution. Financement overnight CFD ASSUMPTION : long 1.86 bps/j, short 0.49 bps/j (0 pour crypto spot).\n\nInvestissements\n0 ouvert · 0 valorisée · 0,00 € engagé\n\nAucun investissement ouvert — 9 184,20 € de liquidités.\n\nValeur du portefeuille\n€ · depuis création · 1d\n1H\n4H\n1D\n1S\n1M\n9 184,20 €\nValeur (€)\nExposition engagée\n\nÉchelle droite = valeur totale du compte (€). Ligne pointillée = capital initial. Snapshots ≈ toutes les 5 min — pas de points inventés ; les longues lignes relient des absences de mesure. « Exposition engagée » (optionnel) = coût d’acquisition par actif, échelle gauche séparée.\n\n\t\n\t\n\n\t\n\t\nMouvements paper\n\nOrdres du compte — pas la page Opérations (circuit auto).\n\nDATE\tACTION\tSENS\tMONTANT\tFRAIS\tSTATUT\n25/09 06:07\tClôture de 0.004750 BTC à 84 185,37 — Fermé manuellement\tVente\t399,92 €\t0,30 €\tExécuté\n25/09 06:07\tAchat de 0.004750 BTC à 84 202,21\tAchat\t400,00 €\t0,30 €\tExécuté\n25/09 06:06\tClôture de 0.005938 BTC à 84 219,59 — Fermé manuellement\tVente\t500,07 €\t0,38 €\tExécuté\n25/09 06:04\tAchat de 0.005938 BTC à 84 208,42\tAchat\t500,00 €\t0,38 €\tExécuté\n24/09 16:57\tClôture de 10.54 WTI à 93,5329 — Le stop (perte maximale prévue) a été touché\tVente\t986,16 €\t0,00 €\tExécuté\n24/09 15:02\tAchat de 10.54 WTI à 94,8454\tAchat\t1 000,00 €\t0,00 €\tExécuté",
+      "hasNeedles": true
+    },
+    "02-opportunites-desktop": {
+      "route": "opportunites",
+      "pass": true,
+      "apiErrors": [],
+      "consoleErrors": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440
+      },
+      "titles": [
+        "Opportunités",
+        "De l’observation à la décision",
+        "Market pulse",
+        "Screener · Crypto"
+      ],
+      "bodyText": "IchiVol\n\nTRADING\n\nDesk\nMarché\nOpportunités\nPortefeuille\n\nRECHERCHE\n\nStrategy Lab\nJournal\nContexte\n\nAUTOMATISATION\n\nCopilot\nAgents\nOpérations\n\nSYSTÈME\n\nParamètres\nArrêt d’urgence\nLLM : clé manquante\nU\nui11p-smoke@ichivol.local\n\nTRADING · OPPORTUNITÉS\n\nOpportunités\n\nQue dit la méthode ?\n\nSpot crypto via Binance Vision (données publiques, pas un compte broker).\n\nÉpinglés\nCrypto\nForex\nMétaux\nIndices\nActions\nÉnergie\n\nCinq portes successives. Seules Achat / Vente (colonne Portes) autorisent un ordre paper. Brut = Ichimoku + RVOL seul — diagnostic, pas un verdict d’action.\n\nDIR\nDirection\n18 ok · 0 bloqué · 2 prudence\nPART\nParticipation\n2 ok · 12 bloqué · 6 prudence\nSTRUCT\nStructure / MTF\n3 ok · 0 bloqué · 17 prudence\nLOC\nLocation\n9 ok · 11 bloqué\nRÉGIME\nRégime / Risque\n0 ok · 20 bloqué\nDe l’observation à la décision\n20 symboles · portes passées\nDir\nDirection\n18\n→\nPart\nParticipation\n2\n→\nStruct\nStructure / MTF\n3\n→\nLoc\nLocation\n9\n→\nRégime\nRégime / Risque\n0\n→\nPortes\nDécision\n0 act.\n0 A · 0 V · 0 W · 20 NT\nMarket pulse\nDistribution actuelle\nBUY\n0\nSELL\n0\nWATCH\n0\nNO TRADE\n20\nACHATS (PORTES)\n0\nVENTES (PORTES)\n0\nSURVEILLANCE\n0\nSCANNÉES · 1H\n20\n0 actionnables\nScreener · Crypto\nListe\nMatrice\n20/20 · il y a 3min\nRafraîchir\nTous\nAchat\nVente\nSurveillance\nNo trade\nTF\n15m\n1h\n4h\n1d\nSYMBOLE\nDÉCISION BRUTE\nToutes\nAchat fort\nAchat\nÀ surveiller\nAttendre\nVente\nVente forte\nRVOL ≥\nActionnables (Portes Achat/Vente)\nSymbole\tPortes ↓\tConfiance\tIchimoku\tRVOL\tPrix\nBTC\t\nPAS DE TRADE\nbrut Vente\n\t65%\t-58\t1.88×\t84385.53\nATOM\t\nPAS DE TRADE\nbrut Achat\n\t65%\t25\t1.75×\t1.8010\nADA\t\nPAS DE TRADE\nbrut Achat\n\t40%\t33\t0.72×\t0.2523\nETH\t\nPAS DE TRADE\nbrut Vente\n\t40%\t-58\t0.99×\t2689.72\nBNB\t\nPAS DE TRADE\nbrut Vente\n\t40%\t-58\t1.03×\t775.57\nLINK\t\nPAS DE TRADE\nbrut Achat\n\t40%\t58\t1.15×\t13.7130\nUNI\t\nPAS DE TRADE\nbrut Vente\n\t40%\t-58\t0.79×\t9.1830\nSUI\t\nPAS DE TRADE\nbrut Achat\n\t40%\t42\t0.78×\t1.0302\nXRP\t\nPAS DE TRADE\nbrut Attendre\n\t10%\t-17\t0.54×\t1.5441\nSOL\t\nPAS DE TRADE\nbrut Attendre\n\t10%\t17\t0.64×\t117.24\nDOGE\t\nPAS DE TRADE\nbrut À surveiller\n\t10%\t-58\t0.53×\t0.0963\nAVAX\t\nPAS DE TRADE\nbrut À surveiller\n\t10%\t-58\t0.60×\t10.3540\nDOT\t\nPAS DE TRADE\nbrut À surveiller\n\t10%\t17\t0.37×\t1.1710\nLTC\t\nPAS DE TRADE\nbrut À surveiller\n\t10%\t58\t0.36×\t71.2000\nNEAR\t\nPAS DE TRADE\nbrut À surveiller\n\t10%\t58\t0.54×\t4.6180\nARB\t\nPAS DE TRADE\nbrut À surveiller\n\t10%\t-58\t0.39×\t0.2198\nAPT\t\nPAS DE TRADE\nbrut À surveiller\n\t10%\t58\t0.53×\t0.8264\nOP\t\nPAS DE TRADE\nbrut À surveiller\n\t10%\t42\t0.67×\t0.1354\nPEPE\t\nPAS DE TRADE\nbrut À surveiller\n\t10%\t-58\t0.67×\t0.0000\nTON\t\nPAS DE TRADE\nbrut À surveiller\n\t10%\t58\t0.62×\t1.6000",
+      "hasNeedles": true
+    },
+    "p2Checks": {
+      "hasRibbon": true,
+      "hasSegment": true,
+      "hasArmedDemo": false,
+      "hasWhy": false
+    },
+    "03-portefeuille-mobile-390": {
+      "route": "portefeuille",
+      "pass": true,
+      "apiErrors": [],
+      "consoleErrors": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390
+      },
+      "titles": [
+        "Portefeuille",
+        "Risk Kernel",
+        "Allocation du capital",
+        "Concentration des positions",
+        "Labs paper",
+        "Synthèse",
+        "Compte · IchiVol baseline V1 (paper broker)",
+        "Progression du test en direct",
+        "Bénéfice net et frais",
+        "Investissements",
+        "Valeur du portefeuille€ · depuis création · 1d",
+        "Mouvements paper"
+      ],
+      "bodyText": "IchiVol\nArrêt d’urgence\nU\n\nTRADING · PORTEFEUILLE\n\nPortefeuille\n\nLe capital d’abord. Le risque toujours.\n\nCapital\n9 184 €\nEquity paper · EUR\nExposition\n0 €\n0,0 % du capital\nDisponible\n9 184 €\nCash libre\nDrawdown\n-16,5 %\nDepuis le plus haut\nRisk Kernel\nrisk_kernel_v1\nVERDICT\nPASSE\nentrées autorisées\nRisque ouvert / limite\n0,0 % / 4 %\nPositions / max\n0 / 10\nAllocation du capital\n9 184 €\n0,0 %\nCapital engagé\n Engagé\n0 €\n Liquidités\n9 184 €\nConcentration des positions\n\nAucune position valorisée pour calculer la concentration.\n\nSynthèse\nCompte\nPositions\nRisque\nTests\nLabs paper\nPortefeuille →\nCODE\tCASH\tRÉALISÉ\nBASELINE_V1\nIchiVol baseline V1 (paper broker)\n\t9 184 €\t-15 €\nCompte · IchiVol baseline V1 (paper broker)\nComptabilité : 2 anomalies\nEQUITY (VALEUR DE MARCHÉ)\n9 184,20 €\n−815,80 € (-8.16 %) depuis la création · capital 10 000 €\n\nVALEUR SI TOUT EST CLÔTURÉ MAINTENANT\n9 184,20 €\n\nLiquidités + coût des positions + latent mark-to-market. La valeur de clôture déduit les frais de sortie estimés. Période de perf = depuis le capital initial.\n\nLIQUIDITÉS\n9 184,20 €\nENGAGÉ (COÛT)\n0,00 €\nLATENT\n0,00 €\nRÉALISÉ (NET FRAIS)\n−15,20 €\nRÉCONCILIATION P&L\nRéalisé + latent\n−15,20 €\n− Frais d’entrée ouverts\n0,00 €\n= P&L compte\n−815,80 €\n\nLes frais d’entrée des positions encore ouvertes réduisent déjà les liquidités ; ils n’entrent dans le « réalisé » qu’à la clôture. Le latent n’inclut pas les frais de sortie futurs.\n\nProgression du test en direct\nle système tourne seul — verdict quand l’échantillon est assez grand\n\nPas assez de données pour juger · au rythme actuel (1.5 transactions/jour), 150 transactions atteintes dans ~98 j\n\nTransactions clôturées\n3 / 150\nDurée du test\n2 / 56 jours\n· Bénéfice net positif\n· Positif même sans les 3 meilleures transactions\n· Positif sur 2 périodes sur 3\n· Perte maximale sous 15 %\n\nRésultat des trades clos : −15,20 € · sans les 3 meilleurs : 0,00 € · perte maximale -50 %\n\n150 transactions clôturées ET 8 semaines ; puis net > 0 (y compris sans les 3 meilleures transactions), positif sur au moins 2 des 3 sous-périodes, drawdown < 15 %. Aucune annualisation.\n\nBénéfice net et frais\ndu brut au net, frais courtier inclus\nRésultat brut\nce que les trades auraient rapporté sans aucun frais\n−813,68 €\nCommissions courtier\nprélevées à chaque achat et vente\n−1,35 €\nÉcart et glissement\ncoût d’exécution, déjà inclus dans les prix\n−0,78 €\nFrais de détention\novernight CFD ASSUMPTION — long 1.86 bps/j · short 0.49 bps/j · 0 crypto spot\n0,00 €\nBénéfice net\ncapital actuel − capital de départ\n−815,80 €\nFrais totaux\n2,13 €\nRendement net\n-8.16 %\nOrdres passés\n6\nVolume échangé\n3 786 €\nInvesti maintenant\n0 € · 0 ligne\nTrades clos\n0 gagnant (0,00 €) · 3 perdants (−15,20 €)\nMARCHÉ\tORDRES\tVOLUME\tCOMMISSIONS\tÉCART + GLISSEMENT\tTOTAL FRAIS\ncrypto\t4\t1 800 €\t1,35 €\t0,18 €\t1,53 €\nautres marchés\t2\t1 986 €\t0,00 €\t0,60 €\t0,60 €\n\nFrais de sortie des positions ouvertes non inclus (pas encore payés). Écarts et glissement sont déjà dans les prix d'exécution. Financement overnight CFD ASSUMPTION : long 1.86 bps/j, short 0.49 bps/j (0 pour crypto spot).\n\nInvestissements\n0 ouvert · 0 valorisée · 0,00 € engagé\n\nAucun investissement ouvert — 9 184,20 € de liquidités.\n\nValeur du portefeuille\n€ · depuis création · 1d\n1H\n4H\n1D\n1S\n1M\n9 184,20 €\nValeur (€)\nExposition engagée\n\nÉchelle droite = valeur totale du compte (€). Ligne pointillée = capital initial. Snapshots ≈ toutes les 5 min — pas de points inventés ; les longues lignes relient des absences de mesure. « Exposition engagée » (optionnel) = coût d’acquisition par actif, échelle gauche séparée.\n\n\t\n\t\n\n\t\n\t\nMouvements paper\n\nOrdres du compte — pas la page Opérations (circuit auto).\n\nDATE\tACTION\tSENS\tMONTANT\tFRAIS\tSTATUT\n25/09 06:07\tClôture de 0.004750 BTC à 84 185,37 — Fermé manuellement\tVente\t399,92 €\t0,30 €\tExécuté\n25/09 06:07\tAchat de 0.004750 BTC à 84 202,21\tAchat\t400,00 €\t0,30 €\tExécuté\n25/09 06:06\tClôture de 0.005938 BTC à 84 219,59 — Fermé manuellement\tVente\t500,07 €\t0,38 €\tExécuté\n25/09 06:04\tAchat de 0.005938 BTC à 84 208,42\tAchat\t500,00 €\t0,38 €\tExécuté\n24/09 16:57\tClôture de 10.54 WTI à 93,5329 — Le stop (perte maximale prévue) a été touché\tVente\t986,16 €\t0,00 €\tExécuté\n24/09 15:02\tAchat de 10.54 WTI à 94,8454\tAchat\t1 000,00 €\t0,00 €\tExécuté\nDesk\nOpportunités\nPortefeuille\nCopilot\nPlus\n\nPlus\n\nMarché\nStrategy Lab\nJournal\nContexte\nAgents\nOpérations\nParamètres"
+    },
+    "04-opportunites-mobile-390": {
+      "route": "opportunites",
+      "pass": true,
+      "apiErrors": [],
+      "consoleErrors": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390
+      },
+      "titles": [
+        "Opportunités",
+        "De l’observation à la décision",
+        "Market pulse",
+        "Screener · Crypto"
+      ],
+      "bodyText": "IchiVol\nArrêt d’urgence\nU\n\nTRADING · OPPORTUNITÉS\n\nOpportunités\nÉpinglés\nCrypto\nForex\nMétaux\nIndices\nActions\nÉnergie\n\nCinq portes successives. Seules Achat / Vente (colonne Portes) autorisent un ordre paper. Brut = Ichimoku + RVOL seul — diagnostic, pas un verdict d’action.\n\nDIR\nDirection\n18 ok · 0 bloqué · 2 prudence\nPART\nParticipation\n2 ok · 12 bloqué · 6 prudence\nSTRUCT\nStructure / MTF\n3 ok · 0 bloqué · 17 prudence\nLOC\nLocation\n9 ok · 11 bloqué\nRÉGIME\nRégime / Risque\n0 ok · 20 bloqué\nDe l’observation à la décision\n20 symboles · portes passées\nDir\nDirection\n18\n→\nPart\nParticipation\n2\n→\nStruct\nStructure / MTF\n3\n→\nLoc\nLocation\n9\n→\nRégime\nRégime / Risque\n0\n→\nPortes\nDécision\n0 act.\n0 A · 0 V · 0 W · 20 NT\nMarket pulse\nDistribution actuelle\nBUY\n0\nSELL\n0\nWATCH\n0\nNO TRADE\n20\nACHATS (PORTES)\n0\nVENTES (PORTES)\n0\nSURVEILLANCE\n0\nSCANNÉES · 1H\n20\n0 actionnables\nScreener · Crypto\nListe\nMatrice\n20/20 · il y a 3min\nRafraîchir\nTous\nAchat\nVente\nSurveillance\nNo trade\nTF\n15m\n1h\n4h\n1d\nSYMBOLE\nDÉCISION BRUTE\nToutes\nAchat fort\nAchat\nÀ surveiller\nAttendre\nVente\nVente forte\nRVOL ≥\nActionnables (Portes Achat/Vente)\nSymbole\tPortes ↓\tRVOL\nBTC\t\nPAS DE TRADE\n\t1.88×\nATOM\t\nPAS DE TRADE\n\t1.75×\nADA\t\nPAS DE TRADE\n\t0.72×\nETH\t\nPAS DE TRADE\n\t0.99×\nBNB\t\nPAS DE TRADE\n\t1.03×\nLINK\t\nPAS DE TRADE\n\t1.15×\nUNI\t\nPAS DE TRADE\n\t0.79×\nSUI\t\nPAS DE TRADE\n\t0.78×\nXRP\t\nPAS DE TRADE\n\t0.54×\nSOL\t\nPAS DE TRADE\n\t0.64×\nDOGE\t\nPAS DE TRADE\n\t0.53×\nAVAX\t\nPAS DE TRADE\n\t0.60×\nDOT\t\nPAS DE TRADE\n\t0.37×\nLTC\t\nPAS DE TRADE\n\t0.36×\nNEAR\t\nPAS DE TRADE\n\t0.54×\nARB\t\nPAS DE TRADE\n\t0.39×\nAPT\t\nPAS DE TRADE\n\t0.53×\nOP\t\nPAS DE TRADE\n\t0.67×\nPEPE\t\nPAS DE TRADE\n\t0.67×\nTON\t\nPAS DE TRADE\n\t0.62×\nDesk\nOpportunités\nPortefeuille\nCopilot\nPlus\n\nPlus\n\nMarché\nStrategy Lab\nJournal\nContexte\nAgents\nOpérations\nParamètres"
+    }
+  }
+}

@@ -7,6 +7,34 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — UI-P2 corrections + merge
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/100 — squash merge après corrections
+- Branche : `cursor/ui-p2-portfolio-opps-a2fe` · tip `184de0c`
+- Corrections : Drawdown « Depuis le plus haut » · montants page via `fmtEur` fr-FR (€)
+- Captures : [`docs/ui-p2/`](./ui-p2/) · smoke PASS
+- **Vérifier** tip `main` après merge
+
+### Suite
+UI-P3 rebase sur main → corrections note PATCH + ops polish → merge + VPS.
+
+---
+
+## 2026-09-25 — UI-P2 Portefeuille + Opportunités — PR draft #100
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/100 — **draft** (attendre Claude avant merge)
+- Branche : `cursor/ui-p2-portfolio-opps-a2fe` · tip `4fb867f`
+- **Périmètre front only** — `engine/` · `server/` intouchés ; style Desk P1 (muted, fr-FR, liens).
+- **Portefeuille** : 4 KPI (Capital / Exposition / Disponible / Drawdown front) · Risk Kernel (PASSE/BLOQUÉ via risk-lock) + barres limites engine · anneaux Allocation / Concentration (composants partagés Desk) · onglets + Labs paper conservés.
+- **Opportunités** : toolbar recherche + filtres Portes réelles (BUY/SELL/WATCH/NO_TRADE) · ruban « De l’observation à la décision » (agrégats screener) · carte « Pourquoi {symbole} ? » si candidat · matrice / pulse / onglets classe inchangés.
+- Captures : [`docs/ui-p2/`](./ui-p2/)
+- Tests : lint/build · `scripts/smoke-ui-p2.mjs` desktop+mobile 390 — **PASS**
+
+### Suite
+**Attendre relecture Claude avant merge.** Puis déploiement VPS.
+
+---
+
 ## 2026-09-25 — UI-P1b MERGÉE (#98) + VPS — tip `2538c74`
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/98 — **MERGÉE** (squash)

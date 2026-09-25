@@ -89,3 +89,81 @@
     font-size: 0.8rem;
   }
 }
+
+/* UI-P2 maquette header */
+.portfolio-page.desk-workspace {
+  --desk-muted: #7d8288;
+  gap: 1rem;
+}
+html.dark .portfolio-page.desk-workspace {
+  --desk-muted: #a8b0bc;
+}
+.portfolio-page.desk-workspace .muted,
+.portfolio-page.desk-workspace .iv-metric small,
+.portfolio-page.desk-workspace .iv-metric-label,
+.portfolio-page.desk-workspace .panel-meta,
+.portfolio-page.desk-workspace .desk-note,
+.portfolio-page.desk-workspace .desk-risk-label > span:first-child {
+  color: var(--desk-muted);
+}
+.portfolio-page.desk-workspace a.link {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+.portfolio-kpis .iv-metric.is-bear .iv-metric-value { color: var(--bear); }
+
+.portfolio-maquette-row { display: grid; gap: 0.85rem; }
+.portfolio-kernel {
+  display: grid;
+  gap: 0.85rem;
+}
+.portfolio-kernel-verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+}
+.portfolio-kernel-verdict span {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--desk-muted);
+}
+.portfolio-kernel-verdict strong { font-size: 1.35rem; }
+.portfolio-kernel-verdict small { color: var(--desk-muted); font-size: 0.72rem; }
+.portfolio-kernel-verdict.is-pass {
+  border-color: color-mix(in srgb, var(--bull) 35%, var(--border));
+  background: color-mix(in srgb, var(--bull) 8%, transparent);
+}
+.portfolio-kernel-verdict.is-pass strong { color: var(--bull); }
+.portfolio-kernel-verdict.is-block {
+  border-color: color-mix(in srgb, var(--bear) 35%, var(--border));
+  background: color-mix(in srgb, var(--bear) 8%, transparent);
+}
+.portfolio-kernel-verdict.is-block strong { color: var(--bear); }
+
+.desk-risk-bars { display: grid; gap: 0.75rem; }
+.desk-risk-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+  margin-bottom: 0.25rem;
+}
+.desk-risk-track {
+  height: 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted-foreground) 12%, transparent);
+  overflow: hidden;
+}
+.desk-risk-track > i {
+  display: block;
+  height: 100%;
+  background: var(--bull);
+  border-radius: inherit;
+}
+.portfolio-allocation { margin-bottom: 0.25rem; }

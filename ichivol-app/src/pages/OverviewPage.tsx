@@ -33,6 +33,11 @@ import {
 } from '../lib/paper'
 import { getRiskLock, type RiskLockState } from '../lib/riskLock'
 import { verdictBucket } from '../lib/deskSummarize'
+import {
+  DeskRing,
+  RING_COLORS,
+  concentrationFromPositions,
+} from '../components/desk/DeskRings'
 import './OverviewPage.css'
 
 const BASELINE = 'ICHIVOL_BASELINE_V1'
@@ -199,49 +204,6 @@ function EquityChart({
           )
         })()
       )}
-    </div>
-  )
-}
-
-function Ring({
-  parts,
-  center,
-  label,
-}: {
-  parts: { pct: number; color: string }[]
-  center: string
-  label: string
-}) {
-  const offsets: number[] = []
-  let acc = 0
-  for (const p of parts) {
-    offsets.push(acc)
-    acc += p.pct
-  }
-  return (
-    <div className="desk-ring">
-      <svg viewBox="0 0 200 200" role="img" aria-label={`${label} : ${center}`}>
-        <circle cx="100" cy="100" r="80" fill="none" stroke="var(--line)" strokeWidth="19" />
-        {parts.map((p, i) => (
-          <circle
-            key={i}
-            cx="100"
-            cy="100"
-            r="80"
-            pathLength="100"
-            fill="none"
-            stroke={p.color}
-            strokeWidth="19"
-            strokeDasharray={`${p.pct} ${100 - p.pct}`}
-            strokeDashoffset={-offsets[i]}
-            transform="rotate(-90 100 100)"
-          />
-        ))}
-      </svg>
-      <div>
-        <b>{center}</b>
-        <small>{label}</small>
-      </div>
     </div>
   )
 }
@@ -449,23 +411,10 @@ export function OverviewPage() {
   const investedPct =
     acct && acct.equity > 0 ? Math.min(100, Math.max(0, (acct.invested / acct.equity) * 100)) : 0
 
-  const concentration = useMemo(() => {
-    const positions = overview?.positions ?? []
-    const values = positions
-      .map((p) => ({
-        symbol: p.symbol.replace(/USDT$/i, ''),
-        mv: Math.abs(p.market_value ?? (p.current_price != null ? p.current_price * (p.qty ?? 0) : 0)),
-      }))
-      .filter((p) => p.mv > 0)
-    const total = values.reduce((s, v) => s + v.mv, 0)
-    if (total <= 0) return [] as { symbol: string; pct: number }[]
-    return values
-      .map((v) => ({ symbol: v.symbol, pct: (v.mv / total) * 100 }))
-      .sort((a, b) => b.pct - a.pct)
-  }, [overview?.positions])
-
-  const RING_COLORS = ['#548f87', '#8c9eb4', '#c2b596', '#a9bdb2', '#7d8288']
-
+  const concentration = useMemo(
+    () => concentrationFromPositions(overview?.positions ?? []),
+    [overview?.positions],
+  )
   return (
     <div className="overview-page desk-workspace">
       <header className="iv-page-header page-head overview-head iv-animate-soft">
@@ -977,7 +926,7 @@ export function OverviewPage() {
             <p className="muted">{loading ? 'Chargement…' : ovError ?? 'Compte indisponible.'}</p>
           ) : (
             <div className="allocation-body">
-              <Ring
+              <DeskRing
                 parts={[{ pct: investedPct, color: '#548f87' }]}
                 center={fmtPctPoints(investedPct, 1, false)}
                 label="Capital engagé"
@@ -1019,7 +968,7 @@ export function OverviewPage() {
             </p>
           ) : (
             <div className="allocation-body">
-              <Ring
+              <DeskRing
                 parts={concentration.slice(0, 5).map((c, i) => ({
                   pct: c.pct,
                   color: RING_COLORS[i % RING_COLORS.length],
