@@ -14,7 +14,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
   - mobile ≤800 : `button.primary` `width: auto` (maquette ≈ 154 px à 390)
   - `.statline` : padding 13px 0, font 12px, hauteur verrouillée 44 px (5 portes = 220 px comme maquette)
 - Smoke 11 pages : `docs/ui-port/smoke-11-pages.json` (bruit `llm-test` 422 ignoré)
-- **VPS préprod** : déploiement branche pour validation mobile (voir entrée après deploy)
+- **VPS préprod** : https://ichivol.global-it-ss.com — `RELEASE=37311b9 cursor/ui-port-marche-a2fe` · `web` rebuild · health 200 · backup `/opt/ichivol-backup/pre-marche-css-*`
+  - **main non mergée** ; rollback = `git checkout main @ 604a8b0` + rebuild web
 
 ### Suite
 OK Samir téléphone → merge #108 → Desk (même méthode).
