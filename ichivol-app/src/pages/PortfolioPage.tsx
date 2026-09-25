@@ -52,9 +52,9 @@ function fmtEur(v: number | null | undefined, digits = 0): string {
   }).format(v)
 }
 
-function fmtMoney(v: number | null | undefined): string {
-  if (v == null || !Number.isFinite(v)) return '—'
-  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(v)
+/** Montants page Portefeuille — toujours fr-FR avec symbole €. */
+function fmtMoney(v: number | null | undefined, digits = 2): string {
+  return fmtEur(v, digits)
 }
 
 function riskVerdict(lock: RiskLockState | null): { label: 'PASSE' | 'BLOQUÉ'; tone: 'pass' | 'block' } {
@@ -185,7 +185,7 @@ export function PortfolioPage() {
           <div className="iv-metric-value mono">
             {drawdown != null ? fmtPct(drawdown, 1, true) : '—'}
           </div>
-          <small>Pic equity_curve → equity</small>
+          <small>Depuis le plus haut</small>
         </div>
       </section>
 
