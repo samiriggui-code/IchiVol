@@ -18,3 +18,8 @@ Branche `cursor/ui-port-pages-a2fe` · **draft** · pas de merge avant relecture
 
 ## Non-merge
 Attendre Claude + Samir.
+
+## VPS préprod
+- Backup : `/opt/ichivol-backup/pre-uiport-paper-20260925-140655.tgz`
+- `RELEASE=ab33224` · https://ichivol.global-it-ss.com · health 200
+- Bundle contient « Ouvrir une position paper »

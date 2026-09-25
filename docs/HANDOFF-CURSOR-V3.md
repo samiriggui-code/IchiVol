@@ -3535,3 +3535,9 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
 - Doutes / points à vérifier par Claude : aucun restant — **validé**.
 
 - Non fait / reste à faire : consommé par le front → T1b (ci-dessus).
+
+## UI-port pages (PR #109) — 2026-09-25
+- Branche `cursor/ui-port-pages-a2fe` tip `ab33224` · draft
+- RAPPORT 11×0 · ACTIONS-METIER.md · paper open/close smoke PASS
+- VPS `RELEASE=ab33224` backup `pre-uiport-paper-20260925-140655.tgz`
+- **Pas de merge** avant Claude + Samir OK
