@@ -338,14 +338,7 @@ export function useMarketController() {
             enginePipeline: eng?.pipeline,
             labContext: eng?.lab_context,
           }
-          return {     setSignals,
-    setChartLive,
-    btRulesetId,
-    setBtRulesetId,
-    runClassScan,
-    marketClass,
-    scanLoading,
-...row, context: buildContextBadges(row) }
+          return { ...row, context: buildContextBadges(row) }
         })
         scanned.sort((a, b) => (b.engineConfidence ?? 0) - (a.engineConfidence ?? 0))
         setRows(scanned)
