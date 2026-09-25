@@ -7,6 +7,20 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — UI-P1b MERGÉE (#98) + VPS — tip `2538c74`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/98 — **MERGÉE** (squash)
+- **Vérifié** : `origin/main` tip = `2538c74`
+- Desk finition : sessions contraste + fr-FR 24h · NumberFormat · muted maquette · Capitalisation crypto 24h · liens accent
+- **P&L jour prod** (pré-merge) : `day_change ≈ −10,28 €` / equity ≈ 5 007 € — cohérent ; engine intact
+- **VPS** : https://ichivol.global-it-ss.com — `RELEASE=2538c74` ; health 200 ; bundle `Capitalisation crypto 24h` · `session-status`
+- Backup : `/opt/ichivol-backup/pre-uip1b-20260925-080011.tgz`
+
+### Suite
+UI-P2 — Portefeuille + Opportunités conformes maquette.
+
+---
+
 ## 2026-09-25 — UI-P1b Desk finition — PR draft #98
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/98 — **draft** (attendre Claude avant merge)
