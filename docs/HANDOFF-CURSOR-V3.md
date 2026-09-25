@@ -20,7 +20,10 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 ### Base main
 
 - **#109 UI-port MERGÉE** squash tip `225549d` (paper + Enregistrer décision · 11×0)
-- VPS : déployer `RELEASE=225549d` si pas déjà sur ce tip (préprod https://ichivol.global-it-ss.com)
+- **VPS** : https://ichivol.global-it-ss.com — `RELEASE=225549d main` · rebuild `web` · public/health **200**
+- Backup : `/opt/ichivol-backup/pre-uiport-merge-20260925-141927.tgz` (+ `pre-uiport-merge-src-*`)
+- #108 fermée (incluse) ; remotes `cursor/ui-port-marche-a2fe` + `cursor/ui-clean-a2fe` supprimées
+- **Pas de merge** de cette PR fiches — relecture Claude + OK Samir
 
 ---
 
