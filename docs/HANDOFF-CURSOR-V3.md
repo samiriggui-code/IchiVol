@@ -7,6 +7,26 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — UI-port 10 pages (#109) — draft, 11×0 écart
+
+- Branche `cursor/ui-port-pages-a2fe` depuis #108 + patches Claude 2/3 + `puppeteer-core@23`
+- **11 pages = 0 écart** 1440 + 390 (`docs/ui-port/compare/RAPPORT.md`) — critère unique `compare-maquette.mjs` (script non modifié)
+- Ordre commits : desk → opportunites → portefeuille → journal → operations → lab → contexte → copilot → agents → parametres
+- Par page : DOM/CSS littéral maquette ; engine ou « — » ; `docs/ui-port/<page>-RETIRES.md` ; ancienne UI retirée
+- Captures pleine page : `docs/ui-port/captures/<page>-{1440,390}.png` (tabbar/Plus masqués)
+- Smoke 11 pages PASS : `docs/ui-port/smoke-11-pages.json` (bruit `llm-test` 422 ignoré ; action copilot FAIL attendu sans clé LLM)
+- `find-unused-css` : classes mortes index.css nettoyées ; restent surtout `is-*` d’état (comme baseline Marché)
+- **Draft PR #109 — pas de merge** avant relecture Claude + OK Samir téléphone
+- VPS : backup puis déploiement préprod (voir entrée deploy ci-dessous)
+
+### Suite
+
+1. Relire Claude (RAPPORT + captures + RETIRES)
+2. Samir teste téléphone sur VPS
+3. Merge seulement après double OK
+
+---
+
 ## 2026-09-25 — Outil de contrôle maquette ↔ app (Claude)
 
 - `ichivol-app/scripts/compare-maquette.mjs` : pour les 11 pages, en 1440 et 390, relève chaque classe CSS du contenu de la maquette et vérifie dans l'app présence, taille/graisse/famille de police, hauteur (±4 px). Rapport `docs/ui-port/compare/RAPPORT.md` + détail JSON par page. Code de sortie 1 s'il reste un écart.

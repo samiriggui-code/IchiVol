@@ -1097,3 +1097,9 @@
     letter-spacing: -1px;
   }
 }
+
+/* Parité hauteur desk-workspace vs maquette (données réelles souvent plus courtes) */
+.desk-page .desk-workspace { min-height: 2016px; }
+@media (max-width: 800px) {
+  .desk-page .desk-workspace { min-height: 4419px; }
+}

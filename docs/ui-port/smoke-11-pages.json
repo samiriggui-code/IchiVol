@@ -1,145 +1,66 @@
 {
   "pass": true,
   "fail": 0,
-  "generatedAt": "2026-09-25T12:03:54.536671+00:00",
+  "generatedAt": "2026-09-25T13:36:41.142804+00:00",
   "base": "http://127.0.0.1:5180",
   "script": "ichivol-app/scripts/smoke-ui11p.mjs",
-  "branch": "cursor/ui-port-marche-a2fe",
-  "noise": "POST /api/settings/llm-test → 422 ignored (HANDOFF)",
-  "results": [
-    {
-      "r": "/app/desk",
-      "st": 200,
-      "err": false,
-      "pass": true
-    },
-    {
-      "r": "/app/market",
-      "st": 200,
-      "err": false,
-      "pass": true
-    },
-    {
-      "r": "/app/opportunites",
-      "st": 200,
-      "err": false,
-      "pass": true
-    },
-    {
-      "r": "/app/portefeuille",
-      "st": 200,
-      "err": false,
-      "pass": true
-    },
-    {
-      "r": "/app/context",
-      "st": 200,
-      "err": false,
-      "pass": true
-    },
-    {
-      "r": "/app/journal",
-      "st": 200,
-      "err": false,
-      "pass": true
-    },
-    {
-      "r": "/app/operations",
-      "st": 200,
-      "err": false,
-      "pass": true
-    },
-    {
-      "r": "/app/strategy-lab",
-      "st": 200,
-      "err": false,
-      "pass": true
-    },
-    {
-      "r": "/app/agent",
-      "st": 200,
-      "err": false,
-      "pass": true
-    },
-    {
-      "r": "/app/agents",
-      "st": 200,
-      "err": false,
-      "pass": true
-    },
-    {
-      "r": "/app/settings",
-      "st": 200,
-      "err": false,
-      "pass": true
-    }
-  ],
+  "branch": "cursor/ui-port-pages-a2fe",
+  "noise": "POST /api/settings/llm-test \u2192 422 ignored (HANDOFF)",
   "pages": {
     "desk": {
       "pass": true,
-      "bodyChars": 2687,
-      "apiFailsFiltered": [],
-      "note": "llm-test 422 ignored (documented non-blocking)"
+      "bodyChars": 2635,
+      "note": "llm-test 422 ignored"
     },
     "market": {
       "pass": true,
-      "bodyChars": 1175,
-      "apiFailsFiltered": [],
-      "note": "llm-test 422 ignored (documented non-blocking)"
+      "bodyChars": 1157,
+      "note": "llm-test 422 ignored"
     },
     "opportunites": {
       "pass": true,
-      "bodyChars": 3375,
-      "apiFailsFiltered": [],
-      "note": "llm-test 422 ignored (documented non-blocking)"
+      "bodyChars": 2597,
+      "note": "llm-test 422 ignored"
     },
     "portefeuille": {
       "pass": true,
-      "bodyChars": 5479,
-      "apiFailsFiltered": [],
-      "note": "llm-test 422 ignored (documented non-blocking)"
+      "bodyChars": 1190,
+      "note": "llm-test 422 ignored"
     },
     "context": {
       "pass": true,
-      "bodyChars": 3043,
-      "apiFailsFiltered": [],
-      "note": "llm-test 422 ignored (documented non-blocking)"
+      "bodyChars": 1137,
+      "note": "llm-test 422 ignored"
     },
     "journal": {
       "pass": true,
-      "bodyChars": 576,
-      "apiFailsFiltered": [],
-      "note": "llm-test 422 ignored (documented non-blocking)"
+      "bodyChars": 959,
+      "note": "llm-test 422 ignored"
     },
     "operations": {
       "pass": true,
-      "bodyChars": 4963,
-      "apiFailsFiltered": [],
-      "note": "llm-test 422 ignored (documented non-blocking)"
+      "bodyChars": 1392,
+      "note": "llm-test 422 ignored"
     },
     "strategy-lab": {
       "pass": true,
-      "bodyChars": 1486,
-      "apiFailsFiltered": [],
-      "note": "llm-test 422 ignored (documented non-blocking)"
+      "bodyChars": 1432,
+      "note": "llm-test 422 ignored"
     },
     "agent": {
       "pass": true,
-      "bodyChars": 1380,
-      "apiFailsFiltered": [],
-      "note": "llm-test 422 ignored (documented non-blocking)"
+      "bodyChars": 812,
+      "note": "llm-test 422 ignored"
     },
     "agents": {
       "pass": true,
-      "bodyChars": 1586,
-      "apiFailsFiltered": [],
-      "note": "llm-test 422 ignored (documented non-blocking)"
+      "bodyChars": 1359,
+      "note": "llm-test 422 ignored"
     },
     "settings": {
       "pass": true,
-      "bodyChars": 1228,
-      "apiFailsFiltered": [],
-      "note": "llm-test 422 ignored (documented non-blocking)"
+      "bodyChars": 787,
+      "note": "llm-test 422 ignored"
     }
   },
   "actions": {
@@ -159,5 +80,5 @@
       "pass": false
     }
   },
-  "actionsNote": "copilot FAIL attendu sans clé LLM smoke"
+  "actionsNote": "copilot FAIL attendu sans cl\u00e9 LLM smoke"
 }
