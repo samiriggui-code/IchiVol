@@ -2,7 +2,7 @@
 
 export const BASELINE = 'ICHIVOL_BASELINE_V1'
 export const REFRESH_MS = 60_000
-export const TAPE_LIMIT = 8
+export const TAPE_LIMIT = 3
 export const PRIMARY_SYMBOLS = [
   'BTCUSDT',
   'ETHUSDT',

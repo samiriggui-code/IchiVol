@@ -489,9 +489,32 @@ button, select { font: inherit; color: inherit; }
   overflow-y: auto;
   padding: 1.25rem 1.5rem 1.5rem;
 }
+.dash-content:has(.desk-page) {
+  overflow-y: auto;
+  /* maquette: aside 218 + main pad 34; app sidebar 168 → +25px/side to match content width */
+  padding: 31px calc(34px + 25px) 25px;
+}
+@media (max-width: 1150px) {
+  .dash-content:has(.desk-page) {
+    /* maquette @media 1150: main pad 25/22, aside 185; app sidebar 168 → +8.5/side */
+    padding: 25px calc(22px + 8.5px) 25px;
+  }
+}
 @media (max-width: 800px) {
   .dash-content:has(.market-page) {
     padding: 1rem 0.85rem calc(3.85rem + env(safe-area-inset-bottom, 0));
+  }
+  .dash-content:has(.desk-page) {
+    /* maquette @media 800: main { padding: 22px 16px } + tabbar room */
+    padding: 22px 16px calc(3.85rem + env(safe-area-inset-bottom, 0));
+  }
+}
+@media (max-width: 768px) {
+  .dash-shell.is-mobile .dash-content:has(.market-page) {
+    padding: 1rem 0.85rem calc(3.85rem + env(safe-area-inset-bottom, 0));
+  }
+  .dash-shell.is-mobile .dash-content:has(.desk-page) {
+    padding: 22px 16px calc(3.85rem + env(safe-area-inset-bottom, 0));
   }
 }
 

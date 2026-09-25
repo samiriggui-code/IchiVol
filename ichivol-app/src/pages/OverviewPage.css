@@ -7,7 +7,7 @@
 .desk-page {
   --bg: #faf8f5;
   --card: #fefdfb;
-  --line: #e5e1db;
+  --line: #ddd9d3;
   --ink: #202b36;
   --muted: #7d8288;
   --blue: #1a7df5;
@@ -61,6 +61,7 @@
 
 .desk-page .table-wrap {
   overflow: auto;
+  padding: 0;
 }
 
 .desk-page table {
@@ -185,6 +186,31 @@
 }
 .desk-page .down{
   color: var(--red)!important;
+  font-family: Manrope, Arial, sans-serif;
+  font-weight: 400;
+}
+.desk-page .up{
+  font-family: Manrope, Arial, sans-serif;
+  font-weight: 400;
+}
+.desk-page .chart-summary b{
+  font-family: Manrope, Arial, sans-serif;
+  font-weight: 400;
+}
+.desk-page table{
+  font-size: 14px;
+}
+.desk-page tr.clickable{
+  font-size: 14px;
+}
+.desk-page .event{
+  overflow: hidden;
+}
+.desk-page .event small{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 .desk-page .metric.featured{
   background: #213e40;
@@ -348,8 +374,9 @@
   padding: 13px 23px;
   text-align: center;
 }
-.desk-page .table-wrap{
+.desk-page .table-wrap {
   overflow: auto;
+  padding: 0;
 }
 .desk-page tr.clickable{
   cursor: pointer;
@@ -844,6 +871,7 @@
   gap: 13px;
   align-items: center;
   margin: 0 0 10px;
+  min-height: 51px;
 }
 .desk-page .climate-symbol{
   display: grid;
@@ -861,8 +889,10 @@
   color: var(--muted);
 }
 .desk-page .climate-head h3{
-  font: 26px Newsreader,Georgia,serif;
-  margin-top: 6px;
+  font: 26px Newsreader, Georgia, serif;
+  font-weight: 400;
+  line-height: normal;
+  margin: 6px 0 0;
 }
 .desk-page .desk-workspace .desk-note{
   font-size: 12px!important;
@@ -884,6 +914,7 @@
   align-items: center;
   gap: 24px;
   padding: 0 23px 16px;
+  flex-wrap: nowrap;
 }
 .desk-page .desk-ring{
   position: relative;
@@ -915,6 +946,8 @@
 .desk-page .allocation-legend{
   flex: 1;
   min-width: 0;
+  display: block;
+  gap: 0;
 }
 .desk-page .allocation-legend .statline{
   flex-wrap: wrap;

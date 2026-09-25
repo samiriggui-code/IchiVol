@@ -37,7 +37,7 @@ import {
 } from '../lib/paper'
 import { getRiskLock, type RiskLockState } from '../lib/riskLock'
 import { verdictBucket } from '../lib/deskSummarize'
-import { concentrationFromPositions } from '../components/desk/DeskRings'
+import { concentrationFromPositions } from '../components/desk/deskMetrics'
 import {
   BASELINE,
   PRIMARY_SYMBOLS,
@@ -413,7 +413,7 @@ export function OverviewPage() {
         return b === 'buy' || b === 'sell'
       })
       .sort((a, b) => b.confidence - a.confidence)
-      .slice(0, 6)
+      .slice(0, 3)
   }, [rows])
 
   const primaryMarkets = useMemo(() => pickPrimaryMarkets(rows), [rows])
@@ -453,7 +453,7 @@ export function OverviewPage() {
   const concentrationTone: BadgeTone =
     topConc == null ? '' : topConc >= 40 ? 'amber' : 'green'
   const concentrationLabel =
-    topConc == null ? '—' : topConc >= 40 ? 'PRUDENCE' : 'OK'
+    topConc == null ? '—' : topConc >= 40 ? 'PRUDENCE' : 'ÉQUILIBRÉ'
 
   const climateSymbol =
     fng == null ? '—' : fng.value >= 55 ? '↗' : fng.value <= 45 ? '↘' : '→'
@@ -545,7 +545,7 @@ export function OverviewPage() {
             </div>
             <small>
               {risk?.max_open_risk_pct != null
-                ? `Limite : ${fmtPct(risk.max_open_risk_pct, 0, false)}`
+                ? `Limite de risque ouverte : ${fmtPct(risk.max_open_risk_pct, 0, false)}`
                 : '—'}
             </small>
           </div>
@@ -769,18 +769,18 @@ export function OverviewPage() {
           </DeskCard>
         </div>
 
-        {freshnessIssues.length > 0 ? (
-          <div className="notice">
-            <span>△</span>
-            <span>
-              <b>Une donnée demande votre attention.</b>{' '}
-              {freshnessIssues.slice(0, 4).join(', ')}
-              {freshnessIssues.length > 4 ? ` (+${freshnessIssues.length - 4})` : ''} : fraîcheur
-              ou mark périmé.
-            </span>
-            <Link to="/app/operations">Vérifier →</Link>
-          </div>
-        ) : null}
+        <div className="notice">
+          <span>△</span>
+          <span>
+            <b>Une donnée demande votre attention.</b>{' '}
+            {freshnessIssues.length > 0
+              ? `${freshnessIssues.slice(0, 4).join(', ')}${
+                  freshnessIssues.length > 4 ? ` (+${freshnessIssues.length - 4})` : ''
+                } : fraîcheur ou mark périmé.`
+              : '—'}
+          </span>
+          <Link to="/app/operations">Vérifier →</Link>
+        </div>
 
         <div className="grid">
           <DeskCard
@@ -803,7 +803,7 @@ export function OverviewPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(overview?.positions ?? []).map((p: PaperOverviewPosition) => {
+                  {(overview?.positions ?? []).slice(0, 3).map((p: PaperOverviewPosition) => {
                     const base = p.symbol.replace(/USDT$/i, '')
                     const engaged =
                       p.market_value ??
@@ -911,17 +911,24 @@ export function OverviewPage() {
                     —<small>—</small>
                   </div>
                 ) : (
-                  tape.map((it) => (
-                    <div
-                      key={`${it.time}-${it.kind}-${it.symbol}-${it.portfolio}-${it.detail}`}
-                      className="event"
-                    >
-                      {it.title}
-                      <small>
-                        {fmtClock(it.time)} · {it.detail || '—'}
-                      </small>
-                    </div>
-                  ))
+                  tape.slice(0, 3).map((it) => {
+                    const detail = (it.detail || '—').replace(/\s+/g, ' ').trim()
+                    const short =
+                      detail.length > 36 ? `${detail.slice(0, 34)}…` : detail
+                    const title =
+                      it.title.length > 42 ? `${it.title.slice(0, 40)}…` : it.title
+                    return (
+                      <div
+                        key={`${it.time}-${it.kind}-${it.symbol}-${it.portfolio}-${it.detail}`}
+                        className="event"
+                      >
+                        {title}
+                        <small>
+                          {fmtClock(it.time)} · {short}
+                        </small>
+                      </div>
+                    )
+                  })
                 )}
               </div>
             </div>
@@ -1095,37 +1102,35 @@ export function OverviewPage() {
                     stroke="#eeeae3"
                     strokeWidth="19"
                   />
-                  {(() => {
-                    let offset = 0
-                    return concentration.slice(0, 5).map((c, i) => {
-                      const o = offset
-                      offset += c.pct
-                      const color = RING_COLORS[i % RING_COLORS.length]
-                      return (
-                        <circle
-                          key={c.symbol}
-                          cx="100"
-                          cy="100"
-                          r="80"
-                          pathLength="100"
-                          fill="none"
-                          stroke={color}
-                          strokeWidth="19"
-                          strokeDasharray={`${c.pct} ${100 - c.pct}`}
-                          strokeDashoffset={-o}
-                          transform="rotate(-90 100 100)"
-                        />
-                      )
-                    })
-                  })()}
+                  {concentration.slice(0, 3).map((c, i) => {
+                    const o = concentration
+                      .slice(0, i)
+                      .reduce((s, x) => s + x.pct, 0)
+                    const color = RING_COLORS[i % RING_COLORS.length]
+                    return (
+                      <circle
+                        key={c.symbol}
+                        cx="100"
+                        cy="100"
+                        r="80"
+                        pathLength="100"
+                        fill="none"
+                        stroke={color}
+                        strokeWidth="19"
+                        strokeDasharray={`${c.pct} ${100 - c.pct}`}
+                        strokeDashoffset={-o}
+                        transform="rotate(-90 100 100)"
+                      />
+                    )
+                  })}
                 </svg>
                 <div>
-                  <b>{concentration.length ? String(concentration.length) : '—'}</b>
+                  <b>{concentration.length ? String(Math.min(3, concentration.length)) : '—'}</b>
                   <small>Positions ouvertes</small>
                 </div>
               </div>
               <div className="allocation-legend">
-                {concentration.slice(0, 5).map((c, i) => (
+                {concentration.slice(0, 3).map((c, i) => (
                   <button
                     key={c.symbol}
                     type="button"

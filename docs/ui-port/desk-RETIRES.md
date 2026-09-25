@@ -39,3 +39,12 @@ Conservé : `pages/desk/deskFormat.ts`.
 | Concentration | Anneau / lignes | Si aucune position valorisée |
 | État système | Source | Si engine down et screener vide |
 | Notice fraîcheur | (omit) | Affichée seulement si stale / mark périmé |
+
+## Compléments (branche `cursor/ui-port-pages-a2fe`)
+
+- `concentrationFromPositions` / `drawdownFromCurve` / `RING_COLORS` extraits vers `components/desk/deskMetrics.ts` (sans CSS) pour éviter la fuite de `DeskRings.css` (gap flex sur `.allocation-legend`) dans le Desk maquette.
+- Badge concentration : `ÉQUILIBRÉ` (au lieu de `OK`) quand top &lt; 40 % — libellé réel, longueur proche de `PRUDENCE` pour le wrap mobile du `card-head`.
+- Notice toujours rendue (texte engine ou « — ») — structure maquette.
+- Listes plafonnées comme la maquette : 3 positions, 3 opportunités, 3 events tape, 3 parts concentration.
+- Volatilité (lecture marché) : toujours « — » (pas de série vol dédiée).
+
