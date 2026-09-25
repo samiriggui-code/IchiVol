@@ -7,6 +7,40 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — merge main → fiches (thème be2c863)
+
+- Intégre #112/#113/#114 (fuite CSS virgule corrigée) dans `cursor/ui-fiches-a2fe`
+- Tip fiches post-merge ; compare à relancer si besoin
+- **Draft #110 — pas de merge**
+
+---
+
+## 2026-09-25 — Fix thème farci #2 — fuite CSS virgule (light = light)
+
+- Bug : dans `maquette-theme.css`, sélecteurs après `,` perdaient le préfixe `html.dark` → `.segmented` restait sombre en mode clair (bandeau Tous/PASSE/…)
+- Fix : réécriture sans fuite ; light → shell/card/segmented/th tous clairs ; dark → tous sombres
+- Smoke local PASS ; VPS à déployer
+
+--
+
+---
+
+## 2026-09-25 — Fix thème farci dark/light (draft → merge autonome)
+
+- Branche `cursor/theme-fix-a2fe` depuis `main` @ `225549d`
+- **Cause** : shell (`camap-tokens` html.dark) sombre + pages maquette figent `--bg/--card/--ink` en clair → cartes crème sur fond noir
+- **Fix** : `theme/maquette-theme.css` resync vars + surfaces sous `html.dark` pour les 11 `*-page` ; défaut thème = **light** (ignore prefers-color-scheme iOS) ; `theme-color` meta dynamique
+- Smoke `scripts/smoke-theme-switch.mjs` : dark + light → shell/card même famille (**PASS**)
+- compare-maquette : 10 pages 0 ; desk écarts `.up`/notice data-dépendants (hors thème, script non modifié)
+- **VPS** : déployer après merge — corrige le téléphone Samir (Opérations)
+
+### Suite
+Chantiers fiches (#110) + Eve (#111) continuent en parallèle.
+
+--
+
+---
+
 ## 2026-09-25 — Chantier 1 polish A + amorce B — fiches
 
 - Branche `cursor/ui-fiches-a2fe` tip **`f80358c`** (suite phase A)

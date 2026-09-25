@@ -1,10 +1,11 @@
 /**
  * Alignement thème sombre ↔ pages maquette.
  *
- * Chaque *-page fige --bg/--card/--ink en clair (port littéral).
- * Le shell (camap-tokens) passe en sombre via html.dark → contraste « farci ».
- * Ici on resynchronise les variables maquette sous html.dark.
- * Les tags pastel (PASSE/PRUDENCE/REFUSÉ) restent lisibles sur fond sombre.
+ * Cause du farci : shell (camap-tokens html.dark) sombre + pages maquette
+ * figent --bg/--card/--ink en clair.
+ *
+ * IMPORTANT : chaque sélecteur après une virgule DOIT reprendre html.dark
+ * (sinon les styles dark fuient en mode light — bug #112/#113).
  */
 
 html.dark
@@ -35,7 +36,6 @@ html.dark
   color-scheme: dark;
 }
 
-/* Cartes / table-wrap : forcer le fond var (évite hex clairs résiduels) */
 html.dark
   :is(
     .desk-page,
@@ -56,7 +56,62 @@ html.dark
   color: var(--ink);
 }
 
-/* Surfaces hardcodées claires (hover, chips, notices) → sombre cohérent */
+html.dark
+  :is(
+    .desk-page,
+    .market-page,
+    .opps-page,
+    .pf-page,
+    .journal-page,
+    .ops-page,
+    .lab-page,
+    .ctx-page,
+    .copilot-page,
+    .agents-page,
+    .params-page
+  )
+  :is(th, thead, .card-head) {
+  background: color-mix(in srgb, var(--card) 88%, #000) !important;
+  color: var(--muted);
+  border-color: var(--line);
+}
+
+html.dark
+  :is(
+    .desk-page,
+    .market-page,
+    .opps-page,
+    .pf-page,
+    .journal-page,
+    .ops-page,
+    .lab-page,
+    .ctx-page,
+    .copilot-page,
+    .agents-page,
+    .params-page
+  )
+  tbody tr {
+  border-color: var(--line);
+}
+
+html.dark
+  :is(
+    .desk-page,
+    .market-page,
+    .opps-page,
+    .pf-page,
+    .journal-page,
+    .ops-page,
+    .lab-page,
+    .ctx-page,
+    .copilot-page,
+    .agents-page,
+    .params-page
+  )
+  tbody tr:hover {
+  background: #22262f;
+}
+
 html.dark
   :is(
     .desk-page,
@@ -116,6 +171,7 @@ html.dark
   color: #8eb0d8;
 }
 
+/* segmented / tabs — UN SEUL sélecteur (pas de virgule hors html.dark) */
 html.dark
   :is(
     .desk-page,
@@ -130,21 +186,7 @@ html.dark
     .agents-page,
     .params-page
   )
-  .tabs,
-  :is(
-    .desk-page,
-    .market-page,
-    .opps-page,
-    .pf-page,
-    .journal-page,
-    .ops-page,
-    .lab-page,
-    .ctx-page,
-    .copilot-page,
-    .agents-page,
-    .params-page
-  )
-  .segmented {
+  :is(.tabs, .segmented) {
   background: #1c2129;
 }
 
@@ -162,21 +204,7 @@ html.dark
     .agents-page,
     .params-page
   )
-  .tabs button.active,
-  :is(
-    .desk-page,
-    .market-page,
-    .opps-page,
-    .pf-page,
-    .journal-page,
-    .ops-page,
-    .lab-page,
-    .ctx-page,
-    .copilot-page,
-    .agents-page,
-    .params-page
-  )
-  .segmented button.active {
+  :is(.tabs button.active, .segmented button.active) {
   background: #2a303a;
   color: var(--ink);
 }
@@ -195,35 +223,7 @@ html.dark
     .agents-page,
     .params-page
   )
-  input,
-  :is(
-    .desk-page,
-    .market-page,
-    .opps-page,
-    .pf-page,
-    .journal-page,
-    .ops-page,
-    .lab-page,
-    .ctx-page,
-    .copilot-page,
-    .agents-page,
-    .params-page
-  )
-  select,
-  :is(
-    .desk-page,
-    .market-page,
-    .opps-page,
-    .pf-page,
-    .journal-page,
-    .ops-page,
-    .lab-page,
-    .ctx-page,
-    .copilot-page,
-    .agents-page,
-    .params-page
-  )
-  textarea {
+  :is(input, select, textarea) {
   background: #1a1e26;
   color: var(--ink);
   border-color: var(--line);
@@ -261,149 +261,14 @@ html.dark
     .agents-page,
     .params-page
   )
-  td,
-  :is(
-    .desk-page,
-    .market-page,
-    .opps-page,
-    .pf-page,
-    .journal-page,
-    .ops-page,
-    .lab-page,
-    .ctx-page,
-    .copilot-page,
-    .agents-page,
-    .params-page
-  )
-  .card-head h2,
-  :is(
-    .desk-page,
-    .market-page,
-    .opps-page,
-    .pf-page,
-    .journal-page,
-    .ops-page,
-    .lab-page,
-    .ctx-page,
-    .copilot-page,
-    .agents-page,
-    .params-page
-  )
-  h1,
-  :is(
-    .desk-page,
-    .market-page,
-    .opps-page,
-    .pf-page,
-    .journal-page,
-    .ops-page,
-    .lab-page,
-    .ctx-page,
-    .copilot-page,
-    .agents-page,
-    .params-page
-  )
-  h2,
-  :is(
-    .desk-page,
-    .market-page,
-    .opps-page,
-    .pf-page,
-    .journal-page,
-    .ops-page,
-    .lab-page,
-    .ctx-page,
-    .copilot-page,
-    .agents-page,
-    .params-page
-  )
-  h3 {
+  :is(td, .card-head h2, h1, h2, h3) {
   color: var(--ink);
 }
 
-/* Dialog maquette (fiches / opportunités) — hors *-page scopes */
 html.dark dialog,
 html.dark .dialog-body,
 html.dark .fiche-dialog {
   background: #1a1e26;
   color: #f1eee6;
   border-color: #333944;
-}
-
-html.dark .fiche-dialog {
-  --card: #1a1e26;
-  --line: #333944;
-  --ink: #f1eee6;
-  --muted: #a0a8b5;
-  --blue: #4b9bf7;
-  color-scheme: dark;
-}
-
-html.dark .fiche-dialog::backdrop {
-  background: #0a0c1099;
-}
-
-html.dark .fiche-dialog .segmented {
-  background: #1c2129;
-}
-
-html.dark .fiche-dialog .segmented button.active {
-  background: #2a303a;
-  color: var(--ink);
-  box-shadow: 0 1px 3px #0006;
-}
-
-html.dark .fiche-dialog .tag {
-  background: #1a2433;
-  color: #8eb0d8;
-}
-
-html.dark .fiche-dialog .tag.green {
-  background: #152822;
-  color: #3aa99a;
-}
-
-html.dark .fiche-dialog .tag.amber {
-  background: #2a2418;
-  color: #e8b86d;
-}
-
-html.dark .fiche-dialog .tag.red {
-  background: #2a1c1a;
-  color: #d48478;
-}
-
-html.dark .fiche-dialog .tag.gray {
-  background: #22262f;
-  color: #a0a8b5;
-}
-
-html.dark .fiche-dialog .notice {
-  background: #2a2418;
-  border-color: #4a3f2a;
-  color: #e8b86d;
-}
-
-html.dark .fiche-dialog .notice.blue {
-  background: #1a2433;
-  border-color: #2a3a50;
-  color: #8eb0d8;
-}
-
-html.dark .fiche-dialog .table-wrap th {
-  background: #161a21;
-  color: var(--muted);
-}
-
-html.dark .fiche-dialog .table-wrap td {
-  border-bottom-color: #333944;
-}
-
-html.dark .fiche-dialog .dialog-head {
-  background: var(--card);
-}
-
-html.dark .fiche-dialog button:hover {
-  border-color: #4a5568;
-  background: #22262f;
 }
