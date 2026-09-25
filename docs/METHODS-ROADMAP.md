@@ -80,8 +80,9 @@ RSI / MACD / Stochastic / CCI : **hors cœur**. Test expérimentaux possibles, *
 | **Wyckoff** | Accum / distrib / spring… ? | Régime comportemental | **V3** | OHLCV (+VP) | ✅ (logique maison) |
 | **Donchian / Breakout** | Vraie cassure de range ? | Détection | **V3** | OHLCV | ✅ |
 | **ADX** | Force de tendance ? | Filtre régime | **V3/test** | OHLCV | ✅ — garder seulement si backtest prouve un edge |
+| **Cycle / Spectral** (FFT · Hilbert · ACF) | Où sommes-nous dans le cycle ? Phase / horizon / stabilité ? | Contexte TEMPS | **V3/test** | OHLCV | ✅ — observe-only ; **jamais** vote LONG/SHORT ([`CYCLE_ENGINE_AUDIT.md`](./CYCLE_ENGINE_AUDIT.md)) |
 
-**Hors cœur (pas de vote) :** RSI, MACD, Stochastic, CCI, EMA soup.
+**Hors cœur (pas de vote) :** RSI, MACD, Stochastic, CCI, EMA soup. Cycle/FFT tant que non promu.
 
 ---
 
@@ -136,6 +137,7 @@ Ordre de code :
 + WYCKOFF (régime narratif borné)
 + DONCHIAN
 + ADX (garder ou jeter selon métriques)
++ CYCLE / SPECTRAL (FFT·Hilbert·ACF — observe only until backtest)
 ```
 
 ---
@@ -154,7 +156,7 @@ Puis **CVD + OI/Funding** pour la couche crypto.
 
 1. Une méthode = **une question** ; pas de double vote directionnel.  
 2. Location peut **downgrader** un signal (mauvais emplacement) sans inverser LONG→SHORT toute seule sauf invalidation structure claire.  
-3. ATR / ADX / Wyckoff ne votent **jamais** LONG/SHORT.  
+3. ATR / ADX / Wyckoff / **Cycle** ne votent **jamais** LONG/SHORT.  
 4. Tout calcul indicateur = **Python local** sur données brutes.  
 5. Pas d’abonnement data pour V1–V2 crypto spot+futures publics.  
 6. Market data ≠ execution ([`MARKET-DATA-STRATEGY.md`](./MARKET-DATA-STRATEGY.md)).

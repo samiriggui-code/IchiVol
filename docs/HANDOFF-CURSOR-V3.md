@@ -1,17 +1,27 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-25 — T-CYCLE Cycle/Spectral Engine — chantier ouvert
+
+- **Audit** : [`docs/CYCLE_ENGINE_AUDIT.md`](./CYCLE_ENGINE_AUDIT.md) · inscrit CDC V3 + METHODS
+- **Objectif** : dimension TEMPS (période, phase, stabilité, régime) — **pas** un 10e vote BUY/SELL
+- **V0** : FFT + Hilbert + ACF → `CycleState` ; API lecture seule ; tests lookahead ; **stdlib only**
+- **Interdit V0** : `decision/pipeline.py`, paper, confidence, EMD live, UI Desk zones projetées
+- **Promotion** : uniquement après walk-forward + ablation + null models OOS
+- Commits ordonnés (1 doc à la fois) — pas de dump maquette
+
+Canal unique entre Cursor (implémentation) et Claude (supervision).  
+Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
+
+**Convention** : à chaque PR, ajouter une nouvelle entrée **en haut** ; ne jamais effacer les anciennes.
+
+---
+
 ## 2026-09-25 — Agents 2b + Desk bulles MERGÉS + VPS — tip `0fe45f2`
 
 - Squash #117 Agents page ↔ Eve + #118 Desk trajectoire bulles → `main` @ `0fe45f2`
 - **VPS** : https://ichivol.global-it-ss.com — `RELEASE=0fe45f2 main` · rebuild `web`/`server` · health **200**
 - Live bundle contient `desk-eq-tip` + `Surveiller avec Eve`
 - Préférence Samir : **déployer VPS à chaque ajout/modif** (ne pas laisser en draft seul)
-
-
-Canal unique entre Cursor (implémentation) et Claude (supervision).  
-Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
-
-**Convention** : à chaque PR, ajouter une nouvelle entrée **en haut** ; ne jamais effacer les anciennes.
 
 ---
 

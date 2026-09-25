@@ -1,7 +1,8 @@
 # IchiVol — Grand cahier des charges
 
 **Statut : VIVANT** — document maître produit (à enrichir, pas à dupliquer).  
-**Dernière maj :** 2026-09-16  
+**Dernière maj :** 2026-09-25  
+
 
 Les décisions **verrouillées** vivent dans les docs listées ci-dessous. Ce CDC **orchestre** : vision, périmètre, backlog, hors-scope.
 
@@ -17,6 +18,7 @@ Les décisions **verrouillées** vivent dans les docs listées ci-dessous. Ce CD
 | [`HANDOFF-CURSOR-SESSION-2026-09-16-SOIR.md`](./HANDOFF-CURSOR-SESSION-2026-09-16-SOIR.md) | Soir : Matrice, watch+cloche, explain_decision, LLM table |
 | [`HANDOFF-CLAUDE-CDC-CAP-2026-09-16.md`](./HANDOFF-CLAUDE-CDC-CAP-2026-09-16.md) | Alerte Claude — échelle V1→V3, agents, watch Journal |
 | [`HANDOFF-CLAUDE-SESSION-2026-09-16-SOIR2.md`](./HANDOFF-CLAUDE-SESSION-2026-09-16-SOIR2.md) | Soir 2 : paper multi-classe, `/decisions/batch`, `/correlations` — état constaté refonte notifs Cursor |
+| [`CYCLE_ENGINE_AUDIT.md`](./CYCLE_ENGINE_AUDIT.md) | **T-CYCLE** — Cycle / Spectral Engine (FFT·Hilbert·ACF) : audit + V0 observe-only |
 
 ---
 
@@ -164,6 +166,7 @@ Il n’existe **pas** de jalon nommé « V2+ » dans ce CDC. L’ordre est stric
 - [ ] **T0-MANAGE-d — prise de profit partielle (paper)** — `paper_partial_exits`, après validation T0-MANAGE-c.
 - [ ] **T0-MANAGE-e — renforcement/pyramiding (Lab)** — invariant risque total ≤ risque initial.
 - [ ] **T0-MANAGE-f — renforcement (paper)** — `app/paper/broker.py`, après validation T0-MANAGE-e.
+- [ ] **T-CYCLE — Cycle / Spectral Engine (dimension TEMPS)** — période dominante, phase, stabilité, régime TREND/CYCLE/TRANSITION/NOISE. **V0 observe-only** : FFT + Hilbert + ACF → `CycleState` ; API Lab/`GET /cycle/{symbol}` ; **ne change aucune gate / paper / confidence**. Promotion décision **uniquement** après walk-forward + ablation + null models hors échantillon. EMD/EEMD = Lab only (pas live). Ref : [`CYCLE_ENGINE_AUDIT.md`](./CYCLE_ENGINE_AUDIT.md).
 - [x] **Collecte automatique de preuve backtest (condition 1 du gate broker live)** (2026-09-17) — `app/backtest/evidence.py` : job d'arrière-plan (même pattern que `ScreenerCache`, pas de conteneur cron) qui relance `experiments.compare()` sur tout l'univers crypto × [1h,4h] et persiste dans `backtest_snapshots`, pour qu'une tendance devienne visible sans script manuel. **Ne décide jamais rien** — logue seulement, un humain/Claude juge si c'est une preuve. `GET /api/engine/backtest/evidence` alimente la tuile Overview "Preuve edge (C1)" (construite en parallèle par Cursor, contrat JSON convergé indépendamment des deux côtés). Vérifié en live : 865 lignes, `pipeline_beats_ichimoku_sharpe: 20/40` (~50%, cohérent avec le reste de la nuit — pas d'edge de rendement). 9 tests. Détail : `ichivol-app/engine/README.md` §Collecte automatique de preuve backtest.  
 - [x] **Notifications système : watchdog santé + digest quotidien** (2026-09-17) — `ichivol-app/server/src/notifications/{systemWatchdog,digest}.ts`, même pattern `setInterval` que le job watch Journal, aucun vote/décision. Watchdog : ping le même check que `GET /api/health` (DB + moteur) toutes les 5 min, alerte seulement sur **changement d'état** (jamais de spam pendant que ça reste cassé). Digest : résumé quotidien des 2 conditions du gate broker live (paper trading + preuve backtest). Les deux créent une notification in-app (cloche header, nouveaux `kind: system_alert | system_digest`) **et** un email optionnel (SMTP configurable, template React Email rendu via `@react-email/render`) si `SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD` sont renseignés — sinon dégrade silencieusement, jamais d'exception. `GET /api/health` durci au passage : teste vraiment DB + moteur (`checks: {database, engine}`, HTTP 503 si l'un est down) au lieu de renvoyer `{ok:true}` inconditionnel — nécessaire pour qu'un monitor externe (UptimeRobot etc.) détecte un vrai incident. Détail : `ichivol-app/server/README.md` §Notifications système.  
 - [ ] Consensus multi-agents StrategyAgents — **seulement après preuve** backtest (pas de bureau multi-LLM)  
@@ -176,7 +179,8 @@ Il n’existe **pas** de jalon nommé « V2+ » dans ce CDC. L’ordre est stric
 
 ### Hors cœur (pas de vote auto)
 
-RSI, MACD, Stochastic, CCI, salade d’indicateurs, broker Binance hardcodé, multi-personas LLM qui votent la direction.
+RSI, MACD, Stochastic, CCI, salade d’indicateurs, broker Binance hardcodé, multi-personas LLM qui votent la direction.  
+Cycle / FFT / Hilbert / ACF tant que **T-CYCLE** n’est pas promu (observe-only — jamais un vote LONG/SHORT).
 
 ---
 
