@@ -5,8 +5,11 @@
 - KeenIcon / cartes panel custom
 - Lien Copilot LLM status strip
 - Details/summary périmètre
+- Badge figé `APERÇU` / notice « illustratifs · aucun agent en exécution »
 
 ## Notes
 
-- Permissions / modes = taxonomie maquette (lecture seule, pas d’exécution)
-- Aucun fichier helper dédié à supprimer hors refactor de `AgentsPage.tsx`
+- Permissions / modes = taxonomie maquette (lecture seule paper, pas d’ordres réels)
+- Chantier 2b : page branchée sur `GET /api/agents` (6 rôles) + `POST /api/agents/missions`
+- FicheAgent / FicheHost : absent sur main → deep-link `?fiche=agent:id` ouvre dialog permissions (stub)
+- AgentLog → journal Opérations : follow-up (pas d’injection ActivityPage ici — compare)
