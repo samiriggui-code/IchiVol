@@ -46,7 +46,9 @@
 /* Spécificité > .page-head h1 (index) et .dash-shell.is-mobile .page-head h1 */
 .dash-shell .market-page .page-head h1,
 .market-page .page-head h1 {
-  font: 400 38px/1.15 Newsreader, Georgia, serif;
+  font: 38px Newsreader, Georgia, serif;
+  font-weight: 400;
+  line-height: normal;
   margin: 0 0 6px;
   letter-spacing: -1px;
   color: var(--ink);
@@ -277,7 +279,7 @@
 .market-page .step {
   border-left: 2px solid #c7dfd9;
   padding: 3px 0 20px 18px;
-  margin: 12px 0 8px 5px;
+  margin-left: 5px;
 }
 
 .market-page .step b {
@@ -385,6 +387,7 @@
     font-size: 32px;
     font-weight: 400;
     font-family: Newsreader, Georgia, serif;
+    line-height: normal;
     letter-spacing: -1px;
   }
   .market-page .market-layout {

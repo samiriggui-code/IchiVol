@@ -480,10 +480,7 @@ export function MarketPage() {
             <p className="lecture-synthesis">{synthesis}</p>
             <div className="step">
               <b>{setupName}</b>
-              <p>
-                RVOL attendu ≥ 1,5
-                {rvolDisplay != null ? ` · actuel ${fmtRvolMaq(rvolDisplay)}` : ''}
-              </p>
+              <p>RVOL attendu ≥ 1,5</p>
               <span className={`tag ${setupState.tone}`.trim()}>{setupState.text}</span>
             </div>
             <button
