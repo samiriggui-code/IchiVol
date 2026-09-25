@@ -269,13 +269,14 @@
 .market-page .statline {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 13px 0;
   border-bottom: 1px solid var(--line);
   font-size: 12px;
-}
-
-.market-page .statline:last-of-type {
-  /* keep borders between gates; synthesis follows */
+  /* Maquette : tag inline dans <b> → ligne 44 px ; ici le tag est flex-item (blockifié) →
+     on verrouille la hauteur calculée (13+13 pad + ~17 contenu + bordure). */
+  box-sizing: border-box;
+  height: 44px;
 }
 
 .market-page .step {
@@ -435,6 +436,10 @@
   .market-page .market-chart-slot {
     height: 280px;
     min-height: 240px;
+  }
+  /* Maquette ≤800 : bouton primaire en largeur contenu, pas pleine largeur. */
+  .market-page button.primary {
+    width: auto;
   }
 }
 

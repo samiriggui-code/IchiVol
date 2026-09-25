@@ -7,6 +7,20 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — UI-port Marché (#108) — retouches CSS + smoke + VPS préprod
+
+- Branche `cursor/ui-port-marche-a2fe` — **draft**, **pas de merge** avant OK Samir téléphone
+- CSS only (`MarketPage.css`) :
+  - mobile ≤800 : `button.primary` `width: auto` (maquette ≈ 154 px à 390)
+  - `.statline` : padding 13px 0, font 12px, hauteur verrouillée 44 px (5 portes = 220 px comme maquette)
+- Smoke 11 pages : `docs/ui-port/smoke-11-pages.json` (bruit `llm-test` 422 ignoré)
+- **VPS préprod** : déploiement branche pour validation mobile (voir entrée après deploy)
+
+### Suite
+OK Samir téléphone → merge #108 → Desk (même méthode).
+
+---
+
 ## 2026-09-25 — UI-port Marché (#108) — corrections appliquées par Claude
 
 - Base : `pr/108` @ `e7aaa9d` (rebasée sur main `604a8b0`)
