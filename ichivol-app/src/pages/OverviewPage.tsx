@@ -757,11 +757,11 @@ export function OverviewPage() {
                   <span className="coin">—</span>
                   <div>
                     <strong>—</strong>
-                    <small>Aucune opportunité screener pour le moment</small>
+                    <small>— · screener vide</small>
                   </div>
                   <div className="right">
                     <span className="score">
-                      —<small style={{ display: 'inline' }}> /100</small>
+                      —<small style={{ display: 'inline' }}>{' '}/100</small>
                     </span>
                     <small>{badge('—', 'gray')}</small>
                   </div>
