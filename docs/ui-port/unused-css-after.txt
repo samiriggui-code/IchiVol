@@ -1,0 +1,12 @@
+is-bad_key
+is-checking
+is-crash
+is-error
+is-fail
+is-long
+is-no_key
+is-short
+is-side-collapsed
+is-stop
+is-target
+is-unreachable

@@ -1,94 +1,395 @@
+/**
+ * Paramètres — port littéral de design-reference/ichivol-workspace `parametres()` + page-head.
+ * Classes HTML = maquette. Préférences locales + écritures engine (patchSettings / push).
+ */
+
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { disablePushAlerts, enablePushAlerts } from '../lib/pushAlerts'
+import {
+  getSettings,
+  patchSettings,
+  type AppSettings,
+} from '../lib/settings'
+import { invalidateEngineThresholdsCache } from '../lib/engineThresholds'
 import './SettingsPage.css'
-import { SettingsDialogs } from './settings/SettingsDialogs'
-import { SettingsForm } from './settings/SettingsForm'
-import { SECTIONS } from './settings/settingsConstants'
-import { useSettingsController } from './settings/useSettingsController'
+
+type SettingsTab =
+  | 'Marché et univers'
+  | 'LLM'
+  | 'Alertes'
+  | 'Limites de risque'
+  | 'Connexions'
+
+type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
+
+const TABS: SettingsTab[] = [
+  'Marché et univers',
+  'LLM',
+  'Alertes',
+  'Limites de risque',
+  'Connexions',
+]
+
+const LS_KEY = 'ichivol-settings'
+
+function badge(text: string, tone: BadgeTone = ''): ReactNode {
+  let inferred = tone
+  if (!inferred) {
+    inferred = /PASSE|ACCEPTÉ|OUVERTE|VALIDÉ/i.test(text)
+      ? 'green'
+      : /REFUS|BLOQU|ERREUR/i.test(text)
+        ? 'red'
+        : /PRUDENCE|ARMED|WATCH/i.test(text)
+          ? 'amber'
+          : ''
+  }
+  return <span className={`tag ${inferred}`.trim()}>{text}</span>
+}
+
+function loadLocal(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(LS_KEY) || '{}') as Record<string, string>
+  } catch {
+    return {}
+  }
+}
 
 export function SettingsPage() {
-  const c = useSettingsController()
-  const { loading, section, setSection, setError, setSaved, apiMissing, error, saved, testResult } = c
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('Limites de risque')
+  const [local, setLocal] = useState(loadLocal)
+  const [engine, setEngine] = useState<AppSettings | null>(null)
+  const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushMsg, setPushMsg] = useState<string | null>(null)
 
-  if (loading) {
-    return (
-      <div className="settings-layout">
-        <aside className="settings-nav panel">
-          <p className="settings-nav-title">Paramètres</p>
-        </aside>
-        <div className="settings-main">
-          <p className="muted">Chargement…</p>
-        </div>
-      </div>
-    )
+  useEffect(() => {
+    getSettings()
+      .then(setEngine)
+      .catch(() => setEngine(null))
+  }, [])
+
+  const onSave = useCallback(
+    async (e: FormEvent<HTMLFormElement>) => {
+      e.preventDefault()
+      const fd = new FormData(e.currentTarget)
+      const next: Record<string, string> = { ...local }
+      fd.forEach((v, k) => {
+        if (typeof v === 'string') next[k] = v
+      })
+      for (let i = 0; i < 4; i++) {
+        next[`alert${i}`] = fd.get(`alert${i}`) ? '1' : '0'
+      }
+      try {
+        localStorage.setItem(LS_KEY, JSON.stringify(next))
+        setLocal(next)
+      } catch {
+        /* ignore quota */
+      }
+
+      setSaving(true)
+      setError(null)
+      setSaved(false)
+      try {
+        const patch: Parameters<typeof patchSettings>[0] = {}
+        if (settingsTab === 'Marché et univers' && engine) {
+          const rvol = Number(next.rvol || engine.volumeParams.rvolConfirm || 1.5)
+          if (Number.isFinite(rvol) && rvol > 0) {
+            patch.volumeParams = {
+              ...engine.volumeParams,
+              rvolConfirm: rvol,
+              rvolSignificant: rvol,
+            }
+          }
+        }
+        if (settingsTab === 'LLM' && engine && next.llmModel) {
+          patch.llmModel = next.llmModel
+        }
+        if (settingsTab === 'Alertes') {
+          patch.pushAlertPrefs = {
+            enabled: engine?.pushAlertPrefs?.enabled ?? false,
+            targetStop: next.alert0 !== '0',
+            accel: next.alert1 !== '0',
+            directionFlip: next.alert2 !== '0',
+            nearPct: engine?.pushAlertPrefs?.nearPct ?? 0.5,
+            cooldownMin: engine?.pushAlertPrefs?.cooldownMin ?? 30,
+          }
+        }
+        if (Object.keys(patch).length > 0) {
+          const updated = await patchSettings(patch)
+          setEngine(updated)
+          invalidateEngineThresholdsCache()
+        }
+        setSaved(true)
+        window.setTimeout(() => setSaved(false), 1500)
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Échec de la sauvegarde moteur')
+      } finally {
+        setSaving(false)
+      }
+    },
+    [local, settingsTab, engine],
+  )
+
+  const riskDefaults = {
+    trade: local.trade || '0.5',
+    day: local.day || '3',
+    exposure: local.exposure || '40',
+    positions: local.positions || '6',
   }
 
   return (
-    <div className="settings-layout">
-      <aside className="settings-nav panel" aria-label="Sections paramètres">
-        <p className="settings-nav-title">Paramètres</p>
-        <nav className="settings-nav-list">
-          {SECTIONS.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className={`settings-nav-item${section === s.id ? ' is-active' : ''}`}
-              onClick={() => {
-                setSection(s.id)
-                setError(null)
-                setSaved(false)
-              }}
-            >
-              <span className="settings-nav-label">{s.label}</span>
-              <span className="settings-nav-blurb muted">{s.blurb}</span>
-            </button>
-          ))}
-        </nav>
-      </aside>
-
-      <div className="settings-main">
-        <header className="iv-page-header page-head">
-          <p className="iv-page-eyebrow">Système · Paramètres</p>
-          <h1>{SECTIONS.find((s) => s.id === section)?.label}</h1>
-          <p className="iv-page-question">Quels réglages gouvernent le cockpit ?</p>
-          <p className="muted">
-            {section === 'llm'
-              ? 'LLM actif en haut. Ajoute ou remplace la clé seulement si tu changes de provider.'
-              : section === 'connections'
-                ? 'Données publiques — aucune clé exchange requise.'
-                : section === 'market'
-                  ? 'Seuils Ichimoku / RVOL persistés ; univers moteur en lecture seule.'
-                  : section === 'risk'
-                    ? 'Limites Risk Kernel en lecture — modification prévue dans une tranche engine.'
-                    : section === 'environment'
-                      ? 'Mode paper, exécution réelle désactivée, identité session.'
-                      : 'Alertes push pour positions paper ouvertes.'}
-          </p>
-        </header>
-
-        {apiMissing && (
-          <div className="banner error" role="alert">
-            API <code>/api/settings</code> indisponible — {error}.
-          </div>
-        )}
-        {!apiMissing && error && (
-          <div className="banner error" role="alert">
-            {error}
-          </div>
-        )}
-        {saved && !error && (
-          <div className="banner settings-ok" role="status">
-            Paramètres enregistrés.
-          </div>
-        )}
-        {testResult?.ok && (
-          <div className="banner settings-ok" role="status">
-            {testResult.message} · {testResult.latencyMs} ms
-          </div>
-        )}
-
-        <SettingsForm c={c} />
+    <div className="params-page">
+      <div className="page-head">
+        <div>
+          <div className="eyebrow">11 / ICHIVOL WORKSPACE</div>
+          <h1>Paramètres</h1>
+          <p className="subtitle">Votre environnement de travail.</p>
+        </div>
+        <div className="actions">{badge('DONNÉES LIVE', 'gray')}</div>
       </div>
 
-      <SettingsDialogs c={c} />
+      <div className="tabs">
+        {TABS.map((t) => (
+          <button
+            key={t}
+            type="button"
+            className={settingsTab === t ? 'active' : ''}
+            onClick={() => setSettingsTab(t)}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid">
+        <section className="card">
+          <div className="card-head">
+            <h2>{settingsTab}</h2>
+          </div>
+          <form id="settings-form" className="card-body" onSubmit={(ev) => void onSave(ev)}>
+            {settingsTab === 'Limites de risque' && (
+              <div className="grid equal">
+                {(
+                  [
+                    ['trade', 'Risque par trade (%)'],
+                    ['day', 'Risque par jour (%)'],
+                    ['exposure', 'Exposition maximale (%)'],
+                    ['positions', 'Positions simultanées'],
+                  ] as const
+                ).map(([id, label]) => (
+                  <div className="field" key={id}>
+                    <label htmlFor={id}>{label}</label>
+                    <input
+                      id={id}
+                      name={id}
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      max="100"
+                      defaultValue={riskDefaults[id]}
+                      required
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {settingsTab === 'Marché et univers' && (
+              <>
+                <div className="field">
+                  <label>Univers</label>
+                  <select name="universe" defaultValue="Crypto spot · Binance">
+                    <option>Crypto spot · Binance</option>
+                    <option>Multi-marchés · aperçu</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Unité de temps</label>
+                  <select name="timeframe" defaultValue="1H">
+                    <option>1H</option>
+                    <option>4H</option>
+                    <option>1D</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Seuil RVOL</label>
+                  <input
+                    name="rvol"
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    defaultValue={
+                      engine?.volumeParams?.rvolConfirm != null
+                        ? String(engine.volumeParams.rvolConfirm)
+                        : local.rvol || '1.5'
+                    }
+                  />
+                </div>
+              </>
+            )}
+
+            {settingsTab === 'LLM' && (
+              <>
+                <div className="field">
+                  <label>Modèle d’analyse</label>
+                  <select
+                    name="llmModel"
+                    defaultValue={engine?.llmModel || ''}
+                    disabled={!engine}
+                  >
+                    {engine?.llmModel ? (
+                      <option value={engine.llmModel}>{engine.llmModel}</option>
+                    ) : (
+                      <option value="">—</option>
+                    )}
+                    {(engine?.llmModels?.[engine.llmProvider] ?? []).map((m) =>
+                      m.id === engine?.llmModel ? null : (
+                        <option key={m.id} value={m.id}>
+                          {m.label}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--muted)' }}>
+                  Les clés et l’appel au modèle restent gérés par votre serveur.
+                  {engine
+                    ? ` Provider actif : ${engine.llmProvider}${engine.llmReady ? ' · prêt' : ' · non prêt'}.`
+                    : ' Settings engine : —.'}
+                </p>
+              </>
+            )}
+
+            {settingsTab === 'Alertes' && (
+              <>
+                {(
+                  [
+                    ['Signal déclenché', 'targetStop'],
+                    ['Décision refusée', 'accel'],
+                    ['Donnée périmée', 'directionFlip'],
+                    ['Stop modifié', 'near'],
+                  ] as const
+                ).map(([l], i) => (
+                  <label className="checkrow" key={l}>
+                    {l}
+                    <input
+                      name={`alert${i}`}
+                      type="checkbox"
+                      defaultChecked={local[`alert${i}`] !== '0'}
+                    />
+                  </label>
+                ))}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
+                  <button
+                    type="button"
+                    className="suggestion"
+                    disabled={pushBusy}
+                    onClick={() => {
+                      setPushBusy(true)
+                      setPushMsg(null)
+                      void enablePushAlerts().then((r) => {
+                        setPushBusy(false)
+                        setPushMsg(
+                          r.ok
+                            ? 'Abonnement push enregistré sur cet appareil.'
+                            : r.message,
+                        )
+                      })
+                    }}
+                  >
+                    {pushBusy ? 'Activation…' : 'Activer les alertes push'}
+                  </button>
+                  <button
+                    type="button"
+                    className="suggestion"
+                    disabled={pushBusy}
+                    onClick={() => {
+                      setPushBusy(true)
+                      void disablePushAlerts().then(() => {
+                        setPushBusy(false)
+                        setPushMsg('Abonnement push retiré sur cet appareil.')
+                      })
+                    }}
+                  >
+                    Désabonner cet appareil
+                  </button>
+                </div>
+                {pushMsg && (
+                  <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 10 }} role="status">
+                    {pushMsg}
+                  </p>
+                )}
+              </>
+            )}
+
+            {settingsTab === 'Connexions' && (
+              <>
+                <div className="field">
+                  <label>Connexion moteur</label>
+                  <input
+                    value={engine ? 'Connectée' : 'Non connectée'}
+                    disabled
+                    readOnly
+                  />
+                  <small>
+                    {engine
+                      ? 'Contrat API settings OK.'
+                      : 'La connexion nécessite le contrat API de votre moteur.'}
+                  </small>
+                </div>
+                <div className="statline">
+                  <span>Données de marché</span>
+                  <b>{badge(engine ? 'LIVE' : '—', 'gray')}</b>
+                </div>
+                <div className="statline">
+                  <span>Broker</span>
+                  <b>{badge('NON CONNECTÉ', 'gray')}</b>
+                </div>
+              </>
+            )}
+
+            {error && (
+              <p style={{ fontSize: 12, color: 'var(--red)', marginTop: 12 }} role="alert">
+                {error}
+              </p>
+            )}
+
+            <button type="submit" className="primary" disabled={saving}>
+              {saving ? 'Enregistrement…' : saved ? 'Enregistré' : 'Enregistrer les préférences'}
+            </button>
+            <p style={{ fontSize: 10, color: 'var(--muted)' }}>
+              Préférences navigateur + sync moteur (RVOL / LLM / alertes) quand disponible.
+            </p>
+          </form>
+        </section>
+
+        <section className="card">
+          <div className="card-head">
+            <h2>Environnement</h2>
+          </div>
+          <div className="card-body">
+            <div className="statline">
+              <span>Mode</span>
+              <b>{badge('PAPER', 'gray')}</b>
+            </div>
+            <div className="statline">
+              <span>Exécution réelle</span>
+              <b>{badge('BLOQUÉE')}</b>
+            </div>
+            <div className="statline">
+              <span>Bougies analysées</span>
+              <b>Clôturées</b>
+            </div>
+            <h3 style={{ marginTop: 28 }}>Identité IchiVol</h3>
+            <p style={{ fontSize: 12, color: 'var(--muted)' }}>
+              Fond crème, surfaces sobres, couleurs réservées aux décisions. Une lecture
+              cohérente sur les onze espaces.
+            </p>
+          </div>
+        </section>
+      </div>
     </div>
   )
 }

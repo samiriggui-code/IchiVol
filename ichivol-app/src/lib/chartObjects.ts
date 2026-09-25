@@ -202,6 +202,7 @@ export function chartObjectPriceLevels(objects: ChartObject[]): Array<{
   label: string
   kind: 'horizontal_line' | 'entry' | 'stop' | 'target'
   side: string | null
+  subtype: string | null
 }> {
   const kinds = new Set(['horizontal_line', 'entry', 'stop', 'target'])
   return objects
@@ -211,6 +212,7 @@ export function chartObjectPriceLevels(objects: ChartObject[]): Array<{
       label: o.label ?? o.type,
       kind: o.type as 'horizontal_line' | 'entry' | 'stop' | 'target',
       side: o.side,
+      subtype: o.subtype,
     }))
 }
 

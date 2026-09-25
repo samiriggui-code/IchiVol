@@ -7,20 +7,118 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-25 — UI-clean front — PR draft
+## 2026-09-25 — UI-port (#109) — correctifs bugs avant merge
 
-- Branche : `cursor/ui-clean-a2fe` — **draft**, ne pas merger avant Claude
-- `index.css` : 5328 → ~2774 lignes · CSS mort + extractions pages
-- Desk / Opportunités / Marché / Lab / Settings découpés en sections (`pages/desk|opportunites|market|lab|settings`)
-- Orphelins supprimés : `ContextPanel.tsx`, `Screener.tsx`
-- Smoke 11 pages + fiche Opportunités mobile — **PASS** · [`docs/ui-clean/`](./ui-clean/)
-- Journal / Activity / Context encore >400 lignes (suite possible)
+- Branche `cursor/ui-port-pages-a2fe` (même PR #109 draft)
+- **Portefeuille** : plus de `positions.slice(0, 3)` (reste maquette démo). Affiche **toutes** les positions ouvertes ; badge `1 POSITION` / `N POSITIONS` / `—`
+- **Opportunités** : bouton primaire **Enregistrer la décision** → `confirmUserDecision` + notice OK/erreur visible, indépendant de l’ouverture paper. Paper reste en `suggestion` (« Ouvrir une position paper → »)
+- Branche distante doublon `cursor/ui-port-desk-4731` : absente sur origin (déjà supprimée) ; branche locale purgée
+- `compare-maquette.mjs` : **11×0** 1440 + 390 — script non modifié
+- **Pas de merge** — attendre OK Samir téléphone + relecture Claude
 
-### Suite
-Relecture Claude. **Pas** de runtime agents.
+### Suite plan (après merge #109)
+
+1. Chantier 1 phase A — fiches (`cursor/ui-fiches-a2fe`) : INVENTAIRE.md → FicheDecision → points d’entrée
+2. Chantier 2 E0 — Eve runtime (`cursor/eve-runtime-a2fe`) : AgentTask + claim + worker minute (server/engine/prisma only)
 
 ---
 
+## 2026-09-25 — UI-port 10 pages (#109) — draft, 11×0 écart
+
+- Branche `cursor/ui-port-pages-a2fe` depuis #108 + patches Claude 2/3 + `puppeteer-core@23`
+- **11 pages = 0 écart** 1440 + 390 (`docs/ui-port/compare/RAPPORT.md`) — critère unique `compare-maquette.mjs` (script non modifié)
+- Ordre commits : desk → opportunites → portefeuille → journal → operations → lab → contexte → copilot → agents → parametres
+- Par page : DOM/CSS littéral maquette ; engine ou « — » ; `docs/ui-port/<page>-RETIRES.md` ; ancienne UI retirée
+- Captures pleine page : `docs/ui-port/captures/<page>-{1440,390}.png` (tabbar/Plus masqués)
+- Smoke 11 pages PASS : `docs/ui-port/smoke-11-pages.json` (bruit `llm-test` 422 ignoré ; action copilot FAIL attendu sans clé LLM)
+- `find-unused-css` : classes mortes index.css nettoyées ; restent surtout `is-*` d’état (comme baseline Marché)
+- **Draft PR #109 — pas de merge** avant relecture Claude + OK Samir téléphone
+- **VPS préprod** : https://ichivol.global-it-ss.com — `RELEASE=025f1ac cursor/ui-port-pages-a2fe` · `web` rebuild · public 200
+- Backup : `/opt/ichivol-backup/pre-uiport-pages-20260925-134158.tgz` (+ `env-pre-uiport-pages-*` si présent)
+
+### Suite
+
+1. Relire Claude (RAPPORT + captures + RETIRES)
+2. Samir teste téléphone sur VPS
+3. Merge seulement après double OK
+
+---
+
+## 2026-09-25 — Outil de contrôle maquette ↔ app (Claude)
+
+- `ichivol-app/scripts/compare-maquette.mjs` : pour les 11 pages, en 1440 et 390, relève chaque classe CSS du contenu de la maquette et vérifie dans l'app présence, taille/graisse/famille de police, hauteur (±4 px). Rapport `docs/ui-port/compare/RAPPORT.md` + détail JSON par page. Code de sortie 1 s'il reste un écart.
+- Classes d'état/données (up, down, active, green…) et graphiques SVG de démo : non exigées, comparées si présentes.
+- Validé par Claude : Marché (#108 + patchs) = **0 écart** en 1440 et 390 ; Desk non porté = 50 écarts.
+- Dépendance : `npm i -D puppeteer-core@23` dans `ichivol-app/` (pas dans ce commit, pour ne pas figer le lockfile ici).
+- Règle : aucune page n'est « conforme » tant que ce script ne renvoie pas 0 écart pour elle.
+
+---
+
+## 2026-09-25 — UI-port Marché (#108) — correctif Claude n°2 (portes + bouton)
+
+- Base : `pr/108` @ `8203b04`
+- **5 portes** : balisage identique à la maquette (`stat()` → `<span>` + `<b><span class="tag">`), suppression du `height: 44px` forcé. Hauteur mesurée = **41 px** (maquette 41 px ; l'ancien correctif donnait 44 px)
+- **Bouton « Préparer le trade → »** : `inline-block`, largeur contenu à toutes les tailles (maquette 153 px en 1440, 1100 et 390) ; l'ancien correctif le laissait pleine largeur entre 801 et 1150 px (836 px)
+- Mesures faites sur la maquette ET l'app en Chromium headless, 1440 / 1100 / 390
+- Build OK · oxlint 79
+
+---
+
+## 2026-09-25 — UI-port Marché (#108) — retouches CSS + smoke + VPS préprod
+
+- Branche `cursor/ui-port-marche-a2fe` — **draft**, **pas de merge** avant OK Samir téléphone
+- CSS only (`MarketPage.css`) :
+  - mobile ≤800 : `button.primary` `width: auto` (maquette ≈ 154 px à 390)
+  - `.statline` : padding 13px 0, font 12px, hauteur verrouillée 44 px (5 portes = 220 px comme maquette)
+- Smoke 11 pages : `docs/ui-port/smoke-11-pages.json` (bruit `llm-test` 422 ignoré)
+- **VPS préprod** : https://ichivol.global-it-ss.com — `RELEASE=37311b9 cursor/ui-port-marche-a2fe` · `web` rebuild · health 200 · backup `/opt/ichivol-backup/pre-marche-css-*`
+  - **main non mergée** ; rollback = `git checkout main @ 604a8b0` + rebuild web
+
+### Suite
+OK Samir téléphone → merge #108 → Desk (même méthode).
+
+---
+
+## 2026-09-25 — UI-port Marché (#108) — corrections appliquées par Claude
+
+- Base : `pr/108` @ `e7aaa9d` (rebasée sur main `604a8b0`)
+- **Supports / résistances** : la page charge les objets STRUCTURE du moteur (`getChartObjects(..., ['engine'])`) et n'affiche que la résistance et le support les plus proches du dernier cours (`nearestSrObjects`), en pointillés, libellés « RÉSISTANCE · … » / « SUPPORT · … »
+- **Watchlist desktop** : même hauteur que la carte graphique, défilement interne (≥ 801 px)
+- **Typographie** : tailles alignées sur les valeurs CALCULÉES de la maquette (Chromium headless, 1440 et 390) — chart-summary 12 px, segmented 12, card-head small 12, checkrow 14, synthèse et step p 14, tag 10, eyebrow 11, bouton primaire 14, sous-titre 12 (y compris mobile)
+- **Axe des prix** : fr-FR (`90 000`, `2 718,5`, `0,5862`)
+- **Code mort** : supprimés `countObjectsByLayer`, `isIchimokuOn`, `change24hFromCandles`, `OBJECT_LAYER_META` (→ `OBJECT_LAYER_KEYS`), exports `ICHIMOKU_LAYER_KEYS`/`LAYERS_PREFS_VERSION` rendus privés ; supprimés `scripts/find-unused-css.mjs` (doublon racine) et `ichivol-app/scripts/recapture-390.mjs`
+- **Capture 390** : la feuille Plus n'est PAS un bug (fermée par défaut) ; c'était la capture pleine page qui figeait les éléments fixes au milieu → `capture-ui-port-marche.mjs` masque tabbar + feuille Plus pendant la capture
+- Build OK · oxlint 79 (main 83), 0 avertissement ajouté (`docs/ui-port/oxlint-compare.txt`)
+
+### Reste à faire (Cursor)
+Relancer `capture-ui-port-marche.mjs` sur données réelles (1440 + 390 pleine page + superpositions), smoke 11 pages, puis validation Samir sur téléphone. Pas de merge avant.
+
+---
+
+## 2026-09-25 — UI-port Marché #108 (draft · corrections Claude)
+
+- Branche : `cursor/ui-port-marche-a2fe` — **draft**, **ne pas merger** avant Samir + Claude
+- Base : `main` @ `604a8b0` (#106 mergée) — rebase ; orphelins terminal #106 **supprimés** (`marche-RETIRES.md`)
+- Corrections : prefs layout mortes · h1 Newsreader 38/32 · 24h watchlist (Binance ticker) · S/R coché · synthèse FR · mobile TF sous titre + checkrow empilé · captures full-page
+- Preuves : `docs/ui-port/marche/` · `docs/ui-p5/PARITE-MOBILE.md`
+- **Pas** de runtime agents · engine/server intouchés
+
+### Suite
+Validation Samir + relecture Claude. Puis Desk.
+
+---
+
+## 2026-09-25 — UI-clean #106 MERGÉE + VPS — tip `604a8b0`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/106 — **MERGÉE** (squash) après validation Claude
+- Tip `ece8cb4` (fix useMarketController) → merge commit `604a8b0`
+- **VPS** : https://ichivol.global-it-ss.com — `RELEASE=604a8b0` · health 200 · backup `/opt/ichivol-backup/pre-uiclean-*`
+- Smoke CI : pytest + frontend build — PASS
+
+### Suite
+#108 Marché (port littéral) — draft.
+
+---
 ## 2026-09-25 — UI-P4 MERGÉE (#103) + VPS
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/103 — squash merge après smoke PASS
@@ -3453,3 +3551,9 @@ Pas de `xfail` documenté : préfère un signal rouge honnête.
 - Doutes / points à vérifier par Claude : aucun restant — **validé**.
 
 - Non fait / reste à faire : consommé par le front → T1b (ci-dessus).
+
+## UI-port pages (PR #109) — 2026-09-25
+- Branche `cursor/ui-port-pages-a2fe` tip `ab33224` · draft
+- RAPPORT 11×0 · ACTIONS-METIER.md · paper open/close smoke PASS
+- VPS `RELEASE=ab33224` backup `pre-uiport-paper-20260925-140655.tgz`
+- **Pas de merge** avant Claude + Samir OK

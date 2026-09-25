@@ -1,0 +1,1232 @@
+/** copilot — CSS maquette scopé .copilot-page */
+
+.copilot-page {
+  --bg: #faf8f5;
+  --card: #fefdfb;
+  --line: #ddd9d3;
+  --ink: #202b36;
+  --muted: #7d8288;
+  --blue: #1a7df5;
+  --green: #0b8f83;
+  --red: #c8412f;
+  --amber: #a76c17;
+  color: var(--ink);
+  font: 14px Manrope, Arial, sans-serif;
+  padding: 0;
+  max-width: 1800px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+.copilot-page *,
+.copilot-page *::before,
+.copilot-page *::after { box-sizing: border-box; }
+.copilot-page button {
+  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  padding: 10px 14px;
+  color: inherit;
+  transition: .18s;
+  font: inherit;
+}
+.copilot-page button:hover { border-color: #a4b9d1; background: #f1f5fa; }
+.copilot-page a { color: inherit; text-decoration: none; }
+.copilot-page input,
+.copilot-page select,
+.copilot-page textarea {
+  font: inherit;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 7px;
+  padding: 10px 12px;
+  color: var(--ink);
+  max-width: 100%;
+}
+
+.copilot-page * {
+  box-sizing:border-box;
+}
+.copilot-page .page-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:26px;
+}
+.copilot-page .eyebrow {
+  font:10px 'DM Mono';
+  letter-spacing:1.6px;
+  color:#8c918f;
+  margin-bottom:10px;
+}
+.copilot-page h1 {
+  font:38px Newsreader,Georgia,serif;
+  margin:0 0 6px;
+  letter-spacing:-1px;
+}
+.copilot-page h2 {
+  font:23px Newsreader,Georgia,serif;
+  margin:0;
+}
+.copilot-page h3 {
+  font-size:14px;
+  margin:0;
+}
+.copilot-page p {
+  line-height:1.7;
+}
+.copilot-page .subtitle {
+  color:var(--muted);
+  font-size:12px;
+  margin:0;
+}
+.copilot-page .actions {
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.copilot-page .primary {
+  background:var(--blue);
+  color:white;
+  border-color:var(--blue);
+}
+.copilot-page .primary:hover {
+  background:#096cde;
+  color:white;
+}
+.copilot-page .subtle {
+  border:0;
+  background:none;
+  color:var(--muted);
+  padding:5px;
+}
+.copilot-page .metrics {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:16px;
+  margin-bottom:22px;
+}
+.copilot-page .metric {
+  padding:21px 23px;
+  border:1px solid var(--line);
+  background:var(--card);
+  border-radius:12px;
+  position:relative;
+  overflow:hidden;
+}
+.copilot-page .metric-label {
+  font-size:11px;
+  color:#777e84;
+  margin-bottom:11px;
+  display:flex;
+  justify-content:space-between;
+}
+.copilot-page .metric-value {
+  font:27px 'DM Mono',monospace;
+  letter-spacing:-1px;
+}
+.copilot-page .metric small {
+  font-size:10px;
+  color:var(--muted);
+  display:block;
+  margin-top:10px;
+}
+.copilot-page .up {
+  color:var(--green)!important;
+}
+.copilot-page .down {
+  color:var(--red)!important;
+}
+.copilot-page .warn {
+  color:var(--amber)!important;
+}
+.copilot-page .metric.featured {
+  background:#213e40;
+  color:white;
+  border-color:#213e40;
+}
+.copilot-page .metric.featured .metric-label, .copilot-page .metric.featured small {
+  color:#b4ccc7;
+}
+.copilot-page .grid {
+  display:grid;
+  grid-template-columns:minmax(0,1.85fr) minmax(290px,1fr);
+  gap:20px;
+  margin-bottom:20px;
+}
+.copilot-page .grid.equal {
+  grid-template-columns:1fr 1fr;
+}
+.copilot-page .grid.three {
+  grid-template-columns:repeat(3,1fr);
+}
+.copilot-page .card {
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--card);
+  overflow:hidden;
+  min-width:0;
+}
+.copilot-page .card-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:21px 23px 15px;
+  gap:12px;
+}
+.copilot-page .card-head small {
+  font-size:10px;
+  color:var(--muted);
+}
+.copilot-page .card-body {
+  padding:10px 23px 22px;
+}
+.copilot-page .tag {
+  font:9px 'DM Mono';
+  padding:5px 7px;
+  background:#edf3fa;
+  border-radius:4px;
+  color:#3978bb;
+  white-space:nowrap;
+}
+.copilot-page .tag.green {
+  background:#e7f3ee;
+  color:#168579;
+}
+.copilot-page .tag.amber {
+  background:#faf0df;
+  color:#a8782a;
+}
+.copilot-page .tag.red {
+  background:#f9eae6;
+  color:#b35346;
+}
+.copilot-page .tag.gray {
+  background:#f0efeb;
+  color:#888b89;
+}
+.copilot-page .chart {
+  width:100%;
+  display:block;
+}
+.copilot-page .chart-labels {
+  display:flex;
+  justify-content:space-between;
+  padding:0 20px 14px;
+  font:10px 'DM Mono';
+  color:#969a9c;
+}
+.copilot-page .chart-summary {
+  display:flex;
+  gap:22px;
+  padding:0 23px;
+  font:10px 'DM Mono';
+  color:var(--muted);
+}
+.copilot-page .chart-summary b {
+  color:var(--green);
+}
+.copilot-page .segmented {
+  display:flex;
+  gap:3px;
+  background:#f3f2ef;
+  padding:3px;
+  border-radius:6px;
+}
+.copilot-page .segmented button {
+  border:none;
+  background:transparent;
+  font-size:10px;
+  padding:6px 9px;
+  color:var(--muted);
+}
+.copilot-page .segmented button.active {
+  background:white;
+  box-shadow:0 1px 3px #0001;
+  color:var(--ink);
+}
+.copilot-page .opportunity {
+  padding:15px 0;
+  border-bottom:1px solid #eeeae5;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  cursor:pointer;
+}
+.copilot-page .opportunity:last-child {
+  border:0;
+}
+.copilot-page .coin {
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  background:#f4e7cc;
+  color:#ac8238;
+  display:grid;
+  place-items:center;
+  font-weight:800;
+  flex-shrink:0;
+}
+.copilot-page .coin.eth {
+  background:#e8ebf4;
+  color:#677eaa;
+}
+.copilot-page .coin.sol {
+  background:#ede7f6;
+  color:#9274b7;
+}
+.copilot-page .opportunity strong {
+  font-size:12px;
+}
+.copilot-page .opportunity small {
+  font-size:10px;
+  color:var(--muted);
+  display:block;
+  margin-top:4px;
+}
+.copilot-page .opportunity .right {
+  margin-left:auto;
+  text-align:right;
+}
+.copilot-page .score {
+  font:20px 'DM Mono';
+  color:var(--green);
+}
+.copilot-page .link {
+  color:var(--blue);
+  font-size:11px;
+  font-weight:700;
+}
+.copilot-page .card-foot {
+  border-top:1px solid var(--line);
+  padding:13px 23px;
+  text-align:center;
+}
+.copilot-page .table-wrap {
+  overflow:auto;
+}
+.copilot-page table {
+  width:100%;
+  border-collapse:collapse;
+  white-space:nowrap;
+  text-align:left;
+}
+.copilot-page th {
+  font-size:9px;
+  letter-spacing:.6px;
+  font-weight:500;
+  color:#8d9297;
+  background:#f9f8f5;
+  padding:12px 20px;
+}
+.copilot-page td {
+  padding:17px 20px;
+  border-bottom:1px solid #eeebe6;
+  font-size:11px;
+}
+.copilot-page tr:last-child td {
+  border:0;
+}
+.copilot-page td small {
+  display:block;
+  color:var(--muted);
+  font-size:9px;
+  margin-top:4px;
+}
+.copilot-page tr.clickable {
+  cursor:pointer;
+}
+.copilot-page tr.clickable:hover {
+  background:#f5f8fb;
+}
+.copilot-page .mono {
+  font-family:'DM Mono',monospace;
+}
+.copilot-page .notice {
+  display:flex;
+  gap:12px;
+  align-items:center;
+  background:#f5f0e6;
+  border:1px solid #e9dfcb;
+  padding:12px 16px;
+  border-radius:8px;
+  color:#9b7a3d;
+  font-size:11px;
+  margin:0 0 22px;
+}
+.copilot-page .notice.blue {
+  background:#edf3fc;
+  border-color:#dce6f5;
+  color:#56749c;
+}
+.copilot-page .notice a {
+  margin-left:auto;
+  font-weight:700;
+}
+.copilot-page .risk-row {
+  display:flex;
+  justify-content:space-between;
+  font-size:11px;
+  margin:16px 0 9px;
+}
+.copilot-page .track {
+  height:5px;
+  border-radius:8px;
+  background:#eeece7;
+  overflow:hidden;
+}
+.copilot-page .track span {
+  display:block;
+  height:100%;
+  background:#548f87;
+  border-radius:8px;
+}
+.copilot-page .session {
+  display:flex;
+  justify-content:space-between;
+  padding:13px 0;
+  font-size:11px;
+  border-bottom:1px solid var(--line);
+}
+.copilot-page .timeline {
+  border-left:1px solid #dce0df;
+  padding-left:20px;
+  margin-left:5px;
+}
+.copilot-page .event {
+  position:relative;
+  padding:0 0 21px;
+  font-size:11px;
+}
+.copilot-page .event:before {
+  content:'';
+  position:absolute;
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#769b93;
+  left:-24px;
+  top:4px;
+}
+.copilot-page .event small {
+  display:block;
+  color:var(--muted);
+  font-size:9px;
+  margin-top:6px;
+}
+.copilot-page .toolbar {
+  display:flex;
+  gap:10px;
+  align-items:center;
+  margin-bottom:20px;
+  flex-wrap:wrap;
+}
+.copilot-page .market-layout {
+  display:grid;
+  grid-template-columns:185px minmax(0,1fr) 230px;
+  gap:16px;
+}
+.copilot-page .watchlist button {
+  border:0;
+  border-radius:0;
+  border-bottom:1px solid var(--line);
+  display:block;
+  width:100%;
+  text-align:left;
+  padding:18px 15px;
+}
+.copilot-page .watchlist button.active {
+  background:#eef4fc;
+  border-left:3px solid var(--blue);
+}
+.copilot-page .watchlist button small {
+  display:block;
+  color:var(--muted);
+  font:10px 'DM Mono';
+  margin-top:5px;
+}
+.copilot-page .watchlist .up, .copilot-page .watchlist .down {
+  float:right;
+}
+.copilot-page .checkrow {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin:17px 0;
+  font-size:12px;
+}
+.copilot-page .checkrow input {
+  accent-color:var(--blue);
+}
+.copilot-page .tabs {
+  display:flex;
+  gap:24px;
+  border-bottom:1px solid var(--line);
+  margin-bottom:24px;
+  overflow:auto;
+}
+.copilot-page .tabs button {
+  border:0;
+  background:none;
+  border-radius:0;
+  padding:0 0 12px;
+  color:var(--muted);
+  white-space:nowrap;
+  font-size:12px;
+}
+.copilot-page .tabs button.active {
+  border-bottom:2px solid var(--blue);
+  color:var(--blue);
+}
+.copilot-page .statline {
+  display:flex;
+  justify-content:space-between;
+  padding:13px 0;
+  border-bottom:1px solid var(--line);
+  font-size:12px;
+}
+.copilot-page .statline:last-child {
+  border:0;
+}
+.copilot-page .agent-card {
+  padding:23px;
+}
+.copilot-page .agent-icon {
+  width:43px;
+  height:43px;
+  background:#e8eef5;
+  color:#567ea8;
+  border-radius:12px;
+  display:grid;
+  place-items:center;
+  font-size:22px;
+  margin-bottom:20px;
+}
+.copilot-page .agent-card p {
+  color:var(--muted);
+  font-size:12px;
+  min-height:40px;
+}
+.copilot-page .agent-card .tag {
+  float:right;
+}
+.copilot-page .agent-card button {
+  width:100%;
+  margin-top:17px;
+  font-size:12px;
+}
+.copilot-page .chat {
+  display:flex;
+  flex-direction:column;
+  min-height:520px;
+}
+.copilot-page .chat-log {
+  padding:24px;
+  flex:1;
+  max-height:530px;
+  overflow:auto;
+}
+.copilot-page .bubble {
+  background:#f2f3ef;
+  padding:20px;
+  border-radius:12px;
+  margin:0 0 15px;
+  max-width:90%;
+  font-size:13px;
+  line-height:1.8;
+}
+.copilot-page .bubble.user {
+  background:#e8f0fd;
+  margin-left:auto;
+}
+.copilot-page .chat form {
+  display:flex;
+  gap:10px;
+  padding:18px;
+  border-top:1px solid var(--line);
+}
+.copilot-page .chat input {
+  flex:1;
+  min-width:0;
+}
+.copilot-page .suggestion {
+  display:block;
+  text-align:left;
+  width:100%;
+  margin-top:10px;
+  font-size:12px;
+}
+.copilot-page .heatmap {
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:5px;
+}
+.copilot-page .heatmap div {
+  padding:18px 5px;
+  text-align:center;
+  font:12px 'DM Mono';
+  border-radius:4px;
+  background:#daeee9;
+  color:#326f66;
+}
+.copilot-page .heatmap .strong {
+  background:#6fa79b;
+  color:white;
+}
+.copilot-page .field {
+  margin-bottom:19px;
+}
+.copilot-page .field label {
+  display:block;
+  font-size:12px;
+  margin-bottom:8px;
+}
+.copilot-page .field input, .copilot-page .field select {
+  width:100%;
+}
+.copilot-page .field small {
+  display:block;
+  font-size:10px;
+  color:var(--muted);
+  margin-top:6px;
+}
+.copilot-page dialog {
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:0;
+  width:550px;
+  max-width:94vw;
+  background:var(--card);
+  color:var(--ink);
+  box-shadow:0 25px 100px #0003;
+}
+.copilot-page dialog::backdrop {
+  background:#18263255;
+  backdrop-filter:blur(3px);
+}
+.copilot-page .dialog-body {
+  padding:28px;
+}
+.copilot-page .dialog-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:20px;
+}
+.copilot-page .dialog-head button {
+  border:0;
+  font-size:22px;
+  background:none;
+}
+.copilot-page .dialog-body h2 {
+  font-size:29px;
+}
+.copilot-page .dialog-body p {
+  color:var(--muted);
+  font-size:13px;
+}
+.copilot-page .dialog-actions {
+  display:flex;
+  gap:10px;
+  margin-top:24px;
+  justify-content:flex-end;
+}
+.copilot-page .empty {
+  padding:45px;
+  text-align:center;
+  color:var(--muted);
+}
+.copilot-page .donut {
+  width:150px;
+  height:150px;
+  border-radius:50%;
+  background:conic-gradient(#347d78 0 27.8%,#e9e6df 27.8% 100%);
+  display:grid;
+  place-items:center;
+  margin:22px auto;
+}
+.copilot-page .donut:before {
+  content:'27,8 %';
+  display:grid;
+  place-items:center;
+  width:115px;
+  height:115px;
+  background:var(--card);
+  border-radius:50%;
+  font:23px 'DM Mono';
+}
+.copilot-page .step {
+  border-left:2px solid #c7dfd9;
+  padding:3px 0 20px 18px;
+  margin-left:5px;
+}
+.copilot-page .step b {
+  font-size:12px;
+}
+.copilot-page .step p {
+  font-size:11px;
+  margin:5px 0;
+  color:var(--muted);
+}
+@media(min-width:1600px) {
+.copilot-page td {
+  font-size:13px;
+}
+.copilot-page th {
+  font-size:11px;
+}
+.copilot-page .metric-value {
+  font-size:31px;
+}
+.copilot-page .subtitle, .copilot-page .opportunity strong {
+  font-size:14px;
+}
+.copilot-page .opportunity small, .copilot-page .metric-label {
+  font-size:12px;
+}
+.copilot-page .card-head {
+  padding-top:24px;
+}
+.copilot-page .card-body {
+  padding-bottom:26px;
+}
+}
+@media(max-width:1150px) {
+.copilot-page .market-layout {
+  grid-template-columns:150px 1fr;
+}
+.copilot-page .market-layout>.analysis-panel {
+  grid-column:1/-1;
+}
+.copilot-page .grid {
+  grid-template-columns:1.5fr 1fr;
+}
+.copilot-page .metric {
+  padding:18px;
+}
+.copilot-page .metric-value {
+  font-size:22px;
+}
+.copilot-page .grid.three {
+  grid-template-columns:1fr 1fr;
+}
+}
+@media(max-width:800px) {
+.copilot-page .page-head {
+  align-items:flex-start;
+  gap:18px;
+}
+.copilot-page .page-head .actions {
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.copilot-page .page-head .actions button {
+  font-size:10px;
+  padding:8px;
+}
+.copilot-page h1 {
+  font-size:32px;
+}
+.copilot-page .metrics {
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.copilot-page .grid, .copilot-page .grid.equal, .copilot-page .grid.three {
+  grid-template-columns:1fr;
+}
+.copilot-page .metric-value {
+  font-size:24px;
+}
+.copilot-page .market-layout {
+  grid-template-columns:1fr;
+}
+.copilot-page .watchlist {
+  display:flex;
+  overflow:auto;
+}
+.copilot-page .watchlist button {
+  min-width:130px;
+}
+.copilot-page .market-layout>.analysis-panel {
+  grid-column:auto;
+}
+.copilot-page .notice {
+  line-height:1.5;
+}
+.copilot-page .card-head {
+  padding:18px;
+}
+.copilot-page .card-body {
+  padding-left:18px;
+  padding-right:18px;
+}
+.copilot-page .toolbar input {
+  min-width:0;
+  width:100%;
+}
+.copilot-page .chat form {
+  padding:12px;
+}
+.copilot-page .chart-summary {
+  gap:10px;
+  font-size:8px;
+}
+}
+.copilot-page .metric.featured {
+  background:var(--card);
+  color:var(--ink);
+  border-color:var(--line);
+}
+.copilot-page .metric.featured .metric-label, .copilot-page .metric.featured small {
+  color:var(--muted);
+}
+.copilot-page .metric-label, .copilot-page .metric small, .copilot-page .subtitle, .copilot-page .opportunity small, .copilot-page .card-head small, .copilot-page .chart-summary, .copilot-page .chart-labels, .copilot-page .link, .copilot-page .risk-row, .copilot-page .session, .copilot-page .event, .copilot-page .event small, .copilot-page .statline, .copilot-page .agent-card p, .copilot-page .field label, .copilot-page .field small, .copilot-page .tabs button, .copilot-page .tag, .copilot-page th, .copilot-page td small, .copilot-page .segmented button, .copilot-page .notice {
+  font-size:12px;
+}
+.copilot-page td, .copilot-page .opportunity strong, .copilot-page .checkrow {
+  font-size:14px;
+}
+.copilot-page .tag {
+  font-size:10px;
+}
+.copilot-page .eyebrow {
+  font-size:11px;
+}
+.copilot-page .metric-value {
+  font-size:27px;
+}
+.copilot-page .card-body p {
+  font-size:14px!important;
+}
+.copilot-page .coin {
+  background:#eeeae3;
+  color:#7f837f;
+}
+.copilot-page .coin.eth, .copilot-page .coin.sol {
+  background:#eeeae3;
+  color:#7f837f;
+}
+.copilot-page .metric.up .metric-value {
+  color:var(--green);
+}
+.copilot-page .metric.up {
+  color:var(--ink)!important;
+}
+.copilot-page .heatmap div {
+  background:#e8ede8;
+  color:#566e66;
+}
+.copilot-page .heatmap .strong {
+  background:#a9bdb2;
+  color:#2c4c40;
+}
+@media(max-width:800px) {
+.copilot-page .metric-value {
+  font-size:23px;
+}
+.copilot-page .page-head {
+  flex-wrap:wrap;
+}
+.copilot-page .checkrow {
+  gap:12px;
+  flex-wrap:wrap;
+}
+.copilot-page .card-head {
+  flex-wrap:wrap;
+}
+}
+.copilot-page .desk-workspace .card {
+  border-radius:14px;
+}
+.copilot-page .desk-overview {
+  display:grid;
+  grid-template-columns:minmax(0,1.45fr) minmax(0,1fr) minmax(0,1fr);
+  gap:20px;
+  margin-bottom:20px;
+}
+.copilot-page .desk-overview h2 {
+  font-size:22px;
+}
+.copilot-page .world-view {
+  position:relative;
+  margin:4px 20px 0;
+  aspect-ratio:720/290;
+}
+.copilot-page .world-view img {
+  width:100%;
+  height:auto;
+  display:block;
+}
+.copilot-page .map-marker {
+  position:absolute;
+  transform:translate(-50%,-50%);
+  border:0;
+  background:none!important;
+  padding:8px;
+  display:grid;
+  justify-items:center;
+  gap:4px;
+  z-index:1;
+}
+.copilot-page .map-marker span {
+  display:block;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#8d969d;
+  box-shadow:0 0 0 4px #fefdfbbf;
+}
+.copilot-page .map-marker b {
+  font-size:12px;
+  font-weight:600;
+  background:#fefdfbd9;
+  border-radius:3px;
+  padding:2px 4px;
+  white-space:nowrap;
+}
+.copilot-page .map-marker.selected span {
+  background:var(--green);
+  box-shadow:0 0 0 5px #0b8f831a;
+}
+.copilot-page .map-marker.selected b {
+  color:var(--green);
+}
+.copilot-page .map-marker:focus-visible {
+  outline:2px solid var(--blue);
+}
+.copilot-page .session-selector {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:5px;
+  margin:10px 20px;
+}
+.copilot-page .session-selector button {
+  padding:10px 4px;
+  font-size:14px;
+  border-color:transparent;
+  background:transparent;
+}
+.copilot-page .session-selector small {
+  display:block;
+  font-size:12px;
+  color:var(--muted);
+  margin-top:5px;
+}
+.copilot-page .session-selector button.active {
+  background:#edf3ef;
+  border-color:#d6e3dc;
+}
+.copilot-page .session-selector button.active small {
+  color:var(--green);
+}
+.copilot-page .session-detail {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:12px 20px;
+  border-top:1px solid var(--line);
+  font-size:12px;
+  flex-wrap:wrap;
+}
+.copilot-page .session-detail strong span {
+  margin-left:8px;
+  font-weight:500;
+}
+.copilot-page .map-foot {
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  flex-wrap:wrap;
+  padding:0 20px 15px;
+  font-size:12px;
+  color:var(--muted);
+}
+.copilot-page .map-foot b {
+  font-family:'DM Mono';
+  font-weight:400;
+  color:var(--green);
+  margin-left:5px;
+}
+.copilot-page .desk-tickers {
+  padding:0 20px;
+}
+.copilot-page .desk-ticker {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  border:0;
+  border-bottom:1px solid var(--line);
+  border-radius:0;
+  background:none;
+  padding:13px 0;
+  text-align:left;
+  font-size:14px;
+}
+.copilot-page .desk-ticker:last-child {
+  border-bottom:0;
+}
+.copilot-page .desk-ticker small {
+  display:block;
+  font-size:12px;
+  color:var(--muted);
+  margin-top:5px;
+}
+.copilot-page .desk-ticker b small {
+  display:inline;
+  font-weight:400;
+  font-size:12px;
+}
+.copilot-page .desk-ticker .right {
+  text-align:right;
+}
+.copilot-page .desk-ticker .mono {
+  font-size:14px;
+  font-weight:400;
+}
+.copilot-page .climate-head {
+  display:flex;
+  gap:13px;
+  align-items:center;
+  margin:0 0 10px;
+}
+.copilot-page .climate-symbol {
+  display:grid;
+  place-items:center;
+  width:42px;
+  height:42px;
+  border:1px solid #dce7df;
+  border-radius:50%;
+  color:var(--green);
+  font-size:23px;
+  background:#f2f5ef;
+}
+.copilot-page .climate-head small {
+  font:12px 'DM Mono';
+  color:var(--muted);
+}
+.copilot-page .climate-head h3 {
+  font:26px Newsreader,Georgia,serif;
+  margin-top:6px;
+}
+.copilot-page .desk-workspace .desk-note {
+  font-size:12px!important;
+  line-height:1.6;
+  color:var(--muted);
+  margin:15px 0;
+}
+.copilot-page .desk-workspace .statline {
+  gap:12px;
+}
+.copilot-page .desk-allocation {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
+  margin-bottom:20px;
+}
+.copilot-page .allocation-body {
+  display:flex;
+  align-items:center;
+  gap:24px;
+  padding:0 23px 16px;
+}
+.copilot-page .desk-ring {
+  position:relative;
+  width:180px;
+  flex-shrink:0;
+  max-width:45%;
+}
+.copilot-page .desk-ring svg {
+  width:100%;
+  display:block;
+}
+.copilot-page .desk-ring>div {
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+.copilot-page .desk-ring b {
+  font:26px 'DM Mono';
+  letter-spacing:-1px;
+}
+.copilot-page .desk-ring small {
+  font-size:12px;
+  color:var(--muted);
+}
+.copilot-page .allocation-legend {
+  flex:1;
+  min-width:0;
+}
+.copilot-page .allocation-legend .statline {
+  flex-wrap:wrap;
+  font-size:14px;
+}
+.copilot-page .legend-dot {
+  display:inline-block;
+  width:8px;
+  height:8px;
+  border-radius:2px;
+  margin-right:8px;
+}
+.copilot-page .legend-dot.teal {
+  background:#548f87;
+}
+.copilot-page .legend-dot.neutral {
+  background:#ddd9d3;
+}
+.copilot-page .concentration-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  width:100%;
+  gap:12px;
+  padding:12px 0;
+  background:none;
+  border:0;
+  border-bottom:1px solid var(--line);
+  border-radius:0;
+  font-size:14px;
+}
+.copilot-page .concentration-row i {
+  display:inline-block;
+  width:8px;
+  height:8px;
+  border-radius:2px;
+  margin-right:9px;
+}
+.copilot-page .concentration-row b {
+  font-weight:400;
+}
+.copilot-page .checkpoint {
+  display:flex;
+  gap:12px;
+  align-items:center;
+  margin:0 0 10px;
+}
+.copilot-page .checkpoint-icon {
+  font-size:28px;
+  color:#548f87;
+}
+.copilot-page .checkpoint small {
+  display:block;
+  font-size:12px;
+  color:var(--muted);
+  margin-top:5px;
+}
+@media(min-width:1600px) {
+.copilot-page .world-view {
+  max-width:490px;
+  margin-left:auto;
+  margin-right:auto;
+}
+.copilot-page .desk-ticker {
+  padding:17px 0;
+}
+}
+@media(max-width:1200px) {
+.copilot-page .desk-overview {
+  grid-template-columns:1.2fr 1fr;
+}
+.copilot-page .desk-overview>.card:last-child {
+  grid-column:1/-1;
+}
+.copilot-page .desk-overview>.card:last-child .card-body {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:0 24px;
+}
+.copilot-page .allocation-body {
+  gap:12px;
+  padding:0 18px 16px;
+}
+.copilot-page .desk-ring {
+  width:145px;
+}
+.copilot-page .allocation-legend .statline {
+  font-size:12px;
+}
+.copilot-page .desk-ring b {
+  font-size:23px;
+}
+}
+@media(max-width:950px) {
+.copilot-page .desk-allocation {
+  grid-template-columns:1fr;
+}
+.copilot-page .desk-ring {
+  width:180px;
+}
+.copilot-page .allocation-body {
+  gap:24px;
+}
+}
+@media(max-width:600px) {
+.copilot-page .desk-overview {
+  grid-template-columns:1fr;
+}
+.copilot-page .desk-overview>.card:last-child .card-body {
+  display:block;
+}
+.copilot-page .world-view {
+  margin-top:10px;
+}
+.copilot-page .desk-allocation {
+  gap:16px;
+}
+.copilot-page .desk-ring {
+  max-width:44%;
+  width:160px;
+}
+.copilot-page .allocation-body {
+  gap:15px;
+}
+.copilot-page .desk-ring b {
+  font-size:22px;
+}
+.copilot-page .desk-ring small {
+  font-size:12px;
+}
+.copilot-page .session-detail {
+  font-size:12px;
+}
+.copilot-page .desk-workspace .grid {
+  gap:16px;
+}
+}
+
+.dash-shell .copilot-page .page-head h1,
+.dash-shell.is-mobile .copilot-page .page-head h1,
+.copilot-page .page-head h1 {
+  font: 38px Newsreader, Georgia, serif;
+  margin: 0 0 6px;
+  letter-spacing: -1px;
+}
+.dash-shell.is-mobile .copilot-page .page-head .subtitle,
+.dash-shell.is-mobile .copilot-page .page-head p,
+.copilot-page .subtitle {
+  font-size: 12px !important;
+  line-height: 1.7;
+  color: var(--muted);
+  margin: 0;
+}
+.copilot-page table { font-size: 14px; }
+.copilot-page tr.clickable { font-size: 14px; }
+.copilot-page td { font-size: 14px; }
+.copilot-page .table-wrap { overflow: auto; padding: 0; }
+@media (max-width: 800px) {
+  .dash-shell .copilot-page .page-head h1,
+  .dash-shell.is-mobile .copilot-page .page-head h1,
+  .copilot-page .page-head h1 { font-size: 32px; }
+  .copilot-page .page-head {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 18px;
+  }
+}

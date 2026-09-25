@@ -1,47 +1,4 @@
-/** Persisted Market page prefs (UI-MARKET) — layout, sort, layers, volume. */
-
-export type DrawerPos = 'closed' | 'half' | 'full'
-export type DrawerTab = 'list' | 'analysis' | 'backtest'
-export type SortDir = 'asc' | 'desc'
-export type WatchlistSortKey =
-  | 'symbol'
-  | 'change24h'
-  | 'rvol'
-  | 'bias'
-  | 'score'
-  | 'context'
-
-export interface MarketLayoutPrefs {
-  rightOpen: boolean
-  rightWidth: number
-  bottomOpen: boolean
-  bottomHeight: number
-  volumeHeight: number
-  sortKey: WatchlistSortKey
-  sortDir: SortDir
-  drawerPos: DrawerPos
-  drawerTab: DrawerTab
-  classFilter: string | null
-  /** Bottom dock tab when panel open (desktop). */
-  bottomTab: 'backtest' | 'mark' | 'journal'
-}
-
-const LAYOUT_KEY = 'ichivol.market.layout'
-const LAYERS_KEY = 'ichivol.market.layers'
-
-export const DEFAULT_LAYOUT: MarketLayoutPrefs = {
-  rightOpen: true,
-  rightWidth: 380,
-  bottomOpen: false,
-  bottomHeight: 250,
-  volumeHeight: 150,
-  sortKey: 'rvol',
-  sortDir: 'desc',
-  drawerPos: 'closed',
-  drawerTab: 'list',
-  classFilter: null,
-  bottomTab: 'backtest',
-}
+/** Persisted Marché layer prefs (Ichimoku / S-R / volume). Pas de prefs drawer/dock. */
 
 export type ObjectLayerKey =
   | 'structure'
@@ -66,57 +23,25 @@ export type LayerPrefs = Record<ObjectLayerKey | IndicatorLayerKey, boolean> & {
   showInvalidated: boolean
 }
 
-export const OBJECT_LAYER_META: {
-  key: ObjectLayerKey
-  label: string
-  subtitle: string
-  color: string
-  emptyUntil?: string
-}[] = [
-  {
-    key: 'structure',
-    label: 'Structure',
-    subtitle: 'Zones S/R et trendlines moteur',
-    color: 'var(--bull)',
-  },
-  {
-    key: 'breaks',
-    label: 'Cassures',
-    subtitle: 'BOS / CHoCH / breakouts (T9b)',
-    color: 'var(--neutral)',
-  },
-  {
-    key: 'fibonacci',
-    label: 'Fibonacci',
-    subtitle: 'Retracements impulsifs (T9e)',
-    color: 'var(--tenkan)',
-  },
-  {
-    key: 'fvg',
-    label: 'FVG',
-    subtitle: 'Fair value gaps (T9d)',
-    color: 'var(--kijun)',
-  },
-  {
-    key: 'claude',
-    label: 'Claude',
-    subtitle: 'Objets dessinés par l’agent',
-    color: 'var(--primary)',
-  },
-  {
-    key: 'user_trades',
-    label: 'Trades',
-    subtitle: 'ENTRY / STOP / TARGET utilisateur',
-    color: 'var(--bear)',
-  },
-  {
-    key: 'backtest',
-    label: 'Backtest',
-    subtitle: 'Overlay stratégie catalogue',
-    color: 'var(--muted-foreground)',
-  },
+/** Cases maquette « Ichimoku 9 / 26 / 52 » → ces 4 calques ensemble. */
+const ICHIMOKU_LAYER_KEYS: IndicatorLayerKey[] = ['tenkan', 'kijun', 'spanA', 'spanB']
+
+/** Calques d'objets moteur que PriceChart sait dessiner. */
+export const OBJECT_LAYER_KEYS: ObjectLayerKey[] = [
+  'structure',
+  'breaks',
+  'fibonacci',
+  'fvg',
+  'claude',
+  'user_trades',
+  'backtest',
 ]
 
+/** Bump when DEFAULT_LAYERS change so devices pick up maquette defaults. */
+const LAYERS_PREFS_VERSION = 3
+const LAYERS_KEY = `ichivol.market.layers.v${LAYERS_PREFS_VERSION}`
+
+/** Maquette : Ichimoku + S/R cochés ; calques avancés off. */
 export const DEFAULT_LAYERS: LayerPrefs = {
   candles: true,
   tenkan: true,
@@ -124,14 +49,14 @@ export const DEFAULT_LAYERS: LayerPrefs = {
   spanA: true,
   spanB: true,
   volume: true,
-  signals: true,
+  signals: false,
   structure: true,
   fibonacci: false,
   fvg: false,
-  breaks: true,
-  claude: true,
-  user_trades: true,
-  backtest: true,
+  breaks: false,
+  claude: false,
+  user_trades: false,
+  backtest: false,
   fadeFilledFvg: true,
   showInvalidated: false,
 }
@@ -146,18 +71,6 @@ function readJson<T>(key: string, fallback: T): T {
   }
 }
 
-export function loadLayoutPrefs(): MarketLayoutPrefs {
-  return readJson(LAYOUT_KEY, DEFAULT_LAYOUT)
-}
-
-export function saveLayoutPrefs(prefs: MarketLayoutPrefs): void {
-  try {
-    localStorage.setItem(LAYOUT_KEY, JSON.stringify(prefs))
-  } catch {
-    /* ignore quota */
-  }
-}
-
 export function loadLayerPrefs(): LayerPrefs {
   return readJson(LAYERS_KEY, DEFAULT_LAYERS)
 }
@@ -168,6 +81,12 @@ export function saveLayerPrefs(prefs: LayerPrefs): void {
   } catch {
     /* ignore */
   }
+}
+
+export function withIchimoku(prefs: LayerPrefs, on: boolean): LayerPrefs {
+  const next = { ...prefs }
+  for (const k of ICHIMOKU_LAYER_KEYS) next[k] = on
+  return next
 }
 
 export function layerFromSource(
@@ -189,24 +108,4 @@ export function layerFromSource(
   if (source === 'claude') return 'claude'
   if (source === 'backtest') return 'backtest'
   return 'structure'
-}
-
-export function countObjectsByLayer(
-  objects: { source: string; layer?: string | null }[] | null | undefined,
-): Record<ObjectLayerKey, number> {
-  const counts = {
-    structure: 0,
-    fibonacci: 0,
-    fvg: 0,
-    breaks: 0,
-    claude: 0,
-    user_trades: 0,
-    backtest: 0,
-  } satisfies Record<ObjectLayerKey, number>
-  if (!objects) return counts
-  for (const o of objects) {
-    const k = layerFromSource(o.source, o.layer)
-    counts[k] += 1
-  }
-  return counts
 }

@@ -1,0 +1,84 @@
+{
+  "pass": true,
+  "fail": 0,
+  "generatedAt": "2026-09-25T13:36:41.142804+00:00",
+  "base": "http://127.0.0.1:5180",
+  "script": "ichivol-app/scripts/smoke-ui11p.mjs",
+  "branch": "cursor/ui-port-pages-a2fe",
+  "noise": "POST /api/settings/llm-test \u2192 422 ignored (HANDOFF)",
+  "pages": {
+    "desk": {
+      "pass": true,
+      "bodyChars": 2635,
+      "note": "llm-test 422 ignored"
+    },
+    "market": {
+      "pass": true,
+      "bodyChars": 1157,
+      "note": "llm-test 422 ignored"
+    },
+    "opportunites": {
+      "pass": true,
+      "bodyChars": 2597,
+      "note": "llm-test 422 ignored"
+    },
+    "portefeuille": {
+      "pass": true,
+      "bodyChars": 1190,
+      "note": "llm-test 422 ignored"
+    },
+    "context": {
+      "pass": true,
+      "bodyChars": 1137,
+      "note": "llm-test 422 ignored"
+    },
+    "journal": {
+      "pass": true,
+      "bodyChars": 959,
+      "note": "llm-test 422 ignored"
+    },
+    "operations": {
+      "pass": true,
+      "bodyChars": 1392,
+      "note": "llm-test 422 ignored"
+    },
+    "strategy-lab": {
+      "pass": true,
+      "bodyChars": 1432,
+      "note": "llm-test 422 ignored"
+    },
+    "agent": {
+      "pass": true,
+      "bodyChars": 812,
+      "note": "llm-test 422 ignored"
+    },
+    "agents": {
+      "pass": true,
+      "bodyChars": 1359,
+      "note": "llm-test 422 ignored"
+    },
+    "settings": {
+      "pass": true,
+      "bodyChars": 787,
+      "note": "llm-test 422 ignored"
+    }
+  },
+  "actions": {
+    "paper": {
+      "pass": true
+    },
+    "killSwitch": {
+      "pass": true
+    },
+    "lab": {
+      "pass": true
+    },
+    "settings": {
+      "pass": true
+    },
+    "copilot": {
+      "pass": false
+    }
+  },
+  "actionsNote": "copilot FAIL attendu sans cl\u00e9 LLM smoke"
+}

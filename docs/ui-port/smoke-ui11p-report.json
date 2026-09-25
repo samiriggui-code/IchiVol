@@ -1,0 +1,166 @@
+{
+  "pages": {
+    "desk": {
+      "pass": true,
+      "note": "IchiVol TRADING Desk Marché Opportunités Portefeuille RECHERCHE Strategy Lab Journal Contexte AUTOMATISATION Copilot Agents Opérations SYSTÈME Paramètres PAPER Arrêt d’urgence LLM ",
+      "apiFails": [],
+      "console": [],
+      "screenshot": "/tmp/ui11p-smoke/01-desk.png",
+      "bodyChars": 2635
+    },
+    "market": {
+      "pass": true,
+      "note": "IchiVol TRADING Desk Marché Opportunités Portefeuille RECHERCHE Strategy Lab Journal Contexte AUTOMATISATION Copilot Agents Opérations SYSTÈME Paramètres PAPER Arrêt d’urgence LLM ",
+      "apiFails": [],
+      "console": [],
+      "screenshot": "/tmp/ui11p-smoke/02-market.png",
+      "bodyChars": 1157
+    },
+    "opportunites": {
+      "pass": true,
+      "note": "IchiVol TRADING Desk Marché Opportunités Portefeuille RECHERCHE Strategy Lab Journal Contexte AUTOMATISATION Copilot Agents Opérations SYSTÈME Paramètres PAPER Arrêt d’urgence LLM ",
+      "apiFails": [],
+      "console": [],
+      "screenshot": "/tmp/ui11p-smoke/03-opportunites.png",
+      "bodyChars": 2597
+    },
+    "portefeuille": {
+      "pass": true,
+      "note": "IchiVol TRADING Desk Marché Opportunités Portefeuille RECHERCHE Strategy Lab Journal Contexte AUTOMATISATION Copilot Agents Opérations SYSTÈME Paramètres PAPER Arrêt d’urgence LLM ",
+      "apiFails": [],
+      "console": [],
+      "screenshot": "/tmp/ui11p-smoke/04-portefeuille.png",
+      "bodyChars": 1190
+    },
+    "context": {
+      "pass": true,
+      "note": "IchiVol TRADING Desk Marché Opportunités Portefeuille RECHERCHE Strategy Lab Journal Contexte AUTOMATISATION Copilot Agents Opérations SYSTÈME Paramètres PAPER Arrêt d’urgence LLM ",
+      "apiFails": [],
+      "console": [],
+      "screenshot": "/tmp/ui11p-smoke/05-context.png",
+      "bodyChars": 1137
+    },
+    "journal": {
+      "pass": true,
+      "note": "IchiVol TRADING Desk Marché Opportunités Portefeuille RECHERCHE Strategy Lab Journal Contexte AUTOMATISATION Copilot Agents Opérations SYSTÈME Paramètres PAPER Arrêt d’urgence LLM ",
+      "apiFails": [],
+      "console": [],
+      "screenshot": "/tmp/ui11p-smoke/06-journal.png",
+      "bodyChars": 959
+    },
+    "operations": {
+      "pass": true,
+      "note": "IchiVol TRADING Desk Marché Opportunités Portefeuille RECHERCHE Strategy Lab Journal Contexte AUTOMATISATION Copilot Agents Opérations SYSTÈME Paramètres PAPER Arrêt d’urgence LLM ",
+      "apiFails": [],
+      "console": [],
+      "screenshot": "/tmp/ui11p-smoke/07-operations.png",
+      "bodyChars": 1392
+    },
+    "strategy-lab": {
+      "pass": true,
+      "note": "IchiVol TRADING Desk Marché Opportunités Portefeuille RECHERCHE Strategy Lab Journal Contexte AUTOMATISATION Copilot Agents Opérations SYSTÈME Paramètres PAPER Arrêt d’urgence LLM ",
+      "apiFails": [],
+      "console": [],
+      "screenshot": "/tmp/ui11p-smoke/08-strategy-lab.png",
+      "bodyChars": 1432
+    },
+    "agent": {
+      "pass": true,
+      "note": "IchiVol TRADING Desk Marché Opportunités Portefeuille RECHERCHE Strategy Lab Journal Contexte AUTOMATISATION Copilot Agents Opérations SYSTÈME Paramètres PAPER Arrêt d’urgence LLM ",
+      "apiFails": [],
+      "console": [],
+      "screenshot": "/tmp/ui11p-smoke/09-agent.png",
+      "bodyChars": 812
+    },
+    "agents": {
+      "pass": true,
+      "note": "IchiVol TRADING Desk Marché Opportunités Portefeuille RECHERCHE Strategy Lab Journal Contexte AUTOMATISATION Copilot Agents Opérations SYSTÈME Paramètres PAPER Arrêt d’urgence LLM ",
+      "apiFails": [],
+      "console": [],
+      "screenshot": "/tmp/ui11p-smoke/10-agents.png",
+      "bodyChars": 1359
+    },
+    "settings": {
+      "pass": true,
+      "note": "IchiVol TRADING Desk Marché Opportunités Portefeuille RECHERCHE Strategy Lab Journal Contexte AUTOMATISATION Copilot Agents Opérations SYSTÈME Paramètres PAPER Arrêt d’urgence LLM ",
+      "apiFails": [],
+      "console": [],
+      "screenshot": "/tmp/ui11p-smoke/11-settings.png",
+      "bodyChars": 787
+    }
+  },
+  "actions": {
+    "paper": {
+      "pass": true,
+      "openStatus": 200,
+      "closeStatus": 200,
+      "positionId": "bc4f9f94-a916-4f09-94f2-38a9217bc5a9",
+      "openSnippet": "{\"id\":\"bc4f9f94-a916-4f09-94f2-38a9217bc5a9\",\"portfolio_id\":\"eae5cf68-e7c6-40bd-8f28-15940ad147b5\",\"symbol\":\"BTCUSDT\",\"timeframe\":\"1h\",\"source\":\"user_confirmed\",\"user_id\":\"ef2d3a33-3ead-4d40-a15f-247c"
+    },
+    "killSwitch": {
+      "pass": true,
+      "armStatus": 200,
+      "disarmStatus": 200,
+      "armedAfterArm": true,
+      "armedAfterDisarm": false
+    },
+    "lab": {
+      "pass": true,
+      "walkForwardStatus": 200,
+      "monteCarloStatus": 200,
+      "rulesetId": "IV_ICHIMOKU_RVOL_LONG_001",
+      "wfKeys": [
+        "symbol",
+        "timeframe",
+        "ruleset",
+        "mode",
+        "n_bars",
+        "warmup_bars",
+        "train_bars",
+        "test_bars",
+        "step_bars",
+        "folds",
+        "oos_summary",
+        "dataset_id"
+      ],
+      "mcKeys": [
+        "version",
+        "n_trades",
+        "n_paths",
+        "seed",
+        "ruin_floor",
+        "min_trades",
+        "sufficient",
+        "mean_final_equity",
+        "p05_final_equity",
+        "p50_final_equity",
+        "p95_final_equity",
+        "mean_max_drawdown"
+      ],
+      "wfSnippet": "{\"symbol\":\"BTCUSDT\",\"timeframe\":\"1h\",\"ruleset\":{\"id\":\"IV_ICHIMOKU_RVOL_LONG_001\",\"version\":\"1\",\"direction\":\"LONG\",\"symbol\":null,\"timeframe\":null,\"description\":\"Price above kumo + Tenkan>Kijun + recent bullish TK + RVOL≥1",
+      "mcSnippet": "{\"version\":\"monte_carlo_v0\",\"n_trades\":4,\"n_paths\":200,\"seed\":42,\"ruin_floor\":0.5,\"min_trades\":5,\"sufficient\":false,\"mean_final_equity\":null,\"p05_final_equity\":null,\"p50_final_equity\":null,\"p95_final_equity\":null,\"mean_m"
+    },
+    "settings": {
+      "pass": true,
+      "lightStatus": 200,
+      "darkStatus": 200,
+      "themeAfter": "dark"
+    },
+    "copilot": {
+      "pass": false,
+      "status": 400,
+      "keys": [
+        "error"
+      ],
+      "snippet": "{\"error\":\"Aucune clé LLM résolue pour ce provider. Vérifie Settings → Agent LLM (OpenRouter déjà possible via .env).\"}"
+    }
+  },
+  "consoleErrors": [
+    {
+      "route": "action-agent",
+      "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+    }
+  ],
+  "startedAt": "2026-09-25T13:33:20.485Z",
+  "finishedAt": "2026-09-25T13:34:37.512Z"
+}

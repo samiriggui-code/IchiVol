@@ -1,0 +1,3 @@
+oxlint main (604a8b0) : 83 avertissements, 0 erreur
+oxlint PR #108 (+ corrections Claude) : 79 avertissements, 0 erreur
+Avertissements ajoutés par la PR (même fichier + même règle, lignes ignorées) : aucun
