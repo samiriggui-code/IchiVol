@@ -1,0 +1,86 @@
+{
+  "pass": true,
+  "pages": {
+    "01-journal-desktop": {
+      "route": "journal",
+      "pass": true,
+      "apiErrors": [],
+      "consoleErrors": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440
+      },
+      "titles": [
+        "Journal",
+        "Décisions sauvegardées"
+      ],
+      "bodyText": "IchiVol\n\nTRADING\n\nDesk\nMarché\nOpportunités\nPortefeuille\n\nRECHERCHE\n\nStrategy Lab\nJournal\nContexte\n\nAUTOMATISATION\n\nCopilot\nAgents\nOpérations\n\nSYSTÈME\n\nParamètres\nArrêt d’urgence\nLLM : clé manquante\nU\nui11p-smoke@ichivol.local\n\nRECHERCHE · JOURNAL\n\nJournal\n\nLa mémoire de vos décisions — trades paper et décisions sauvegardées.\n\nCapital → Portefeuille · circuit auto → Opérations.\n\nTrades\nDécisions sauvegardées\nRecharger\nSymbole\nExporter CSV\nArchivées\nDécisions sauvegardées\nCONFIRMÉ\tMAJ\tSYMBOLE\tTF\tBRUT\tPORTES\tRVOL\tACTIONS\nVide — sur Opportunités, confirme une ligne.",
+      "hasNeedles": true
+    },
+    "02-operations-desktop": {
+      "route": "operations",
+      "pass": true,
+      "apiErrors": [],
+      "consoleErrors": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440
+      },
+      "titles": [
+        "Opérations",
+        "Circuit 24 h",
+        "Pipeline health",
+        "Preuves & opérations",
+        "Journal d’audit",
+        "Qualité des données",
+        "Ce que la trace explique",
+        "Historique"
+      ],
+      "bodyText": "IchiVol\n\nTRADING\n\nDesk\nMarché\nOpportunités\nPortefeuille\n\nRECHERCHE\n\nStrategy Lab\nJournal\nContexte\n\nAUTOMATISATION\n\nCopilot\nAgents\nOpérations\n\nSYSTÈME\n\nParamètres\nArrêt d’urgence\nLLM : clé manquante\nU\nui11p-smoke@ichivol.local\n\nAUTOMATISATION · OPÉRATIONS\n\nOpérations\n\nL’activité du système, sans angle mort — décisions, paper, filtres, backtests.\n\nStrategy Lab →\nActualiser\nCircuit 24 h\nActif\nDécisions\n1 908\ntotal 1 908\nPaper ouverts\n0\n3 cumul\nLab / backtests\n0\ndernier jamais\nPipeline health\nPortes passées · screener 1h\nDirection\n25/28\nParticipation\n2/28\nStructure\n3/28\nEmplacement\n11/28\nRégime\n1/28\nPreuves & opérations\nOpérations →\n\nEdge pipeline vs Ichimoku : pas encore de comparaison\n\n0 refusés · 570 signaux mesurés\n\nStrategy Lab ↗\nDÉCISIONS\n1\n1 908\n1 908 / 24 h · il y a 3 min\n\nLe moteur relit les marchés surveillés et note chaque décision.\n\nTRADES PAPIER\n2\n3 ouverts\n0 en cours · il y a 2 h\n\nOuvertures fictives quand le pipeline valide (jamais d’argent réel).\n\nTRADES REFUSÉS\n3\n0 refusés\n0 jugés\n\nFiltres structure / contexte / Fib — suivi counterfactual.\n\nBACKTESTS\n4\n0 runs\ndernier jamais\n\nCollecte quotidienne · 5 méthodes · couverture actuelle (souvent crypto).\n\nSUIVI SIGNAUX\n5\nDésactivé\nsuivi coupé (ENABLE_SIGNAL_TRACKING)\n\nEnregistrement signal → outcome pour prouver l’efficacité.\n\nTous\nPASSE\nPRUDENCE\nREFUSÉ\nRechercher dans le journal\nJournal d’audit\n6 événements\nHEURE\tNIVEAU\tSOURCE\tÉVÉNEMENT\n06:07:24\tREFUSÉ\tPosition\tSortie BTCUSDT — manual_close · résultat -0.02 %\n06:07:23\tPRUDENCE\tPosition\tAchat automatique BTCUSDT — entrée 84202.2 · stop 82518.3 · objectif 87570 · risque 0 %\n06:06:12\tPASSE\tPosition\tSortie BTCUSDT — manual_close · résultat +0.01 %\n06:04:17\tPRUDENCE\tPosition\tAchat automatique BTCUSDT — entrée 84208.4 · stop 82524.4 · objectif 87576.4 · risque 0 %\n16:57:55\tREFUSÉ\tPosition\tSortie WTI — stop touché · résultat -1.38 %\n15:02:31\tPRUDENCE\tPosition\tAchat automatique WTI — entrée 94.8454 · stop 93.5711 · objectif 97.3942 · risque 0 %\nQualité des données\nscreener · 1H\nXAUUSD\nPRUDENCE\n\ngap · porte watch · biquote · 118 barres\n\nUSDJPY\nPRUDENCE\n\ngap · porte watch · biquote · 119 barres\n\nGBPUSD\nPRUDENCE\n\ngap · porte watch · biquote · 119 barres\n\nXAGUSD\nPRUDENCE\n\ngap · porte watch · biquote · 118 barres\n\nSPX\nPRUDENCE\n\ngap · porte watch · biquote · 118 barres\n\nNDX\nPRUDENCE\n\ngap · porte watch · biquote · 118 barres\n\nWTI\nPRUDENCE\n\ngap · porte watch · biquote · 118 barres\n\nEURUSD\nPRUDENCE\n\ngap · porte watch · biquote · 119 barres\n\nTONUSDT\nPRUDENCE\n\npérimé · retard · stale · fail · porte fail · stale · retard · binance · 300 barres\n\nCe que la trace explique\ndécision · protection · reproductibilité\nDÉCISION\n\n100 signaux mesurés · 365 terminés\n\nIchimoku seul · -1.93 % à 20 bougies\n+ RVOL (participation validée) · +0.58 % à 20 bougies\n+ RVOL + structure · -0.46 % à 20 bougies\nPROTECTION\n\nNon disponible\n\nREPRODUCTIBILITÉ\n\nNon disponible\n\nHistorique\nTout\nTrades papier\nFiltres\nBacktests\nVENDREDI 25 SEPTEMBRE\n06:07\nSortie BTCUSDT\nmanual_close · résultat -0.02 %\nICHIVOL_BASELINE_V1\n06:07\nAchat automatique BTCUSDT\nentrée 84202.2 · stop 82518.3 · objectif 87570 · risque 0 %\nICHIVOL_BASELINE_V1\n06:06\nSortie BTCUSDT\nmanual_close · résultat +0.01 %\nICHIVOL_BASELINE_V1\n06:04\nAchat automatique BTCUSDT\nentrée 84208.4 · stop 82524.4 · objectif 87576.4 · risque 0 %\nICHIVOL_BASELINE_V1\nJEUDI 24 SEPTEMBRE\n16:57\nSortie WTI\nstop touché · résultat -1.38 %\nICHIVOL_BASELINE_V1\n15:02\nAchat automatique WTI\nentrée 94.8454 · stop 93.5711 · objectif 97.3942 · risque 0 %\nICHIVOL_BASELINE_V1",
+      "hasNeedles": true
+    },
+    "p3Checks": {
+      "hasAudit": true,
+      "hasQuality": true,
+      "hasTrace": true,
+      "hasLevels": true,
+      "hasDemoArmed": false
+    },
+    "03-journal-mobile-390": {
+      "route": "journal",
+      "pass": true,
+      "apiErrors": [],
+      "consoleErrors": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390
+      },
+      "titles": [
+        "Journal",
+        "Décisions sauvegardées"
+      ],
+      "bodyText": "IchiVol\nArrêt d’urgence\nU\n\nRECHERCHE · JOURNAL\n\nJournal\n\nLa mémoire de vos décisions — trades paper et décisions sauvegardées.\n\nCapital → Portefeuille · circuit auto → Opérations.\n\nTrades\nDécisions sauvegardées\nRecharger\nSymbole\nExporter CSV\nArchivées\nDécisions sauvegardées\nCONFIRMÉ\tMAJ\tSYMBOLE\tTF\tBRUT\tPORTES\tRVOL\tACTIONS\nVide — sur Opportunités, confirme une ligne.\nDesk\nOpportunités\nPortefeuille\nCopilot\nPlus\n\nPlus\n\nMarché\nStrategy Lab\nJournal\nContexte\nAgents\nOpérations\nParamètres"
+    },
+    "04-operations-mobile-390": {
+      "route": "operations",
+      "pass": true,
+      "apiErrors": [],
+      "consoleErrors": [],
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390
+      },
+      "titles": [
+        "Opérations",
+        "Circuit 24 h",
+        "Pipeline health",
+        "Preuves & opérations",
+        "Journal d’audit",
+        "Qualité des données",
+        "Ce que la trace explique",
+        "Historique"
+      ],
+      "bodyText": "IchiVol\nArrêt d’urgence\nU\n\nAUTOMATISATION · OPÉRATIONS\n\nOpérations\n\nL’activité du système, sans angle mort — décisions, paper, filtres, backtests.\n\nStrategy Lab →\nActualiser\nCircuit 24 h\nActif\nDécisions\n1 908\ntotal 1 908\nPaper ouverts\n0\n3 cumul\nLab / backtests\n0\ndernier jamais\nPipeline health\nPortes passées · screener 1h\nDirection\n25/28\nParticipation\n2/28\nStructure\n3/28\nEmplacement\n11/28\nRégime\n1/28\nPreuves & opérations\nOpérations →\n\nEdge pipeline vs Ichimoku : pas encore de comparaison\n\n0 refusés · 570 signaux mesurés\n\nStrategy Lab ↗\nDÉCISIONS\n1\n1 908\n1 908 / 24 h · il y a 3 min\n\nLe moteur relit les marchés surveillés et note chaque décision.\n\nTRADES PAPIER\n2\n3 ouverts\n0 en cours · il y a 2 h\n\nOuvertures fictives quand le pipeline valide (jamais d’argent réel).\n\nTRADES REFUSÉS\n3\n0 refusés\n0 jugés\n\nFiltres structure / contexte / Fib — suivi counterfactual.\n\nBACKTESTS\n4\n0 runs\ndernier jamais\n\nCollecte quotidienne · 5 méthodes · couverture actuelle (souvent crypto).\n\nSUIVI SIGNAUX\n5\nDésactivé\nsuivi coupé (ENABLE_SIGNAL_TRACKING)\n\nEnregistrement signal → outcome pour prouver l’efficacité.\n\nTous\nPASSE\nPRUDENCE\nREFUSÉ\nRechercher dans le journal\nJournal d’audit\n6 événements\nHEURE\tNIVEAU\tSOURCE\tÉVÉNEMENT\n06:07:24\tREFUSÉ\tPosition\tSortie BTCUSDT — manual_close · résultat -0.02 %\n06:07:23\tPRUDENCE\tPosition\tAchat automatique BTCUSDT — entrée 84202.2 · stop 82518.3 · objectif 87570 · risque 0 %\n06:06:12\tPASSE\tPosition\tSortie BTCUSDT — manual_close · résultat +0.01 %\n06:04:17\tPRUDENCE\tPosition\tAchat automatique BTCUSDT — entrée 84208.4 · stop 82524.4 · objectif 87576.4 · risque 0 %\n16:57:55\tREFUSÉ\tPosition\tSortie WTI — stop touché · résultat -1.38 %\n15:02:31\tPRUDENCE\tPosition\tAchat automatique WTI — entrée 94.8454 · stop 93.5711 · objectif 97.3942 · risque 0 %\nQualité des données\nscreener · 1H\nXAUUSD\nPRUDENCE\n\ngap · porte watch · biquote · 118 barres\n\nUSDJPY\nPRUDENCE\n\ngap · porte watch · biquote · 119 barres\n\nGBPUSD\nPRUDENCE\n\ngap · porte watch · biquote · 119 barres\n\nXAGUSD\nPRUDENCE\n\ngap · porte watch · biquote · 118 barres\n\nSPX\nPRUDENCE\n\ngap · porte watch · biquote · 118 barres\n\nNDX\nPRUDENCE\n\ngap · porte watch · biquote · 118 barres\n\nWTI\nPRUDENCE\n\ngap · porte watch · biquote · 118 barres\n\nEURUSD\nPRUDENCE\n\ngap · porte watch · biquote · 119 barres\n\nTONUSDT\nPRUDENCE\n\npérimé · retard · stale · fail · porte fail · stale · retard · binance · 300 barres\n\nCe que la trace explique\ndécision · protection · reproductibilité\nDÉCISION\n\n100 signaux mesurés · 365 terminés\n\nIchimoku seul · -1.93 % à 20 bougies\n+ RVOL (participation validée) · +0.58 % à 20 bougies\n+ RVOL + structure · -0.46 % à 20 bougies\nPROTECTION\n\nNon disponible\n\nREPRODUCTIBILITÉ\n\nNon disponible\n\nHistorique\nTout\nTrades papier\nFiltres\nBacktests\nVENDREDI 25 SEPTEMBRE\n06:07\nSortie BTCUSDT\nmanual_close · résultat -0.02 %\nICHIVOL_BASELINE_V1\n06:07\nAchat automatique BTCUSDT\nentrée 84202.2 · stop 82518.3 · objectif 87570 · risque 0 %\nICHIVOL_BASELINE_V1\n06:06\nSortie BTCUSDT\nmanual_close · résultat +0.01 %\nICHIVOL_BASELINE_V1\n06:04\nAchat automatique BTCUSDT\nentrée 84208.4 · stop 82524.4 · objectif 87576.4 · risque 0 %\nICHIVOL_BASELINE_V1\nJEUDI 24 SEPTEMBRE\n16:57\nSortie WTI\nstop touché · résultat -1.38 %\nICHIVOL_BASELINE_V1\n15:02\nAchat automatique WTI\nentrée 94.8454 · stop 93.5711 · objectif 97.3942 · risque 0 %\nICHIVOL_BASELINE_V1\nDesk\nOpportunités\nPortefeuille\nCopilot\nPlus\n\nPlus\n\nMarché\nStrategy Lab\nJournal\nContexte\nAgents\nOpérations\nParamètres"
+    }
+  }
+}
