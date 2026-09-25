@@ -309,11 +309,8 @@ export function OverviewPage() {
   const navigate = useNavigate()
   const [rows, setRows] = useState<ScreenerDecisionRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [overview, setOverview] = useState<PaperOverview | null>(null)
-  const [ovError, setOvError] = useState<string | null>(null)
   const [tape, setTape] = useState<ActivityItem[]>([])
-  const [tapeError, setTapeError] = useState<string | null>(null)
   const [lock, setLock] = useState<RiskLockState | null>(null)
   const [engineOk, setEngineOk] = useState<boolean | null>(null)
   const [market, setMarket] = useState<GlobalMarketData | null>(null)
@@ -335,17 +332,10 @@ export function OverviewPage() {
           ),
         getPaperOverview(BASELINE)
           .then((r) => ({ ok: true as const, data: r }))
-          .catch((err: unknown) => ({
-            ok: false as const,
-            error: err instanceof Error ? err.message : 'Overview indisponible',
-          })),
+          .catch(() => ({ ok: false as const })),
         getActivityFeed(40)
           .then((r) => ({ ok: true as const, items: r.items }))
-          .catch((err: unknown) => ({
-            ok: false as const,
-            error: err instanceof Error ? err.message : 'Feed indisponible',
-            items: [] as ActivityItem[],
-          })),
+          .catch(() => ({ ok: false as const, items: [] as ActivityItem[] })),
         getRiskLock(BASELINE).catch(() => null),
         fetch('/api/engine/health', { credentials: 'include' })
           .then(async (res) => {
@@ -360,10 +350,7 @@ export function OverviewPage() {
           .catch(() => ({ engine: false })),
         fetchGlobalMarket()
           .then((m) => ({ ok: true as const, data: m }))
-          .catch((err: unknown) => ({
-            ok: false as const,
-            error: err instanceof Error ? err.message : 'CoinGecko indisponible',
-          })),
+          .catch(() => ({ ok: false as const })),
         fetchFearGreed()
           .then((f) => ({ ok: true as const, data: f }))
           .catch(() => ({ ok: false as const })),
@@ -377,42 +364,22 @@ export function OverviewPage() {
       ])
 
     if (screenerRes instanceof Error) {
-      const msg = screenerRes.message
-      setError(
-        msg.includes('engine_unreachable') || msg.includes('502')
-          ? 'Moteur Python injoignable — lance l’engine pour le desk.'
-          : msg,
-      )
       setRows([])
     } else {
-      setError(null)
       setRows(screenerRes.rows)
     }
 
-    if (ovRes.ok) {
-      setOverview(ovRes.data)
-      setOvError(null)
-    } else {
-      setOverview(null)
-      setOvError(ovRes.error)
-    }
+    if (ovRes.ok) setOverview(ovRes.data)
+    else setOverview(null)
 
-    if (feedRes.ok) {
-      setTape(feedRes.items.slice(0, TAPE_LIMIT))
-      setTapeError(null)
-    } else {
-      setTape([])
-      setTapeError(feedRes.error)
-    }
+    if (feedRes.ok) setTape(feedRes.items.slice(0, TAPE_LIMIT))
+    else setTape([])
 
     setLock(lockRes)
     setEngineOk(healthRes.engine)
 
-    if (mktRes.ok) {
-      setMarket(mktRes.data)
-    } else {
-      setMarket(null)
-    }
+    if (mktRes.ok) setMarket(mktRes.data)
+    else setMarket(null)
     if (fngRes.ok) setFng(fngRes.data)
     else setFng(null)
 
@@ -520,11 +487,6 @@ export function OverviewPage() {
     navigate(`/app/portefeuille?tab=positions&symbol=${encodeURIComponent(symbol)}`)
   }
 
-  const systemNotice =
-    error || ovError || tapeError
-      ? [error, ovError, tapeError].filter(Boolean).join(' · ')
-      : null
-
   return (
     <div className="desk-page">
       <div className="page-head">
@@ -542,15 +504,6 @@ export function OverviewPage() {
       </div>
 
       <div className="desk-workspace">
-        {systemNotice ? (
-          <div className="notice">
-            <span>△</span>
-            <span>
-              <b>Connexion.</b> {systemNotice}
-            </span>
-            <Link to="/app/operations">Vérifier →</Link>
-          </div>
-        ) : null}
         <div className="metrics">
           <div className="metric featured">
             <div className="metric-label">
