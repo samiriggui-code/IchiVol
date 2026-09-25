@@ -165,15 +165,21 @@ export function sessionStatusLabel(status: SessionStatus): string {
   }
 }
 
-/** Format open–close in the user's local timezone (for the venue calendar day of `now`). */
-export function formatSessionHoursLocal(def: MarketSessionDef, now: Date = new Date()): string {
+function sessionOpenCloseUtc(def: MarketSessionDef, now: Date): { open: Date; close: Date } {
   const p = zonedParts(now, def.timeZone)
   const openH = Math.floor(def.openLocal)
   const openMin = Math.round((def.openLocal - openH) * 60)
   const closeH = Math.floor(def.closeLocal)
   const closeMin = Math.round((def.closeLocal - closeH) * 60)
-  const open = wallTimeToUtc(p.year, p.month, p.day, openH, openMin, def.timeZone)
-  const close = wallTimeToUtc(p.year, p.month, p.day, closeH, closeMin, def.timeZone)
+  return {
+    open: wallTimeToUtc(p.year, p.month, p.day, openH, openMin, def.timeZone),
+    close: wallTimeToUtc(p.year, p.month, p.day, closeH, closeMin, def.timeZone),
+  }
+}
+
+/** Format open–close in the user's local timezone (for the venue calendar day of `now`). */
+export function formatSessionHoursLocal(def: MarketSessionDef, now: Date = new Date()): string {
+  const { open, close } = sessionOpenCloseUtc(def, now)
   const fmt = (d: Date) =>
     d.toLocaleTimeString('fr-FR', {
       hour: '2-digit',
@@ -181,6 +187,19 @@ export function formatSessionHoursLocal(def: MarketSessionDef, now: Date = new D
       hour12: false,
     })
   return `${fmt(open)}–${fmt(close)}`
+}
+
+/** Format open–close in UTC (maquette Desk session detail). */
+export function formatSessionHoursUtc(def: MarketSessionDef, now: Date = new Date()): string {
+  const { open, close } = sessionOpenCloseUtc(def, now)
+  const fmt = (d: Date) =>
+    d.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'UTC',
+    })
+  return `${fmt(open)}–${fmt(close)} UTC`
 }
 
 /** Next 1h candle close (UTC hour boundary). */
