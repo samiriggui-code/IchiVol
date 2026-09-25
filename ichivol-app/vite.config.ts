@@ -7,7 +7,7 @@ const BYBIT = 'https://api.bybit.com'
 const OKX = 'https://www.okx.com'
 const COINGECKO = 'https://api.coingecko.com'
 const FEAR_GREED = 'https://api.alternative.me'
-const AGENT_SERVER = 'http://localhost:8787'
+const AGENT_SERVER = process.env.AGENT_SERVER || 'http://localhost:8787'
 
 const marketProxy = (target: string, prefix: string): ProxyOptions => ({
   target,

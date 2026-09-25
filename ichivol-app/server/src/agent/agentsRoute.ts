@@ -7,6 +7,7 @@ import type { Request, Response } from 'express'
 import { config } from '../config.js'
 import { db } from '../db.js'
 import { checkSystemHealth } from '../health/check.js'
+import { resolveLlmForUser } from '../settings/resolve.js'
 import {
   AGENT_ROLE_ORDER,
   authorityStepFromLogSource,
@@ -67,62 +68,80 @@ function countOpenFxSessions(now = new Date()): number {
   return open
 }
 
-function llmKeyPresent(): boolean {
-  return Boolean(
+async function llmKeyPresentForUser(userId: string | undefined): Promise<boolean | null> {
+  const envPresent = Boolean(
     config.anthropicApiKey || config.openaiApiKey || config.openrouterApiKey,
   )
+  if (envPresent) return true
+  if (!userId) return false
+  try {
+    const resolved = await resolveLlmForUser(userId)
+    return Boolean(resolved.apiKey)
+  } catch {
+    return null
+  }
 }
 
-async function gatherRoleSignals(): Promise<RoleSignals> {
+async function gatherRoleSignals(userId?: string): Promise<RoleSignals> {
   const health = await checkSystemHealth()
   const since = new Date(Date.now() - 24 * 60 * 60_000)
   const runtime = getAgentRuntimeSnapshot()
 
-  const [openTasks, leasedTasks, recheckOpen, logs24h, lastLog, nextTask, riskLock, positions] =
-    await Promise.all([
-      db.agentTask.count({
-        where: {
-          agentId: DEFAULT_AGENT_ID,
-          status: { in: ['pending', 'leased'] },
-        },
-      }),
-      db.agentTask.count({
-        where: { agentId: DEFAULT_AGENT_ID, status: 'leased' },
-      }),
-      db.agentTask.count({
-        where: {
-          agentId: DEFAULT_AGENT_ID,
-          kind: 'recheck',
-          status: { in: ['pending', 'leased'] },
-        },
-      }),
-      db.agentLog.count({
-        where: { agentId: DEFAULT_AGENT_ID, createdAt: { gte: since } },
-      }),
-      db.agentLog.findFirst({
-        where: { agentId: DEFAULT_AGENT_ID },
-        orderBy: { createdAt: 'desc' },
-        select: { message: true, createdAt: true, source: true },
-      }),
-      db.agentTask.findFirst({
-        where: {
-          agentId: DEFAULT_AGENT_ID,
-          status: { in: ['pending', 'leased'] },
-        },
-        orderBy: { dueAt: 'asc' },
-        select: { dueAt: true, kind: true, symbol: true },
-      }),
-      health.engine
-        ? fetchEngineJson<{
-            kill_switch_armed?: boolean
-          }>(`/api/engine/paper/portfolios/${PORTFOLIO_CODE}/risk-lock`)
-        : Promise.resolve(null),
-      health.engine
-        ? fetchEngineJson<{ positions?: unknown[]; count?: number }>(
-            '/api/engine/paper/positions?status=OPEN',
-          )
-        : Promise.resolve(null),
-    ])
+  const [
+    openTasks,
+    leasedTasks,
+    recheckOpen,
+    logs24h,
+    lastLog,
+    nextTask,
+    riskLock,
+    positions,
+    llmKey,
+  ] = await Promise.all([
+    db.agentTask.count({
+      where: {
+        agentId: DEFAULT_AGENT_ID,
+        status: { in: ['pending', 'leased'] },
+      },
+    }),
+    db.agentTask.count({
+      where: { agentId: DEFAULT_AGENT_ID, status: 'leased' },
+    }),
+    db.agentTask.count({
+      where: {
+        agentId: DEFAULT_AGENT_ID,
+        kind: 'recheck',
+        status: { in: ['pending', 'leased'] },
+      },
+    }),
+    db.agentLog.count({
+      where: { agentId: DEFAULT_AGENT_ID, createdAt: { gte: since } },
+    }),
+    db.agentLog.findFirst({
+      where: { agentId: DEFAULT_AGENT_ID },
+      orderBy: { createdAt: 'desc' },
+      select: { message: true, createdAt: true, source: true },
+    }),
+    db.agentTask.findFirst({
+      where: {
+        agentId: DEFAULT_AGENT_ID,
+        status: { in: ['pending', 'leased'] },
+      },
+      orderBy: { dueAt: 'asc' },
+      select: { dueAt: true, kind: true, symbol: true },
+    }),
+    health.engine
+      ? fetchEngineJson<{
+          kill_switch_armed?: boolean
+        }>(`/api/engine/paper/portfolios/${PORTFOLIO_CODE}/risk-lock`)
+      : Promise.resolve(null),
+    health.engine
+      ? fetchEngineJson<{ positions?: unknown[]; count?: number }>(
+          '/api/engine/paper/positions?status=OPEN',
+        )
+      : Promise.resolve(null),
+    llmKeyPresentForUser(userId),
+  ])
 
   let openPaper: number | null = null
   if (positions) {
@@ -149,14 +168,14 @@ async function gatherRoleSignals(): Promise<RoleSignals> {
     eveNextKind: nextTask?.kind ?? null,
     eveNextSymbol: nextTask?.symbol ?? null,
     eveLogs24h: logs24h,
-    llmKeyPresent: llmKeyPresent(),
+    llmKeyPresent: llmKey,
   }
 }
 
 /** 6 role cards + Eve runtime notice payload. */
-export async function handleListAgents(_req: Request, res: Response): Promise<void> {
+export async function handleListAgents(req: Request, res: Response): Promise<void> {
   const [signals, lastLog] = await Promise.all([
-    gatherRoleSignals(),
+    gatherRoleSignals(req.user?.id),
     db.agentLog.findFirst({
       where: { agentId: DEFAULT_AGENT_ID },
       orderBy: { createdAt: 'desc' },
