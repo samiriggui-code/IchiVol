@@ -1,60 +1,150 @@
-import { Link } from 'react-router-dom'
-import { KeenIcon } from '../components/KeenIcon'
-import { llmStatusLabel, useLlmStatus } from '../lib/llmStatus'
+/**
+ * Agents — port littéral de design-reference/ichivol-workspace `agents()` + page-head.
+ * Classes HTML = maquette. États = lecture seule (aucun agent en exécution).
+ */
+
+import { type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './AgentsPage.css'
 
-const roles = [
-  { name: 'Observateur de marché', icon: 'compass', purpose: 'Observer les régimes, le volume et la structure du marché.', scope: 'Prix, indicateurs et contexte.', limit: 'Aucune modification de position.', to: '/app/context', label: 'Voir le contexte' },
-  { name: 'Opportunités', icon: 'questionnaire-tablet', purpose: 'Rassembler les preuves autour des setups repérés par le moteur.', scope: 'Signaux et étapes du pipeline.', limit: 'Aucune décision de trading autonome.', to: '/app/opportunites', label: 'Voir les opportunités' },
-  { name: 'Risque', icon: 'shield-tick', purpose: 'Présenter les limites et les refus du Risk Kernel.', scope: 'Exposition et contrôles du portefeuille.', limit: 'Aucun changement des limites de risque.', to: '/app/portefeuille?tab=risque', label: 'Voir le risque' },
-  { name: 'Exécution', icon: 'arrow-right', purpose: 'Suivre la transmission et le résultat des décisions validées.', scope: 'Traçabilité des opérations.', limit: 'Aucun ordre envoyé depuis cette page.', to: '/app/operations', label: 'Voir les opérations' },
-  { name: 'Gestion de position', icon: 'chart-simple', purpose: 'Suivre les positions paper et leurs conditions de sortie.', scope: 'Positions et protection.', limit: 'Aucun changement de stop ou clôture depuis cette page.', to: '/app/portefeuille?tab=positions', label: 'Voir les positions' },
-  { name: 'Session', icon: 'timer', purpose: 'Regrouper les contraintes horaires de la chaîne de décision.', scope: 'Rôle prévu dans la maquette.', limit: 'Agent de session non connecté.', to: '/app/journal', label: 'Voir le journal' },
-] as const
+type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
+
+const AGENTS: {
+  name: string
+  icon: string
+  blurb: string
+  mode: string
+  permission: string
+  to: string
+}[] = [
+  {
+    name: 'Observateur de marché',
+    icon: '◎',
+    blurb: 'Observe les régimes et la structure du marché.',
+    mode: 'Règles',
+    permission: 'market_read',
+    to: '/app/context',
+  },
+  {
+    name: 'Opportunités',
+    icon: '◇',
+    blurb: 'Repère les setups et rassemble les preuves.',
+    mode: 'LLM / règles',
+    permission: 'signals_read',
+    to: '/app/opportunites',
+  },
+  {
+    name: 'Risque',
+    icon: '◈',
+    blurb: 'Applique les limites du Risk Kernel.',
+    mode: 'Règles',
+    permission: 'risk_read',
+    to: '/app/portefeuille',
+  },
+  {
+    name: 'Exécution',
+    icon: '↗',
+    blurb: 'Transmet uniquement les décisions validées.',
+    mode: 'Règles',
+    permission: 'orders_execute',
+    to: '/app/operations',
+  },
+  {
+    name: 'Gestion de position',
+    icon: '◫',
+    blurb: 'Surveille le stop et les conditions de sortie.',
+    mode: 'Règles',
+    permission: 'paper_orders',
+    to: '/app/portefeuille',
+  },
+  {
+    name: 'Session',
+    icon: '◷',
+    blurb: 'Suit les horaires et contraintes de session.',
+    mode: 'Règles',
+    permission: 'market_read',
+    to: '/app/journal',
+  },
+]
+
+const CHAIN = ['Observation', 'Opportunité', 'Risk Kernel', 'Position', 'Exécution']
+
+function badge(text: string, tone: BadgeTone = ''): ReactNode {
+  let inferred = tone
+  if (!inferred) {
+    inferred = /PASSE|ACCEPTÉ|OUVERTE|VALIDÉ/i.test(text)
+      ? 'green'
+      : /REFUS|BLOQU|ERREUR/i.test(text)
+        ? 'red'
+        : /PRUDENCE|ARMED|WATCH/i.test(text)
+          ? 'amber'
+          : ''
+  }
+  return <span className={`tag ${inferred}`.trim()}>{text}</span>
+}
 
 export function AgentsPage() {
-  const llm = useLlmStatus()
+  const navigate = useNavigate()
+
   return (
     <div className="agents-page">
-      <header className="iv-page-header page-head agents-page-head">
+      <div className="page-head">
         <div>
-          <p className="iv-page-eyebrow">Automatisation · Agents</p>
+          <div className="eyebrow">09 / ICHIVOL WORKSPACE</div>
           <h1>Agents</h1>
-          <p className="iv-page-question">Une chaîne de décision sous contrôle.</p>
+          <p className="subtitle">Une chaîne de décision sous contrôle.</p>
         </div>
-        <Link className="ghost" to="/app/agent">Ouvrir Copilot →</Link>
-      </header>
+        <div className="actions">{badge('DONNÉES LIVE', 'gray')}</div>
+      </div>
 
-      <section className="panel agents-connection" aria-label="Connexion du Copilot">
-        <div>
-          <h2>Copilot · connexion LLM</h2>
-          <p role="status">{llmStatusLabel(llm.state)}{llm.provider ? ` · ${llm.provider}` : ''}{llm.model ? ` · ${llm.model}` : ''}</p>
-          <p className="muted">L’état de connexion ne signifie pas qu’un agent est en cours d’exécution.</p>
-        </div>
-        <Link to="/app/settings">Paramètres du LLM →</Link>
-      </section>
+      <div className="notice blue">
+        ⬡{' '}
+        <span>
+          Supervision des agents · permissions et états illustratifs · aucun agent en
+          exécution.
+        </span>
+      </div>
 
-      <p className="agents-notice">Les six rôles ci-dessous décrivent l’organisation prévue. Leurs permissions sont indicatives ; leur exécution autonome n’est pas connectée à cette page.</p>
-
-      <div className="agents-grid">
-        {roles.map((role) => (
-          <section className="panel agents-card" key={role.name}>
-            <div className="agents-card-top"><KeenIcon icon={role.icon} /><span className="iv-badge">NON CONNECTÉ</span></div>
-            <h2>{role.name}</h2>
-            <p>{role.purpose}</p>
-            <details>
-              <summary>Périmètre prévu</summary>
-              <dl><dt>Lecture</dt><dd>{role.scope}</dd><dt>Limite</dt><dd>{role.limit}</dd></dl>
-            </details>
-            <Link to={role.to}>{role.label} →</Link>
+      <div className="grid three">
+        {AGENTS.map((a) => (
+          <section className="card agent-card" key={a.name}>
+            {badge('APERÇU', 'gray')}
+            <div className="agent-icon">{a.icon}</div>
+            <h2>{a.name}</h2>
+            <p>{a.blurb}</p>
+            <div className="statline">
+              <span>Mode</span>
+              <b>{a.mode}</b>
+            </div>
+            <div className="statline">
+              <span>Permission</span>
+              <b>{a.permission}</b>
+            </div>
+            <button type="button" onClick={() => navigate(a.to)}>
+              Voir les permissions →
+            </button>
           </section>
         ))}
       </div>
 
-      <section className="panel agents-authority">
-        <h2>Chaîne d’autorité</h2>
-        <ol>{['Observation', 'Opportunité', 'Risk Kernel', 'Validation', 'Exécution'].map((step) => <li key={step}>{step}</li>)}</ol>
-        <p className="muted">Le moteur calcule et contrôle le risque. Copilot explique les résultats. Cette page ne déclenche aucune opération.</p>
+      <section className="card">
+        <div className="card-head">
+          <h2>Chaîne d’autorité</h2>
+        </div>
+        <div className="card-body">
+          <div className="toolbar">
+            {CHAIN.map((s, i) => (
+              <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                {i ? <span aria-hidden="true">→</span> : null}
+                {badge(s, 'gray')}
+              </span>
+            ))}
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--muted)' }}>
+            Chaque étape dispose d’un périmètre explicite. Le contrôle du risque reste
+            nécessaire avant l’exécution.
+          </p>
+        </div>
       </section>
     </div>
   )
