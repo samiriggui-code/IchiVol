@@ -1,0 +1,17 @@
+    23 /tmp/wt-clean/ichivol-app/src/pages/RequireAuth.tsx
+    61 /tmp/wt-clean/ichivol-app/src/pages/AgentsPage.tsx
+   162 /tmp/wt-clean/ichivol-app/src/pages/LoginPage.tsx
+   274 /tmp/wt-clean/ichivol-app/src/pages/AgentPage.tsx
+   415 /tmp/wt-clean/ichivol-app/src/pages/PaperPage.tsx
+   462 /tmp/wt-clean/ichivol-app/src/pages/LandingPage.tsx
+   464 /tmp/wt-clean/ichivol-app/src/pages/PortfolioPage.tsx
+   552 /tmp/wt-clean/ichivol-app/src/pages/SynthesePage.tsx
+   628 /tmp/wt-clean/ichivol-app/src/pages/ContextPage.tsx
+   784 /tmp/wt-clean/ichivol-app/src/pages/ActivityPage.tsx
+   858 /tmp/wt-clean/ichivol-app/src/pages/JournalPage.tsx
+  1000 /tmp/wt-clean/ichivol-app/src/pages/OverviewPage.tsx
+  1208 /tmp/wt-clean/ichivol-app/src/pages/SettingsPage.tsx
+  1430 /tmp/wt-clean/ichivol-app/src/pages/DecisionsPage.tsx
+  1499 /tmp/wt-clean/ichivol-app/src/pages/MarketPage.tsx
+  1730 /tmp/wt-clean/ichivol-app/src/pages/BacktestsPage.tsx
+ 11550 total

@@ -12,6 +12,7 @@ import {
   type PaperSource,
   type ShadowStats,
 } from '../lib/paper'
+import './PaperPage.css'
 
 /** Paper technique — sources, % trades, evidence IDs (indépendant de Synthèse). */
 

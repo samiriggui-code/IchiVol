@@ -1,0 +1,233 @@
+{
+  "pass": true,
+  "pages": {
+    "desktop-market": {
+      "pass": true,
+      "paperPill": true,
+      "paperText": "PAPER",
+      "titles": [
+        "Lecture du marché"
+      ],
+      "apiErrors": [],
+      "consoleErrors": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440
+      }
+    },
+    "desktop-strategy-lab": {
+      "pass": true,
+      "paperPill": true,
+      "paperText": "PAPER",
+      "titles": [
+        "Strategy Lab",
+        "Expériences comparées",
+        "De l’idée à la preuve"
+      ],
+      "apiErrors": [],
+      "consoleErrors": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440
+      }
+    },
+    "desktop-context": {
+      "pass": true,
+      "paperPill": true,
+      "paperText": "PAPER",
+      "titles": [
+        "Contexte",
+        "Régime par classe d’actifs"
+      ],
+      "apiErrors": [],
+      "consoleErrors": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440
+      }
+    },
+    "desktop-agent": {
+      "pass": true,
+      "paperPill": true,
+      "paperText": "PAPER",
+      "titles": [
+        "Copilot",
+        "Conversation",
+        "Explorer une décision"
+      ],
+      "apiErrors": [],
+      "consoleErrors": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440
+      }
+    },
+    "desktop-agents": {
+      "pass": true,
+      "paperPill": true,
+      "paperText": "PAPER",
+      "titles": [
+        "Agents",
+        "Copilot · connexion LLM",
+        "Observateur de marché",
+        "Opportunités",
+        "Risque",
+        "Exécution",
+        "Gestion de position",
+        "Session"
+      ],
+      "apiErrors": [],
+      "consoleErrors": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440
+      }
+    },
+    "desktop-settings": {
+      "pass": true,
+      "paperPill": true,
+      "paperText": "PAPER",
+      "titles": [
+        "LLM",
+        "LLM connectés",
+        "Nouveau LLM"
+      ],
+      "apiErrors": [],
+      "consoleErrors": [],
+      "overflow": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440
+      }
+    },
+    "mobile390-market": {
+      "pass": true,
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390
+      },
+      "apiErrors": [],
+      "consoleErrors": [],
+      "paperPill": true
+    },
+    "mobile390-strategy-lab": {
+      "pass": true,
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390
+      },
+      "apiErrors": [],
+      "consoleErrors": [],
+      "paperPill": true
+    },
+    "mobile390-context": {
+      "pass": true,
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390
+      },
+      "apiErrors": [],
+      "consoleErrors": [],
+      "paperPill": true
+    },
+    "mobile390-agent": {
+      "pass": true,
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390
+      },
+      "apiErrors": [],
+      "consoleErrors": [],
+      "paperPill": true
+    },
+    "mobile390-agents": {
+      "pass": true,
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390
+      },
+      "apiErrors": [],
+      "consoleErrors": [],
+      "paperPill": true
+    },
+    "mobile390-settings": {
+      "pass": true,
+      "overflow": {
+        "scrollWidth": 390,
+        "clientWidth": 390
+      },
+      "apiErrors": [],
+      "consoleErrors": [],
+      "paperPill": true
+    }
+  },
+  "paperPill": "PAPER",
+  "global11": {
+    "desk": {
+      "pass": true,
+      "api": 0,
+      "console": 0
+    },
+    "market": {
+      "pass": true,
+      "api": 0,
+      "console": 0
+    },
+    "opportunites": {
+      "pass": true,
+      "api": 0,
+      "console": 0
+    },
+    "portefeuille": {
+      "pass": true,
+      "api": 0,
+      "console": 0
+    },
+    "strategy-lab": {
+      "pass": true,
+      "api": 0,
+      "console": 0
+    },
+    "journal": {
+      "pass": true,
+      "api": 0,
+      "console": 0
+    },
+    "context": {
+      "pass": true,
+      "api": 0,
+      "console": 0
+    },
+    "agent": {
+      "pass": true,
+      "api": 0,
+      "console": 0
+    },
+    "agents": {
+      "pass": true,
+      "api": 0,
+      "console": 0
+    },
+    "operations": {
+      "pass": true,
+      "api": 0,
+      "console": 0
+    },
+    "settings": {
+      "pass": true,
+      "api": 0,
+      "console": 0
+    }
+  },
+  "plus": {
+    "open": true,
+    "links": [
+      "Marché",
+      "Strategy Lab",
+      "Journal",
+      "Contexte",
+      "Agents",
+      "Opérations",
+      "Paramètres"
+    ]
+  }
+}
