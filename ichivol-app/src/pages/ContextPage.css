@@ -1,0 +1,65 @@
+/* Page Contexte — multi-classes (forex / crypto / métaux / …). */
+
+.context-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  flex-shrink: 0;
+  min-height: min-content;
+  width: 100%;
+}
+
+.ctx-blurb {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  max-width: 44rem;
+}
+
+.ctx-pad {
+  padding: 0 0.75rem 0.75rem;
+}
+
+.ctx-climate .context-grid,
+.ctx-regime-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  padding: 0 0.75rem 0.75rem;
+}
+@media (max-width: 800px) {
+  .ctx-climate .context-grid,
+  .ctx-regime-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.context-feeds.is-cal-first .context-feeds-grid.is-single {
+  grid-template-columns: 1fr;
+}
+
+.context-cal-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
+}
+.context-cal-head h4 {
+  margin: 0;
+}
+
+.context-feed-hint {
+  margin: 0 0 0.45rem;
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+
+.context-impact-tabs {
+  flex-shrink: 0;
+}
+
+.context-feeds-grid.is-single {
+  grid-template-columns: 1fr;
+}

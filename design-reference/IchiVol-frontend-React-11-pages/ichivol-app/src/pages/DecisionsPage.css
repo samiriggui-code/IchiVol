@@ -1,0 +1,153 @@
+/* Décisions P0 — bandeau méthode + sheet confirm. */
+
+.decisions-page {
+  flex-shrink: 0;
+  min-height: min-content;
+}
+
+.dec-method {
+  padding: 0.55rem 0.75rem 0.65rem;
+}
+.dec-method-lead {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--foreground);
+  max-width: 52rem;
+}
+.dec-method-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+@media (max-width: 900px) {
+  .dec-method-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .dec-method-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.dec-method-steps li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  padding: 0.4rem 0.45rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  background: color-mix(in srgb, var(--background) 70%, transparent);
+  font-size: 0.68rem;
+}
+.dec-method-n {
+  font-size: 0.58rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+}
+.dec-method-steps strong {
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+.dec-method-counts {
+  font-size: 0.6rem;
+  line-height: 1.3;
+}
+
+.dec-sheet-summary {
+  margin: 0 0 0.55rem;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  border-radius: 0.4rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--secondary) 75%, transparent);
+}
+.dec-sheet-verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.55rem;
+}
+
+.paper-confirm-backdrop {
+  z-index: 60;
+}
+.paper-confirm-sheet {
+  max-width: 420px;
+}
+.paper-confirm-stats {
+  margin: 0.5rem 0;
+}
+.paper-confirm-note {
+  margin: 0.5rem 0 0.75rem;
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+.paper-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+.dec-sheet-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.dec-filter-check {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.35rem;
+  padding-top: 0.85rem;
+}
+.dec-filter-check input {
+  width: auto;
+}
+
+.dec-before-open {
+  margin: 0.35rem 0 0.55rem;
+  padding: 0.45rem 0.55rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--secondary) 55%, transparent);
+}
+.dec-before-open > .subhead {
+  margin-top: 0;
+  margin-bottom: 0.35rem;
+}
+.dec-before-open .trade-plan,
+.dec-before-open .propose-paper-panel {
+  border: 0;
+  background: transparent;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.dec-secondary-actions {
+  opacity: 0.95;
+}
+
+.dec-gate-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+@media (max-width: 820px) {
+  .dec-gate-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.dec-gate-stats > button.overview-stat {
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  width: 100%;
+}
+.dec-gate-stats > button.overview-stat:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+}

@@ -1,0 +1,1246 @@
+/* Landing / login — style GSMS CRM (Manrope / Newsreader / primary blue) */
+
+.camap-shell {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+.camap-shell-center {
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  gap: 1.5rem;
+}
+
+.camap-nav-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  padding: 1rem 1rem 0;
+  pointer-events: none;
+}
+
+.camap-nav {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: 1rem;
+  width: 100%;
+  max-width: 68rem;
+  min-height: 3.5rem;
+  padding: 0.35rem 0.75rem 0.35rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  background: color-mix(in srgb, var(--background) 82%, transparent);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-lg);
+}
+
+.camap-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  text-decoration: none;
+  color: inherit;
+  font-weight: 700;
+  justify-self: start;
+}
+
+.camap-mark {
+  width: 1.85rem;
+  height: 1.85rem;
+  display: block;
+  border-radius: 0.5rem;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.camap-word {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+.camap-nav-links {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  gap: 0.35rem;
+  justify-self: center;
+}
+
+@media (min-width: 768px) {
+  .camap-nav-links { display: flex; }
+}
+
+.camap-nav-links a {
+  color: var(--muted-foreground);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.55rem;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.camap-nav-links a:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--secondary) 80%, transparent);
+}
+
+.camap-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-self: end;
+}
+
+.camap-icon-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.camap-icon-btn:hover {
+  background: var(--secondary);
+}
+
+.camap-icon-btn .ki-outline,
+.camap-icon-btn .ki-duotone {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.camap-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.95rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.camap-btn-lg {
+  padding: 0.7rem 1.25rem;
+  font-size: 0.95rem;
+}
+
+.camap-btn-block { width: 100%; }
+
+.camap-btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.camap-btn-primary:hover {
+  filter: brightness(1.05);
+}
+
+.camap-btn-outline {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+.camap-btn-outline:hover {
+  background: var(--secondary);
+}
+
+.camap-hero {
+  position: relative;
+  padding: 4.25rem 1.5rem 2.5rem;
+  overflow: clip;
+  min-height: min(92vh, 900px);
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 18% 12%,
+      color-mix(in srgb, var(--bull) 10%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 55% 45% at 88% 20%,
+      color-mix(in srgb, var(--primary) 14%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-subtle) 80%, var(--background)) 0%,
+      var(--background) 72%
+    );
+}
+
+.camap-hero-grid {
+  position: relative;
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  gap: 3rem;
+  align-items: center;
+  grid-template-columns: 1fr;
+  text-align: center;
+}
+
+@media (min-width: 960px) {
+  .camap-hero-grid {
+    grid-template-columns: 1.05fr 0.95fr;
+    text-align: left;
+  }
+}
+
+.camap-hero-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+@media (min-width: 960px) {
+  .camap-hero-copy { align-items: flex-start; }
+}
+
+.camap-hero-glow {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 520px;
+  background: radial-gradient(
+    ellipse 60% 100% at 50% 0%,
+    color-mix(in srgb, var(--primary) 18%, transparent),
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.camap-eyebrow {
+  position: relative;
+  margin: 0 0 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.camap-brand-lockup {
+  position: relative;
+  margin: 0 0 0.85rem;
+  font-family: var(--font-serif);
+  font-size: clamp(2.55rem, 6vw, 3.9rem);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  color: var(--foreground);
+  line-height: 0.92;
+}
+
+.camap-eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+.camap-dot-live {
+  background: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
+  animation: camap-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes camap-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--primary) 8%, transparent); }
+}
+
+.camap-reveal {
+  animation: camap-rise 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.camap-reveal-delay {
+  animation: camap-rise 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.14s both;
+}
+
+@keyframes camap-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .camap-reveal,
+  .camap-reveal-delay {
+    animation: none;
+  }
+}
+
+.camap-hero-gates {
+  margin-top: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.camap-hero-gates span {
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.camap-hero-gates .is-pass {
+  color: var(--bull);
+  background: color-mix(in srgb, var(--bull) 12%, transparent);
+  border-color: color-mix(in srgb, var(--bull) 28%, transparent);
+}
+
+.camap-hero-gates .is-watch {
+  color: var(--muted-foreground);
+  background: var(--secondary);
+}
+
+.camap-trust {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 1.5rem 2.5rem;
+}
+
+.camap-checklist-inline {
+  margin: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+@media (min-width: 800px) {
+  .camap-checklist-inline {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.camap-inline-quote {
+  margin: 2rem 0 0;
+  padding: 1.15rem 1.25rem;
+  border-left: 3px solid var(--primary);
+  background: color-mix(in srgb, var(--secondary) 70%, transparent);
+  border-radius: 0 calc(var(--radius) - 4px) calc(var(--radius) - 4px) 0;
+}
+
+.camap-inline-quote p {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.45;
+}
+
+.camap-inline-quote cite {
+  display: block;
+  margin-top: 0.55rem;
+  font-style: normal;
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.camap-hero-title {
+  position: relative;
+  margin: 0 0 0.85rem;
+  max-width: 22ch;
+  font-family: var(--font-serif);
+  font-size: clamp(1.35rem, 2.6vw, 1.85rem);
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+
+.camap-hero-title em {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--foreground);
+}
+
+.camap-hero-lede {
+  position: relative;
+  margin: 1.25rem 0 0;
+  max-width: 680px;
+  font-size: clamp(17px, 1.6vw, 20px);
+  line-height: 1.55;
+  color: var(--muted-foreground);
+}
+
+.camap-hero-cta {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1.75rem;
+}
+
+@media (min-width: 960px) {
+  .camap-hero-cta { justify-content: flex-start; }
+}
+
+.camap-checklist {
+  list-style: none;
+  margin: 1.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.camap-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.camap-checklist li svg,
+.camap-checklist li .camap-check-icon {
+  flex-shrink: 0;
+  color: var(--primary);
+  font-size: 1rem;
+}
+
+.camap-hero-visual-wrap {
+  position: relative;
+}
+
+.camap-hero-visual {
+  position: relative;
+  padding: 1.1rem 1.25rem 1.35rem;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 4px);
+  background: var(--card);
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.camap-hero-visual-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-subtle);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--foreground);
+}
+
+.camap-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--muted-foreground);
+}
+
+.camap-mock-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.camap-hero-visual-footer {
+  margin-top: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.camap-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+}
+
+.camap-chip-bull {
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  color: var(--primary);
+}
+
+.camap-compare {
+  margin-top: 1.75rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 800px) {
+  .camap-compare { grid-template-columns: 1fr 1fr; }
+}
+
+.camap-compare-col {
+  padding: 1.3rem 1.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.camap-compare-col-highlight {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  background: color-mix(in srgb, var(--primary) 5%, var(--card));
+}
+
+.camap-compare-label {
+  display: block;
+  margin-bottom: 0.85rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.camap-compare-col-highlight .camap-compare-label { color: var(--primary); }
+
+.camap-compare-col ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.camap-compare-col li {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.camap-compare-col-highlight li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  color: var(--foreground);
+}
+
+.camap-compare-col-highlight li svg,
+.camap-compare-col-highlight li .camap-check-icon {
+  flex-shrink: 0;
+  color: var(--primary);
+  font-size: 1rem;
+  margin-top: 0.1rem;
+}
+
+.camap-section {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+
+.camap-section-title {
+  margin: 0;
+  font-size: 1.75rem;
+  letter-spacing: -0.03em;
+  font-weight: 650;
+}
+
+.camap-section-lede {
+  margin: 0.75rem 0 0;
+  max-width: 560px;
+  color: var(--muted-foreground);
+  line-height: 1.55;
+}
+
+.camap-steps {
+  list-style: none;
+  margin: 2rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 800px) {
+  .camap-steps { grid-template-columns: repeat(3, 1fr); }
+}
+
+.camap-steps li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1.15rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.camap-steps strong { font-size: 1rem; }
+.camap-steps span { color: var(--muted-foreground); font-size: 0.9rem; line-height: 1.45; }
+
+.camap-steps-numbered li { padding-top: 2.75rem; }
+
+.camap-step-number {
+  position: absolute;
+  top: 0.9rem;
+  left: 1.2rem;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.5rem;
+  color: color-mix(in srgb, var(--primary) 55%, var(--muted-foreground));
+}
+
+.camap-steps-numbered .camap-icon-box-sm {
+  position: absolute;
+  top: 0.95rem;
+  right: 1.05rem;
+  margin-bottom: 0;
+}
+
+.camap-stats {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 1.5rem 3rem;
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(2, 1fr);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--border);
+}
+
+@media (min-width: 800px) {
+  .camap-stats { grid-template-columns: repeat(4, 1fr); }
+}
+
+.camap-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1.4rem 1.25rem;
+  background: var(--card);
+  text-align: center;
+}
+
+.camap-stat-value {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+.camap-stat-label {
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+  line-height: 1.4;
+}
+
+.camap-faq {
+  margin-top: 1.75rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.camap-faq-item {
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.camap-faq-item summary {
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+}
+
+.camap-faq-item summary::-webkit-details-marker { display: none; }
+
+.camap-faq-item summary::after {
+  content: '+';
+  float: right;
+  color: var(--muted-foreground);
+  font-weight: 400;
+}
+
+.camap-faq-item[open] summary::after { content: '−'; }
+
+.camap-faq-item p {
+  margin: 0.75rem 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.camap-engine-stack {
+  list-style: none;
+  margin: 1.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+  max-width: 40rem;
+}
+
+.camap-engine-stack li {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  gap: 0.85rem;
+  align-items: baseline;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+
+.camap-engine-stack li:last-child {
+  border-bottom: none;
+}
+
+.camap-engine-code {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--primary);
+}
+
+.camap-bento {
+  margin-top: 1.75rem;
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 800px) {
+  .camap-bento { grid-template-columns: 1fr 1fr; }
+}
+
+.camap-card {
+  padding: 1.25rem 1.3rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.camap-icon-box {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: 0.85rem;
+  border-radius: calc(var(--radius) - 2px);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  font-size: 1.15rem;
+}
+
+.camap-icon-box-sm {
+  width: 2rem;
+  height: 2rem;
+  margin-bottom: 0.55rem;
+  font-size: 0.95rem;
+}
+
+.camap-card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.camap-card p {
+  margin: 0;
+  color: var(--muted-foreground);
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+.camap-closing {
+  text-align: center;
+  padding: 3.5rem 1.5rem 4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.camap-closing h2 {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  letter-spacing: -0.03em;
+}
+
+.camap-closing p {
+  margin: 0 0 0.5rem;
+  color: var(--muted-foreground);
+}
+
+.camap-footer {
+  margin-top: auto;
+  width: 100%;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--secondary) 55%, transparent);
+  padding: 2.5rem 1.5rem 1.5rem;
+}
+
+.camap-footer-inner {
+  max-width: 1120px;
+  margin-inline: auto;
+  display: grid;
+  gap: 2rem;
+}
+
+@media (min-width: 800px) {
+  .camap-footer-inner {
+    grid-template-columns: 1.4fr 1fr;
+    gap: 3rem;
+    align-items: start;
+  }
+}
+
+.camap-footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-width: 22rem;
+}
+
+.camap-footer-brand p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--muted-foreground);
+}
+
+.camap-footer-cols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.camap-footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.camap-footer-col h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.camap-footer-col a {
+  font-size: 0.875rem;
+  color: var(--foreground);
+  text-decoration: none;
+  width: fit-content;
+}
+
+.camap-footer-col a:hover {
+  color: var(--primary);
+}
+
+.camap-footer-bar {
+  max-width: 1120px;
+  margin: 1.75rem auto 0;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.65rem 1.25rem;
+  font-size: 0.8rem;
+}
+
+.camap-footer-muted { color: var(--muted-foreground); }
+
+.camap-login-page {
+  height: 100%;
+  min-height: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  background:
+    radial-gradient(
+      ellipse 55% 40% at 12% 0%,
+      color-mix(in srgb, var(--bull) 8%, transparent),
+      transparent 60%
+    ),
+    var(--background);
+  overflow: auto;
+}
+
+.camap-shell.camap-login-page {
+  display: grid;
+  flex-direction: unset;
+}
+
+@media (min-width: 900px) {
+  .camap-login-page {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    overflow: hidden;
+  }
+}
+
+/* Brand column � Metronic inset panel (right on desktop) */
+.camap-login-brand {
+  display: none;
+  order: 1;
+  padding: 0;
+  min-height: 0;
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .camap-login-brand {
+    display: flex;
+    order: 1;
+    padding: 1.25rem;
+    height: 100%;
+    min-height: 0;
+  }
+}
+
+.camap-login-brand-panel {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.25rem;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: clamp(1.5rem, 2.8vw, 2.75rem);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 6px);
+  background:
+    radial-gradient(
+      ellipse 80% 60% at 15% 0%,
+      color-mix(in srgb, var(--primary) 16%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 70% 50% at 100% 100%,
+      color-mix(in srgb, var(--primary) 10%, transparent),
+      transparent 50%
+    ),
+    var(--card);
+  box-shadow: var(--shadow-lg);
+}
+
+.camap-login-brand-glow {
+  display: none;
+}
+
+.camap-login-brand-mark {
+  position: relative;
+  width: fit-content;
+  flex-shrink: 0;
+}
+
+.camap-login-brand-copy {
+  position: relative;
+  width: 100%;
+  max-width: 34rem;
+}
+
+.camap-login-brand-lockup {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(2.1rem, 3.8vw, 2.85rem);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+  color: var(--foreground);
+}
+
+.camap-login-brand-copy .camap-eyebrow {
+  margin-top: 0.85rem;
+}
+
+.camap-login-brand-copy h1 {
+  margin: 0.65rem 0 0;
+  font-family: var(--font-serif);
+  font-size: clamp(1.65rem, 2.4vw, 2.2rem);
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  font-weight: 400;
+}
+
+.camap-login-brand-copy h1 em {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--bull);
+}
+
+.camap-login-brand-lede {
+  margin: 0.75rem 0 0;
+  font-size: 0.925rem;
+  line-height: 1.55;
+  color: var(--muted-foreground);
+  max-width: 32rem;
+}
+
+.camap-login-brand-mid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  flex: 1;
+  min-height: 0;
+  justify-content: center;
+}
+
+.camap-login-brand-visual {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.camap-login-quote {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 4px);
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+  backdrop-filter: blur(6px);
+  flex-shrink: 0;
+}
+
+.camap-login-quote p {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--foreground);
+}
+
+.camap-login-quote cite {
+  display: block;
+  margin-top: 0.5rem;
+  font-style: normal;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+/* Form column � Metronic centered card (left on desktop) */
+.camap-login-form-side {
+  order: 2;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  min-height: 100%;
+  min-width: 0;
+  background: var(--surface-subtle);
+}
+
+@media (min-width: 900px) {
+  .camap-login-form-side {
+    order: 2;
+    height: 100%;
+    min-height: 0;
+    padding: 2rem 2.5rem;
+    background: transparent;
+  }
+
+  .camap-login-form-mark { display: none; }
+  .camap-login-top { justify-content: flex-end; }
+}
+
+.camap-login-form-wrap {
+  width: min(400px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.camap-login-top {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.camap-login-card {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+  padding: 1.75rem 1.65rem;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 2px);
+  background: var(--card);
+  box-shadow: var(--shadow-lg);
+}
+
+.camap-login-card-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.15rem;
+}
+
+.camap-eyebrow-icon {
+  font-size: 0.85rem;
+  color: var(--primary);
+}
+
+
+.camap-dev-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px dashed color-mix(in srgb, var(--primary) 45%, var(--border));
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+}
+
+.camap-dev-hint-tag {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  margin-top: 0.1rem;
+}
+
+.camap-dev-hint p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.camap-dev-hint code {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--foreground);
+  word-break: break-all;
+}
+
+.camap-login-card h1,
+.camap-login-card-head h1 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(1.75rem, 3vw, 2.1rem);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.camap-login-lede {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.camap-login-lede code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--foreground);
+}
+
+.camap-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.camap-field input {
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--foreground);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.8rem;
+}
+
+.camap-field input:focus {
+  outline: 2px solid color-mix(in srgb, var(--ring) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.camap-form-error {
+  margin: 0;
+  color: var(--destructive);
+  font-size: 0.875rem;
+}
+
+.camap-back {
+  text-align: center;
+  color: var(--muted-foreground);
+  text-decoration: none;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.camap-back:hover { color: var(--foreground); }

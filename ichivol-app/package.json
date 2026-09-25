@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "npm run dev --prefix server",
+    "dev:engine": "cd engine && .venv/Scripts/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload",
+    "dev:stack": "npx --yes concurrently -k -n web,api,engine -c cyan,magenta,green \"npm run dev\" \"npm run dev:api\" \"npm run dev:engine\"",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"

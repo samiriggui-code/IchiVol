@@ -1,0 +1,13 @@
+@import url('/keenicons/outline/style.css');
+@import url('/keenicons/duotone/style.css');
+
+/* Sizing helpers — keep icons crisp in nav / buttons */
+.ki-outline,
+.ki-duotone {
+  font-size: 1em;
+  color: inherit;
+}
+
+.ki-duotone {
+  font-size: 1em;
+}

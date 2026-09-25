@@ -1,0 +1,67 @@
+/* Tokens GSMS CRM — warm paper + blue (pas Comp AI indigo) */
+:root {
+  --background: #faf8f5;
+  --foreground: #11151c;
+  --card: #fefdfb;
+  --card-foreground: #11151c;
+  --primary: #1a7df5;
+  --primary-foreground: #ffffff;
+  --secondary: #f1eee9;
+  --secondary-foreground: #11151c;
+  --muted: #eeebe6;
+  --muted-foreground: #676b73;
+  --accent: #f1eee9;
+  --accent-foreground: #11151c;
+  --border: #ddd9d3;
+  --ring: #1a7df5;
+  --surface-subtle: #f6f3ee;
+  --destructive: #ae2e24;
+  --radius: 14px;
+  --font-sans: 'Manrope', system-ui, sans-serif;
+  --font-serif: 'Newsreader', Georgia, serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
+  --shadow-lg: 0 4px 8px rgba(20, 18, 30, 0.04), 0 18px 48px rgba(20, 18, 30, 0.06);
+  color-scheme: light;
+
+  /* Sémantique trading — aligné design-reference IchiVol */
+  --bull: #0b8f83;
+  --bear: #c8412f;
+  --neutral: #a76c17;
+  --weak: #9aa1ab;
+  --tenkan: #c9702f;
+  --kijun: #4f8fc0;
+  --span-a: var(--bull);
+  --span-b: var(--bear);
+  --amber: #a76c17;
+}
+
+html.dark {
+  --background: #12151a;
+  --foreground: #f1eee6;
+  --card: #1a1e26;
+  --card-foreground: #f1eee6;
+  --primary: #4b9bf7;
+  --primary-foreground: #0c121c;
+  --secondary: #22262f;
+  --secondary-foreground: #f1eee6;
+  --muted: #22262f;
+  --muted-foreground: #a0a8b5;
+  --accent: #2a303a;
+  --accent-foreground: #f1eee6;
+  --border: #333944;
+  --ring: #4b9bf7;
+  --surface-subtle: #1c2129;
+  --destructive: #ae2e24;
+  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.18);
+  color-scheme: dark;
+
+  --bull: #2dd4bf;
+  --bear: #f07167;
+  --neutral: #e8b86d;
+  --weak: #5b6b73;
+  --tenkan: #f4a261;
+  --kijun: #7eb8da;
+  --span-a: var(--bull);
+  --span-b: var(--bear);
+  --amber: #e8b86d;
+}

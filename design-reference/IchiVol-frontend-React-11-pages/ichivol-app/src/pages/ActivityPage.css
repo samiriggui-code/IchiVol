@@ -1,0 +1,237 @@
+/* Activité — aligné tokens IchiVol (camap) + patterns Overview / Décisions. */
+
+.act-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  /* Ne pas se faire compresser dans .dash-content (flex) — sinon « Ce que ça prouve » s’écrase. */
+  flex-shrink: 0;
+  min-height: min-content;
+  width: 100%;
+}
+
+.act-page > .panel,
+.act-page > .act-circuit {
+  flex-shrink: 0;
+}
+
+.act-circuit {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+@media (max-width: 1100px) {
+  .act-circuit { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .act-circuit { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+  .act-circuit { grid-template-columns: 1fr; }
+}
+
+.act-step {
+  gap: 0.2rem;
+  padding: 0.55rem 0.65rem 0.6rem;
+  border-left: 3px solid var(--border);
+}
+.act-step.is-ok { border-left-color: var(--bull); }
+.act-step.is-warn { border-left-color: var(--neutral); }
+.act-step.is-off { border-left-color: var(--bear); }
+
+.act-step-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+.act-step-num {
+  font-size: 0.58rem;
+  font-variant-numeric: tabular-nums;
+}
+.act-step-value {
+  font-size: 1.05rem;
+  font-weight: 650;
+  line-height: 1.15;
+  color: var(--foreground);
+}
+.act-step.is-off .act-step-value { color: var(--bear); }
+.act-step-what {
+  margin: 0.25rem 0 0;
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+
+.act-eff {
+  overflow: visible;
+  flex: none;
+  height: auto;
+  max-height: none;
+}
+.act-eff-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem 1.25rem;
+  padding: 0.35rem 0.75rem 0.85rem;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  flex: none;
+}
+@media (max-width: 800px) {
+  .act-eff-body { grid-template-columns: 1fr; }
+}
+.act-eff-block {
+  min-width: 0;
+}
+.act-eff-block .subhead {
+  margin-top: 0;
+  margin-bottom: 0.35rem;
+}
+.act-eff-list {
+  margin: 0 0 0.4rem;
+  padding-left: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--foreground);
+}
+.act-eff-lead {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--foreground);
+}
+.act-eff-note {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+.act-eff-list .up { color: var(--bull); font-weight: 600; }
+.act-eff-list .down { color: var(--bear); font-weight: 600; }
+
+.act-filters {
+  flex-shrink: 0;
+}
+
+.act-history {
+  overflow: visible;
+}
+.act-history .panel-head {
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.act-day {
+  padding: 0 0.75rem 0.35rem;
+}
+.act-day-title {
+  margin: 0.65rem 0 0.25rem;
+  text-transform: capitalize;
+}
+
+.act-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.act-row {
+  display: grid;
+  grid-template-columns: 2.75rem 0.55rem minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: start;
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem;
+}
+.act-row:first-child { border-top: none; }
+
+.act-time {
+  font-size: 0.68rem;
+  padding-top: 0.1rem;
+}
+
+.act-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  margin-top: 0.35rem;
+  background: var(--weak);
+  flex-shrink: 0;
+}
+.act-dot.is-good { background: var(--bull); }
+.act-dot.is-bad { background: var(--bear); }
+.act-dot.is-blocked { background: var(--neutral); }
+.act-dot.is-neutral { background: var(--weak); }
+.act-dot.is-run { background: var(--primary); }
+
+.act-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  min-width: 0;
+}
+.act-body strong {
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--foreground);
+}
+.act-detail {
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+.act-portfolio {
+  font-size: 0.62rem;
+  white-space: nowrap;
+  padding-top: 0.12rem;
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.act-empty {
+  padding: 0.5rem 0.75rem 0.85rem;
+  font-size: 0.78rem;
+}
+
+.act-run-toggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  line-height: 1.4;
+}
+.act-run-toggle:hover strong { color: var(--primary); }
+.act-chevron {
+  margin-left: 0.35rem;
+  font-size: 0.7rem;
+}
+
+.act-run-table-wrap {
+  margin-top: 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  background: var(--secondary);
+}
+.act-run-table-wrap table {
+  font-size: 0.72rem;
+}
+.act-badge {
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 0.25rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--neutral) 18%, transparent);
+  color: var(--foreground);
+}
+
+.act-eff-wide { grid-column: 1 / -1; }
