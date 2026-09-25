@@ -17,7 +17,8 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 - Smoke 11 pages PASS : `docs/ui-port/smoke-11-pages.json` (bruit `llm-test` 422 ignoré ; action copilot FAIL attendu sans clé LLM)
 - `find-unused-css` : classes mortes index.css nettoyées ; restent surtout `is-*` d’état (comme baseline Marché)
 - **Draft PR #109 — pas de merge** avant relecture Claude + OK Samir téléphone
-- VPS : backup puis déploiement préprod (voir entrée deploy ci-dessous)
+- **VPS préprod** : https://ichivol.global-it-ss.com — `RELEASE=025f1ac cursor/ui-port-pages-a2fe` · `web` rebuild · public 200
+- Backup : `/opt/ichivol-backup/pre-uiport-pages-20260925-134158.tgz` (+ `env-pre-uiport-pages-*` si présent)
 
 ### Suite
 
