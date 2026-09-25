@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "steps": [
+    "login",
+    "symbol=BTCUSDT",
+    "dialog",
+    "confirm-sheet",
+    "opened",
+    "close-confirm",
+    "closed"
+  ],
+  "error": null
+}

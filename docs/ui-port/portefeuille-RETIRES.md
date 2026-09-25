@@ -27,3 +27,5 @@
 | `PaperTradeSheet.tsx` | Détail position hors maquette ; clôture via `PaperCloseConfirmSheet` |
 | `BrokerAccount.tsx` / `CostsPanel.tsx` / `TestProgressPanel.tsx` / `ActivityJournal.tsx` / `PortfolioChart.tsx` | Ancienne Synthèse hors maquette |
 | Conservé : `PaperCloseConfirmSheet` | Fermeture paper depuis table Positions |
+| `PositionChart.tsx` | Orphelin post-purge |
+| `VerdictBadge.tsx` | Orphelin post-purge |

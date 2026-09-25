@@ -203,12 +203,11 @@ export function BacktestsPage() {
       <div className="notice blue">
         ◈{' '}
         <span>
-          Résultats engine · couverture backtest / runs persistés · research lab branché
-          (plan / audit / MC / walk-forward opt).
+          Résultats engine · couverture backtest / runs persistés · research branché.
         </span>
       </div>
       {researchMsg && (
-        <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }} role="status">
+        <p className="lab-research-msg" role="status">
           {researchMsg}
         </p>
       )}

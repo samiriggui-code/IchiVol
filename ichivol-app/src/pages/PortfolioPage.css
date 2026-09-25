@@ -1239,11 +1239,18 @@
   }
 }
 
+/* Lignes positions : hauteur maquette ~75 px */
+.pf-page tr.clickable td {
+  padding-top: 17px;
+  padding-bottom: 17px;
+}
 .pf-page .pf-pos-state {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  flex-direction: row;
+  align-items: center;
   gap: 8px;
+  flex-wrap: nowrap;
+  min-height: 22px;
 }
 .pf-page .suggestion,
 .pf-page .pf-close-btn {
@@ -1251,8 +1258,11 @@
   align-items: center;
   width: auto;
   margin-top: 0;
-  font-size: 11px;
-  padding: 6px 10px;
+  font-size: 10px;
+  padding: 2px 7px;
+  line-height: 1.2;
+  white-space: nowrap;
+  border-radius: 6px;
 }
 .pf-page .pf-close-btn:hover {
   border-color: var(--red);
