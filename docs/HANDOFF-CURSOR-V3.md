@@ -7,9 +7,10 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-25 — UI-P1b Desk finition — PR draft
+## 2026-09-25 — UI-P1b Desk finition — PR draft #98
 
-- Branche : `cursor/ui-p1b-desk-finish-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/98 — **draft** (attendre Claude avant merge)
+- Branche : `cursor/ui-p1b-desk-finish-a2fe` · tip `177bd12`
 - **Périmètre front only** — contraste sessions, formats fr-FR, liens accent, lecture marché.
 - Sessions : statut coloré comme marqueurs (vert / ambre / gris) ; sélecteur non « disabled » ; heures `fr-FR` 24 h.
 - Nombres Desk via `Intl.NumberFormat('fr-FR')` ; muted maquette `#7d8288` (clair) / `#a8b0bc` (sombre).
