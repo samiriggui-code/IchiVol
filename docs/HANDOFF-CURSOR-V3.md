@@ -7,6 +7,15 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — Copilot : « Pourquoi BTC attend » charge le moteur (draft)
+
+- Branche `cursor/copilot-context-a2fe`
+- **Cause** : question → mode `research` + prompt « si pas de LIVE_DATA → théorie » + OpenRouter sans prefetch décision → RAG + hallucination `!status`
+- **Fix** : planner `attendre/WAIT` → `explain_decision` ; research+symbole prefetch DECISION+LIVE ; prompt research n’impose plus la théorie si données présentes
+- Tests planner OK ; `npm test` server PASS
+
+---
+
 ## 2026-09-25 — Fix thème farci #2 — fuite CSS virgule (light = light)
 
 - Bug : dans `maquette-theme.css`, sélecteurs après `,` perdaient le préfixe `html.dark` → `.segmented` restait sombre en mode clair (bandeau Tous/PASSE/…)
