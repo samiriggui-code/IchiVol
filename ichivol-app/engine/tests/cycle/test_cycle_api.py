@@ -49,3 +49,27 @@ def test_get_cycle_observe_only(monkeypatch):
     assert cyc["regime"] in {"TREND", "CYCLE", "TRANSITION", "NOISE"}
     assert "disclaimer" in body
     assert "not a trade signal" in body["disclaimer"].lower()
+
+
+def test_get_cycle_study_observe_only(monkeypatch):
+    candles = _sine_candles(280)
+
+    class _Prov:
+        id = "binance"
+
+    def fake_resolve(symbol, timeframe, limit):
+        return (_Prov(), symbol, candles[:limit])
+
+    monkeypatch.setattr(
+        "app.market_data.resolve.resolve_and_fetch",
+        fake_resolve,
+    )
+
+    res = client.get(
+        "/api/engine/cycle/BTCUSDT/study?timeframe=1h&limit=280&window=96&horizon=8"
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["study"]["ok"] is True
+    assert body["study"]["verdict"]["promote_to_decision"] is False
+    assert "Research" in body["disclaimer"]

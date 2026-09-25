@@ -33,6 +33,8 @@ from app.chart_objects.types import ChartObjectType
 from app.context.calendar import fetch_calendar_events
 from app.context.news import fetch_news
 from app.correlation.engine import compute_correlation_matrix
+from app.cycle.engine import CycleParams, compute_cycle_state
+from app.cycle.study import CycleStudyParams, run_cycle_walk_forward
 from app.db.session import SessionLocal
 from app.indicators.atr import AtrParams
 from app.indicators.registry import REGISTRY
@@ -535,6 +537,80 @@ def cmd_get_correlations(args: dict) -> dict:
         "sample_size": result.sample_size,
         "matrix": result.matrix,
         "skipped": [{"symbol": s.symbol, "reason": s.reason} for s in result.skipped],
+    }
+
+
+def cmd_get_cycle_state(args: dict) -> dict:
+    """Same payload as `GET /cycle/{symbol}` — observe-only CycleState."""
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = args.get("timeframe", "1h")
+    if not isinstance(timeframe, str) or not timeframe.strip():
+        raise CommandError("missing_or_invalid_arg: 'timeframe' must be a non-empty string")
+    limit = int(args.get("limit", 300))
+    window = int(args.get("window", 128))
+    if window < 32 or window > 512:
+        raise CommandError("window must be in [32, 512]")
+    if limit < window:
+        raise CommandError("limit must be >= window")
+
+    try:
+        provider, provider_symbol, candles = resolve_and_fetch(symbol, timeframe, min(limit, 1000))
+    except ProviderNotWiredError as exc:
+        raise CommandError(str(exc)) from exc
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+
+    state = compute_cycle_state(candles, CycleParams(window=window))
+    return {
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "provider": provider.id,
+        "provider_symbol": provider_symbol,
+        "window": window,
+        "n_bars": len(candles),
+        "cycle": state.to_dict(),
+        "disclaimer": (
+            "Observe-only CycleState. Not a trade signal. "
+            "methods_agreement is period consensus, not probability of profit."
+        ),
+    }
+
+
+def cmd_run_cycle_study(args: dict) -> dict:
+    """Walk-forward + null models — same as GET /cycle/{symbol}/study."""
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = args.get("timeframe", "1h")
+    if not isinstance(timeframe, str) or not timeframe.strip():
+        raise CommandError("missing_or_invalid_arg: 'timeframe' must be a non-empty string")
+    limit = int(args.get("limit", 500))
+    window = int(args.get("window", 96))
+    horizon = int(args.get("horizon", 8))
+    if window < 32 or window > 512:
+        raise CommandError("window must be in [32, 512]")
+    if horizon < 1 or horizon > 64:
+        raise CommandError("horizon must be in [1, 64]")
+
+    try:
+        provider, provider_symbol, candles = resolve_and_fetch(symbol, timeframe, min(limit, 1000))
+    except ProviderNotWiredError as exc:
+        raise CommandError(str(exc)) from exc
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+
+    study = run_cycle_walk_forward(
+        candles,
+        CycleStudyParams(window=window, horizon=horizon),
+    )
+    return {
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "provider": provider.id,
+        "provider_symbol": provider_symbol,
+        "study": study,
+        "disclaimer": (
+            "Research walk-forward only. Not a trade signal. "
+            "Does not modify the decision pipeline."
+        ),
     }
 
 

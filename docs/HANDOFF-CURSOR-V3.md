@@ -1,5 +1,19 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — T-CYCLE V0 livré (observe-only) — tip à jour sur `main`
+
+- **Audit** : [`docs/CYCLE_ENGINE_AUDIT.md`](./CYCLE_ENGINE_AUDIT.md)
+- **Livré** :
+  - `app/cycle/` — FFT + Hilbert + ACF → `CycleState` (stdlib, causal)
+  - `GET /api/engine/cycle/{symbol}` + `GET /api/engine/cycle/{symbol}/study`
+  - Agent tools `get_cycle_state` + `run_cycle_study`
+  - Walk-forward + null models (`app/cycle/study.py`) ; `verdict.promote_to_decision` **toujours false**
+  - Benchmark helper `app/cycle/benchmark.py` (`python -m app.cycle.benchmark`)
+  - Tests lookahead / values / API / study
+- **Pas livré (volontaire)** : pipeline gates, paper, UI Desk, EMD, CycleStack MTF, ExpectedMoveRange
+- **Suite** : multi-symbol OOS, ablation A–G, benchmark 40/100 live candles, décision filtre vs prédicteur
+- CDC checkbox **T-CYCLE** reste ouverte jusqu’à preuve OOS
+
 ## 2026-09-25 — T-CYCLE Cycle/Spectral Engine — chantier ouvert
 
 - **Audit** : [`docs/CYCLE_ENGINE_AUDIT.md`](./CYCLE_ENGINE_AUDIT.md) · inscrit CDC V3 + METHODS

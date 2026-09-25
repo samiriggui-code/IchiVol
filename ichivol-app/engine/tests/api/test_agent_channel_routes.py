@@ -222,6 +222,22 @@ def test_agent_command_get_correlations(monkeypatch):
     assert set(body["symbols"]) == {"BTCUSDT", "ETHUSDT"}
 
 
+def test_agent_command_get_cycle_state(monkeypatch):
+    candles = _uptrend_with_spike(200)
+    monkeypatch.setattr(binance, "fetch_klines", lambda symbol, tf, limit: candles)
+
+    resp = client.post(
+        "/api/engine/agent/command",
+        json={"cmd": "get_cycle_state", "args": {"symbol": "BTCUSDT", "window": 64, "limit": 200}},
+    )
+    assert resp.status_code == 200
+    body = resp.json()["data"]
+    assert body["symbol"] == "BTCUSDT"
+    assert "cycle" in body
+    assert "buy" not in body["cycle"]
+    assert "disclaimer" in body
+
+
 def test_agent_command_get_news(monkeypatch):
     import httpx
 

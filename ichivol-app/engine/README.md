@@ -256,6 +256,13 @@ Stateless comme `/backtest` : recalculée à chaque appel sur l'historique dispo
 
 `app/cycle/` — FFT + Hilbert/Ehlers-style + ACF → `CycleState` (période, phase, stabilité, régime). Stdlib only, causal, **jamais** branché sur le pipeline. Ref : `docs/CYCLE_ENGINE_AUDIT.md`.
 
+```
+GET /api/engine/cycle/{symbol}?timeframe=1h&limit=300&window=128
+GET /api/engine/cycle/{symbol}/study?timeframe=1h&limit=500&window=96&horizon=8
+```
+
+Agent : `get_cycle_state`, `run_cycle_study`. Lab harness : `app/cycle/study.py` (walk-forward + null models). Benchmark : `python -m app.cycle.benchmark`.
+
 ## Routes
 
 ```

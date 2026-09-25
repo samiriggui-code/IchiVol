@@ -346,6 +346,13 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/cycle/{symbol}/study",
+    "endpoint": "get_cycle_study"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/cycle/{symbol}",
     "endpoint": "get_cycle_state"
   },

@@ -348,7 +348,8 @@ Python calcule `CycleState`. Claude reçoit JSON structuré et **interprète** �
 ## Prochaines étapes ordonnées
 
 1. ~~Audit (ce doc)~~  
-2. Inscription CDC / METHODS / HANDOFF  
-3. Package `app/cycle` + tests lookahead  
-4. Route `GET /cycle/{symbol}`  
-5. Demain : walk-forward, null models, benchmark 40/100, décision filtre vs prédicteur  
+2. ~~Inscription CDC / METHODS / HANDOFF~~  
+3. ~~Package `app/cycle` + tests lookahead~~  
+4. ~~Route `GET /cycle/{symbol}`~~  
+5. ~~Walk-forward + null models (`study.py`) + agent tools + benchmark helper~~  
+6. **Suite** : multi-symbol OOS réel, ablation A–G, benchmark 40/100 candles live, décision filtre vs prédicteur — **avant toute gate**  
