@@ -56,6 +56,63 @@ html.dark
   color: var(--ink);
 }
 
+/* En-têtes de table / lignes — hex crème hardcodés dans les CSS pages */
+html.dark
+  :is(
+    .desk-page,
+    .market-page,
+    .opps-page,
+    .pf-page,
+    .journal-page,
+    .ops-page,
+    .lab-page,
+    .ctx-page,
+    .copilot-page,
+    .agents-page,
+    .params-page
+  )
+  :is(th, thead, .card-head) {
+  background: color-mix(in srgb, var(--card) 88%, #000) !important;
+  color: var(--muted);
+  border-color: var(--line);
+}
+
+html.dark
+  :is(
+    .desk-page,
+    .market-page,
+    .opps-page,
+    .pf-page,
+    .journal-page,
+    .ops-page,
+    .lab-page,
+    .ctx-page,
+    .copilot-page,
+    .agents-page,
+    .params-page
+  )
+  tbody tr {
+  border-color: var(--line);
+}
+
+html.dark
+  :is(
+    .desk-page,
+    .market-page,
+    .opps-page,
+    .pf-page,
+    .journal-page,
+    .ops-page,
+    .lab-page,
+    .ctx-page,
+    .copilot-page,
+    .agents-page,
+    .params-page
+  )
+  tbody tr:hover {
+  background: #22262f;
+}
+
 /* Surfaces hardcodées claires (hover, chips, notices) → sombre cohérent */
 html.dark
   :is(
