@@ -7,6 +7,18 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — Fix fiche Opportunités mobile — merge + VPS
+
+- PR : (à venir) branche `cursor/fix-opps-sheet-mobile-a2fe`
+- Cause : `.is-sheet-open` masquait market-head / table mais **pas** `.opp-ribbon` / Pourquoi / pulse / filtres P2 → Fermer hors écran
+- Fix : wrapper `.decisions-chrome` masqué en mobile ; fiche `position:fixed` + en-tête sticky **← Retour** ; `?symbol=` push/back ; re-tap onglet Opportunités nettoie la query
+- Smoke 390 : 3 symboles · scroll · 3 chemins de fermeture — **PASS** · [`docs/fix-opps-sheet/`](./fix-opps-sheet/)
+
+### Suite
+Rebase UI-P4 (#103) sur main → smoke → merge + VPS. Puis nettoyage front (draft). **Pas** de runtime agents.
+
+---
+
 ## 2026-09-25 — Audit Agent Runtime VALIDÉ (Claude) — merge docs
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/102 — squash merge (docs only)

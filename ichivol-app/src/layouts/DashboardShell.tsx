@@ -216,6 +216,13 @@ function DashboardShellInner() {
                 key={to}
                 to={to}
                 className={({ isActive }) => `dash-mobile-tab${isActive ? ' is-active' : ''}`}
+                onClick={(e) => {
+                  /* Re-tap onglet actif → ferme fiche (?symbol=) / query et revient à la liste */
+                  if (location.pathname === to && location.search) {
+                    e.preventDefault()
+                    navigate(to)
+                  }
+                }}
               >
                 <Icon />
                 <span>{label}</span>

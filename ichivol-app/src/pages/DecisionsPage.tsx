@@ -291,7 +291,7 @@ type PaperConfirmState = {
 }
 
 export function DecisionsPage() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const pinnedOnly = searchParams.get('filter') === 'pinned'
   const [pinnedSymbols, setPinnedSymbols] = useState<Set<string> | null>(null)
   const [instruments, setInstruments] = useState<EngineInstrument[]>([])
@@ -718,6 +718,11 @@ export function DecisionsPage() {
     setDetailLoading(false)
     setIntentOverride(null)
     setConfirmMsg(null)
+    if (searchParams.has('symbol')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('symbol')
+      setSearchParams(next, { replace: true })
+    }
   }
 
   function onSelect(symbol: string) {
@@ -733,6 +738,9 @@ export function DecisionsPage() {
     setDetailLoading(true)
     setIntentOverride(null)
     setConfirmMsg(null)
+    const next = new URLSearchParams(searchParams)
+    next.set('symbol', symbol)
+    setSearchParams(next, { replace: false })
     getDecisionDetail(symbol, timeframe)
       .then(setDetail)
       .catch((err: unknown) =>
@@ -763,7 +771,18 @@ export function DecisionsPage() {
     ) {
       setMarketClass(classQ)
     }
-    if (!fromUrl || selected === fromUrl) return
+    if (!fromUrl) {
+      if (selected) {
+        setSelected(null)
+        setDetail(null)
+        setDetailError(null)
+        setDetailLoading(false)
+        setIntentOverride(null)
+        setConfirmMsg(null)
+      }
+      return
+    }
+    if (selected === fromUrl) return
     setSelected(fromUrl)
     setDetail(null)
     setDetailError(null)
@@ -819,6 +838,7 @@ export function DecisionsPage() {
 
   return (
     <div className={`decisions-page${sheetOpen ? ' is-sheet-open' : ''}`}>
+      <div className="decisions-chrome" aria-hidden={sheetOpen || undefined}>
       <header className="iv-page-header page-head market-head">
         <div className="market-head-copy">
           <p className="iv-page-eyebrow">Trading · Opportunités</p>
@@ -977,6 +997,7 @@ export function DecisionsPage() {
             : error}
         </div>
       )}
+      </div>
 
       <div className="decisions-split">
         <section className="panel decisions-table-panel">
@@ -1274,8 +1295,8 @@ export function DecisionsPage() {
                     Marché →
                   </Link>
                 )}
-                <button type="button" className="ghost decision-sheet-close" onClick={closeSheet}>
-                  Fermer
+                <button type="button" className="ghost decision-sheet-close" onClick={closeSheet} aria-label="Retour à la liste">
+                  ← Retour
                 </button>
               </div>
             </header>
