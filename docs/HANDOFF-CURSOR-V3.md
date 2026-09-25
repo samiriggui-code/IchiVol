@@ -7,13 +7,27 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — UI-P3 corrections + merge + VPS
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/101 — squash merge après corrections
+- Branche : `cursor/ui-p3-journal-ops-a2fe` · tip `c92201b` (+ captures smoke)
+- **Exception server minimale** : `PATCH /api/decisions/:id` accepte `note` (trim, max 500, vide→null) · ownership user → 404 sinon · update in-place (archivée sans doublon)
+- Client : `patchUserDecisionNote` · Journal n’utilise plus `confirmUserDecision` pour la note
+- Opérations : liens accent (pas de soulignement bleu) · pas de self-link « Opérations → » · « Aucun run » si jamais de backtest
+- Tests : `server/.../patchNote.test.ts` 8/8 · lint/build · `scripts/smoke-ui-p3.mjs` desktop+mobile 390 — **PASS**
+- Captures : [`docs/ui-p3/`](./ui-p3/)
+
+### Suite
+UI-P4 (Marché, Lab, Contexte, Copilot, Agents, Paramètres + pill PAPER) + audit agents en **PR draft** — **ne pas merger** avant relecture Claude.
+
+---
+
 ## 2026-09-25 — UI-P2 corrections + merge
 
-- PR : https://github.com/samiriggui-code/IchiVol/pull/100 — squash merge après corrections
-- Branche : `cursor/ui-p2-portfolio-opps-a2fe` · tip `184de0c`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/100 — squash merge après corrections · tip main `1b620d3`
+- Branche : `cursor/ui-p2-portfolio-opps-a2fe`
 - Corrections : Drawdown « Depuis le plus haut » · montants page via `fmtEur` fr-FR (€)
 - Captures : [`docs/ui-p2/`](./ui-p2/) · smoke PASS
-- **Vérifier** tip `main` après merge
 
 ### Suite
 UI-P3 rebase sur main → corrections note PATCH + ops polish → merge + VPS.

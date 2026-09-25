@@ -31,6 +31,15 @@ export interface ScreenerDataQuality {
   data_late?: boolean
 }
 
+/** T11a — provenance série (fingerprint / provider) — observation only. */
+export interface ScreenerDataProvenance {
+  version?: string
+  provider?: string
+  dataset_fingerprint?: string
+  n_bars?: number
+  closed_only?: boolean
+}
+
 export interface ScreenerDecisionRow {
   symbol: string
   timeframe: string
@@ -47,6 +56,8 @@ export interface ScreenerDecisionRow {
   lab_context?: LabContextPayload
   /** T11a — stale / data_late pour notice fraîcheur Desk. */
   data_quality?: ScreenerDataQuality | null
+  /** T11a — provider / fingerprint pour audit Lab. */
+  data_provenance?: ScreenerDataProvenance | null
 }
 
 export interface AgentDetail {

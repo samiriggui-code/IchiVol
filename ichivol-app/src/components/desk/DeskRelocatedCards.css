@@ -73,3 +73,19 @@
 @media (max-width: 640px) {
   .ov-circuit-grid { grid-template-columns: 1fr; }
 }
+
+.desk-relocated-stack a.link,
+.ov-proof-block a.link {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+.desk-relocated-stack a.link:hover,
+.desk-relocated-stack a.link:focus-visible,
+.ov-proof-block a.link:hover,
+.ov-proof-block a.link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  color: var(--primary);
+}

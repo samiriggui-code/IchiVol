@@ -185,7 +185,11 @@ export function Circuit24Strip({
           <div>
             <span className="muted">Lab / backtests</span>
             <strong className="mono">{fmtInt(summary.backtest.runs_total)}</strong>
-            <small className="muted">dernier {fmtWhen(summary.backtest.last_at)}</small>
+            <small className="muted">
+              {summary.backtest.last_at
+                ? `dernier ${fmtWhen(summary.backtest.last_at)}`
+                : 'Aucun run'}
+            </small>
           </div>
         </div>
       )}
@@ -197,18 +201,23 @@ export function EvidenceOpsCard({
   evidence,
   summary,
   loading,
+  showOpsLink = true,
 }: {
   evidence: BacktestEvidenceSummary | null
   summary: ActivitySummary | null
+  /** Masquer le lien Opérations → (ex. déjà sur la page Opérations). */
+  showOpsLink?: boolean
 } & LoadProps) {
   const edge = evidence?.pipeline_beats_ichimoku_sharpe
   return (
     <section className="panel ov-proof-block" aria-label="Preuves et opérations">
       <header className="panel-head">
         <h2>Preuves &amp; opérations</h2>
-        <Link to="/app/operations" className="ghost">
-          Opérations →
-        </Link>
+        {showOpsLink ? (
+          <Link to="/app/operations" className="link">
+            Opérations →
+          </Link>
+        ) : null}
       </header>
       <div className="ov-proof-body card-body">
         {loading && !evidence && !summary ? (

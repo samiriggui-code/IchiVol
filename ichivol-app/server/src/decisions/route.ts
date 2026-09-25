@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express'
 import { db } from '../db.js'
 import { createNotification } from '../notifications/create.js'
+import { decisionOwnedByUser, parsePatchDecisionBody } from './patchDecision.js'
 
 const STATUSES = new Set(['confirmed', 'dismissed', 'archived'])
 
@@ -162,7 +163,7 @@ export async function handleCreateDecision(req: Request, res: Response): Promise
   res.status(201).json({ ...row, deduped: false })
 }
 
-/** PATCH /api/decisions/:id — statut (dismissed / archived / confirmed). */
+/** PATCH /api/decisions/:id — statut et/ou note personnelle (max 500). */
 export async function handlePatchDecision(req: Request, res: Response): Promise<void> {
   if (!req.user) {
     res.status(401).json({ error: 'Non authentifié' })
@@ -173,20 +174,20 @@ export async function handlePatchDecision(req: Request, res: Response): Promise<
     res.status(400).json({ error: 'id requis' })
     return
   }
-  const body = req.body as Record<string, unknown> | null
-  const status = body && typeof body.status === 'string' ? body.status : null
-  if (!status || !STATUSES.has(status)) {
-    res.status(400).json({ error: 'status invalide (confirmed|dismissed|archived)' })
+  const parsed = parsePatchDecisionBody(req.body)
+  if (!parsed.ok) {
+    res.status(parsed.status).json({ error: parsed.error })
     return
   }
+
   const existing = await db.decision.findFirst({ where: { id, userId: req.user.id } })
-  if (!existing) {
+  if (!decisionOwnedByUser(existing, req.user.id)) {
     res.status(404).json({ error: 'Décision introuvable' })
     return
   }
   const row = await db.decision.update({
     where: { id },
-    data: { status },
+    data: parsed.data,
   })
   res.json(row)
 }
