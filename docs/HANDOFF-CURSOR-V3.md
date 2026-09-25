@@ -7,6 +7,19 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — UI-P2 corrections + merge
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/100 — squash merge après corrections
+- Branche : `cursor/ui-p2-portfolio-opps-a2fe` · tip `184de0c`
+- Corrections : Drawdown « Depuis le plus haut » · montants page via `fmtEur` fr-FR (€)
+- Captures : [`docs/ui-p2/`](./ui-p2/) · smoke PASS
+- **Vérifier** tip `main` après merge
+
+### Suite
+UI-P3 rebase sur main → corrections note PATCH + ops polish → merge + VPS.
+
+---
+
 ## 2026-09-25 — UI-P2 Portefeuille + Opportunités — PR draft #100
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/100 — **draft** (attendre Claude avant merge)
