@@ -7,6 +7,14 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — Fix thème farci #2 — fuite CSS virgule (light = light)
+
+- Bug : dans `maquette-theme.css`, sélecteurs après `,` perdaient le préfixe `html.dark` → `.segmented` restait sombre en mode clair (bandeau Tous/PASSE/…)
+- Fix : réécriture sans fuite ; light → shell/card/segmented/th tous clairs ; dark → tous sombres
+- Smoke local PASS ; VPS à déployer
+
+---
+
 ## 2026-09-25 — Fix thème farci dark/light (draft → merge autonome)
 
 - Branche `cursor/theme-fix-a2fe` depuis `main` @ `225549d`

@@ -1,10 +1,11 @@
 /**
  * Alignement thème sombre ↔ pages maquette.
  *
- * Chaque *-page fige --bg/--card/--ink en clair (port littéral).
- * Le shell (camap-tokens) passe en sombre via html.dark → contraste « farci ».
- * Ici on resynchronise les variables maquette sous html.dark.
- * Les tags pastel (PASSE/PRUDENCE/REFUSÉ) restent lisibles sur fond sombre.
+ * Cause du farci : shell (camap-tokens html.dark) sombre + pages maquette
+ * figent --bg/--card/--ink en clair.
+ *
+ * IMPORTANT : chaque sélecteur après une virgule DOIT reprendre html.dark
+ * (sinon les styles dark fuient en mode light — bug #112/#113).
  */
 
 html.dark
@@ -35,7 +36,6 @@ html.dark
   color-scheme: dark;
 }
 
-/* Cartes / table-wrap : forcer le fond var (évite hex clairs résiduels) */
 html.dark
   :is(
     .desk-page,
@@ -56,7 +56,6 @@ html.dark
   color: var(--ink);
 }
 
-/* En-têtes de table / lignes — hex crème hardcodés dans les CSS pages */
 html.dark
   :is(
     .desk-page,
@@ -113,7 +112,6 @@ html.dark
   background: #22262f;
 }
 
-/* Surfaces hardcodées claires (hover, chips, notices) → sombre cohérent */
 html.dark
   :is(
     .desk-page,
@@ -173,6 +171,7 @@ html.dark
   color: #8eb0d8;
 }
 
+/* segmented / tabs — UN SEUL sélecteur (pas de virgule hors html.dark) */
 html.dark
   :is(
     .desk-page,
@@ -187,21 +186,7 @@ html.dark
     .agents-page,
     .params-page
   )
-  .tabs,
-  :is(
-    .desk-page,
-    .market-page,
-    .opps-page,
-    .pf-page,
-    .journal-page,
-    .ops-page,
-    .lab-page,
-    .ctx-page,
-    .copilot-page,
-    .agents-page,
-    .params-page
-  )
-  .segmented {
+  :is(.tabs, .segmented) {
   background: #1c2129;
 }
 
@@ -219,21 +204,7 @@ html.dark
     .agents-page,
     .params-page
   )
-  .tabs button.active,
-  :is(
-    .desk-page,
-    .market-page,
-    .opps-page,
-    .pf-page,
-    .journal-page,
-    .ops-page,
-    .lab-page,
-    .ctx-page,
-    .copilot-page,
-    .agents-page,
-    .params-page
-  )
-  .segmented button.active {
+  :is(.tabs button.active, .segmented button.active) {
   background: #2a303a;
   color: var(--ink);
 }
@@ -252,35 +223,7 @@ html.dark
     .agents-page,
     .params-page
   )
-  input,
-  :is(
-    .desk-page,
-    .market-page,
-    .opps-page,
-    .pf-page,
-    .journal-page,
-    .ops-page,
-    .lab-page,
-    .ctx-page,
-    .copilot-page,
-    .agents-page,
-    .params-page
-  )
-  select,
-  :is(
-    .desk-page,
-    .market-page,
-    .opps-page,
-    .pf-page,
-    .journal-page,
-    .ops-page,
-    .lab-page,
-    .ctx-page,
-    .copilot-page,
-    .agents-page,
-    .params-page
-  )
-  textarea {
+  :is(input, select, textarea) {
   background: #1a1e26;
   color: var(--ink);
   border-color: var(--line);
@@ -318,67 +261,10 @@ html.dark
     .agents-page,
     .params-page
   )
-  td,
-  :is(
-    .desk-page,
-    .market-page,
-    .opps-page,
-    .pf-page,
-    .journal-page,
-    .ops-page,
-    .lab-page,
-    .ctx-page,
-    .copilot-page,
-    .agents-page,
-    .params-page
-  )
-  .card-head h2,
-  :is(
-    .desk-page,
-    .market-page,
-    .opps-page,
-    .pf-page,
-    .journal-page,
-    .ops-page,
-    .lab-page,
-    .ctx-page,
-    .copilot-page,
-    .agents-page,
-    .params-page
-  )
-  h1,
-  :is(
-    .desk-page,
-    .market-page,
-    .opps-page,
-    .pf-page,
-    .journal-page,
-    .ops-page,
-    .lab-page,
-    .ctx-page,
-    .copilot-page,
-    .agents-page,
-    .params-page
-  )
-  h2,
-  :is(
-    .desk-page,
-    .market-page,
-    .opps-page,
-    .pf-page,
-    .journal-page,
-    .ops-page,
-    .lab-page,
-    .ctx-page,
-    .copilot-page,
-    .agents-page,
-    .params-page
-  )
-  h3 {
+  :is(td, .card-head h2, h1, h2, h3) {
   color: var(--ink);
 }
 
-/* Dialog maquette (fiches / opportunités) */
 html.dark dialog,
 html.dark .dialog-body,
 html.dark .fiche-dialog {
