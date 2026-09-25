@@ -13,6 +13,7 @@ import {
   type BacktestRun,
   type BacktestRuns,
   type EvidenceOutcomes,
+  type FeedTone,
 } from '../lib/activity'
 import { getShadowStats, type ShadowStats } from '../lib/paper'
 import { getScreener, type ScreenerDecisionRow } from '../lib/decisions'
@@ -24,13 +25,22 @@ import {
 } from '../components/desk/DeskRelocatedCards'
 import './ActivityPage.css'
 
-type Filter = 'all' | 'paper' | 'shadow' | 'backtest'
+type HistoryFilter = 'all' | 'paper' | 'shadow' | 'backtest'
+type LevelFilter = 'all' | 'PASSE' | 'PRUDENCE' | 'REFUSÉ'
+type AuditLevel = 'PASSE' | 'PRUDENCE' | 'REFUSÉ'
 
-const FILTERS: { id: Filter; label: string }[] = [
+const HISTORY_FILTERS: { id: HistoryFilter; label: string }[] = [
   { id: 'all', label: 'Tout' },
   { id: 'paper', label: 'Trades papier' },
   { id: 'shadow', label: 'Filtres' },
   { id: 'backtest', label: 'Backtests' },
+]
+
+const LEVEL_FILTERS: { id: LevelFilter; label: string }[] = [
+  { id: 'all', label: 'Tous' },
+  { id: 'PASSE', label: 'PASSE' },
+  { id: 'PRUDENCE', label: 'PRUDENCE' },
+  { id: 'REFUSÉ', label: 'REFUSÉ' },
 ]
 
 const REFRESH_MS = 60_000
@@ -39,6 +49,15 @@ type TimelineEntry =
   | { type: 'feed'; time: string; item: ActivityItem; portfolios: string[] }
   | { type: 'run'; time: string; run: BacktestRun }
 
+type AuditRow = {
+  key: string
+  time: string
+  level: AuditLevel
+  source: string
+  event: string
+  portfolios: string[]
+}
+
 function fmtWhen(iso: string | null): string {
   if (!iso) return 'jamais'
   return new Date(iso).toLocaleString('fr-FR', {
@@ -46,6 +65,15 @@ function fmtWhen(iso: string | null): string {
     month: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+  })
+}
+
+function fmtClock(iso: string): string {
+  return new Date(iso).toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
   })
 }
 
@@ -68,6 +96,39 @@ function fmtInt(n: number): string {
 
 function fmtNumber(n: number | null, digits = 2): string {
   return n == null ? '—' : n.toFixed(digits)
+}
+
+/** Map feed tone → niveau maquette PASSE / PRUDENCE / REFUSÉ. */
+function levelFromTone(tone: FeedTone): AuditLevel {
+  switch (tone) {
+    case 'good':
+      return 'PASSE'
+    case 'blocked':
+      return 'PRUDENCE'
+    case 'bad':
+      return 'REFUSÉ'
+    case 'neutral':
+      return 'PRUDENCE'
+    default: {
+      const _exhaustive: never = tone
+      return _exhaustive
+    }
+  }
+}
+
+function sourceFromItem(item: ActivityItem): string {
+  switch (item.kind) {
+    case 'paper_opened':
+    case 'paper_closed':
+      return 'Position'
+    case 'shadow_blocked':
+    case 'shadow_closed':
+      return 'Filtres'
+    default: {
+      const _exhaustive: never = item.kind
+      return _exhaustive
+    }
+  }
 }
 
 function CircuitCard(props: {
@@ -136,6 +197,20 @@ function RunDetail({ run, minTrades }: { run: BacktestRun; minTrades: number }) 
   )
 }
 
+function qualityIssues(row: ScreenerDecisionRow): string[] {
+  const dq = row.data_quality
+  if (!dq) return []
+  const issues: string[] = []
+  if (dq.stale) issues.push('périmé')
+  if (dq.data_late) issues.push('retard')
+  if (dq.issue_codes?.length) issues.push(...dq.issue_codes)
+  if (dq.ok === false && issues.length === 0) issues.push(dq.gate ?? 'qualité')
+  if (dq.gate && /fail|block|reject|warn/i.test(dq.gate) && !issues.includes(dq.gate)) {
+    issues.push(dq.gate)
+  }
+  return issues
+}
+
 export function ActivityPage() {
   const [summary, setSummary] = useState<ActivitySummary | null>(null)
   const [feed, setFeed] = useState<ActivityItem[]>([])
@@ -145,7 +220,9 @@ export function ActivityPage() {
   const [coverage, setCoverage] = useState<BacktestCoverage | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<Filter>('all')
+  const [filter, setFilter] = useState<HistoryFilter>('all')
+  const [levelFilter, setLevelFilter] = useState<LevelFilter>('all')
+  const [auditQuery, setAuditQuery] = useState('')
   const [openRun, setOpenRun] = useState<string | null>(null)
   const [screenerRows, setScreenerRows] = useState<ScreenerDecisionRow[]>([])
   const [evidenceSummary, setEvidenceSummary] = useState<BacktestEvidenceSummary | null>(null)
@@ -184,6 +261,65 @@ export function ActivityPage() {
     return () => window.clearInterval(id)
   }, [load])
 
+  const auditRows = useMemo(() => {
+    const merged = new Map<string, AuditRow>()
+    for (const item of feed) {
+      const level = levelFromTone(item.tone)
+      const key = `${item.time.slice(0, 19)}|${item.kind}|${item.symbol}|${item.detail}`
+      const existing = merged.get(key)
+      if (existing) {
+        existing.portfolios.push(item.portfolio)
+        continue
+      }
+      merged.set(key, {
+        key,
+        time: item.time,
+        level,
+        source: sourceFromItem(item),
+        event: item.detail ? `${item.title} — ${item.detail}` : item.title,
+        portfolios: [item.portfolio],
+      })
+    }
+    return [...merged.values()].sort((a, b) => b.time.localeCompare(a.time))
+  }, [feed])
+
+  const filteredAudit = useMemo(() => {
+    const q = auditQuery.trim().toLowerCase()
+    return auditRows.filter((row) => {
+      if (levelFilter !== 'all' && row.level !== levelFilter) return false
+      if (!q) return true
+      const hay = `${row.level} ${row.source} ${row.event} ${row.portfolios.join(' ')}`.toLowerCase()
+      return hay.includes(q)
+    })
+  }, [auditRows, levelFilter, auditQuery])
+
+  const dataQualityRows = useMemo(() => {
+    return screenerRows
+      .map((row) => {
+        const issues = qualityIssues(row)
+        const dq = row.data_quality
+        const prov = row.data_provenance
+        return {
+          symbol: row.symbol,
+          issues,
+          gate: dq?.gate ?? null,
+          stale: Boolean(dq?.stale),
+          dataLate: Boolean(dq?.data_late),
+          ok: dq?.ok !== false && issues.length === 0,
+          provider: prov?.provider ?? null,
+          fingerprint: prov?.dataset_fingerprint ?? null,
+          nBars: prov?.n_bars ?? null,
+          hasQuality: Boolean(dq),
+        }
+      })
+      .filter((r) => r.hasQuality)
+  }, [screenerRows])
+
+  const qualityProblems = useMemo(
+    () => dataQualityRows.filter((r) => !r.ok || r.issues.length > 0),
+    [dataQualityRows],
+  )
+
   const timeline = useMemo(() => {
     const entries: TimelineEntry[] = []
     if (filter !== 'backtest') {
@@ -215,6 +351,7 @@ export function ActivityPage() {
 
   const evidenceWired = (summary?.evidence.rows_total ?? 0) > 0
   const minTrades = runs?.min_trades_per_pair ?? 30
+  const latestRun = runs?.runs[0] ?? null
 
   return (
     <div className="act-page">
@@ -317,136 +454,236 @@ export function ActivityPage() {
         />
       </section>
 
-      <section className="panel act-eff" aria-label="Efficacité">
+      <div className="act-ops-toolbar" role="search">
+        <div className="market-class-tabs act-filters" role="tablist" aria-label="Filtre niveau">
+          {LEVEL_FILTERS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              role="tab"
+              aria-selected={levelFilter === f.id}
+              className={levelFilter === f.id ? 'is-active' : undefined}
+              onClick={() => setLevelFilter(f.id)}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <label className="act-ops-search">
+          <span className="sr-only">Rechercher dans le journal</span>
+          <input
+            type="search"
+            placeholder="Rechercher dans le journal…"
+            value={auditQuery}
+            onChange={(e) => setAuditQuery(e.target.value)}
+          />
+        </label>
+      </div>
+
+      <div className="act-ops-grid">
+        <section className="panel act-audit" aria-label="Journal d’audit">
+          <header className="panel-head">
+            <h2>Journal d’audit</h2>
+            <span className="panel-meta">
+              {loading ? '…' : `${fmtInt(filteredAudit.length)} événement${filteredAudit.length === 1 ? '' : 's'}`}
+            </span>
+          </header>
+          {loading ? (
+            <p className="muted act-empty">Chargement…</p>
+          ) : error ? (
+            <p className="muted act-empty">Journal indisponible.</p>
+          ) : filteredAudit.length === 0 ? (
+            <p className="muted act-empty">Aucun événement pour ce filtre.</p>
+          ) : (
+            <div className="table-wrap act-audit-table-wrap">
+              <table className="act-audit-table">
+                <thead>
+                  <tr>
+                    <th>Heure</th>
+                    <th>Niveau</th>
+                    <th>Source</th>
+                    <th>Événement</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAudit.map((row) => (
+                    <tr key={row.key}>
+                      <td className="mono muted">{fmtClock(row.time)}</td>
+                      <td>
+                        <span
+                          className={`act-level is-${
+                            row.level === 'PASSE'
+                              ? 'passe'
+                              : row.level === 'PRUDENCE'
+                                ? 'prudence'
+                                : 'refuse'
+                          }`}
+                        >
+                          {row.level}
+                        </span>
+                      </td>
+                      <td>{row.source}</td>
+                      <td>
+                        {row.event}
+                        {row.portfolios.length > 1 ? (
+                          <span className="muted"> · {row.portfolios.length} portes</span>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section className="panel act-quality" aria-label="Qualité des données">
+          <header className="panel-head">
+            <h2>Qualité des données</h2>
+            <span className="panel-meta">screener · 1H</span>
+          </header>
+          {loading ? (
+            <p className="muted act-empty">Chargement…</p>
+          ) : dataQualityRows.length === 0 ? (
+            <p className="muted act-empty">Non disponible</p>
+          ) : qualityProblems.length === 0 ? (
+            <p className="act-quality-ok">Aucun problème détecté</p>
+          ) : (
+            <ul className="act-quality-list">
+              {qualityProblems.map((r) => (
+                <li key={r.symbol}>
+                  <div className="act-quality-row">
+                    <strong className="mono">{r.symbol}</strong>
+                    <span className="act-level is-prudence" aria-label="prudence">
+                      PRUDENCE
+                    </span>
+                  </div>
+                  <p className="muted act-quality-detail">
+                    {r.issues.length ? r.issues.join(' · ') : 'anomalie'}
+                    {r.gate ? ` · porte ${r.gate}` : ''}
+                    {r.stale ? ' · stale' : ''}
+                    {r.dataLate ? ' · retard' : ''}
+                    {r.provider ? ` · ${r.provider}` : ''}
+                    {r.nBars != null ? ` · ${fmtInt(r.nBars)} barres` : ''}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <section className="panel act-trace" aria-label="Ce que la trace explique">
         <header className="panel-head">
-          <h2>Ce que ça prouve</h2>
-          <span className="panel-meta">filtres · edge backtest · signaux suivis</span>
+          <h2>Ce que la trace explique</h2>
+          <span className="panel-meta">décision · protection · reproductibilité</span>
         </header>
-        <div className="act-eff-body">
-          <div className="act-eff-block">
-            <h3 className="subhead">Filtres</h3>
-            {shadow && shadow.n_closed > 0 ? (
+        <div className="act-trace-grid">
+          <article className="act-trace-col">
+            <h3 className="subhead">Décision</h3>
+            {loading ? (
+              <p className="muted">Chargement…</p>
+            ) : outcomes && outcomes.n_used > 0 ? (
               <>
+                <p className="act-trace-lead">
+                  <strong className="mono">{fmtInt(outcomes.n_used)}</strong> signaux mesurés
+                  {summary ? ` · ${fmtInt(summary.evidence.complete)} terminés` : ''}
+                </p>
                 <ul className="act-eff-list">
-                  {Object.entries(shadow.by_block_source).map(([source, s]) => {
-                    const helped = s.mean_pnl_r < 0
+                  {outcomes.groups.slice(0, 3).map((g) => {
+                    const h20 = g.horizons['20']
                     return (
-                      <li key={source}>
-                        <strong>{source}</strong> · {s.n} refusés ·{' '}
-                        <span className={helped ? 'up' : 'down'}>
-                          {s.mean_pnl_r >= 0 ? '+' : ''}
-                          {s.mean_pnl_r.toFixed(2)} R
-                        </span>
-                        <span className="muted">
-                          {' '}
-                          — {helped ? 'écarté des perdants' : 'écarté des gagnants'}
-                        </span>
+                      <li key={g.id}>
+                        <strong>{g.label}</strong>
+                        {h20 && h20.n > 0 ? (
+                          <>
+                            {' '}
+                            ·{' '}
+                            <span className={(h20.mean_return ?? 0) >= 0 ? 'up' : 'down'}>
+                              {(h20.mean_return ?? 0) >= 0 ? '+' : ''}
+                              {((h20.mean_return ?? 0) * 100).toFixed(2)} %
+                            </span>
+                            <span className="muted"> à 20 bougies</span>
+                          </>
+                        ) : (
+                          <span className="muted"> · pas encore de horizon 20</span>
+                        )}
                       </li>
                     )
                   })}
                 </ul>
-                <p className="muted act-eff-note">
-                  Verdict : <strong>{shadow.filter_verdict ?? 'inconnu'}</strong>
-                  {shadow.n_closed < 5 ? ' · échantillon encore mince' : ''}
-                </p>
               </>
+            ) : summary && summary.evidence.rows_total > 0 ? (
+              <p className="muted">
+                {fmtInt(summary.evidence.rows_total)} signaux enregistrés, aucun mesuré encore.
+              </p>
             ) : (
-              <p className="muted">Pas encore de trade refusé jugé.</p>
+              <p className="muted">Non disponible</p>
             )}
-          </div>
-          <div className="act-eff-block">
-            <h3 className="subhead">Pipeline vs Ichimoku</h3>
-            {runs && runs.runs[0] ? (
+          </article>
+
+          <article className="act-trace-col">
+            <h3 className="subhead">Protection</h3>
+            {loading ? (
+              <p className="muted">Chargement…</p>
+            ) : shadow && shadow.n_closed > 0 ? (
               <>
-                <p className="act-eff-lead">
+                <p className="act-trace-lead">
+                  Verdict filtres : <strong>{shadow.filter_verdict ?? 'inconnu'}</strong>
+                  {shadow.n_closed < 5 ? ' · échantillon mince' : ''}
+                </p>
+                <ul className="act-eff-list">
+                  {Object.entries(shadow.by_block_source)
+                    .slice(0, 4)
+                    .map(([source, s]) => {
+                      const helped = s.mean_pnl_r < 0
+                      return (
+                        <li key={source}>
+                          <strong>{source}</strong> · {s.n} refusés ·{' '}
+                          <span className={helped ? 'up' : 'down'}>
+                            {s.mean_pnl_r >= 0 ? '+' : ''}
+                            {s.mean_pnl_r.toFixed(2)} R
+                          </span>
+                        </li>
+                      )
+                    })}
+                </ul>
+              </>
+            ) : summary && summary.shadow.blocked_total > 0 ? (
+              <p className="muted">
+                {fmtInt(summary.shadow.blocked_total)} refusés · {fmtInt(summary.shadow.judged_total)}{' '}
+                jugés — pas encore de stats fermées.
+              </p>
+            ) : (
+              <p className="muted">Non disponible</p>
+            )}
+          </article>
+
+          <article className="act-trace-col">
+            <h3 className="subhead">Reproductibilité</h3>
+            {loading ? (
+              <p className="muted">Chargement…</p>
+            ) : latestRun ? (
+              <>
+                <p className="act-trace-lead">
                   Dernier run : pipeline bat Ichimoku sur{' '}
                   <strong className="mono">
-                    {runs.runs[0].pipeline_vs_ichimoku.beats}/{runs.runs[0].pipeline_vs_ichimoku.compared}
+                    {latestRun.pipeline_vs_ichimoku.beats}/{latestRun.pipeline_vs_ichimoku.compared}
                   </strong>{' '}
-                  paires (Sharpe).
+                  paires
                 </p>
                 <p className="muted act-eff-note">
-                  ~{runs.runs[0].experiments.PIPELINE?.trades_mean.toFixed(0) ?? '?'} trades / paire
-                  (seuil {minTrades}) — PF élevé = bruit tant que l’échantillon est faible.
+                  {fmtWhen(latestRun.ended_at)} · {latestRun.n_pairs} paires ·{' '}
+                  {fmtInt(latestRun.n_rows)} rows
+                  {coverage
+                    ? ` · couverture ${coverage.crypto_symbols} cryptos × ${coverage.timeframes.join(' / ')}`
+                    : ''}
                 </p>
               </>
             ) : (
-              <p className="muted">Aucun backtest enregistré.</p>
+              <p className="muted">Non disponible</p>
             )}
-            {coverage && (
-              <p className="muted act-eff-note">
-                Couverture : {coverage.crypto_symbols} cryptos × {coverage.timeframes.join(' / ')} (
-                {coverage.pairs_covered} paires). Forex, métaux, indices : {coverage.others.filter((o) => o.covered).length}/
-                {coverage.others.length} paires ; il faut {coverage.min_bars} bougies
-                {coverage.others.length
-                  ? ` (${coverage.others[0].label} ${coverage.others[0].timeframe} : ${coverage.others[0].bars})`
-                  : ''}
-                . Ils rejoignent le backtest tout seuls dès que l’historique suffit.
-              </p>
-            )}
-          </div>
-          <div className="act-eff-block act-eff-wide">
-            <h3 className="subhead">Signaux suivis : plus de confluences, meilleurs résultats ?</h3>
-            {outcomes && outcomes.n_used > 0 ? (
-              <>
-                <div className="act-run-table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Groupe</th>
-                        <th>Signaux</th>
-                        {['5', '10', '20'].map((h) => (
-                          <th key={h}>À {h} bougies</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {outcomes.groups.map((g) => (
-                        <tr key={g.id}>
-                          <td>{g.label}</td>
-                          <td className="mono">{g.n_signals}</td>
-                          {['5', '10', '20'].map((h) => {
-                            const cell = g.horizons[h]
-                            if (!cell || cell.n === 0) {
-                              return (
-                                <td key={h} className="muted">
-                                  —
-                                </td>
-                              )
-                            }
-                            return (
-                              <td key={h} className="mono">
-                                <span className={(cell.mean_return ?? 0) >= 0 ? 'up' : 'down'}>
-                                  {(cell.mean_return ?? 0) >= 0 ? '+' : ''}
-                                  {((cell.mean_return ?? 0) * 100).toFixed(2)} %
-                                </span>{' '}
-                                <span className="muted">
-                                  · {cell.hit_rate == null ? '—' : `${(cell.hit_rate * 100).toFixed(0)} %`} juste · n=
-                                  {cell.n}
-                                </span>
-                                {cell.small_sample && <span className="act-badge">échantillon faible</span>}
-                              </td>
-                            )
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <p className="muted act-eff-note">
-                  Un signal compte une fois par série de bougies dans le même sens ({outcomes.n_used} sur{' '}
-                  {outcomes.n_total}). Seuil de lecture : {outcomes.min_n} signaux par groupe.
-                </p>
-              </>
-            ) : (
-              <p className="muted act-eff-note">
-                {summary && summary.evidence.rows_total > 0
-                  ? `${fmtInt(summary.evidence.rows_total)} signaux enregistrés, aucun mesuré encore : le premier résultat arrive une bougie après le signal, le verdict à 20 bougies (environ 20 h en 1 h).`
-                  : 'Le suivi vient de démarrer : les signaux sont enregistrés à chaque scan, leur résultat suit.'}{' '}
-                Il faudra environ {outcomes?.min_n ?? 30} signaux par groupe pour conclure.
-              </p>
-            )}
-          </div>
+          </article>
         </div>
       </section>
 
@@ -454,7 +691,7 @@ export function ActivityPage() {
         <header className="panel-head">
           <h2>Historique</h2>
           <div className="market-class-tabs act-filters" role="tablist" aria-label="Filtre historique">
-            {FILTERS.map((f) => (
+            {HISTORY_FILTERS.map((f) => (
               <button
                 key={f.id}
                 type="button"
