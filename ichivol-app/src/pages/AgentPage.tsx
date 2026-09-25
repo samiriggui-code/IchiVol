@@ -1,273 +1,203 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { AgentPanel } from '../components/AgentPanel'
-import { useAgentSession } from '../lib/agentSession'
-import {
-  getAgentCapabilities,
-  mapCapabilityBadges,
-  type CapabilityBadge,
-} from '../lib/agentCapabilities'
-import { getActivityFeed, type ActivityItem } from '../lib/activity'
-import { getScreener, type ScreenerDecisionRow } from '../lib/decisions'
-import { verdictBucket } from '../lib/deskSummarize'
-import { useMarketSnapshot } from '../lib/marketSnapshot'
-import { getPaperOverview, type PaperOverviewPosition } from '../lib/paper'
-
-interface CopilotSuggestion {
-  id: string
-  label: string
-  prompt: string
-  symbol?: string
-}
-
-function bestBuySellRow(rows: ScreenerDecisionRow[]): ScreenerDecisionRow | null {
-  let best: ScreenerDecisionRow | null = null
-  let bestScore = -1
-  for (const row of rows) {
-    const bucket = verdictBucket(row)
-    if (bucket !== 'buy' && bucket !== 'sell') continue
-    const score = Number.isFinite(row.confidence) ? row.confidence : 0
-    if (score > bestScore) {
-      best = row
-      bestScore = score
-    }
-  }
-  return best
-}
-
-function latestRefusal(items: ActivityItem[]): ActivityItem | null {
-  for (const it of items) {
-    if (it.kind === 'shadow_blocked') return it
-  }
-  return null
-}
-
-function firstOpenPosition(positions: PaperOverviewPosition[]): PaperOverviewPosition | null {
-  return positions.find((p) => String(p.status).toUpperCase() === 'OPEN') ?? null
-}
-
-function buildSuggestions(ctx: {
-  screenerRow: ScreenerDecisionRow | null
-  refusal: ActivityItem | null
-  position: PaperOverviewPosition | null
-}): CopilotSuggestion[] {
-  const out: CopilotSuggestion[] = []
-  if (ctx.screenerRow) {
-    const r = ctx.screenerRow
-    const bucket = verdictBucket(r)
-    const side = bucket === 'buy' ? 'BUY' : 'SELL'
-    out.push({
-      id: `screener-${r.symbol}`,
-      label: `Pourquoi ${r.symbol} est en ${side} ?`,
-      prompt:
-        `Explique pourquoi ${r.symbol} (${r.timeframe}) est classé ${side} ` +
-        `(confiance ${(r.confidence * 100).toFixed(0)} %). ` +
-        `Appuie-toi sur les portes / le contexte moteur. Ne propose pas un autre sens.`,
-      symbol: r.symbol,
-    })
-  }
-  if (ctx.refusal) {
-    const it = ctx.refusal
-    out.push({
-      id: `refusal-${it.symbol}-${it.time}`,
-      label: `Explique le refus ${it.symbol}`,
-      prompt:
-        `Explique le refus / blocage shadow sur ${it.symbol}.\n` +
-        `• Titre : ${it.title}\n` +
-        `• Détail : ${it.detail}\n` +
-        `Clarifie ce qui a bloqué et ce qu’il faudrait pour débloquer — sans voter une direction.`,
-      symbol: it.symbol,
-    })
-  }
-  if (ctx.position) {
-    const p = ctx.position
-    out.push({
-      id: `position-${p.id}`,
-      label: `Risque de la position ${p.symbol}`,
-      prompt:
-        `Analyse la position paper ouverte ${p.symbol} (${p.direction}). ` +
-        `Explique le risque, les invalidations possibles et ce que le moteur surveille. ` +
-        `Ne propose pas d’ordre sans confirmation humaine.`,
-      symbol: p.symbol,
-    })
-  }
-  return out.slice(0, 3)
-}
-
 /**
- * Agent Claude : il interroge le moteur en lecture seule (outils) puis explique.
+ * Copilot — port littéral de design-reference/ichivol-workspace `copilot()` + page-head.
+ * Classes HTML = maquette. Données / chat = engine (manquant → « — »).
  */
+
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { askAgentStream } from '../lib/agent'
+import { useAgentSession } from '../lib/agentSession'
+import { getSettings } from '../lib/settings'
+import './AgentPage.css'
+
+type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
+
+const SUGGESTIONS = [
+  'Pourquoi BTC attend-il ?',
+  'Quel est le risque du portefeuille ?',
+  'Explique le setup BNB',
+]
+
+function badge(text: string, tone: BadgeTone = ''): ReactNode {
+  let inferred = tone
+  if (!inferred) {
+    inferred = /PASSE|ACCEPTÉ|OUVERTE|VALIDÉ|DISPONIBLE/i.test(text)
+      ? 'green'
+      : /REFUS|BLOQU|ERREUR/i.test(text)
+        ? 'red'
+        : /PRUDENCE|ARMED|WATCH/i.test(text)
+          ? 'amber'
+          : ''
+  }
+  return <span className={`tag ${inferred}`.trim()}>{text}</span>
+}
+
 export function AgentPage() {
-  const { snapshot } = useMarketSnapshot()
-  const { decisionPayload, assumedSymbol, assumedTimeframe, launch, queueLaunch } = useAgentSession()
-  const [badges, setBadges] = useState<CapabilityBadge[]>(() => mapCapabilityBadges(null))
-  const [capsError, setCapsError] = useState<string | null>(null)
-  const [suggestions, setSuggestions] = useState<CopilotSuggestion[]>([])
-
-  const symbol =
-    launch?.decision?.symbol ??
-    launch?.live?.symbol ??
-    assumedSymbol ??
-    decisionPayload?.symbol ??
-    snapshot?.symbol ??
-    null
-  const timeframe =
-    launch?.decision?.timeframe ??
-    launch?.live?.interval ??
-    assumedTimeframe ??
-    decisionPayload?.timeframe ??
-    snapshot?.interval ??
-    '1h'
-
-  const hasSession = Boolean(symbol)
+  const { history, setHistory, input, setInput, loading, setLoading, threadId, setThreadId } =
+    useAgentSession()
+  const [llmReady, setLlmReady] = useState<boolean | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    let cancelled = false
-    getAgentCapabilities()
-      .then((caps) => {
-        if (!cancelled) {
-          setBadges(mapCapabilityBadges(caps))
-          setCapsError(null)
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setBadges(mapCapabilityBadges(null))
-          setCapsError(err instanceof Error ? err.message : 'Capacités indisponibles')
-        }
-      })
-    return () => {
-      cancelled = true
-    }
+    getSettings()
+      .then((s) => setLlmReady(Boolean(s.llmReady)))
+      .catch(() => setLlmReady(false))
   }, [])
 
-  useEffect(() => {
-    let cancelled = false
-    Promise.all([
-      getScreener('1h').catch(() => null),
-      getActivityFeed(80).catch(() => null),
-      getPaperOverview().catch(() => null),
-    ]).then(([screener, feed, overview]) => {
-      if (cancelled) return
-      const screenerRow = screener ? bestBuySellRow(screener.rows) : null
-      const refusal = feed ? latestRefusal(feed.items) : null
-      const position = overview ? firstOpenPosition(overview.positions) : null
-      setSuggestions(buildSuggestions({ screenerRow, refusal, position }))
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const send = useCallback(
+    async (text: string) => {
+      const q = text.trim()
+      if (!q || loading) return
+      setError(null)
+      setInput('')
+      setHistory((h) => [...h, { role: 'user', content: q }])
+      setLoading(true)
+      try {
+        let acc = ''
+        const res = await askAgentStream(
+          {
+            question: q,
+            threadId: threadId ?? undefined,
+            mode: 'research',
+          },
+          {
+            onText: (t) => {
+              acc += t
+              setHistory((h) => {
+                const copy = [...h]
+                const last = copy[copy.length - 1]
+                if (last?.role === 'assistant') {
+                  copy[copy.length - 1] = { ...last, content: acc }
+                } else {
+                  copy.push({ role: 'assistant', content: acc })
+                }
+                return copy
+              })
+            },
+          },
+        )
+        if (res.threadId) setThreadId(res.threadId)
+        const finalText = res.answer || acc || '—'
+        setHistory((h) => {
+          const copy = [...h]
+          const last = copy[copy.length - 1]
+          if (last?.role === 'assistant') {
+            copy[copy.length - 1] = { ...last, content: finalText }
+          } else {
+            copy.push({ role: 'assistant', content: finalText })
+          }
+          return copy
+        })
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Copilot indisponible')
+        setHistory((h) => [...h, { role: 'assistant', content: '—' }])
+      } finally {
+        setLoading(false)
+      }
+    },
+    [loading, setHistory, setInput, setLoading, setThreadId, threadId],
+  )
 
-  function onSuggestion(s: CopilotSuggestion) {
-    queueLaunch({
-      kind: 'research',
-      symbol: s.symbol,
-      promptOverride: s.prompt,
-      autoSend: true,
-    })
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault()
+    void send(input)
   }
 
   return (
-    <div className="page agent-atelier">
-      <header className="iv-page-header agent-atelier-hero">
-        <div className="agent-atelier-hero-copy">
-          <p className="iv-page-eyebrow">Automatisation · Copilot</p>
+    <div className="copilot-page">
+      <div className="page-head">
+        <div>
+          <div className="eyebrow">08 / ICHIVOL WORKSPACE</div>
           <h1>Copilot</h1>
-          <p className="iv-page-question">Pourquoi le moteur a-t-il classé ainsi ?</p>
-          <p className="agent-atelier-lede">
-            Le <strong>moteur Python</strong> calcule. Claude <strong>interroge le moteur</strong> avec ses outils, puis explique.
-            Depuis Décisions ou Journal, un clic « Expliquer » t’amène ici avec la
-            question déjà prête.
-          </p>
-          <div className="agent-atelier-roles" aria-label="Rôles">
-            <span className="agent-role-pill is-engine">Moteur = chiffres</span>
-            <span className="agent-role-pill is-llm">Claude = outils + explication</span>
-            <span className="agent-role-pill is-you">Toi = confirmation</span>
-          </div>
+          <p className="subtitle">Explorer et expliquer chaque décision.</p>
         </div>
+        <div className="actions">{badge('APERÇU DU COPILOT', 'gray')}</div>
+      </div>
 
-        <div className="agent-atelier-hero-aside">
-          <div className={`agent-session-chip ${hasSession ? 'is-live' : ''}`}>
-            <span className="agent-session-label">Session</span>
-            {hasSession ? (
-              <span className="agent-session-value">
-                {symbol}
-                <span className="muted"> · {timeframe}</span>
+      <div className="grid">
+        <section className="card chat">
+          <div className="card-head">
+            <h2>Une seconde lecture</h2>
+            {badge('APERÇU DU COPILOT', 'gray')}
+          </div>
+          <div className="chat-log" id="chat-log">
+            <div className="bubble">
+              <b>Votre décision, rendue lisible.</b>
+              <p>
+                Choisissez une question pour explorer les données. Le Copilot explique les
+                signaux et le risque ; la validation reste au moteur.
+              </p>
+              <span className="tag gray">
+                {llmReady === null
+                  ? '—'
+                  : llmReady
+                    ? 'LLM connecté'
+                    : 'Claude non connecté'}
               </span>
-            ) : (
-              <span className="agent-session-value muted">Aucun symbole — lance depuis Décisions</span>
+            </div>
+            {history.map((m, i) => (
+              <div className="bubble" key={`${m.role}-${i}`}>
+                <span className="eyebrow">{m.role === 'user' ? 'VOUS' : 'COPILOT'}</span>
+                <p>{m.content || '—'}</p>
+              </div>
+            ))}
+            {error && (
+              <div className="bubble">
+                <p style={{ color: 'var(--red)' }}>{error}</p>
+              </div>
             )}
           </div>
-          <nav className="agent-atelier-jump" aria-label="Raccourcis">
-            <Link to="/app/opportunites">Opportunités</Link>
-            <Link to="/app/journal">Journal</Link>
-            <Link to="/app/context">Contexte</Link>
-            <Link to="/app/market">Marché</Link>
-          </nav>
-        </div>
-      </header>
-
-      <div className="agent-atelier-grid">
-        <section className="agent-atelier-chat panel">
-          <header className="agent-atelier-panel-head">
-            <div>
-              <h2>Conversation</h2>
-              <p className="muted">
-                Modes : expliquer une décision, un signal, rechercher, ou une idée —
-                toujours ancré sur les données injectées.
-              </p>
-            </div>
-          </header>
-          <AgentPanel snapshot={snapshot} />
+          <form id="chat-form" onSubmit={onSubmit}>
+            <input
+              id="chat-input"
+              placeholder="Pourquoi BTC n’est-il pas encore déclenché ?"
+              aria-label="Votre question"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              required
+              disabled={loading}
+            />
+            <button className="primary" type="submit" disabled={loading}>
+              {loading ? '…' : 'Envoyer ↗'}
+            </button>
+          </form>
         </section>
 
-        <aside className="agent-atelier-explore panel" aria-label="Suggestions et capacités">
-          <header className="agent-atelier-panel-head">
-            <div>
-              <h2>Explorer une décision</h2>
-              <p className="muted">Suggestions ancrées sur le screener, l’activité et le paper.</p>
-            </div>
-          </header>
-          <div className="agent-atelier-suggestions">
-            {suggestions.length === 0 ? (
-              <p className="muted agent-atelier-empty-suggest">
-                Aucune suggestion contextuelle pour l’instant (pas de BUY/SELL, refus ou position ouverte).
-              </p>
-            ) : (
-              suggestions.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className="agent-suggestion-btn"
-                  onClick={() => onSuggestion(s)}
-                >
-                  {s.label}
-                </button>
-              ))
-            )}
+        <section className="card">
+          <div className="card-head">
+            <h2>Explorer une décision</h2>
           </div>
-
-          <div className="agent-atelier-caps" aria-label="Capacités">
-            <h3>Capacités</h3>
-            {capsError && (
-              <p className="muted agent-caps-error" role="status">
-                {capsError}
-              </p>
-            )}
-            <ul className="agent-caps-list">
-              {badges.map((b) => (
-                <li key={b.id} className={`agent-caps-row is-${b.status}`} title={b.detail}>
-                  <span className="agent-caps-label">{b.label}</span>
-                  <span className={`iv-badge agent-caps-badge is-${b.status}`}>{b.statusLabel}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="muted agent-caps-note">
-              Passer un ordre paper exige toujours une confirmation humaine — hors exécution autonome.
+          <div className="card-body">
+            {SUGGESTIONS.map((q, i) => (
+              <button
+                key={q}
+                type="button"
+                className="suggestion"
+                onClick={() => void send(q)}
+                disabled={loading}
+                data-prompt={i}
+              >
+                {q}
+              </button>
+            ))}
+            <div style={{ marginTop: 30 }}>
+              <div className="statline">
+                <span>Lire le contexte</span>
+                <b>{badge('DISPONIBLE', 'gray')}</b>
+              </div>
+              <div className="statline">
+                <span>Expliquer un refus</span>
+                <b>{badge('DISPONIBLE', 'gray')}</b>
+              </div>
+              <div className="statline">
+                <span>Passer un ordre</span>
+                <b>{badge('BLOQUÉ')}</b>
+              </div>
+            </div>
+            <p style={{ fontSize: 11, color: 'var(--muted)' }}>
+              Les réponses passent par le moteur / LLM configuré. Sans clé : « — ».
             </p>
           </div>
-        </aside>
+        </section>
       </div>
     </div>
   )
