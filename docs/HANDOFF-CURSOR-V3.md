@@ -7,6 +7,53 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — UI-11p — smoke réel + nettoyage (PR → merge si vert)
+
+- Branche : `cursor/ui-workspace-pages-a2fe`
+- Tip de départ : `d2b5d68` (import React 11-pages + design-reference)
+- Base : `main` (post-#86)
+- **Périmètre** : front only (`ichivol-app/src`, `public/`, `design-reference/`, handoff). **Pas** de touche `engine/` ni `server/`.
+
+### Nettoyage
+- Supprimé `WatchlistPage` (plus importé ; redirects `/app/watchlist` conservés).
+- **Conservé** `SynthesePage` + `PaperPage` : toujours montés comme onglets de `PortfolioPage`.
+- Supprimé démos keenicons (`demo.html`, `demo-files/`, `selection.json`, Read Me) dans `ichivol-app/public/keenicons/{duotone,outline}/` et le miroir `design-reference/...`.
+
+### Smoke local (engine :8000 + server :8787 + vite :5173)
+Compte test : `ui11p-smoke@ichivol.local`. Script : `ichivol-app/scripts/smoke-ui11p.mjs` + captures `/opt/cursor/artifacts/ui11p-smoke/`.
+
+#### Pages `/app/*` (données réelles, pas d’erreur console hors bruit LLM)
+| Route | Verdict | Données vues |
+|---|---|---|
+| desk | **PASS** | 28 marchés, pulse 28 NO TRADE, equity ~9 185 €, pipeline health |
+| market | **PASS** | Chart BTC 84 228 + Ichimoku/BOS/CHoCH, watchlist live, moteur « PAS DE TRADE » |
+| opportunites | **PASS** | Liste décisions / empty actionnable OK (short off) |
+| portefeuille | **PASS** | Synthèse equity/cash/réalisé, onglets Compte/Positions/Risque/Tests |
+| context | **PASS** | Feeds contexte chargés |
+| journal | **PASS** | Page journal OK |
+| operations | **PASS** | Activité / opérations OK |
+| strategy-lab | **PASS** | Tabs Compare/Regimes/Experiments/Live/Research ; BTCUSDT 1h |
+| agent | **PASS** | UI Copilot + session ; badge « LLM : clé manquante » |
+| agents | **PASS** | Page agents OK |
+| settings | **PASS** | Formulaire paramètres OK |
+
+Bruit unique observé : `POST /api/settings/llm-test` → **422** (pas de clé LLM dans `.env`) — attendu, non bloquant pour les pages.
+
+#### Actions
+| Action | Verdict | Détail |
+|---|---|---|
+| Paper open → close | **PASS** | `POST .../paper/positions?discretionary=true&notional=400` → 200 ; close → 200 |
+| Kill-switch arm/disarm | **PASS** | arm `kill_switch_armed=true` ; disarm `false` (UI bouton Arrêt d’urgence + API) |
+| Walk-forward | **PASS** | `GET .../strategy-lab/walk-forward?limit=1200` → 200 (folds + oos_summary) |
+| Monte-Carlo | **PASS** | `POST .../strategy-lab/monte-carlo` ruleset `IV_ICHIMOKU_RVOL_LONG_001` → 200 (`sufficient=false`, n_trades=4 — endpoint OK) |
+| Settings save | **PASS** | PATCH theme `light`→`dark` → 200 |
+| Copilot chat | **BLOQUÉ env** | `POST /api/agent/chat` → 400 « Aucune clé LLM résolue » (`OPENROUTER_API_KEY` vide). UI OK ; pas de clé à inventer. |
+
+### Suite après merge
+Onglet **Journal** de Market + indicateurs moteur sur le graphe Market.
+
+---
+
 ## 2026-09-24 — UI workspace refonte MERGÉE (#86) — squash `92f43f7`
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/86 — **MERGÉE** squash
