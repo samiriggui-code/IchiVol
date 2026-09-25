@@ -7,7 +7,20 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-25 — UI maquette gap audit + clôture UI-11p secrets
+## 2026-09-25 — UI maquette gap MERGÉE (#93) — tip `8e2ab82`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/93 — **MERGÉE** (squash)
+- **Vérifié** : `origin/main` tip = `8e2ab82`
+- Audit : [`docs/UI-MAQUETTE-GAP.md`](./UI-MAQUETTE-GAP.md)
+- Secrets UI-11p : #91 `b73a20b` ; handoff secrets #92 `5ab809e`
+- Deploy VPS : **toujours bloqué** (Hostinger MCP timeout) — demandé `HOSTINGER_API_TOKEN` + clé SSH agent sur VPS
+
+### Suite
+Déployer `main` sur VPS → mobile barre + Copilot LLM → portage selon gap doc / Journal Market.
+
+---
+
+## 2026-09-25 — UI maquette gap audit + clôture UI-11p secrets (archive)
 
 - Branche : `cursor/ui-maquette-gap-a2fe`
 - **Audit (aucun code produit)** : [`docs/UI-MAQUETTE-GAP.md`](./UI-MAQUETTE-GAP.md) — 11 pages maquette (`design-reference/ichivol-workspace`) ↔ React, statut section + endpoint réel ou « à décider », React hors maquette.
