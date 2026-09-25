@@ -19,7 +19,7 @@ import {
 } from 'lightweight-charts'
 import {
   DEFAULT_LAYERS,
-  OBJECT_LAYER_META,
+  OBJECT_LAYER_KEYS,
   layerFromSource,
   type LayerPrefs,
 } from '../lib/marketPrefs'
@@ -143,6 +143,14 @@ function asLine(
 function fmtPrice(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—'
   return n.toLocaleString(undefined, { maximumFractionDigits: 6 })
+}
+
+/** Axe des prix fr-FR : « 90 000 », « 2 718,5 », « 0,5862 » (maquette). */
+function fmtAxisPrice(n: number): string {
+  if (!Number.isFinite(n)) return ''
+  const a = Math.abs(n)
+  const digits = a >= 10_000 ? 0 : a >= 100 ? 1 : a >= 1 ? 2 : 4
+  return n.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: digits })
 }
 
 function fmtVol(n: number): string {
@@ -271,7 +279,8 @@ function renderChartObjects(
         price: lvl.price,
         color: `${color}cc`,
         lineWidth: lvl.kind === 'horizontal_line' ? 1 : 2,
-        lineStyle: lvl.kind === 'stop' ? LineStyle.Dashed : LineStyle.Solid,
+        lineStyle:
+          lvl.kind === 'stop' || lvl.subtype === 'sr_nearest' ? LineStyle.Dashed : LineStyle.Solid,
         axisLabelVisible: true,
         title: lvl.label,
       }),
@@ -408,6 +417,7 @@ export function PriceChart({
       height: el.clientHeight || 480,
       rightPriceScale: { borderVisible: false },
       timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false },
+      localization: { locale: 'fr-FR', priceFormatter: fmtAxisPrice },
     })
 
     const ro = new ResizeObserver(() => {
@@ -709,7 +719,7 @@ export function PriceChart({
   // Overlays moteur via ChartObjects : zones = 2 price lines, trendlines = 2-point series.
   useEffect(() => {
     const filtered = filterObjectsByLayers(chartObjects, prefs)
-    const showObjects = OBJECT_LAYER_META.some((m) => prefs[m.key])
+    const showObjects = OBJECT_LAYER_KEYS.some((k) => prefs[k])
     structureMarkersRef.current = renderChartObjects(
       chartRef.current,
       seriesRef.current,

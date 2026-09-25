@@ -1,6 +1,8 @@
 /** Marché — helpers d’affichage (maquette). Pas de composants. */
 
 import type { DecisionPipelineView, PipelineStageStatus } from '../../lib/decisionPipeline'
+import type { ChartObject } from '../../lib/chartObjects'
+import { layerFromSource } from '../../lib/marketPrefs'
 import { displaySymbol } from '../../lib/markets'
 
 export type MaquetteBadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
@@ -35,6 +37,13 @@ export function fmtPriceMaq(n: number | null | undefined): string {
   })
 }
 
+/** Niveau S/R : « 67 850 », « 2 645,3 », « 0,5862 » (même règle que l'axe du graphique). */
+function fmtLevelMaq(n: number): string {
+  const a = Math.abs(n)
+  const digits = a >= 10_000 ? 0 : a >= 100 ? 1 : a >= 1 ? 2 : 4
+  return n.toLocaleString('fr-FR', { maximumFractionDigits: digits })
+}
+
 export function fmtPctMaq(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return '—'
   const sign = n > 0 ? '+' : ''
@@ -50,15 +59,60 @@ export function shortSymbol(id: string): string {
   return displaySymbol(id)
 }
 
-export function change24hFromCandles(
-  candles: { close: number }[],
-): number | null {
-  if (candles.length < 2) return null
-  const last = candles[candles.length - 1]!.close
-  const lookback = Math.min(24, candles.length - 1)
-  const prev = candles[candles.length - 1 - lookback]!.close
-  if (!prev) return null
-  return ((last - prev) / prev) * 100
+/**
+ * Maquette : une seule résistance (au-dessus du prix) et un seul support (en dessous),
+ * les plus proches, tirés des objets STRUCTURE du moteur (zones + lignes horizontales).
+ * Renvoie 0 à 2 objets « horizontal_line » (subtype sr_nearest) prêts pour PriceChart.
+ */
+export function nearestSrObjects(
+  objects: ChartObject[],
+  price: number | null | undefined,
+  symbol: string,
+  timeframe: string,
+): ChartObject[] {
+  if (price == null || !Number.isFinite(price) || price <= 0) return []
+  let res: number | null = null
+  let sup: number | null = null
+  for (const o of objects) {
+    if (layerFromSource(o.source, o.layer) !== 'structure') continue
+    const levels: number[] = []
+    if ((o.type === 'zone' || o.type === 'rectangle') && o.price_low != null && o.price_high != null) {
+      if (o.origin?.kind === 'fvg') continue
+      const st = typeof o.origin?.status === 'string' ? o.origin.status : ''
+      if (st === 'invalidated') continue
+      levels.push(o.price_low, o.price_high)
+    } else if (o.type === 'horizontal_line' && o.points.length === 1) {
+      levels.push(o.points[0]!.price)
+    } else {
+      continue
+    }
+    for (const lv of levels) {
+      if (!Number.isFinite(lv)) continue
+      if (lv > price && (res == null || lv < res)) res = lv
+      if (lv < price && (sup == null || lv > sup)) sup = lv
+    }
+  }
+  const mk = (id: string, lv: number, side: 'resistance' | 'support', label: string): ChartObject => ({
+    id,
+    type: 'horizontal_line',
+    source: 'engine',
+    layer: 'structure',
+    symbol,
+    timeframe,
+    points: [{ time: 0, price: lv }],
+    price_low: null,
+    price_high: null,
+    side,
+    label: `${label} · ${fmtLevelMaq(lv)}`,
+    confidence: 1,
+    as_of: 0,
+    origin: {},
+    subtype: 'sr_nearest',
+  })
+  const out: ChartObject[] = []
+  if (res != null) out.push(mk('sr-nearest-r', res, 'resistance', 'RÉSISTANCE'))
+  if (sup != null) out.push(mk('sr-nearest-s', sup, 'support', 'SUPPORT'))
+  return out
 }
 
 /**

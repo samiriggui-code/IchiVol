@@ -92,6 +92,13 @@ for (const [w, h, tag] of [
   await expandScroll(page)
   // Force full height capture by expanding body to content height
   await page.evaluate(() => {
+    // Capture pleine page : les éléments fixes du shell (barre d'onglets, feuille Plus)
+    // se retrouveraient au milieu de l'image → masqués pour la capture uniquement.
+    document
+      .querySelectorAll('.dash-mobile-tabbar, .dash-mobile-more, .dash-mobile-more-backdrop')
+      .forEach((el) => {
+        el.style.display = 'none'
+      })
     const mp = document.querySelector('.market-page')
     const dc = document.querySelector('.dash-content')
     if (dc) {

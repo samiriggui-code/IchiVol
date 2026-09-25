@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { PriceChart } from '../components/PriceChart'
 import { confirmAgentAction } from '../lib/agent'
+import { getChartObjects, type ChartObject } from '../lib/chartObjects'
 import { fetchTickers24h } from '../lib/binance'
 import {
   getDecisionDetail,
@@ -36,6 +37,7 @@ import {
   fmtRvolMaq,
   lectureSynthesisFr,
   maquetteGateBadge,
+  nearestSrObjects,
   shortSymbol,
 } from './market/marketMaquetteHelpers'
 import './MarketPage.css'
@@ -89,6 +91,7 @@ export function MarketPage() {
   const [layerPrefs, setLayerPrefs] = useState<LayerPrefs>(() => loadLayerPrefs())
   const [watchMsg, setWatchMsg] = useState<string | null>(null)
   const [watchBusy, setWatchBusy] = useState(false)
+  const [engineObjects, setEngineObjects] = useState<ChartObject[]>([])
 
   const ichimokuOn =
     layerPrefs.tenkan && layerPrefs.kijun && layerPrefs.spanA && layerPrefs.spanB
@@ -184,6 +187,34 @@ export function MarketPage() {
       cancelled = true
     }
   }, [symbol, interval])
+
+  // Supports / résistances : objets STRUCTURE du moteur → niveau le plus proche de chaque côté.
+  useEffect(() => {
+    if (!symbol) return
+    let cancelled = false
+    setEngineObjects([])
+    getChartObjects(symbol, interval, 300, ['engine'])
+      .then((objs) => {
+        if (!cancelled) setEngineObjects(objs)
+      })
+      .catch(() => {
+        if (!cancelled) setEngineObjects([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [symbol, interval])
+
+  const srObjects = useMemo(
+    () =>
+      nearestSrObjects(
+        engineObjects,
+        candles.length ? candles[candles.length - 1]!.close : null,
+        symbol,
+        interval,
+      ),
+    [engineObjects, candles, symbol, interval],
+  )
 
   useEffect(() => {
     if (!symbol) return
@@ -400,6 +431,7 @@ export function MarketPage() {
                 timeframe={interval}
                 layerPrefs={layerPrefs}
                 onLayerPrefsChange={setLayers}
+                chartObjects={srObjects}
               />
             ) : (
               <div className="empty">Aucune bougie</div>

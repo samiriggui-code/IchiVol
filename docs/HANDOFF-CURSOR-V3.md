@@ -7,6 +7,22 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — UI-port Marché (#108) — corrections appliquées par Claude
+
+- Base : `pr/108` @ `e7aaa9d` (rebasée sur main `604a8b0`)
+- **Supports / résistances** : la page charge les objets STRUCTURE du moteur (`getChartObjects(..., ['engine'])`) et n'affiche que la résistance et le support les plus proches du dernier cours (`nearestSrObjects`), en pointillés, libellés « RÉSISTANCE · … » / « SUPPORT · … »
+- **Watchlist desktop** : même hauteur que la carte graphique, défilement interne (≥ 801 px)
+- **Typographie** : tailles alignées sur les valeurs CALCULÉES de la maquette (Chromium headless, 1440 et 390) — chart-summary 12 px, segmented 12, card-head small 12, checkrow 14, synthèse et step p 14, tag 10, eyebrow 11, bouton primaire 14, sous-titre 12 (y compris mobile)
+- **Axe des prix** : fr-FR (`90 000`, `2 718,5`, `0,5862`)
+- **Code mort** : supprimés `countObjectsByLayer`, `isIchimokuOn`, `change24hFromCandles`, `OBJECT_LAYER_META` (→ `OBJECT_LAYER_KEYS`), exports `ICHIMOKU_LAYER_KEYS`/`LAYERS_PREFS_VERSION` rendus privés ; supprimés `scripts/find-unused-css.mjs` (doublon racine) et `ichivol-app/scripts/recapture-390.mjs`
+- **Capture 390** : la feuille Plus n'est PAS un bug (fermée par défaut) ; c'était la capture pleine page qui figeait les éléments fixes au milieu → `capture-ui-port-marche.mjs` masque tabbar + feuille Plus pendant la capture
+- Build OK · oxlint 79 (main 83), 0 avertissement ajouté (`docs/ui-port/oxlint-compare.txt`)
+
+### Reste à faire (Cursor)
+Relancer `capture-ui-port-marche.mjs` sur données réelles (1440 + 390 pleine page + superpositions), smoke 11 pages, puis validation Samir sur téléphone. Pas de merge avant.
+
+---
+
 ## 2026-09-25 — UI-port Marché #108 (draft · corrections Claude)
 
 - Branche : `cursor/ui-port-marche-a2fe` — **draft**, **ne pas merger** avant Samir + Claude

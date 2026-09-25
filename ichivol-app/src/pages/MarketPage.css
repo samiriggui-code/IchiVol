@@ -37,7 +37,7 @@
 }
 
 .market-page .eyebrow {
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 11px 'DM Mono', ui-monospace, monospace;
   letter-spacing: 1.6px;
   color: #8c918f;
   margin-bottom: 10px;
@@ -57,9 +57,12 @@
   margin: 0;
 }
 
+/* Spécificité > .dash-shell.is-mobile .page-head p (index.css) */
+.dash-shell .market-page .page-head .subtitle,
 .market-page .subtitle {
   color: var(--muted);
   font-size: 12px;
+  line-height: 1.7;
   margin: 0;
 }
 
@@ -70,7 +73,7 @@
 }
 
 .market-page .tag {
-  font: 9px 'DM Mono', ui-monospace, monospace;
+  font: 10px 'DM Mono', ui-monospace, monospace;
   padding: 5px 7px;
   background: #edf3fa;
   border-radius: 4px;
@@ -107,7 +110,7 @@
   padding: 12px 16px;
   border-radius: 8px;
   color: #9b7a3d;
-  font-size: 11px;
+  font-size: 12px;
   margin: 0 0 22px;
 }
 
@@ -134,7 +137,7 @@
 }
 
 .market-page .card-head small {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -151,7 +154,7 @@
   display: flex;
   gap: 22px;
   padding: 0 23px;
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 12px 'DM Mono', ui-monospace, monospace;
   color: var(--muted);
 }
 
@@ -178,7 +181,7 @@
 .market-page .segmented button {
   border: none;
   background: transparent;
-  font-size: 10px;
+  font-size: 12px;
   padding: 6px 9px;
   color: var(--muted);
   border-radius: 4px;
@@ -236,7 +239,7 @@
 }
 
 .market-page .lecture-synthesis {
-  font-size: 12px !important;
+  font-size: 14px !important;
   color: var(--muted);
   line-height: 1.7;
   margin: 14px 0 4px;
@@ -256,7 +259,7 @@
   align-items: center;
   justify-content: space-between;
   margin: 17px 0;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .market-page .checkrow input {
@@ -286,12 +289,13 @@
 }
 
 .market-page .step p {
-  font-size: 11px !important;
+  font-size: 14px !important;
   margin: 5px 0;
   color: var(--muted);
 }
 
 .market-page button.primary {
+  font: 14px Manrope, Arial, sans-serif;
   background: var(--blue);
   color: white;
   border: 1px solid var(--blue);
@@ -357,6 +361,15 @@
 
 /* —— Media queries maquette (≤1150 / ≤800) —— */
 
+/* Watchlist desktop : même hauteur que la carte graphique, défilement interne (maquette). */
+@media (min-width: 801px) {
+  .market-page .watchlist {
+    height: 0;
+    min-height: 100%;
+    overflow-y: auto;
+  }
+}
+
 @media (max-width: 1150px) {
   .market-page .market-layout {
     grid-template-columns: 150px 1fr;
@@ -411,7 +424,6 @@
   }
   .market-page .chart-summary {
     gap: 10px;
-    font-size: 8px;
   }
   /* Cases Ichimoku / S-R empilées */
   .market-page .checkrow {
