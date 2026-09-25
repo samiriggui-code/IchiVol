@@ -5,12 +5,13 @@ import type { DecisionDetail } from '../lib/decisions'
 import type { DecisionPipelineView } from '../lib/decisionPipeline'
 import { signalLabel } from '../lib/signals'
 import type { Signal } from '../lib/types'
+import './BiasPanel.css'
 
 interface Props {
   symbol: string
   signals: Signal[]
   bias: 'bull' | 'bear' | 'neutral'
-  rvol: number
+  rvol: number | null
   price: number | null
   /** Décision moteur Python (crypto USDT) — null si hors périmètre / erreur. */
   engineDetail: DecisionDetail | null
@@ -18,6 +19,22 @@ interface Props {
   engineLoading: boolean
   engineError: string | null
   engineAvailable: boolean
+  /** Ouvre le flux « Préparer le trade » (MarkTradeSheet modal). */
+  onPrepareTrade?: () => void
+  prepareTradeDisabled?: boolean
+  prepareTradeHint?: string | null
+}
+
+function fmtRvol(n: number | null): string {
+  if (n == null || !Number.isFinite(n)) return '—'
+  return `${n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}×`
+}
+
+function fmtPrice(n: number | null): string {
+  if (n == null || !Number.isFinite(n)) return '—'
+  return n.toLocaleString('fr-FR', {
+    maximumFractionDigits: n >= 100 ? 2 : 6,
+  })
 }
 
 export function BiasPanel({
@@ -31,45 +48,43 @@ export function BiasPanel({
   engineLoading,
   engineError,
   engineAvailable,
+  onPrepareTrade,
+  prepareTradeDisabled,
+  prepareTradeHint,
 }: Props) {
   const recent = [...signals].reverse().slice(0, 6)
+  const showPrepare = typeof onPrepareTrade === 'function'
+
   return (
-    <section className="panel bias-panel">
+    <section className="panel bias-panel bias-panel--lecture">
       <header className="panel-head">
-        <h2>Lecture</h2>
+        <h2>Lecture du marché</h2>
         <span className="panel-meta">{symbol}</span>
       </header>
 
-      <div className="bias-grid">
-        <div>
-          <span className="label">Biais chart</span>
-          <strong className={`bias bias-${bias}`}>{bias}</strong>
-        </div>
-        <div>
-          <span className="label">RVOL chart</span>
-          <strong className="mono">{rvol.toFixed(2)}×</strong>
-        </div>
-        <div>
-          <span className="label">Prix</span>
-          <strong className="mono">
-            {price != null
-              ? price.toLocaleString(undefined, { maximumFractionDigits: 6 })
-              : '—'}
-          </strong>
-        </div>
+      <div className="bias-meta-strip" aria-label="Résumé chart">
+        <span>
+          Biais chart <strong className={`bias bias-${bias}`}>{bias}</strong>
+        </span>
+        <span>
+          RVOL <strong className="mono">{fmtRvol(rvol)}</strong>
+        </span>
+        <span>
+          Prix <strong className="mono">{fmtPrice(price)}</strong>
+        </span>
       </div>
-      <p className="bias-chart-note muted">
-        Chart = OHLCV source (calcul local). Le moteur IchiVol ci-dessous est la même lecture que
-        Décisions.
+      <p className="bias-chart-note">
+        Chart = OHLCV source (calcul local). Les 5 portes ci-dessous viennent du moteur IchiVol
+        (même lecture que Décisions).
       </p>
 
       <div className="bias-engine">
         <div className="bias-engine-head">
-          <h3 className="subhead">Moteur IchiVol</h3>
+          <h3 className="subhead">Cinq portes</h3>
           {engineAvailable && engineDetail && (
             <Link
               to="/app/opportunites"
-              className="ghost bias-engine-link"
+              className="bias-engine-link"
               title="Ouvrir la page Décisions"
             >
               Décisions →
@@ -79,8 +94,8 @@ export function BiasPanel({
 
         {!engineAvailable && (
           <p className="muted bias-engine-msg">
-            Le moteur décisionnel (pipeline) est branché sur les paires crypto USDT. Change de
-            classe / timeframe supporté pour l’activer.
+            Pipeline décisionnel branché sur les paires crypto USDT. Change de classe / timeframe
+            supporté pour l’activer.
           </p>
         )}
 
@@ -96,12 +111,20 @@ export function BiasPanel({
           </p>
         )}
 
+        {engineAvailable && !engineLoading && !engineError && !engineDetail && (
+          <p className="muted bias-engine-msg">Non disponible</p>
+        )}
+
         {engineDetail && (
           <>
             <div className="bias-engine-badges">
               <VerdictBadge decision={engineDetail.decision} pipeline={engineDetail.pipeline} />
               <span className="muted mono">
-                conf {(engineDetail.confidence * 100).toFixed(0)}% · {engineDetail.timeframe}
+                conf{' '}
+                {(engineDetail.confidence * 100).toLocaleString('fr-FR', {
+                  maximumFractionDigits: 0,
+                })}
+                % · {engineDetail.timeframe}
                 {enginePipeline?.native ? ' · natif' : ''}
               </span>
             </div>
@@ -110,19 +133,44 @@ export function BiasPanel({
         )}
       </div>
 
-      <h3 className="subhead">Signaux chart (RVOL local)</h3>
-      <ul className="signal-list">
-        {recent.map((s) => (
-          <li key={`${s.time}-${s.kind}`}>
-            <span className="sig-chip">{signalLabel(s.kind)}</span>
-            <span className="mono muted">{new Date(s.time * 1000).toLocaleString()}</span>
-            <span className="mono">{s.rvol.toFixed(2)}×</span>
-          </li>
-        ))}
-        {recent.length === 0 && (
-          <li className="muted">Pas de signal volume-confirmé sur la fenêtre chart</li>
-        )}
-      </ul>
+      <div className="bias-signals">
+        <h3 className="subhead">Signaux chart (RVOL local)</h3>
+        <ul className="signal-list">
+          {recent.map((s) => (
+            <li key={`${s.time}-${s.kind}`}>
+              <span className="sig-chip">{signalLabel(s.kind)}</span>
+              <span className="mono muted">
+                {new Date(s.time * 1000).toLocaleString('fr-FR')}
+              </span>
+              <span className="mono">{fmtRvol(s.rvol)}</span>
+            </li>
+          ))}
+          {recent.length === 0 && (
+            <li className="muted">Pas de signal volume-confirmé sur la fenêtre chart</li>
+          )}
+        </ul>
+      </div>
+
+      {showPrepare && (
+        <div className="bias-cta-row">
+          <button
+            type="button"
+            className="bias-prepare-cta"
+            disabled={prepareTradeDisabled}
+            title={
+              prepareTradeDisabled
+                ? (prepareTradeHint ?? 'Marquage indisponible sur ce symbole / TF')
+                : 'Poser ENTRY / STOP / TARGET puis proposer en paper'
+            }
+            onClick={onPrepareTrade}
+          >
+            Préparer le trade →
+          </button>
+          {prepareTradeDisabled && prepareTradeHint ? (
+            <p className="bias-cta-hint">{prepareTradeHint}</p>
+          ) : null}
+        </div>
+      )}
     </section>
   )
 }

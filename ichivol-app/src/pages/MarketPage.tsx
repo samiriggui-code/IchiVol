@@ -7,7 +7,7 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { BiasPanel } from '../components/BiasPanel'
 import {
   BacktestOverlaySheet,
@@ -26,7 +26,13 @@ import {
   type ScreenerDecisionRow,
 } from '../lib/decisions'
 import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
+import { labelDecision, labelPipelineGate } from '../lib/decisionLabels'
 import { displaySymbol } from '../lib/markets'
+import {
+  listUserDecisions,
+  type UserDecisionRow,
+} from '../lib/userDecisions'
+import './MarketPage.css'
 import {
   getChartObjects,
   postUserTradeSetup,
@@ -114,13 +120,65 @@ function friendlyDataError(raw: string): string {
 
 function fmtPrice(n: number | null): string {
   if (n == null || !Number.isFinite(n)) return '—'
-  return n.toLocaleString(undefined, { maximumFractionDigits: n >= 100 ? 2 : 6 })
+  return n.toLocaleString('fr-FR', { maximumFractionDigits: n >= 100 ? 2 : 6 })
 }
 
 function fmtPct(n: number | null): string {
   if (n == null || !Number.isFinite(n)) return '—'
   const sign = n > 0 ? '+' : ''
-  return `${sign}${n.toFixed(2)} %`
+  return `${sign}${n.toLocaleString('fr-FR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} %`
+}
+
+function fmtRvol(n: number | null): string {
+  if (n == null || !Number.isFinite(n)) return '—'
+  return `${n.toLocaleString('fr-FR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}×`
+}
+
+/** Variation ≈24h depuis les bougies OHLCV (jamais inventée). */
+function change24hFromCandles(candles: Candle[]): number | null {
+  if (candles.length < 2) return null
+  const last = candles[candles.length - 1]
+  if (!last || !Number.isFinite(last.close) || last.close === 0) return null
+  const target = last.time - 24 * 3600
+  let best = candles[0]
+  let bestDist = Math.abs((best?.time ?? 0) - target)
+  for (let i = 1; i < candles.length - 1; i++) {
+    const c = candles[i]
+    if (!c) continue
+    const dist = Math.abs(c.time - target)
+    if (dist < bestDist) {
+      best = c
+      bestDist = dist
+    }
+  }
+  if (!best || !Number.isFinite(best.close) || best.close === 0) return null
+  // Pas assez d’historique (~<12h) → Non disponible plutôt qu’un faux 24h.
+  if (last.time - best.time < 12 * 3600) return null
+  return ((last.close - best.close) / best.close) * 100
+}
+
+function journalGateLabel(row: UserDecisionRow): string {
+  if (row.gateDecision) {
+    return labelPipelineGate(row.gateDecision as 'BUY' | 'SELL' | 'WATCH' | 'NO_TRADE')
+  }
+  if (row.signalKind) {
+    return labelDecision(
+      row.signalKind as
+        | 'STRONG_BUY'
+        | 'BUY'
+        | 'WATCH'
+        | 'WAIT'
+        | 'SELL'
+        | 'STRONG_SELL',
+    )
+  }
+  return 'Non disponible'
 }
 
 function isAssetClass(v: string | null): v is EngineAssetClass {
@@ -196,6 +254,10 @@ export function MarketPage() {
   const [btActive, setBtActive] = useState(false)
   const [btLoading, setBtLoading] = useState(false)
   const [btError, setBtError] = useState<string | null>(null)
+
+  const [journalRows, setJournalRows] = useState<UserDecisionRow[]>([])
+  const [journalLoading, setJournalLoading] = useState(false)
+  const [journalError, setJournalError] = useState<string | null>(null)
 
   const resizeRef = useRef<{ startX: number; startW: number } | null>(null)
   const indicatorsRef = useRef<HTMLDivElement | null>(null)
@@ -543,19 +605,52 @@ export function MarketPage() {
     [candles, chartLive],
   )
 
-  /** Top-bar % only — rows keep change24h: 0 from API. */
-  const change24hDisplay = useMemo(() => {
-    if (candles.length < 2) return null
-    const last = candles[candles.length - 1]?.close
-    const prev = candles[candles.length - 2]?.close
-    if (last == null || prev == null || prev === 0) return null
-    return ((last - prev) / prev) * 100
-  }, [candles])
+  /** Top-bar / bandeau % — dérivé des bougies (~24h), jamais inventé. */
+  const change24hDisplay = useMemo(() => change24hFromCandles(candles), [candles])
+
+  /** RVOL : moteur d’abord, sinon chart live — absent → null (« — »). */
+  const summaryRvol = useMemo((): number | null => {
+    if (engineDetail?.rvol != null && Number.isFinite(engineDetail.rvol)) {
+      return engineDetail.rvol
+    }
+    if (candles.length > 0 && Number.isFinite(chartLive.rvol)) {
+      return chartLive.rvol
+    }
+    return null
+  }, [engineDetail, candles.length, chartLive.rvol])
 
   const enginePipeline = useMemo(
     () => (engineDetail ? pipelineFromDecisionDetail(engineDetail) : null),
     [engineDetail],
   )
+
+  const journalForSymbol = useMemo(
+    () => journalRows.filter((r) => r.symbol === symbol),
+    [journalRows, symbol],
+  )
+
+  useEffect(() => {
+    if (isMobile || !layout.bottomOpen || layout.bottomTab !== 'journal') return
+    let cancelled = false
+    setJournalLoading(true)
+    setJournalError(null)
+    listUserDecisions(80)
+      .then((rows) => {
+        if (!cancelled) setJournalRows(rows)
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setJournalError(err instanceof Error ? err.message : 'Journal indisponible')
+          setJournalRows([])
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setJournalLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isMobile, layout.bottomOpen, layout.bottomTab, symbol])
 
   useEffect(() => {
     setSnapshot({ symbol, interval, live, signals, rows })
@@ -849,19 +944,47 @@ export function MarketPage() {
     showEngine: engineOn || marketClass === 'crypto' || allWired.some((i) => i.provider !== 'twelve_data'),
   }
 
+  const prepareHint = canMarkTrade
+    ? null
+    : 'Disponible sur symboles câblés (timeframes moteur 15m / 1h / 4h / 1d).'
+
   const biasPanel = (
     <BiasPanel
       symbol={current?.label ?? displaySymbol(symbol)}
       signals={signals}
       bias={live.bias}
-      rvol={live.rvol}
+      rvol={summaryRvol}
       price={live.price}
       engineDetail={engineDetail}
       enginePipeline={enginePipeline}
       engineLoading={engineLoading}
       engineError={engineError}
       engineAvailable={engineOn}
+      onPrepareTrade={() => {
+        if (!canMarkTrade || markSaving) return
+        startMarkTrade()
+        if (isMobile) updateLayout({ drawerPos: 'closed' })
+      }}
+      prepareTradeDisabled={!canMarkTrade || markSaving}
+      prepareTradeHint={prepareHint}
     />
+  )
+
+  const chartSummary = (
+    <div className="mkt-chart-summary" aria-label="Résumé PRIX 24H RVOL">
+      <span>
+        Prix <b className="mono">{fmtPrice(live.price)}</b>
+      </span>
+      <span>
+        24H{' '}
+        <b className={`mono ${change24hDisplay == null ? 'is-na' : pctClass}`}>
+          {change24hDisplay == null ? 'Non disponible' : fmtPct(change24hDisplay)}
+        </b>
+      </span>
+      <span>
+        RVOL <b className={`mono ${summaryRvol == null ? 'is-na' : ''}`}>{fmtRvol(summaryRvol)}</b>
+      </span>
+    </div>
   )
 
   const chartEl = (
@@ -1169,6 +1292,7 @@ export function MarketPage() {
       {/* —— Main layout —— */}
       <div className="mkt-body">
         <section className="mkt-chart-panel chart-panel panel">
+          {chartSummary}
           {chartEl}
         </section>
 
@@ -1218,8 +1342,44 @@ export function MarketPage() {
                 </div>
               ) : null}
               {layout.bottomTab === 'journal' ? (
-                <div className="mkt-bottom-embed">
-                  <p>Journal — bientôt</p>
+                <div className="mkt-bottom-embed mkt-journal-dock">
+                  <div className="mkt-journal-dock-head">
+                    <h3>Journal · {current?.label ?? displaySymbol(symbol)}</h3>
+                    <Link className="mkt-journal-dock-link" to="/app/journal">
+                      Ouvrir le journal →
+                    </Link>
+                  </div>
+                  {journalLoading ? (
+                    <p className="mkt-journal-dock-msg">Chargement…</p>
+                  ) : journalError ? (
+                    <p className="mkt-journal-dock-msg is-error" role="alert">
+                      {journalError}
+                    </p>
+                  ) : journalForSymbol.length === 0 ? (
+                    <p className="mkt-journal-dock-msg">
+                      Aucune décision sauvegardée pour ce symbole.
+                    </p>
+                  ) : (
+                    <ul className="mkt-journal-list">
+                      {journalForSymbol.slice(0, 12).map((row) => (
+                        <li key={row.id}>
+                          <span className="mkt-journal-when mono">
+                            {new Date(row.createdAt).toLocaleString('fr-FR', {
+                              day: '2-digit',
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                          <span className="mkt-journal-meta">
+                            {row.interval}
+                            {row.note ? ` · ${row.note}` : ''}
+                          </span>
+                          <span className="mkt-journal-gate">{journalGateLabel(row)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               ) : null}
             </div>
@@ -1288,17 +1448,6 @@ export function MarketPage() {
               {layout.drawerTab === 'analysis' ? (
                 <div className="mkt-analysis-mobile">
                   {biasPanel}
-                  <button
-                    type="button"
-                    className="mkt-paper-cta"
-                    disabled={!canMarkTrade}
-                    onClick={() => {
-                      if (!markOpen) startMarkTrade()
-                      updateLayout({ drawerPos: 'closed' })
-                    }}
-                  >
-                    Ouvrir un trade paper
-                  </button>
                 </div>
               ) : null}
               {layout.drawerTab === 'backtest' ? backtestEmbed : null}
