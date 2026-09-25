@@ -3,11 +3,19 @@
  * Classes HTML = maquette. Données = engine (pas de démo inventée ; manquant → « — »).
  */
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   getActivityFeed,
   type ActivityItem,
+  type FeedTone,
 } from '../lib/activity'
 import {
   getScreener,
@@ -31,7 +39,9 @@ import {
   type SessionStatus,
 } from '../lib/marketSessions'
 import {
+  getPaperActivity,
   getPaperOverview,
+  type PaperOrderRow,
   type PaperOverview,
   type PaperOverviewPosition,
 } from '../lib/paper'
@@ -146,11 +156,7 @@ function pickPrimaryMarkets(rows: ScreenerDecisionRow[]): ScreenerDecisionRow[] 
   return [...preferred, ...rest].slice(0, 4)
 }
 
-function filterEquityCurve(
-  points: { t: string; equity: number }[],
-  period: EquityPeriod,
-  now = Date.now(),
-): { t: string; equity: number }[] {
+function periodCutoffMs(period: EquityPeriod, now = Date.now()): number {
   const ms =
     period === '1J'
       ? 86_400_000
@@ -159,10 +165,163 @@ function filterEquityCurve(
         : period === '1M'
           ? 30 * 86_400_000
           : 90 * 86_400_000
-  const cutoff = now - ms
+  return now - ms
+}
+
+function filterEquityCurve(
+  points: { t: string; equity: number }[],
+  period: EquityPeriod,
+  now = Date.now(),
+): { t: string; equity: number }[] {
+  const cutoff = periodCutoffMs(period, now)
   return points.filter((p) => {
     const t = Date.parse(p.t)
     return !Number.isNaN(t) && t >= cutoff
+  })
+}
+
+type EquityMarkerKind =
+  | 'tx_buy'
+  | 'tx_sell'
+  | 'paper_opened'
+  | 'paper_closed'
+  | 'shadow_blocked'
+  | 'shadow_closed'
+
+type EquityMarker = {
+  id: string
+  ms: number
+  kind: EquityMarkerKind
+  tone: FeedTone
+  symbol: string
+  title: string
+  detail: string
+  source: 'transaction' | 'action'
+}
+
+const MAX_EQUITY_MARKERS = 48
+
+function equityAtTime(
+  series: { ms: number; equity: number }[],
+  ms: number,
+): number | null {
+  if (series.length === 0) return null
+  if (ms <= series[0]!.ms) return series[0]!.equity
+  const last = series[series.length - 1]!
+  if (ms >= last.ms) return last.equity
+  for (let i = 1; i < series.length; i++) {
+    const b = series[i]!
+    if (ms <= b.ms) {
+      const a = series[i - 1]!
+      const r = (ms - a.ms) / Math.max(1, b.ms - a.ms)
+      return a.equity + r * (b.equity - a.equity)
+    }
+  }
+  return null
+}
+
+function nearKey(symbol: string, ms: number): string {
+  return `${symbol.toUpperCase()}@${Math.round(ms / 120_000)}`
+}
+
+function buildEquityMarkers(
+  actions: ActivityItem[],
+  orders: PaperOrderRow[],
+  period: EquityPeriod,
+  now = Date.now(),
+): EquityMarker[] {
+  const cutoff = periodCutoffMs(period, now)
+  const fromActions: EquityMarker[] = []
+  const covered = new Set<string>()
+
+  for (const it of actions) {
+    const ms = Date.parse(it.time)
+    if (Number.isNaN(ms) || ms < cutoff) continue
+    covered.add(nearKey(it.symbol, ms))
+    fromActions.push({
+      id: `act-${it.kind}-${it.symbol}-${it.time}`,
+      ms,
+      kind: it.kind,
+      tone: it.tone,
+      symbol: it.symbol,
+      title: it.title,
+      detail: it.detail || '—',
+      source: 'action',
+    })
+  }
+
+  const fromOrders: EquityMarker[] = []
+  for (const o of orders) {
+    const ms = Date.parse(o.time)
+    if (Number.isNaN(ms) || ms < cutoff) continue
+    if (covered.has(nearKey(o.symbol, ms))) continue
+    const side = String(o.side).toUpperCase()
+    const isBuy = side === 'BUY'
+    const notional =
+      Number.isFinite(o.notional) && o.notional > 0
+        ? fmtEur(o.notional, 2)
+        : '—'
+    const px =
+      Number.isFinite(o.filled_price) && o.filled_price > 0
+        ? fmtPrice(o.filled_price)
+        : '—'
+    fromOrders.push({
+      id: `tx-${o.id}`,
+      ms,
+      kind: isBuy ? 'tx_buy' : 'tx_sell',
+      tone: isBuy ? 'good' : 'neutral',
+      symbol: o.symbol,
+      title: `${isBuy ? 'Achat' : 'Vente'} ${o.symbol}`,
+      detail: [
+        `${side} · ${fmtDec(o.qty, 4)} @ ${px}`,
+        `notional ${notional}`,
+        o.reason?.trim() || null,
+        o.status ? `statut ${o.status}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      source: 'transaction',
+    })
+  }
+
+  const merged = [...fromActions, ...fromOrders].sort((a, b) => a.ms - b.ms)
+  if (merged.length <= MAX_EQUITY_MARKERS) return merged
+  // Prefer opens/closes + recent txs when dense.
+  const rank = (m: EquityMarker): number => {
+    if (m.kind === 'paper_opened' || m.kind === 'paper_closed') return 3
+    if (m.kind === 'tx_buy' || m.kind === 'tx_sell') return 2
+    return 1
+  }
+  return [...merged]
+    .sort((a, b) => rank(b) - rank(a) || b.ms - a.ms)
+    .slice(0, MAX_EQUITY_MARKERS)
+    .sort((a, b) => a.ms - b.ms)
+}
+
+function markerToneClass(tone: FeedTone): string {
+  switch (tone) {
+    case 'good':
+      return 'is-good'
+    case 'bad':
+      return 'is-bad'
+    case 'blocked':
+      return 'is-blocked'
+    case 'neutral':
+      return 'is-neutral'
+    default: {
+      const _exhaustive: never = tone
+      return _exhaustive
+    }
+  }
+}
+
+function fmtMarkerWhen(ms: number): string {
+  return new Date(ms).toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
   })
 }
 
@@ -224,27 +383,24 @@ function decisionBadgeText(r: ScreenerDecisionRow): string {
 function EquityViz({
   points,
   period,
+  actions,
+  orders,
 }: {
   points: { t: string; equity: number }[]
   period: EquityPeriod
+  actions: ActivityItem[]
+  orders: PaperOrderRow[]
 }) {
-  const filtered = filterEquityCurve(points, period)
-  if (filtered.length < 2) {
-    return (
-      <div id="equity">
-        <svg
-          className="chart"
-          viewBox="0 0 720 230"
-          role="img"
-          aria-label="Courbe de performance indisponible"
-        />
-      </div>
-    )
-  }
-  const vals = filtered.map((p) => p.equity)
-  const min = Math.min(...vals)
-  const max = Math.max(...vals)
-  const span = Math.max(1e-6, max - min)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [tipPos, setTipPos] = useState<{ left: number; top: number } | null>(null)
+
+  const filtered = useMemo(() => filterEquityCurve(points, period), [points, period])
+  const markers = useMemo(
+    () => buildEquityMarkers(actions, orders, period),
+    [actions, orders, period],
+  )
+
   const w = 720
   const h = 230
   const padL = 25
@@ -253,14 +409,77 @@ function EquityViz({
   const padB = 30
   const innerW = w - padL - padR
   const innerH = h - padT - padB
-  const coords = vals.map((v, i) => {
-    const x = padL + (i / (vals.length - 1)) * innerW
-    const y = padT + (1 - (v - min) / span) * innerH
-    return [x, y] as const
-  })
-  const d = coords.map((p, i) => `${i ? 'L' : 'M'}${p[0]},${p[1]}`).join(' ')
-  const last = coords[coords.length - 1]
-  const area = `${d} L${last[0]},${h - padB} L${padL},${h - padB}Z`
+
+  const series = useMemo(
+    () =>
+      filtered
+        .map((p) => ({ ms: Date.parse(p.t), equity: p.equity }))
+        .filter((p) => !Number.isNaN(p.ms)),
+    [filtered],
+  )
+
+  const geometry = useMemo(() => {
+    if (series.length < 2) return null
+    const vals = series.map((p) => p.equity)
+    const min = Math.min(...vals)
+    const max = Math.max(...vals)
+    const span = Math.max(1e-6, max - min)
+    const t0 = series[0]!.ms
+    const t1 = series[series.length - 1]!.ms
+    const tSpan = Math.max(1, t1 - t0)
+    const xAt = (ms: number) => padL + ((ms - t0) / tSpan) * innerW
+    const yAt = (equity: number) => padT + (1 - (equity - min) / span) * innerH
+    const coords = series.map((p) => [xAt(p.ms), yAt(p.equity)] as const)
+    const d = coords.map((p, i) => `${i ? 'L' : 'M'}${p[0]},${p[1]}`).join(' ')
+    const last = coords[coords.length - 1]!
+    const area = `${d} L${last[0]},${h - padB} L${padL},${h - padB}Z`
+    const placed = markers
+      .map((m) => {
+        const eq = equityAtTime(series, m.ms)
+        if (eq == null) return null
+        return { ...m, x: xAt(m.ms), y: yAt(eq), equity: eq }
+      })
+      .filter((m): m is EquityMarker & { x: number; y: number; equity: number } => m != null)
+    return { min, max, span, d, area, last, placed, vals }
+  }, [series, markers, innerW, innerH])
+
+  const active = geometry?.placed.find((m) => m.id === activeId) ?? null
+
+  const showTip = useCallback(
+    (id: string, clientX: number, clientY: number) => {
+      const box = wrapRef.current?.getBoundingClientRect()
+      if (!box) return
+      setActiveId(id)
+      const left = Math.min(Math.max(8, clientX - box.left + 12), box.width - 200)
+      const top = Math.min(Math.max(8, clientY - box.top - 8), box.height - 12)
+      setTipPos({ left, top })
+    },
+    [],
+  )
+
+  const hideTip = useCallback(() => {
+    setActiveId(null)
+    setTipPos(null)
+  }, [])
+
+  useEffect(() => {
+    hideTip()
+  }, [period, hideTip])
+
+  if (!geometry) {
+    return (
+      <div id="equity" className="desk-equity-wrap" ref={wrapRef}>
+        <svg
+          className="chart"
+          viewBox={`0 0 ${w} ${h}`}
+          role="img"
+          aria-label="Courbe de performance indisponible"
+        />
+      </div>
+    )
+  }
+
+  const { max, span, d, area, last, placed } = geometry
   const labels = [filtered[0], filtered[Math.floor(filtered.length / 2)], filtered[filtered.length - 1]]
     .filter(Boolean)
     .map((p) => {
@@ -272,8 +491,14 @@ function EquityViz({
     })
 
   return (
-    <div id="equity">
-      <svg className="chart" viewBox={`0 0 ${w} ${h}`} role="img" aria-label={`Courbe equity ${period}`}>
+    <div id="equity" className="desk-equity-wrap" ref={wrapRef}>
+      <svg
+        className="chart"
+        viewBox={`0 0 ${w} ${h}`}
+        role="img"
+        aria-label={`Courbe equity ${period}${placed.length ? ` · ${placed.length} événements` : ''}`}
+        onPointerLeave={hideTip}
+      >
         <defs>
           <linearGradient id="desk-eq-fade" x1="0" y1="0" x2="0" y2="1">
             <stop stopColor="#b5d6cc" stopOpacity=".35" />
@@ -294,13 +519,93 @@ function EquityViz({
         })}
         <path d={area} fill="url(#desk-eq-fade)" />
         <path d={d} fill="none" stroke="#478f83" strokeWidth="2" />
-        <circle cx={last[0]} cy={last[1]} r="4" fill="#478f83" />
+        {placed.map((m) => (
+          <g key={m.id} className={`desk-eq-marker ${markerToneClass(m.tone)}`}>
+            <circle
+              cx={m.x}
+              cy={m.y}
+              r={activeId === m.id ? 6 : 4.5}
+              className="desk-eq-marker-dot"
+              role="button"
+              tabIndex={0}
+              aria-label={`${m.title} · ${fmtMarkerWhen(m.ms)}`}
+              onPointerEnter={(e) => showTip(m.id, e.clientX, e.clientY)}
+              onFocus={(e) => {
+                const box = wrapRef.current?.getBoundingClientRect()
+                const svg = (e.target as SVGCircleElement).ownerSVGElement
+                if (!box || !svg) return
+                const pt = svg.createSVGPoint()
+                pt.x = m.x
+                pt.y = m.y
+                const ctm = svg.getScreenCTM()
+                if (!ctm) return
+                const screen = pt.matrixTransform(ctm)
+                showTip(m.id, screen.x, screen.y)
+              }}
+              onBlur={hideTip}
+              onClick={(e) => {
+                e.stopPropagation()
+                if (activeId === m.id) hideTip()
+                else showTip(m.id, e.clientX, e.clientY)
+              }}
+            />
+            {m.source === 'transaction' ? (
+              <circle
+                cx={m.x}
+                cy={m.y}
+                r={2}
+                className="desk-eq-marker-core"
+                pointerEvents="none"
+              />
+            ) : null}
+          </g>
+        ))}
+        <circle cx={last[0]} cy={last[1]} r="4" fill="#478f83" pointerEvents="none" />
       </svg>
+      {active && tipPos ? (
+        <div
+          className="desk-eq-tip"
+          role="tooltip"
+          style={{ left: tipPos.left, top: tipPos.top }}
+        >
+          <header>
+            <strong>{active.title}</strong>
+            <span className={`desk-eq-tip-kind ${active.source}`}>
+              {active.source === 'transaction' ? 'Transaction' : 'Action'}
+            </span>
+          </header>
+          <p>{active.detail}</p>
+          <dl>
+            <div>
+              <dt>Quand</dt>
+              <dd>{fmtMarkerWhen(active.ms)}</dd>
+            </div>
+            <div>
+              <dt>Symbole</dt>
+              <dd>{active.symbol || '—'}</dd>
+            </div>
+            <div>
+              <dt>Equity</dt>
+              <dd>{fmtEur(active.equity, 2)}</dd>
+            </div>
+          </dl>
+        </div>
+      ) : null}
       <div className="chart-labels">
         {labels.map((l, i) => (
           <span key={`${l}-${i}`}>{l}</span>
         ))}
       </div>
+      {placed.length > 0 ? (
+        <div className="desk-eq-legend" aria-hidden="true">
+          <span>
+            <i className="desk-eq-legend-dot is-tx" /> transactions paper
+          </span>
+          <span>
+            <i className="desk-eq-legend-dot is-action" /> actions circuit
+          </span>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -311,6 +616,8 @@ export function OverviewPage() {
   const [loading, setLoading] = useState(true)
   const [overview, setOverview] = useState<PaperOverview | null>(null)
   const [tape, setTape] = useState<ActivityItem[]>([])
+  const [equityActions, setEquityActions] = useState<ActivityItem[]>([])
+  const [paperOrders, setPaperOrders] = useState<PaperOrderRow[]>([])
   const [lock, setLock] = useState<RiskLockState | null>(null)
   const [engineOk, setEngineOk] = useState<boolean | null>(null)
   const [market, setMarket] = useState<GlobalMarketData | null>(null)
@@ -323,7 +630,7 @@ export function OverviewPage() {
   const load = useCallback(async (force = false) => {
     setLoading(true)
     type ScreenerOk = Awaited<ReturnType<typeof getScreener>>
-    const [screenerRes, ovRes, feedRes, lockRes, healthRes, mktRes, fngRes, tickersRes] =
+    const [screenerRes, ovRes, feedRes, ordersRes, lockRes, healthRes, mktRes, fngRes, tickersRes] =
       await Promise.all([
         getScreener('1h', force)
           .then((r): ScreenerOk | Error => r)
@@ -333,9 +640,12 @@ export function OverviewPage() {
         getPaperOverview(BASELINE)
           .then((r) => ({ ok: true as const, data: r }))
           .catch(() => ({ ok: false as const })),
-        getActivityFeed(40)
+        getActivityFeed(100)
           .then((r) => ({ ok: true as const, items: r.items }))
           .catch(() => ({ ok: false as const, items: [] as ActivityItem[] })),
+        getPaperActivity(BASELINE, 120)
+          .then((r) => ({ ok: true as const, orders: r }))
+          .catch(() => ({ ok: false as const, orders: [] as PaperOrderRow[] })),
         getRiskLock(BASELINE).catch(() => null),
         fetch('/api/engine/health', { credentials: 'include' })
           .then(async (res) => {
@@ -372,8 +682,16 @@ export function OverviewPage() {
     if (ovRes.ok) setOverview(ovRes.data)
     else setOverview(null)
 
-    if (feedRes.ok) setTape(feedRes.items.slice(0, TAPE_LIMIT))
-    else setTape([])
+    if (feedRes.ok) {
+      setEquityActions(feedRes.items)
+      setTape(feedRes.items.slice(0, TAPE_LIMIT))
+    } else {
+      setEquityActions([])
+      setTape([])
+    }
+
+    if (ordersRes.ok) setPaperOrders(ordersRes.orders)
+    else setPaperOrders([])
 
     setLock(lockRes)
     setEngineOk(healthRes.engine)
@@ -710,7 +1028,12 @@ export function OverviewPage() {
                 </b>
               </span>
             </div>
-            <EquityViz points={overview?.equity_curve ?? []} period={equityPeriod} />
+            <EquityViz
+              points={overview?.equity_curve ?? []}
+              period={equityPeriod}
+              actions={equityActions}
+              orders={paperOrders}
+            />
           </DeskCard>
 
           <DeskCard
