@@ -1,0 +1,18 @@
+IchiVol — frontend React / TypeScript / Vite — 11 pages
+
+Sources complètes du frontend : src/, composants, styles, public/ et configuration.
+Pages : Desk, Marché, Opportunités, Portefeuille, Strategy Lab, Journal,
+Contexte, Copilot, Agents, Opérations, Paramètres. Accueil et connexion inclus.
+
+Version issue du dépôt à 9c0c0cc, avec corrections CSS et ajout de la page Agents.
+Compilation vérifiée. Ces modifications ne sont pas déposées sur GitHub ni déployées.
+La page Agents présente six rôles prévus, sans lancer d’agents autonomes.
+
+Pour démarrer : ouvrir ichivol-app, lancer npm ci puis npm run dev.
+Pour compiler : npm run build.
+Le serveur et le moteur Python existants restent nécessaires pour les données
+et l’authentification. Ils ne sont pas inclus dans cette archive frontend.
+
+Pour intégrer dans le dépôt actuel : comparer les fichiers avant remplacement,
+car le dépôt peut avoir évolué depuis cette version. Conserver engine/ et server/.
+Aucune capture, aucun node_modules et aucune clé privée inclus.

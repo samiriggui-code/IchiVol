@@ -43,17 +43,24 @@ Companion Pine Script : [`../ichimoku-volume/`](../ichimoku-volume/).
 
 Panneau `AgentPanel` (3 modes : expliquer un signal, recherche théorique, idée de marché sur le screener), branché sur un petit backend séparé dans [`server/`](server/). L'agent est bridé pour ne jamais inventer une valeur de marché — voir [`server/README.md`](server/README.md) pour le détail du référentiel anti-hallucination.
 
-Lancement (deux process) :
+Lancement (trois process — ou `npm run dev:stack` depuis `ichivol-app/`) :
 
 ```bash
-# terminal 1 — backend agent
+# terminal 1 — moteur Python
+cd engine
+.venv/Scripts/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+
+# terminal 2 — backend agent / auth / proxy /api/engine → :8000
 cd server
 npm install
-cp .env.example .env   # renseigner ANTHROPIC_API_KEY, OPENAI_API_KEY ou OPENROUTER_API_KEY
+cp .env.example .env   # renseigner JWT_SECRET + ENGINE_URL=http://127.0.0.1:8000
 npm run dev             # http://localhost:8787
 
-# terminal 2 — app
+# terminal 3 — app
+cd ..
 npm run dev              # http://localhost:5173, proxy /api -> :8787
 ```
+
+Chaîne locale : **Vite `:5173` → Node `:8787` → Python `:8000`**. Sans le Node, `/api/*` renvoie 502 même si Python tourne.
 
 ⚠️ `dotenv` ne surcharge pas une variable déjà présente dans l'environnement système : si `ANTHROPIC_API_KEY` (ou autre) est déjà définie globalement sur la machine, le serveur l'utilisera même si `server/.env` est vide.

@@ -1,0 +1,47 @@
+/* Page Backtests : test manuel en haut, historique automatique dans un volet à droite
+   (même principe que le volet de la page Décisions). */
+
+.bt-head-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.bt-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: start;
+  transition: grid-template-columns 0.18s ease;
+}
+.bt-split.is-open {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.85fr);
+}
+.bt-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+.bt-sheet {
+  position: sticky;
+  top: 0.5rem;
+  max-height: calc(100vh - 1.5rem);
+}
+.bt-sheet .decision-sheet-scroll {
+  padding: 0 0.75rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+@media (max-width: 900px) {
+  .bt-split.is-open {
+    grid-template-columns: 1fr;
+  }
+  .bt-sheet {
+    order: -1;
+    position: static;
+    max-height: 60vh;
+  }
+}
