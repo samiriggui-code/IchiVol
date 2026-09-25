@@ -7,16 +7,16 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-25 — UI-11p smoke secrets (PR #91)
+## 2026-09-25 — UI-11p smoke secrets MERGÉE (#91) — tip `b73a20b`
 
-- PR : https://github.com/samiriggui-code/IchiVol/pull/91 — `cursor/ui11p-smoke-secrets-a2fe`
-- **Sécurité** : `scripts/smoke-ui11p.mjs` + `smoke-ui11p-mobile.mjs` — `SMOKE_EMAIL` / `SMOKE_PASS` **obligatoires** via env (exit 2 si absents ; plus aucun mot de passe par défaut dans le repo).
-- Compte local `ui11p-smoke@ichivol.local` : mot de passe **rotaté** (ancien hash invalidé). Identifiants hors repo uniquement.
-- Prod (`ichivol.global-it-ss.com`) : login avec l’ancien mot de passe exposé → **401**. Bundle prod encore sur nav legacy (Cockpit/Décisions/…) — **déploiement main (post-#89) requis** pour la barre Desk·Opportunités·Portefeuille·Copilot·Plus.
-- Lint + build OK ; smoke mobile 390px local **PASS**.
+- PR : https://github.com/samiriggui-code/IchiVol/pull/91 — **MERGÉE** (squash)
+- **Vérifié** : `origin/main` tip = `b73a20b`
+- Scripts smoke : `SMOKE_EMAIL` / `SMOKE_PASS` obligatoires (exit 2 si absents)
+- Compte local `ui11p-smoke@ichivol.local` : MDP rotaté ; ancien secret → 401 en local et sur prod
+- Prod encore nav legacy au moment du merge — déploiement VPS de `main` à faire pour barre UI-11p
 
 ### Suite
-Merge #91 → déployer main sur VPS → vérif mobile barre + Copilot LLM prod → onglet Journal Market + indicateurs moteur.
+Déployer `main` sur VPS → vérif mobile barre + Copilot LLM prod → onglet Journal Market + indicateurs moteur.
 
 ---
 
