@@ -1,183 +1,410 @@
-import { Link } from 'react-router-dom'
-import { PaperConfirmSheet } from '../components/PaperConfirmSheet'
-import { MarketPulseCard } from '../components/desk/DeskRelocatedCards'
-import { CLASS_BLURBS, CLASS_LABELS } from '../lib/universe'
-import { DecisionSheet } from './opportunites/DecisionSheet'
-import { GateStats } from './opportunites/GateStats'
-import { MethodBanner } from './opportunites/MethodBanner'
-import { PipelineRibbon } from './opportunites/PipelineRibbon'
-import { ScreenerPanel } from './opportunites/ScreenerPanel'
-import { WhyCard } from './opportunites/WhyCard'
-import { useOpportunitesController } from './opportunites/useOpportunitesController'
+/**
+ * Opportunités — port littéral de design-reference/ichivol-workspace `opportunites()` + page-head.
+ * Classes HTML = maquette. Données = engine (pas de démo inventée ; manquant → « — »).
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import {
+  getDecisionDetail,
+  getScreener,
+  type DecisionDetail,
+  type ScreenerDecisionRow,
+} from '../lib/decisions'
+import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
+import { displaySymbol } from '../lib/markets'
+import {
+  maquetteGateBadge,
+  type MaquetteBadgeTone,
+} from './market/marketMaquetteHelpers'
 import './DecisionsPage.css'
 
+type OppFilter = 'Tous' | 'WATCH' | 'ARMED' | 'TRIGGERED'
+
+type CycleLabel = 'WATCH' | 'ARMED' | 'TRIGGERED' | 'ACCEPTÉ' | 'REFUSÉ' | '—'
+
+function badge(text: string, tone: MaquetteBadgeTone | string = ''): ReactNode {
+  let inferred = tone
+  if (!inferred) {
+    inferred = /PASSE|ACCEPTÉ|OUVERTE|VALIDÉ|TRIGGERED/i.test(text)
+      ? 'green'
+      : /REFUS|BLOQU|ERREUR|ÉCHEC/i.test(text)
+        ? 'red'
+        : /PRUDENCE|ARMED|WATCH/i.test(text)
+          ? 'amber'
+          : ''
+  }
+  return <span className={`tag ${inferred}`.trim()}>{text}</span>
+}
+
+function cycleFromRow(row: ScreenerDecisionRow): CycleLabel {
+  const gate = row.pipeline?.decision?.toUpperCase?.() ?? ''
+  if (gate === 'BUY' || gate === 'SELL') return 'TRIGGERED'
+  if (gate === 'WATCH') return 'ARMED'
+  if (gate === 'NO_TRADE') return 'WATCH'
+  const d = String(row.decision || '').toUpperCase()
+  if (d === 'STRONG_BUY' || d === 'STRONG_SELL' || d === 'BUY' || d === 'SELL') return 'TRIGGERED'
+  if (d === 'WATCH') return 'ARMED'
+  if (d === 'WAIT') return 'WATCH'
+  return '—'
+}
+
+function stageBadge(row: ScreenerDecisionRow, stageId: string): ReactNode {
+  const stages = row.pipeline?.stages
+  const st = stages?.find((s) => s.id === stageId)
+  if (!st) return badge('—', 'gray')
+  const b = maquetteGateBadge(st.status)
+  // Maquette matrice uses BLOQUÉ instead of ÉCHEC for fail on some gates
+  if (b.text === 'ÉCHEC') return badge('BLOQUÉ', 'red')
+  return badge(b.text, b.tone)
+}
+
+function participationBadge(row: ScreenerDecisionRow): ReactNode {
+  if (row.pipeline?.stages?.some((s) => s.id === 'participation')) {
+    return stageBadge(row, 'participation')
+  }
+  if (row.rvol == null || !Number.isFinite(row.rvol)) return badge('—', 'gray')
+  return row.rvol >= 1.5 ? badge('PASSE') : badge('PRUDENCE', 'amber')
+}
+
+function directionCell(row: ScreenerDecisionRow): ReactNode {
+  if (row.direction === 'SHORT' || row.decision === 'SELL' || row.decision === 'STRONG_SELL') {
+    return <span className="down">↓ Vente</span>
+  }
+  if (row.direction === 'LONG' || row.decision === 'BUY' || row.decision === 'STRONG_BUY') {
+    return <span className="up">↑ Achat</span>
+  }
+  return <span>—</span>
+}
+
+function confidencePct(row: ScreenerDecisionRow): string {
+  if (row.confidence == null || !Number.isFinite(row.confidence)) return '—'
+  return `${Math.round(row.confidence * 100)}`
+}
+
 export function DecisionsPage() {
-  const c = useOpportunitesController()
+  const navigate = useNavigate()
+  const [rows, setRows] = useState<ScreenerDecisionRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [query, setQuery] = useState('')
+  const [oppFilter, setOppFilter] = useState<OppFilter>('Tous')
+  const [detail, setDetail] = useState<DecisionDetail | null>(null)
+  const [detailSym, setDetailSym] = useState<string | null>(null)
+  const dialogRef = useRef<HTMLDialogElement>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await getScreener('1h')
+      setRows(res.rows ?? [])
+    } catch {
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return rows.filter((r) => {
+      const cycle = cycleFromRow(r)
+      if (oppFilter !== 'Tous' && cycle !== oppFilter) return false
+      if (!q) return true
+      const base = displaySymbol(r.symbol).toLowerCase()
+      const full = r.symbol.toLowerCase()
+      return base.includes(q) || full.includes(q)
+    })
+  }, [rows, query, oppFilter])
+
+  const whyRow = useMemo(() => {
+    const triggered = rows.filter((r) => cycleFromRow(r) === 'TRIGGERED')
+    const pool = triggered.length ? triggered : rows
+    if (!pool.length) return null
+    return [...pool].sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))[0] ?? null
+  }, [rows])
+
+  const openDecision = async (symbol: string) => {
+    setDetailSym(symbol)
+    setDetail(null)
+    dialogRef.current?.showModal()
+    try {
+      const d = await getDecisionDetail(symbol, '1h', false)
+      setDetail(d)
+    } catch {
+      setDetail(null)
+    }
+  }
+
+  const closeDialog = () => {
+    dialogRef.current?.close()
+    setDetailSym(null)
+    setDetail(null)
+  }
+
+  const whyBase = whyRow ? displaySymbol(whyRow.symbol) : '—'
+  const whyCycle = whyRow ? cycleFromRow(whyRow) : '—'
+
+  const detailPipeline = detail ? pipelineFromDecisionDetail(detail) : null
+  const detailCycle = detail ? cycleFromRow(detail) : '—'
+  const detailRvol =
+    detail?.rvol != null && Number.isFinite(detail.rvol)
+      ? `${detail.rvol.toLocaleString('fr-FR', { maximumFractionDigits: 2, minimumFractionDigits: 1 })}×`
+      : '—'
+  const detailConf =
+    detail?.confidence != null && Number.isFinite(detail.confidence)
+      ? `${Math.round(detail.confidence * 100)} / 100`
+      : '—'
 
   return (
-    <div className={`decisions-page${c.sheetOpen ? ' is-sheet-open' : ''}`}>
-      <div className="decisions-chrome" aria-hidden={c.sheetOpen || undefined}>
-        <header className="iv-page-header page-head market-head">
-          <div className="market-head-copy">
-            <p className="iv-page-eyebrow">Trading · Opportunités</p>
-            <h1>Opportunités</h1>
-            <p className="iv-page-question">
-              Que dit la méthode ?
-              {c.pinnedOnly ? ' · Filtre Épinglés actif.' : ''}
-            </p>
-            <p className="muted">{CLASS_BLURBS[c.marketClass]}</p>
+    <div className="opps-page">
+      <div className="page-head">
+        <div>
+          <div className="eyebrow">03 / ICHIVOL WORKSPACE</div>
+          <h1>Opportunités</h1>
+          <p className="subtitle">Chaque décision commence par une preuve.</p>
+        </div>
+        <div className="actions">{badge('DONNÉES LIVE', 'gray')}</div>
+      </div>
+
+      <div className="toolbar">
+        <input
+          type="search"
+          id="opp-search"
+          placeholder="Rechercher un actif…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <div className="segmented">
+          {(['Tous', 'WATCH', 'ARMED', 'TRIGGERED'] as OppFilter[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              className={oppFilter === t ? 'active' : ''}
+              onClick={() => setOppFilter(t)}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>
+          {loading ? '—' : `${filtered.length} actifs`} · clôture 1H
+        </span>
+      </div>
+
+      <section className="card">
+        <div className="card-head">
+          <h2>Matrice de décision</h2>
+          {badge('5 PORTES', 'gray')}
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ACTIF</th>
+                <th>DIRECTION</th>
+                <th>PARTICIPATION</th>
+                <th>STRUCTURE</th>
+                <th>EMPLACEMENT</th>
+                <th>RÉGIME</th>
+                <th>CYCLE</th>
+                <th>CONFIANCE</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={8}>
+                    <b>—</b>
+                    <small>{loading ? 'Chargement…' : 'Aucune ligne'}</small>
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((r) => {
+                  const base = displaySymbol(r.symbol)
+                  const cycle = cycleFromRow(r)
+                  return (
+                    <tr
+                      key={r.symbol}
+                      className="clickable"
+                      tabIndex={0}
+                      onClick={() => void openDecision(r.symbol)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          void openDecision(r.symbol)
+                        }
+                      }}
+                    >
+                      <td>
+                        <b>{base}</b>
+                        <small>{base} · USDT</small>
+                      </td>
+                      <td>{directionCell(r)}</td>
+                      <td>{participationBadge(r)}</td>
+                      <td>{stageBadge(r, 'structure')}</td>
+                      <td>{stageBadge(r, 'location')}</td>
+                      <td>{stageBadge(r, 'regime')}</td>
+                      <td>{badge(cycle === '—' ? '—' : cycle)}</td>
+                      <td>
+                        <span className="mono">{confidencePct(r)} %</span>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div style={{ height: 20 }} />
+
+      <div className="grid">
+        <section className="card">
+          <div className="card-head">
+            <h2>De l’observation à la décision</h2>
           </div>
-          {c.visibleClasses.length > 0 && (
-            <div className="market-class-tabs" role="tablist" aria-label="Classe d’actif">
-              {c.pinnedOnly && (
-                <Link to="/app/opportunites" className="ghost" style={{ alignSelf: 'center' }}>
-                  Tout voir
-                </Link>
-              )}
-              {!c.pinnedOnly && (
-                <Link
-                  to="/app/opportunites?filter=pinned"
-                  className="ghost"
-                  style={{ alignSelf: 'center' }}
-                >
-                  Épinglés
-                </Link>
-              )}
-              {c.visibleClasses.map((cl) => (
-                <button
-                  key={cl}
-                  type="button"
-                  role="tab"
-                  aria-selected={cl === c.marketClass}
-                  className={cl === c.marketClass ? 'is-active' : undefined}
-                  onClick={() => c.selectClass(cl)}
-                >
-                  {CLASS_LABELS[cl]}
-                </button>
+          <div className="card-body">
+            <div className="toolbar">
+              {(['WATCH', 'ARMED', 'TRIGGERED', 'ACCEPTÉ', 'REFUSÉ'] as const).map((s, i) => (
+                <span key={s}>
+                  {i ? ' → ' : ''}
+                  {badge(s)}
+                </span>
               ))}
             </div>
-          )}
-        </header>
-
-        <MethodBanner rows={c.classRows} />
-        <PipelineRibbon rows={c.classRows} loading={c.loading} />
-
-        {c.whyCandidate ? (
-          <WhyCard
-            whyCandidate={c.whyCandidate}
-            whyDetail={c.whyDetail}
-            whyLoading={c.whyLoading}
-            whyError={c.whyError}
-            onOpenSheet={c.onSelect}
-          />
-        ) : null}
-
-        <div className="desk-relocated-stack">
-          <MarketPulseCard rows={c.classRows} loading={c.loading} />
-        </div>
-
-        <GateStats
-          loading={c.loading}
-          empty={!c.classRows.length}
-          buy={c.gateStats.buy}
-          sell={c.gateStats.sell}
-          watch={c.gateStats.watch}
-          total={c.gateStats.total}
-          timeframe={c.timeframe}
-          onFilterBuySell={() => {
-            c.setActionableOnly(true)
-            c.setDecisionFilter('all')
-          }}
-          onClearActionable={() => {
-            c.setActionableOnly(false)
-            c.setDecisionFilter('all')
-          }}
-        />
-
-        {c.error && (
-          <div className="banner error" role="alert">
-            {c.error.includes('engine_unreachable') || c.error.includes('502')
-              ? 'Moteur Python injoignable — vérifie que le service tourne (voir ichivol-app/engine/README).'
-              : c.error}
+            <p style={{ fontSize: 12, color: 'var(--muted)' }}>
+              Un signal traverse chaque contrôle. La confiance complète la lecture ; elle ne
+              remplace jamais le verdict du Risk Kernel.
+            </p>
           </div>
-        )}
+        </section>
+
+        <section className="card">
+          <div className="card-head">
+            <h2>{whyRow ? `Pourquoi ${whyBase} ?` : 'Pourquoi — ?'}</h2>
+            {badge(whyCycle === '—' ? '—' : whyCycle)}
+          </div>
+          <div className="card-body">
+            <p style={{ fontSize: 12 }}>
+              {whyRow
+                ? 'Direction, volume et structure lus par le moteur. Le plan attend une validation finale du risque.'
+                : '—'}
+            </p>
+            {whyRow ? (
+              <button
+                type="button"
+                className="primary"
+                onClick={() => void openDecision(whyRow.symbol)}
+              >
+                Ouvrir la fiche de décision →
+              </button>
+            ) : (
+              <button type="button" className="primary" disabled>
+                —
+              </button>
+            )}
+          </div>
+        </section>
       </div>
 
-      <div className="decisions-split">
-        <ScreenerPanel
-          marketClass={c.marketClass}
-          listView={c.listView}
-          setListView={c.setListView}
-          loading={c.loading}
-          visibleRows={c.visibleRows}
-          classRows={c.classRows}
-          cacheAge={c.cacheAge}
-          onRefresh={() => c.load(true)}
-          gateFilter={c.gateFilter}
-          setGateFilter={c.setGateFilter}
-          setActionableOnly={c.setActionableOnly}
-          timeframe={c.timeframe}
-          setTimeframe={c.setTimeframe}
-          symbolQuery={c.symbolQuery}
-          setSymbolQuery={c.setSymbolQuery}
-          decisionFilter={c.decisionFilter}
-          setDecisionFilter={c.setDecisionFilter}
-          rvolMin={c.rvolMin}
-          setRvolMin={c.setRvolMin}
-          actionableOnly={c.actionableOnly}
-          sheetOpen={c.sheetOpen}
-          selected={c.selected}
-          onSelect={c.onSelect}
-          instrumentLabel={c.instrumentLabel}
-          onOpenPaperFromMatrix={(row) => void c.onOpenPaperFromMatrix(row)}
-          paperBusySymbol={c.paperBusySymbol}
-          openPaperSymbols={c.openPaperSymbols}
-          paperMsg={c.paperMsg}
-          error={c.error}
-          sortKey={c.sortKey}
-          sortDir={c.sortDir}
-          toggleSort={c.toggleSort}
-          colCount={c.colCount}
-        />
-
-        {c.sheetOpen && c.selected && (
-          <DecisionSheet
-            selected={c.selected}
-            instrumentLabel={c.instrumentLabel}
-            detailLoading={c.detailLoading}
-            byId={c.byId}
-            detail={c.detail}
-            closeSheet={c.closeSheet}
-            detailError={c.detailError}
-            activeIntent={c.activeIntent}
-            pipelineView={c.pipelineView}
-            intentLoading={c.intentLoading}
-            paperConfirming={c.paperConfirming}
-            onConfirmPaperOrder={() => void c.onConfirmPaperOrder()}
-            onRefreshIntent={() => void c.onRefreshIntent()}
-            confirming={c.confirming}
-            onConfirmDetail={() => void c.onConfirmDetail()}
-            explainDecision={c.explainDecision}
-            compareGates={c.compareGates}
-            confirmMsg={c.confirmMsg}
-          />
-        )}
-      </div>
-
-      {c.paperConfirm && (
-        <PaperConfirmSheet
-          symbol={c.paperConfirm.symbol}
-          timeframe={c.paperConfirm.timeframe}
-          symbolLabel={c.instrumentLabel(c.paperConfirm.symbol)}
-          intent={c.paperConfirm.intent}
-          confirming={c.paperConfirming}
-          error={c.paperConfirmError}
-          onConfirm={(order) => void c.executePaperConfirm(order)}
-          onCancel={() => {
-            if (!c.paperConfirming) c.setPaperConfirm(null)
-          }}
-        />
-      )}
+      <dialog id="detail" ref={dialogRef} onClose={closeDialog}>
+        {detailSym ? (
+          <div className="card" style={{ border: 0, boxShadow: 'none' }}>
+            <div className="card-head">
+              <h2>
+                {displaySymbol(detailSym)} / USDT
+              </h2>
+              <button type="button" className="subtle" onClick={closeDialog} aria-label="Fermer">
+                ✕
+              </button>
+            </div>
+            <div className="card-body">
+              {badge(detailCycle === '—' ? '—' : detailCycle)}
+              <p>
+                Fiche de décision · Ichimoku × RVOL · 1H
+                {detail?.strategy_version ? ` · ${detail.strategy_version}` : ''}
+              </p>
+              <div className="statline">
+                <span>Direction</span>
+                <b>
+                  {detailPipeline
+                    ? badge(
+                        detailPipeline.direction === 'SHORT'
+                          ? 'VENTE'
+                          : detailPipeline.direction === 'LONG'
+                            ? 'PASSE'
+                            : '—',
+                      )
+                    : badge('—', 'gray')}
+                </b>
+              </div>
+              <div className="statline">
+                <span>Participation</span>
+                <b>
+                  {detail
+                    ? participationBadge(detail)
+                    : badge('—', 'gray')}
+                </b>
+              </div>
+              <div className="statline">
+                <span>RVOL</span>
+                <b>{detailRvol}</b>
+              </div>
+              <div className="statline">
+                <span>Confiance</span>
+                <b>{detailConf}</b>
+              </div>
+              <div className="statline">
+                <span>Déclenchement</span>
+                <b>—</b>
+              </div>
+              <div className="statline">
+                <span>Invalidation</span>
+                <b>
+                  {detail?.invalidation?.[0] ?? '—'}
+                </b>
+              </div>
+              <div className="notice blue" style={{ marginTop: 20 }}>
+                Lecture moteur. Aucun ordre n’est envoyé depuis cette fiche.
+              </div>
+            </div>
+            <div className="card-foot" style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  closeDialog()
+                  navigate(`/app/market?symbol=${encodeURIComponent(detailSym)}`)
+                }}
+              >
+                Voir le graphique
+              </button>
+              <Link
+                className="primary"
+                to="/app/journal"
+                onClick={closeDialog}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '10px 14px',
+                  borderRadius: 8,
+                  background: 'var(--blue)',
+                  color: 'white',
+                  border: '1px solid var(--blue)',
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              >
+                Enregistrer la décision
+              </Link>
+            </div>
+          </div>
+        ) : null}
+      </dialog>
     </div>
   )
 }
