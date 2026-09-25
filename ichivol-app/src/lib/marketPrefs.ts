@@ -1,49 +1,4 @@
-/** Persisted Market page prefs (UI-MARKET) — layout, sort, layers, volume. */
-
-export type DrawerPos = 'closed' | 'half' | 'full'
-export type DrawerTab = 'list' | 'analysis' | 'backtest'
-export type SortDir = 'asc' | 'desc'
-export type WatchlistSortKey =
-  | 'symbol'
-  | 'change24h'
-  | 'rvol'
-  | 'bias'
-  | 'score'
-  | 'context'
-
-export interface MarketLayoutPrefs {
-  rightOpen: boolean
-  rightWidth: number
-  bottomOpen: boolean
-  bottomHeight: number
-  volumeHeight: number
-  sortKey: WatchlistSortKey
-  sortDir: SortDir
-  drawerPos: DrawerPos
-  drawerTab: DrawerTab
-  classFilter: string | null
-  /** Bottom dock tab when panel open (desktop). */
-  bottomTab: 'backtest' | 'mark' | 'journal'
-}
-
-const LAYOUT_KEY = 'ichivol.market.layout'
-/** Bump when DEFAULT_LAYERS change so existing devices pick up new defaults. */
-export const LAYERS_PREFS_VERSION = 2
-const LAYERS_KEY = `ichivol.market.layers.v${LAYERS_PREFS_VERSION}`
-
-export const DEFAULT_LAYOUT: MarketLayoutPrefs = {
-  rightOpen: true,
-  rightWidth: 380,
-  bottomOpen: false,
-  bottomHeight: 250,
-  volumeHeight: 150,
-  sortKey: 'rvol',
-  sortDir: 'desc',
-  drawerPos: 'closed',
-  drawerTab: 'list',
-  classFilter: null,
-  bottomTab: 'backtest',
-}
+/** Persisted Marché layer prefs (Ichimoku / S-R / volume). Pas de prefs drawer/dock. */
 
 export type ObjectLayerKey =
   | 'structure'
@@ -68,7 +23,7 @@ export type LayerPrefs = Record<ObjectLayerKey | IndicatorLayerKey, boolean> & {
   showInvalidated: boolean
 }
 
-/** Primary Calques toggles (maquette). */
+/** Primary Ichimoku toggles (maquette checkbox). */
 export const ICHIMOKU_LAYER_KEYS: IndicatorLayerKey[] = [
   'tenkan',
   'kijun',
@@ -76,59 +31,7 @@ export const ICHIMOKU_LAYER_KEYS: IndicatorLayerKey[] = [
   'spanB',
 ]
 
-export type AdvancedLayerKey = ObjectLayerKey | 'signals'
-
-/** Advanced layers under the collapsed Calques section (maquette). */
-export const ADVANCED_LAYER_META: {
-  key: AdvancedLayerKey
-  label: string
-  subtitle: string
-  color: string
-}[] = [
-  {
-    key: 'signals',
-    label: 'Signaux',
-    subtitle: 'Marqueurs volume-confirmés',
-    color: 'var(--neutral)',
-  },
-  {
-    key: 'breaks',
-    label: 'BOS / CHoCH',
-    subtitle: 'Cassures structure (T9b)',
-    color: 'var(--neutral)',
-  },
-  {
-    key: 'fibonacci',
-    label: 'Fibonacci',
-    subtitle: 'Retracements impulsifs (T9e)',
-    color: 'var(--tenkan)',
-  },
-  {
-    key: 'fvg',
-    label: 'FVG',
-    subtitle: 'Fair value gaps (T9d)',
-    color: 'var(--kijun)',
-  },
-  {
-    key: 'claude',
-    label: 'Dessins Claude',
-    subtitle: 'Objets dessinés par l’agent',
-    color: 'var(--primary)',
-  },
-  {
-    key: 'user_trades',
-    label: 'Mes trades',
-    subtitle: 'ENTRY / STOP / TARGET utilisateur',
-    color: 'var(--bear)',
-  },
-  {
-    key: 'backtest',
-    label: 'Backtest',
-    subtitle: 'Overlay stratégie catalogue',
-    color: 'var(--muted-foreground)',
-  },
-]
-
+/** Meta for object overlays still drawn by PriceChart when enabled. */
 export const OBJECT_LAYER_META: {
   key: ObjectLayerKey
   label: string
@@ -180,7 +83,11 @@ export const OBJECT_LAYER_META: {
   },
 ]
 
-/** Maquette defaults: candles + volume + Ichimoku cloud/TK only. */
+/** Bump when DEFAULT_LAYERS change so devices pick up maquette defaults. */
+export const LAYERS_PREFS_VERSION = 3
+const LAYERS_KEY = `ichivol.market.layers.v${LAYERS_PREFS_VERSION}`
+
+/** Maquette : Ichimoku + S/R cochés ; calques avancés off. */
 export const DEFAULT_LAYERS: LayerPrefs = {
   candles: true,
   tenkan: true,
@@ -189,7 +96,7 @@ export const DEFAULT_LAYERS: LayerPrefs = {
   spanB: true,
   volume: true,
   signals: false,
-  structure: false,
+  structure: true,
   fibonacci: false,
   fvg: false,
   breaks: false,
@@ -207,18 +114,6 @@ function readJson<T>(key: string, fallback: T): T {
     return { ...fallback, ...JSON.parse(raw) } as T
   } catch {
     return fallback
-  }
-}
-
-export function loadLayoutPrefs(): MarketLayoutPrefs {
-  return readJson(LAYOUT_KEY, DEFAULT_LAYOUT)
-}
-
-export function saveLayoutPrefs(prefs: MarketLayoutPrefs): void {
-  try {
-    localStorage.setItem(LAYOUT_KEY, JSON.stringify(prefs))
-  } catch {
-    /* ignore quota */
   }
 }
 

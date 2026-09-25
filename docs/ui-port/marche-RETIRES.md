@@ -1,37 +1,31 @@
-# Marché — éléments retirés de la page (port maquette)
+# Marché — éléments retirés (port maquette)
 
-PR : `cursor/ui-port-marche-a2fe` · commit `f731e54`  
-Référence maquette : `design-reference/ichivol-workspace` → `marche()` + `page-head` dans `render()`.
+Branche `cursor/ui-port-marche-a2fe` · rebase sur `main` @ `604a8b0` (#106).
 
-Règle : tout ce qui n’est pas dans la maquette sort de la page. Les fichiers orphelins (plus importés nulle part) sont **supprimés** dans cette PR (récupérables via git). Les libs métier restent.
+## Supprimés du dépôt (orphelins après portage)
 
-## Supprimés du dépôt (orphelins après retrait de la page)
+| Fichier | Raison |
+|---------|--------|
+| `components/BiasPanel.tsx` (+ `.css`) | Lecture technique ≠ panneau maquette |
+| `components/MarketWatchlist.tsx` | Screener multi-colonnes ≠ watchlist maquette |
+| `components/MarketLayersMenu.tsx` | Calques avancés hors maquette |
+| `components/MarkTradeSheet.tsx` | Marquer un trade — hors maquette |
+| `components/BacktestOverlaySheet.tsx` | Overlay backtest — hors maquette |
+| `pages/market/useMarketController.ts` | Contrôleur terminal #106 — remplacé par page maquette |
+| `pages/market/MarketToolbar.tsx` | Toolbar terminal |
+| `pages/market/MarketChartArea.tsx` | Zone chart terminal |
+| `pages/market/MarketBottomDock.tsx` | Dock bas Backtest/Mark/Journal |
+| `pages/market/MarketDrawer.tsx` | Tiroir mobile (interdit) |
+| `pages/market/MarketSheets.tsx` | Sheets Mark/Backtest |
+| `pages/market/marketHelpers.ts` | Helpers terminal (format bias/scan) |
 
-| Fichier | Raison | Proposition d’emplacement |
-|---------|--------|---------------------------|
-| `components/BiasPanel.tsx` (+ `.css`) | « Lecture » technique 5 portes / pipeline détaillé ≠ panneau maquette | Opportunités (fiche) ou section repliable ultérieure si Samir le veut |
-| `components/MarketWatchlist.tsx` | Screener multi-colonnes (score, contexte, classes) ≠ watchlist maquette (symbole / % / prix) | Opportunités (matrice) — doublon probable |
-| `components/MarketLayersMenu.tsx` | Menu Calques avancés (BOS, Fib, FVG, Claude, trades, backtest) | Sous le graphique (menu ⋯) si réintégration demandée |
-| `components/MarkTradeSheet.tsx` | « Marquer un trade » T2c | Journal / menu ⋯ graphique |
-| `components/BacktestOverlaySheet.tsx` | Overlay backtest T4a | Strategy Lab / menu ⋯ graphique |
+Conservé : `pages/market/marketMaquetteHelpers.ts` (affichage maquette).
 
-## Retiré de l’UI Marché (logique / chrome, pas forcément fichiers dédiés)
+## Prefs retirées (`marketPrefs.ts`)
 
-| Élément | Raison | Proposition |
-|---------|--------|-------------|
-| Toolbar symbole / Calques / Indicateurs / Marquer un trade | Hors maquette | Menu ⋯ sur carte graphique (décision Samir) |
-| Screener multi-classes + Rescan (Crypto/Forex/…) | Hors maquette | Opportunités ou section « Screener complet » |
-| Dock bas Backtest / Marquer / Journal | Hors maquette | Lab / Journal / menu ⋯ |
-| Tiroir mobile Liste / Analyse / Backtest | Interdit (tiroir caché) | Empilement maquette ≤800px |
-| Prefs layout drawer / right panel / bottom dock | Servaient l’ancien terminal | Conservées dans `marketPrefs.ts` pour non-régression clés LS ; non utilisées par la page |
+Drawer / panneau droit / dock bas / sort / classFilter — **supprimés** (plus de clés LS layout).  
+Calques : `LAYERS_PREFS_VERSION = 3` · Ichimoku + **Supports/résistances ON** par défaut.
 
-## Conservé (métier)
+## Ne pas réintroduire
 
-- `PriceChart` + overlays Ichimoku / S/R via prefs calques
-- `lib/decisions`, `decisionPipeline`, `universe`, `marketPrefs` (calques v2), `agent.confirmAgentAction` (pin watchlist)
-- Tokens `camap-tokens` bull/bear alignés maquette (#318d80 / #bf6c61) — partagés, pas page-only
-
-## CSS
-
-- Ancien chrome `.mkt-*` retiré de `index.css` (~14,6 kB).
-- Styles page = `MarketPage.css` (port `style.css` maquette, scopé `.market-page`).
+Marquer un trade · Backtest overlay · Calques avancés · screener multi-classes — emplacement futur = décision Samir.

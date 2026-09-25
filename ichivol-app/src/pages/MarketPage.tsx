@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { PriceChart } from '../components/PriceChart'
 import { confirmAgentAction } from '../lib/agent'
+import { fetchTickers24h } from '../lib/binance'
 import {
   getDecisionDetail,
   getScreener,
@@ -30,10 +31,10 @@ import {
   type EngineInstrument,
 } from '../lib/universe'
 import {
-  change24hFromCandles,
   fmtPctMaq,
   fmtPriceMaq,
   fmtRvolMaq,
+  lectureSynthesisFr,
   maquetteGateBadge,
   shortSymbol,
 } from './market/marketMaquetteHelpers'
@@ -75,6 +76,9 @@ export function MarketPage() {
   const [searchParams] = useSearchParams()
   const [instruments, setInstruments] = useState<EngineInstrument[]>([])
   const [screenerRows, setScreenerRows] = useState<ScreenerDecisionRow[]>([])
+  const [tickers24h, setTickers24h] = useState<Map<string, { price: number; change24h: number }>>(
+    () => new Map(),
+  )
   const [symbol, setSymbol] = useState('BTCUSDT')
   const [interval, setInterval] = useState<Interval>('1h')
   const [candles, setCandles] = useState<Candle[]>([])
@@ -95,7 +99,6 @@ export function MarketPage() {
     saveLayerPrefs(next)
   }, [])
 
-  // Universe + deep-link
   useEffect(() => {
     let cancelled = false
     getEngineUniverse()
@@ -123,7 +126,6 @@ export function MarketPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Screener (prix / rvol watchlist)
   useEffect(() => {
     let cancelled = false
     getScreener(interval, false)
@@ -138,7 +140,26 @@ export function MarketPage() {
     }
   }, [interval])
 
-  // OHLCV
+  // 24h Binance pour chaque symbole watchlist (crypto USDT)
+  useEffect(() => {
+    let cancelled = false
+    fetchTickers24h()
+      .then((rows) => {
+        if (cancelled) return
+        const m = new Map<string, { price: number; change24h: number }>()
+        for (const t of rows) {
+          m.set(t.symbol, { price: t.lastPrice, change24h: t.priceChangePercent })
+        }
+        setTickers24h(m)
+      })
+      .catch(() => {
+        if (!cancelled) setTickers24h(new Map())
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   useEffect(() => {
     if (!symbol) return
     let cancelled = false
@@ -164,7 +185,6 @@ export function MarketPage() {
     }
   }, [symbol, interval])
 
-  // Decision detail for Lecture du marché
   useEffect(() => {
     if (!symbol) return
     let cancelled = false
@@ -197,22 +217,35 @@ export function MarketPage() {
         : []
     return list.map((inst) => {
       const row = screenerById.get(inst.id)
+      const tick = tickers24h.get(inst.id)
+      const price =
+        tick?.price && tick.price > 0
+          ? tick.price
+          : row?.price && row.price > 0
+            ? row.price
+            : null
       return {
         id: inst.id,
         label: shortSymbol(inst.id),
-        price: row?.price && row.price > 0 ? row.price : null,
-        change24h: null, // pas de 24h fiable multi-symbole sans inventer
+        price,
+        change24h: tick != null && Number.isFinite(tick.change24h) ? tick.change24h : null,
         rvol: row?.rvol ?? null,
       }
     })
-  }, [instruments, screenerById])
+  }, [instruments, screenerById, tickers24h])
 
-  const change24h = useMemo(() => change24hFromCandles(candles), [candles])
+  const selectedTick = tickers24h.get(symbol)
+  const change24h =
+    selectedTick != null && Number.isFinite(selectedTick.change24h)
+      ? selectedTick.change24h
+      : null
   const lastClose = candles.length ? candles[candles.length - 1]!.close : null
   const priceDisplay =
+    (selectedTick?.price && selectedTick.price > 0 ? selectedTick.price : null) ??
     (screenerById.get(symbol)?.price && screenerById.get(symbol)!.price > 0
       ? screenerById.get(symbol)!.price
-      : null) ?? lastClose
+      : null) ??
+    lastClose
   const rvolDisplay = detail?.rvol ?? screenerById.get(symbol)?.rvol ?? null
 
   const pipeline = useMemo(
@@ -220,14 +253,10 @@ export function MarketPage() {
     [detail],
   )
 
-  const synthesis = useMemo(() => {
-    if (!pipeline) return '—'
-    const parts = pipeline.stages
-      .filter((s) => s.summary)
-      .slice(0, 2)
-      .map((s) => s.summary)
-    return parts.length ? parts.join(' ') : '—'
-  }, [pipeline])
+  const synthesis = useMemo(
+    () => lectureSynthesisFr(pipeline, rvolDisplay),
+    [pipeline, rvolDisplay],
+  )
 
   const setupName = useMemo(() => {
     if (!pipeline) return '—'
@@ -300,7 +329,7 @@ export function MarketPage() {
             </button>
           )}
           {watchRows.map((w) => {
-            const ch = w.id === symbol ? change24h : w.change24h
+            const ch = w.change24h
             const up = ch != null && ch >= 0
             return (
               <button
@@ -311,12 +340,12 @@ export function MarketPage() {
               >
                 <b>{w.label}</b>
                 <span
-                  className={ch == null ? undefined : up ? 'up' : 'down'}
+                  className={ch == null ? 'chg-na' : up ? 'up' : 'down'}
                   style={{ fontSize: 10 }}
                 >
                   {fmtPctMaq(ch)}
                 </span>
-                <small>{fmtPriceMaq(w.id === symbol ? priceDisplay : w.price)}</small>
+                <small>{fmtPriceMaq(w.price)}</small>
               </button>
             )
           })}
@@ -414,7 +443,7 @@ export function MarketPage() {
                 </div>
               )
             })}
-            <p style={{ fontSize: 12, color: 'var(--muted-foreground, #7d8288)' }}>{synthesis}</p>
+            <p className="lecture-synthesis">{synthesis}</p>
             <div className="step">
               <b>{setupName}</b>
               <p>
@@ -440,10 +469,8 @@ export function MarketPage() {
             >
               Ajouter à la watchlist
             </button>
-            {watchMsg && (
-              <p style={{ fontSize: 11, color: 'var(--muted-foreground, #7d8288)' }}>{watchMsg}</p>
-            )}
-            <p style={{ marginTop: 12 }}>
+            {watchMsg && <p className="watch-msg">{watchMsg}</p>}
+            <p className="fiche-link">
               <Link className="link" to={`/app/opportunites?symbol=${encodeURIComponent(symbol)}`}>
                 Voir la fiche décision ↗
               </Link>

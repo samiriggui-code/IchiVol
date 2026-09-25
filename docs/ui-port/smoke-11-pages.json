@@ -1,0 +1,61 @@
+{
+  "pass": true,
+  "fail": 0,
+  "results": [
+    {
+      "r": "/app",
+      "st": 200,
+      "err": false
+    },
+    {
+      "r": "/app/market",
+      "st": 200,
+      "err": false
+    },
+    {
+      "r": "/app/opportunites",
+      "st": 200,
+      "err": false
+    },
+    {
+      "r": "/app/paper",
+      "st": 200,
+      "err": false
+    },
+    {
+      "r": "/app/journal",
+      "st": 200,
+      "err": false
+    },
+    {
+      "r": "/app/activity",
+      "st": 200,
+      "err": false
+    },
+    {
+      "r": "/app/backtests",
+      "st": 200,
+      "err": false
+    },
+    {
+      "r": "/app/context",
+      "st": 200,
+      "err": false
+    },
+    {
+      "r": "/app/agent",
+      "st": 200,
+      "err": false
+    },
+    {
+      "r": "/app/agents",
+      "st": 200,
+      "err": false
+    },
+    {
+      "r": "/app/settings",
+      "st": 200,
+      "err": false
+    }
+  ]
+}

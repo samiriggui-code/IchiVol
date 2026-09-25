@@ -7,20 +7,30 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-25 — UI-clean front — PR draft
+## 2026-09-25 — UI-port Marché #108 (draft · corrections Claude)
 
-- Branche : `cursor/ui-clean-a2fe` — **draft**, ne pas merger avant Claude
-- `index.css` : 5328 → ~2774 lignes · CSS mort + extractions pages
-- Desk / Opportunités / Marché / Lab / Settings découpés en sections (`pages/desk|opportunites|market|lab|settings`)
-- Orphelins supprimés : `ContextPanel.tsx`, `Screener.tsx`
-- Smoke 11 pages + fiche Opportunités mobile — **PASS** · [`docs/ui-clean/`](./ui-clean/)
-- Journal / Activity / Context encore >400 lignes (suite possible)
+- Branche : `cursor/ui-port-marche-a2fe` — **draft**, **ne pas merger** avant Samir + Claude
+- Base : `main` @ `604a8b0` (#106 mergée) — rebase ; orphelins terminal #106 **supprimés** (`marche-RETIRES.md`)
+- Corrections : prefs layout mortes · h1 Newsreader 38/32 · 24h watchlist (Binance ticker) · S/R coché · synthèse FR · mobile TF sous titre + checkrow empilé · captures full-page
+- Preuves : `docs/ui-port/marche/` · `docs/ui-p5/PARITE-MOBILE.md`
+- **Pas** de runtime agents · engine/server intouchés
 
 ### Suite
-Relecture Claude. **Pas** de runtime agents.
+Validation Samir + relecture Claude. Puis Desk.
 
 ---
 
+## 2026-09-25 — UI-clean #106 MERGÉE + VPS — tip `604a8b0`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/106 — **MERGÉE** (squash) après validation Claude
+- Tip `ece8cb4` (fix useMarketController) → merge commit `604a8b0`
+- **VPS** : https://ichivol.global-it-ss.com — `RELEASE=604a8b0` · health 200 · backup `/opt/ichivol-backup/pre-uiclean-*`
+- Smoke CI : pytest + frontend build — PASS
+
+### Suite
+#108 Marché (port littéral) — draft.
+
+---
 ## 2026-09-25 — UI-P4 MERGÉE (#103) + VPS
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/103 — squash merge après smoke PASS

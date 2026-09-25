@@ -495,15 +495,8 @@ button, select { font: inherit; color: inherit; }
   }
 }
 
-.dash-content:has(.mkt-page) {
-  overflow: hidden;
-  padding-bottom: 0;
-}
 @media (max-width: 768px) {
   /* Keep Market drawer handle above the fixed 5-tab bar (UI-MARKET 03). */
-  .dash-shell.is-mobile .dash-content:has(.mkt-page) {
-    padding-bottom: calc(3.85rem + env(safe-area-inset-bottom, 0));
-  }
 }
 
 .dash-header-left {

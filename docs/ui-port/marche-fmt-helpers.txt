@@ -1,16 +1,16 @@
-ichivol-app/src/pages/OverviewPage.tsx:51:function fmtPctPoints(
-ichivol-app/src/pages/OverviewPage.tsx:66:function fmtPct(v: number | null | undefined, digits = 1, signed = true): string {
-ichivol-app/src/pages/OverviewPage.tsx:79:function fmtEur(v: number | null | undefined, digits = 0): string {
-ichivol-app/src/pages/OverviewPage.tsx:89:function fmtPrice(v: number | null | undefined): string {
-ichivol-app/src/pages/BacktestsPage.tsx:222:function fmtPct(v: number | null, digits = 1): string {
-ichivol-app/src/pages/PaperPage.tsx:18:function fmtPct(v: number | null, digits = 1): string {
-ichivol-app/src/pages/market/marketMaquetteHelpers.ts:30:export function fmtPriceMaq(n: number | null | undefined): string {
-ichivol-app/src/pages/market/marketMaquetteHelpers.ts:37:export function fmtPctMaq(n: number | null | undefined): string {
-ichivol-app/src/pages/market/marketMaquetteHelpers.ts:43:export function fmtRvolMaq(n: number | null | undefined): string {
+ichivol-app/src/pages/lab/labShared.tsx:185:export function fmtPct(v: number | null, digits = 1): string {
+ichivol-app/src/pages/PaperPage.tsx:19:function fmtPct(v: number | null, digits = 1): string {
+ichivol-app/src/pages/market/marketMaquetteHelpers.ts:31:export function fmtPriceMaq(n: number | null | undefined): string {
+ichivol-app/src/pages/market/marketMaquetteHelpers.ts:38:export function fmtPctMaq(n: number | null | undefined): string {
+ichivol-app/src/pages/market/marketMaquetteHelpers.ts:44:export function fmtRvolMaq(n: number | null | undefined): string {
+ichivol-app/src/pages/desk/deskFormat.ts:18:export function fmtPctPoints(
+ichivol-app/src/pages/desk/deskFormat.ts:33:export function fmtPct(v: number | null | undefined, digits = 1, signed = true): string {
+ichivol-app/src/pages/desk/deskFormat.ts:46:export function fmtEur(v: number | null | undefined, digits = 0): string {
+ichivol-app/src/pages/desk/deskFormat.ts:56:export function fmtPrice(v: number | null | undefined): string {
 ichivol-app/src/pages/PortfolioPage.tsx:35:function fmtPct(v: number | null | undefined, digits = 1, signed = false): string {
 ichivol-app/src/pages/PortfolioPage.tsx:45:function fmtEur(v: number | null | undefined, digits = 0): string {
+ichivol-app/src/components/ScenariosPanel.tsx:5:function fmtPctOf(v: number | null | undefined): string {
 ichivol-app/src/components/PriceChart.tsx:143:function fmtPrice(n: number | null | undefined): string {
-ichivol-app/src/components/desk/DeskRelocatedCards.tsx:16:function fmtEur(v: number | null | undefined, digits = 0): string {
 ichivol-app/src/components/LabResearchPanel.tsx:23:function fmtPct(v: number | null | undefined, digits = 1): string {
 ichivol-app/src/components/PaperIntentConfirmSheet.tsx:12:function fmtEur(v: number | null | undefined): string {
-ichivol-app/src/components/ScenariosPanel.tsx:5:function fmtPctOf(v: number | null | undefined): string {
+ichivol-app/src/components/desk/DeskRelocatedCards.tsx:16:function fmtEur(v: number | null | undefined, digits = 0): string {

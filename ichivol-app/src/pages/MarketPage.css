@@ -43,10 +43,13 @@
   margin-bottom: 10px;
 }
 
-.market-page h1 {
-  font: 38px Newsreader, Georgia, serif;
+/* Spécificité > .page-head h1 (index) et .dash-shell.is-mobile .page-head h1 */
+.dash-shell .market-page .page-head h1,
+.market-page .page-head h1 {
+  font: 400 38px/1.15 Newsreader, Georgia, serif;
   margin: 0 0 6px;
   letter-spacing: -1px;
+  color: var(--ink);
 }
 
 .market-page h2 {
@@ -214,8 +217,10 @@
 }
 
 .market-page .watchlist .up,
-.market-page .watchlist .down {
+.market-page .watchlist .down,
+.market-page .watchlist .chg-na {
   float: right;
+  margin-left: 8px;
 }
 
 .market-page .watchlist .up {
@@ -224,6 +229,26 @@
 
 .market-page .watchlist .down {
   color: var(--red);
+}
+
+.market-page .watchlist .chg-na {
+  color: var(--muted);
+}
+
+.market-page .lecture-synthesis {
+  font-size: 12px !important;
+  color: var(--muted);
+  line-height: 1.7;
+  margin: 14px 0 4px;
+}
+
+.market-page .watch-msg {
+  font-size: 11px !important;
+  color: var(--muted);
+}
+
+.market-page .fiche-link {
+  margin-top: 12px;
 }
 
 .market-page .checkrow {
@@ -346,8 +371,13 @@
     align-items: flex-start;
     gap: 18px;
   }
-  .market-page h1 {
+  .dash-shell .market-page .page-head h1,
+  .dash-shell.is-mobile .market-page .page-head h1,
+  .market-page .page-head h1 {
     font-size: 32px;
+    font-weight: 400;
+    font-family: Newsreader, Georgia, serif;
+    letter-spacing: -1px;
   }
   .market-page .market-layout {
     grid-template-columns: 1fr;
@@ -364,9 +394,16 @@
   .market-page .market-layout > .analysis-panel {
     grid-column: auto;
   }
+  /* Maquette ≤800 : card-head wrap → TF sous le titre symbole */
   .market-page .card-head {
     padding: 18px;
     flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .market-page .card-head .segmented {
+    align-self: flex-start;
+    margin-top: 4px;
   }
   .market-page .card-body {
     padding-left: 18px;
@@ -376,9 +413,12 @@
     gap: 10px;
     font-size: 8px;
   }
+  /* Cases Ichimoku / S-R empilées */
   .market-page .checkrow {
     gap: 12px;
     flex-wrap: wrap;
+    flex-direction: column;
+    align-items: flex-start;
   }
   .market-page .market-chart-slot {
     height: 280px;
