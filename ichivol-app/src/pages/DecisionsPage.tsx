@@ -122,6 +122,8 @@ export function DecisionsPage() {
   const [paperConfirmError, setPaperConfirmError] = useState<string | null>(null)
   const [paperMsg, setPaperMsg] = useState<string | null>(null)
   const [paperBusy, setPaperBusy] = useState(false)
+  const [saveBusy, setSaveBusy] = useState(false)
+  const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
   const paperConfirmLock = useRef(false)
   const deepLinkHandled = useRef<string | null>(null)
@@ -188,6 +190,7 @@ export function DecisionsPage() {
     setDetail(null)
     setDetailLoading(false)
     setPaperMsg(null)
+    setSaveMsg(null)
     const next = new URLSearchParams(searchParams)
     if (next.has('symbol') || next.has('open')) {
       next.delete('symbol')
@@ -252,6 +255,7 @@ export function DecisionsPage() {
     setPaperBusy(true)
     setPaperConfirmError(null)
     setPaperMsg(null)
+    setSaveMsg(null)
     try {
       const tf = detail?.timeframe || '1h'
       const intent = await proposePaperTrade(detailSym, tf).catch(() => null)
@@ -262,6 +266,47 @@ export function DecisionsPage() {
       })
     } finally {
       setPaperBusy(false)
+    }
+  }
+
+  /** Enregistrement journal indépendant de l’ouverture paper. */
+  async function saveDecisionToJournal() {
+    if (!detailSym || saveBusy || detailLoading) return
+    setSaveBusy(true)
+    setSaveMsg(null)
+    setPaperMsg(null)
+    try {
+      const tf = detail?.timeframe || '1h'
+      const gate = detail?.pipeline?.decision ?? 'WATCH'
+      const pipe = detail ? pipelineFromDecisionDetail(detail) : null
+      const dir = pipe?.direction
+      const bias =
+        dir === 'SHORT' ? 'BEARISH' : dir === 'LONG' ? 'BULLISH' : 'NEUTRAL'
+      const row = await confirmUserDecision({
+        symbol: detailSym,
+        interval: tf,
+        bias,
+        rvol: detail?.rvol ?? 0,
+        signalKind:
+          detail?.decision ??
+          (gate === 'SELL' ? 'SELL' : gate === 'BUY' ? 'BUY' : 'WATCH'),
+        gateDecision: gate,
+        confidence: detail?.confidence,
+      })
+      const deduped = row.deduped === true
+      setSaveMsg({
+        ok: true,
+        text: deduped
+          ? `${displaySymbol(detailSym)} · déjà enregistrée dans le Journal`
+          : `${displaySymbol(detailSym)} · décision enregistrée dans le Journal`,
+      })
+    } catch (err: unknown) {
+      setSaveMsg({
+        ok: false,
+        text: err instanceof Error ? err.message : 'Enregistrement impossible',
+      })
+    } finally {
+      setSaveBusy(false)
     }
   }
 
@@ -486,6 +531,7 @@ export function DecisionsPage() {
           setDetail(null)
           setDetailLoading(false)
           setPaperMsg(null)
+          setSaveMsg(null)
         }}
       >
         {detailSym ? (
@@ -541,17 +587,43 @@ export function DecisionsPage() {
             <div className="notice blue" style={{ marginTop: 20 }}>
               {alreadyOpen
                 ? 'Position paper déjà ouverte sur ce symbole.'
-                : 'Aperçu paper avant confirmation. Aucun broker réel.'}
+                : 'Lecture moteur. Enregistrement journal ou ouverture paper au choix.'}
             </div>
+            {saveMsg && (
+              <div
+                className="notice"
+                style={{
+                  marginTop: 12,
+                  background: saveMsg.ok ? '#e7f3ee' : '#f8ecea',
+                  borderColor: saveMsg.ok ? '#c5ddd4' : '#e8cfc9',
+                  color: saveMsg.ok ? '#168579' : '#c8412f',
+                }}
+                role="status"
+              >
+                {saveMsg.text}
+              </div>
+            )}
             {paperMsg && (
               <p style={{ fontSize: 12, marginTop: 12 }} role="status">
                 {paperMsg}
               </p>
             )}
+            <button
+              type="button"
+              className="suggestion"
+              style={{ width: '100%', marginTop: 16 }}
+              disabled={alreadyOpen || paperBusy || paperConfirming || detailLoading}
+              onClick={() => void startPaperOpen()}
+            >
+              {alreadyOpen
+                ? 'Déjà ouvert en paper'
+                : paperBusy
+                  ? 'Préparation paper…'
+                  : 'Ouvrir une position paper →'}
+            </button>
             <div className="dialog-actions">
               <button
                 type="button"
-                className="suggestion"
                 onClick={() => {
                   closeDialog()
                   navigate(`/app/market?symbol=${encodeURIComponent(detailSym)}`)
@@ -562,14 +634,10 @@ export function DecisionsPage() {
               <button
                 type="button"
                 className="primary"
-                disabled={alreadyOpen || paperBusy || paperConfirming || detailLoading}
-                onClick={() => void startPaperOpen()}
+                disabled={saveBusy || detailLoading || !detail}
+                onClick={() => void saveDecisionToJournal()}
               >
-                {alreadyOpen
-                  ? 'Déjà ouvert'
-                  : paperBusy
-                    ? 'Préparation…'
-                    : 'Ouvrir une position paper →'}
+                {saveBusy ? 'Enregistrement…' : 'Enregistrer la décision'}
               </button>
             </div>
           </div>

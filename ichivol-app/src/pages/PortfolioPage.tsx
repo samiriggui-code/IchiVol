@@ -121,11 +121,16 @@ export function PortfolioPage() {
     () => (overview?.positions ?? []).filter((p) => String(p.status).toUpperCase() === 'OPEN'),
     [overview?.positions],
   )
-  const shown = positions.slice(0, 3)
   const concentration = useMemo(
-    () => concentrationFromPositions(positions).slice(0, 3),
+    () => concentrationFromPositions(positions),
     [positions],
   )
+  const positionsBadge =
+    positions.length === 0
+      ? '—'
+      : positions.length === 1
+        ? '1 POSITION'
+        : `${positions.length} POSITIONS`
   const dd = drawdownFromCurve(overview?.equity_curve ?? [], acct?.equity)
   const investedPct =
     acct && acct.equity > 0 ? Math.min(100, Math.max(0, (acct.invested / acct.equity) * 100)) : null
@@ -308,10 +313,7 @@ export function PortfolioPage() {
       <section className="card">
         <div className="card-head">
           <h2>Positions ouvertes</h2>
-          {badge(
-            positions.length ? `${Math.min(3, positions.length)} POSITIONS` : '—',
-            'gray',
-          )}
+          {badge(positionsBadge, 'gray')}
         </div>
         <div className="table-wrap">
           <table>
@@ -325,7 +327,7 @@ export function PortfolioPage() {
               </tr>
             </thead>
             <tbody>
-              {shown.length === 0 ? (
+              {positions.length === 0 ? (
                 <tr>
                   <td colSpan={5}>
                     <b>—</b>
@@ -333,7 +335,7 @@ export function PortfolioPage() {
                   </td>
                 </tr>
               ) : (
-                shown.map((p: PaperOverviewPosition) => {
+                positions.map((p: PaperOverviewPosition) => {
                   const base = displaySymbol(p.symbol)
                   const engaged =
                     p.market_value ??

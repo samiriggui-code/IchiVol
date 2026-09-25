@@ -7,6 +7,22 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — UI-port (#109) — correctifs bugs avant merge
+
+- Branche `cursor/ui-port-pages-a2fe` (même PR #109 draft)
+- **Portefeuille** : plus de `positions.slice(0, 3)` (reste maquette démo). Affiche **toutes** les positions ouvertes ; badge `1 POSITION` / `N POSITIONS` / `—`
+- **Opportunités** : bouton primaire **Enregistrer la décision** → `confirmUserDecision` + notice OK/erreur visible, indépendant de l’ouverture paper. Paper reste en `suggestion` (« Ouvrir une position paper → »)
+- Branche distante doublon `cursor/ui-port-desk-4731` : absente sur origin (déjà supprimée) ; branche locale purgée
+- `compare-maquette.mjs` : **11×0** 1440 + 390 — script non modifié
+- **Pas de merge** — attendre OK Samir téléphone + relecture Claude
+
+### Suite plan (après merge #109)
+
+1. Chantier 1 phase A — fiches (`cursor/ui-fiches-a2fe`) : INVENTAIRE.md → FicheDecision → points d’entrée
+2. Chantier 2 E0 — Eve runtime (`cursor/eve-runtime-a2fe`) : AgentTask + claim + worker minute (server/engine/prisma only)
+
+---
+
 ## 2026-09-25 — UI-port 10 pages (#109) — draft, 11×0 écart
 
 - Branche `cursor/ui-port-pages-a2fe` depuis #108 + patches Claude 2/3 + `puppeteer-core@23`
