@@ -8,6 +8,8 @@ import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
 import { TradePlanCard } from '../components/TradePlanCard'
 import { VerdictBadge } from '../components/VerdictBadge'
 import { MarketPulseCard } from '../components/desk/DeskRelocatedCards'
+import { DeskCardShell } from '../components/desk/DeskRings'
+import { summarizeScreener } from '../lib/deskSummarize'
 import {
   buildDecisionSummary,
   labelDecision,
@@ -234,6 +236,53 @@ function MethodBanner({ rows }: { rows: ScreenerDecisionRow[] }) {
   )
 }
 
+function PipelineRibbon({ rows, loading }: { rows: ScreenerDecisionRow[]; loading: boolean }) {
+  const summary = useMemo(() => summarizeScreener(rows), [rows])
+  const stages = PIPELINE_STAGE_ORDER.map((id) => ({
+    id,
+    label: stageFullLabel(id),
+    short: stageMatrixLabel(id),
+    pass: summary.stagePass[id] ?? 0,
+  }))
+  return (
+    <section className="panel opp-pipeline-ribbon" aria-label="De l'observation à la décision">
+      <header className="panel-head">
+        <h2>De l’observation à la décision</h2>
+        <span className="panel-meta">
+          {loading && !rows.length ? '…' : `${summary.total} symboles · portes passées`}
+        </span>
+      </header>
+      <ol className="opp-ribbon">
+        {stages.map((s, i) => (
+          <li key={s.id}>
+            {i > 0 ? <span className="opp-ribbon-arrow" aria-hidden>→</span> : null}
+            <div className="opp-ribbon-step">
+              <span className="muted">{s.short}</span>
+              <strong>{s.label}</strong>
+              <b className="mono">{loading && !rows.length ? '—' : s.pass}</b>
+            </div>
+          </li>
+        ))}
+        <li>
+          <span className="opp-ribbon-arrow" aria-hidden>→</span>
+          <div className="opp-ribbon-step is-gate">
+            <span className="muted">Portes</span>
+            <strong>Décision</strong>
+            <b className="mono">
+              {loading && !rows.length
+                ? '—'
+                : `${summary.buy + summary.sell} act.`}
+            </b>
+            <small className="muted">
+              {summary.buy} A · {summary.sell} V · {summary.watch} W · {summary.none} NT
+            </small>
+          </div>
+        </li>
+      </ol>
+    </section>
+  )
+}
+
 type PaperConfirmState = {
   symbol: string
   timeframe: string
@@ -261,9 +310,13 @@ export function DecisionsPage() {
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [symbolQuery, setSymbolQuery] = useState('')
   const [decisionFilter, setDecisionFilter] = useState<'all' | DecisionLabel>('all')
+  const [gateFilter, setGateFilter] = useState<'all' | PipelineGateLabel>('all')
   const [rvolMin, setRvolMin] = useState('')
   const [actionableOnly, setActionableOnly] = useState(false)
   const [timeframe, setTimeframe] = useState('1h')
+  const [whyDetail, setWhyDetail] = useState<DecisionDetail | null>(null)
+  const [whyLoading, setWhyLoading] = useState(false)
+  const [whyError, setWhyError] = useState<string | null>(null)
 
   const [confirming, setConfirming] = useState(false)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null)
@@ -366,6 +419,10 @@ export function DecisionsPage() {
         if (!sym.includes(q) && !short.includes(q) && !label.includes(q)) return false
       }
       if (decisionFilter !== 'all' && r.decision !== decisionFilter) return false
+      if (gateFilter !== 'all') {
+        const g = rowGate(r)
+        if (g !== gateFilter) return false
+      }
       if (actionableOnly) {
         const g = rowGate(r)
         if (g !== 'BUY' && g !== 'SELL') return false
@@ -376,7 +433,60 @@ export function DecisionsPage() {
       return true
     })
     return [...filtered].sort((a, b) => compareRows(a, b, sortKey, sortDir))
-  }, [classRows, symbolQuery, decisionFilter, rvolMin, actionableOnly, sortKey, sortDir, byId])
+  }, [
+    classRows,
+    symbolQuery,
+    decisionFilter,
+    gateFilter,
+    rvolMin,
+    actionableOnly,
+    sortKey,
+    sortDir,
+    byId,
+  ])
+
+  const whyCandidate = useMemo(() => {
+    if (selected) {
+      const hit = classRows.find((r) => r.symbol === selected)
+      if (hit) return hit
+    }
+    const actionable = classRows
+      .filter((r) => {
+        const g = rowGate(r)
+        return g === 'BUY' || g === 'SELL'
+      })
+      .sort((a, b) => b.confidence - a.confidence)
+    return actionable[0] ?? null
+  }, [classRows, selected])
+
+  useEffect(() => {
+    if (!whyCandidate) {
+      setWhyDetail(null)
+      setWhyError(null)
+      setWhyLoading(false)
+      return
+    }
+    let cancelled = false
+    setWhyLoading(true)
+    setWhyError(null)
+    getDecisionDetail(whyCandidate.symbol, timeframe)
+      .then((d) => {
+        if (!cancelled) {
+          setWhyDetail(d)
+          setWhyLoading(false)
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setWhyDetail(null)
+          setWhyError(err instanceof Error ? err.message : 'Détail indisponible')
+          setWhyLoading(false)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [whyCandidate?.symbol, timeframe])
 
   function instrumentLabel(id: string): string {
     return byId.get(id)?.label ?? id.replace(/USDT$/i, '')
@@ -749,6 +859,68 @@ export function DecisionsPage() {
 
       <MethodBanner rows={classRows} />
 
+      <PipelineRibbon rows={classRows} loading={loading} />
+
+      {whyCandidate ? (
+        <DeskCardShell
+          title={`Pourquoi ${whyCandidate.symbol.replace(/USDT$/i, '')} ?`}
+          meta={
+            (() => {
+              const g = rowGate(whyCandidate)
+              return g ? labelPipelineGate(g) : labelDecision(whyCandidate.decision)
+            })()
+          }
+          footer={
+            <button type="button" className="link" onClick={() => onSelect(whyCandidate.symbol)}>
+              Ouvrir la fiche ↗
+            </button>
+          }
+        >
+          {whyLoading && !whyDetail ? (
+            <p className="muted">Chargement du détail…</p>
+          ) : whyError && !whyDetail ? (
+            <p className="muted">{whyError}</p>
+          ) : whyDetail ? (
+            <div className="opp-why">
+              <p className="opp-why-summary">{buildDecisionSummary(whyDetail)}</p>
+              <ul className="opp-why-stages">
+                {(whyDetail.pipeline?.stages ?? []).map((s) => (
+                  <li key={s.id} className={`is-${s.status}`}>
+                    <span>{stageFullLabel(s.id as PipelineStageId)}</span>
+                    <strong>{s.status === 'pass' ? 'passée' : s.status === 'fail' ? 'bloquée' : s.status}</strong>
+                    {s.summary ? <small className="muted">{s.summary}</small> : null}
+                  </li>
+                ))}
+              </ul>
+              <dl className="opp-why-meta">
+                <div>
+                  <dt>RVOL</dt>
+                  <dd className="mono">
+                    {whyDetail.rvol != null
+                      ? `${new Intl.NumberFormat('fr-FR', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }).format(whyDetail.rvol)}×`
+                      : '—'}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Invalidation</dt>
+                  <dd>
+                    {(whyDetail.invalidation && whyDetail.invalidation[0]) ||
+                      whyDetail.evidence?.invalidation?.[0] ||
+                      whyDetail.order_intent?.invalidation?.[0] ||
+                      '—'}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          ) : (
+            <p className="muted">Pas encore de détail pour ce symbole.</p>
+          )}
+        </DeskCardShell>
+      ) : null}
+
       <div className="desk-relocated-stack">
         <MarketPulseCard rows={classRows} loading={loading} />
       </div>
@@ -847,6 +1019,30 @@ export function DecisionsPage() {
           </header>
 
           <div className="decisions-filters" role="search">
+            <div className="opp-gate-segmented" role="group" aria-label="Filtrer par état Portes">
+              {(
+                [
+                  ['all', 'Tous'],
+                  ['BUY', 'Achat'],
+                  ['SELL', 'Vente'],
+                  ['WATCH', 'Surveillance'],
+                  ['NO_TRADE', 'No trade'],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={gateFilter === id ? 'is-active' : undefined}
+                  aria-pressed={gateFilter === id}
+                  onClick={() => {
+                    setGateFilter(id)
+                    if (id === 'BUY' || id === 'SELL') setActionableOnly(false)
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <label className="decisions-filter">
               <span className="muted">TF</span>
               <select value={timeframe} onChange={(e) => setTimeframe(e.target.value)}>
@@ -867,7 +1063,7 @@ export function DecisionsPage() {
               />
             </label>
             <label className="decisions-filter">
-              <span className="muted">Décision</span>
+              <span className="muted">Décision brute</span>
               <select
                 value={decisionFilter}
                 onChange={(e) => setDecisionFilter(e.target.value as 'all' | DecisionLabel)}
@@ -898,13 +1094,18 @@ export function DecisionsPage() {
               />
               <span className="muted">Actionnables (Portes Achat/Vente)</span>
             </label>
-            {(symbolQuery || decisionFilter !== 'all' || rvolMin || actionableOnly) && (
+            {(symbolQuery ||
+              decisionFilter !== 'all' ||
+              gateFilter !== 'all' ||
+              rvolMin ||
+              actionableOnly) && (
               <button
                 type="button"
                 className="ghost decisions-filter-reset"
                 onClick={() => {
                   setSymbolQuery('')
                   setDecisionFilter('all')
+                  setGateFilter('all')
                   setRvolMin('')
                   setActionableOnly(false)
                 }}
