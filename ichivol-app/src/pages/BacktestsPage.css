@@ -8,6 +8,20 @@
   gap: 0.5rem;
 }
 
+.bt-kpis {
+  margin-bottom: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+@media (max-width: 900px) {
+  .bt-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.bt-kpis .iv-metric-value {
+  font-size: clamp(0.95rem, 1.6vw, 1.25rem);
+  word-break: break-word;
+}
+
 .bt-split {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -44,4 +58,55 @@
     position: static;
     max-height: 60vh;
   }
+}
+
+.bt-pad {
+  padding: 0 0.75rem 0.85rem;
+}
+
+.bt-equity-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.bt-equity-svg {
+  width: 100%;
+  height: auto;
+  max-height: 120px;
+  display: block;
+}
+.bt-equity-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.68rem;
+  color: var(--muted-foreground, var(--muted));
+}
+
+.bt-proof-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+  padding: 0 0.75rem 0.85rem;
+}
+@media (max-width: 900px) {
+  .bt-proof-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .bt-proof-steps {
+    grid-template-columns: 1fr;
+  }
+}
+.bt-proof-step b {
+  display: block;
+  font-size: 0.82rem;
+  margin-bottom: 0.25rem;
+}
+.bt-proof-step p {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--muted-foreground, var(--muted));
 }

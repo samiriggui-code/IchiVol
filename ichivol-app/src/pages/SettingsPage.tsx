@@ -1,11 +1,13 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { getMe, type AuthUser } from '../lib/auth'
 import {
   invalidateEngineThresholdsCache,
   validateEngineThresholds,
   thresholdsFromVolume,
 } from '../lib/engineThresholds'
 import { llmStatusLabel, useLlmStatus } from '../lib/llmStatus'
+import { getPaperOverview, type PaperOverview } from '../lib/paper'
 import {
   DEFAULT_MODELS,
   getSettings,
@@ -23,14 +25,23 @@ import {
   enablePushAlerts,
 } from '../lib/pushAlerts'
 import { DEFAULT_ICHI, DEFAULT_VOL } from '../lib/types'
+import { CLASS_LABELS, getEngineUniverse, type EngineUniverse } from '../lib/universe'
 
-type SettingsSection = 'llm' | 'sources' | 'indicators' | 'alerts'
+type SettingsSection =
+  | 'market'
+  | 'llm'
+  | 'alerts'
+  | 'risk'
+  | 'connections'
+  | 'environment'
 
 const SECTIONS: { id: SettingsSection; label: string; blurb: string }[] = [
-  { id: 'llm', label: 'Agent LLM', blurb: 'Provider, modèle, clé' },
-  { id: 'sources', label: 'Feeds marché', blurb: 'Vision · Bybit · OKX (data only)' },
-  { id: 'indicators', label: 'Indicateurs', blurb: 'Ichimoku · RVOL/ATR moteur' },
-  { id: 'alerts', label: 'Alertes push', blurb: 'Téléphone · positions ouvertes' },
+  { id: 'market', label: 'Marché et univers', blurb: 'Indicateurs · univers (lecture)' },
+  { id: 'llm', label: 'LLM', blurb: 'Provider, modèle, clé' },
+  { id: 'alerts', label: 'Alertes', blurb: 'Push · préférences' },
+  { id: 'risk', label: 'Limites de risque', blurb: 'Risk Kernel · lecture seule' },
+  { id: 'connections', label: 'Connexions', blurb: 'Feeds · Twelve Data' },
+  { id: 'environment', label: 'Environnement', blurb: 'PAPER · identité' },
 ]
 
 const SOURCES = [
@@ -96,6 +107,11 @@ export function SettingsPage() {
   })
   const [pushStatusMsg, setPushStatusMsg] = useState<string | null>(null)
   const [pushBusy, setPushBusy] = useState(false)
+  const [universe, setUniverse] = useState<EngineUniverse | null>(null)
+  const [universeError, setUniverseError] = useState<string | null>(null)
+  const [risk, setRisk] = useState<PaperOverview['risk'] | null>(null)
+  const [riskError, setRiskError] = useState<string | null>(null)
+  const [identity, setIdentity] = useState<AuthUser | null>(null)
 
   const modelOptions = useMemo(
     () => modelsForProvider(llmProvider, catalog),
@@ -127,6 +143,43 @@ export function SettingsPage() {
       .finally(() => {
         if (!cancelled) setLoading(false)
       })
+
+    getEngineUniverse()
+      .then((u) => {
+        if (!cancelled) {
+          setUniverse(u)
+          setUniverseError(null)
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setUniverse(null)
+          setUniverseError(err instanceof Error ? err.message : 'Univers indisponible')
+        }
+      })
+
+    getPaperOverview()
+      .then((ov) => {
+        if (!cancelled) {
+          setRisk(ov.risk ?? null)
+          setRiskError(ov.risk ? null : 'Risk Kernel absent de l’overview.')
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setRisk(null)
+          setRiskError(err instanceof Error ? err.message : 'Limites de risque indisponibles')
+        }
+      })
+
+    getMe()
+      .then((user) => {
+        if (!cancelled) setIdentity(user)
+      })
+      .catch(() => {
+        if (!cancelled) setIdentity(null)
+      })
+
     return () => {
       cancelled = true
     }
@@ -190,7 +243,7 @@ export function SettingsPage() {
     const thrErr = validateEngineThresholds(thresholdsFromVolume(vol))
     if (thrErr) {
       setError(thrErr)
-      setSection('indicators')
+      setSection('market')
       return
     }
     setSaving(true)
@@ -211,7 +264,7 @@ export function SettingsPage() {
         if (clearKey) patch.llmApiKey = ''
         else if (llmApiKey.trim()) patch.llmApiKey = llmApiKey.trim()
       }
-      if (section === 'sources') {
+      if (section === 'connections') {
         if (clearTwelveDataKey) patch.twelveDataApiKey = ''
         else if (twelveDataApiKey.trim()) patch.twelveDataApiKey = twelveDataApiKey.trim()
       }
@@ -307,9 +360,15 @@ export function SettingsPage() {
           <p className="muted">
             {section === 'llm'
               ? 'LLM actif en haut. Ajoute ou remplace la clé seulement si tu changes de provider.'
-              : section === 'sources'
+              : section === 'connections'
                 ? 'Données publiques — aucune clé exchange requise.'
-                : 'Seuils Ichimoku / RVOL persistés pour le cockpit.'}
+                : section === 'market'
+                  ? 'Seuils Ichimoku / RVOL persistés ; univers moteur en lecture seule.'
+                  : section === 'risk'
+                    ? 'Limites Risk Kernel en lecture — modification prévue dans une tranche engine.'
+                    : section === 'environment'
+                      ? 'Mode paper, exécution réelle désactivée, identité session.'
+                      : 'Alertes push pour positions paper ouvertes.'}
           </p>
         </header>
 
@@ -560,7 +619,7 @@ export function SettingsPage() {
             </>
           )}
 
-          {section === 'sources' && (
+          {section === 'connections' && (
             <section className="panel settings-section">
               <header className="panel-head">
                 <h2>Feeds de données actifs</h2>
@@ -598,7 +657,7 @@ export function SettingsPage() {
             </section>
           )}
 
-          {section === 'sources' && (
+          {section === 'connections' && (
             <section className="panel settings-section">
               <header className="panel-head">
                 <h2>Twelve Data (actions)</h2>
@@ -649,7 +708,54 @@ export function SettingsPage() {
             </section>
           )}
 
-          {section === 'indicators' && (
+          {section === 'market' && (
+            <>
+            <section className="panel settings-section">
+              <header className="panel-head">
+                <h2>Univers moteur</h2>
+                <span className="panel-meta">Lecture seule</span>
+              </header>
+              <div className="settings-body">
+                {universeError && (
+                  <p className="muted" role="status">
+                    {universeError}
+                  </p>
+                )}
+                {!universeError && !universe && <p className="muted">Chargement de l’univers…</p>}
+                {universe && (
+                  <>
+                    <p className="muted settings-feed-note">
+                      {universe.instruments.length} instruments · classes :{' '}
+                      {universe.classes.map((c) => CLASS_LABELS[c] ?? c).join(' · ')}
+                    </p>
+                    <div className="table-wrap settings-llm-table-wrap">
+                      <table className="settings-llm-table">
+                        <thead>
+                          <tr>
+                            <th>Classe</th>
+                            <th>Actifs</th>
+                            <th>Câblés</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {universe.classes.map((cls) => {
+                            const rows = universe.instruments.filter((i) => i.asset_class === cls)
+                            const wired = rows.filter((i) => i.wired).length
+                            return (
+                              <tr key={cls}>
+                                <td>{CLASS_LABELS[cls] ?? cls}</td>
+                                <td className="mono">{rows.length}</td>
+                                <td className="mono">{wired}</td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </div>
+            </section>
             <section className="panel settings-section">
               <header className="panel-head">
                 <h2>Ichimoku · RVOL · thème</h2>
@@ -817,9 +923,10 @@ export function SettingsPage() {
                 </button>
               </div>
             </section>
+            </>
           )}
 
-          {section === 'alerts' && (
+{section === 'alerts' && (
             <section className="panel">
               <header className="panel-head">
                 <h2>Alertes push (téléphone)</h2>
@@ -961,6 +1068,109 @@ export function SettingsPage() {
               </div>
             </section>
           )}
+
+          {section === 'risk' && (
+            <section className="panel settings-section">
+              <header className="panel-head">
+                <h2>Limites de risque</h2>
+                <span className="panel-meta">Risk Kernel · lecture seule</span>
+              </header>
+              <div className="settings-body">
+                <p className="muted settings-feed-note">
+                  Affichage des plafonds issus de <code>getPaperOverview().risk</code>. Modification
+                  prévue dans une tranche engine.
+                </p>
+                {riskError && (
+                  <p className="muted" role="status">
+                    {riskError}
+                  </p>
+                )}
+                {!riskError && !risk && <p className="muted">Chargement…</p>}
+                {risk && (
+                  <dl className="settings-risk-grid">
+                    <div>
+                      <dt>Capital (equity)</dt>
+                      <dd className="mono">
+                        {risk.capital.toLocaleString('fr-FR', { maximumFractionDigits: 2 })}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Cash</dt>
+                      <dd className="mono">
+                        {risk.cash.toLocaleString('fr-FR', { maximumFractionDigits: 2 })}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Exposé</dt>
+                      <dd className="mono">
+                        {risk.exposed.toLocaleString('fr-FR', { maximumFractionDigits: 2 })}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Risque ouvert</dt>
+                      <dd className="mono">
+                        {risk.open_risk_amount.toLocaleString('fr-FR', { maximumFractionDigits: 2 })}
+                        {risk.open_risk_pct != null
+                          ? ` · ${(risk.open_risk_pct * 100).toFixed(2)} %`
+                          : ''}
+                        {risk.max_open_risk_pct != null
+                          ? ` / lim. ${(risk.max_open_risk_pct * 100).toFixed(2)} %`
+                          : ''}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Positions ouvertes</dt>
+                      <dd className="mono">
+                        {risk.open_positions} / {risk.max_open_positions}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Kernel</dt>
+                      <dd className="mono">{risk.kernel}</dd>
+                    </div>
+                  </dl>
+                )}
+              </div>
+            </section>
+          )}
+
+          {section === 'environment' && (
+            <section className="panel settings-section">
+              <header className="panel-head">
+                <h2>Environnement</h2>
+                <span className="panel-meta">PAPER</span>
+              </header>
+              <div className="settings-body">
+                <dl className="settings-risk-grid">
+                  <div>
+                    <dt>Mode</dt>
+                    <dd>
+                      <span className="iv-badge">PAPER</span>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Exécution réelle</dt>
+                    <dd>
+                      <span className="iv-badge is-refuse">Désactivée</span>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Identité</dt>
+                    <dd className="mono">{identity?.email ?? '—'}</dd>
+                  </div>
+                  <div>
+                    <dt>User id</dt>
+                    <dd className="mono muted">{identity?.id ?? '—'}</dd>
+                  </div>
+                </dl>
+                <p className="muted settings-feed-note">
+                  Aucun ordre réel n’est envoyé depuis ce cockpit. Le paper et le Risk Kernel restent
+                  la seule voie d’exécution.
+                </p>
+              </div>
+            </section>
+          )}
+
         </form>
       </div>
 

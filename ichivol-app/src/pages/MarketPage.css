@@ -1,0 +1,152 @@
+/* UI-P4 — Market bandeau, prepare-trade modal, journal dock */
+
+.mkt-chart-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.35rem;
+  padding: 0.35rem 0.75rem 0.45rem;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 92%, var(--muted-foreground));
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.mkt-chart-summary span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.mkt-chart-summary b {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--foreground);
+}
+
+.mkt-chart-summary b.is-up {
+  color: var(--bull);
+}
+
+.mkt-chart-summary b.is-down {
+  color: var(--bear);
+}
+
+.mkt-chart-summary b.is-na {
+  color: var(--muted-foreground);
+  font-weight: 600;
+}
+
+/* MarkTradeSheet as modal overlay on Market */
+.mkt-page.is-mark-trade .mark-trade-backdrop {
+  pointer-events: auto;
+  background: color-mix(in srgb, var(--foreground) 32%, transparent);
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.mkt-page.is-mark-trade .mark-trade-sheet {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  max-height: min(80vh, 520px);
+  width: min(440px, 100%);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--foreground) 22%, transparent);
+}
+
+/* Journal dock */
+.mkt-journal-dock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-height: 0;
+  height: 100%;
+}
+
+.mkt-journal-dock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.mkt-journal-dock-head h3 {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.mkt-journal-dock-link {
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.mkt-journal-dock-link:hover {
+  text-decoration: underline;
+}
+
+.mkt-journal-dock-msg {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.mkt-journal-dock-msg.is-error {
+  color: var(--bear);
+}
+
+.mkt-journal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 0;
+}
+
+.mkt-journal-list li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.35rem 0.65rem;
+  align-items: baseline;
+  padding: 0.35rem 0.45rem;
+  border-radius: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  font-size: 0.72rem;
+}
+
+.mkt-journal-list .mkt-journal-when {
+  color: var(--muted-foreground);
+  font-size: 0.65rem;
+  white-space: nowrap;
+}
+
+.mkt-journal-list .mkt-journal-meta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mkt-journal-list .mkt-journal-gate {
+  font-weight: 600;
+  font-size: 0.68rem;
+  color: var(--foreground);
+}
+
+@media (max-width: 768px) {
+  .mkt-chart-summary {
+    gap: 0.55rem 0.85rem;
+    padding: 0.3rem 0.55rem;
+  }
+}
