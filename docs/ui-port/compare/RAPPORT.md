@@ -2,6 +2,6 @@
 
 | Page | 1440 | 390 |
 |---|---|---|
-| portefeuille | ✅ 0 | ✅ 0 |
+| journal | ✅ 0 | ✅ 0 |
 
 Total écarts : **0**. Détail par page : `docs/ui-port/compare/<page>.json`.

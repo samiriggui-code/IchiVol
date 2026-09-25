@@ -487,7 +487,8 @@ button, select { font: inherit; color: inherit; }
 }
 .dash-content:has(.market-page),
 .dash-content:has(.opps-page),
-.dash-content:has(.pf-page) {
+.dash-content:has(.pf-page),
+.dash-content:has(.journal-page) {
   overflow-y: auto;
   padding: 1.25rem 1.5rem 1.5rem;
 }
@@ -505,7 +506,8 @@ button, select { font: inherit; color: inherit; }
 @media (max-width: 800px) {
   .dash-content:has(.market-page),
   .dash-content:has(.opps-page),
-  .dash-content:has(.pf-page) {
+  .dash-content:has(.pf-page),
+  .dash-content:has(.journal-page) {
     padding: 1rem 0.85rem calc(3.85rem + env(safe-area-inset-bottom, 0));
   }
   .dash-content:has(.desk-page) {
@@ -516,7 +518,8 @@ button, select { font: inherit; color: inherit; }
 @media (max-width: 768px) {
   .dash-shell.is-mobile .dash-content:has(.market-page),
   .dash-shell.is-mobile .dash-content:has(.opps-page),
-  .dash-shell.is-mobile .dash-content:has(.pf-page) {
+  .dash-shell.is-mobile .dash-content:has(.pf-page),
+  .dash-shell.is-mobile .dash-content:has(.journal-page) {
     padding: 1rem 0.85rem calc(3.85rem + env(safe-area-inset-bottom, 0));
   }
   .dash-shell.is-mobile .dash-content:has(.desk-page) {
