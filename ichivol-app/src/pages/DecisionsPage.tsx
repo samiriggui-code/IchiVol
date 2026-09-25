@@ -1,10 +1,12 @@
 /**
  * Opportunités — port littéral de design-reference/ichivol-workspace `opportunites()` + page-head.
  * Classes HTML = maquette. Données = engine (pas de démo inventée ; manquant → « — »).
+ * Paper : fiche dialog → aperçu (PaperConfirmSheet / previewPaperBuy) → openPaperPosition.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { PaperConfirmSheet } from '../components/PaperConfirmSheet'
 import {
   getDecisionDetail,
   getScreener,
@@ -14,6 +16,15 @@ import {
 import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
 import { displaySymbol } from '../lib/markets'
 import {
+  getPaperOverview,
+  listPaperPositions,
+  openPaperPosition,
+  proposePaperTrade,
+  type ManualOrderInput,
+  type OrderIntent,
+} from '../lib/paper'
+import { confirmUserDecision } from '../lib/userDecisions'
+import {
   maquetteGateBadge,
   type MaquetteBadgeTone,
 } from './market/marketMaquetteHelpers'
@@ -22,6 +33,12 @@ import './DecisionsPage.css'
 type OppFilter = 'Tous' | 'WATCH' | 'ARMED' | 'TRIGGERED'
 
 type CycleLabel = 'WATCH' | 'ARMED' | 'TRIGGERED' | 'ACCEPTÉ' | 'REFUSÉ' | '—'
+
+type PaperConfirmState = {
+  symbol: string
+  timeframe: string
+  intent: OrderIntent | null
+}
 
 function badge(text: string, tone: MaquetteBadgeTone | string = ''): ReactNode {
   let inferred = tone
@@ -82,15 +99,32 @@ function confidencePct(row: ScreenerDecisionRow): string {
   return `${Math.round(row.confidence * 100)}`
 }
 
+function normalizeSymbolParam(raw: string | null): string | null {
+  if (!raw) return null
+  const s = raw.trim().toUpperCase()
+  if (!s) return null
+  return s.endsWith('USDT') ? s : `${s}USDT`
+}
+
 export function DecisionsPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [rows, setRows] = useState<ScreenerDecisionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [oppFilter, setOppFilter] = useState<OppFilter>('Tous')
   const [detail, setDetail] = useState<DecisionDetail | null>(null)
   const [detailSym, setDetailSym] = useState<string | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [openPaperSymbols, setOpenPaperSymbols] = useState<ReadonlySet<string>>(() => new Set())
+  const [paperConfirm, setPaperConfirm] = useState<PaperConfirmState | null>(null)
+  const [paperConfirming, setPaperConfirming] = useState(false)
+  const [paperConfirmError, setPaperConfirmError] = useState<string | null>(null)
+  const [paperMsg, setPaperMsg] = useState<string | null>(null)
+  const [paperBusy, setPaperBusy] = useState(false)
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const paperConfirmLock = useRef(false)
+  const deepLinkHandled = useRef<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -104,9 +138,30 @@ export function DecisionsPage() {
     }
   }, [])
 
+  const refreshOpenPaperSymbols = useCallback(async () => {
+    try {
+      const ov = await getPaperOverview()
+      const fromOverview = ov.positions
+        .filter((p) => String(p.status).toUpperCase() === 'OPEN')
+        .map((p) => p.symbol)
+      setOpenPaperSymbols(new Set(fromOverview))
+    } catch {
+      try {
+        const [user, auto] = await Promise.all([
+          listPaperPositions({ source: 'user_confirmed', status: 'OPEN' }),
+          listPaperPositions({ source: 'auto_watchlist', status: 'OPEN' }),
+        ])
+        setOpenPaperSymbols(new Set([...user, ...auto].map((p) => p.symbol)))
+      } catch {
+        /* keep previous */
+      }
+    }
+  }, [])
+
   useEffect(() => {
     void load()
-  }, [load])
+    void refreshOpenPaperSymbols()
+  }, [load, refreshOpenPaperSymbols])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -127,22 +182,132 @@ export function DecisionsPage() {
     return [...pool].sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))[0] ?? null
   }, [rows])
 
-  const openDecision = async (symbol: string) => {
-    setDetailSym(symbol)
-    setDetail(null)
-    dialogRef.current?.showModal()
-    try {
-      const d = await getDecisionDetail(symbol, '1h', false)
-      setDetail(d)
-    } catch {
-      setDetail(null)
-    }
-  }
-
-  const closeDialog = () => {
+  const closeDialog = useCallback(() => {
     dialogRef.current?.close()
     setDetailSym(null)
     setDetail(null)
+    setDetailLoading(false)
+    setPaperMsg(null)
+    const next = new URLSearchParams(searchParams)
+    if (next.has('symbol') || next.has('open')) {
+      next.delete('symbol')
+      next.delete('open')
+      setSearchParams(next, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
+
+  const openDecision = useCallback(
+    async (symbol: string, opts?: { keepQuery?: boolean }) => {
+      const sym = symbol.toUpperCase()
+      setDetailSym(sym)
+      setDetail(null)
+      setDetailLoading(true)
+      setPaperMsg(null)
+      dialogRef.current?.showModal()
+      if (!opts?.keepQuery) {
+        const next = new URLSearchParams(searchParams)
+        next.set('symbol', sym)
+        setSearchParams(next, { replace: true })
+      }
+      try {
+        const d = await getDecisionDetail(sym, '1h', false)
+        setDetail(d)
+      } catch {
+        setDetail(null)
+      } finally {
+        setDetailLoading(false)
+      }
+    },
+    [searchParams, setSearchParams],
+  )
+
+  // Deep-link Marché → /app/opportunites?symbol=…&open=1
+  useEffect(() => {
+    const sym = normalizeSymbolParam(searchParams.get('symbol'))
+    const open = searchParams.get('open') === '1'
+    if (!sym || !open) return
+    const key = `${sym}|open`
+    if (deepLinkHandled.current === key) return
+    deepLinkHandled.current = key
+    void openDecision(sym, { keepQuery: true })
+  }, [searchParams, openDecision])
+
+  // ?symbol= alone (sans open) : ouvre aussi la fiche
+  useEffect(() => {
+    const sym = normalizeSymbolParam(searchParams.get('symbol'))
+    const open = searchParams.get('open') === '1'
+    if (!sym || open) return
+    const key = `${sym}|view`
+    if (deepLinkHandled.current === key || deepLinkHandled.current === `${sym}|open`) return
+    deepLinkHandled.current = key
+    void openDecision(sym, { keepQuery: true })
+  }, [searchParams, openDecision])
+
+  async function startPaperOpen() {
+    if (!detailSym || paperBusy || paperConfirming) return
+    if (openPaperSymbols.has(detailSym)) {
+      setPaperMsg(`${displaySymbol(detailSym)} · déjà ouvert — pas de 2ᵉ achat`)
+      return
+    }
+    setPaperBusy(true)
+    setPaperConfirmError(null)
+    setPaperMsg(null)
+    try {
+      const tf = detail?.timeframe || '1h'
+      const intent = await proposePaperTrade(detailSym, tf).catch(() => null)
+      setPaperConfirm({
+        symbol: detailSym,
+        timeframe: tf,
+        intent: intent ?? detail?.order_intent ?? null,
+      })
+    } finally {
+      setPaperBusy(false)
+    }
+  }
+
+  async function executePaperConfirm(order: ManualOrderInput) {
+    if (!paperConfirm || paperConfirmLock.current) return
+    paperConfirmLock.current = true
+    setPaperConfirming(true)
+    setPaperConfirmError(null)
+    try {
+      const sameDetail = detail?.symbol === paperConfirm.symbol ? detail : null
+      const gate =
+        paperConfirm.intent?.pipeline_decision ?? sameDetail?.pipeline?.decision ?? 'WATCH'
+      const pos = await openPaperPosition(paperConfirm.symbol, paperConfirm.timeframe, order)
+      let journalWarn = ''
+      try {
+        await confirmUserDecision({
+          symbol: paperConfirm.symbol,
+          interval: paperConfirm.timeframe,
+          bias: 'BULLISH',
+          rvol: sameDetail?.rvol ?? 0,
+          signalKind:
+            sameDetail?.decision ??
+            (gate === 'SELL' ? 'SELL' : gate === 'BUY' ? 'BUY' : 'WATCH'),
+          gateDecision: gate,
+          confidence: sameDetail?.confidence,
+        })
+      } catch {
+        journalWarn = ' · journal non enregistré (réessayer depuis le Journal)'
+      }
+      const already = pos.already_open === true || pos.created === false
+      setPaperMsg(
+        (already
+          ? `${displaySymbol(pos.symbol)} · déjà en portefeuille — achat verrouillé`
+          : `${displaySymbol(pos.symbol)} · paper ${pos.direction} @ ${pos.entry_price}`) +
+          journalWarn,
+      )
+      setOpenPaperSymbols((prev) => new Set([...prev, pos.symbol]))
+      setPaperConfirm(null)
+      void refreshOpenPaperSymbols()
+    } catch (err: unknown) {
+      const raw = err instanceof Error ? err.message : 'Échec paper'
+      setPaperConfirmError(raw.replace(/^[a-z_]+: /, ''))
+    } finally {
+      setPaperConfirming(false)
+      paperConfirmLock.current = false
+    }
   }
 
   const whyBase = whyRow ? displaySymbol(whyRow.symbol) : '—'
@@ -158,6 +323,7 @@ export function DecisionsPage() {
     detail?.confidence != null && Number.isFinite(detail.confidence)
       ? `${Math.round(detail.confidence * 100)} / 100`
       : '—'
+  const alreadyOpen = detailSym ? openPaperSymbols.has(detailSym) : false
 
   return (
     <div className="opps-page">
@@ -312,70 +478,80 @@ export function DecisionsPage() {
         </section>
       </div>
 
-      <dialog id="detail" ref={dialogRef} onClose={closeDialog}>
+      <dialog
+        id="detail"
+        ref={dialogRef}
+        onClose={() => {
+          setDetailSym(null)
+          setDetail(null)
+          setDetailLoading(false)
+          setPaperMsg(null)
+        }}
+      >
         {detailSym ? (
-          <div className="card" style={{ border: 0, boxShadow: 'none' }}>
-            <div className="card-head">
+          <div className="dialog-body">
+            <div className="dialog-head">
               <h2>
                 {displaySymbol(detailSym)} / USDT
               </h2>
-              <button type="button" className="subtle" onClick={closeDialog} aria-label="Fermer">
-                ✕
+              <button type="button" onClick={closeDialog} aria-label="Fermer">
+                ×
               </button>
             </div>
-            <div className="card-body">
-              {badge(detailCycle === '—' ? '—' : detailCycle)}
-              <p>
-                Fiche de décision · Ichimoku × RVOL · 1H
-                {detail?.strategy_version ? ` · ${detail.strategy_version}` : ''}
-              </p>
-              <div className="statline">
-                <span>Direction</span>
-                <b>
-                  {detailPipeline
-                    ? badge(
-                        detailPipeline.direction === 'SHORT'
-                          ? 'VENTE'
-                          : detailPipeline.direction === 'LONG'
-                            ? 'PASSE'
-                            : '—',
-                      )
-                    : badge('—', 'gray')}
-                </b>
-              </div>
-              <div className="statline">
-                <span>Participation</span>
-                <b>
-                  {detail
-                    ? participationBadge(detail)
-                    : badge('—', 'gray')}
-                </b>
-              </div>
-              <div className="statline">
-                <span>RVOL</span>
-                <b>{detailRvol}</b>
-              </div>
-              <div className="statline">
-                <span>Confiance</span>
-                <b>{detailConf}</b>
-              </div>
-              <div className="statline">
-                <span>Déclenchement</span>
-                <b>—</b>
-              </div>
-              <div className="statline">
-                <span>Invalidation</span>
-                <b>
-                  {detail?.invalidation?.[0] ?? '—'}
-                </b>
-              </div>
-              <div className="notice blue" style={{ marginTop: 20 }}>
-                Lecture moteur. Aucun ordre n’est envoyé depuis cette fiche.
-              </div>
+            {badge(detailCycle === '—' ? '—' : detailCycle)}
+            <p>
+              Fiche de décision · Ichimoku × RVOL · 1H
+              {detail?.strategy_version ? ` · ${detail.strategy_version}` : ''}
+              {detailLoading ? ' · chargement…' : ''}
+            </p>
+            <div className="statline">
+              <span>Direction</span>
+              <b>
+                {detailPipeline
+                  ? badge(
+                      detailPipeline.direction === 'SHORT'
+                        ? 'VENTE'
+                        : detailPipeline.direction === 'LONG'
+                          ? 'PASSE'
+                          : '—',
+                    )
+                  : badge('—', 'gray')}
+              </b>
             </div>
-            <div className="card-foot" style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+            <div className="statline">
+              <span>Participation</span>
+              <b>{detail ? participationBadge(detail) : badge('—', 'gray')}</b>
+            </div>
+            <div className="statline">
+              <span>RVOL</span>
+              <b>{detailRvol}</b>
+            </div>
+            <div className="statline">
+              <span>Confiance</span>
+              <b>{detailConf}</b>
+            </div>
+            <div className="statline">
+              <span>Déclenchement</span>
+              <b>—</b>
+            </div>
+            <div className="statline">
+              <span>Invalidation</span>
+              <b>{detail?.invalidation?.[0] ?? '—'}</b>
+            </div>
+            <div className="notice blue" style={{ marginTop: 20 }}>
+              {alreadyOpen
+                ? 'Position paper déjà ouverte sur ce symbole.'
+                : 'Aperçu paper avant confirmation. Aucun broker réel.'}
+            </div>
+            {paperMsg && (
+              <p style={{ fontSize: 12, marginTop: 12 }} role="status">
+                {paperMsg}
+              </p>
+            )}
+            <div className="dialog-actions">
               <button
                 type="button"
+                className="suggestion"
                 onClick={() => {
                   closeDialog()
                   navigate(`/app/market?symbol=${encodeURIComponent(detailSym)}`)
@@ -383,28 +559,37 @@ export function DecisionsPage() {
               >
                 Voir le graphique
               </button>
-              <Link
+              <button
+                type="button"
                 className="primary"
-                to="/app/journal"
-                onClick={closeDialog}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '10px 14px',
-                  borderRadius: 8,
-                  background: 'var(--blue)',
-                  color: 'white',
-                  border: '1px solid var(--blue)',
-                  fontSize: 12,
-                  fontWeight: 700,
-                }}
+                disabled={alreadyOpen || paperBusy || paperConfirming || detailLoading}
+                onClick={() => void startPaperOpen()}
               >
-                Enregistrer la décision
-              </Link>
+                {alreadyOpen
+                  ? 'Déjà ouvert'
+                  : paperBusy
+                    ? 'Préparation…'
+                    : 'Ouvrir une position paper →'}
+              </button>
             </div>
           </div>
         ) : null}
       </dialog>
+
+      {paperConfirm && (
+        <PaperConfirmSheet
+          symbol={paperConfirm.symbol}
+          timeframe={paperConfirm.timeframe}
+          symbolLabel={displaySymbol(paperConfirm.symbol)}
+          intent={paperConfirm.intent}
+          confirming={paperConfirming}
+          error={paperConfirmError}
+          onConfirm={(order) => void executePaperConfirm(order)}
+          onCancel={() => {
+            if (!paperConfirming) setPaperConfirm(null)
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -1238,3 +1238,23 @@
     flex: 0 0 auto;
   }
 }
+
+.pf-page .pf-pos-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.pf-page .suggestion,
+.pf-page .pf-close-btn {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  margin-top: 0;
+  font-size: 11px;
+  padding: 6px 10px;
+}
+.pf-page .pf-close-btn:hover {
+  border-color: var(--red);
+  color: var(--red);
+}

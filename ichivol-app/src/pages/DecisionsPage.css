@@ -631,6 +631,14 @@
   gap:10px;
   margin-top:24px;
   justify-content:flex-end;
+  flex-wrap:wrap;
+}
+.opps-page .dialog-actions .suggestion {
+  display:inline-flex;
+  width:auto;
+  margin-top:0;
+  text-align:center;
+  align-items:center;
 }
 .opps-page .empty {
   padding:45px;

@@ -1,15 +1,18 @@
 /**
  * Portefeuille — port littéral de design-reference/ichivol-workspace `portefeuille()` + page-head.
  * Classes HTML = maquette. Données = engine (manquant → « — »).
+ * Clôture paper : confirmation (PaperCloseConfirmSheet) → closePaperPosition.
  */
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { PaperCloseConfirmSheet } from '../components/PaperCloseConfirmSheet'
 import {
   concentrationFromPositions,
   drawdownFromCurve,
 } from '../components/desk/deskMetrics'
 import {
+  closePaperPosition,
   getPaperOverview,
   type PaperOverview,
   type PaperOverviewPosition,
@@ -90,6 +93,10 @@ export function PortfolioPage() {
   const [overview, setOverview] = useState<PaperOverview | null>(null)
   const [lock, setLock] = useState<RiskLockState | null>(null)
   const [loading, setLoading] = useState(true)
+  const [closeTarget, setCloseTarget] = useState<PaperOverviewPosition | null>(null)
+  const [closeConfirming, setCloseConfirming] = useState(false)
+  const [closeError, setCloseError] = useState<string | null>(null)
+  const closeLock = useRef(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -128,8 +135,25 @@ export function PortfolioPage() {
       ? null
       : !lock.entries_blocked && !lock.daily_loss_locked && !lock.kill_switch_armed
 
-  const openPosition = (symbol: string) => {
+  const openMarket = (symbol: string) => {
     navigate(`/app/market?symbol=${encodeURIComponent(symbol)}`)
+  }
+
+  async function executeClose() {
+    if (!closeTarget?.id || closeLock.current) return
+    closeLock.current = true
+    setCloseConfirming(true)
+    setCloseError(null)
+    try {
+      await closePaperPosition(closeTarget.id)
+      setCloseTarget(null)
+      await load()
+    } catch (err: unknown) {
+      setCloseError(err instanceof Error ? err.message : 'Clôture impossible')
+    } finally {
+      setCloseConfirming(false)
+      closeLock.current = false
+    }
   }
 
   return (
@@ -331,11 +355,11 @@ export function PortfolioPage() {
                       key={p.id ?? p.symbol}
                       className="clickable"
                       tabIndex={0}
-                      onClick={() => openPosition(p.symbol)}
+                      onClick={() => openMarket(p.symbol)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault()
-                          openPosition(p.symbol)
+                          openMarket(p.symbol)
                         }
                       }}
                     >
@@ -354,7 +378,24 @@ export function PortfolioPage() {
                       <td>
                         <span className={`mono ${pnlCls}`.trim()}>{fmtEur(pnl, 2)}</span>
                       </td>
-                      <td>{badge(p.mark_stale ? 'MARK STALE' : 'OUVERTE')}</td>
+                      <td>
+                        <div className="pf-pos-state">
+                          {badge(p.mark_stale ? 'MARK STALE' : 'OUVERTE')}
+                          {p.id ? (
+                            <button
+                              type="button"
+                              className="suggestion pf-close-btn"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setCloseError(null)
+                                setCloseTarget(p)
+                              }}
+                            >
+                              Fermer
+                            </button>
+                          ) : null}
+                        </div>
+                      </td>
                     </tr>
                   )
                 })
@@ -391,6 +432,21 @@ export function PortfolioPage() {
           )}
         </div>
       </section>
+
+      {closeTarget && (
+        <PaperCloseConfirmSheet
+          position={closeTarget}
+          confirming={closeConfirming}
+          error={closeError}
+          onConfirm={() => void executeClose()}
+          onCancel={() => {
+            if (!closeConfirming) {
+              setCloseTarget(null)
+              setCloseError(null)
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

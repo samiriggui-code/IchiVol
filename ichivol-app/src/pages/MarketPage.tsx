@@ -487,7 +487,9 @@ export function MarketPage() {
               type="button"
               className="primary"
               onClick={() =>
-                navigate(`/app/opportunites?symbol=${encodeURIComponent(symbol)}`)
+                navigate(
+                  `/app/opportunites?symbol=${encodeURIComponent(symbol)}&open=1`,
+                )
               }
             >
               Préparer le trade →
