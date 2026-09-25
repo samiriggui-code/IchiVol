@@ -48,3 +48,8 @@ Conservé : `pages/desk/deskFormat.ts`.
 - Listes plafonnées comme la maquette : 3 positions, 3 opportunités, 3 events tape, 3 parts concentration.
 - Volatilité (lecture marché) : toujours « — » (pas de série vol dédiée).
 
+
+## Orphelins Claude (relecture PR #109) — supprimés
+| Fichier | Raison |
+|---------|--------|
+| `desk/DeskRings.tsx` (+ css) | Anneaux hors maquette desk ; métriques via `deskMetrics.ts` |

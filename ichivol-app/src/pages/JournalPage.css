@@ -1230,3 +1230,27 @@
     gap: 18px;
   }
 }
+
+.journal-page tr.is-selected {
+  background: #f5f8fb;
+}
+.journal-page .journal-decision-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.journal-page .journal-decision-actions .suggestion {
+  display: inline-flex;
+  width: auto;
+  margin-top: 0;
+  padding: 5px 9px;
+  font-size: 11px;
+}
+.journal-page .toolbar .checkrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+}

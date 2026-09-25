@@ -30,3 +30,12 @@
 | Fiche dialog | Déclenchement | Pas de champ engine dédié |
 | Fiche dialog | Invalidation | Premier item `invalidation[]` ou « — » |
 | Pourquoi X | Carte entière | Si screener vide |
+
+## Orphelins Claude (relecture PR #109) — supprimés
+| Fichier | Raison |
+|---------|--------|
+| `GateMatrix.tsx` | Remplacé par table maquette |
+| `ProposePaperTradePanel.tsx` | Flux paper → dialog + `PaperConfirmSheet` |
+| `SignalEvidenceCard.tsx` | Hors maquette |
+| `TradePlanCard.tsx` | Hors maquette |
+| `DecisionPipelinePanel.tsx` | Hors maquette (stats dans dialog) |

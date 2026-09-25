@@ -26,3 +26,9 @@
 | Tableau STATUT | | pas de runs → À ÉVALUER / — |
 | Trajectoires | courbe | pas de série equity lab exposée → « — » |
 | Configurer / Examiner | | non branchés moteur (disabled / no-op) |
+
+## Orphelins Claude (relecture PR #109) — supprimés
+| Fichier | Raison |
+|---------|--------|
+| `LabResearchPanel.tsx` | Actions research rebranchées dans `BacktestsPage` (Configurer / Examiner) |
+| `BacktestRunsPanel.tsx` | Couverture/runs lus directement dans la page |

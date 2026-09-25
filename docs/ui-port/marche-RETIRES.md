@@ -29,3 +29,10 @@ Calques : `LAYERS_PREFS_VERSION = 3` · Ichimoku + **Supports/résistances ON** 
 ## Ne pas réintroduire
 
 Marquer un trade · Backtest overlay · Calques avancés · screener multi-classes — emplacement futur = décision Samir.
+
+## Orphelins Claude (relecture PR #109) — supprimés
+| Fichier | Raison |
+|---------|--------|
+| `MarketSymbolSearch.tsx` | Watchlist maquette native |
+| `BiasPanel.tsx` (si présent) | Remplacé par panneau Lecture maquette |
+| MarkTrade / backtest overlay UI | Hors maquette ; « Préparer le trade » → Opportunités paper |

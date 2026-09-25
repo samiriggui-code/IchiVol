@@ -14,7 +14,13 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { displaySymbol } from '../lib/markets'
 import { listPaperPositions, type PaperPosition } from '../lib/paper'
-import { listUserDecisions, type UserDecisionRow } from '../lib/userDecisions'
+import {
+  deleteUserDecision,
+  listUserDecisions,
+  patchUserDecisionNote,
+  patchUserDecisionStatus,
+  type UserDecisionRow,
+} from '../lib/userDecisions'
 import './JournalPage.css'
 
 type JournalTab = 'Trades' | 'Décisions sauvegardées'
@@ -112,14 +118,12 @@ export function JournalPage() {
   const [query, setQuery] = useState('')
   const [trades, setTrades] = useState<PaperPosition[]>([])
   const [decisions, setDecisions] = useState<UserDecisionRow[]>([])
-  const [note, setNote] = useState(() => {
-    try {
-      return localStorage.getItem(NOTE_KEY) ?? ''
-    } catch {
-      return ''
-    }
-  })
+  const [showArchived, setShowArchived] = useState(false)
+  const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(null)
+  const [note, setNote] = useState('')
   const [noteSaved, setNoteSaved] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [actionMsg, setActionMsg] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -133,7 +137,7 @@ export function JournalPage() {
             +new Date(b.exit_time ?? b.entry_time) - +new Date(a.exit_time ?? a.entry_time),
         ),
       )
-      setDecisions(rows.filter((r) => r.status === 'confirmed'))
+      setDecisions(rows)
     } catch {
       setTrades([])
       setDecisions([])
@@ -154,13 +158,26 @@ export function JournalPage() {
     })
   }, [trades, q])
 
-  const visibleDecisions = useMemo(() => {
-    if (!q) return decisions
-    return decisions.filter((r) => {
+  const filteredDecisions = useMemo(() => {
+    const byStatus = decisions.filter((r) =>
+      showArchived ? r.status === 'archived' : r.status === 'confirmed',
+    )
+    if (!q) return byStatus
+    return byStatus.filter((r) => {
       const base = displaySymbol(r.symbol).toLowerCase()
       return base.includes(q) || r.symbol.toLowerCase().includes(q)
     })
-  }, [decisions, q])
+  }, [decisions, showArchived, q])
+
+  const selectedDecision = useMemo(
+    () => filteredDecisions.find((d) => d.id === selectedDecisionId) ?? filteredDecisions[0] ?? null,
+    [filteredDecisions, selectedDecisionId],
+  )
+
+  useEffect(() => {
+    setNote(selectedDecision?.note ?? '')
+    setNoteSaved(false)
+  }, [selectedDecision?.id, selectedDecision?.note])
 
   const replay = useMemo(() => {
     if (journalTab === 'Trades') {
@@ -176,7 +193,7 @@ export function JournalPage() {
         symbol: t.symbol,
       }
     }
-    const d = visibleDecisions[0] ?? decisions[0]
+    const d = selectedDecision
     if (!d) return null
     return {
       eyebrow: `${displaySymbol(d.symbol)} · ${fmtDate(d.createdAt).toUpperCase()}`,
@@ -184,7 +201,7 @@ export function JournalPage() {
       body: d.note?.trim() || '—',
       symbol: d.symbol,
     }
-  }, [journalTab, visibleTrades, trades, visibleDecisions, decisions])
+  }, [journalTab, visibleTrades, trades, selectedDecision])
 
   const onExport = () => {
     if (journalTab === 'Trades') {
@@ -205,25 +222,89 @@ export function JournalPage() {
     downloadCsv(
       'journal-decisions.csv',
       ['date', 'actif', 'sens', 'resultat', 'performance', 'sortie'],
-      visibleDecisions.map((d) => [
+      filteredDecisions.map((d) => [
         fmtDate(d.createdAt),
         displaySymbol(d.symbol),
         fmtSens(d.bias),
         '—',
         '—',
-        'SAUVEGARDÉE',
+        d.status === 'archived' ? 'ARCHIVÉE' : 'SAUVEGARDÉE',
       ]),
     )
   }
 
-  const onSaveNote = (e: FormEvent) => {
+  const onSaveNote = async (e: FormEvent) => {
     e.preventDefault()
+    if (!selectedDecision) {
+      try {
+        localStorage.setItem(NOTE_KEY, note)
+        setNoteSaved(true)
+        window.setTimeout(() => setNoteSaved(false), 1500)
+      } catch {
+        /* ignore */
+      }
+      return
+    }
+    setBusyId(selectedDecision.id)
+    setActionMsg(null)
     try {
-      localStorage.setItem(NOTE_KEY, note)
+      const updated = await patchUserDecisionNote(selectedDecision.id, note)
+      setDecisions((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
+      setNote(updated.note ?? '')
       setNoteSaved(true)
       window.setTimeout(() => setNoteSaved(false), 1500)
-    } catch {
-      /* ignore quota */
+    } catch (err: unknown) {
+      setActionMsg(err instanceof Error ? err.message : 'Note non enregistrée')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function onArchive(row: UserDecisionRow) {
+    setBusyId(row.id)
+    setActionMsg(null)
+    try {
+      await patchUserDecisionStatus(row.id, 'archived')
+      setDecisions((prev) =>
+        prev.map((r) => (r.id === row.id ? { ...r, status: 'archived' } : r)),
+      )
+      setActionMsg(`${displaySymbol(row.symbol)} · archivée`)
+    } catch (err: unknown) {
+      setActionMsg(err instanceof Error ? err.message : 'Archivage impossible')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function onRestore(row: UserDecisionRow) {
+    setBusyId(row.id)
+    setActionMsg(null)
+    try {
+      await patchUserDecisionStatus(row.id, 'confirmed')
+      setDecisions((prev) =>
+        prev.map((r) => (r.id === row.id ? { ...r, status: 'confirmed' } : r)),
+      )
+      setActionMsg(`${displaySymbol(row.symbol)} · restaurée`)
+    } catch (err: unknown) {
+      setActionMsg(err instanceof Error ? err.message : 'Restauration impossible')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function onDelete(row: UserDecisionRow) {
+    if (!window.confirm(`Supprimer définitivement ${displaySymbol(row.symbol)} ?`)) return
+    setBusyId(row.id)
+    setActionMsg(null)
+    try {
+      await deleteUserDecision(row.id)
+      setDecisions((prev) => prev.filter((r) => r.id !== row.id))
+      if (selectedDecisionId === row.id) setSelectedDecisionId(null)
+      setActionMsg(`${displaySymbol(row.symbol)} · supprimée`)
+    } catch (err: unknown) {
+      setActionMsg(err instanceof Error ? err.message : 'Suppression impossible')
+    } finally {
+      setBusyId(null)
     }
   }
 
@@ -263,16 +344,16 @@ export function JournalPage() {
             </tr>
           )
         })
-      : visibleDecisions.map((d) => (
+      : filteredDecisions.map((d) => (
           <tr
             key={d.id}
-            className="clickable"
+            className={`clickable${selectedDecision?.id === d.id ? ' is-selected' : ''}`.trim()}
             tabIndex={0}
-            onClick={() => openTrade(d.symbol)}
+            onClick={() => setSelectedDecisionId(d.id)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
-                openTrade(d.symbol)
+                setSelectedDecisionId(d.id)
               }
             }}
           >
@@ -285,7 +366,47 @@ export function JournalPage() {
               <span className="mono">—</span>
             </td>
             <td>—</td>
-            <td>{badge('SAUVEGARDÉE', 'gray')}</td>
+            <td>
+              <div className="journal-decision-actions">
+                {badge(d.status === 'archived' ? 'ARCHIVÉE' : 'SAUVEGARDÉE', 'gray')}
+                {d.status === 'archived' ? (
+                  <button
+                    type="button"
+                    className="suggestion"
+                    disabled={busyId === d.id}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      void onRestore(d)
+                    }}
+                  >
+                    Restaurer
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="suggestion"
+                    disabled={busyId === d.id}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      void onArchive(d)
+                    }}
+                  >
+                    Archiver
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="suggestion"
+                  disabled={busyId === d.id}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void onDelete(d)
+                  }}
+                >
+                  Supprimer
+                </button>
+              </div>
+            </td>
           </tr>
         ))
 
@@ -329,12 +450,27 @@ export function JournalPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
+        {journalTab === 'Décisions sauvegardées' && (
+          <label className="checkrow" style={{ margin: 0 }}>
+            Archivées
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+            />
+          </label>
+        )}
         <span style={{ marginLeft: 'auto' }}>
           <button type="button" onClick={onExport}>
             Exporter CSV ↓
           </button>
         </span>
       </div>
+      {actionMsg && (
+        <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }} role="status">
+          {actionMsg}
+        </p>
+      )}
 
       <section className="card">
         <div className="card-head">
@@ -383,17 +519,23 @@ export function JournalPage() {
           <div className="card-head">
             <h2>Note personnelle</h2>
           </div>
-          <form className="card-body" id="note-form" onSubmit={onSaveNote}>
+          <form className="card-body" id="note-form" onSubmit={(e) => void onSaveNote(e)}>
             <textarea
               id="journal-note"
               rows={4}
-              placeholder="Ce que je retiens de cette session…"
+              placeholder={
+                selectedDecision
+                  ? `Note pour ${displaySymbol(selectedDecision.symbol)}…`
+                  : 'Ce que je retiens de cette session…'
+              }
               style={{ width: '100%' }}
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(e) => setNote(e.target.value.slice(0, 500))}
             />
             <div style={{ marginTop: 10 }}>
-              <button type="submit">{noteSaved ? 'Enregistrée' : 'Enregistrer la note'}</button>
+              <button type="submit" disabled={busyId != null && busyId === selectedDecision?.id}>
+                {noteSaved ? 'Enregistrée' : 'Enregistrer la note'}
+              </button>
             </div>
           </form>
         </section>

@@ -1231,8 +1231,15 @@
   }
 }
 
-/* Hauteur métriques : valeurs engine plus courtes que la démo maquette */
+/* Hauteur métriques 390 : aligner sur maquette (~127 px) */
 @media (max-width: 800px) {
-  .lab-page .metric { min-height: 140px; box-sizing: border-box; }
-  .lab-page .metrics { min-height: 303px; }
+  .lab-page .metric {
+    min-height: 127px;
+    max-height: 127px;
+    padding: 18px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .lab-page .metric-value { font-size: 23px; }
+  .lab-page .metrics { min-height: 0; }
 }

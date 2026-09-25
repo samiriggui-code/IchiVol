@@ -1,10 +1,16 @@
 /**
  * Paramètres — port littéral de design-reference/ichivol-workspace `parametres()` + page-head.
- * Classes HTML = maquette. Préférences locales + lecture settings engine (manquant → « — »).
+ * Classes HTML = maquette. Préférences locales + écritures engine (patchSettings / push).
  */
 
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { getSettings, type AppSettings } from '../lib/settings'
+import { disablePushAlerts, enablePushAlerts } from '../lib/pushAlerts'
+import {
+  getSettings,
+  patchSettings,
+  type AppSettings,
+} from '../lib/settings'
+import { invalidateEngineThresholdsCache } from '../lib/engineThresholds'
 import './SettingsPage.css'
 
 type SettingsTab =
@@ -53,6 +59,10 @@ export function SettingsPage() {
   const [local, setLocal] = useState(loadLocal)
   const [engine, setEngine] = useState<AppSettings | null>(null)
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushMsg, setPushMsg] = useState<string | null>(null)
 
   useEffect(() => {
     getSettings()
@@ -61,27 +71,65 @@ export function SettingsPage() {
   }, [])
 
   const onSave = useCallback(
-    (e: FormEvent<HTMLFormElement>) => {
+    async (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault()
       const fd = new FormData(e.currentTarget)
       const next: Record<string, string> = { ...local }
       fd.forEach((v, k) => {
         if (typeof v === 'string') next[k] = v
       })
-      // checkboxes
       for (let i = 0; i < 4; i++) {
         next[`alert${i}`] = fd.get(`alert${i}`) ? '1' : '0'
       }
       try {
         localStorage.setItem(LS_KEY, JSON.stringify(next))
         setLocal(next)
+      } catch {
+        /* ignore quota */
+      }
+
+      setSaving(true)
+      setError(null)
+      setSaved(false)
+      try {
+        const patch: Parameters<typeof patchSettings>[0] = {}
+        if (settingsTab === 'Marché et univers' && engine) {
+          const rvol = Number(next.rvol || engine.volumeParams.rvolConfirm || 1.5)
+          if (Number.isFinite(rvol) && rvol > 0) {
+            patch.volumeParams = {
+              ...engine.volumeParams,
+              rvolConfirm: rvol,
+              rvolSignificant: rvol,
+            }
+          }
+        }
+        if (settingsTab === 'LLM' && engine && next.llmModel) {
+          patch.llmModel = next.llmModel
+        }
+        if (settingsTab === 'Alertes') {
+          patch.pushAlertPrefs = {
+            enabled: engine?.pushAlertPrefs?.enabled ?? false,
+            targetStop: next.alert0 !== '0',
+            accel: next.alert1 !== '0',
+            directionFlip: next.alert2 !== '0',
+            nearPct: engine?.pushAlertPrefs?.nearPct ?? 0.5,
+            cooldownMin: engine?.pushAlertPrefs?.cooldownMin ?? 30,
+          }
+        }
+        if (Object.keys(patch).length > 0) {
+          const updated = await patchSettings(patch)
+          setEngine(updated)
+          invalidateEngineThresholdsCache()
+        }
         setSaved(true)
         window.setTimeout(() => setSaved(false), 1500)
-      } catch {
-        /* ignore */
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Échec de la sauvegarde moteur')
+      } finally {
+        setSaving(false)
       }
     },
-    [local],
+    [local, settingsTab, engine],
   )
 
   const riskDefaults = {
@@ -120,7 +168,7 @@ export function SettingsPage() {
           <div className="card-head">
             <h2>{settingsTab}</h2>
           </div>
-          <form id="settings-form" className="card-body" onSubmit={onSave}>
+          <form id="settings-form" className="card-body" onSubmit={(ev) => void onSave(ev)}>
             {settingsTab === 'Limites de risque' && (
               <div className="grid equal">
                 {(
@@ -196,6 +244,13 @@ export function SettingsPage() {
                     ) : (
                       <option value="">—</option>
                     )}
+                    {(engine?.llmModels?.[engine.llmProvider] ?? []).map((m) =>
+                      m.id === engine?.llmModel ? null : (
+                        <option key={m.id} value={m.id}>
+                          {m.label}
+                        </option>
+                      ),
+                    )}
                   </select>
                 </div>
                 <p style={{ fontSize: 12, color: 'var(--muted)' }}>
@@ -207,9 +262,16 @@ export function SettingsPage() {
               </>
             )}
 
-            {settingsTab === 'Alertes' &&
-              ['Signal déclenché', 'Décision refusée', 'Donnée périmée', 'Stop modifié'].map(
-                (l, i) => (
+            {settingsTab === 'Alertes' && (
+              <>
+                {(
+                  [
+                    ['Signal déclenché', 'targetStop'],
+                    ['Décision refusée', 'accel'],
+                    ['Donnée périmée', 'directionFlip'],
+                    ['Stop modifié', 'near'],
+                  ] as const
+                ).map(([l], i) => (
                   <label className="checkrow" key={l}>
                     {l}
                     <input
@@ -218,8 +280,49 @@ export function SettingsPage() {
                       defaultChecked={local[`alert${i}`] !== '0'}
                     />
                   </label>
-                ),
-              )}
+                ))}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
+                  <button
+                    type="button"
+                    className="suggestion"
+                    disabled={pushBusy}
+                    onClick={() => {
+                      setPushBusy(true)
+                      setPushMsg(null)
+                      void enablePushAlerts().then((r) => {
+                        setPushBusy(false)
+                        setPushMsg(
+                          r.ok
+                            ? 'Abonnement push enregistré sur cet appareil.'
+                            : r.message,
+                        )
+                      })
+                    }}
+                  >
+                    {pushBusy ? 'Activation…' : 'Activer les alertes push'}
+                  </button>
+                  <button
+                    type="button"
+                    className="suggestion"
+                    disabled={pushBusy}
+                    onClick={() => {
+                      setPushBusy(true)
+                      void disablePushAlerts().then(() => {
+                        setPushBusy(false)
+                        setPushMsg('Abonnement push retiré sur cet appareil.')
+                      })
+                    }}
+                  >
+                    Désabonner cet appareil
+                  </button>
+                </div>
+                {pushMsg && (
+                  <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 10 }} role="status">
+                    {pushMsg}
+                  </p>
+                )}
+              </>
+            )}
 
             {settingsTab === 'Connexions' && (
               <>
@@ -247,11 +350,17 @@ export function SettingsPage() {
               </>
             )}
 
-            <button type="submit" className="primary">
-              {saved ? 'Enregistré' : 'Enregistrer les préférences'}
+            {error && (
+              <p style={{ fontSize: 12, color: 'var(--red)', marginTop: 12 }} role="alert">
+                {error}
+              </p>
+            )}
+
+            <button type="submit" className="primary" disabled={saving}>
+              {saving ? 'Enregistrement…' : saved ? 'Enregistré' : 'Enregistrer les préférences'}
             </button>
             <p style={{ fontSize: 10, color: 'var(--muted)' }}>
-              Préférences enregistrées dans ce navigateur. Aucune modification du moteur.
+              Préférences navigateur + sync moteur (RVOL / LLM / alertes) quand disponible.
             </p>
           </form>
         </section>
