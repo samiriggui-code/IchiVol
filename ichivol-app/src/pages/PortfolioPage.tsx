@@ -11,6 +11,7 @@ import {
   concentrationFromPositions,
   drawdownFromCurve,
 } from '../components/desk/deskMetrics'
+import { DATA_REFRESH_EVENT } from '../lib/actionFeedback'
 import {
   closePaperPosition,
   getPaperOverview,
@@ -19,6 +20,7 @@ import {
 } from '../lib/paper'
 import { getRiskLock, type RiskLockState } from '../lib/riskLock'
 import { displaySymbol } from '../lib/markets'
+import { useFicheNav } from '../lib/useFicheNav'
 import './PortfolioPage.css'
 
 type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
@@ -90,6 +92,7 @@ function ProgressRow({
 
 export function PortfolioPage() {
   const navigate = useNavigate()
+  const { openPositionFiche } = useFicheNav()
   const [overview, setOverview] = useState<PaperOverview | null>(null)
   const [lock, setLock] = useState<RiskLockState | null>(null)
   const [loading, setLoading] = useState(true)
@@ -113,6 +116,14 @@ export function PortfolioPage() {
 
   useEffect(() => {
     void load()
+  }, [load])
+
+  useEffect(() => {
+    const onRefresh = () => {
+      void load()
+    }
+    window.addEventListener(DATA_REFRESH_EVENT, onRefresh)
+    return () => window.removeEventListener(DATA_REFRESH_EVENT, onRefresh)
   }, [load])
 
   const acct = overview?.account
@@ -140,8 +151,12 @@ export function PortfolioPage() {
       ? null
       : !lock.entries_blocked && !lock.daily_loss_locked && !lock.kill_switch_armed
 
-  const openMarket = (symbol: string) => {
-    navigate(`/app/market?symbol=${encodeURIComponent(symbol)}`)
+  const openPosition = (p: PaperOverviewPosition) => {
+    if (p.id) {
+      openPositionFiche(p.id)
+      return
+    }
+    navigate(`/app/market?symbol=${encodeURIComponent(p.symbol)}`)
   }
 
   async function executeClose() {
@@ -357,11 +372,11 @@ export function PortfolioPage() {
                       key={p.id ?? p.symbol}
                       className="clickable"
                       tabIndex={0}
-                      onClick={() => openMarket(p.symbol)}
+                      onClick={() => openPosition(p)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault()
-                          openMarket(p.symbol)
+                          openPosition(p)
                         }
                       }}
                     >

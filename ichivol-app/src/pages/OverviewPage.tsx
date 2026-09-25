@@ -37,6 +37,8 @@ import {
 } from '../lib/paper'
 import { getRiskLock, type RiskLockState } from '../lib/riskLock'
 import { verdictBucket } from '../lib/deskSummarize'
+import { DATA_REFRESH_EVENT } from '../lib/actionFeedback'
+import { useFicheNav } from '../lib/useFicheNav'
 import { concentrationFromPositions } from '../components/desk/deskMetrics'
 import {
   BASELINE,
@@ -182,7 +184,7 @@ function drawdownRatio(
 function sessionStatusClass(st: SessionStatus): string {
   switch (st) {
     case 'open':
-      return 'up'
+      return 'is-open'
     case 'closed':
     case 'upcoming':
       return 'muted'
@@ -307,6 +309,7 @@ function EquityViz({
 
 export function OverviewPage() {
   const navigate = useNavigate()
+  const { openDecisionFiche, openPositionFiche } = useFicheNav()
   const [rows, setRows] = useState<ScreenerDecisionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [overview, setOverview] = useState<PaperOverview | null>(null)
@@ -397,6 +400,14 @@ export function OverviewPage() {
     }
   }, [load])
 
+  useEffect(() => {
+    const onRefresh = () => {
+      void load(true)
+    }
+    window.addEventListener(DATA_REFRESH_EVENT, onRefresh)
+    return () => window.removeEventListener(DATA_REFRESH_EVENT, onRefresh)
+  }, [load])
+
   const now = useMemo(() => new Date(nowTick), [nowTick])
   const acct = overview?.account
   const risk = overview?.risk
@@ -480,11 +491,25 @@ export function OverviewPage() {
 
   const openOpp = (symbol: string) => {
     const full = /USDT$/i.test(symbol) ? symbol.toUpperCase() : `${symbol.toUpperCase()}USDT`
-    navigate(`/app/opportunites?symbol=${encodeURIComponent(full)}`)
+    openDecisionFiche(full, '1h')
   }
 
-  const openPosition = (symbol: string) => {
-    navigate(`/app/portefeuille?tab=positions&symbol=${encodeURIComponent(symbol)}`)
+  const openPosition = (idOrSymbol: string, id?: string) => {
+    if (id) {
+      openPositionFiche(id)
+      return
+    }
+    const full = /USDT$/i.test(idOrSymbol)
+      ? idOrSymbol.toUpperCase()
+      : `${idOrSymbol.toUpperCase()}USDT`
+    const match = (overview?.positions ?? []).find(
+      (p) => p.symbol.toUpperCase() === full && String(p.status).toUpperCase() === 'OPEN',
+    )
+    if (match?.id) {
+      openPositionFiche(match.id)
+      return
+    }
+    navigate(`/app/portefeuille?tab=positions&symbol=${encodeURIComponent(full)}`)
   }
 
   return (
@@ -615,7 +640,13 @@ export function OverviewPage() {
                 const base = r.symbol.replace(/USDT$/i, '')
                 const chg = changeBySymbol[r.symbol.toUpperCase()]
                 const chgCls =
-                  chg == null || Number.isNaN(chg) ? '' : chg > 0 ? 'up' : chg < 0 ? 'down' : ''
+                  chg == null || Number.isNaN(chg)
+                    ? ''
+                    : chg > 0
+                      ? 'is-up'
+                      : chg < 0
+                        ? 'is-down'
+                        : ''
                 return (
                   <button
                     key={r.symbol}
@@ -721,45 +752,61 @@ export function OverviewPage() {
             )}
           >
             <div className="card-body">
-              {watchList.map((r) => {
-                const base = r.symbol.replace(/USDT$/i, '')
-                const coin = coinLetter(base)
-                const score =
-                  r.confidence != null && Number.isFinite(r.confidence)
-                    ? Math.round(r.confidence * 100)
-                    : null
-                return (
-                  <div
-                    key={r.symbol}
-                    className="opportunity"
-                    tabIndex={0}
-                    role="button"
-                    onClick={() => openOpp(r.symbol)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        openOpp(r.symbol)
-                      }
-                    }}
-                  >
-                    <span className={`coin ${coin.cls}`.trim()}>{coin.letter}</span>
-                    <div>
-                      <strong>
-                        {base}
-                        <span style={{ color: '#a0a4a6', fontWeight: 400 }}> / USDT</span>
-                      </strong>
-                      <small>{opportunityCaption(r)}</small>
-                    </div>
-                    <div className="right">
-                      <span className="score">
-                        {score != null ? score : '—'}
-                        <small style={{ display: 'inline' }}> /100</small>
-                      </span>
-                      <small>{badge(decisionBadgeText(r))}</small>
-                    </div>
+              {watchList.length === 0 ? (
+                <div className="opportunity" aria-disabled="true">
+                  <span className="coin">—</span>
+                  <div>
+                    <strong>—</strong>
+                    <small>— · screener vide</small>
                   </div>
-                )
-              })}
+                  <div className="right">
+                    <span className="score">
+                      —<small style={{ display: 'inline' }}>{' '}/100</small>
+                    </span>
+                    <small>{badge('—', 'gray')}</small>
+                  </div>
+                </div>
+              ) : (
+                watchList.map((r) => {
+                  const base = r.symbol.replace(/USDT$/i, '')
+                  const coin = coinLetter(base)
+                  const score =
+                    r.confidence != null && Number.isFinite(r.confidence)
+                      ? Math.round(r.confidence * 100)
+                      : null
+                  return (
+                    <div
+                      key={r.symbol}
+                      className="opportunity"
+                      tabIndex={0}
+                      role="button"
+                      onClick={() => openOpp(r.symbol)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          openOpp(r.symbol)
+                        }
+                      }}
+                    >
+                      <span className={`coin ${coin.cls}`.trim()}>{coin.letter}</span>
+                      <div>
+                        <strong>
+                          {base}
+                          <span style={{ color: '#a0a4a6', fontWeight: 400 }}> / USDT</span>
+                        </strong>
+                        <small>{opportunityCaption(r)}</small>
+                      </div>
+                      <div className="right">
+                        <span className="score">
+                          {score != null ? score : '—'}
+                          <small style={{ display: 'inline' }}> /100</small>
+                        </span>
+                        <small>{badge(decisionBadgeText(r))}</small>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
             </div>
             <div className="card-foot">
               <Link className="link" to="/app/opportunites">
@@ -777,7 +824,7 @@ export function OverviewPage() {
               ? `${freshnessIssues.slice(0, 4).join(', ')}${
                   freshnessIssues.length > 4 ? ` (+${freshnessIssues.length - 4})` : ''
                 } : fraîcheur ou mark périmé.`
-              : '—'}
+              : 'Pas d’alerte fraîcheur pour le moment.'}
           </span>
           <Link to="/app/operations">Vérifier →</Link>
         </div>
@@ -813,9 +860,9 @@ export function OverviewPage() {
                     const perf = p.unrealized_pct
                     const pnl = p.unrealized_pnl
                     const perfCls =
-                      perf == null ? '' : perf > 0 ? 'up' : perf < 0 ? 'down' : ''
+                      perf == null ? '' : perf > 0 ? 'is-up' : perf < 0 ? 'is-down' : ''
                     const pnlCls =
-                      pnl == null ? '' : pnl > 0 ? 'up' : pnl < 0 ? 'down' : ''
+                      pnl == null ? '' : pnl > 0 ? 'is-up' : pnl < 0 ? 'is-down' : ''
                     const strat =
                       p.timeframe != null
                         ? `Ichimoku × RVOL · ${String(p.timeframe).toUpperCase()}`
@@ -825,11 +872,11 @@ export function OverviewPage() {
                         key={p.id ?? p.symbol}
                         className="clickable"
                         tabIndex={0}
-                        onClick={() => openPosition(p.symbol)}
+                        onClick={() => openPosition(p.symbol, p.id)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault()
-                            openPosition(p.symbol)
+                            openPosition(p.symbol, p.id)
                           }
                         }}
                       >

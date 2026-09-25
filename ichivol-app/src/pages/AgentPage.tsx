@@ -1,12 +1,21 @@
 /**
  * Copilot — port littéral de design-reference/ichivol-workspace `copilot()` + page-head.
  * Classes HTML = maquette. Données / chat = engine (manquant → « — »).
+ * Symboles mentionnés dans les réponses → liens FicheDecision (`?fiche=`).
  */
 
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
 import { askAgentStream } from '../lib/agent'
 import { useAgentSession } from '../lib/agentSession'
+import { normalizeFicheSymbol } from '../lib/ficheDeepLink'
 import { getSettings } from '../lib/settings'
+import { useFicheNav } from '../lib/useFicheNav'
 import './AgentPage.css'
 
 type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
@@ -16,6 +25,10 @@ const SUGGESTIONS = [
   'Quel est le risque du portefeuille ?',
   'Explique le setup BNB',
 ]
+
+/** Tickers crypto courants + formes SYMBOLUSDT / SYMBOL. */
+const SYMBOL_RE =
+  /\b((?:BTC|ETH|SOL|BNB|XRP|ADA|AVAX|DOT|LINK|MATIC|NEAR|ATOM|LTC|UNI|AAVE|PEPE|TON|DOGE|SHIB|APT|ARB|OP|SUI|INJ|FIL|ICP|ETC|XLM|ALGO|VET|HBAR|FTM|SAND|MANA|AXS|CRV|MKR|SNX|COMP)(?:USDT)?|[A-Z]{2,10}USDT)\b/g
 
 function badge(text: string, tone: BadgeTone = ''): ReactNode {
   let inferred = tone
@@ -31,9 +44,50 @@ function badge(text: string, tone: BadgeTone = ''): ReactNode {
   return <span className={`tag ${inferred}`.trim()}>{text}</span>
 }
 
+function MessageWithSymbolLinks({
+  text,
+  onOpen,
+}: {
+  text: string
+  onOpen: (symbol: string) => void
+}) {
+  if (!text) return <>{'—'}</>
+  const nodes: ReactNode[] = []
+  let last = 0
+  const re = new RegExp(SYMBOL_RE.source, 'g')
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) nodes.push(text.slice(last, m.index))
+    const raw = m[1]
+    const sym = normalizeFicheSymbol(raw)
+    nodes.push(
+      <button
+        key={`${m.index}-${sym}`}
+        type="button"
+        className="link"
+        style={{
+          border: 0,
+          background: 'none',
+          padding: 0,
+          cursor: 'pointer',
+          font: 'inherit',
+          display: 'inline',
+        }}
+        onClick={() => onOpen(sym)}
+      >
+        {raw}
+      </button>,
+    )
+    last = m.index + raw.length
+  }
+  if (last < text.length) nodes.push(text.slice(last))
+  return <>{nodes}</>
+}
+
 export function AgentPage() {
   const { history, setHistory, input, setInput, loading, setLoading, threadId, setThreadId } =
     useAgentSession()
+  const { openDecisionFiche } = useFicheNav()
   const [llmReady, setLlmReady] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -137,7 +191,16 @@ export function AgentPage() {
             {history.map((m, i) => (
               <div className="bubble" key={`${m.role}-${i}`}>
                 <span className="eyebrow">{m.role === 'user' ? 'VOUS' : 'COPILOT'}</span>
-                <p>{m.content || '—'}</p>
+                <p>
+                  {m.role === 'assistant' ? (
+                    <MessageWithSymbolLinks
+                      text={m.content || '—'}
+                      onOpen={(sym) => openDecisionFiche(sym, '1h')}
+                    />
+                  ) : (
+                    m.content || '—'
+                  )}
+                </p>
               </div>
             ))}
             {error && (

@@ -7,11 +7,21 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — merge main → fiches (thème be2c863)
+
+- Intégre #112/#113/#114 (fuite CSS virgule corrigée) dans `cursor/ui-fiches-a2fe`
+- Tip fiches post-merge ; compare à relancer si besoin
+- **Draft #110 — pas de merge**
+
+---
+
 ## 2026-09-25 — Fix thème farci #2 — fuite CSS virgule (light = light)
 
 - Bug : dans `maquette-theme.css`, sélecteurs après `,` perdaient le préfixe `html.dark` → `.segmented` restait sombre en mode clair (bandeau Tous/PASSE/…)
 - Fix : réécriture sans fuite ; light → shell/card/segmented/th tous clairs ; dark → tous sombres
 - Smoke local PASS ; VPS à déployer
+
+--
 
 ---
 
@@ -26,6 +36,42 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ### Suite
 Chantiers fiches (#110) + Eve (#111) continuent en parallèle.
+
+--
+
+---
+
+## 2026-09-25 — Chantier 1 polish A + amorce B — fiches
+
+- Branche `cursor/ui-fiches-a2fe` tip **`f80358c`** (suite phase A)
+- **Thème** : défaut `light` (ignore `prefers-color-scheme`) ; `theme/maquette-theme.css` — overrides `html.dark` pour les 11 `*-page` + `.fiche-dialog` (segmented/tags/notices/tables)
+- **FicheDecision** : fix notice paper (`ok` toujours cohérent) ; `openDecisionFiche` normalise le symbole
+- **Phase B amorcée** : `FichePosition` skeleton (paper, marks overview, partials, scénarios, clôture via `PaperCloseConfirmSheet`) ; câblé Portefeuille / Desk / Journal trades ; `FicheRun` reste stub
+- Desk compare : notice vide + skeleton `opportunity/coin/score` si screener vide (hauteur ±4)
+- Surface maquette inchangée (détail uniquement dans dialogs)
+- `npx tsc --noEmit` OK · `compare-maquette.mjs` : **11×0** (script non modifié)
+- Gaps : mini-chart / calques ; as-of journal toujours live ; CHoCH moteur souvent absent
+- **Pas de merge**
+
+---
+
+## 2026-09-25 — Chantier 1 phase A — fiches décision (draft PR)
+
+- Branche `cursor/ui-fiches-a2fe` depuis `origin/main` @ **`225549d`** (#109 squash MERGÉ)
+- **Livré** : `docs/ui-fiches/INVENTAIRE.md` → `FicheDecision` (5 onglets) → deep-link shell `?fiche=` → points d’entrée Marché / Opportunités / Desk / Journal / Copilot → `lib/actionFeedback.ts`
+- Dialog maquette (`dialog-body` / `dialog-head` / `statline` / `tag` / `notice` / `table-wrap` / `segmented`) ; max 720px desktop ; ≤800 plein écran
+- Opportunités : dialog local retiré — une seule `FicheDecision` via shell
+- `npx tsc --noEmit` OK · `compare-maquette.mjs` : **11×0** (script non modifié)
+- Phase B non démarrée (FichePosition / FicheRun / Calques = stubs deep-link)
+- **Pas de merge** — PR créée par le parent
+
+### Base main
+
+- **#109 UI-port MERGÉE** squash tip `225549d` (paper + Enregistrer décision · 11×0)
+- **VPS** : https://ichivol.global-it-ss.com — `RELEASE=225549d main` · rebuild `web` · public/health **200**
+- Backup : `/opt/ichivol-backup/pre-uiport-merge-20260925-141927.tgz` (+ `pre-uiport-merge-src-*`)
+- #108 fermée (incluse) ; remotes `cursor/ui-port-marche-a2fe` + `cursor/ui-clean-a2fe` supprimées
+- **Pas de merge** de cette PR fiches — relecture Claude + OK Samir
 
 ---
 
