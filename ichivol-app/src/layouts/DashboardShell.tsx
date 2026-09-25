@@ -161,6 +161,13 @@ function DashboardShellInner() {
           </div>
           <div className="dash-header-right">
             {isMobile && <ThemeToggle />}
+            <span
+              className="dash-paper-pill"
+              data-mode="paper"
+              title="Mode paper — aucune exécution réelle"
+            >
+              PAPER
+            </span>
             <KillSwitchButton />
             <LlmHeaderBadge />
 
