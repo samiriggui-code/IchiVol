@@ -1,464 +1,396 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+/**
+ * Portefeuille — port littéral de design-reference/ichivol-workspace `portefeuille()` + page-head.
+ * Classes HTML = maquette. Données = engine (manquant → « — »).
+ */
+
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
-  DeskCardShell,
-  DeskRing,
-  RING_COLORS,
   concentrationFromPositions,
   drawdownFromCurve,
-} from '../components/desk/DeskRings'
-import { LabsPaperCard } from '../components/desk/DeskRelocatedCards'
+} from '../components/desk/deskMetrics'
 import {
   getPaperOverview,
-  listPaperPortfolios,
   type PaperOverview,
-  type PaperPortfolioRow,
+  type PaperOverviewPosition,
 } from '../lib/paper'
 import { getRiskLock, type RiskLockState } from '../lib/riskLock'
-import { PaperPage } from './PaperPage'
-import { SynthesePage } from './SynthesePage'
+import { displaySymbol } from '../lib/markets'
 import './PortfolioPage.css'
-import '../components/desk/DeskRings.css'
 
-type PortfolioTab = 'synthese' | 'compte' | 'positions' | 'risque' | 'tests'
+type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
 
-const BASELINE = 'ICHIVOL_BASELINE_V1'
-
-function normalizeTab(raw: string | null): PortfolioTab {
-  if (raw === 'positions' || raw === 'paper') return 'positions'
-  if (raw === 'compte' || raw === 'account') return 'compte'
-  if (raw === 'risque' || raw === 'risk') return 'risque'
-  if (raw === 'tests') return 'tests'
-  return 'synthese'
-}
-
-function fmtPct(v: number | null | undefined, digits = 1, signed = false): string {
-  if (v == null || !Number.isFinite(v)) return '—'
-  const n = new Intl.NumberFormat('fr-FR', {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-    signDisplay: signed ? 'exceptZero' : 'auto',
-  }).format(v * 100)
-  return `${n} %`
-}
-
-function fmtEur(v: number | null | undefined, digits = 0): string {
-  if (v == null || !Number.isFinite(v)) return '—'
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: digits,
-    minimumFractionDigits: digits,
-  }).format(v)
-}
-
-/** Montants page Portefeuille — toujours fr-FR avec symbole €. */
-function fmtMoney(v: number | null | undefined, digits = 2): string {
-  return fmtEur(v, digits)
-}
-
-function riskVerdict(lock: RiskLockState | null): { label: 'PASSE' | 'BLOQUÉ'; tone: 'pass' | 'block' } {
-  if (lock?.entries_blocked || lock?.kill_switch_armed || lock?.daily_loss_locked) {
-    return { label: 'BLOQUÉ', tone: 'block' }
+function badge(text: string, tone: BadgeTone = ''): ReactNode {
+  let inferred = tone
+  if (!inferred) {
+    inferred = /PASSE|ACCEPTÉ|OUVERTE|VALIDÉ/i.test(text)
+      ? 'green'
+      : /REFUS|BLOQU|ERREUR/i.test(text)
+        ? 'red'
+        : /PRUDENCE|ARMED|WATCH/i.test(text)
+          ? 'amber'
+          : ''
   }
-  return { label: 'PASSE', tone: 'pass' }
+  return <span className={`tag ${inferred}`.trim()}>{text}</span>
 }
 
-/**
- * T14a + T13b + UI-P2 — Portefeuille maquette : KPI / Risk Kernel / anneaux au-dessus des onglets.
- */
+function fmtEur(n: number | null | undefined, digits = 2): string {
+  if (n == null || !Number.isFinite(n)) return '—'
+  return (
+    n.toLocaleString('fr-FR', {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }) + ' €'
+  )
+}
+
+function fmtPct(n: number | null | undefined, digits = 1, signed = false): string {
+  if (n == null || !Number.isFinite(n)) return '—'
+  const v = n * 100
+  const sign = signed && v > 0 ? '+' : ''
+  return `${sign}${v.toLocaleString('fr-FR', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  })} %`
+}
+
+function fmtPctPoints(n: number | null | undefined, digits = 1): string {
+  if (n == null || !Number.isFinite(n)) return '—'
+  return `${n.toLocaleString('fr-FR', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  })} %`
+}
+
+function ProgressRow({
+  label,
+  value,
+  pct,
+}: {
+  label: string
+  value: string
+  pct: number
+}) {
+  const width = Math.max(0, Math.min(100, pct))
+  return (
+    <>
+      <div className="risk-row">
+        <span>{label}</span>
+        <span className="mono">{value}</span>
+      </div>
+      <div className="track">
+        <span style={{ width: `${width}%` }} />
+      </div>
+    </>
+  )
+}
+
 export function PortfolioPage() {
-  const [params, setParams] = useSearchParams()
-  const active = useMemo(() => normalizeTab(params.get('tab')), [params])
+  const navigate = useNavigate()
   const [overview, setOverview] = useState<PaperOverview | null>(null)
-  const [ovError, setOvError] = useState<string | null>(null)
-  const [ovLoading, setOvLoading] = useState(true)
   const [lock, setLock] = useState<RiskLockState | null>(null)
-  const [labs, setLabs] = useState<PaperPortfolioRow[]>([])
-  const [labsLoading, setLabsLoading] = useState(true)
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    let cancelled = false
-    setLabsLoading(true)
-    listPaperPortfolios()
-      .then((rows) => {
-        if (!cancelled) setLabs(rows.filter((p) => p.is_active))
-      })
-      .catch(() => {
-        if (!cancelled) setLabs([])
-      })
-      .finally(() => {
-        if (!cancelled) setLabsLoading(false)
-      })
-    return () => {
-      cancelled = true
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [ov, lk] = await Promise.all([getPaperOverview(), getRiskLock().catch(() => null)])
+      setOverview(ov)
+      setLock(lk)
+    } catch {
+      setOverview(null)
+    } finally {
+      setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    let cancelled = false
-    setOvLoading(true)
-    Promise.all([
-      getPaperOverview(BASELINE)
-        .then((ov) => ({ ok: true as const, ov }))
-        .catch((err: unknown) => ({
-          ok: false as const,
-          error: err instanceof Error ? err.message : 'Overview indisponible',
-        })),
-      getRiskLock(BASELINE).catch(() => null),
-    ]).then(([ovRes, lockRes]) => {
-      if (cancelled) return
-      if (ovRes.ok) {
-        setOverview(ovRes.ov)
-        setOvError(null)
-      } else {
-        setOverview(null)
-        setOvError(ovRes.error)
-      }
-      setLock(lockRes)
-      setOvLoading(false)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  function selectTab(next: PortfolioTab) {
-    const nextParams = new URLSearchParams(params)
-    if (next === 'synthese') nextParams.delete('tab')
-    else nextParams.set('tab', next === 'positions' ? 'positions' : next)
-    setParams(nextParams, { replace: true })
-  }
+    void load()
+  }, [load])
 
   const acct = overview?.account
   const risk = overview?.risk
-  const drawdown = useMemo(
-    () => drawdownFromCurve(overview?.equity_curve ?? [], acct?.equity),
-    [overview?.equity_curve, acct?.equity],
-  )
-  const investedPct =
-    acct && acct.equity > 0 ? Math.min(100, Math.max(0, (acct.invested / acct.equity) * 100)) : 0
-  const concentration = useMemo(
-    () => concentrationFromPositions(overview?.positions ?? []),
+  const positions = useMemo(
+    () => (overview?.positions ?? []).filter((p) => String(p.status).toUpperCase() === 'OPEN'),
     [overview?.positions],
   )
-  const verdict = riskVerdict(lock)
+  const shown = positions.slice(0, 3)
+  const concentration = useMemo(
+    () => concentrationFromPositions(positions).slice(0, 3),
+    [positions],
+  )
+  const dd = drawdownFromCurve(overview?.equity_curve ?? [], acct?.equity)
+  const investedPct =
+    acct && acct.equity > 0 ? Math.min(100, Math.max(0, (acct.invested / acct.equity) * 100)) : null
+
+  const riskPass =
+    lock == null
+      ? null
+      : !lock.entries_blocked && !lock.daily_loss_locked && !lock.kill_switch_armed
+
+  const openPosition = (symbol: string) => {
+    navigate(`/app/market?symbol=${encodeURIComponent(symbol)}`)
+  }
 
   return (
-    <div className="portfolio-page desk-workspace">
-      <header className="iv-page-header page-head portfolio-page-header iv-animate-soft">
+    <div className="pf-page">
+      <div className="page-head">
         <div>
-          <p className="iv-page-eyebrow">Trading · Portefeuille</p>
+          <div className="eyebrow">04 / ICHIVOL WORKSPACE</div>
           <h1>Portefeuille</h1>
-          <p className="iv-page-question">Le capital d’abord. Le risque toujours.</p>
+          <p className="subtitle">Le capital d’abord. Le risque toujours.</p>
         </div>
-      </header>
+        <div className="actions">{badge('DONNÉES LIVE', 'gray')}</div>
+      </div>
 
-      {ovError && (
-        <div className="banner error" role="alert">
-          {ovError}
-        </div>
-      )}
-
-      <section className="iv-metrics desk-kpis portfolio-kpis iv-animate-in" aria-label="Indicateurs portefeuille">
-        <div className="iv-metric">
-          <div className="iv-metric-label">Capital</div>
-          <div className="iv-metric-value mono">
-            {ovLoading && !acct ? '—' : acct ? fmtEur(acct.equity, 0) : '—'}
+      <div className="metrics">
+        <div className="metric">
+          <div className="metric-label">
+            Capital<span>↗</span>
           </div>
-          <small>Equity paper · EUR</small>
+          <div className="metric-value">{acct ? fmtEur(acct.equity, 2) : loading ? '—' : '—'}</div>
+          <small>Portefeuille paper</small>
         </div>
-        <div className="iv-metric">
-          <div className="iv-metric-label">Exposition</div>
-          <div className="iv-metric-value mono">{acct ? fmtEur(acct.invested, 0) : '—'}</div>
+        <div className="metric">
+          <div className="metric-label">
+            Exposition<span>↗</span>
+          </div>
+          <div className="metric-value">{acct ? fmtEur(acct.invested, 2) : '—'}</div>
           <small>
-            {acct && acct.equity > 0 ? `${fmtPct(acct.invested / acct.equity, 1)} du capital` : 'Engagé'}
+            {investedPct != null ? `${fmtPctPoints(investedPct, 1)} du capital` : '—'}
           </small>
         </div>
-        <div className="iv-metric">
-          <div className="iv-metric-label">Disponible</div>
-          <div className="iv-metric-value mono">{acct ? fmtEur(acct.cash, 0) : '—'}</div>
-          <small>Cash libre</small>
-        </div>
-        <div className={`iv-metric${drawdown != null && drawdown < 0 ? ' is-bear' : ''}`}>
-          <div className="iv-metric-label">Drawdown</div>
-          <div className="iv-metric-value mono">
-            {drawdown != null ? fmtPct(drawdown, 1, true) : '—'}
+        <div className="metric">
+          <div className="metric-label">
+            Disponible<span>↗</span>
           </div>
+          <div className="metric-value">{acct ? fmtEur(acct.cash, 2) : '—'}</div>
+          <small>Réserve non engagée</small>
+        </div>
+        <div className={`metric${dd != null && dd < 0 ? ' down' : ''}`.trim()}>
+          <div className="metric-label">
+            Drawdown<span>↗</span>
+          </div>
+          <div className="metric-value">{dd != null ? fmtPct(dd, 1, true) : '—'}</div>
           <small>Depuis le plus haut</small>
+        </div>
+      </div>
+
+      <div className="grid">
+        <section className="card">
+          <div className="card-head">
+            <h2>Risk Kernel</h2>
+          </div>
+          <div className="card-body">
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 20,
+                padding: '10px 0 22px',
+              }}
+            >
+              <span
+                style={{
+                  font: '42px Newsreader, Georgia, serif',
+                  color:
+                    riskPass === true
+                      ? 'var(--green)'
+                      : riskPass === false
+                        ? 'var(--red)'
+                        : 'var(--muted)',
+                }}
+              >
+                {riskPass === true ? 'PASSE' : riskPass === false ? 'BLOQUÉ' : '—'}
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Verdict risk kernel
+                <br />
+                {risk
+                  ? `${risk.open_positions} position${risk.open_positions === 1 ? '' : 's'} sous surveillance`
+                  : '—'}
+              </span>
+            </div>
+            <ProgressRow
+              label="Risque par trade"
+              value="—"
+              pct={0}
+            />
+            <ProgressRow
+              label="Risque par jour"
+              value={
+                risk?.open_risk_pct != null && risk.max_open_risk_pct != null
+                  ? `${fmtPct(risk.open_risk_pct, 1).replace(' %', '')} / ${fmtPct(risk.max_open_risk_pct, 0)}`
+                  : '—'
+              }
+              pct={
+                risk?.open_risk_pct != null && risk.max_open_risk_pct
+                  ? (risk.open_risk_pct / risk.max_open_risk_pct) * 100
+                  : 0
+              }
+            />
+            <ProgressRow
+              label="Exposition globale"
+              value={
+                investedPct != null
+                  ? `${fmtPctPoints(investedPct, 1).replace(' %', '')} / —`
+                  : '—'
+              }
+              pct={investedPct ?? 0}
+            />
+            <ProgressRow
+              label="Positions simultanées"
+              value={
+                risk ? `${risk.open_positions} / ${risk.max_open_positions}` : '—'
+              }
+              pct={
+                risk && risk.max_open_positions > 0
+                  ? (risk.open_positions / risk.max_open_positions) * 100
+                  : 0
+              }
+            />
+          </div>
+        </section>
+
+        <section className="card">
+          <div className="card-head">
+            <h2>Allocation du capital</h2>
+            {badge('CRYPTO SPOT', 'gray')}
+          </div>
+          <div className="card-body">
+            <div
+              className="donut"
+              style={
+                investedPct != null
+                  ? {
+                      background: `conic-gradient(#347d78 0 ${investedPct}%, #e9e6df ${investedPct}% 100%)`,
+                    }
+                  : undefined
+              }
+              data-label={investedPct != null ? fmtPctPoints(investedPct, 1) : '—'}
+            />
+            <div className="statline">
+              <span>Capital engagé</span>
+              <b>{acct ? fmtEur(acct.invested, 2) : '—'}</b>
+            </div>
+            <div className="statline">
+              <span>Liquidités</span>
+              <b>{acct ? fmtEur(acct.cash, 2) : '—'}</b>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section className="card">
+        <div className="card-head">
+          <h2>Positions ouvertes</h2>
+          {badge(
+            positions.length ? `${Math.min(3, positions.length)} POSITIONS` : '—',
+            'gray',
+          )}
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ACTIF / STRATÉGIE</th>
+                <th>ENGAGÉ</th>
+                <th>PERFORMANCE</th>
+                <th>P&amp;L LATENT</th>
+                <th>ÉTAT</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.length === 0 ? (
+                <tr>
+                  <td colSpan={5}>
+                    <b>—</b>
+                    <small>{loading ? 'Chargement…' : 'Aucune position ouverte'}</small>
+                  </td>
+                </tr>
+              ) : (
+                shown.map((p: PaperOverviewPosition) => {
+                  const base = displaySymbol(p.symbol)
+                  const engaged =
+                    p.market_value ??
+                    (p.current_price != null && p.qty != null
+                      ? p.current_price * Math.abs(p.qty)
+                      : p.notional ?? null)
+                  const perf = p.unrealized_pct
+                  const pnl = p.unrealized_pnl
+                  const perfCls =
+                    perf == null ? '' : perf > 0 ? 'up' : perf < 0 ? 'down' : ''
+                  const pnlCls =
+                    pnl == null ? '' : pnl > 0 ? 'up' : pnl < 0 ? 'down' : ''
+                  const strat =
+                    p.timeframe != null
+                      ? `Ichimoku × RVOL · ${String(p.timeframe).toUpperCase()}`
+                      : '—'
+                  return (
+                    <tr
+                      key={p.id ?? p.symbol}
+                      className="clickable"
+                      tabIndex={0}
+                      onClick={() => openPosition(p.symbol)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          openPosition(p.symbol)
+                        }
+                      }}
+                    >
+                      <td>
+                        <b>{base}</b>
+                        <small>{strat}</small>
+                      </td>
+                      <td>
+                        <span className="mono">{fmtEur(engaged, 2)}</span>
+                      </td>
+                      <td>
+                        <span className={`mono ${perfCls}`.trim()}>
+                          {perf != null ? fmtPct(perf, 2, true) : '—'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`mono ${pnlCls}`.trim()}>{fmtEur(pnl, 2)}</span>
+                      </td>
+                      <td>{badge(p.mark_stale ? 'MARK STALE' : 'OUVERTE')}</td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
 
-      <div className="portfolio-maquette-row">
-        <DeskCardShell title="Risk Kernel" meta={risk?.kernel ?? BASELINE}>
-          {ovLoading && !risk && !lock ? (
-            <p className="muted">Chargement…</p>
-          ) : !risk && !lock ? (
-            <p className="muted">Risque indisponible.</p>
+      <div style={{ height: 20 }} />
+
+      <section className="card">
+        <div className="card-head">
+          <h2>Concentration des positions</h2>
+        </div>
+        <div className="card-body">
+          {concentration.length === 0 ? (
+            <p style={{ fontSize: 11, color: 'var(--muted)' }}>—</p>
           ) : (
-            <div className="portfolio-kernel">
-              <div className={`portfolio-kernel-verdict is-${verdict.tone}`}>
-                <span>Verdict</span>
-                <strong>{verdict.label}</strong>
-                <small>
-                  {[
-                    lock?.kill_switch_armed ? 'kill-switch armé' : null,
-                    lock?.daily_loss_locked ? 'perte journalière verrouillée' : null,
-                    lock?.entries_blocked && !lock.kill_switch_armed && !lock.daily_loss_locked
-                      ? 'entrées bloquées'
-                      : null,
-                    verdict.tone === 'pass' ? 'entrées autorisées' : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </small>
-              </div>
-              <div className="desk-risk-bars">
-                {risk?.open_risk_pct != null && risk.max_open_risk_pct != null ? (
-                  <div>
-                    <div className="desk-risk-label">
-                      <span>Risque ouvert / limite</span>
-                      <span className="mono">
-                        {fmtPct(risk.open_risk_pct, 1)} / {fmtPct(risk.max_open_risk_pct, 0)}
-                      </span>
-                    </div>
-                    <div className="desk-risk-track" aria-hidden>
-                      <i
-                        style={{
-                          width: `${Math.min(
-                            100,
-                            (risk.open_risk_pct / risk.max_open_risk_pct) * 100,
-                          )}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ) : null}
-                {risk && risk.max_open_positions > 0 ? (
-                  <div>
-                    <div className="desk-risk-label">
-                      <span>Positions / max</span>
-                      <span className="mono">
-                        {risk.open_positions} / {risk.max_open_positions}
-                      </span>
-                    </div>
-                    <div className="desk-risk-track" aria-hidden>
-                      <i
-                        style={{
-                          width: `${Math.min(
-                            100,
-                            (risk.open_positions / risk.max_open_positions) * 100,
-                          )}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ) : null}
-                {!risk?.max_open_risk_pct && !(risk && risk.max_open_positions > 0) ? (
-                  <p className="muted">Aucune limite risque exposée par l’engine.</p>
-                ) : null}
-              </div>
-            </div>
+            <>
+              {concentration.map((c) => (
+                <ProgressRow
+                  key={c.symbol}
+                  label={c.symbol}
+                  value={`${fmtPctPoints(c.pct, 1)} de l’exposition`}
+                  pct={c.pct}
+                />
+              ))}
+              <p style={{ fontSize: 11, color: 'var(--muted)' }}>
+                {concentration.length} actif{concentration.length > 1 ? 's' : ''} crypto : surveiller
+                leur corrélation avant d’ajouter une position.
+              </p>
+            </>
           )}
-        </DeskCardShell>
-      </div>
-
-      <div className="desk-allocation portfolio-allocation">
-        <DeskCardShell title="Allocation du capital" meta={acct ? fmtEur(acct.equity, 0) : undefined}>
-          {!acct ? (
-            <p className="muted">{ovLoading ? 'Chargement…' : 'Compte indisponible.'}</p>
-          ) : (
-            <div className="allocation-body">
-              <DeskRing
-                parts={[{ pct: investedPct, color: '#548f87' }]}
-                center={fmtPct(investedPct / 100, 1)}
-                label="Capital engagé"
-              />
-              <div className="allocation-legend">
-                <div className="statline">
-                  <span>
-                    <i className="legend-dot teal" aria-hidden /> Engagé
-                  </span>
-                  <b className="mono">{fmtEur(acct.invested, 0)}</b>
-                </div>
-                <div className="statline">
-                  <span>
-                    <i className="legend-dot neutral" aria-hidden /> Liquidités
-                  </span>
-                  <b className="mono">{fmtEur(acct.cash, 0)}</b>
-                </div>
-              </div>
-            </div>
-          )}
-        </DeskCardShell>
-
-        <DeskCardShell title="Concentration des positions">
-          {!concentration.length ? (
-            <p className="muted">
-              {ovLoading ? 'Chargement…' : 'Aucune position valorisée pour calculer la concentration.'}
-            </p>
-          ) : (
-            <div className="allocation-body">
-              <DeskRing
-                parts={concentration.slice(0, 5).map((c, i) => ({
-                  pct: c.pct,
-                  color: RING_COLORS[i % RING_COLORS.length],
-                }))}
-                center={String(concentration.length)}
-                label="Positions"
-              />
-              <div className="allocation-legend">
-                {concentration.slice(0, 5).map((c, i) => (
-                  <div key={c.symbol} className="statline concentration-row">
-                    <span>
-                      <i
-                        className="legend-dot"
-                        style={{ background: RING_COLORS[i % RING_COLORS.length] }}
-                        aria-hidden
-                      />
-                      {c.symbol}
-                    </span>
-                    <b className="mono">{fmtPct(c.pct / 100, 1)}</b>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </DeskCardShell>
-      </div>
-
-      <div className="portfolio-tabs" role="tablist" aria-label="Sections portefeuille">
-        {(
-          [
-            ['synthese', 'Synthèse'],
-            ['compte', 'Compte'],
-            ['positions', 'Positions'],
-            ['risque', 'Risque'],
-            ['tests', 'Tests'],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={active === id}
-            className={`portfolio-tab${active === id ? ' is-active' : ''}`}
-            onClick={() => selectTab(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <div className="desk-relocated-stack">
-        <LabsPaperCard portfolios={labs} loading={labsLoading} />
-      </div>
-
-      <div className="portfolio-tab-panel" role="tabpanel">
-        {active === 'synthese' && (
-          <div className="portfolio-embed is-synthese">
-            <SynthesePage />
-          </div>
-        )}
-        {active === 'compte' && (
-          <div className="portfolio-embed">
-            <p className="muted portfolio-embed-hint">
-              Vue compte paper — détail technique aussi dans{' '}
-              <Link to="/app/portefeuille?tab=positions">Positions</Link>.
-            </p>
-            <PaperPage />
-          </div>
-        )}
-        {active === 'positions' && (
-          <div className="portfolio-embed">
-            <PaperPage />
-          </div>
-        )}
-        {active === 'risque' && (
-          <div className="portfolio-embed portfolio-risk">
-            <p className="muted portfolio-embed-hint">
-              Détail Risk Kernel — capital, exposé, risque utilisé, derniers refus.
-            </p>
-            {ovError && (
-              <div className="banner error" role="alert">
-                {ovError}
-              </div>
-            )}
-            {!ovError && !risk && <p className="muted">{ovLoading ? 'Chargement…' : 'Risque indisponible.'}</p>}
-            {risk && (
-              <>
-                <dl className="portfolio-risk-grid">
-                  <div>
-                    <dt>Capital (equity)</dt>
-                    <dd className="mono">{fmtMoney(risk.capital)}</dd>
-                  </div>
-                  <div>
-                    <dt>Cash</dt>
-                    <dd className="mono">{fmtMoney(risk.cash)}</dd>
-                  </div>
-                  <div>
-                    <dt>Exposé</dt>
-                    <dd className="mono">{fmtMoney(risk.exposed)}</dd>
-                  </div>
-                  <div>
-                    <dt>Risque utilisé</dt>
-                    <dd className="mono">
-                      {fmtMoney(risk.open_risk_amount)}
-                      {risk.open_risk_pct != null ? ` · ${fmtPct(risk.open_risk_pct)}` : ''}
-                      {risk.max_open_risk_pct != null
-                        ? ` / lim. ${fmtPct(risk.max_open_risk_pct)}`
-                        : ''}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Positions ouvertes</dt>
-                    <dd className="mono">
-                      {risk.open_positions} / {risk.max_open_positions}
-                    </dd>
-                  </div>
-                </dl>
-                <h2 className="portfolio-risk-h2">Derniers refus</h2>
-                {risk.recent_refusals.length === 0 ? (
-                  <p className="muted">Aucun refus journalisé récemment.</p>
-                ) : (
-                  <div className="table-wrap">
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>Quand</th>
-                          <th>Symbole</th>
-                          <th>TF</th>
-                          <th>Code</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {risk.recent_refusals.map((r, i) => (
-                          <tr key={`${r.at}-${r.symbol}-${i}`}>
-                            <td className="mono muted">
-                              {r.at ? new Date(r.at).toLocaleString('fr-FR') : '—'}
-                            </td>
-                            <td>{r.symbol ?? '—'}</td>
-                            <td>{r.timeframe ?? '—'}</td>
-                            <td className="mono">{(r.codes && r.codes[0]) || r.reason || '—'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-        {active === 'tests' && (
-          <div className="portfolio-embed">
-            <p className="muted portfolio-embed-hint">
-              Tests / shadow broker — section Paper. Disponible avec T13x pour un onglet dédié.
-            </p>
-            <PaperPage />
-          </div>
-        )}
-      </div>
+        </div>
+      </section>
     </div>
   )
 }
