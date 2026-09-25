@@ -21,6 +21,7 @@ import './theme/camap-landing.css'
 import './index.css'
 // Workspace refinements follow the base cockpit rules; no !important overrides.
 import './theme/iv-workspace.css'
+import './theme/maquette-theme.css'
 
 initTheme()
 
