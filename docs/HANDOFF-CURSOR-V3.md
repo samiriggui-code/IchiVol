@@ -11,11 +11,11 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - Branche `cursor/agents-page-a2fe` depuis `origin/main` @ Eve #111 mergé
 - **API** `GET /api/agents` : 6 role cards (`observer`…`session`) + `runtime` (worker/drain) + `authorityChain` + résumé `eve` rétrocompat
-- **Statuts** dérivés (pas inventés) : engine health, kill-switch, positions paper, tâches Eve, sessions FX, clé LLM
+- **Statuts** dérivés (pas inventés) : engine health, kill-switch, positions paper, tâches Eve, sessions FX, clé LLM (env + settings user)
 - **Front** `AgentsPage` : badges ACTIF/EN VEILLE/EN PAUSE/ERREUR ; notice runtime réelle ; chaîne d’autorité si log ; mission « Surveiller avec Eve » via `POST /api/agents/missions`
 - **FicheAgent** : FicheHost absent → stub `?fiche=agent:id` + dialog maquette
 - **Opérations / AgentLog** : follow-up (pas d’injection ActivityPage — compare)
-- Tests `agentRoles.test.ts` ; `compare-maquette.mjs` non modifié — viser **11×0**
+- Tests `agentRoles.test.ts` PASS ; `compare-maquette.mjs` **agents 1440/390 = 0** (script non modifié) ; desk écarts `.up`/notice data-dépendants déjà présents sur main
 
 ### Suite
 E2 evaluate_watch · FicheAgent quand fiches mergées · cancel mission endpoint · AgentLog → journal ops
