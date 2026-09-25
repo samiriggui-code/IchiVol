@@ -752,45 +752,61 @@ export function OverviewPage() {
             )}
           >
             <div className="card-body">
-              {watchList.map((r) => {
-                const base = r.symbol.replace(/USDT$/i, '')
-                const coin = coinLetter(base)
-                const score =
-                  r.confidence != null && Number.isFinite(r.confidence)
-                    ? Math.round(r.confidence * 100)
-                    : null
-                return (
-                  <div
-                    key={r.symbol}
-                    className="opportunity"
-                    tabIndex={0}
-                    role="button"
-                    onClick={() => openOpp(r.symbol)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        openOpp(r.symbol)
-                      }
-                    }}
-                  >
-                    <span className={`coin ${coin.cls}`.trim()}>{coin.letter}</span>
-                    <div>
-                      <strong>
-                        {base}
-                        <span style={{ color: '#a0a4a6', fontWeight: 400 }}> / USDT</span>
-                      </strong>
-                      <small>{opportunityCaption(r)}</small>
-                    </div>
-                    <div className="right">
-                      <span className="score">
-                        {score != null ? score : '—'}
-                        <small style={{ display: 'inline' }}> /100</small>
-                      </span>
-                      <small>{badge(decisionBadgeText(r))}</small>
-                    </div>
+              {watchList.length === 0 ? (
+                <div className="opportunity" aria-disabled="true">
+                  <span className="coin">—</span>
+                  <div>
+                    <strong>—</strong>
+                    <small>Aucune opportunité screener pour le moment</small>
                   </div>
-                )
-              })}
+                  <div className="right">
+                    <span className="score">
+                      —<small style={{ display: 'inline' }}> /100</small>
+                    </span>
+                    <small>{badge('—', 'gray')}</small>
+                  </div>
+                </div>
+              ) : (
+                watchList.map((r) => {
+                  const base = r.symbol.replace(/USDT$/i, '')
+                  const coin = coinLetter(base)
+                  const score =
+                    r.confidence != null && Number.isFinite(r.confidence)
+                      ? Math.round(r.confidence * 100)
+                      : null
+                  return (
+                    <div
+                      key={r.symbol}
+                      className="opportunity"
+                      tabIndex={0}
+                      role="button"
+                      onClick={() => openOpp(r.symbol)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          openOpp(r.symbol)
+                        }
+                      }}
+                    >
+                      <span className={`coin ${coin.cls}`.trim()}>{coin.letter}</span>
+                      <div>
+                        <strong>
+                          {base}
+                          <span style={{ color: '#a0a4a6', fontWeight: 400 }}> / USDT</span>
+                        </strong>
+                        <small>{opportunityCaption(r)}</small>
+                      </div>
+                      <div className="right">
+                        <span className="score">
+                          {score != null ? score : '—'}
+                          <small style={{ display: 'inline' }}> /100</small>
+                        </span>
+                        <small>{badge(decisionBadgeText(r))}</small>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
             </div>
             <div className="card-foot">
               <Link className="link" to="/app/opportunites">
