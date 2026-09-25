@@ -7,17 +7,17 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
-## 2026-09-25 — UI-P1 Desk maquette (option A) — PR #96
+## 2026-09-25 — UI-P1 Desk maquette MERGÉE (#96) — tip `718b2ba`
 
-- PR : https://github.com/samiriggui-code/IchiVol/pull/96 — branche `cursor/ui-p1-desk-maquette-a2fe`
-- **Périmètre front only** — Desk conforme maquette ; `engine/` · `server/` intouchés.
-- Desk : KPI paper · sessions Tokyo/Londres/NY (**IANA** `Asia/Tokyo` · `Europe/London` · `America/New_York`, horaires locaux 09–18 / 08–17 / 09:30–16, week-end **par place**, DST auto) · marchés screener + variation Binance · lecture CoinGecko/F&G · equity 1J/1S/1M/3M · à surveiller · notice fraîcheur · positions · budget risque · tape · prochain contrôle 1H + RVOL BTC · état système (`/api/engine/health` + risk-lock) · anneaux.
-- Relocalisation : Market pulse → Opportunités ; Pipeline / Circuit 24h / Preuves → Opérations ; Labs paper → Portefeuille.
-- Tests : `npm run lint` / `npm run build` ; `scripts/check-market-sessions.mjs` (été + DST Londres 23/26 oct + NY 30 oct/2 nov + ven/dim soir UTC) ; `scripts/smoke-ui-p1-desk.mjs` — **PASS**.
-- Captures (repo) : [`docs/ui-p1/01-desk-desktop.png`](./ui-p1/01-desk-desktop.png) · [`docs/ui-p1/02-desk-mobile-390.png`](./ui-p1/02-desk-mobile-390.png)
+- PR : https://github.com/samiriggui-code/IchiVol/pull/96 — **MERGÉE** (squash)
+- **Vérifié** : `origin/main` tip = `718b2ba`
+- Desk conforme maquette (option A) : KPI paper · sessions **IANA** Tokyo/Londres/NY (horaires locaux, week-end par place, DST auto) · marchés + variation Binance · CoinGecko/F&G · equity · à surveiller · fraîcheur · positions · budget risque · tape · contrôle 1H · `/api/engine/health` · anneaux.
+- Relocalisation : pulse → Opportunités ; pipeline/circuit/preuves → Opérations ; labs → Portefeuille.
+- Captures : [`docs/ui-p1/01-desk-desktop.png`](./ui-p1/01-desk-desktop.png) · [`docs/ui-p1/02-desk-mobile-390.png`](./ui-p1/02-desk-mobile-390.png)
+- Tests : lint/build · `check-market-sessions.mjs` (DST) · smoke Desk desktop+mobile — PASS
 
 ### Suite
-Merge + déploiement VPS → portage pages suivantes selon `UI-MAQUETTE-GAP.md`.
+Déploiement VPS `main` @ `718b2ba` → portage pages suivantes selon `UI-MAQUETTE-GAP.md`.
 
 ---
 
