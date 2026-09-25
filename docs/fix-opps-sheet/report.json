@@ -1,0 +1,81 @@
+{
+  "pass": true,
+  "closes": {
+    "retour_open": {
+      "sheetOpen": true,
+      "hasSheet": true,
+      "chromeHidden": true,
+      "ribbonHidden": true,
+      "scrollOk": true,
+      "retourVisible": true,
+      "retourLabel": "← Retour",
+      "url": "http://127.0.0.1:5177/app/opportunites?symbol=LINKUSDT",
+      "hasSymbolQ": true
+    },
+    "retour_closed": {
+      "sheetOpen": false,
+      "hasSheet": false,
+      "chromeHidden": false,
+      "ribbonHidden": false,
+      "scrollOk": false,
+      "retourVisible": false,
+      "retourLabel": "",
+      "url": "http://127.0.0.1:5177/app/opportunites",
+      "hasSymbolQ": false
+    },
+    "back_open": {
+      "sheetOpen": true,
+      "hasSheet": true,
+      "chromeHidden": true,
+      "ribbonHidden": true,
+      "scrollOk": true,
+      "retourVisible": true,
+      "retourLabel": "← Retour",
+      "url": "http://127.0.0.1:5177/app/opportunites?symbol=BTCUSDT",
+      "hasSymbolQ": true
+    },
+    "back_closed": {
+      "sheetOpen": false,
+      "hasSheet": false,
+      "chromeHidden": false,
+      "ribbonHidden": false,
+      "scrollOk": false,
+      "retourVisible": false,
+      "retourLabel": "",
+      "url": "http://127.0.0.1:5177/app/opportunites",
+      "hasSymbolQ": false
+    },
+    "retap_open": {
+      "sheetOpen": true,
+      "hasSheet": true,
+      "chromeHidden": true,
+      "ribbonHidden": true,
+      "scrollOk": true,
+      "retourVisible": true,
+      "retourLabel": "← Retour",
+      "url": "http://127.0.0.1:5177/app/opportunites?symbol=SOLUSDT",
+      "hasSymbolQ": true
+    },
+    "retap_closed": {
+      "sheetOpen": false,
+      "hasSheet": false,
+      "chromeHidden": false,
+      "ribbonHidden": false,
+      "scrollOk": false,
+      "retourVisible": false,
+      "retourLabel": "",
+      "url": "http://127.0.0.1:5177/app/opportunites",
+      "hasSymbolQ": false
+    }
+  },
+  "symbols": [
+    "LINKA",
+    "BTCP",
+    "SOLP"
+  ],
+  "listAfter": {
+    "rows": 20,
+    "chromeVisible": true,
+    "noSheet": true
+  }
+}
