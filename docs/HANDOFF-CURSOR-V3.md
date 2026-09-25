@@ -7,6 +7,23 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — UI-P1b Desk finition — PR draft #98
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/98 — **draft** (attendre Claude avant merge)
+- Branche : `cursor/ui-p1b-desk-finish-a2fe` · tip `177bd12`
+- **Périmètre front only** — contraste sessions, formats fr-FR, liens accent, lecture marché.
+- Sessions : statut coloré comme marqueurs (vert / ambre / gris) ; sélecteur non « disabled » ; heures `fr-FR` 24 h.
+- Nombres Desk via `Intl.NumberFormat('fr-FR')` ; muted maquette `#7d8288` (clair) / `#a8b0bc` (sombre).
+- Lecture : « Capitalisation crypto 24h » (plus de libellé Volatilité sans mesure réelle).
+- **P&L du jour (prod VPS, compte réel)** : `day_change = -10,28 €` pour equity ≈ 5 007 € ; ref 24 h ≈ 5 017 € → **cohérent** (écart equity ~24 h). Engine non modifié.
+- Captures : [`docs/ui-p1/01-desk-desktop.png`](./ui-p1/01-desk-desktop.png) · [`docs/ui-p1/02-desk-mobile-390.png`](./ui-p1/02-desk-mobile-390.png)
+- Tests : lint/build · smoke Desk desktop+mobile 390 + checks p1b — **PASS**
+
+### Suite
+**Attendre relecture Claude avant merge.** Puis déploiement VPS.
+
+---
+
 ## 2026-09-25 — VPS déployé UI-P1 — tip `718b2ba`
 
 - **FQDN** : https://ichivol.global-it-ss.com — rebuild `web`/`server`/`engine` depuis `main` @ `718b2ba`

@@ -42,10 +42,33 @@ const PRIMARY_SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 
 
 type EquityPeriod = '1J' | '1S' | '1M' | '3M'
 
-function fmtPct(v: number | null | undefined, digits = 1): string {
+/** Percentage already expressed as percent units (e.g. 58.5), not ratio. */
+function fmtPctPoints(
+  v: number | null | undefined,
+  digits = 1,
+  signed = false,
+): string {
   if (v == null || Number.isNaN(v)) return '—'
-  const sign = v > 0 ? '+' : ''
-  return `${sign}${(v * 100).toFixed(digits)} %`
+  const n = new Intl.NumberFormat('fr-FR', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+    signDisplay: signed ? 'exceptZero' : 'auto',
+  }).format(v)
+  return `${n} %`
+}
+
+/** Ratio 0–1 → pourcentage fr-FR (ex. 0.585 → « 58,5 % »). */
+function fmtPct(v: number | null | undefined, digits = 1, signed = true): string {
+  if (v == null || Number.isNaN(v)) return '—'
+  return fmtPctPoints(v * 100, digits, signed)
+}
+
+function fmtDec(v: number | null | undefined, digits = 2): string {
+  if (v == null || Number.isNaN(v)) return '—'
+  return new Intl.NumberFormat('fr-FR', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(v)
 }
 
 function fmtEur(v: number | null | undefined, digits = 0): string {
@@ -60,13 +83,27 @@ function fmtEur(v: number | null | undefined, digits = 0): string {
 
 function fmtPrice(v: number | null | undefined): string {
   if (v == null || Number.isNaN(v)) return '—'
-  if (v >= 1000) return v.toLocaleString('fr-FR', { maximumFractionDigits: 0 })
-  if (v >= 1) return v.toLocaleString('fr-FR', { maximumFractionDigits: 2 })
-  return v.toLocaleString('fr-FR', { maximumFractionDigits: 5 })
+  if (v >= 1000) {
+    return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(v)
+  }
+  if (v >= 1) {
+    return new Intl.NumberFormat('fr-FR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(v)
+  }
+  return new Intl.NumberFormat('fr-FR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 5,
+  }).format(v)
 }
 
 function fmtClock(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
 }
 
 function toneClass(tone: ActivityItem['tone']): string {
@@ -469,7 +506,7 @@ export function OverviewPage() {
           </div>
           <small>
             {acct && acct.equity > 0
-              ? `${((acct.cash / acct.equity) * 100).toFixed(1)} % du capital`
+              ? `${fmtPct(acct.cash / acct.equity, 1, false)} du capital`
               : 'Cash libre'}
           </small>
         </div>
@@ -484,14 +521,14 @@ export function OverviewPage() {
           <div className="iv-metric-label">Risque utilisé</div>
           <div className="iv-metric-value mono">
             {risk?.open_risk_pct != null
-              ? `${(risk.open_risk_pct * 100).toFixed(1)} %`
+              ? fmtPct(risk.open_risk_pct, 1, false)
               : risk
                 ? fmtEur(risk.open_risk_amount, 0)
                 : '—'}
           </div>
           <small>
             {risk?.max_open_risk_pct != null
-              ? `Limite ${(risk.max_open_risk_pct * 100).toFixed(0)} %`
+              ? `Limite ${fmtPct(risk.max_open_risk_pct, 0, false)}`
               : 'Risque ouvert'}
           </small>
         </div>
@@ -537,7 +574,7 @@ export function OverviewPage() {
                   onClick={() => setSessionId(s.id)}
                 >
                   {s.region}
-                  <small>{sessionStatusLabel(st)}</small>
+                  <small className={`session-status is-${st}`}>{sessionStatusLabel(st)}</small>
                 </button>
               )
             })}
@@ -545,13 +582,7 @@ export function OverviewPage() {
           <div className="session-detail" id="desk-session-detail">
             <strong>
               {selectedSession.city}{' '}
-              <span
-                className={
-                  sessionStatus(selectedSession, now) === 'open'
-                    ? 'up'
-                    : 'muted'
-                }
-              >
+              <span className={`session-status is-${sessionStatus(selectedSession, now)}`}>
                 {sessionStatusLabel(sessionStatus(selectedSession, now))}
               </span>
             </strong>
@@ -585,7 +616,7 @@ export function OverviewPage() {
                   <span>
                     <b>
                       {r.symbol.replace(/USDT$/i, '')}
-                      <small> / USDT</small>
+                      <small className="desk-quote"> / USDT</small>
                     </b>
                     <small>
                       <VerdictBadge decision={r.decision} pipeline={r.pipeline} hideDiagnostic />
@@ -599,17 +630,15 @@ export function OverviewPage() {
                         return (
                           <small className="muted">
                             {r.rvol != null
-                              ? `RVOL ${r.rvol.toFixed(2)}×`
-                              : `conf ${(r.confidence * 100).toFixed(0)}`}
+                              ? `RVOL ${fmtDec(r.rvol, 2)}×`
+                              : `conf ${fmtPct(r.confidence, 0, false)}`}
                           </small>
                         )
                       }
-                      const sign = chg > 0 ? '+' : ''
                       const tone = chg > 0 ? 'is-up' : chg < 0 ? 'is-down' : ''
                       return (
                         <small className={`mono desk-chg ${tone}`.trim()}>
-                          {sign}
-                          {chg.toFixed(2)} %
+                          {fmtPctPoints(chg, 2, true)}
                         </small>
                       )
                     })()}
@@ -643,10 +672,9 @@ export function OverviewPage() {
               {market ? (
                 <dl className="desk-climate-stats">
                   <div>
-                    <dt>Volatilité (mcap 24h)</dt>
+                    <dt>Capitalisation crypto 24h</dt>
                     <dd className={market.marketCapChangePercent24h >= 0 ? 'up' : 'down'}>
-                      {market.marketCapChangePercent24h >= 0 ? '+' : ''}
-                      {market.marketCapChangePercent24h.toFixed(2)} %
+                      {fmtPctPoints(market.marketCapChangePercent24h, 2, true)}
                     </dd>
                   </div>
                   {(() => {
@@ -655,7 +683,7 @@ export function OverviewPage() {
                     return (
                       <div>
                         <dt>Dominance BTC</dt>
-                        <dd className="mono">{btc.percent.toFixed(1)} %</dd>
+                        <dd className="mono">{fmtPctPoints(btc.percent, 1, false)}</dd>
                       </div>
                     )
                   })()}
@@ -704,7 +732,7 @@ export function OverviewPage() {
                   <Link to={`/app/opportunites?symbol=${encodeURIComponent(r.symbol)}`}>
                     <strong>{r.symbol.replace(/USDT$/i, '')}</strong>
                     <VerdictBadge decision={r.decision} pipeline={r.pipeline} hideDiagnostic />
-                    <span className="mono muted">{(r.confidence * 100).toFixed(0)} %</span>
+                    <span className="mono muted">{fmtPct(r.confidence, 0, false)}</span>
                   </Link>
                 </li>
               ))}
@@ -799,9 +827,9 @@ export function OverviewPage() {
                 <div className="desk-risk-label">
                   <span>Exposition / limite</span>
                   <span className="mono">
-                    {risk.open_risk_pct != null ? `${(risk.open_risk_pct * 100).toFixed(1)} %` : '—'}
+                    {risk.open_risk_pct != null ? fmtPct(risk.open_risk_pct, 1, false) : '—'}
                     {risk.max_open_risk_pct != null
-                      ? ` / ${(risk.max_open_risk_pct * 100).toFixed(0)} %`
+                      ? ` / ${fmtPct(risk.max_open_risk_pct, 0, false)}`
                       : ''}
                   </span>
                 </div>
@@ -896,7 +924,7 @@ export function OverviewPage() {
             <div>
               <dt>RVOL BTC</dt>
               <dd className="mono">
-                {btcRow?.rvol != null ? `${btcRow.rvol.toFixed(2)}×` : '—'}
+                {btcRow?.rvol != null ? `${fmtDec(btcRow.rvol, 2)}×` : '—'}
               </dd>
             </div>
           </dl>
@@ -951,7 +979,7 @@ export function OverviewPage() {
             <div className="allocation-body">
               <Ring
                 parts={[{ pct: investedPct, color: '#548f87' }]}
-                center={`${investedPct.toFixed(1)} %`}
+                center={fmtPctPoints(investedPct, 1, false)}
                 label="Capital engagé"
               />
               <div className="allocation-legend">
@@ -969,7 +997,7 @@ export function OverviewPage() {
                 </div>
                 <p className="desk-note">
                   {acct.equity > 0
-                    ? `${((acct.cash / acct.equity) * 100).toFixed(1)} % du capital reste disponible.`
+                    ? `${fmtPct(acct.cash / acct.equity, 1, false)} du capital reste disponible.`
                     : null}
                 </p>
               </div>
@@ -1010,7 +1038,7 @@ export function OverviewPage() {
                       />
                       {c.symbol}
                     </span>
-                    <b className="mono">{c.pct.toFixed(1)} %</b>
+                    <b className="mono">{fmtPctPoints(c.pct, 1, false)}</b>
                   </div>
                 ))}
               </div>
