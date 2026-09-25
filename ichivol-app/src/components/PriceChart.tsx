@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import {
+  AreaSeries,
   CandlestickSeries,
   ColorType,
   createChart,
@@ -21,7 +22,6 @@ import {
   OBJECT_LAYER_META,
   layerFromSource,
   type LayerPrefs,
-  type ObjectLayerKey,
 } from '../lib/marketPrefs'
 import {
   chartObjectMarkers,
@@ -30,7 +30,7 @@ import {
   chartObjectZones,
   type ChartObject,
 } from '../lib/chartObjects'
-import { type ChartColors, readChartColors } from '../lib/chartColors'
+import { type ChartColors, readChartColors, withAlpha } from '../lib/chartColors'
 import { fetchChartOverlays } from '../lib/engineIndicators'
 import { getSettings } from '../lib/settings'
 import { biasFromIchi, buildVolumePulse, signalLabel } from '../lib/signals'
@@ -72,6 +72,8 @@ type SeriesBag = {
   kijun: ISeriesApi<'Line'>
   spanA: ISeriesApi<'Line'>
   spanB: ISeriesApi<'Line'>
+  cloudUpper: ISeriesApi<'Area'>
+  cloudLower: ISeriesApi<'Area'>
   volume: ISeriesApi<'Histogram'>
 }
 
@@ -110,8 +112,8 @@ const LOCAL_DEFAULT: LayerVis = {
   spanA: true,
   spanB: true,
   volume: true,
-  signals: true,
-  structure: true,
+  signals: false,
+  structure: false,
 }
 
 function filterObjectsByLayers(
@@ -125,18 +127,6 @@ function filterObjectsByLayers(
   })
 }
 
-function buildLegend(colors: ChartColors): { key: LayerKey; label: string; color: string; color2?: string }[] {
-  return [
-    { key: 'candles', label: 'Bougies', color: colors.bull, color2: colors.bear },
-    { key: 'tenkan', label: 'Tenkan', color: colors.tenkan },
-    { key: 'kijun', label: 'Kijun', color: colors.kijun },
-    { key: 'spanA', label: 'Span A', color: colors.spanA },
-    { key: 'spanB', label: 'Span B', color: colors.spanB },
-    { key: 'volume', label: 'Volume', color: colors.bull, color2: colors.bear },
-    { key: 'signals', label: 'Signaux', color: colors.neutral },
-    { key: 'structure', label: 'Structure', color: colors.bull, color2: colors.bear },
-  ]
-}
 
 function ts(t: number): UTCTimestamp {
   return t as UTCTimestamp
@@ -174,20 +164,22 @@ function timeToUnix(time: Time): number | null {
 }
 
 function applyChartTheme(chart: IChartApi, series: SeriesBag, colors: ChartColors) {
+  const grid = withAlpha(colors.grid || colors.border, 0.55)
+  const cloudFill = withAlpha(colors.cloud, 0.45)
   chart.applyOptions({
     layout: {
-      background: { type: ColorType.Solid, color: 'transparent' },
+      background: { type: ColorType.Solid, color: colors.background },
       textColor: colors.muted,
-      fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
+      fontFamily: "var(--font-sans), system-ui, sans-serif",
     },
     grid: {
-      vertLines: { color: `${colors.border}a6` },
-      horzLines: { color: `${colors.border}a6` },
+      vertLines: { color: grid },
+      horzLines: { color: grid },
     },
     crosshair: {
       mode: 1,
-      vertLine: { color: `${colors.muted}73`, labelBackgroundColor: colors.background },
-      horzLine: { color: `${colors.muted}73`, labelBackgroundColor: colors.background },
+      vertLine: { color: withAlpha(colors.muted, 0.35), labelBackgroundColor: colors.background },
+      horzLine: { color: withAlpha(colors.muted, 0.35), labelBackgroundColor: colors.background },
     },
   })
   series.candle.applyOptions({
@@ -198,10 +190,32 @@ function applyChartTheme(chart: IChartApi, series: SeriesBag, colors: ChartColor
     wickUpColor: colors.bull,
     wickDownColor: colors.bear,
   })
-  series.tenkan.applyOptions({ color: colors.tenkan })
-  series.kijun.applyOptions({ color: colors.kijun })
-  series.spanA.applyOptions({ color: colors.spanA })
-  series.spanB.applyOptions({ color: colors.spanB })
+  series.tenkan.applyOptions({ color: colors.tenkan, lineWidth: 1 })
+  series.kijun.applyOptions({ color: colors.kijun, lineWidth: 1 })
+  series.spanA.applyOptions({ color: withAlpha(colors.spanA, 0.7), lineWidth: 1 })
+  series.spanB.applyOptions({ color: withAlpha(colors.spanB, 0.7), lineWidth: 1 })
+  series.cloudUpper.applyOptions({
+    lineColor: 'transparent',
+    topColor: cloudFill,
+    bottomColor: cloudFill,
+    priceLineVisible: false,
+    lastValueVisible: false,
+    crosshairMarkerVisible: false,
+  })
+  series.cloudLower.applyOptions({
+    lineColor: 'transparent',
+    topColor: colors.background,
+    bottomColor: colors.background,
+    priceLineVisible: false,
+    lastValueVisible: false,
+    crosshairMarkerVisible: false,
+  })
+}
+
+/** Volume bar color from candle direction at ~0.28 opacity (maquette). */
+function volumeBarColor(open: number, close: number, colors: ChartColors): string {
+  const up = close >= open
+  return withAlpha(up ? colors.bull : colors.bear, 0.28)
 }
 
 /** Render ChartObjects (ENGINE + USER/CLAUDE) with Structure visual parity + T2b levels. */
@@ -239,9 +253,9 @@ function renderChartObjects(
           price,
           color: `${color}${alpha}`,
           lineWidth: 1,
-          lineStyle: LineStyle.Dotted,
-          axisLabelVisible: title !== '',
-          title,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: Boolean(title),
+          title: title ? (z.side === 'support' ? 'S' : 'R') : '',
         }),
       )
     }
@@ -311,7 +325,6 @@ export function PriceChart({
   pickMode = false,
   onPickPoint,
   layerPrefs,
-  onLayerPrefsChange,
   volumeHeight = 110,
   onVolumeHeightChange,
 }: Props) {
@@ -370,8 +383,12 @@ export function PriceChart({
   }, [onPickPoint])
   useEffect(() => {
     volumeHeightRef.current = volumeHeight
-    const panes = chartRef.current?.panes()
-    if (panes?.[1]) panes[1].setHeight(Math.max(40, Math.min(280, volumeHeight)))
+    const series = seriesRef.current
+    if (!series) return
+    // Map persisted volumeHeight (40–280) → overlay top margin (~0.92–0.65)
+    const clamped = Math.max(40, Math.min(280, volumeHeight))
+    const top = 0.92 - ((clamped - 40) / 240) * 0.27
+    series.volume.priceScale().applyOptions({ scaleMargins: { top, bottom: 0 } })
   }, [volumeHeight])
 
   const [tip, setTip] = useState<TipState>({
@@ -380,18 +397,6 @@ export function PriceChart({
     y: 0,
     point: null,
   })
-
-  const toggleLayer = (key: LayerKey) => {
-    setLayers((prev) => {
-      const next = { ...prev, [key]: !prev[key] }
-      onLayerPrefsChange?.({ ...prefs, ...next })
-      return next
-    })
-  }
-
-  const toggleObjectLayer = (key: ObjectLayerKey) => {
-    onLayerPrefsChange?.({ ...prefs, [key]: !prefs[key] })
-  }
 
   useEffect(() => {
     const el = hostRef.current
@@ -419,21 +424,36 @@ export function PriceChart({
       priceLineVisible: false,
       crosshairMarkerVisible: false,
     } as const
+    const areaOpts = {
+      lineWidth: 1 as const,
+      lineColor: 'transparent',
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    }
+    const cloudUpper = chart.addSeries(AreaSeries, { ...areaOpts, topColor: 'transparent', bottomColor: 'transparent' }, 0)
+    const cloudLower = chart.addSeries(AreaSeries, { ...areaOpts, topColor: 'transparent', bottomColor: 'transparent' }, 0)
     const candle = chart.addSeries(CandlestickSeries, { ...seriesOpts }, 0)
-    const tenkan = chart.addSeries(LineSeries, { lineWidth: 2, ...seriesOpts }, 0)
-    const kijun = chart.addSeries(LineSeries, { lineWidth: 2, ...seriesOpts }, 0)
-    const spanA = chart.addSeries(LineSeries, { lineWidth: 1, lineStyle: LineStyle.Dashed, ...seriesOpts }, 0)
-    const spanB = chart.addSeries(LineSeries, { lineWidth: 1, lineStyle: LineStyle.Dashed, ...seriesOpts }, 0)
+    const tenkan = chart.addSeries(LineSeries, { lineWidth: 1, ...seriesOpts }, 0)
+    const kijun = chart.addSeries(LineSeries, { lineWidth: 1, ...seriesOpts }, 0)
+    const spanA = chart.addSeries(LineSeries, { lineWidth: 1, lineStyle: LineStyle.Solid, ...seriesOpts }, 0)
+    const spanB = chart.addSeries(LineSeries, { lineWidth: 1, lineStyle: LineStyle.Solid, ...seriesOpts }, 0)
+    // Volume overlay on price pane (maquette: bars at bottom, do not mask candles)
     const volume = chart.addSeries(
       HistogramSeries,
-      { priceFormat: { type: 'volume' }, priceScaleId: '', ...seriesOpts },
-      1,
+      { priceFormat: { type: 'volume' }, priceScaleId: 'volume', ...seriesOpts },
+      0,
     )
-    volume.priceScale().applyOptions({ scaleMargins: { top: 0.2, bottom: 0 } })
-    const panes = chart.panes()
-    if (panes[1]) panes[1].setHeight(Math.max(40, Math.min(280, volumeHeightRef.current)))
+    volume.priceScale().applyOptions({
+      scaleMargins: { top: 0.78, bottom: 0 },
+      borderVisible: false,
+    })
+    chart.priceScale('volume').applyOptions({
+      scaleMargins: { top: 0.78, bottom: 0 },
+      borderVisible: false,
+    })
 
-    const seriesBag: SeriesBag = { candle, tenkan, kijun, spanA, spanB, volume }
+    const seriesBag: SeriesBag = { candle, tenkan, kijun, spanA, spanB, cloudUpper, cloudLower, volume }
     applyChartTheme(chart, seriesBag, initialColors)
 
     markersRef.current = createSeriesMarkers(candle, [])
@@ -547,8 +567,14 @@ export function PriceChart({
     series.kijun.setData([])
     series.spanA.setData([])
     series.spanB.setData([])
+    series.cloudUpper.setData([])
+    series.cloudLower.setData([])
     series.volume.setData(
-      candles.map((c) => ({ time: ts(c.time), value: c.volume, color: colors.weak })),
+      candles.map((c) => ({
+        time: ts(c.time),
+        value: c.volume,
+        color: volumeBarColor(c.open, c.close, colors),
+      })),
     )
     chart.timeScale().fitContent()
 
@@ -591,10 +617,37 @@ export function PriceChart({
 
         series.tenkan.setData(asLine(ichi.map((p) => ({ time: p.time, value: p.tenkan }))))
         series.kijun.setData(asLine(ichi.map((p) => ({ time: p.time, value: p.kijun }))))
-        series.spanA.setData(asLine(projection.map((p) => ({ time: p.time, value: p.senkouA }))))
-        series.spanB.setData(asLine(projection.map((p) => ({ time: p.time, value: p.senkouB }))))
+        const spanPairs = projection
+          .map((p) => {
+            if (p.senkouA == null || p.senkouB == null) return null
+            return {
+              time: ts(p.time),
+              a: p.senkouA,
+              b: p.senkouB,
+            }
+          })
+          .filter((p): p is { time: UTCTimestamp; a: number; b: number } => p != null)
+        series.spanA.setData(spanPairs.map((p) => ({ time: p.time, value: p.a })))
+        series.spanB.setData(spanPairs.map((p) => ({ time: p.time, value: p.b })))
+        // Cloud fill: upper=max(A,B) cloud color, lower=min(A,B) punches bg hole
+        series.cloudUpper.setData(
+          spanPairs.map((p) => ({ time: p.time, value: Math.max(p.a, p.b) })),
+        )
+        series.cloudLower.setData(
+          spanPairs.map((p) => ({ time: p.time, value: Math.min(p.a, p.b) })),
+        )
+        const candleByTime = new Map(candles.map((c) => [c.time, c]))
         series.volume.setData(
-          volumes.map((v) => ({ time: ts(v.time), value: v.volume, color: v.color })),
+          volumes.map((v) => {
+            const c = candleByTime.get(v.time)
+            return {
+              time: ts(v.time),
+              value: v.volume,
+              color: c
+                ? volumeBarColor(c.open, c.close, colors)
+                : withAlpha(colors.weak, 0.28),
+            }
+          }),
         )
 
         const lastIchi = ichi[ichi.length - 1]
@@ -619,7 +672,7 @@ export function PriceChart({
     return () => {
       cancelled = true
     }
-  }, [candles, symbol, timeframe, onSignals, onLive, colors.weak])
+  }, [candles, symbol, timeframe, onSignals, onLive, colors])
 
   useEffect(() => {
     const series = seriesRef.current
@@ -630,6 +683,9 @@ export function PriceChart({
     series.kijun.applyOptions({ visible: showOverlays && layers.kijun })
     series.spanA.applyOptions({ visible: showOverlays && layers.spanA })
     series.spanB.applyOptions({ visible: showOverlays && layers.spanB })
+    const cloudOn = showOverlays && layers.spanA && layers.spanB
+    series.cloudUpper.applyOptions({ visible: cloudOn })
+    series.cloudLower.applyOptions({ visible: cloudOn })
     series.volume.applyOptions({ visible: layers.volume })
 
     const markers: SeriesMarker<Time>[] = [
@@ -685,10 +741,6 @@ export function PriceChart({
 
   const p = tip.point
   const up = p ? p.candle.close >= p.candle.open : false
-  const legend = buildLegend(colors).filter(
-    (item) => item.key === 'tenkan' || item.key === 'kijun' || item.key === 'spanA' || item.key === 'spanB',
-  )
-  const activeObjectLayers = OBJECT_LAYER_META.filter((m) => prefs[m.key])
 
   const onVolDragStart = (e: ReactPointerEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -709,40 +761,6 @@ export function PriceChart({
 
   return (
     <div className={`chart-wrap${pickMode ? ' is-pick-mode' : ''}`} ref={wrapRef}>
-      <div className="chart-chrome-row">
-        <div className="chart-layer-pills" role="toolbar" aria-label="Calques actifs">
-          {activeObjectLayers.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className="layer-pill is-on"
-              aria-pressed
-              title={`Masquer ${item.label}`}
-              onClick={() => toggleObjectLayer(item.key)}
-            >
-              <i style={{ background: item.color }} aria-hidden />
-              {item.label}
-            </button>
-          ))}
-        </div>
-        <div className="chart-legend chart-legend--indicators" role="toolbar" aria-label="Ichimoku">
-          {legend.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={`legend-chip${layers[item.key] ? ' is-on' : ' is-off'}`}
-              aria-pressed={layers[item.key]}
-              title={layers[item.key] ? `Masquer ${item.label}` : `Afficher ${item.label}`}
-              onClick={() => toggleLayer(item.key)}
-            >
-              <span className="legend-dots" aria-hidden="true">
-                <i style={{ background: item.color }} />
-              </span>
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </div>
       {overlayError && (
         <p className="muted chart-overlay-msg" role="status">
           Prix seul — overlays moteur indisponibles ({overlayError})
@@ -759,7 +777,7 @@ export function PriceChart({
         role="separator"
         aria-orientation="horizontal"
         aria-label="Redimensionner le volume"
-        title="Glisser pour redimensionner volume / RVOL"
+        title="Glisser pour redimensionner le volume"
         onPointerDown={onVolDragStart}
       />
       {tip.visible && p && (

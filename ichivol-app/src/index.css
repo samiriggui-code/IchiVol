@@ -5078,6 +5078,30 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 
 /* Layers menu / sheet */
 .mkt-layers-list { list-style: none; margin: 0; padding: 0; }
+.mkt-layers-primary { margin-bottom: 0.25rem; }
+.mkt-layers-advanced-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 0.2rem 0 0.15rem;
+  padding: 0.4rem 0.35rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  text-align: left;
+}
+.mkt-layers-advanced-toggle:hover,
+.mkt-layers-advanced-toggle.is-open {
+  color: var(--foreground);
+  background: var(--secondary);
+}
+.mkt-layers-advanced { margin-top: 0.1rem; }
 .mkt-layer-row {
   display: grid;
   grid-template-columns: 0.55rem 1fr auto auto;
@@ -5093,7 +5117,8 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
   color: var(--foreground);
 }
 .mkt-layer-row:hover { background: var(--secondary); }
-.mkt-layer-row.is-on .mkt-layer-eye { color: var(--primary); }
+.mkt-layer-row.is-on .mkt-layer-eye,
+.mkt-layer-row.is-on .mkt-layer-switch { color: var(--primary); }
 .mkt-layer-swatch {
   width: 0.45rem;
   height: 0.45rem;
@@ -5103,6 +5128,12 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 .mkt-layer-copy strong { font-size: 0.78rem; }
 .mkt-layer-copy small { font-size: 0.62rem; color: var(--muted-foreground); }
 .mkt-layer-count { font-size: 0.65rem; color: var(--muted-foreground); }
+.mkt-layer-switch {
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+  width: 1rem;
+  text-align: center;
+}
 .mkt-layers-opts {
   display: flex;
   flex-direction: column;

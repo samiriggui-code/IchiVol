@@ -27,7 +27,9 @@ export interface MarketLayoutPrefs {
 }
 
 const LAYOUT_KEY = 'ichivol.market.layout'
-const LAYERS_KEY = 'ichivol.market.layers'
+/** Bump when DEFAULT_LAYERS change so existing devices pick up new defaults. */
+export const LAYERS_PREFS_VERSION = 2
+const LAYERS_KEY = `ichivol.market.layers.v${LAYERS_PREFS_VERSION}`
 
 export const DEFAULT_LAYOUT: MarketLayoutPrefs = {
   rightOpen: true,
@@ -66,23 +68,33 @@ export type LayerPrefs = Record<ObjectLayerKey | IndicatorLayerKey, boolean> & {
   showInvalidated: boolean
 }
 
-export const OBJECT_LAYER_META: {
-  key: ObjectLayerKey
+/** Primary Calques toggles (maquette). */
+export const ICHIMOKU_LAYER_KEYS: IndicatorLayerKey[] = [
+  'tenkan',
+  'kijun',
+  'spanA',
+  'spanB',
+]
+
+export type AdvancedLayerKey = ObjectLayerKey | 'signals'
+
+/** Advanced layers under the collapsed Calques section (maquette). */
+export const ADVANCED_LAYER_META: {
+  key: AdvancedLayerKey
   label: string
   subtitle: string
   color: string
-  emptyUntil?: string
 }[] = [
   {
-    key: 'structure',
-    label: 'Structure',
-    subtitle: 'Zones S/R et trendlines moteur',
-    color: 'var(--bull)',
+    key: 'signals',
+    label: 'Signaux',
+    subtitle: 'Marqueurs volume-confirmés',
+    color: 'var(--neutral)',
   },
   {
     key: 'breaks',
-    label: 'Cassures',
-    subtitle: 'BOS / CHoCH / breakouts (T9b)',
+    label: 'BOS / CHoCH',
+    subtitle: 'Cassures structure (T9b)',
     color: 'var(--neutral)',
   },
   {
@@ -99,13 +111,13 @@ export const OBJECT_LAYER_META: {
   },
   {
     key: 'claude',
-    label: 'Claude',
+    label: 'Dessins Claude',
     subtitle: 'Objets dessinés par l’agent',
     color: 'var(--primary)',
   },
   {
     key: 'user_trades',
-    label: 'Trades',
+    label: 'Mes trades',
     subtitle: 'ENTRY / STOP / TARGET utilisateur',
     color: 'var(--bear)',
   },
@@ -117,6 +129,58 @@ export const OBJECT_LAYER_META: {
   },
 ]
 
+export const OBJECT_LAYER_META: {
+  key: ObjectLayerKey
+  label: string
+  subtitle: string
+  color: string
+  emptyUntil?: string
+}[] = [
+  {
+    key: 'structure',
+    label: 'Supports / résistances',
+    subtitle: 'Zones S/R et trendlines moteur',
+    color: 'var(--bull)',
+  },
+  {
+    key: 'breaks',
+    label: 'BOS / CHoCH',
+    subtitle: 'Cassures structure (T9b)',
+    color: 'var(--neutral)',
+  },
+  {
+    key: 'fibonacci',
+    label: 'Fibonacci',
+    subtitle: 'Retracements impulsifs (T9e)',
+    color: 'var(--tenkan)',
+  },
+  {
+    key: 'fvg',
+    label: 'FVG',
+    subtitle: 'Fair value gaps (T9d)',
+    color: 'var(--kijun)',
+  },
+  {
+    key: 'claude',
+    label: 'Dessins Claude',
+    subtitle: 'Objets dessinés par l’agent',
+    color: 'var(--primary)',
+  },
+  {
+    key: 'user_trades',
+    label: 'Mes trades',
+    subtitle: 'ENTRY / STOP / TARGET utilisateur',
+    color: 'var(--bear)',
+  },
+  {
+    key: 'backtest',
+    label: 'Backtest',
+    subtitle: 'Overlay stratégie catalogue',
+    color: 'var(--muted-foreground)',
+  },
+]
+
+/** Maquette defaults: candles + volume + Ichimoku cloud/TK only. */
 export const DEFAULT_LAYERS: LayerPrefs = {
   candles: true,
   tenkan: true,
@@ -124,14 +188,14 @@ export const DEFAULT_LAYERS: LayerPrefs = {
   spanA: true,
   spanB: true,
   volume: true,
-  signals: true,
-  structure: true,
+  signals: false,
+  structure: false,
   fibonacci: false,
   fvg: false,
-  breaks: true,
-  claude: true,
-  user_trades: true,
-  backtest: true,
+  breaks: false,
+  claude: false,
+  user_trades: false,
+  backtest: false,
   fadeFilledFvg: true,
   showInvalidated: false,
 }
@@ -168,6 +232,16 @@ export function saveLayerPrefs(prefs: LayerPrefs): void {
   } catch {
     /* ignore */
   }
+}
+
+export function isIchimokuOn(prefs: LayerPrefs): boolean {
+  return ICHIMOKU_LAYER_KEYS.every((k) => prefs[k])
+}
+
+export function withIchimoku(prefs: LayerPrefs, on: boolean): LayerPrefs {
+  const next = { ...prefs }
+  for (const k of ICHIMOKU_LAYER_KEYS) next[k] = on
+  return next
 }
 
 export function layerFromSource(

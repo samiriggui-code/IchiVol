@@ -217,6 +217,8 @@ export function MarketPage() {
 
   const [layout, setLayout] = useState<MarketLayoutPrefs>(() => loadLayoutPrefs())
   const [layerPrefs, setLayerPrefs] = useState<LayerPrefs>(() => loadLayerPrefs())
+  /** Ephemeral layer force-on (mark trade / backtest) — not persisted. */
+  const [layerOverrides, setLayerOverrides] = useState<Partial<LayerPrefs>>({})
   const [isMobile, setIsMobile] = useState(false)
 
   const [searchOpen, setSearchOpen] = useState(false)
@@ -271,9 +273,15 @@ export function MarketPage() {
     [instruments, symbol],
   )
   const engineOn = Boolean(current?.wired && ENGINE_TIMEFRAMES.has(interval))
+
+  const effectiveLayerPrefs = useMemo(
+    () => ({ ...layerPrefs, ...layerOverrides }),
+    [layerPrefs, layerOverrides],
+  )
+
   const activeObjectLayerCount = useMemo(
-    () => OBJECT_LAYER_META.filter((m) => layerPrefs[m.key]).length,
-    [layerPrefs],
+    () => OBJECT_LAYER_META.filter((m) => effectiveLayerPrefs[m.key]).length,
+    [effectiveLayerPrefs],
   )
 
   const updateLayout = useCallback((patch: Partial<MarketLayoutPrefs>) => {
@@ -287,6 +295,19 @@ export function MarketPage() {
   const setLayerPrefsAndSave = useCallback((next: LayerPrefs) => {
     setLayerPrefs(next)
     saveLayerPrefs(next)
+  }, [])
+
+  const pushLayerOverride = useCallback((key: 'user_trades' | 'backtest') => {
+    setLayerOverrides((prev) => ({ ...prev, [key]: true }))
+  }, [])
+
+  const popLayerOverride = useCallback((key: 'user_trades' | 'backtest') => {
+    setLayerOverrides((prev) => {
+      if (!(key in prev)) return prev
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
   }, [])
 
   const selectSymbol = useCallback(
@@ -676,7 +697,8 @@ export function MarketPage() {
     setMarkError(null)
     setMarkSaving(false)
     setMarkOpen(true)
-  }, [])
+    pushLayerOverride('user_trades')
+  }, [pushLayerOverride])
 
   const cancelMarkTrade = useCallback(() => {
     setMarkOpen(false)
@@ -685,7 +707,8 @@ export function MarketPage() {
     setMarkSetupId(null)
     setMarkError(null)
     setMarkSaving(false)
-  }, [])
+    popLayerOverride('user_trades')
+  }, [popLayerOverride])
 
   const onPickPoint = useCallback(
     (point: ChartPickPoint) => {
@@ -735,6 +758,7 @@ export function MarketPage() {
     setBtActive(false)
     setBtError(null)
     setBtUiFilter('all')
+    popLayerOverride('backtest')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, interval])
 
@@ -747,7 +771,8 @@ export function MarketPage() {
     setBtActive(false)
     setBtError(null)
     setBtUiFilter('all')
-  }, [])
+    popLayerOverride('backtest')
+  }, [popLayerOverride])
 
   const loadBacktestOverlay = useCallback(
     async (
@@ -777,13 +802,23 @@ export function MarketPage() {
         setBtCounts(res.counts)
         setBtMetrics(res.metrics ?? null)
         setBtActive(true)
+        pushLayerOverride('backtest')
       } catch (err: unknown) {
         setBtError(err instanceof Error ? err.message : 'Échec backtest')
       } finally {
         setBtLoading(false)
       }
     },
-    [btRulesetId, btOutcome, btExitReason, btDirection, btRegimeLabel, symbol, interval],
+    [
+      btRulesetId,
+      btOutcome,
+      btExitReason,
+      btDirection,
+      btRegimeLabel,
+      symbol,
+      interval,
+      pushLayerOverride,
+    ],
   )
 
   const onBtOutcome = useCallback(
@@ -997,7 +1032,7 @@ export function MarketPage() {
       chartObjects={mergedChartObjects}
       pickMode={markOpen && markStep !== 'review'}
       onPickPoint={onPickPoint}
-      layerPrefs={layerPrefs}
+      layerPrefs={effectiveLayerPrefs}
       onLayerPrefsChange={setLayerPrefsAndSave}
       volumeHeight={isMobile ? Math.min(layout.volumeHeight, 120) : layout.volumeHeight}
       onVolumeHeightChange={(h) => updateLayout({ volumeHeight: h })}
