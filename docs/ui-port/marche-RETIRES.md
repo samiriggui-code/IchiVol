@@ -1,6 +1,6 @@
 # Marché — éléments retirés de la page (port maquette)
 
-PR : `cursor/ui-port-marche-a2fe`  
+PR : `cursor/ui-port-marche-a2fe` · commit `f731e54`  
 Référence maquette : `design-reference/ichivol-workspace` → `marche()` + `page-head` dans `render()`.
 
 Règle : tout ce qui n’est pas dans la maquette sort de la page. Les fichiers orphelins (plus importés nulle part) sont **supprimés** dans cette PR (récupérables via git). Les libs métier restent.
