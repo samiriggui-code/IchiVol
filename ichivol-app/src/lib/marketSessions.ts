@@ -175,7 +175,11 @@ export function formatSessionHoursLocal(def: MarketSessionDef, now: Date = new D
   const open = wallTimeToUtc(p.year, p.month, p.day, openH, openMin, def.timeZone)
   const close = wallTimeToUtc(p.year, p.month, p.day, closeH, closeMin, def.timeZone)
   const fmt = (d: Date) =>
-    d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+    d.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
   return `${fmt(open)}–${fmt(close)}`
 }
 

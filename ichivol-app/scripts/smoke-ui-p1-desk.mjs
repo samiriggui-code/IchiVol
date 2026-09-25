@@ -104,6 +104,32 @@ async function main() {
   if (!deskDesktop.pass) report.pass = false
   console.log('[desk desktop]', deskDesktop.pass ? 'PASS' : 'FAIL', deskDesktop.titles.slice(0, 14), deskDesktop.apiErrors)
 
+  const p1b = await deskPage.evaluate(() => {
+    const text = document.body.innerText
+    const statusEls = [...document.querySelectorAll('.session-status')]
+    const statusClasses = statusEls.map((el) => el.className)
+    const hours = document.querySelector('#desk-session-detail .mono')?.textContent || ''
+    const links = [...document.querySelectorAll('.desk-workspace a.link')].map((a) =>
+      getComputedStyle(a).color,
+    )
+    return {
+      hasCap: /Capitalisation crypto 24h/.test(text),
+      hasFakeVol: /Volatilité \(mcap/.test(text),
+      statusClasses,
+      hours,
+      linkColors: links.slice(0, 3),
+      hasCommaPct: /\d+,\d+\s*%/.test(text),
+    }
+  })
+  const p1bOk =
+    p1b.hasCap &&
+    !p1b.hasFakeVol &&
+    p1b.statusClasses.some((c) => /is-(open|closed|upcoming)/.test(c)) &&
+    !/[AP]M/.test(p1b.hours)
+  if (!p1bOk) report.pass = false
+  report.pages.p1bChecks = p1b
+  console.log('[desk p1b]', p1bOk ? 'PASS' : 'FAIL', p1b)
+
   await deskPage.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true })
   const deskMobile = await collectPage(deskPage, 'desk', '02-desk-mobile-390')
   report.pages.deskMobile = deskMobile
