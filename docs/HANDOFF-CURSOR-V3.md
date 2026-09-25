@@ -7,6 +7,34 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — Chantier 2 E0 Eve runtime (P0) — draft
+
+- Branche `cursor/eve-runtime-a2fe` depuis `main` @ `225549d` (#109 squash-merged)
+- **Option D hybride** : patterns Comp AI (file Postgres + SKIP LOCKED + leases + poke) dans IchiVol server — **pas** de container Eve
+- Prisma : `AgentTask` (`agent_tasks`) + `AgentLog` (`agent_logs`) — migration `20260925143000_agent_runtime_e0`
+- Runtime server : `tasks.ts` (schedule/claim/complete/reconcile), `staleTasks.ts`, `runtime/dispatcher.ts` (worker minute + stub process), `POST /api/agent/runtime/poke` (Bearer `AGENT_BRIDGE_SECRET`)
+- Paper only ; LLM non réveillé en E0 ; `evaluate_watch_condition` / `schedule_recheck` → **E1/E2**
+- Tests : `npm test` dans `ichivol-app/server` — 41 pass (dont 6 E0 : claim concurrent, stale lease, idempotency)
+- **Draft PR — pas de merge** ; parent ManagePullRequest
+
+### Gaps / suite E1
+1. Outil `schedule_recheck` (raison ≥10 car.) + wiring Claude tools
+2. Ne plus stub-compléter les tâches à condition — attendre E2 `evaluate_watch_condition`
+3. `missionRunner` borné (budget LLM) sur wake réel
+
+---
+
+## 2026-09-25 — UI-port #109 MERGÉE + VPS — tip `225549d`
+
+- PR : https://github.com/samiriggui-code/IchiVol/pull/109 — **MERGÉE** (squash) → tip `225549d`
+- Contenu : 11 pages portées + correctifs Portefeuille (toutes positions) + Opportunités « Enregistrer la décision »
+- **VPS** : `RELEASE=225549d` (aligné tip main post-#109)
+
+### Suite
+Chantier 1 fiches + Chantier 2 E0 runtime (cette branche).
+
+---
+
 ## 2026-09-25 — UI-port (#109) — correctifs bugs avant merge
 
 - Branche `cursor/ui-port-pages-a2fe` (même PR #109 draft)

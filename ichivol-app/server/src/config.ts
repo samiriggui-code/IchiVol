@@ -29,6 +29,8 @@ export interface Config {
     privateKey: string | undefined
     subject: string
   }
+  /** Comp AI–style bridge secret for agent runtime poke. Unset = poke disabled. */
+  agentBridgeSecret: string | undefined
 }
 
 function readProvider(value: string | undefined): ProviderName {
@@ -71,4 +73,5 @@ export const config: Config = {
     privateKey: process.env.VAPID_PRIVATE_KEY,
     subject: process.env.VAPID_SUBJECT || 'mailto:admin@ichivol.local',
   },
+  agentBridgeSecret: process.env.AGENT_BRIDGE_SECRET?.trim() || undefined,
 }

@@ -579,3 +579,19 @@ Trigger `next_closed_candle` : `dueAt` fixé à la **clôture + 60 s** ; évalua
 1. UI-P2 / UI-P3 — corrections, merge, VPS *(fait)*.
 2. UI-P4 — PR **draft**, merge seulement après relecture Claude.
 3. Runtime agents — phases **P0 → P2** de cet audit, **une PR draft par phase** (file + dispatcher + audit log ; `schedule_recheck` ; recheck conditionnel engine). **Ne pas démarrer** tant que P4 n’est pas validée.
+
+---
+
+## Implémentation E0 / P0 (2026-09-25) — branche `cursor/eve-runtime-a2fe`
+
+Livré (server only, paper) :
+
+| Pièce | Emplacement |
+|---|---|
+| `AgentTask` + `AgentLog` | `server/prisma` + migration `20260925143000_agent_runtime_e0` |
+| claim / schedule / complete / stale | `server/src/agent/tasks.ts`, `staleTasks.ts` |
+| Worker minute + stub process | `server/src/agent/runtime/dispatcher.ts` |
+| Poke `AGENT_BRIDGE_SECRET` | `POST /api/agent/runtime/poke` |
+| Tests | `server/src/agent/tasks.test.ts` |
+
+**Hors E0 (suivi)** : `schedule_recheck` tool (E1) ; `evaluate_watch_condition` engine (E2) ; `missionRunner` LLM wake ; `execution_gateway` ; UI Agents.
