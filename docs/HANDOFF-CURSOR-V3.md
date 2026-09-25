@@ -7,6 +7,23 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — Chantier 1 phase A — fiches décision (draft PR)
+
+- Branche `cursor/ui-fiches-a2fe` depuis `origin/main` @ **`225549d`** (#109 squash MERGÉ)
+- **Livré** : `docs/ui-fiches/INVENTAIRE.md` → `FicheDecision` (5 onglets) → deep-link shell `?fiche=` → points d’entrée Marché / Opportunités / Desk / Journal / Copilot → `lib/actionFeedback.ts`
+- Dialog maquette (`dialog-body` / `dialog-head` / `statline` / `tag` / `notice` / `table-wrap` / `segmented`) ; max 720px desktop ; ≤800 plein écran
+- Opportunités : dialog local retiré — une seule `FicheDecision` via shell
+- `npx tsc --noEmit` OK · `compare-maquette.mjs` : **11×0** (script non modifié)
+- Phase B non démarrée (FichePosition / FicheRun / Calques = stubs deep-link)
+- **Pas de merge** — PR créée par le parent
+
+### Base main
+
+- **#109 UI-port MERGÉE** squash tip `225549d` (paper + Enregistrer décision · 11×0)
+- VPS : déployer `RELEASE=225549d` si pas déjà sur ce tip (préprod https://ichivol.global-it-ss.com)
+
+---
+
 ## 2026-09-25 — UI-port (#109) — correctifs bugs avant merge
 
 - Branche `cursor/ui-port-pages-a2fe` (même PR #109 draft)
