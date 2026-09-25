@@ -7,6 +7,17 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — VPS déployé UI-P1 — tip `718b2ba`
+
+- **FQDN** : https://ichivol.global-it-ss.com — rebuild `web`/`server`/`engine` depuis `main` @ `718b2ba`
+- Backup : `/opt/ichivol-backup/pre-uip1-20260925-074227.tgz` ; `RELEASE` = `718b2ba main`
+- Vérifié : `/api/health` ok ; bundle Desk contient `Asia/Tokyo` · `Europe/London` · `America/New_York` · `Sessions de marché`
+
+### Suite
+Portage pages suivantes selon [`UI-MAQUETTE-GAP.md`](./UI-MAQUETTE-GAP.md).
+
+---
+
 ## 2026-09-25 — UI-P1 Desk maquette MERGÉE (#96) — tip `718b2ba`
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/96 — **MERGÉE** (squash)
