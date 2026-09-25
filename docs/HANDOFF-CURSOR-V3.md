@@ -28,10 +28,12 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/109 — **MERGÉE** (squash) → tip `225549d`
 - Contenu : 11 pages portées + correctifs Portefeuille (toutes positions) + Opportunités « Enregistrer la décision »
-- **VPS** : `RELEASE=225549d` (aligné tip main post-#109)
+- **VPS** : https://ichivol.global-it-ss.com — `RELEASE=225549d main` · rebuild `web` · public/health **200**
+- Backup : `/opt/ichivol-backup/pre-uiport-merge-20260925-141927.tgz` (+ `pre-uiport-merge-src-*`)
+- #108 fermée (incluse dans #109) ; remotes `cursor/ui-port-marche-a2fe` + `cursor/ui-clean-a2fe` supprimées
 
 ### Suite
-Chantier 1 fiches + Chantier 2 E0 runtime (cette branche).
+Chantier 1 fiches (parallèle) + Chantier 2 E0 runtime (cette branche) — draft, pas de merge.
 
 ---
 
