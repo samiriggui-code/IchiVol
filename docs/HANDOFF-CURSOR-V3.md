@@ -7,6 +7,16 @@ Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
 
 ---
 
+## 2026-09-25 — UI-port Marché (#108) — correctif Claude n°2 (portes + bouton)
+
+- Base : `pr/108` @ `8203b04`
+- **5 portes** : balisage identique à la maquette (`stat()` → `<span>` + `<b><span class="tag">`), suppression du `height: 44px` forcé. Hauteur mesurée = **41 px** (maquette 41 px ; l'ancien correctif donnait 44 px)
+- **Bouton « Préparer le trade → »** : `inline-block`, largeur contenu à toutes les tailles (maquette 153 px en 1440, 1100 et 390) ; l'ancien correctif le laissait pleine largeur entre 801 et 1150 px (836 px)
+- Mesures faites sur la maquette ET l'app en Chromium headless, 1440 / 1100 / 390
+- Build OK · oxlint 79
+
+---
+
 ## 2026-09-25 — UI-port Marché (#108) — retouches CSS + smoke + VPS préprod
 
 - Branche `cursor/ui-port-marche-a2fe` — **draft**, **pas de merge** avant OK Samir téléphone

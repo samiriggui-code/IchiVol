@@ -471,7 +471,9 @@ export function MarketPage() {
               return (
                 <div className="statline" key={id}>
                   <span>{GATE_LABELS[id]}</span>
-                  <span className={`tag ${badge.tone}`.trim()}>{badge.text}</span>
+                  <b>
+                    <span className={`tag ${badge.tone}`.trim()}>{badge.text}</span>
+                  </b>
                 </div>
               )
             })}
