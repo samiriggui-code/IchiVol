@@ -491,6 +491,9 @@
 }
 .agents-page .agent-card {
   padding:23px;
+  /* compare-maquette: maquette agent-card = 342px ; live rows scroll inside */
+  height:342px;
+  overflow-y:auto;
 }
 .agents-page .agent-icon {
   width:43px;

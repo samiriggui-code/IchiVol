@@ -184,38 +184,32 @@ function badge(text: string, tone: BadgeTone = ''): ReactNode {
   return <span className={`tag ${inferred}`.trim()}>{text}</span>
 }
 
-function dash(value: string | null | undefined, reason?: string): string {
-  if (value && value.trim()) return value
+function dash(value: string | null | undefined, reason?: string, max = 72): string {
+  if (value && value.trim()) {
+    const t = value.trim()
+    return t.length > max ? `${t.slice(0, max - 1)}…` : t
+  }
   return reason ? `— (${reason})` : '—'
 }
 
 function runtimeNotice(data: AgentsListResponse | null, loadError: string | null): string {
+  // Keep length close to maquette notice (~62px height at 390).
   if (loadError) {
-    return `Supervision des agents · runtime inaccessible (${loadError}) · —`
+    return 'Supervision des agents · runtime inaccessible · —'
   }
   if (!data) {
     return 'Supervision des agents · chargement du runtime Eve…'
   }
   const r = data.runtime
-  const parts: string[] = ['Supervision des agents · paper only']
-  if (r.workerStarted) {
-    parts.push('worker minute démarré')
-    if (r.lastDrainAt) parts.push(`dernier drain ${fmtDue(r.lastDrainAt)}`)
-    else parts.push('aucun drain encore (boot ≤15s)')
-  } else {
-    parts.push('worker minute non détecté dans ce process')
-  }
-  if (r.lastDrainError) parts.push(`erreur drain: ${r.lastDrainError}`)
-  const leased = data.agents.find((a) => a.id === 'opportunities')
-  if (leased?.status === 'ACTIF') {
-    parts.push('Eve en exécution')
-  } else if ((data.eve?.openTasks ?? 0) > 0) {
-    parts.push(`${data.eve.openTasks} tâche(s) ouverte(s)`)
-  } else {
-    parts.push('aucun agent LLM en exécution')
-  }
-  parts.push(r.llmBudget.dailyBudgetReason)
-  return parts.join(' · ')
+  const eve = data.agents.find((a) => a.id === 'opportunities')
+  const worker = r.workerStarted ? 'worker minute démarré' : 'worker non détecté'
+  const run =
+    eve?.status === 'ACTIF'
+      ? 'Eve en exécution'
+      : (data.eve?.openTasks ?? 0) > 0
+        ? `${data.eve.openTasks} tâche(s) ouverte(s)`
+        : 'aucun agent LLM en exécution'
+  return `Supervision des agents · ${worker} · ${run}.`
 }
 
 export function AgentsPage() {
@@ -482,6 +476,18 @@ export function AgentsPage() {
               <b>
                 {badge('OUI', 'green')} · humanConfirmDefault=
                 {String(detail.humanConfirmDefault)}
+              </b>
+            </div>
+            <div className="statline">
+              <span>Dernière action</span>
+              <b>{dash(detail.lastAction, detail.statusReason, 200)}</b>
+            </div>
+            <div className="statline">
+              <span>Prochaine tâche</span>
+              <b>
+                {detail.nextTaskDue
+                  ? `${detail.nextTaskKind ?? 'task'}${detail.nextTaskSymbol ? ` · ${detail.nextTaskSymbol}` : ''} · ${fmtDue(detail.nextTaskDue)}`
+                  : dash(null, detail.statusReason)}
               </b>
             </div>
             <p style={{ fontSize: 12, color: 'var(--muted)' }}>
