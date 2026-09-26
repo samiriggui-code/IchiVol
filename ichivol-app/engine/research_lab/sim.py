@@ -69,7 +69,8 @@ class Rules:
     hook_label: str = ""
     # exit rule: "decision" = baseline (leave when the effective decision stops supporting the position);
     # "direction" = leave only on stop/target or when the Ichimoku direction no longer matches (experiment E);
-    # "levels_only" = VP2 common exit — stop / TP / time-stop only (never pipeline/direction flip)
+    # "levels_only" = VP2 common exit — stop / TP / time-stop only (never pipeline/direction flip);
+    # "hold" = B0 buy&hold — no SL/TP/time-stop/pipeline exits (only force_flat_at_end)
     exit_mode: str = "decision"
     # live-replica mode: decide and fill in the same step at the step's price (old intrabar behaviour)
     immediate_fill: bool = False
@@ -313,6 +314,9 @@ def simulate(
             item = data[sym].get(t)
             if item is None:
                 continue
+            if rules.exit_mode == "hold":
+                # B0: ignore stop / TP / time-stop
+                continue
             c = item[0]
             long = p.direction == "LONG"
             if t != p.entry_time:
@@ -360,8 +364,8 @@ def simulate(
             run_start = run_state[sym][1]
             p = positions.get(sym)
             if p is not None:
-                if rules.exit_mode == "levels_only":
-                    # VP2: no pipeline / direction exits — SL/TP/time-stop only.
+                if rules.exit_mode in ("levels_only", "hold"):
+                    # VP2 levels_only / B0 hold: no pipeline / direction exits.
                     continue
                 want = "BUY" if p.direction == "LONG" else "SELL"
                 if rules.exit_mode == "direction":

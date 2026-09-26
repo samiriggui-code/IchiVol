@@ -25,7 +25,13 @@
 - Package `engine/vp2/` : Rules §6/§1ter, loader VP1→feed, run metadata (seed, sha256, protocol, cost base|adverse).
 - Tests `tests/vp2/` — pas d’entrées B* (VP3). Smoke : `python -m vp2 smoke`.
 
-Claude review au retour (≥17h30). File suivant : undraft/merge VP2 → VP3 (B0–B8).
+### VP3 (en cours) — `cursor/vp3-baselines-a2fe`
+
+- `engine/vp3/` : entrées B0/B1/B2/B5/B6/B7 (§2) sur harness VP2 ; B0 = `exit_mode=hold`.
+- Tests `tests/vp3/` (masques + hold). Runs WF / verdicts A,B,H,J = suite après merge VP2.
+- CLI : `python -m vp3 run --strategy B1 --symbol BTCUSDT --interval 1h`.
+
+Claude review au retour (≥17h30). File : undraft/merge VP2 → draft VP3.
 
 ---
 
