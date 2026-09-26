@@ -383,7 +383,7 @@ function densifyEquityPath(
 }
 
 function drawdownRatio(
-  curve: { equity: number }[],
+  curve: { t: string; equity: number }[],
   equity: number | null | undefined,
 ): number | null {
   const band = cleanEquitySeries(curve).map((p) => p.equity)
