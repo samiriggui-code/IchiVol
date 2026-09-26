@@ -29,7 +29,8 @@ Branche `cursor/t-cycle-b1-b4-a2fe` vs `main` @ tip T-CYCLE précédent. Fichier
 ### Tests
 
 - `tests/cycle/test_cycle_synthetic.py` — sondes Claude B1/B2/B4 + validate bundle + no BUY/SELL
-- `pytest tests/cycle/` vert (y compris Postgres `DATABASE_URL` local)
+- `pytest tests/cycle/` + `tests/api/test_api_surface_golden.py` **vert** (24)
+- Full `pytest tests/` : échecs **préexistants** env (tables paper/chart absentes, alembic head conflict `decisions`) — hors scope T-CYCLE ; cycle suite isolée OK. DSN : retirer `?schema=public` (Prisma) pour psycopg2.
 
 ### Invariants inchangés
 
