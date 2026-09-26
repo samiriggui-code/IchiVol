@@ -1,26 +1,21 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
-## 2026-09-26 — GEL VP0 · AW1 MERGÉ · AG0 en merge · Claude pause → 17h30
+## 2026-09-26 — GEL VP0 · AW1 · AG0 MERGÉS · filtre entry_source · VP1 next
 
-### Fait
+### Merges (OK utilisateur — Claude pause jusqu’à 17h30)
 
-| Étape | Statut |
-|-------|--------|
-| **VP0 gel + merge** #140 | **FAIT** → `main` @ `34991b4` |
-| **AW1** #143 Pourquoi? | **FAIT** → `main` @ `7723e53` |
-| **AG0** #144 hygiène | **APPROUVÉ** Claude @ `f0c464a` — merge en cours |
-| **Filtre entry_source** #145 | Après AG0 |
-| **VP1** données + manifeste | Ensuite |
+| PR | Tip squash | Contenu |
+|----|------------|---------|
+| **#140** VP0 | `34991b4` | VALIDATION-PROTOCOL + AW0 — **GEL** |
+| **#143** AW1 | `7723e53` | Pourquoi? / `explain_chart_object` |
+| **#144** AG0 | `c3d9a3c` | Hygiène agent (RO tools, closed-only, evidence entry, caps) |
+| **#145** filtre | (ce PR) | `/evidence/outcomes` exclut rows sans `entry_source=first_closed_open` |
 
-### AG0 (rappel)
+### Suite
 
-Read-only tools, closed-only calc, evidence entry=`first_closed_open`, meta persist, ceilings/timeout/budget, UI outils ; fix plafond tool_result. Stats pré-AG0 biaisées → filtre #145.
+**VP1** — download Univers VP (BTC/ETH/SOL spot + 1d + perp OI/funding) ; manifeste sha256 ; loader figé. Pas de run Lab avant manifeste.
 
-### File suite
-
-Merge AG0 → merge #145 → démarrer **VP1** (download Univers VP + sha256 + loader figé).
-
----
+Claude review au retour (17h30+).
 
 ---
 

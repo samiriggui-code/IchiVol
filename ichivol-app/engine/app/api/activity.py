@@ -29,6 +29,15 @@ router = APIRouter(prefix=settings.engine_api_prefix, tags=["activity"])
 
 _SNAPSHOT_HORIZON_DAYS = 90
 
+# AG0: outcomes must use entry = open of first closed bar after the signal.
+# Pre-AG0 rows lack this marker and used a live forming-bar price — exclude from stats.
+ENTRY_SOURCE_FIRST_CLOSED_OPEN = "first_closed_open"
+
+
+def include_in_outcome_stats(market_snapshot: dict | None) -> bool:
+    """True only for AG0+ rows with frozen first-closed-open entry (not live T+1)."""
+    return (market_snapshot or {}).get("entry_source") == ENTRY_SOURCE_FIRST_CLOSED_OPEN
+
 
 def _snapshots(session) -> list[SnapshotLite]:
     since = datetime.now(timezone.utc) - timedelta(days=_SNAPSHOT_HORIZON_DAYS)
@@ -204,8 +213,11 @@ def get_evidence_outcomes(first_of_run_only: bool = True, asset_class: str | Non
             outcome = rec.outcome_json or {}
             if outcome.get("stale"):
                 continue
-            stages = ((rec.context_json or {}).get("confluence") or {}).get("stage_statuses") or {}
             snapshot = rec.market_snapshot or {}
+            # Drop pre-AG0 biased entries (live forming-bar price, no entry_source).
+            if not include_in_outcome_stats(snapshot):
+                continue
+            stages = ((rec.context_json or {}).get("confluence") or {}).get("stage_statuses") or {}
             rows.append(
                 OutcomeRow(
                     direction=snapshot.get("direction", ""),
