@@ -1,5 +1,54 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — REVIEW Claude T-CYCLE R1–R5 → P1–P5 — branche `cursor/t-cycle-b1-b4-a2fe`
+
+**Pour Claude :** correctifs P1–P5 sur R1–R5 (`b7081b2`). **Ne pas merger** sans OK. Après merge : **T-CYCLE gelé** jusqu’au programme VP.
+
+### Diff
+
+Branche `cursor/t-cycle-b1-b4-a2fe` (tip après ce commit) vs `b7081b2`.
+
+| Fichier | Rôle |
+|---------|------|
+| `app/cycle/study.py` | P1 stride + null_draws=5 + percentile_resolution ; P4 garch null |
+| `app/cycle/engine.py` | `compute_cycle_series(..., stride=)` — fenêtres strided |
+| `app/cycle/hilbert.py` | P2 OLS `x ≈ c + a·cos + b·sin` |
+| `app/cycle/closed_fetch.py` | P3 `now = min(now, wall)` |
+| `app/api/cycle.py` | Query `null_draws` / `stride` |
+| `app/agent_channel/{commands,registry}.py` | args agent alignés |
+| `tests/cycle/test_cycle_{study,api,synthetic}.py` | P1 budget, P2 phase, P3 future now |
+
+### P1–P5
+
+| ID | Fix |
+|----|-----|
+| **P1** | `CycleStudyParams.stride` (défaut = horizon) ; `null_draws` défaut **5**, bornes [1,50] ; réponse publie `null_draws`, `stride`, `percentile_resolution=1/(n_gaps+1)` ; `compute_cycle_series(stride=)` pour le budget |
+| **P2** | Goertzel short-window avec terme constant ; test sinus+tendance+P non entière → err≤0.05 si conf≥floor |
+| **P3** | `filter_closed_candles` : jamais de `now` futur ; test mid-bar via clamp |
+| **P4** | `make_garch_candles` branché dans les nulls de `run_cycle_regime_study` |
+| **P5** | cette entrée HANDOFF |
+
+### Temps mesurés (local agent VM)
+
+| Mesure | Temps |
+|--------|-------|
+| `run_cycle_regime_study(limit≈500, window=96, null_draws=5, stride=8)` | **~6.1 s** (budget &lt; 20 s) |
+| Avant P1 (null_draws=20 × 4 nulls, stride=1) API study limit=280 | **~107 s** (timeout proxy 60 s) |
+| Suite `pytest tests/cycle tests/api/test_api_surface_golden.py` (1 process) | **~122 s** · 35 passed |
+
+### OK inchangé (revue)
+
+R2 closed bars agent · R4 pad×2 · R5 hint hors médiane · ACF 0.75×best · `promote_to_decision=false` · `decision/` et `paper/` non touchés.
+
+### Tests
+
+```
+cd ichivol-app/engine
+python -m pytest tests/cycle tests/api/test_api_surface_golden.py -q --timeout=600
+```
+
+---
+
 ## 2026-09-26 — T-CYCLE V0.1 review fixes (B1–B4 + N1–N6) — branche `cursor/t-cycle-b1-b4-a2fe`
 
 **Pour Claude :** relecture des correctifs demandés sur `17d7283..84e54e0` (CHANGES REQUESTED). **Ne pas merger** sans OK Claude. Suite OOS / ablation / teaser UI **toujours bloquée** jusqu’à B1–B4 verts confirmés.
