@@ -112,16 +112,50 @@ def _save_manifest(root: Path, man: dict[str, Any]) -> None:
     lock_path = root / "manifest.lock"
     tmp_path = root / "manifest.json.tmp"
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    # fcntl is POSIX; Lab runs on Linux in prod/CI.
-    import fcntl
-
     with open(lock_path, "a+", encoding="utf-8") as lock_f:
-        fcntl.flock(lock_f.fileno(), fcntl.LOCK_EX)
+        _flock_exclusive(lock_f)
         try:
             tmp_path.write_text(payload, encoding="utf-8")
             os.replace(tmp_path, mp)
         finally:
-            fcntl.flock(lock_f.fileno(), fcntl.LOCK_UN)
+            _flock_unlock(lock_f)
+
+
+def _flock_exclusive(lock_f) -> None:
+    """Portable exclusive lock (fcntl POSIX / msvcrt Windows) — ENV-R1."""
+    try:
+        import fcntl
+
+        fcntl.flock(lock_f.fileno(), fcntl.LOCK_EX)
+        return
+    except ImportError:
+        pass
+    import msvcrt
+
+    # Lock one byte at start of lock file
+    lock_f.seek(0)
+    if lock_f.read(1) == "":
+        lock_f.write("0")
+        lock_f.flush()
+    lock_f.seek(0)
+    msvcrt.locking(lock_f.fileno(), msvcrt.LK_LOCK, 1)
+
+
+def _flock_unlock(lock_f) -> None:
+    try:
+        import fcntl
+
+        fcntl.flock(lock_f.fileno(), fcntl.LOCK_UN)
+        return
+    except ImportError:
+        pass
+    import msvcrt
+
+    lock_f.seek(0)
+    try:
+        msvcrt.locking(lock_f.fileno(), msvcrt.LK_UNLCK, 1)
+    except OSError:
+        pass
 
 
 def _aligned_cache_end_ms(now_ms: int, timeframe: str) -> int:
