@@ -1,12 +1,17 @@
 """Assemble Chart Intelligence payload from live engine producers.
 
-Observe-only: reuses ChartObjects + Ichimoku + RVOL/ATR. Does not write
-orders or mutate the decision pipeline. ``as_of`` truncates candles so
-overlays match what was knowable at that bar (anti-lookahead).
+Observe-only: reuses ChartObjects + Ichimoku + pipeline stages. Does not write
+orders or mutate paper. ``as_of`` truncates candles before computing overlays.
+
+CI-R1: progressive replay uses ``build_chart_intelligence_replay`` (walk-forward).
+Client-side filtering of a live snapshot by anchor ``known_at`` is NOT safe —
+do not claim anti-lookahead for that path.
 """
 
 from __future__ import annotations
 
+import threading
+import time
 from typing import Any
 
 from app.agents import ichimoku_agent, rvol_agent
@@ -17,16 +22,25 @@ from app.chart_objects.from_fvg import fvg_to_chart_objects
 from app.chart_objects.from_structure import structure_to_chart_objects
 from app.chart_objects.store import list_chart_objects
 from app.chart_objects.types import ChartObjectSource
+from app.config import settings
 from app.db.session import SessionLocal
-from app.decision.combiner import combine_ichimoku_rvol
+from app.decision.pipeline import build_pipeline
 from app.indicators.atr import VolatilityRegime
 from app.indicators.ichimoku import Candle, compute_projected_kumo
 from app.indicators.registry import REGISTRY
 from app.market_data import twelve_data
+from app.market_data.quality import closed_candles
 from app.market_data.resolve import resolve_and_fetch
 from app.market_data.timeframes import TF_SECONDS
+from app.strategy_lab.adn_ichivol import LiveScreenerSettings
 from app.structure.params import StructureEngineParams
 from app.structure.service import detect_market_structure
+
+# (symbol, timeframe, last_bar_time, from_ts, to_ts, lookback) → (expires_at, payload)
+_REPLAY_CACHE: dict[tuple[Any, ...], tuple[float, dict[str, Any]]] = {}
+_REPLAY_CACHE_LOCK = threading.Lock()
+_REPLAY_CACHE_TTL_S = 60.0
+_DEFAULT_REPLAY_LOOKBACK = 48
 
 
 def _candle_dict(c: Candle) -> dict[str, Any]:
@@ -40,39 +54,29 @@ def _candle_dict(c: Candle) -> dict[str, Any]:
     }
 
 
-def _object_known_at(obj: dict[str, Any], *, fallback: int | None) -> int | None:
-    """Premier instant où l'objet est ancré (points), pas la fin de fenêtre."""
-    origin = obj.get("origin") or {}
-    raw = origin.get("known_at")
-    if raw is not None:
-        try:
-            return int(raw)
-        except (TypeError, ValueError):
-            pass
-    times: list[int] = []
-    for p in obj.get("points") or []:
-        t = p.get("time") if isinstance(p, dict) else None
-        if t is not None:
-            try:
-                times.append(int(t))
-            except (TypeError, ValueError):
-                pass
-    if times:
-        return min(times)
-    if obj.get("as_of") is not None:
-        try:
-            return int(obj["as_of"])
-        except (TypeError, ValueError):
-            pass
-    return fallback
+def _closed_only(
+    candles: list[Candle], timeframe: str, now: int | None = None
+) -> list[Candle]:
+    """Drop the still-forming bar (CI-R2), same rule as screener/cycle."""
+    tf = TF_SECONDS.get(timeframe)
+    if tf is None:
+        return candles
+    if not settings.decide_on_closed_candles:
+        return candles
+    closed = closed_candles(candles, int(tf), int(time.time()) if now is None else int(now))
+    return closed if len(closed) >= 2 else candles
 
 
-def _enrich_object(obj: dict[str, Any], *, known_at: int | None) -> dict[str, Any]:
-    """Additive origin keys expected by Chart Intelligence UI."""
+def _enrich_object(obj: dict[str, Any], *, known_at: int | None = None) -> dict[str, Any]:
+    """Additive origin keys for the UI.
+
+    Does NOT invent known_at from anchor point times (CI-R1) — that leaked
+    final Fib/BOS/FVG before detection. known_at is set only when the
+    walk-forward replay (or an explicit producer field) provides it.
+    """
     origin = dict(obj.get("origin") or {})
-    resolved = _object_known_at(obj, fallback=known_at)
-    if resolved is not None and origin.get("known_at") is None:
-        origin["known_at"] = int(resolved)
+    if known_at is not None and origin.get("known_at") is None:
+        origin["known_at"] = int(known_at)
     if origin.get("producer") is None and obj.get("source") == "engine":
         layer = obj.get("layer")
         if layer == "fibonacci":
@@ -97,7 +101,6 @@ def _structure_label(objects: list[dict[str, Any]]) -> str:
     swings = [s for s in swings if s]
     if not swings:
         return "MIXED"
-    # Last few swing labels → compact structure tag.
     tail = swings[-4:]
     if all(s in ("HH", "HL") for s in tail):
         return "HH_HL"
@@ -124,6 +127,224 @@ def _trend_label(*, close: float | None, tenkan: float | None, kijun: float | No
     return "range"
 
 
+def _status_snapshot(obj: dict[str, Any], *, at: int) -> dict[str, Any]:
+    origin = obj.get("origin") or {}
+    return {
+        "at": int(at),
+        "status": origin.get("status"),
+        "touch_count": origin.get("touch_count"),
+        "confidence": obj.get("confidence"),
+        "price_low": obj.get("price_low"),
+        "price_high": obj.get("price_high"),
+    }
+
+
+def _collect_engine_objects(
+    window: list[Candle],
+    *,
+    sym: str,
+    timeframe: str,
+    include_pytrendline: bool,
+) -> list[dict[str, Any]]:
+    params = StructureEngineParams(window_bars=min(len(window), 500))
+    snap = detect_market_structure(window, params, include_pytrendline=include_pytrendline)
+    objects: list[dict[str, Any]] = []
+    objects.extend(o.to_dict() for o in structure_to_chart_objects(snap, sym, timeframe, window))
+    objects.extend(
+        o.to_dict() for o in breaks_to_chart_objects(window, sym, timeframe, snapshot=snap)
+    )
+    objects.extend(o.to_dict() for o in fvg_to_chart_objects(window, sym, timeframe))
+    objects.extend(
+        o.to_dict() for o in fibonacci_to_chart_objects(window, sym, timeframe, key_only=True)
+    )
+    return objects
+
+
+def _build_analysis_and_state(
+    window: list[Candle],
+    objects: list[dict[str, Any]],
+    *,
+    ichi_params: Any,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Pipeline Option B verdict (same family as lib/verdict.ts) + market_state."""
+    live = LiveScreenerSettings.production_defaults()
+    rvol_params = live.rvol_params()
+    atr_params = live.atr_params()
+
+    rvol_out = rvol_agent.analyze(window, rvol_params)[-1]
+    ichi_out = ichimoku_agent.analyze(window, ichi_params)[-1]
+    computed = REGISTRY.compute_many(
+        ["structure", "atr", "location", "cvd", "adx", "donchian"],
+        window,
+        params_by_id={"atr": atr_params},
+    )
+    pipeline = build_pipeline(
+        ichimoku=ichi_out,
+        rvol=rvol_out,
+        structure=computed["structure"][-1] if computed["structure"] else None,
+        atr=computed["atr"][-1] if computed["atr"] else None,
+        location=computed["location"][-1] if computed["location"] else None,
+        cvd=computed["cvd"][-1] if computed["cvd"] else None,
+        adx=computed["adx"][-1] if computed["adx"] else None,
+        donchian=computed["donchian"][-1] if computed["donchian"] else None,
+    )
+
+    atr_last = computed["atr"][-1] if computed["atr"] else None
+    ichi_states = REGISTRY.compute("ichimoku", window, ichi_params)
+    last_ichi = ichi_states[-1] if ichi_states else None
+    close = float(window[-1].close)
+    rvol_val = rvol_out.metadata.get("rvol")
+    rvol_f = float(rvol_val) if rvol_val is not None else 0.0
+    regime_val = atr_last.regime.value if atr_last is not None else None
+
+    market_state = {
+        "trend": _trend_label(
+            close=close,
+            tenkan=getattr(last_ichi, "tenkan", None),
+            kijun=getattr(last_ichi, "kijun", None),
+        ),
+        "structure": _structure_label(objects),
+        "volatility": _vol_label(regime_val),
+        "rvol": rvol_f,
+    }
+
+    threshold = float(live.rvol_significant)
+    waiting: list[str] = []
+    if rvol_f < threshold:
+        waiting.append(f"RVOL > {threshold:g}")
+
+    stage_lines = [
+        f"{s.id.value}: {s.status.value} — {s.summary}" for s in pipeline.stages
+    ][:6]
+    analysis = {
+        "state": pipeline.decision,
+        "confidence": float(ichi_out.confidence),
+        "summary": "; ".join(stage_lines) if stage_lines else pipeline.decision,
+        "confluence": stage_lines,
+        "waiting": waiting,
+        "producer": "engine",
+        "kind": "pipeline",
+        "strategy_version": pipeline.strategy_version,
+    }
+    return analysis, market_state
+
+
+def _payload_from_candles(
+    *,
+    sym: str,
+    timeframe: str,
+    provider_id: str,
+    provider_symbol: str,
+    candles: list[Candle],
+    limit: int,
+    requested: list[str],
+    include_pytrendline: bool,
+    replay_first: int,
+    replay_last: int,
+    tf_sec: int,
+    known_at_by_id: dict[str, int] | None = None,
+    status_history_by_id: dict[str, list[dict[str, Any]]] | None = None,
+) -> dict[str, Any]:
+    if not candles:
+        raise ValueError(f"no_candles:{sym}")
+
+    definition = REGISTRY.get("ichimoku")
+    ichi_params = definition.build_params({})
+    window = candles[-int(limit) :] if len(candles) > int(limit) else candles
+    effective_as_of = int(window[-1].time)
+
+    objects: list[dict[str, Any]] = []
+    if ChartObjectSource.ENGINE.value in requested:
+        objects.extend(
+            _collect_engine_objects(
+                window, sym=sym, timeframe=timeframe, include_pytrendline=include_pytrendline
+            )
+        )
+
+    persist_sources = [
+        s
+        for s in requested
+        if s in (ChartObjectSource.USER.value, ChartObjectSource.CLAUDE.value)
+    ]
+    if persist_sources:
+        session = SessionLocal()
+        try:
+            stored = list_chart_objects(
+                session, symbol=sym, timeframe=timeframe, sources=persist_sources
+            )
+            for o in stored:
+                if int(o.as_of) <= effective_as_of:
+                    objects.append(o.to_dict())
+        finally:
+            session.close()
+
+    enriched: list[dict[str, Any]] = []
+    for o in objects:
+        oid = str(o.get("id") or "")
+        ka = None
+        if known_at_by_id is not None and oid in known_at_by_id:
+            ka = known_at_by_id[oid]
+        row = _enrich_object(o, known_at=ka)
+        if status_history_by_id is not None and oid in status_history_by_id:
+            origin = dict(row.get("origin") or {})
+            origin["status_history"] = list(status_history_by_id[oid])
+            row["origin"] = origin
+        enriched.append(row)
+    objects = enriched
+
+    ichi_states = REGISTRY.compute("ichimoku", candles, ichi_params)
+    window_start = int(window[0].time)
+    ichimoku = [
+        {"time": int(s.time), "tenkan": s.tenkan, "kijun": s.kijun}
+        for s in ichi_states
+        if int(s.time) >= window_start
+    ]
+    projection_raw = [
+        p
+        for p in compute_projected_kumo(candles, ichi_params)
+        if int(p["time_projected"]) >= window_start
+    ]
+    # CI-R5: a projected kumo point at time t is known when (t - 25 bars) <= as_of.
+    # When building at as_of=effective_as_of (candles already truncated), keep points
+    # whose computation bar is in-range — filter by known bar explicitly for safety.
+    bar_lag = 25 * tf_sec
+    projection = [
+        {
+            "time": int(p["time_projected"]),
+            "senkouA": p["senkou_a"],
+            "senkouB": p["senkou_b"],
+        }
+        for p in projection_raw
+        if p.get("senkou_a") is not None
+        and p.get("senkou_b") is not None
+        and int(p["time_projected"]) - bar_lag <= effective_as_of
+    ]
+
+    analysis, market_state = _build_analysis_and_state(window, objects, ichi_params=ichi_params)
+
+    return {
+        "symbol": sym,
+        "timeframe": timeframe,
+        "provider": provider_id,
+        "provider_symbol": provider_symbol,
+        "as_of": effective_as_of,
+        "sources": requested,
+        "candles": [_candle_dict(c) for c in window],
+        "ichimoku": ichimoku,
+        "projection": projection,
+        "market_state": market_state,
+        "objects": objects,
+        "count": len(objects),
+        "analysis": analysis,
+        "replay": {
+            "first": replay_first,
+            "last": replay_last,
+            "bar_seconds": tf_sec,
+        },
+        "mock": False,
+    }
+
+
 def build_chart_intelligence(
     *,
     symbol: str,
@@ -133,7 +354,9 @@ def build_chart_intelligence(
     sources: str | list[str] | None = "engine,user,claude",
     include_pytrendline: bool = False,
     x_twelve_data_key: str | None = None,
+    now: int | None = None,
 ) -> dict[str, Any]:
+    """Live (or as_of-truncated) Chart Intelligence snapshot."""
     sym = symbol.upper()
     requested = parse_sources(sources)
     tf_sec = int(TF_SECONDS.get(timeframe, 3600))
@@ -148,141 +371,176 @@ def build_chart_intelligence(
     if not raw_candles:
         raise ValueError(f"no_candles:{sym}")
 
-    replay_first = int(raw_candles[0].time)
-    replay_last = int(raw_candles[-1].time)
+    candles = _closed_only(list(raw_candles), timeframe, now=now)
+    if not candles:
+        raise ValueError(f"no_candles:{sym}")
 
-    candles = list(raw_candles)
+    replay_first = int(candles[0].time)
+    replay_last = int(candles[-1].time)
+
     if as_of is not None:
         cut = int(as_of)
         candles = [c for c in candles if int(c.time) <= cut]
         if not candles:
             raise ValueError(f"no_candles_at_as_of:{sym}:{cut}")
 
-    window = candles[-int(limit) :] if len(candles) > int(limit) else candles
-    effective_as_of = int(window[-1].time)
+    return _payload_from_candles(
+        sym=sym,
+        timeframe=timeframe,
+        provider_id=provider.id,
+        provider_symbol=provider_symbol,
+        candles=candles,
+        limit=limit,
+        requested=requested,
+        include_pytrendline=include_pytrendline,
+        replay_first=replay_first,
+        replay_last=replay_last if as_of is None else int(candles[-1].time),
+        tf_sec=tf_sec,
+    )
 
-    objects: list[dict[str, Any]] = []
-    if ChartObjectSource.ENGINE.value in requested:
-        params = StructureEngineParams(window_bars=min(len(window), 500))
-        snap = detect_market_structure(
-            window, params, include_pytrendline=include_pytrendline
-        )
-        objects.extend(
-            o.to_dict()
-            for o in structure_to_chart_objects(snap, sym, timeframe, window)
-        )
-        objects.extend(
-            o.to_dict()
-            for o in breaks_to_chart_objects(window, sym, timeframe, snapshot=snap)
-        )
-        objects.extend(o.to_dict() for o in fvg_to_chart_objects(window, sym, timeframe))
-        objects.extend(
-            o.to_dict()
-            for o in fibonacci_to_chart_objects(window, sym, timeframe, key_only=True)
-        )
 
-    persist_sources = [
-        s
-        for s in requested
-        if s in (ChartObjectSource.USER.value, ChartObjectSource.CLAUDE.value)
-    ]
-    if persist_sources:
-        session = SessionLocal()
-        try:
-            stored = list_chart_objects(
-                session, symbol=sym, timeframe=timeframe, sources=persist_sources
+def build_chart_intelligence_replay(
+    *,
+    symbol: str,
+    timeframe: str = "1h",
+    limit: int = 300,
+    from_ts: int | None = None,
+    to_ts: int | None = None,
+    lookback_bars: int = _DEFAULT_REPLAY_LOOKBACK,
+    sources: str | list[str] | None = "engine",
+    include_pytrendline: bool = False,
+    x_twelve_data_key: str | None = None,
+    now: int | None = None,
+) -> dict[str, Any]:
+    """Walk-forward replay (CI-R1a).
+
+    Recalculates objects bar-by-bar on candles ≤ T. Sets ``origin.known_at`` to
+    the first bar where the object id appears, plus ``status_history``.
+    Cached by (symbol, timeframe, last closed bar, from, to, lookback).
+    """
+    sym = symbol.upper()
+    requested = parse_sources(sources)
+    tf_sec = int(TF_SECONDS.get(timeframe, 3600))
+    lookback = max(2, min(int(lookback_bars), 120))
+
+    definition = REGISTRY.get("ichimoku")
+    ichi_params = definition.build_params({})
+    warmup = int(definition.warmup(ichi_params))
+    fetch_limit = max(1, min(int(limit) + warmup + lookback, 5000))
+
+    twelve_data.set_api_key_override(x_twelve_data_key)
+    provider, provider_symbol, raw_candles = resolve_and_fetch(sym, timeframe, fetch_limit)
+    if not raw_candles:
+        raise ValueError(f"no_candles:{sym}")
+
+    series = _closed_only(list(raw_candles), timeframe, now=now)
+    if len(series) < 2:
+        raise ValueError(f"no_candles:{sym}")
+
+    end_t = int(to_ts) if to_ts is not None else int(series[-1].time)
+    series = [c for c in series if int(c.time) <= end_t]
+    if not series:
+        raise ValueError(f"no_candles_at_as_of:{sym}:{end_t}")
+
+    times = [int(c.time) for c in series]
+    if from_ts is not None:
+        start_t = int(from_ts)
+    else:
+        start_t = times[max(0, len(times) - lookback)]
+
+    walk_times = [t for t in times if start_t <= t <= end_t]
+    if not walk_times:
+        walk_times = times[-lookback:]
+
+    cache_key = (sym, timeframe, int(series[-1].time), start_t, end_t, lookback)
+    now_m = time.monotonic()
+    with _REPLAY_CACHE_LOCK:
+        hit = _REPLAY_CACHE.get(cache_key)
+        if hit is not None and hit[0] > now_m:
+            cached = dict(hit[1])
+            cached["cached"] = True
+            return cached
+
+    known_at_by_id: dict[str, int] = {}
+    status_history_by_id: dict[str, list[dict[str, Any]]] = {}
+    frames: list[dict[str, Any]] = []
+
+    for t in walk_times:
+        truncated = [c for c in series if int(c.time) <= t]
+        snap = _payload_from_candles(
+            sym=sym,
+            timeframe=timeframe,
+            provider_id=provider.id,
+            provider_symbol=provider_symbol,
+            candles=truncated,
+            limit=limit,
+            requested=requested,
+            include_pytrendline=include_pytrendline,
+            replay_first=int(series[0].time),
+            replay_last=int(series[-1].time),
+            tf_sec=tf_sec,
+        )
+        for o in snap["objects"]:
+            oid = str(o.get("id") or "")
+            if not oid:
+                continue
+            if oid not in known_at_by_id:
+                known_at_by_id[oid] = int(t)
+            hist = status_history_by_id.setdefault(oid, [])
+            snap_row = _status_snapshot(o, at=t)
+            if not hist or any(
+                hist[-1].get(k) != snap_row.get(k)
+                for k in ("status", "touch_count", "confidence", "price_low", "price_high")
+            ):
+                hist.append(snap_row)
+        # Attach walk-forward known_at for this frame (parity ids/status/bounds unchanged).
+        frame_objects = []
+        for o in snap["objects"]:
+            oid = str(o.get("id") or "")
+            frame_objects.append(
+                _enrich_object(o, known_at=known_at_by_id.get(oid))
             )
-            # Replay: only overlays known by as_of.
-            for o in stored:
-                if int(o.as_of) <= effective_as_of:
-                    objects.append(o.to_dict())
-        finally:
-            session.close()
+        snap = dict(snap)
+        snap["objects"] = frame_objects
+        snap["count"] = len(frame_objects)
+        frames.append(
+            {
+                "as_of": int(t),
+                "candles": snap["candles"],
+                "ichimoku": snap["ichimoku"],
+                "projection": snap["projection"],
+                "objects": frame_objects,
+                "count": len(frame_objects),
+                "market_state": snap["market_state"],
+                "analysis": snap["analysis"],
+            }
+        )
 
-    objects = [_enrich_object(o, known_at=effective_as_of) for o in objects]
-
-    # Ichimoku on full truncated series (warmup), slice to window.
-    ichi_states = REGISTRY.compute("ichimoku", candles, ichi_params)
-    window_start = int(window[0].time)
-    ichimoku = [
-        {
-            "time": int(s.time),
-            "tenkan": s.tenkan,
-            "kijun": s.kijun,
-        }
-        for s in ichi_states
-        if int(s.time) >= window_start
-    ]
-
-    projection_raw = [
-        p
-        for p in compute_projected_kumo(candles, ichi_params)
-        if int(p["time_projected"]) >= window_start
-    ]
-    projection = [
-        {
-            "time": int(p["time_projected"]),
-            "senkouA": p["senkou_a"],
-            "senkouB": p["senkou_b"],
-        }
-        for p in projection_raw
-        if p.get("senkou_a") is not None and p.get("senkou_b") is not None
-    ]
-
-    # Market state + analysis from existing agents (no new formula).
-    rvol_out = rvol_agent.analyze(window)[-1]
-    ichi_out = ichimoku_agent.analyze(window)[-1]
-    decision = combine_ichimoku_rvol(ichi_out, rvol_out)
-    atr_states = REGISTRY.compute("atr", window, REGISTRY.get("atr").build_params({}))
-    atr_last = atr_states[-1] if atr_states else None
-    last_ichi = ichi_states[-1] if ichi_states else None
-    close = float(window[-1].close)
-
-    rvol_val = rvol_out.metadata.get("rvol")
-    rvol_f = float(rvol_val) if rvol_val is not None else 0.0
-    regime_val = atr_last.regime.value if atr_last is not None else None
-    market_state = {
-        "trend": _trend_label(
-            close=close,
-            tenkan=getattr(last_ichi, "tenkan", None),
-            kijun=getattr(last_ichi, "kijun", None),
-        ),
-        "structure": _structure_label(objects),
-        "volatility": _vol_label(regime_val),
-        "rvol": rvol_f,
+    # Final enriched live-at-end payload (for clients that filter by known_at).
+    final = _payload_from_candles(
+        sym=sym,
+        timeframe=timeframe,
+        provider_id=provider.id,
+        provider_symbol=provider_symbol,
+        candles=series,
+        limit=limit,
+        requested=requested,
+        include_pytrendline=include_pytrendline,
+        replay_first=int(series[0].time),
+        replay_last=int(series[-1].time),
+        tf_sec=tf_sec,
+        known_at_by_id=known_at_by_id,
+        status_history_by_id=status_history_by_id,
+    )
+    payload = {
+        **final,
+        "from": int(walk_times[0]),
+        "to": int(walk_times[-1]),
+        "lookback_bars": lookback,
+        "frames": frames,
+        "cached": False,
+        "replay_mode": "walk_forward",
     }
-
-    waiting: list[str] = []
-    if rvol_f < 1.5:
-        waiting.append("RVOL > 1.5")
-    confluence_lines = [r for r in (decision.reasons or []) if r][:6]
-    analysis = {
-        "state": decision.decision,
-        "confidence": float(decision.confidence),
-        "summary": "; ".join(confluence_lines) if confluence_lines else decision.decision,
-        "confluence": confluence_lines,
-        "waiting": waiting,
-        "producer": "engine",
-    }
-
-    return {
-        "symbol": sym,
-        "timeframe": timeframe,
-        "provider": provider.id,
-        "provider_symbol": provider_symbol,
-        "as_of": effective_as_of,
-        "sources": requested,
-        "candles": [_candle_dict(c) for c in window],
-        "ichimoku": ichimoku,
-        "projection": projection,
-        "market_state": market_state,
-        "objects": objects,
-        "count": len(objects),
-        "analysis": analysis,
-        "replay": {
-            "first": replay_first,
-            "last": replay_last if as_of is None else effective_as_of,
-            "bar_seconds": tf_sec,
-        },
-        "mock": False,
-    }
+    with _REPLAY_CACHE_LOCK:
+        _REPLAY_CACHE[cache_key] = (now_m + _REPLAY_CACHE_TTL_S, dict(payload))
+    return payload

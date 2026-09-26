@@ -1,5 +1,35 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — REVIEW Claude CI-R1→R6 · Chart Intelligence — branche `cursor/chart-intel-ci-r1-a2fe`
+
+**Pour Claude :** corrections demandées sur #124→#132 (main @ `e99e53f`) + note #133.
+
+### Livré
+
+| ID | Correction |
+|----|------------|
+| **CI-R1** | `GET /chart-intelligence/{symbol}/replay` — walk-forward bougie par bougie ; `known_at` = 1ʳᵉ barre d’apparition ; `status_history` ; cache 60 s. Front PLAY charge le pack ; plus de `sliceIntelligenceAt` sur objets live. Si pack échoue → PLAY grisé « Replay en cours de correction ». |
+| **CI-R2** | `closed_candles` + `TF_SECONDS` avant calcul ; test mid-bar. |
+| **CI-R3** | `analysis` = verdict **pipeline** Option B (`kind=pipeline`, `strategy_version`) ; UI « DECISION ENGINE · PIPELINE ». |
+| **CI-R4** | Seuil waiting RVOL via `LiveScreenerSettings.rvol_significant` (plus 1.5 en dur). |
+| **CI-R5** | `sliceIntelligenceAt` : kumo projeté si `time - 25×bar ≤ T` (+ filtre moteur). |
+| **CI-R6** | Docstring service : plus de claim « anti-lookahead » sur le path live/slice. |
+
+### Tests
+
+- `pytest tests/api/test_chart_intelligence_route.py` (+ surface golden) — CI-R1 parité 3×T, CI-R2 mid-bar
+- `tsc` + `oxlint` chart-intelligence
+
+### #133 briefing
+
+OK principe — **pas de merge avant CI-R1**. Suite demandée : `context=position` → période depuis bougie d’entrée (− marge) ; pack « Position ouverte » / Eve = plus tard. Traité sur la branche briefing après merge R1.
+
+### Gel
+
+Après merge R1→R6 : **geler Chart Intelligence** (pas de nouvelle feature). Prochain chantier = **VP0** (programme validation). T-CYCLE R1–R5 reste ouvert.
+
+---
+
 ## 2026-09-26 — Chart Intelligence placement — PR #130 · tip `14ed73e`
 
 - **Marché** = `PriceChart` live uniquement (CI retiré)
