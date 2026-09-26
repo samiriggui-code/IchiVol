@@ -591,13 +591,67 @@ button, select { font: inherit; color: inherit; }
     background: color-mix(in srgb, var(--card) 92%, transparent);
     backdrop-filter: blur(10px);
   }
-/* Fiches dialog : ne pas passer sous la tabbar sur téléphone */
-.dash-shell.is-mobile dialog {
-    max-height: calc(100dvh - var(--dash-tabbar-clearance) - 0.75rem);
-    margin-bottom: calc(var(--dash-tabbar-clearance) * 0.35);
+/* Fiches dialog / sheets mobile — au-dessus de la tabbar, bas lisible */
+.dash-shell.is-mobile dialog,
+  .dash-shell.is-mobile .opps-page dialog,
+  .dash-shell.is-mobile .pf-page dialog,
+  .dash-shell.is-mobile .ops-page dialog,
+  .dash-shell.is-mobile .agents-page dialog,
+  .dash-shell.is-mobile .journal-page dialog,
+  .dash-shell.is-mobile .lab-page dialog,
+  .dash-shell.is-mobile .ctx-page dialog,
+  .dash-shell.is-mobile .copilot-page dialog,
+  .dash-shell.is-mobile .params-page dialog {
+    width: min(960px, 100%) !important;
+    max-width: 100% !important;
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 0.75rem) !important;
+    margin: auto;
+    margin-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+.dash-shell.is-mobile dialog .dialog-body,
+  .dash-shell.is-mobile .pf-fiche-body,
+  .dash-shell.is-mobile .ops-dossier .dialog-body {
+    padding-bottom: calc(1.75rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+.dash-shell.is-mobile dialog .dialog-actions,
+  .dash-shell.is-mobile .paper-confirm-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--card, #fefdfb) 94%, transparent);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid var(--line, var(--border));
+  }
+/* Overlays custom (pas top-layer) : au-dessus de la tabbar z=40 */
+.dash-shell.is-mobile .pf-fiche-backdrop,
+  .dash-shell.is-mobile .ops-fiche-backdrop,
+  .dash-shell.is-mobile .trade-sheet-backdrop,
+  .dash-shell.is-mobile .paper-confirm-backdrop {
+    z-index: 60 !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    align-items: flex-end;
+  }
+.dash-shell.is-mobile .pf-page .pf-fiche,
+  .dash-shell.is-mobile .ops-page .ops-dossier {
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem) !important;
+    width: min(960px, 100%) !important;
+    max-width: 100% !important;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+  }
+.dash-shell.is-mobile .trade-sheet,
+  .dash-shell.is-mobile .paper-confirm-sheet {
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 .dash-shell.is-mobile .trade-sheet-scroll {
-    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 .dash-mobile-tab {
     display: flex;
