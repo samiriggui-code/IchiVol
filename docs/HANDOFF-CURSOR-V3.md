@@ -14,20 +14,17 @@
 | **#147 VP2** | `91c2795` | Harness §6 / §1ter |
 | **#148 VP3** | `d3abe6f` | B0–B7 + WF + métriques + DSR |
 
-### VP3 compare (local) — voir [`VP3-REPORT-BTCUSDT-1h.md`](./VP3-REPORT-BTCUSDT-1h.md)
+### VP3 compare — [`VP3-REPORT-BTCUSDT-1h.md`](./VP3-REPORT-BTCUSDT-1h.md) · tip `e352c3c`+
 
-BTCUSDT 1h · base · n_boot=500 smoke :
+BTCUSDT 1h · base · **n_boot=10 000** :
 
 | Q | Pair | bi_beats_bj | Note |
 |---|------|-------------|------|
-| A | B1 vs B0 | **false** | B1 dominé (Δ&lt;0) |
-| B | B2 vs B1 | **false** | Δ&gt;0 mais DSR 0.52 |
-| H | B5 vs B2 | **false** | IC Δ inclut 0 |
+| A | B1 vs B0 | **false** | B1 dominé (Δ&lt;0, IC exclut 0) |
+| B | B2 vs B1 | **false** | Δ&gt;0 IC ok · DSR 0.52 |
+| H | B5 vs B2 | **false** | IC Δ inclut 0 · DSR 0.72 |
 
-Fix B0 WF : mask BUY dès warm-up (gate pli = 1ʳᵉ entrée). CLI `python -m vp3 compare`.
-
-Claude review au retour (≥17h30). Suite : n_boot=10k · grille ETH/SOL · 4h · Q J (B7).
-
+Claude review au retour (≥17h30). Suite : ETH/SOL · 4h · Q J (B7) · N T10b.
 ---
 
 ## 2026-09-26 — VP2 harness · VP1 funding OK · file gel (Claude pause)
