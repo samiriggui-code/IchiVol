@@ -1,4 +1,4 @@
-"""CLI: python -m vp3 run|list — VP3 B* baselines on VP2 harness."""
+"""CLI: python -m vp3 run|wf|list — VP3 B* baselines + walk-forward."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from pathlib import Path
 
 from vp3 import STRATEGIES
 from vp3.run import run_strategy
+from vp3.wf import run_wf
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -18,13 +19,19 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("list", help="List strategies")
 
-    r = sub.add_parser("run", help="Run one strategy on frozen VP1 series")
+    r = sub.add_parser("run", help="Run one strategy on frozen VP1 series (full window)")
     r.add_argument("--strategy", required=True, choices=STRATEGIES)
     r.add_argument("--symbol", default="BTCUSDT")
     r.add_argument("--interval", default="1h", choices=("1h", "4h"))
     r.add_argument("--cost", default="base", choices=("base", "adverse"))
     r.add_argument("--window-start", default=None, help="ISO date override start")
     r.add_argument("--window-end", default=None, help="ISO date override end (inclusive)")
+
+    w = sub.add_parser("wf", help="Walk-forward §5 test folds (local VP1 data)")
+    w.add_argument("--strategy", required=True, choices=STRATEGIES)
+    w.add_argument("--symbol", default="BTCUSDT")
+    w.add_argument("--interval", default="1h", choices=("1h", "4h"))
+    w.add_argument("--cost", default="base", choices=("base", "adverse"))
 
     args = p.parse_args(argv)
     if args.cmd == "list":
@@ -43,6 +50,16 @@ def main(argv: list[str] | None = None) -> int:
             window=win,
         )
         print(json.dumps(out.summary(), indent=2))
+        return 0
+    if args.cmd == "wf":
+        report = run_wf(
+            args.strategy,
+            symbol=args.symbol,
+            interval=args.interval,
+            cost_profile=args.cost,
+            root=args.root,
+        )
+        print(json.dumps(report.summary(), indent=2, default=str))
         return 0
     return 2
 

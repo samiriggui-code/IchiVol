@@ -28,10 +28,10 @@
 ### VP3 (draft) — [#148](https://github.com/samiriggui-code/IchiVol/pull/148) `cursor/vp3-baselines-a2fe`
 
 - `engine/vp3/` : entrées B0/B1/B2/B5/B6/B7 (§2) sur harness VP2 ; B0 = `exit_mode=hold`.
-- Tests `tests/vp3/` (masques + hold). Runs WF / verdicts A,B,H,J = suite.
-- CLI : `python -m vp3 run --strategy B1 --symbol BTCUSDT --interval 1h`.
+- Folds WF1–7 + purge · métriques §8.1 (Sortino all-bars) · bootstrap apparié · DSR scaffold · `python -m vp3 wf`.
+- Tests `tests/vp3/`. Verdicts A/B/H/J chiffrés = après runs locaux WF.
 
-Claude review au retour (≥17h30). File : undraft/merge VP3 → WF/metrics.
+Claude review au retour (≥17h30). File : undraft/merge VP3.
 
 ---
 
