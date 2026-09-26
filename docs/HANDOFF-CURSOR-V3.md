@@ -11,12 +11,13 @@
 | #144 AG0 | `c3d9a3c` | Hygiène agent |
 | #145 filtre | `7741c92` | outcomes exclut pré-AG0 sans entry_source |
 
-### VP1 (en cours) — `cursor/vp1-data-manifest-a2fe`
+### VP1 (en cours) — [#146](https://github.com/samiriggui-code/IchiVol/pull/146) `cursor/vp1-data-manifest-a2fe`
 
-- Package `ichivol-app/engine/vp1/` : download Vision (`data.binance.vision`) + CHECKSUM sha256 + manifest + frozen loader + `build-spot`.
-- Smoke : BTCUSDT 1h 2020-09 zip OK (checksum match) → series 720 bars.
-- Full `download-spot` / `download-funding` / `download-oi` à lancer ; données sous `vp1/data/` (gitignored).
-- Pas de run Lab tant que manifeste spot (+ funding) n’est pas figé.
+- Package `engine/vp1/` : Vision download + CHECKSUM + manifest + frozen loader.
+- **Spot Univers téléchargé** : 648 monthly zips (BTC/ETH/SOL × 1h/4h/1d), 0 missing ; `verify` OK.
+- Series figées : 1h **37973** / 4h **9498** / 1d **1583** bars / symbole (fenêtre VP).
+- Funding download en cours ; OI daily metrics = gros volume (resume-friendly).
+- Données `vp1/data/` gitignored — pas de run Lab avant funding (+ OI si B4) figés.
 
 Claude review au retour (≥17h30).
 
