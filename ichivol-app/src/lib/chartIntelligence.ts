@@ -75,6 +75,20 @@ export interface IntelligenceOrigin extends Record<string, unknown> {
   components?: ConfluenceComponent[]
   /** true tant que le score est fictif (prototype). */
   score_is_mock?: boolean
+  /** Walk-forward replay (CI-R1) : historique d’état ≤ as_of. */
+  status_history?: Array<{
+    at: number
+    status?: IntelligenceStatus
+    touch_count?: number
+    confidence?: number
+    price_low?: number
+    price_high?: number
+  }>
+  /**
+   * Identité stable hors empreinte d’id (CI-R8).
+   * FVG / zone / BOS / Fib group / breakout — utilisée pour known_at.
+   */
+  lineage_key?: string
 }
 
 export interface ConfluenceComponent {
@@ -112,7 +126,7 @@ export interface MarketState {
 }
 
 export interface IntelligenceAnalysis {
-  /** Libellé fourni par Python (ex. PRUDENCE). Mappé vers un ton via analysisTone(). */
+  /** Libellé fourni par Python (ex. PRUDENCE / BUY). Mappé via analysisTone(). */
   state: string
   confidence: number
   summary: string
@@ -122,6 +136,9 @@ export interface IntelligenceAnalysis {
   waiting?: string[]
   /** Producteur du texte (agent / LLM) — jamais autorité de décision. */
   producer?: string
+  /** `pipeline` = Option B (portes) ; `combiner` = brut Ichimoku×RVOL. */
+  kind?: 'pipeline' | 'combiner' | string
+  strategy_version?: string
 }
 
 /** Réponse attendue de GET /api/engine/chart-intelligence/{symbol}?timeframe&as_of (à créer). */
@@ -285,17 +302,22 @@ export function objectKnownAt(o: IntelligenceObject): number {
 }
 
 /**
- * Coupe un snapshot live à `asOf` pour un replay progressif côté client
- * (sans re-fetch à chaque bougie).
+ * Coupe un snapshot à `asOf` pour le mock / fallback.
+ * CI-R5 : kumo projeté connu à T si (time - 25 bougies) ≤ T.
+ * Les objets d’un snapshot LIVE ne doivent PAS être rejoués ainsi en prod
+ * (CI-R1) — utiliser le pack walk-forward `/replay`.
  */
 export function sliceIntelligenceAt(
   live: ChartIntelligenceResponse,
   asOf: number,
 ): ChartIntelligenceResponse {
+  const barSec = live.replay?.bar_seconds ?? 3600
   const candles = live.candles.filter((c) => c.time <= asOf)
   const ichimoku = live.ichimoku.filter((p) => p.time <= asOf)
-  const projection = live.projection.filter((p) => p.time <= asOf)
-  const objects = live.objects.filter((o) => objectKnownAt(o) <= asOf)
+  const projection = live.projection.filter((p) => p.time - 25 * barSec <= asOf)
+  const objects = live.objects
+    .filter((o) => objectKnownAt(o) <= asOf)
+    .map((o) => applyStatusHistoryAt(o, asOf))
   return {
     ...live,
     as_of: asOf,
@@ -307,6 +329,28 @@ export function sliceIntelligenceAt(
     // Analyse = verdict live ; masquée pendant le replay pour ne pas spoiler.
     analysis: null,
     mock: live.mock,
+  }
+}
+
+/** Applique le dernier état de status_history ≤ asOf (CI-R1). */
+export function applyStatusHistoryAt(o: IntelligenceObject, asOf: number): IntelligenceObject {
+  const hist = o.origin?.status_history
+  if (!Array.isArray(hist) || hist.length === 0) return o
+  let last: { at: number; status?: string; touch_count?: number; confidence?: number; price_low?: number; price_high?: number } | null =
+    null
+  for (const row of hist) {
+    if (typeof row?.at === 'number' && row.at <= asOf) last = row
+  }
+  if (!last) return o
+  const origin = { ...o.origin }
+  if (last.status != null) origin.status = last.status as IntelligenceObject['origin']['status']
+  if (last.touch_count != null) origin.touch_count = last.touch_count
+  return {
+    ...o,
+    confidence: last.confidence ?? o.confidence,
+    price_low: last.price_low ?? o.price_low,
+    price_high: last.price_high ?? o.price_high,
+    origin,
   }
 }
 
@@ -340,9 +384,34 @@ export function fmtTime(unix: number | null | undefined): string {
 export interface ChartIntelligenceQuery {
   symbol: string
   timeframe: string
-  /** Replay : snapshot tel que connu à cet instant (anti-lookahead côté Python). */
+  /** Snapshot tel que recalculé à cet instant (as_of côté Python). */
   asOf?: number | null
   limit?: number
+}
+
+export interface ChartIntelligenceReplayQuery {
+  symbol: string
+  timeframe: string
+  from?: number | null
+  to?: number | null
+  lookbackBars?: number
+  limit?: number
+}
+
+export interface ChartIntelligenceReplayFrame {
+  as_of: number
+  /** CI-R7: candles/ichimoku/projection are on the pack root; front truncates by as_of. */
+  objects: IntelligenceObject[]
+  market_state: ChartIntelligenceResponse['market_state']
+}
+
+export interface ChartIntelligenceReplayPack extends ChartIntelligenceResponse {
+  from: number
+  to: number
+  lookback_bars: number
+  frames: ChartIntelligenceReplayFrame[]
+  cached?: boolean
+  replay_mode?: string
 }
 
 /**
@@ -361,4 +430,27 @@ export async function getChartIntelligence(q: ChartIntelligenceQuery): Promise<C
     throw new Error(body?.detail ?? `Erreur ${res.status}`)
   }
   return (await res.json()) as ChartIntelligenceResponse
+}
+
+/** Walk-forward replay pack (CI-R1a). */
+export async function getChartIntelligenceReplay(
+  q: ChartIntelligenceReplayQuery,
+): Promise<ChartIntelligenceReplayPack> {
+  const params = new URLSearchParams({
+    timeframe: q.timeframe,
+    limit: String(q.limit ?? 300),
+    lookback_bars: String(q.lookbackBars ?? 48),
+    sources: 'engine',
+  })
+  if (q.from != null) params.set('from', String(q.from))
+  if (q.to != null) params.set('to', String(q.to))
+  const res = await fetch(
+    `/api/engine/chart-intelligence/${encodeURIComponent(q.symbol)}/replay?${params}`,
+    { credentials: 'include' },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { detail?: string } | null
+    throw new Error(body?.detail ?? `Erreur ${res.status}`)
+  }
+  return (await res.json()) as ChartIntelligenceReplayPack
 }

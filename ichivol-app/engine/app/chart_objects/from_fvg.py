@@ -14,6 +14,7 @@ from app.chart_objects.types import (
     ChartObjectSource,
     ChartObjectType,
     ChartPoint,
+    round_chart_coord,
 )
 from app.indicators.fvg import FvgParams, FvgState
 from app.indicators.ichimoku import Candle
@@ -44,6 +45,10 @@ def fvg_to_chart_objects(
         t0 = int(candles[ev.start_bar].time)
         if as_of <= t0:
             continue
+        # CI-R8: lineage outside id fingerprint (end point = as_of → new id/bar).
+        pl = round_chart_coord(ev.price_low)
+        ph = round_chart_coord(ev.price_high)
+        lineage_key = f"fvg:{ev.direction}:{t0}:{pl}:{ph}"
         out.append(
             ChartObject(
                 type=ChartObjectType.RECTANGLE,
@@ -71,6 +76,7 @@ def fvg_to_chart_objects(
                     "mid_bar": ev.mid_bar,
                     "end_bar": ev.end_bar,
                     "discovery_bar": ev.bar,
+                    "lineage_key": lineage_key,
                 },
             )
         )
