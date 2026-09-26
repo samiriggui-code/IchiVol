@@ -190,71 +190,92 @@
 .engine-evidence .sec-foot { margin-top: 12px; font-size: 11px; }
 
 /*
- * Dark — cartes blanches + texte clair = illisible (screenshots user).
- * html.dark obligatoire sur chaque sélecteur (pas de fuite light).
+ * Dark — cartes #fff + texte clair = illisible.
+ * Couleurs littérales (pas seulement var(--card)) : les pages maquette
+ * re-déclarent --card clair sur .*-page et peuvent gagner selon l’ordre.
+ * html.dark obligatoire sur chaque sélecteur.
  */
 html.dark .engine-evidence {
-  color: var(--ink, #f1eee6);
+  color: #f1eee6;
+}
+
+html.dark .engine-evidence .muted,
+html.dark .engine-evidence .subhead,
+html.dark .engine-evidence .pipeline-headline,
+html.dark .engine-evidence .pipeline-legend {
+  color: #a0a8b5;
 }
 
 html.dark .engine-evidence .argumentaire {
-  color: var(--ink, #f1eee6);
+  color: #f1eee6;
 }
 
 html.dark .engine-evidence .decision-pipeline,
-html.dark .engine-evidence .signal-evidence-card {
-  background: var(--card, #1a1e26);
-  border-color: var(--line, #333944);
-  color: var(--ink, #f1eee6);
+html.dark .engine-evidence .signal-evidence-card,
+html.dark .decision-pipeline,
+html.dark .signal-evidence-card {
+  background: #1a1e26 !important;
+  border-color: #333944 !important;
+  color: #f1eee6 !important;
 }
 
 html.dark .engine-evidence .pipeline-stage,
 html.dark .engine-evidence .pipeline-reading-card {
-  border-color: var(--line, #333944);
+  border-color: #333944;
   background: #22262f;
-  color: var(--ink, #f1eee6);
+  color: #f1eee6;
 }
 
 html.dark .engine-evidence .pipeline-stage-index {
   background: #2a303a;
-  color: var(--ink, #f1eee6);
+  color: #f1eee6;
+}
+
+html.dark .engine-evidence .pipeline-stage-q,
+html.dark .engine-evidence .pipeline-stage-summary,
+html.dark .engine-evidence .pipeline-reading-body,
+html.dark .engine-evidence .sec-symbol,
+html.dark .engine-evidence p,
+html.dark .engine-evidence strong {
+  color: #f1eee6;
 }
 
 html.dark .engine-evidence .sig-chip {
   background: #22262f;
-  border-color: var(--line, #333944);
-  color: var(--ink, #f1eee6);
+  border-color: #333944;
+  color: #f1eee6;
 }
 
 html.dark .engine-evidence .risk-chip {
   background: #33201d;
   border-color: #4a3030;
-  color: var(--red, #d48478);
+  color: #d48478;
 }
 
 html.dark .engine-evidence .bias-bull {
   background: #16302c;
   border-color: #2a4a44;
-  color: var(--green, #3aa99a);
+  color: #3aa99a;
 }
 
 html.dark .engine-evidence .bias-bear {
   background: #33201d;
   border-color: #4a3030;
-  color: var(--red, #d48478);
+  color: #d48478;
 }
 
 html.dark .engine-evidence .bias-neutral {
   background: #2a2418;
   border-color: #4a3f2a;
-  color: var(--amber, #e8b86d);
+  color: #e8b86d;
 }
 
 html.dark .engine-evidence .pipeline-stage-badge {
-  border-color: var(--line, #333944);
+  border-color: #333944;
 }
 
 html.dark .engine-evidence .sec-ablation th,
 html.dark .engine-evidence .sec-ablation td {
-  border-color: var(--line, #333944);
+  border-color: #333944;
+  color: #f1eee6;
 }
