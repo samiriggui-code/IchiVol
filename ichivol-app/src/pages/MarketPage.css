@@ -74,6 +74,38 @@
   align-items: center;
 }
 
+.market-page .actions .market-tv-open {
+  display: inline-block;
+  width: auto;
+  margin-top: 0;
+  font: 12px Manrope, sans-serif;
+  padding: 8px 12px;
+}
+
+.market-page .card-head-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.market-page .market-tv-open-inline {
+  border: 1px solid var(--line);
+  background: #f3f2ef;
+  border-radius: 6px;
+  font: 11px 'DM Mono', ui-monospace, monospace;
+  letter-spacing: 0.6px;
+  padding: 6px 10px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.market-page .market-tv-open-inline:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: #eef4fc;
+}
+
 .market-page .tag {
   font: 10px 'DM Mono', ui-monospace, monospace;
   padding: 5px 7px;
