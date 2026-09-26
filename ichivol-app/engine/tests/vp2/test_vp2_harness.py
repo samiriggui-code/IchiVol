@@ -151,6 +151,40 @@ def test_run_meta_includes_protocol_seed_cost():
     assert BASE_COST.name == "base" and ADVERSE_COST.name == "adverse"
 
 
+def test_stop_tp_anchored_on_raw_open_not_fill():
+    """VP2-R2: levels from open(t+1); costs stay on fill."""
+    # Signal BUY at bar0; fill at bar1 open=100 with adverse friction → fill > 100
+    # Stop distance 2 → stop must be 98 (raw-2), not fill-2
+    cost = CostModel("wide", commission_bps=0.0, spread_bps=20.0, slippage_bps=0.0)
+    rows = [
+        (100, 100, 100, 100, "BUY", 2.0),
+        (100, 100, 100, 100, "BUY", 2.0),
+        (100, 100, 97.5, 98, "WATCH", 2.0),  # low hits stop at 98
+    ] + flat(3, 98)
+    rules = Rules(
+        "t",
+        exit_mode="levels_only",
+        take_profit_r=2.0,
+        full_cash=True,
+        max_open=1,
+        max_notional_pct=1.0,
+        daily_loss_limit_pct=0.0,
+        max_open_risk_pct=10.0,
+        allow_short=False,
+        liquidity_cap_pct=1.0,
+        force_flat_at_end=False,
+        time_stop_bars=None,
+        bar_seconds=H,
+    )
+    res = simulate({"X": series(rows)}, rules, cost, (T0, T0 + 50 * H), initial=10_000.0)
+    assert len(res.trades) == 1
+    t = res.trades[0]
+    assert t.entry_raw == 100.0
+    assert t.entry_fill > t.entry_raw  # costs on fill
+    assert t.exit_reason.startswith("stop")
+    assert abs(t.exit_raw - 98.0) < 1e-9  # stop = raw - sd
+
+
 def test_force_flat_at_end():
     rows = [(100, 100, 100, 100, "BUY", 2.0), (100, 100, 100, 100, "BUY", 2.0)] + flat(5, 100, "WATCH", 2.0)
     rules = Rules(

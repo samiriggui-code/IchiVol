@@ -426,3 +426,39 @@ test('timeout Anthropic lève une erreur claire (AG0)', async () => {
     /timeout/i,
   )
 })
+
+test('timeout Anthropic couvre aussi le mode stream (AG0-R1)', async () => {
+  const fetchImpl = (async (_u: string, init: { signal?: AbortSignal }) => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        const onAbort = () => {
+          try {
+            controller.error(new Error('aborted'))
+          } catch {
+            /* already closed */
+          }
+        }
+        init.signal?.addEventListener('abort', onAbort)
+        // Never enqueue — wait for abort so await readAnthropicStream stays in try
+      },
+    })
+    return new Response(stream, {
+      status: 200,
+      headers: { 'content-type': 'text/event-stream' },
+    })
+  }) as unknown as typeof fetch
+  await assert.rejects(
+    runClaudeToolLoop({
+      apiKey: 'k',
+      model: 'm',
+      system: 's',
+      messages: [{ role: 'user', content: 'x' }],
+      tools: toolsFromEngineManifest([CONTEXT_SPEC]),
+      anthropicTimeoutMs: 30,
+      fetchImpl,
+      onEvent: () => {},
+      execute: async () => ({ ok: true, content: '{}' }),
+    }),
+    /timeout/i,
+  )
+})
