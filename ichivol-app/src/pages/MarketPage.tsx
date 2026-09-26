@@ -579,7 +579,7 @@ export function MarketPage() {
           </div>
         </section>
 
-        <ChartIntelligencePanel symbol={symbol} timeframe={interval} source="mock" />
+        <ChartIntelligencePanel symbol={symbol} timeframe={interval} source="api" />
 
         {layersOpen && layersSheet && (
           <MarketLayersMenu

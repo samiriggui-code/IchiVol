@@ -25,7 +25,7 @@ export type ChartIntelligenceSource = 'mock' | 'api'
 export interface UseChartIntelligenceOptions {
   symbol: string
   timeframe: string
-  /** 'mock' tant que l'endpoint Python n'existe pas. */
+  /** 'api' = engine Python ; 'mock' réservé aux tests locaux. */
   source?: ChartIntelligenceSource
   /** Vitesse du replay (ms par bougie). */
   replayIntervalMs?: number
@@ -64,7 +64,7 @@ async function fetchSnapshot(
 export function useChartIntelligence({
   symbol,
   timeframe,
-  source = 'mock',
+  source = 'api',
   replayIntervalMs = 450,
 }: UseChartIntelligenceOptions) {
   /** null = live (dernière bougie). */

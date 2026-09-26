@@ -5668,6 +5668,129 @@
         }
       }
     },
+    "/api/engine/chart-intelligence/{symbol}": {
+      "get": {
+        "tags": [
+          "engine"
+        ],
+        "summary": "Get Chart Intelligence",
+        "description": "Live Chart Intelligence snapshot for the React panel (not mock).",
+        "operationId": "get_chart_intelligence_api_engine_chart_intelligence__symbol__get",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Symbol"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "1h",
+              "title": "Timeframe"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 300,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Unix seconds \u2014 recompute on candles with time <= as_of (anti-lookahead)",
+              "title": "As Of"
+            },
+            "description": "Unix seconds \u2014 recompute on candles with time <= as_of (anti-lookahead)"
+          },
+          {
+            "name": "sources",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated ChartObjectSource values",
+              "default": "engine,user,claude",
+              "title": "Sources"
+            },
+            "description": "Comma-separated ChartObjectSource values"
+          },
+          {
+            "name": "include_pytrendline",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Pytrendline"
+            }
+          },
+          {
+            "name": "X-Twelve-Data-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Twelve-Data-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Chart Intelligence Api Engine Chart Intelligence  Symbol  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/engine/health": {
       "get": {
         "summary": "Health",

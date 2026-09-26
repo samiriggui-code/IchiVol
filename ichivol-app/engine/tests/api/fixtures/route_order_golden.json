@@ -549,6 +549,13 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/chart-intelligence/{symbol}",
+    "endpoint": "get_chart_intelligence"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/health",
     "endpoint": "health"
   }
