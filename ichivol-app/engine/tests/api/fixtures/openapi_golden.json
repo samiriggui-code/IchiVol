@@ -1730,6 +1730,153 @@
         ]
       }
     },
+    "/api/engine/chart-intelligence/{symbol}/explain": {
+      "get": {
+        "description": "AW1 \u00ab Pourquoi ? \u00bb \u2014 faits moteur d'un ChartObject ENGINE (observe-only).",
+        "operationId": "get_chart_intelligence_explain_api_engine_chart_intelligence__symbol__explain_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "object_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Object Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lineage_key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 256,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lineage Key"
+            }
+          },
+          {
+            "description": "Unix seconds \u2014 barre de r\u00e9f\u00e9rence",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Unix seconds \u2014 barre de r\u00e9f\u00e9rence",
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 300,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lookback_bars",
+            "required": false,
+            "schema": {
+              "default": 48,
+              "maximum": 120,
+              "minimum": 2,
+              "title": "Lookback Bars",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Twelve-Data-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Twelve-Data-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Chart Intelligence Explain Api Engine Chart Intelligence  Symbol  Explain Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Chart Intelligence Explain",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
     "/api/engine/chart-intelligence/{symbol}/replay": {
       "get": {
         "description": "Walk-forward replay pack (CI-R1a) \u2014 objects recalculated bar-by-bar.",

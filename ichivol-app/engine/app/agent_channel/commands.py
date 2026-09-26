@@ -1245,6 +1245,38 @@ def cmd_get_structure(args: dict) -> dict:
         raise CommandError(str(exc)) from exc
 
 
+def cmd_explain_chart_object(args: dict) -> dict:
+    """AW1 — same payload as GET /chart-intelligence/{symbol}/explain.
+
+    Faits moteur d'un ChartObject ENGINE (provenance, known_at walk-forward,
+    historique de statut, maturité registre, validation VP). Lecture seule.
+    """
+    from app.chart_intelligence.explain import ExplainError, explain_chart_object
+
+    symbol = _require_str(args, "symbol").upper()
+    object_id = args.get("object_id")
+    lineage_key = args.get("lineage_key")
+    if not object_id and not lineage_key:
+        raise CommandError("object_id ou lineage_key requis")
+    as_of = args.get("as_of")
+    try:
+        return explain_chart_object(
+            symbol=symbol,
+            timeframe=args.get("timeframe", "1h"),
+            object_id=str(object_id) if object_id else None,
+            lineage_key=str(lineage_key) if lineage_key else None,
+            as_of=int(as_of) if as_of is not None else None,
+            limit=int(args.get("limit", 300)),
+            lookback_bars=int(args.get("lookback_bars", 48)),
+        )
+    except ExplainError as exc:
+        raise CommandError(str(exc)) from exc
+    except ProviderNotWiredError as exc:
+        raise CommandError(str(exc)) from exc
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc
+
+
 def cmd_get_chart_objects(args: dict) -> dict:
     """Same payload as GET /chart-objects/{symbol} (ENGINE + USER/CLAUDE store).
 

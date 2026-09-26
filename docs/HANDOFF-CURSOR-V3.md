@@ -1,44 +1,26 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
-## 2026-09-26 — AG0 Hygiène agent (draft PR) · tip `cursor/ag0-agent-hygiene-a2fe`
+## 2026-09-26 — GEL VP0 · AW1 MERGÉ · AG0 en merge · Claude pause → 17h30
 
-**Petite PR hygiène — pas de nouvelle feature.** Après #139 (GOLDEN-RVOL) et gel VP0. **Ne pas merger avant review Claude / gel VP0.** Aucun changement decision engine ni paper.
+### Fait
 
-### Défauts corrigés
+| Étape | Statut |
+|-------|--------|
+| **VP0 gel + merge** #140 | **FAIT** → `main` @ `34991b4` |
+| **AW1** #143 Pourquoi? | **FAIT** → `main` @ `7723e53` |
+| **AG0** #144 hygiène | **APPROUVÉ** Claude @ `f0c464a` — merge en cours |
+| **Filtre entry_source** #145 | Après AG0 |
+| **VP1** données + manifeste | Ensuite |
 
-| # | Fix |
-|---|-----|
-| 1 | `isExposedToClaude` : write chart (`draw_*` / `delete_chart_object`) **retirés** du LLM (reviendront AG2 via `chart_refs`). Prompt « lecture seule » ↔ outils : test dédié. |
-| 2 | `cmd_calculate_ichimoku` / `cmd_calculate_rvol` : filtre `_closed_only` (comme screener) + test. |
-| 3 | Evidence entry = **open de la 1ʳᵉ bougie clôturée après le signal** (`outcomes.update_pending_outcomes`) ; recorder **ne stocke / ne rafraîchit plus** `row.price` live. |
+### AG0 (rappel)
 
-### Garde-fous
+Read-only tools, closed-only calc, evidence entry=`first_closed_open`, meta persist, ceilings/timeout/budget, UI outils ; fix plafond tool_result. Stats pré-AG0 biaisées → filtre #145.
 
-| # | Fix |
-|---|-----|
-| 4 | `AgentMessage.meta` (Prisma) : toolCalls (args + hash/preview sortie), ok, ms, model, `promptVersion`, usage — chat + missions. |
-| 5 | `runClaudeToolLoop` : plafond outils / tour + total, timeout Anthropic, budget tokens → arrêt propre. |
-| 6 | `AgentPage` : activité outils (`onToolStart` / `onToolEnd`) — nom, durée, ok/erreur. |
+### File suite
 
-### Fix plafond tool_use / tool_result (BLOQUANT, post-review Claude)
+Merge AG0 → merge #145 → démarrer **VP1** (download Univers VP + sha256 + loader figé).
 
-Quand `uses` dépassait `maxToolCallsPerTurn` / `maxToolCallsTotal`, les `tool_use` non exécutés restaient dans le message assistant **sans** `tool_result` → Anthropic **400**.  
-**Corrigé :** chaque `tool_use` skip reçoit `tool_result` `{ is_error: true, content: "non exécuté : plafond d'appels atteint (AG0)" }` + trace `ok:false, ms:0` ; plafond total → tour suivant `forceText` (texte non vide). Tests : 6→6 results (2 errors) ; total cap → texte.
-
-### Note bias outcome (IMPORTANT)
-
-Les **`signal_evidence` antérieurs à AG0** ont une **entrée biaisée** (prix live T+1 rafraîchi). **À exclure des stats** : filtre `entry_source` **absent** (ou ≠ `first_closed_open`), ou les marquer. Ne pas comparer cohortes pré/post AG0 sans recalcul. Recalcul historique = ticket séparé.
-
-### File
-
-Correction AG0 → (après OK utilisateur) **gel + merge VP0** → merge **AW1** → merge **AG0** → **VP1**.  
-VP0 (#140 @ `fa04bec`) : APPROUVÉ Claude — **ne pas merger** avant OK utilisateur.
-
-### Hors scope AG0
-
-- AG2 chart_refs / write tools
-- Decision engine / paper
-- Merge avant review / gel VP0
+---
 
 ---
 
@@ -74,21 +56,12 @@ VP0 (#140 @ `fa04bec`) : APPROUVÉ Claude — **ne pas merger** avant OK utilisa
 
 ### Ticket GOLDEN-RVOL — rapport bisect (ne pas régénérer)
 
-**Issue :** voir [#135](https://github.com/samiriggui-code/IchiVol/issues/135).
-
-| Check | Résultat agent VM @ `9e2b02f` |
-|-------|------------------------------|
-| 14 nodeids RVOL listés par Claude | **PASS** |
-| `pytest tests --ignore=tests/cycle` | **tout vert** |
-| Engine CI GitHub `main` (#134/#133/#123) | **success** |
-
-**Bisect :** non exécutable — tip `main` vert ici (pas de commit « rouge » à isoler).  
-**Suspect historique si échec réapparaît :** `51b0edf` (T1d) — `rvol_agent` → `REGISTRY.compute("rvol")` (**changement voulu**, parity goldens `89caa75`→`51b0edf`).  
-**Next :** Claude colle le diff `-vv` + versions numpy/python. Puis : tolérance / pin deps, **ou** PR goldens dédiée (diff valeurs), **ou** fix code. **Pas de régénération à l’aveugle.**
+**Issue :** voir [#135](https://github.com/samiriggui-code/IchiVol/issues/135).  
+**Update 2026-09-26 soir :** cause = py3.11 vs 3.12 `sum()` — voir § Review Claude + PR #139. Bisect agent (tip vert) reste valide ; pas de regen.
 
 ### VP0
 
-Protocole de validation (document only) — voir `docs/VP0-PROTOCOLE-VALIDATION.md`.
+Voir [`VALIDATION-PROTOCOL.md`](./VALIDATION-PROTOCOL.md). Ancien fichier = annexe technique seulement.
 
 ## 2026-09-26 — MERGED #134 CI-R1→R9 · VPS smoke replay · tip `50ea9c4`
 
