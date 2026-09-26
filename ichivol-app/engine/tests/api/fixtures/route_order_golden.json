@@ -332,6 +332,13 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/strategy-lab/microstructure/vp-compare",
+    "endpoint": "get_microstructure_vp_compare"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/backtest/{symbol}",
     "endpoint": "get_backtest"
   },

@@ -10,10 +10,18 @@ from app.microstructure.trade_cvd import (
     compare_kline_vs_trade_cvd,
     compute_trade_cvd,
 )
+from app.microstructure.trade_vp import (
+    VpCompareReport,
+    compare_kline_vs_trade_vp,
+    compute_trade_volume_profile,
+)
 
 __all__ = [
     "AggressorTrade",
     "CvdCompareReport",
+    "VpCompareReport",
     "compare_kline_vs_trade_cvd",
+    "compare_kline_vs_trade_vp",
     "compute_trade_cvd",
+    "compute_trade_volume_profile",
 ]

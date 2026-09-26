@@ -720,6 +720,25 @@ Onglet **Journal** de Market + indicateurs moteur sur le graphe Market.
 
 ---
 
+## 2026-09-24 — Trade VP Lab EN COURS — compare vs kline OHLCV VP
+
+- Branche : `cursor/trade-volume-profile-lab-a2fe`
+- PR : https://github.com/samiriggui-code/IchiVol/pull/68 (**draft**)
+- Base : `main` @ `9c0c0cc` (rebase)
+- Statut : **DRAFT** — Cursor solo. Lab-only ; **pas** de mutation sémantique `location` / pipeline.
+
+### Livré
+
+1. `microstructure/trade_vp.py` — POC/VAH/VAL trade-tape + compare kline
+2. `GET /strategy-lab/microstructure/vp-compare` + agent `compare_trade_vp`
+3. Tests + OpenAPI / route_order goldens (ajouts)
+4. **Revue Claude** : rebase sur `main` ; primitive partagée `volume_profile_core` (location + Lab) ; grille commune high/low bougies pour le compare ; golden location verrouillé ; test écart nul si mêmes samples
+
+### Hors scope
+Remplacer location VP · order book · FeatureStatus · paper.
+
+---
+
 ## 2026-09-24 — UI workspace refonte MERGÉE (#86) — squash `92f43f7`
 
 - PR : https://github.com/samiriggui-code/IchiVol/pull/86 — **MERGÉE** squash
@@ -1587,8 +1606,8 @@ T10c redondance ; T9g ablation OOS ; aucun rejet automatique sur complexité / e
 - **T0-MANAGE-f** #50 — **MERGÉE** squash `7a77424` (validé Claude 102caee ; suite PG **944 ok / 1 skip**, 0 régression). **T0-MANAGE a→f terminé.**
 - **T0-FIX-SHORT-FEE** #51 — **MERGÉE** squash `b9f8421` (validé Claude ; suite PG **948 ok / 1 skip**, 0 régression). Sondes SHORT (close / partiel→target / renfort→target / épuisement / stop) : cash = réalisé ≤ 5e-13. **Vérifié** `git log origin/main` contient `b9f8421`. **Dette SHORT entry_fee soldée** pour clôtures post-fix.
 - **T9a** #52 — **MERGÉE** squash `985c4e5` (validé Claude ; suite PG **955 ok / 1 skip**). **Vérifié** `origin/main` tip contenait `985c4e5`.
-- **UI-MARKET** #54 — **MERGÉE** squash `10631ef` (Cursor solo, Claude restreint ; CI verte). **À auditer Claude 12h10.**
-- **T10a** #55 — **MERGÉE** squash `2e3ebc1` (Cursor solo ; CI verte). **À auditer Claude 12h10.**
+- **UI-MARKET** #54 — **MERGÉE** squash `10631ef` — **VALIDÉE PAR CLAUDE** (rév.47 ; suite PG 957 ok / 1 skip).
+- **T10a** #55 — **MERGÉE** squash `2e3ebc1` (Cursor solo ; CI verte). Déjà en place avant rév.47.
 - **T9b** #53 — **MERGÉE** squash `6d1968a` (Cursor solo, Claude restreint ; CI verte). **À auditer Claude 12h10.**
 - **T10b** #56 — **MERGÉE** squash `82e980e` (Cursor solo ; CI verte). **À auditer Claude 12h10.**
 - **T9c** #57 — **MERGÉE** squash `ef062c2` (Cursor solo ; CI verte). **À auditer Claude 12h10.**

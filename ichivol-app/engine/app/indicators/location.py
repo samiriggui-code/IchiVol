@@ -31,6 +31,7 @@ from typing import Sequence
 
 from app.indicators.ichimoku import Candle
 from app.indicators.structure import BosEvent, StructureState
+from app.indicators.volume_profile_core import compute_volume_profile_bins
 
 
 class NodeType(str, Enum):
@@ -97,46 +98,20 @@ def _volume_profile(
     if hi <= lo:
         return None, None, None, NodeType.UNKNOWN
 
-    num_bins = max(1, params.num_bins)
-    bin_width = (hi - lo) / num_bins
-    volumes = [0.0] * num_bins
-
-    def bin_index(price: float) -> int:
-        idx = int((price - lo) / bin_width)
-        return min(max(idx, 0), num_bins - 1)
-
-    for c in window:
-        volumes[bin_index(_typical_price(c))] += c.volume
-
-    total_volume = sum(volumes)
-    if total_volume <= 0:
+    # Shared binning primitive — grid = candle high/low extent (not typical-price span).
+    bins = compute_volume_profile_bins(
+        [(_typical_price(c), float(c.volume)) for c in window],
+        lo=lo,
+        hi=hi,
+        num_bins=params.num_bins,
+        value_area_pct=params.value_area_pct,
+    )
+    if bins.poc is None or bins.total_volume <= 0:
         return None, None, None, NodeType.UNKNOWN
 
-    poc_idx = max(range(num_bins), key=lambda b: volumes[b])
-    poc_price = lo + (poc_idx + 0.5) * bin_width
-
-    # Standard Value Area algorithm: start at POC, expand to whichever
-    # adjacent bin (above or below the current range) carries more volume,
-    # until value_area_pct of total volume is covered.
-    lo_idx, hi_idx = poc_idx, poc_idx
-    covered = volumes[poc_idx]
-    target = params.value_area_pct * total_volume
-    while covered < target and (lo_idx > 0 or hi_idx < num_bins - 1):
-        left_vol = volumes[lo_idx - 1] if lo_idx > 0 else -1.0
-        right_vol = volumes[hi_idx + 1] if hi_idx < num_bins - 1 else -1.0
-        if right_vol >= left_vol:
-            hi_idx += 1
-            covered += volumes[hi_idx]
-        else:
-            lo_idx -= 1
-            covered += volumes[lo_idx]
-
-    val_price = lo + lo_idx * bin_width
-    vah_price = lo + (hi_idx + 1) * bin_width
-
-    current_bin = bin_index(_typical_price(candles[end]))
-    avg_bin_volume = total_volume / num_bins
-    current_bin_volume = volumes[current_bin]
+    current_bin = bins.bin_index(_typical_price(candles[end]))
+    avg_bin_volume = bins.total_volume / bins.num_bins
+    current_bin_volume = bins.volumes[current_bin]
     if current_bin_volume >= params.hvn_ratio * avg_bin_volume:
         node_type = NodeType.HVN
     elif current_bin_volume <= params.lvn_ratio * avg_bin_volume:
@@ -144,7 +119,7 @@ def _volume_profile(
     else:
         node_type = NodeType.NEUTRAL
 
-    return poc_price, vah_price, val_price, node_type
+    return bins.poc, bins.vah, bins.val, node_type
 
 
 def compute_location(
