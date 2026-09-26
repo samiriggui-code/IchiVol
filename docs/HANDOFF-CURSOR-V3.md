@@ -1,36 +1,28 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
-## 2026-09-26 — AW1 « Pourquoi ? » explain_chart_object — PR draft (attente gel VP0)
+## 2026-09-26 — GEL VP0 · file merges (OK utilisateur — Claude en pause jusqu’à 17h30)
 
-### Contenu (patch Claude + goldens additifs)
+### Gel
 
-- Branche : `cursor/aw1-explain-a2fe` (base `main` @ `c46eda1` = #139 mergé)
-- Commits : `e5f1474` (feat AW1) + `adc0a34` (goldens OpenAPI + route_order, +1 route `/explain`)
-- Engine : `app/chart_intelligence/explain.py` + `GET /chart-intelligence/{symbol}/explain` + commande agent read-only `explain_chart_object`
-- Front : `WhyPanel` (bouton « Pourquoi ? », API only, pas mock) ; "USED BY DECISION ENGINE" masqué si champ absent
-- Eve : systemPrompt cite `explain_chart_object`
-- Observe-only : pas de changement calcul / pipeline / décision ; validation VP = `NON_VALIDE`
+- **VP0 GELÉ + MERGÉ** [#140](https://github.com/samiriggui-code/IchiVol/pull/140) squash → `main` @ `34991b4` (`VP0-2026-09-26` + AW0 §12).
+- OK utilisateur : enchaîner sans Claude ; Claude review au retour.
 
-### Vérifs locales
+### File en cours
 
-| Check | Résultat |
-|-------|----------|
-| pytest py3.12 + Postgres | **1171** nodeids ; **1** flaky hors AW1 `test_open_flow::test_account_identity_after_refresh` (equity DB polluée locale — pas de régression AW1) ; 7 nouveaux explain + goldens surface **PASS** |
-| `tsc -b` | OK |
-| oxlint chart-intelligence | OK (0) |
-| `vite build` | OK |
+1. ~~Gel + merge VP0~~ **FAIT**
+2. **Merge AW1** [#143](https://github.com/samiriggui-code/IchiVol/pull/143) (Pourquoi? / `explain_chart_object`) — en cours (rebase sur main post-VP0)
+3. **Merge AG0** [#144](https://github.com/samiriggui-code/IchiVol/pull/144) hygiène agent
+4. **Merge filtre entry_source** [#145](https://github.com/samiriggui-code/IchiVol/pull/145)
+5. **VP1** : download spot+1d+perp OI/funding ; manifeste sha256 ; loader figé
 
-### Suite
+### Références
 
-- **#139** déjà mergé. **Ne pas merger AW1** avant **gel VP0** (#140).
-- Pas de nouvelle PR UI tant que VP0 non gelé (ordre Claude).
-
-### Tip / SHA
-
-| Ref | SHA |
-|-----|-----|
-| `main` | `c46eda1` |
-| AW1 tip | `adc0a34` |
+| Ref | SHA / PR |
+|-----|----------|
+| `main` (post-VP0) | `34991b4` |
+| AW1 | #143 |
+| AG0 | #144 @ `f0c464a` APPROUVÉ |
+| Filtre evidence | #145 |
 
 ---
 
@@ -66,21 +58,12 @@
 
 ### Ticket GOLDEN-RVOL — rapport bisect (ne pas régénérer)
 
-**Issue :** voir [#135](https://github.com/samiriggui-code/IchiVol/issues/135).
-
-| Check | Résultat agent VM @ `9e2b02f` |
-|-------|------------------------------|
-| 14 nodeids RVOL listés par Claude | **PASS** |
-| `pytest tests --ignore=tests/cycle` | **tout vert** |
-| Engine CI GitHub `main` (#134/#133/#123) | **success** |
-
-**Bisect :** non exécutable — tip `main` vert ici (pas de commit « rouge » à isoler).  
-**Suspect historique si échec réapparaît :** `51b0edf` (T1d) — `rvol_agent` → `REGISTRY.compute("rvol")` (**changement voulu**, parity goldens `89caa75`→`51b0edf`).  
-**Next :** Claude colle le diff `-vv` + versions numpy/python. Puis : tolérance / pin deps, **ou** PR goldens dédiée (diff valeurs), **ou** fix code. **Pas de régénération à l’aveugle.**
+**Issue :** voir [#135](https://github.com/samiriggui-code/IchiVol/issues/135).  
+**Update 2026-09-26 soir :** cause = py3.11 vs 3.12 `sum()` — voir § Review Claude + PR #139. Bisect agent (tip vert) reste valide ; pas de regen.
 
 ### VP0
 
-Protocole de validation (document only) — voir `docs/VP0-PROTOCOLE-VALIDATION.md`.
+Voir [`VALIDATION-PROTOCOL.md`](./VALIDATION-PROTOCOL.md). Ancien fichier = annexe technique seulement.
 
 ## 2026-09-26 — MERGED #134 CI-R1→R9 · VPS smoke replay · tip `50ea9c4`
 
