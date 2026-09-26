@@ -1,0 +1,22 @@
+/** Chart Intelligence — point d'entrée (intégration progressive dans IchiVol V3). */
+
+export { ChartIntelligencePanel } from './ChartIntelligencePanel'
+export { IntelligenceChart } from './IntelligenceChart'
+export { DrawingLayer } from './DrawingLayer'
+export { MarketStructureLayer } from './MarketStructureLayer'
+export { SupportResistanceLayer, SupportResistanceZone } from './SupportResistanceLayer'
+export { TrendlineLayer, TrendlineDrawing } from './TrendlineDrawing'
+export { FibonacciLayer, FibonacciDrawing } from './FibonacciDrawing'
+export { FVGLayer, FVGDrawing } from './FVGDrawing'
+export { LiquidityLayer, LiquidityDrawing } from './LiquidityDrawing'
+export { ConfluenceLayer, ConfluenceZone } from './ConfluenceZone'
+export { LayerControls } from './LayerControls'
+export { BriefingControls } from './BriefingControls'
+export { DrawingInspector } from './DrawingInspector'
+export { AIAnalysisPanel } from './AIAnalysisPanel'
+export { ReplayControls } from './ReplayControls'
+export { useChartProjection, type ChartProjection } from './chartProjection'
+
+export { useChartIntelligence } from '../../lib/useChartIntelligence'
+export * from '../../lib/chartIntelligence'
+export * from '../../lib/chartIntelligenceBriefing'

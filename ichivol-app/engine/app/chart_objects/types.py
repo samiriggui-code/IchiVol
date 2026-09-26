@@ -47,6 +47,8 @@ class ChartObjectLayer(str, Enum):
     FIBONACCI = "fibonacci"
     FVG = "fvg"
     BREAKS = "breaks"
+    LIQUIDITY = "liquidity"
+    CONFLUENCE = "confluence"
     CLAUDE = "claude"
     USER_TRADES = "user_trades"
     BACKTEST = "backtest"
@@ -83,6 +85,11 @@ class ChartPoint:
 
 def _round_coord(value: float, ndigits: int = 8) -> float:
     return round(float(value), ndigits)
+
+
+def round_chart_coord(value: float, ndigits: int = 8) -> float:
+    """Public rounding used by producers for stable ``lineage_key`` bounds."""
+    return _round_coord(value, ndigits)
 
 
 def _id_payload(

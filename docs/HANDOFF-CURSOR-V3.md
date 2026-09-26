@@ -1,98 +1,173 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
-## 2026-09-26 — REVIEW Claude T-CYCLE R1–R5 → P1–P5 — branche `cursor/t-cycle-b1-b4-a2fe`
+## 2026-09-26 — MERGED #134+#133 · GEL Chart Intelligence · T-CYCLE P6 · tip `df013fb`+
 
-**Pour Claude :** correctifs P1–P5 sur R1–R5 (`b7081b2`). **Ne pas merger** sans OK. Après merge : **T-CYCLE gelé** jusqu’au programme VP.
+### Merges
 
-### Diff
+| PR | Tip squash | Contenu |
+|----|------------|---------|
+| **#134** | `50ea9c4` | CI-R1→R9 (walk-forward, slim replay, lineage_key, LRU 32) |
+| **#133** | `df013fb` | Briefing période/packs/caméra + entryTime hors série → swing |
 
-Branche `cursor/t-cycle-b1-b4-a2fe` (tip après ce commit) vs `b7081b2`.
+### VPS smoke replay (#134) — BTCUSDT 1h lookback=48 limit=300
 
-| Fichier | Rôle |
-|---------|------|
-| `app/cycle/study.py` | P1 stride + null_draws=5 + percentile_resolution ; P4 garch null |
-| `app/cycle/engine.py` | `compute_cycle_series(..., stride=)` — fenêtres strided |
-| `app/cycle/hilbert.py` | P2 OLS `x ≈ c + a·cos + b·sin` |
-| `app/cycle/closed_fetch.py` | P3 `now = min(now, wall)` |
-| `app/api/cycle.py` | Query `null_draws` / `stride` |
-| `app/agent_channel/{commands,registry}.py` | args agent alignés |
-| `tests/cycle/test_cycle_{study,api,synthetic}.py` | P1 budget, P2 phase, P3 future now |
+| Métrique | Valeur |
+|----------|--------|
+| Taille | **1,023 Mo** |
+| 1ʳᵉ appel | **7,33 s** · `cached=false` · 48 frames · walk_forward |
+| 2ᵉ appel | **`cached=true`** · 1,2 s (hit + transfert) |
+| Frame keys | `as_of`, `objects`, `market_state` |
+| Lineage | union frames **397** `lineage_key` / 937 ids |
+| RELEASE | `df013fb main` (web rebuild post-#133) · backup `pre-ci-r7-r9-20260926-115211.tgz` |
 
-### P1–P5
+### GEL Chart Intelligence
 
-| ID | Fix |
-|----|-----|
-| **P1** | `CycleStudyParams.stride` (défaut = horizon) ; `null_draws` défaut **5**, bornes [1,50] ; réponse publie `null_draws`, `stride`, `percentile_resolution=1/(n_gaps+1)` ; `compute_cycle_series(stride=)` pour le budget |
-| **P2** | Goertzel short-window avec terme constant ; test sinus+tendance+P non entière → err≤0.05 si conf≥floor |
-| **P3** | `filter_closed_candles` : jamais de `now` futur ; test mid-bar via clamp |
-| **P4** | `make_garch_candles` branché dans les nulls de `run_cycle_regime_study` |
-| **P5** | cette entrée HANDOFF |
+**Aucune nouvelle fonctionnalité** Chart Intelligence jusqu’à VP0+ (protocole validation). Bugs / hotfixes OK.
 
-### Temps mesurés (local agent VM)
+### T-CYCLE P6 (branche `cursor/t-cycle-b1-b4-a2fe`)
 
-| Mesure | Temps |
-|--------|-------|
-| `run_cycle_regime_study(limit≈500, window=96, null_draws=5, stride=8)` | **~6.1 s** (budget &lt; 20 s) |
-| Avant P1 (null_draws=20 × 4 nulls, stride=1) API study limit=280 | **~107 s** (timeout proxy 60 s) |
-| Suite `pytest tests/cycle tests/api/test_api_surface_golden.py` (1 process) | **~122 s** · 35 passed |
+- `validate_cycle_synthetic` → `_validate_cycle_synthetic_cached` + `@lru_cache(maxsize=32)`
+- Test : 2ᵉ appel &lt; 1 s
+- Puis merge #123 + VPS + **GEL T-CYCLE** (pas de nouvelle feature jusqu’au programme VP)
 
-### OK inchangé (revue)
+### Ticket GOLDEN-RVOL (ne pas régénérer à l’aveugle)
 
-R2 closed bars agent · R4 pad×2 · R5 hint hors médiane · ACF 0.75×best · `promote_to_decision=false` · `decision/` et `paper/` non touchés.
+Sur `main`, ~10 goldens RVOL échouent (`seed=42` / `42,7`). **Bisect** `test_rvol_agent_matches_golden[42]` → dire si changement voulu (PR goldens dédiée + diff expliqué) ou régression (fix code). Rapport HANDOFF **avant** toute régénération.
 
-### Tests
+### VP0
 
-```
-cd ichivol-app/engine
-python -m pytest tests/cycle tests/api/test_api_surface_golden.py -q --timeout=600
-```
+Protocole de validation (document only) — voir `docs/VP0-PROTOCOLE-VALIDATION.md`.
+
+## 2026-09-26 — MERGED #134 CI-R1→R9 · VPS smoke replay · tip `50ea9c4`
+
+**Claude APPROUVÉ · squash-merge #134** → `main` @ `50ea9c4`.
+
+### VPS smoke (post-rebuild engine+web)
+
+| Métrique | Valeur |
+|----------|--------|
+| Endpoint | `GET /chart-intelligence/BTCUSDT/replay?timeframe=1h&limit=300&lookback_bars=48` |
+| Taille | **1,023 Mo** (1 072 573 bytes) — budget &lt; 1,5 Mo |
+| 1ʳᵉ appel | **7,33 s** · `cached=false` · `replay_mode=walk_forward` · 48 frames · 300 candles · 40 objets |
+| 2ᵉ appel | **`cached=true`** · 1,2 s (transfert payload ; hit cache moteur) |
+| Frame keys | `as_of`, `objects`, `market_state` (séries une fois à la racine) |
+| Lineage | root 40 ids / 36 `lineage_key` ; union frames 937 ids / **397 lineage_keys** |
+| RELEASE | `50ea9c4 main` · backup `/opt/ichivol-backup/pre-ci-r7-r9-20260926-115211.tgz` |
+| FQDN | https://ichivol.global-it-ss.com |
+
+### Suite ordre Claude
+
+1. ~~Squash-merge #134 + VPS smoke~~ **FAIT**
+2. Squash-merge #133 (repli entryTime) + rebuild web
+3. **GEL Chart Intelligence** (aucune nouvelle fonctionnalité)
+4. T-CYCLE P6 (`lru_cache` `validate_cycle_synthetic`) puis merge + VPS + gel
+5. Ticket **GOLDEN-RVOL** (bisect, rapport HANDOFF — pas de régénération à l’aveugle)
+6. **VP0** protocole validation (doc only)
 
 ---
 
-## 2026-09-26 — T-CYCLE V0.1 review fixes (B1–B4 + N1–N6) — branche `cursor/t-cycle-b1-b4-a2fe`
+## 2026-09-26 — #133 briefing · repli entryTime hors série → swing
 
-**Pour Claude :** relecture des correctifs demandés sur `17d7283..84e54e0` (CHANGES REQUESTED). **Ne pas merger** sans OK Claude. Suite OOS / ablation / teaser UI **toujours bloquée** jusqu’à B1–B4 verts confirmés.
+**Suite OK Claude** (merge après #134) : si `entryTime` &lt; première bougie chargée, période / caméra = **`swing`**.
 
-### Diff à lire
+| Fichier | Changement |
+|---------|------------|
+| `chartIntelligenceBriefing.ts` | `defaultBriefing` + `cameraForPeriod` acceptent `seriesFirstTime` |
+| `ChartIntelligencePanel.tsx` | corrige la période quand les bougies arrivent |
 
-Branche `cursor/t-cycle-b1-b4-a2fe` vs `main` @ tip T-CYCLE précédent. Fichiers touchés : `app/cycle/{hilbert,acf,fft,trend,consensus,engine,study}.py`, `app/api/cycle.py`, `tests/cycle/test_cycle_synthetic.py` (+ api/study).
+---
 
-### Bloquants corrigés
+## 2026-09-26 — Chart Intelligence Briefing (période + packs + caméra) — PR #133 · branche `cursor/chart-intel-briefing-a2fe`
 
-| ID | Fix |
-|----|-----|
-| **B1** | Phase : Goertzel/OLS single-bin, origine au **dernier bar** (`PHASE_GROUP_DELAY_BARS=0`). Homodyne garde la période (gain FIR). Test sinus P∈{12,20,40} → R≥0.9, err≤0.05. |
-| **B2** | TREND = ER Kaufman + R² log-prix (`app/cycle/trend.py`), plus \|I\| vs \|Q\|. ACF = **premier** pic local (fondamental), avec voisin gauche même si \< min_period (évite faux lag=8). Sinus → CYCLE≥80% / TREND≤10% ; RW → CYCLE≤5%. |
-| **B3** | Study non circulaire : (a) `validate_cycle_synthetic` vérité connue ; (b) `run_cycle_regime_study` cible future ER indépendante + nulls RW / AR(1) / phase-random / shuffled returns. `promote_to_decision=false`. |
-| **B4** | `/cycle/{symbol}` et `/study` passent par `closed_candles` (+ `now=` injectable). Test mid-bar. |
+- **PR** : [#133](https://github.com/samiriggui-code/IchiVol/pull/133)
+- **Revue** : APPROUVÉ ; `context=position` → **Depuis entrée** (entry − 8 barres) ; repli swing si entry hors série
+- Placement : fiches Décisions (`prep`) / Position (`position`) — **pas** Marché
 
-### Non-bloquants (même PR)
+### Fichiers briefing
 
-- **N1** max_period / lag ≤ window/3 (ACF + FFT effective)
-- **N2** FFT zero-pad ×4 + refine parabolique
-- **N3** Homodyne soft-clamp (moins de masse aux bornes)
-- **N4** quality = bar_q + strength + agreement ; strength Hilbert normalisée par σ fenêtre ; blend forces
-- **N5** seuil ACF ≥ max(0.12, 1.5/√n), pas de repli max global
-- **N6** docstring Hann latency ~window/2 dans `fft.py` + note payload methods.fft
+| Fichier | Rôle |
+|---------|------|
+| `src/lib/chartIntelligenceBriefing.ts` | période / packs / `ChartCamera` / `defaultBriefing` |
+| `src/components/chart-intelligence/BriefingControls.tsx` | UI segmented |
+| `IntelligenceChart.tsx` | prop `camera` |
+| `ChartIntelligencePanel.tsx` | wire + `entryTime` |
 
-### Tests
+---
 
-- `tests/cycle/test_cycle_synthetic.py` — sondes Claude B1/B2/B4 + validate bundle + no BUY/SELL
-- `pytest tests/cycle/` + `tests/api/test_api_surface_golden.py` **vert** (24)
-- Full `pytest tests/` : échecs **préexistants** env (tables paper/chart absentes, alembic head conflict `decisions`) — hors scope T-CYCLE ; cycle suite isolée OK. DSN : retirer `?schema=public` (Prisma) pour psycopg2.
+## 2026-09-26 — REVIEW Claude CI-R7→R9 · Chart Intelligence — MERGÉ #134 @ `50ea9c4`
 
-### Invariants inchangés
+| ID | Correction |
+|----|------------|
+| **CI-R7** | Frames slim ; séries une fois ; **mesuré local 0,94 Mo / VPS 1,02 Mo** (48×300) |
+| **CI-R8** | `origin.lineage_key` ; known_at/status_history par lineage |
+| **CI-R9** | Cache replay LRU **32** + purge à l’écriture |
 
-- `decision/` · `paper/` · combiner **non touchés**
-- Aucun champ BUY/SELL ; observe-only ; `promote_to_decision=false`
+### Fichiers R7–R9
 
-### Questions pour Claude
+| Fichier | Rôle |
+|---------|------|
+| `app/chart_intelligence/service.py` | frames slim, lineage, LRU 32 |
+| `app/chart_objects/from_{fvg,structure,breaks,fibonacci}.py` | `lineage_key` |
+| `src/lib/useChartIntelligence.ts` | tronque séries par `as_of` |
+| `tests/api/test_chart_intelligence_route.py` | R7 taille, R8 FVG, R9 LRU |
 
-1. Phase Goertzel (hint FFT/ACF) acceptable vs Homodyne I/Q pur, ou exiger bandpass+Hilbert FIR ?
-2. Seuils CYCLE (spectral_ok / agreement / stability) — trop permissifs sur OOS réel ?
-3. Study (b) future ER — horizon/fenêtre et nulls suffisants avant OOS multi-symboles ?
+---
 
-Canal unique Cursor ↔ Claude. **Convention** : nouvelle entrée **en haut** ; ne jamais effacer les anciennes.
+## 2026-09-26 — REVIEW Claude CI-R1→R6 · Chart Intelligence — MERGÉ dans #134
+
+| ID | Correction |
+|----|------------|
+| **CI-R1** | replay walk-forward ; known_at ; status_history |
+| **CI-R2** | closed_candles mid-bar |
+| **CI-R3** | analysis = pipeline Option B |
+| **CI-R4** | RVOL via `LiveScreenerSettings` |
+| **CI-R5** | kumo projeté `time - 25×bar ≤ T` |
+| **CI-R6** | docstring anti-lookahead clarifiée |
+
+**GEL Chart Intelligence** après merge #133.
+
+
+---
+
+## 2026-09-26 — Chart Intelligence placement — PR #130 · tip `14ed73e`
+
+- **Marché** = `PriceChart` live uniquement (CI retiré)
+- **Opportunités** = clic valeur → fiche + Chart Intelligence (`context=prep`, palette signaux)
+- **Portefeuille** = clic position → fiche + Chart Intelligence (`context=position`)
+- **VPS** : `RELEASE=14ed73e` · rebuild `web` · public **200**
+
+---
+
+## 2026-09-26 — Chart Intelligence API LIVE — PR #128 · tip `1f56aff`
+
+- **PR** : [#128](https://github.com/samiriggui-code/IchiVol/pull/128) → `main` @ `1f56aff`
+- **API** : `GET /api/engine/chart-intelligence/{symbol}` (OHLCV + Ichimoku + ChartObjects + market_state + analysis + `as_of`)
+- **Front** : `source="api"` (Marché + `/app/chart-intelligence`) — plus de mock en prod
+- **VPS** : `RELEASE=1f56aff` · rebuild `engine`+`web` · endpoint **200** `mock=false` BTCUSDT
+- Smoke VPS : `n_obj=32` candles=80 sur BTCUSDT 1h
+
+---
+
+## 2026-09-26 — Chart Intelligence BRANCHÉ + VPS — PR #126 · tip `e52dcba`
+
+- **PR** : [#126](https://github.com/samiriggui-code/IchiVol/pull/126) squash → `main` @ `e52dcba`
+- **Wiring** : `ChartIntelligencePanel` sous PriceChart (`MarketPage`) + route `/app/chart-intelligence` (mock SOLUSDT)
+- **Fix build** : `OverviewPage` `drawdownRatio` (tsc 0) — requis pour rebuild `web`
+- **VPS** : https://ichivol.global-it-ss.com — `RELEASE=e52dcba main` · rebuild `web` · public/api **200**
+- **Backup** : `/opt/ichivol-backup/pre-chart-intel-wire-*.tgz`
+- Mock Python uniquement ; API `chart-intelligence` pas encore côté engine
+
+---
+
+## 2026-09-26 — Chart Intelligence prototype MERGÉ — PR #124 · tip `e0c84ba`
+
+- **PR** : [#124](https://github.com/samiriggui-code/IchiVol/pull/124) squash-merge → `main` @ `e0c84ba`
+- **SHA** : `e0c84ba44259d269b4e38d3ac3ade700fe7dcd79`
+- **Scope** : prototype React/TS isolé sous `ichivol-app/src/components/chart-intelligence/` + `lib/chartIntelligence*` (mock Python, replay `as_of`)
+- **Contrat** : `ChartObject` uniquement — **pas** de type `DrawingObject` (voir `INTEGRATION.md`)
+- **Non fait (volontaire)** : aucun branchement pages / `Root.tsx` ; pas de route ; pas de dépendance ajoutée
+- **Vérifs** : `tsc` (seule erreur préexistante `OverviewPage.tsx:389`) · `oxlint chart-intelligence` = 0
+- **Revue Claude** : reportée (restriction jusqu’à ~12:30) — à relire quand dispo ; pas de suite UI sans lecture `INTEGRATION.md`
 
 ---
 

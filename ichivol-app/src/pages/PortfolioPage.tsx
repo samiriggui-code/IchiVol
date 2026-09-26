@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PaperCloseConfirmSheet } from '../components/PaperCloseConfirmSheet'
+import { ChartIntelligencePanel } from '../components/chart-intelligence'
 import {
   concentrationFromPositions,
   drawdownFromCurve,
@@ -702,6 +703,16 @@ export function PortfolioPage() {
               {fmtPx(fiche.entry_price)}.
               {fiche.entry_decision ? ` Signal : ${fiche.entry_decision}.` : ''}
             </p>
+            <div className="ci-embed">
+              <ChartIntelligencePanel
+                symbol={fiche.symbol}
+                timeframe={String(fiche.timeframe || '1h')}
+                source="api"
+                variant="brief"
+                context="position"
+                entryTime={fiche.entry_time}
+              />
+            </div>
             <div className="statline">
               <span>Quantité</span>
               <b>{fiche.qty != null ? fmtPx(fiche.qty) : '—'}</b>

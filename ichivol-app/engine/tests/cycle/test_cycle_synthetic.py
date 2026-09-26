@@ -120,6 +120,24 @@ def test_validate_cycle_synthetic_bundle_ok():
     assert "random_walk" in report
 
 
+def test_p6_validate_cycle_synthetic_cache_second_call_fast():
+    """P6 — lru_cache: 2ᵉ appel < 1 s (warm hit)."""
+    import time
+
+    from app.cycle.study import clear_validate_cycle_synthetic_cache
+
+    clear_validate_cycle_synthetic_cache()
+    t0 = time.perf_counter()
+    a = validate_cycle_synthetic(window=128)
+    t1 = time.perf_counter()
+    b = validate_cycle_synthetic(window=128)
+    t2 = time.perf_counter()
+    assert a["ok"] is True and b["ok"] is True
+    assert a == b
+    second = t2 - t1
+    assert second < 1.0, f"2nd call {second:.3f}s — expected cache hit < 1s (1st={t1 - t0:.3f}s)"
+
+
 def test_no_buy_sell_fields_after_fix():
     state = compute_cycle_state(make_sine_candles(200, 20.0), CycleParams(window=96))
     d = state.to_dict()

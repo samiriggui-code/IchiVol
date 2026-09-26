@@ -16,6 +16,7 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Sequence
 
 from app.cycle.acf import estimate_acf
@@ -256,12 +257,12 @@ def shuffled_return_candles(candles: Sequence[Candle], *, seed: int) -> list[Can
     return out
 
 
-def validate_cycle_synthetic(
-    *,
-    window: int = 128,
-    periods: Sequence[float] = (12.0, 20.0, 40.0),
+@lru_cache(maxsize=32)
+def _validate_cycle_synthetic_cached(
+    window: int,
+    periods: tuple[float, ...],
 ) -> dict:
-    """(a) Estimation validation on known sines + RW false-positive rates."""
+    """Cached body for ``validate_cycle_synthetic`` (P6 — 2ᵉ appel ≪ 1 s)."""
     params = CycleParams(window=window, min_period=8.0, max_period=min(80.0, window / 3.0))
     sine_rows: list[dict] = []
     for period in periods:
@@ -368,6 +369,24 @@ def validate_cycle_synthetic(
             "rw_cycle_max": 0.05,
         },
     }
+
+
+def validate_cycle_synthetic(
+    *,
+    window: int = 128,
+    periods: Sequence[float] = (12.0, 20.0, 40.0),
+) -> dict:
+    """(a) Estimation validation on known sines + RW false-positive rates.
+
+    P6 — result is ``lru_cache``'d (window + periods tuple); 2ᵉ appel ≪ 1 s.
+    """
+    key_periods = tuple(float(p) for p in periods)
+    return _validate_cycle_synthetic_cached(int(window), key_periods)
+
+
+def clear_validate_cycle_synthetic_cache() -> None:
+    """Test helper — drop P6 cache between suites."""
+    _validate_cycle_synthetic_cached.cache_clear()
 
 
 def _future_efficiency(closes_px: Sequence[float], i: int, horizon: int) -> float | None:

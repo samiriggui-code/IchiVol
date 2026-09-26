@@ -1607,6 +1607,278 @@
         ]
       }
     },
+    "/api/engine/chart-intelligence/{symbol}": {
+      "get": {
+        "description": "Live Chart Intelligence snapshot for the React panel (not mock).",
+        "operationId": "get_chart_intelligence_api_engine_chart_intelligence__symbol__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 300,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Unix seconds \u2014 recompute on candles with time <= as_of",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Unix seconds \u2014 recompute on candles with time <= as_of",
+              "title": "As Of"
+            }
+          },
+          {
+            "description": "Comma-separated ChartObjectSource values",
+            "in": "query",
+            "name": "sources",
+            "required": false,
+            "schema": {
+              "default": "engine,user,claude",
+              "description": "Comma-separated ChartObjectSource values",
+              "title": "Sources",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_pytrendline",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Pytrendline",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Twelve-Data-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Twelve-Data-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Chart Intelligence Api Engine Chart Intelligence  Symbol  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Chart Intelligence",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/chart-intelligence/{symbol}/replay": {
+      "get": {
+        "description": "Walk-forward replay pack (CI-R1a) \u2014 objects recalculated bar-by-bar.",
+        "operationId": "get_chart_intelligence_replay_api_engine_chart_intelligence__symbol__replay_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 300,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lookback_bars",
+            "required": false,
+            "schema": {
+              "default": 48,
+              "maximum": 120,
+              "minimum": 2,
+              "title": "Lookback Bars",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Comma-separated ChartObjectSource values",
+            "in": "query",
+            "name": "sources",
+            "required": false,
+            "schema": {
+              "default": "engine",
+              "description": "Comma-separated ChartObjectSource values",
+              "title": "Sources",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_pytrendline",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Pytrendline",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Twelve-Data-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Twelve-Data-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Chart Intelligence Replay Api Engine Chart Intelligence  Symbol  Replay Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Chart Intelligence Replay",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
     "/api/engine/chart-objects/item/{object_id}": {
       "delete": {
         "description": "Soft-delete a USER chart overlay. Does not delete CLAUDE/ENGINE objects.",

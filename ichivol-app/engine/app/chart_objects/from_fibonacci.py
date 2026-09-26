@@ -44,6 +44,11 @@ def fibonacci_to_chart_objects(
     if ctx.known_bar is not None and 0 <= ctx.known_bar < len(candles):
         t = int(candles[ctx.known_bar].time)
     sym = symbol.upper()
+    # CI-R8: Fib lineage = group_id (shared by all levels of the same anchor).
+    group_id = (
+        f"fib:{ctx.impulse}:{ctx.anchor_source}:{ctx.start_bar}:{ctx.end_bar}:"
+        f"{ctx.swing_low}:{ctx.swing_high}"
+    )
     key_set = {round(r, 4) for r in DEFAULT_KEY_RATIOS}
     out: list[ChartObject] = []
     for lv in ctx.levels:
@@ -73,6 +78,8 @@ def fibonacci_to_chart_objects(
                     "displacement_atr": ctx.displacement_atr,
                     "swing_low": ctx.swing_low,
                     "swing_high": ctx.swing_high,
+                    "group_id": group_id,
+                    "lineage_key": group_id,
                 },
             )
         )
