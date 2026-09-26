@@ -1,0 +1,671 @@
+/**
+ * Chart Intelligence — styles SCOPÉS (.ci-root / .ci-*). Aucun sélecteur global.
+ * Valeurs reprises de la maquette ichivol-workspace (cf. MarketPage.css,
+ * MarketLayersMenu.css) : Manrope / DM Mono / Newsreader, cartes 12px, tags 4px.
+ * Couleurs de marché : tokens globaux --bull / --bear / --kijun (camap-tokens.css).
+ * Mode sombre : même règle que maquette-theme.css (chaque sélecteur préfixé html.dark).
+ */
+
+.ci-root {
+  --ci-bg: #faf8f5;
+  --ci-card: #fefdfb;
+  --ci-line: #e5e1db;
+  --ci-ink: #202b36;
+  --ci-muted: #7d8288;
+  --ci-soft: #f3f2ef;
+  --ci-blue: #1a7df5;
+  --ci-blue-soft: #eef4fc;
+  --ci-green: #0b8f83;
+  --ci-red: #c8412f;
+  --ci-amber: #a76c17;
+  --ci-fib: #7f86a6;
+  --ci-chip-bg: rgba(254, 253, 251, 0.92);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: start;
+  color: var(--ci-ink);
+  font: 14px Manrope, Arial, sans-serif;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.ci-root *,
+.ci-root *::before,
+.ci-root *::after {
+  box-sizing: border-box;
+}
+
+html.dark .ci-root {
+  --ci-bg: #12151a;
+  --ci-card: #1a1e26;
+  --ci-line: #333944;
+  --ci-ink: #f1eee6;
+  --ci-muted: #a0a8b5;
+  --ci-soft: #22262f;
+  --ci-blue: #4b9bf7;
+  --ci-blue-soft: #1a2433;
+  --ci-green: #3aa99a;
+  --ci-red: #d48478;
+  --ci-amber: #e8b86d;
+  --ci-fib: #a7adc8;
+  --ci-chip-bg: rgba(26, 30, 38, 0.92);
+}
+
+.ci-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* ---------- Cartes (même gabarit que .market-page .card) ---------- */
+
+.ci-card {
+  border: 1px solid var(--ci-line);
+  border-radius: 12px;
+  background: var(--ci-card);
+  overflow: hidden;
+  min-width: 0;
+  padding-bottom: 14px;
+}
+
+.ci-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 18px 20px 12px;
+}
+
+.ci-card h2 {
+  font: 23px Newsreader, Georgia, serif;
+  margin: 0;
+  color: var(--ci-ink);
+}
+
+.ci-card h3 {
+  font: 18px Newsreader, Georgia, serif;
+  margin: 4px 0 0;
+  color: var(--ci-ink);
+}
+
+.ci-sub {
+  font: 12px Manrope, sans-serif;
+  color: var(--ci-muted);
+}
+
+.ci-eyebrow {
+  font: 10px 'DM Mono', ui-monospace, monospace;
+  letter-spacing: 1.4px;
+  color: var(--ci-muted);
+  text-transform: uppercase;
+}
+
+.ci-muted {
+  color: var(--ci-muted);
+  font-size: 12px;
+  margin: 0 20px;
+  line-height: 1.6;
+}
+
+.ci-root .mono {
+  font-family: 'DM Mono', ui-monospace, monospace;
+}
+
+.ci-notice {
+  margin: 0 20px 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #faf0df;
+  color: #a8782a;
+  font-size: 12px;
+}
+
+.ci-foot {
+  margin-top: 10px;
+  font-size: 11px;
+}
+
+.ci-layers {
+  padding: 0 12px;
+}
+
+/* ---------- Tags (valeurs .market-page .tag) ---------- */
+
+.ci-tag {
+  display: inline-block;
+  font: 10px 'DM Mono', ui-monospace, monospace;
+  padding: 5px 7px;
+  background: #edf3fa;
+  border-radius: 4px;
+  color: #3978bb;
+  white-space: nowrap;
+}
+
+.ci-tag.green {
+  background: #e7f3ee;
+  color: #168579;
+}
+
+.ci-tag.amber {
+  background: #faf0df;
+  color: #a8782a;
+}
+
+.ci-tag.red {
+  background: #f9eae6;
+  color: #b35346;
+}
+
+.ci-tag.gray {
+  background: #f0efeb;
+  color: #888b89;
+}
+
+.ci-tag-lg {
+  font-size: 13px;
+  padding: 7px 10px;
+  letter-spacing: 1px;
+}
+
+.ci-ml {
+  margin-left: 6px;
+}
+
+html.dark .ci-root .ci-tag {
+  background: #1a2433;
+  color: #8eb0d8;
+}
+
+html.dark .ci-root .ci-tag.green {
+  background: #16302c;
+  color: #3aa99a;
+}
+
+html.dark .ci-root .ci-tag.amber {
+  background: #2a2418;
+  color: #e8b86d;
+}
+
+html.dark .ci-root .ci-tag.red {
+  background: #33201d;
+  color: #d48478;
+}
+
+html.dark .ci-root .ci-tag.gray {
+  background: #22262f;
+  color: #a0a8b5;
+}
+
+/* ---------- Graphique + surface SVG ---------- */
+
+.ci-chart {
+  position: relative;
+  width: 100%;
+  border-top: 1px solid var(--ci-line);
+  border-bottom: 1px solid var(--ci-line);
+}
+
+.ci-chart-host {
+  position: absolute;
+  inset: 0;
+}
+
+.ci-chart-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.ci-drawing-svg {
+  display: block;
+  overflow: visible;
+  pointer-events: none;
+  font: 10px 'DM Mono', ui-monospace, monospace;
+}
+
+.ci-drawing-svg .ci-hit {
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.ci-drawing-svg .ci-hit-stroke {
+  stroke: transparent;
+  stroke-width: 10;
+  fill: none;
+}
+
+.ci-hatch-line {
+  stroke: var(--ci-blue);
+  stroke-width: 1;
+  opacity: 0.35;
+}
+
+/* Tons */
+.ci-drawing-svg .ci-tone-bull {
+  --ci-tone: var(--bull, #318d80);
+}
+.ci-drawing-svg .ci-tone-bear {
+  --ci-tone: var(--bear, #bf6c61);
+}
+.ci-drawing-svg .ci-tone-fib,
+.ci-drawing-svg .ci-fib {
+  --ci-tone: var(--ci-fib);
+}
+.ci-drawing-svg .ci-tone-conf,
+.ci-drawing-svg .ci-conf {
+  --ci-tone: var(--ci-blue);
+}
+.ci-drawing-svg .ci-tone-liq,
+.ci-drawing-svg .ci-liq {
+  --ci-tone: var(--ci-amber);
+}
+.ci-drawing-svg .ci-tone-muted {
+  --ci-tone: var(--ci-muted);
+}
+
+/* Chips */
+.ci-chip rect {
+  fill: var(--ci-chip-bg);
+  stroke: var(--ci-tone, var(--ci-line));
+  stroke-width: 0.8;
+}
+.ci-chip text {
+  fill: var(--ci-tone, var(--ci-ink));
+  font: 10px 'DM Mono', ui-monospace, monospace;
+  letter-spacing: 0.2px;
+}
+.ci-chip.is-strong rect {
+  stroke-width: 1.4;
+}
+
+/* Zones S/R */
+.ci-sr .ci-zone-fill {
+  fill: var(--ci-tone);
+  fill-opacity: 0.1;
+}
+.ci-sr .ci-zone-edge {
+  stroke: var(--ci-tone);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  opacity: 0.8;
+}
+.ci-sr.is-htf .ci-zone-fill {
+  fill-opacity: 0.06;
+}
+.ci-sr.is-htf .ci-zone-edge {
+  stroke-dasharray: 1 3;
+}
+
+/* Trendline */
+.ci-trend-line {
+  stroke: var(--ci-tone);
+  stroke-width: 1.4;
+  fill: none;
+}
+.ci-anchor {
+  fill: var(--ci-card);
+  stroke: var(--ci-tone, var(--ci-ink));
+  stroke-width: 1.5;
+}
+
+/* Fibonacci */
+.ci-fib-line {
+  stroke: var(--ci-tone);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  opacity: 0.85;
+}
+.ci-fib-level.is-key .ci-fib-line {
+  stroke-dasharray: none;
+  opacity: 1;
+}
+.ci-fib-text {
+  fill: var(--ci-tone);
+  font: 10px 'DM Mono', ui-monospace, monospace;
+}
+.ci-fib-diag {
+  stroke: var(--ci-tone);
+  stroke-width: 1;
+  stroke-dasharray: 5 4;
+  opacity: 0.7;
+}
+
+/* FVG */
+.ci-fvg-rect {
+  fill: var(--ci-tone);
+  fill-opacity: 0.16;
+  stroke: var(--ci-tone);
+  stroke-width: 0.8;
+  stroke-opacity: 0.6;
+}
+.ci-fvg.is-partial .ci-fvg-rect {
+  fill-opacity: 0.1;
+  stroke-dasharray: 4 3;
+}
+.ci-fvg.is-filled .ci-fvg-rect,
+.ci-fvg.is-invalidated .ci-fvg-rect {
+  fill-opacity: 0.04;
+  stroke-dasharray: 1 3;
+}
+.ci-fvg.is-filled .ci-chip,
+.ci-fvg.is-invalidated .ci-chip {
+  opacity: 0.65;
+}
+
+/* Structure */
+.ci-swing-dot {
+  fill: var(--ci-tone);
+}
+.ci-swing-text {
+  fill: var(--ci-tone);
+  font: 700 10px 'DM Mono', ui-monospace, monospace;
+  letter-spacing: 0.6px;
+}
+.ci-event-line {
+  stroke: var(--ci-tone);
+  stroke-width: 1.2;
+  stroke-dasharray: 6 3;
+}
+.ci-event.is-internal .ci-event-line {
+  stroke-dasharray: 2 3;
+  opacity: 0.8;
+}
+
+/* Liquidité */
+.ci-liq-line {
+  stroke: var(--ci-tone);
+  stroke-width: 1.2;
+  stroke-dasharray: 1 3;
+  stroke-linecap: round;
+}
+.ci-liq-sweep {
+  fill: none;
+  stroke: var(--ci-tone);
+  stroke-width: 1.5;
+}
+.ci-liq.is-swept .ci-chip {
+  opacity: 0.75;
+}
+
+/* Confluence */
+.ci-conf-rect {
+  fill: var(--ci-tone);
+  fill-opacity: 0.08;
+  stroke: var(--ci-tone);
+  stroke-width: 1.2;
+}
+.ci-conf-hatch {
+  fill: url(#ci-hatch);
+  pointer-events: none;
+}
+
+/* Sélection */
+.ci-drawing-svg .is-selected .ci-zone-fill,
+.ci-drawing-svg .is-selected .ci-fvg-rect,
+.ci-drawing-svg .is-selected .ci-conf-rect {
+  stroke: var(--ci-tone);
+  stroke-width: 2;
+  stroke-dasharray: none;
+  stroke-opacity: 1;
+}
+.ci-drawing-svg .is-selected .ci-trend-line,
+.ci-drawing-svg .is-selected .ci-fib-line,
+.ci-drawing-svg .is-selected .ci-event-line,
+.ci-drawing-svg .is-selected .ci-liq-line {
+  stroke-width: 2.2;
+  opacity: 1;
+  filter: drop-shadow(0 0 2px var(--ci-tone));
+}
+.ci-drawing-svg .is-selected .ci-swing-text {
+  text-decoration: underline;
+}
+
+/* ---------- Replay ---------- */
+
+.ci-replay {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ci-replay-btns {
+  display: flex;
+  gap: 3px;
+  background: var(--ci-soft);
+  padding: 3px;
+  border-radius: 6px;
+}
+
+.ci-replay-btns button,
+.ci-replay-live,
+.ci-icon-btn {
+  border: none;
+  background: transparent;
+  font: 11px 'DM Mono', ui-monospace, monospace;
+  letter-spacing: 0.6px;
+  padding: 6px 9px;
+  color: var(--ci-muted);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.ci-replay-btns button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ci-replay-btns .ci-replay-play {
+  background: var(--ci-card);
+  color: var(--ci-ink);
+  box-shadow: 0 1px 3px #0001;
+  min-width: 58px;
+}
+
+.ci-replay-btns .ci-replay-play.is-on {
+  color: var(--ci-blue);
+}
+
+.ci-replay-range {
+  width: 160px;
+  accent-color: var(--ci-blue);
+}
+
+.ci-replay-meta {
+  font-size: 11px;
+  color: var(--ci-muted);
+}
+
+.ci-replay-live {
+  border: 1px solid var(--ci-blue);
+  color: var(--ci-blue);
+  background: var(--ci-blue-soft);
+}
+
+/* ---------- Inspecteur / analyse ---------- */
+
+.ci-icon-btn {
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 8px;
+}
+
+.ci-kvs {
+  padding: 0 20px;
+}
+
+.ci-kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--ci-line);
+  font-size: 12px;
+}
+
+.ci-kv > span {
+  font: 10px 'DM Mono', ui-monospace, monospace;
+  letter-spacing: 1px;
+  color: var(--ci-muted);
+}
+
+.ci-kv > b {
+  font-weight: 600;
+  text-align: right;
+}
+
+.ci-block {
+  padding: 12px 20px 0;
+}
+
+.ci-why,
+.ci-summary {
+  font-size: 13px;
+  line-height: 1.65;
+  margin: 6px 0 0;
+  color: var(--ci-ink);
+}
+
+.ci-summary {
+  padding: 0 20px;
+}
+
+.ci-decision-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ci-id {
+  margin: 12px 20px 0;
+  font-size: 10px;
+  color: var(--ci-muted);
+  word-break: break-all;
+}
+
+.ci-components,
+.ci-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+
+.ci-components li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--ci-line);
+  font-size: 12px;
+}
+
+.ci-components li em {
+  grid-column: 1 / -1;
+  font: normal 9px 'DM Mono', ui-monospace, monospace;
+  color: var(--ci-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.ci-components li.is-off {
+  color: var(--ci-muted);
+}
+
+.ci-list li {
+  font-size: 13px;
+  padding: 3px 0 3px 14px;
+  position: relative;
+}
+
+.ci-list li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 11px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--ci-blue);
+}
+
+.ci-state-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 0 20px 10px;
+}
+
+.ci-decision {
+  margin: 14px 20px 0;
+  padding: 12px 14px;
+  border-left: 2px solid #c7dfd9;
+  background: var(--ci-soft);
+  border-radius: 0 8px 8px 0;
+}
+
+.ci-decision-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.ci-decision-state .ci-muted {
+  margin: 0;
+}
+
+.ci-waiting {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--ci-muted);
+}
+
+.ci-waiting b {
+  color: var(--ci-ink);
+  font-size: 12px;
+}
+
+/* ---------- Responsive (mobile : empilé) ---------- */
+
+@media (max-width: 1100px) {
+  .ci-root {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .ci-card-head {
+    padding: 14px 14px 10px;
+  }
+  .ci-replay-range {
+    width: 100%;
+    order: 3;
+  }
+  .ci-replay {
+    width: 100%;
+  }
+}
+
+/* Gouttière droite : traits de rappel vers les étiquettes */
+.ci-leader {
+  fill: none;
+  stroke: var(--ci-tone, var(--ci-muted));
+  stroke-width: 0.8;
+  opacity: 0.55;
+}
+
+.ci-meta {
+  font: 10px 'DM Mono', ui-monospace, monospace;
+  color: var(--ci-muted);
+}
