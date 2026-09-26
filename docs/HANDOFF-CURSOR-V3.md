@@ -11,21 +11,21 @@
 | #144 AG0 | `c3d9a3c` | Hygiène agent |
 | #145 filtre | `7741c92` | outcomes exclut pré-AG0 sans entry_source |
 
-### VP1 — [#146](https://github.com/samiriggui-code/IchiVol/pull/146) `cursor/vp1-data-manifest-a2fe`
+### VP1 — MERGED [#146](https://github.com/samiriggui-code/IchiVol/pull/146) → `main` @ `89e950a`
 
 - Package `engine/vp1/` : Vision download + CHECKSUM + manifest + frozen loader.
 - **Spot** : 648 monthly zips · series 1h **37973** / 4h **9498** / 1d **1583** / symbole.
 - **Funding** : 216 monthly zips OK (BTC/ETH/SOL).
 - OI daily metrics = optionnel / gros volume (B4+) — resume-friendly.
-- `vp1/data/` gitignored. Undraft/merge #146 quand CI vert.
+- `vp1/data/` gitignored.
 
-### VP2 (en cours) — `cursor/vp2-harness-a2fe`
+### VP2 (draft) — [#147](https://github.com/samiriggui-code/IchiVol/pull/147) `cursor/vp2-harness-a2fe`
 
 - `research_lab/sim.py` : `exit_mode=levels_only`, `time_stop_bars`, `full_cash`, `force_flat_at_end`.
 - Package `engine/vp2/` : Rules §6/§1ter, loader VP1→feed, run metadata (seed, sha256, protocol, cost base|adverse).
 - Tests `tests/vp2/` — pas d’entrées B* (VP3). Smoke : `python -m vp2 smoke`.
 
-Claude review au retour (≥17h30). File : undraft VP1 → merge → VP2 draft.
+Claude review au retour (≥17h30). File suivant : undraft/merge VP2 → VP3 (B0–B8).
 
 ---
 
