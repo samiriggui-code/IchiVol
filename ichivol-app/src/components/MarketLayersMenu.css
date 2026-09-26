@@ -20,9 +20,9 @@
   font: 11px 'DM Mono', ui-monospace, monospace;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  border: 1px solid #1a7df5;
-  background: #eef4fc;
-  color: #1a7df5;
+  border: 1px solid var(--blue, #1a7df5);
+  background: var(--blue-soft, #eef4fc);
+  color: var(--blue, #1a7df5);
   font-weight: 700;
   padding: 7px 11px;
 }
@@ -33,7 +33,7 @@
 .mkt-layers-btn-head.is-open {
   border-color: #096cde;
   color: #fff;
-  background: #1a7df5;
+  background: var(--blue, #1a7df5);
 }
 
 .mkt-layers-quick {
@@ -47,7 +47,7 @@
 
 .mkt-layers-quick button {
   border: 1px solid var(--line, #e5e1db);
-  background: #f3f2ef;
+  background: var(--soft, #f3f2ef);
   border-radius: 6px;
   padding: 5px 8px;
   font-size: 11px;
@@ -56,9 +56,9 @@
 }
 
 .mkt-layers-quick button:hover {
-  border-color: #1a7df5;
-  color: #1a7df5;
-  background: #eef4fc;
+  border-color: var(--blue, #1a7df5);
+  color: var(--blue, #1a7df5);
+  background: var(--blue-soft, #eef4fc);
 }
 
 .mkt-layers-panel.is-menu {
@@ -97,7 +97,7 @@
 }
 
 .mkt-layer-row:hover {
-  background: #f3f2ef;
+  background: var(--soft, #f3f2ef);
 }
 
 .mkt-layer-row.is-on .mkt-layer-eye {
@@ -214,4 +214,40 @@
 
 .mono {
   font-family: 'DM Mono', ui-monospace, monospace;
+}
+
+/*
+ * Fallbacks dark quand le parent ne définit pas --soft / --blue-soft
+ * (ex. LayerControls sous .ci-root). Préfixe html.dark obligatoire.
+ */
+html.dark .mkt-layers-btn-head {
+  background: var(--blue-soft, #1a2433);
+  border-color: var(--blue, #4b9bf7);
+  color: var(--blue, #4b9bf7);
+}
+
+html.dark .mkt-layers-btn-head:hover,
+html.dark .mkt-layers-btn-head.is-open {
+  background: var(--blue, #4b9bf7);
+  border-color: var(--blue, #4b9bf7);
+  color: #fff;
+}
+
+html.dark .mkt-layers-quick button {
+  background: var(--soft, #22262f);
+}
+
+html.dark .mkt-layers-quick button:hover {
+  background: var(--blue-soft, #1a2433);
+  border-color: var(--blue, #4b9bf7);
+  color: var(--blue, #4b9bf7);
+}
+
+html.dark .mkt-layer-row:hover {
+  background: var(--soft, #22262f);
+}
+
+html.dark .mkt-layers-panel.is-menu,
+html.dark .mkt-layers-panel.is-sheet {
+  box-shadow: 0 12px 32px #0008;
 }
