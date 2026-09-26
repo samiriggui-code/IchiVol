@@ -158,8 +158,26 @@ def compute_cycle_state(
     candles: Sequence[Candle],
     params: CycleParams | None = None,
 ) -> CycleState:
-    """CycleState at the last candle only (API helper)."""
+    """CycleState at the last candle only (API / agent helper).
+
+    Does **not** recompute the full series (that path is O(n) windows and
+    is reserved for ``compute_cycle_series`` / Lab walk-forward). Builds a
+    short causal period history over the last ``stability_lookback`` bars
+    only — same values at T as the full series for fields that depend on
+    the final window + that short history.
+    """
+    p = params or CycleParams()
     if not candles:
         return _empty_state(0)
-    series = compute_cycle_series(candles, params)
-    return series[-1]
+    n = len(candles)
+    min_bars = max(32, int(p.min_period) * 3)
+    if n < min_bars:
+        return _empty_state(int(candles[-1].time))
+
+    period_history: list[float | None] = []
+    start_i = max(min_bars - 1, n - p.stability_lookback)
+    state = _empty_state(int(candles[-1].time))
+    for i in range(start_i, n):
+        w0 = max(0, i + 1 - p.window)
+        state = _state_at_window(candles[w0 : i + 1], params=p, period_history=period_history)
+    return state

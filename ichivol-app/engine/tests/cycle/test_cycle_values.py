@@ -43,3 +43,19 @@ def test_cycle_state_has_no_trade_fields():
     for forbidden in ("buy", "sell", "long", "short", "probability_win"):
         assert forbidden not in d
     assert d["regime"] in {"TREND", "CYCLE", "TRANSITION", "NOISE"}
+
+
+def test_compute_cycle_state_matches_series_tail():
+    """API fast path must match full-series last bar (causal + short stability hist)."""
+    from app.cycle.engine import compute_cycle_state
+
+    candles = _sine_candles(180, period=20.0)
+    params = CycleParams(window=96, stability_lookback=16)
+    full = compute_cycle_series(candles, params)[-1]
+    fast = compute_cycle_state(candles, params)
+    assert fast.time == full.time
+    assert fast.dominant_period_candles == full.dominant_period_candles
+    assert fast.phase == full.phase
+    assert abs(fast.quality - full.quality) < 1e-12
+    assert fast.regime == full.regime
+    assert fast.methods_agreement == full.methods_agreement

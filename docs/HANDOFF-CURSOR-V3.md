@@ -1,5 +1,11 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — T-CYCLE V0.1 perf API (last-window)
+
+- Benchmark synthétique : ~5–7 s/symbole car `compute_cycle_state` rejouait toute la série
+- Fix : API/agent = dernières `stability_lookback` fenêtres seulement ; Lab `compute_cycle_series` inchangé
+- Screener multi-symboles **toujours hors scope** tant que budget CPU non prouvé
+
 ## 2026-09-26 — T-CYCLE V0 livré (observe-only) — tip à jour sur `main`
 
 - **Audit** : [`docs/CYCLE_ENGINE_AUDIT.md`](./CYCLE_ENGINE_AUDIT.md)

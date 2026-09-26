@@ -260,15 +260,21 @@ Si V0 ne bat pas ces baselines OOS → **ne pas** intégrer au moteur de décisi
 
 ---
 
-## 18. Benchmark performance (à remplir)
+## 18. Benchmark performance (mesuré 2026-09-26)
 
-| Charge | Cible V0 | Mesure |
-|--------|----------|--------|
-| 1 symbole × 1 TF × 300 bars | < 50 ms CPU | test/benchmark |
-| 40 symboles | budget screener | demain |
-| 100 symboles | décider live vs Lab | demain |
+Synthetic sine, `window=128`, `bars=300`, avant optimisation API :
 
-Hypothèse : FFT/Hilbert/ACF → candidats live ; EMD → Lab. **À vérifier.**
+| Charge | ms / symbole (mean) | Note |
+|--------|---------------------|------|
+| 1 | ~5400 | `compute_cycle_state` recalculait toute la série |
+| 40 | ~7500 | Inutilisable en screener live |
+| 100 | ~7600 | Idem |
+
+**Correctif V0.1** : `compute_cycle_state` ne calcule que les `stability_lookback` dernières fenêtres (API/agent). `compute_cycle_series` reste pour Lab walk-forward (volontairement plus cher).
+
+**Re-mesure après fix (même machine, synthétique)** : ~620 ms / symbole (1) · ~730 ms / symbole (×10) — ~9× plus rapide. Acceptable pour appel à la demande ; screener 40–100 toujours hors scope.
+
+Hypothèse : FFT/Hilbert/ACF → candidats live **après** perf ; EMD → Lab. **À vérifier.**
 
 ---
 
