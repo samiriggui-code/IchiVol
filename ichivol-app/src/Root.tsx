@@ -45,7 +45,13 @@ export function Root() {
               path="chart-intelligence"
               element={
                 <div className="market-page">
-                  <ChartIntelligencePanel symbol="SOLUSDT" timeframe="1h" source="api" />
+                  <ChartIntelligencePanel
+                    symbol="SOLUSDT"
+                    timeframe="1h"
+                    source="api"
+                    variant="full"
+                    context="explore"
+                  />
                 </div>
               }
             />

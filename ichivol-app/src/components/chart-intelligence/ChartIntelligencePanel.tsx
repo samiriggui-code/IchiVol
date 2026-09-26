@@ -1,9 +1,8 @@
 /**
- * ChartIntelligencePanel — assemblage prêt à monter dans une page existante
- * (ex. MarketPage, sous le PriceChart, ou dans un onglet). Pas de route, pas de
- * navigation, pas de page : un bloc `.card` au format maquette.
+ * ChartIntelligencePanel — assemblage pour fiches Décisions / Position
+ * (symbole sélectionné). Le graphique live Marché reste PriceChart.
  *
- * Toutes les pièces restent utilisables séparément (voir index.ts).
+ * variant brief = densifié pour dialogues ; full = page / route preview.
  */
 
 import { useChartIntelligence, type ChartIntelligenceSource } from '../../lib/useChartIntelligence'
@@ -22,23 +21,45 @@ import { SupportResistanceLayer } from './SupportResistanceLayer'
 import { TrendlineLayer } from './TrendlineDrawing'
 import './ChartIntelligence.css'
 
+type Variant = 'full' | 'brief'
+type Context = 'prep' | 'position' | 'explore'
+
 interface Props {
   symbol: string
   timeframe: string
   source?: ChartIntelligenceSource
   chartHeight?: number
+  /** brief = fiche dialog (Décisions / Position) ; full = route preview */
+  variant?: Variant
+  /** Libellé d’eyebrow selon le contexte d’usage */
+  context?: Context
 }
 
-export function ChartIntelligencePanel({ symbol, timeframe, source = 'api', chartHeight = 540 }: Props) {
+const CONTEXT_EYEBROW: Record<Context, string> = {
+  prep: 'BRIEFING TRADE · CHART INTELLIGENCE',
+  position: 'POSITION · CHART INTELLIGENCE',
+  explore: 'CHART INTELLIGENCE',
+}
+
+export function ChartIntelligencePanel({
+  symbol,
+  timeframe,
+  source = 'api',
+  chartHeight,
+  variant = 'full',
+  context = 'explore',
+}: Props) {
   const ci = useChartIntelligence({ symbol, timeframe, source })
   const res = ci.response
+  const height = chartHeight ?? (variant === 'brief' ? 300 : 540)
+  const eyebrow = CONTEXT_EYEBROW[context] + (res?.mock ? ' · MOCK' : '')
 
   return (
-    <div className="ci-root">
+    <div className={`ci-root${variant === 'brief' ? ' ci-root--brief' : ''}`}>
       <section className="ci-card ci-chart-card" aria-label="Chart Intelligence">
         <header className="ci-card-head">
           <div>
-            <div className="ci-eyebrow">CHART INTELLIGENCE{res?.mock ? ' · MOCK PYTHON' : ''}</div>
+            <div className="ci-eyebrow">{eyebrow}</div>
             <h2>
               {res?.symbol ?? symbol}
               <span className="ci-sub"> · {(res?.timeframe ?? timeframe).toUpperCase()}</span>
@@ -53,15 +74,21 @@ export function ChartIntelligencePanel({ symbol, timeframe, source = 'api', char
           </div>
         )}
 
+        {ci.loading && !res && (
+          <div className="ci-notice" role="status">
+            Chargement Chart Intelligence…
+          </div>
+        )}
+
         {res && (
           <IntelligenceChart
             candles={res.candles}
             ichimoku={res.ichimoku}
             projection={res.projection}
             showIchimoku={ci.layers.ichimoku}
-            resetKey={`${res.symbol}:${res.timeframe}`}
+            resetKey={`${res.symbol}:${res.timeframe}:${res.as_of ?? 'live'}`}
             onBackgroundClick={() => ci.select(null)}
-            height={chartHeight}
+            height={height}
           >
             <DrawingLayer
               objects={ci.visibleObjects}
@@ -80,15 +107,15 @@ export function ChartIntelligencePanel({ symbol, timeframe, source = 'api', char
           </IntelligenceChart>
         )}
         <p className="ci-foot ci-muted">
-          Objets produits par Python (ChartObject). React affiche, sélectionne et masque — aucun calcul de
-          marché côté front. {res?.mock ? 'Scores et confidences fictifs (maquette).' : ''}
+          Calques moteur (ChartObject) — Fib, FVG, structure, casses. React affiche et filtre ;
+          aucun calcul de marché côté front.
         </p>
       </section>
 
       <aside className="ci-side">
-        <section className="ci-card" aria-label="Calques">
+        <section className="ci-card" aria-label="Palette de signaux">
           <header className="ci-card-head">
-            <div className="ci-eyebrow">LAYERS</div>
+            <div className="ci-eyebrow">PALETTE SIGNAUX</div>
           </header>
           <LayerControls prefs={ci.layers} onChange={ci.setLayers} counts={ci.counts} />
         </section>

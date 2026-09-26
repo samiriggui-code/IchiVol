@@ -7,7 +7,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
 import { MarketLayersMenu } from '../components/MarketLayersMenu'
-import { ChartIntelligencePanel } from '../components/chart-intelligence'
 import { PriceChart } from '../components/PriceChart'
 import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
 import '../components/engineEvidence.css'
@@ -578,8 +577,6 @@ export function MarketPage() {
             </div>
           </div>
         </section>
-
-        <ChartIntelligencePanel symbol={symbol} timeframe={interval} source="api" />
 
         {layersOpen && layersSheet && (
           <MarketLayersMenu

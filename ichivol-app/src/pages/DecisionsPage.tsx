@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
+import { ChartIntelligencePanel } from '../components/chart-intelligence'
 import { PaperConfirmSheet } from '../components/PaperConfirmSheet'
 import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
 import '../components/engineEvidence.css'
@@ -638,10 +639,21 @@ export function DecisionsPage() {
                 <SignalEvidenceCard detail={detail} />
               </div>
             )}
+            {detailSym && (
+              <div className="ci-embed">
+                <ChartIntelligencePanel
+                  symbol={detailSym}
+                  timeframe={detail?.timeframe || '1h'}
+                  source="api"
+                  variant="brief"
+                  context="prep"
+                />
+              </div>
+            )}
             <div className="notice blue" style={{ marginTop: 20 }}>
               {alreadyOpen
                 ? 'Position paper déjà ouverte sur ce symbole.'
-                : 'Lecture moteur. Enregistrement journal ou ouverture paper au choix.'}
+                : 'Lecture moteur + Chart Intelligence. Enregistrement journal ou ouverture paper au choix.'}
             </div>
             {saveMsg && (
               <div
