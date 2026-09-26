@@ -1,7 +1,7 @@
 # VALIDATION-PROTOCOL — IchiVol (VP0)
 
 **Statut :** DOC ONLY · gelé avant tout run · 2026-09-26  
-**Tip référence :** `main` @ `6634438`  
+**Tip référence :** `main` @ `c46eda1` (review Claude @ `6634438` ; GOLDEN-RVOL #139 mergé)  
 **Version :** `VP0-2026-09-26`  
 **Interdit :** code, runs Lab/backtest, régénération de goldens, trading réel, intervention Claude dans VP1→VP7.
 
@@ -40,22 +40,22 @@ Chaque niveau a des **règles d’entrée et de sortie** exactes. La **sortie co
 
 ## 3. Questions A → L
 
-Si l’utilisateur fournit une liste A–L d’origine, **elle remplace** celle-ci. Sinon :
+Si l’utilisateur fournit une liste A–L d’origine, **elle remplace** celle-ci. Sinon — comparaisons **exactes** (review Claude tip `6634438`) :
 
 | Q | Comparaison exacte | Métrique décisive | Étape VP |
 |---|--------------------|-------------------|----------|
-| **A** | B1 vs B0 | Espérance nette / trade + Deflated Sharpe | **VP3** |
-| **B** | B2 vs B1 | Δ espérance nette ; IC bootstrap du Δ | **VP3** |
-| **C** | B3 vs B2 | Δ espérance nette (après C1) | **VP5** |
-| **D** | Ablation de chaque brique de B7 (leave-one-out) | Δ espérance / Deflated Sharpe vs B7 full | **VP6** |
-| **E** | Apport OI (B4 sans OI vs avec OI, ou ablation OI dans B7) | Δ espérance nette | **VP5** |
-| **F** | Apport CVD | Δ espérance nette | **VP5** |
-| **G** | Apport funding | Δ espérance nette | **VP5** |
-| **H** | B5 vs B2 | Δ espérance nette + Calmar | **VP3** |
-| **I** | Redondance / corrélation des briques (signaux booléens) | Corrélation / VIF ; briques redondantes → candidat retrait | **VP6** |
-| **J** | B7 vs meilleur de B0–B6 | Espérance nette, Deflated Sharpe, maxDD | **VP3** |
-| **K** | Stabilité par régime et par actif | Même signe d’espérance sur ≥ 2/3 des régimes × actifs | **VP7** |
-| **L** | Holdout 2026 (une fois) + 3 mois paper forward | Critères §9 sur holdout **et** paper | **VP7** |
+| **A** | B1 vs B0 | Espérance nette / trade ; Deflated Sharpe ; IC bootstrap (§9) | **VP3** |
+| **B** | B2 vs B1 | Δ espérance nette ; IC bootstrap du Δ ; Deflated Sharpe du Δ (§9) | **VP3** |
+| **C** | B3 vs B2 | Δ espérance nette ; IC / Deflated Sharpe du Δ (§9) — après C1 | **VP5** |
+| **D** | Contribution de chaque brique de B7 **par ablation** (leave-one-out vs B7 full) | Δ espérance nette ; Deflated Sharpe du Δ (§9) | **VP6** |
+| **E** | Apport OI (B4 avec vs sans OI, ou ablation OI dans B7) | Δ espérance nette ; IC / Deflated Sharpe du Δ (§9) | **VP5** |
+| **F** | Apport CVD (même schéma qu’E) | Δ espérance nette ; IC / Deflated Sharpe du Δ (§9) | **VP5** |
+| **G** | Apport funding (même schéma qu’E) | Δ espérance nette ; IC / Deflated Sharpe du Δ (§9) | **VP5** |
+| **H** | B5 vs B2 | Δ espérance nette ; IC / Deflated Sharpe du Δ (§9) | **VP3** |
+| **I** | Redondance / corrélation des briques (signaux booléens entre briques B7) | Corrélation / redondance ; briques redondantes → candidat retrait (pas de claim EDGE isolé) | **VP6** |
+| **J** | B7 vs meilleur de B0–B6 | Espérance nette ; Deflated Sharpe ; maxDD (§9) | **VP3** |
+| **K** | Stabilité par régime et par actif | Même **signe** d’espérance nette sur les régimes × actifs (§8 buckets) ; instabilité → NON CONCLUANT (§9) | **VP7** |
+| **L** | Holdout 2026 (**une fois**) + **3 mois** paper forward | Critères §9 sur holdout **et** paper (pour B7 : paper = seul OOS crédible) | **VP7** |
 
 ---
 

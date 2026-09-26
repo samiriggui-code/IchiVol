@@ -1,5 +1,30 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — Complément Claude · #139 MERGÉ · A→L · AW0 branch delete
+
+### Fait (priorité Claude)
+
+1. **#139 MERGÉ** squash → `main` @ `c46eda1` — GOLDEN-RVOL pin py3.12 + `pytest.approx` ; `rvol.py` inchangé ; pas de regen.
+2. **#135** : à fermer côté GitHub (API agent = 403 issues) — diagnostic + fix déjà dans #139 / HANDOFF.
+3. **VALIDATION-PROTOCOL** §3 Questions **A→L** alignées verbatim review Claude tip `6634438` (comparaison / métrique §9 / étape VP) — retiré Calmar/VIF/seuil 2/3 inventés.
+4. Branche `cursor/vp-aw0-docs-a2fe` **supprimée** (doublon de #140 ; #137 déjà closed).
+5. **#141** `engine-evidence-dark` **fermée** (contenu déjà dans #142 mobile-tabbar-clearance).
+
+### Suite (ordre Claude)
+
+1. Review + gel **#140** (`VP0-2026-09-26`) après ce commit A→L
+2. Puis seulement merge UI **#142** + **#138** (build+lint verts)
+3. **Pas** de nouvelle PR UI tant que VP0 non gelé
+
+### Tip / SHA
+
+| Ref | SHA |
+|-----|-----|
+| `main` (après #139) | `c46eda1` |
+| Docs VP (#140 tip) | (ce commit) |
+
+---
+
 ## 2026-09-26 — Review Claude tip `6634438` · GOLDEN-RVOL · VP0 redo · AW0
 
 ### Claude APPROUVÉ (moteur)
@@ -16,9 +41,9 @@
 
 - Écart ULP (~1e-16) sur `avg_volume` / `rvol*` / `vol_accel` uniquement.
 - Cause : Python **3.12** `sum()` compensé vs **3.11** ; goldens générés en 3.12 ; `rvol.py` L65 inchangé.
-- **PR [#139](https://github.com/samiriggui-code/IchiVol/pull/139)** `cursor/golden-rvol-py312-a2fe` @ `8324a54` : pin `>=3.12,<3.13` + `assert_golden_equal` / `pytest.approx(1e-12)` ; **pas** de regen goldens ; **pas** de touche `rvol.py`.
+- **PR [#139](https://github.com/samiriggui-code/IchiVol/pull/139)** **MERGÉE** squash → `main` @ `c46eda1` (branche `8324a54`) : pin `>=3.12,<3.13` + `assert_golden_equal` / `pytest.approx(1e-12)` ; **pas** de regen goldens ; **pas** de touche `rvol.py`.
 - Tests locaux : 8/8 goldens agents + agent_channel **PASS**.
-- **Action :** fermer [#135](https://github.com/samiriggui-code/IchiVol/issues/135) avec ce diagnostic après merge #139.
+- **Action :** fermer [#135](https://github.com/samiriggui-code/IchiVol/issues/135) (agent API issues = 403 — à fermer manuellement / Claude).
 
 ### VP0 — REFUSÉ Claude (ancien) → REFAIT
 

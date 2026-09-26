@@ -1,8 +1,8 @@
 # AW0 — Consolidation (audit docs only)
 
 **Date:** 2026-09-26  
-**Tip:** `main` @ `6634438`  
-**Branch:** `cursor/validation-protocol-a2fe`  
+**Tip:** `main` @ `c46eda1` (après #139 ; review Claude @ `6634438`)  
+**Branch:** `cursor/validation-protocol-a2fe` · `cursor/vp-aw0-docs-a2fe` **supprimée**  
 **Prérequis :** protocole VP gelable — [`VALIDATION-PROTOCOL.md`](./VALIDATION-PROTOCOL.md) (`VP0-2026-09-26`).  
 **Périmètre :** lecture seule — inventaire des assemblages dupliqués avant toute raffactor AW1+.  
 **Livrable :** ce fichier uniquement.  

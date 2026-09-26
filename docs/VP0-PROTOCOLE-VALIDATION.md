@@ -14,7 +14,7 @@
 |----------|------|
 | Chart Intelligence | **GEL** — #134+#133 (`50ea9c4` / `df013fb`) — bugs only |
 | T-CYCLE | **GEL** — #123 (`9e2b02f`, P6 inclus) — bugs only jusqu’à VP |
-| GOLDEN-RVOL | [#135](https://github.com/samiriggui-code/IchiVol/issues/135) — diagnostic Claude : ULP py3.11 vs 3.12 ; fix pin+approx → [#139](https://github.com/samiriggui-code/IchiVol/pull/139) ; **ne pas régénérer** |
+| GOLDEN-RVOL | [#135](https://github.com/samiriggui-code/IchiVol/issues/135) — diagnostic Claude : ULP py3.11 vs 3.12 ; fix pin+approx → [#139](https://github.com/samiriggui-code/IchiVol/pull/139) **MERGÉ** @ c46eda1 ; **ne pas régénérer** ; fermer #135 |
 
 ## Invariants techniques (à respecter dans VP1+)
 
