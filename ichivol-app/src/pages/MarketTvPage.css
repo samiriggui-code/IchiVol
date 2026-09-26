@@ -1,0 +1,336 @@
+/**
+ * Marché TV — plein écran hors shell (fenêtre popup ou onglet).
+ * Tokens alignés sur MarketPage (maquette).
+ */
+
+.market-tv {
+  --bg: #faf8f5;
+  --card: #fefdfb;
+  --line: #e5e1db;
+  --ink: #202b36;
+  --muted: #7d8288;
+  --blue: #1a7df5;
+  --green: #0b8f83;
+  --red: #c8412f;
+  color: var(--ink);
+  font: 14px Manrope, Arial, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #e8eef6 0%, transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, #efe8dc 0%, transparent 50%),
+    var(--bg);
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.market-tv *,
+.market-tv *::before,
+.market-tv *::after {
+  box-sizing: border-box;
+}
+
+.market-tv-bar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 14px 20px 10px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.market-tv-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 88px;
+}
+
+.market-tv-mark {
+  font: 22px Newsreader, Georgia, serif;
+  letter-spacing: -0.6px;
+  line-height: 1;
+}
+
+.market-tv-mode {
+  font: 10px 'DM Mono', ui-monospace, monospace;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.market-tv-symbol {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.market-tv-symbol h1 {
+  margin: 0;
+  font: 28px Newsreader, Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.8px;
+  line-height: 1.1;
+}
+
+.market-tv-symbol h1 span {
+  font: 12px Manrope, sans-serif;
+  color: var(--muted);
+  margin-left: 6px;
+}
+
+.market-tv-symbol small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.market-tv-stats {
+  display: flex;
+  gap: 18px;
+  font: 11px 'DM Mono', ui-monospace, monospace;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.market-tv-stats b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.market-tv-stats .up {
+  color: var(--green);
+}
+
+.market-tv-stats .down {
+  color: var(--red);
+}
+
+.market-tv .segmented {
+  display: flex;
+  gap: 3px;
+  background: #f3f2ef;
+  padding: 3px;
+  border-radius: 6px;
+}
+
+.market-tv .segmented button {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  padding: 6px 10px;
+  color: var(--muted);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.market-tv .segmented button.active {
+  background: white;
+  box-shadow: 0 1px 3px #0001;
+  color: var(--ink);
+}
+
+.market-tv-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.market-tv-link {
+  font: 12px Manrope, sans-serif;
+  color: var(--blue);
+  text-decoration: none;
+  font-weight: 600;
+  padding: 8px 10px;
+}
+
+.market-tv-close {
+  font: 12px Manrope, sans-serif;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.market-tv-close:hover {
+  border-color: #cfc9c0;
+}
+
+.market-tv-notice {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 8px 20px 0;
+  padding: 10px 14px;
+  background: #f5f0e6;
+  border: 1px solid #e9dfcb;
+  border-radius: 8px;
+  color: #9b7a3d;
+  font-size: 12px;
+}
+
+.market-tv-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 20px 0;
+}
+
+.market-tv-chips button {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: 12px Manrope, sans-serif;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.market-tv-chips button.active {
+  background: #202b36;
+  color: #faf8f5;
+  border-color: #202b36;
+}
+
+.market-tv-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px 16px 16px;
+}
+
+.market-tv-watch {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.market-tv-watch button {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 14px 12px;
+  background: var(--card);
+  color: inherit;
+  cursor: pointer;
+}
+
+.market-tv-watch button.active {
+  background: #eef4fc;
+  border-left: 3px solid var(--blue);
+}
+
+.market-tv-watch button small {
+  display: block;
+  color: var(--muted);
+  font: 10px 'DM Mono', ui-monospace, monospace;
+  margin-top: 4px;
+}
+
+.market-tv-watch .up,
+.market-tv-watch .down,
+.market-tv-watch .chg-na {
+  float: right;
+  margin-left: 8px;
+  font-size: 10px;
+}
+
+.market-tv-watch .up {
+  color: var(--green);
+}
+
+.market-tv-watch .down {
+  color: var(--red);
+}
+
+.market-tv-watch .chg-na {
+  color: var(--muted);
+}
+
+.market-tv-chart {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.market-tv-chart-slot {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.market-tv-chart-slot .chart-wrap {
+  height: 100%;
+  min-height: 0;
+}
+
+.market-tv-chart-slot .chart-host {
+  height: 100% !important;
+  min-height: 0;
+}
+
+.market-tv-chart-slot .chart-vol-resize,
+.market-tv-chart-slot .chart-overlay-msg {
+  display: none;
+}
+
+.market-tv-empty {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+.market-tv-tools {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.market-tv-tools input {
+  accent-color: var(--blue);
+}
+
+@media (max-width: 900px) {
+  .market-tv-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .market-tv-watch {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-height: none;
+  }
+
+  .market-tv-watch button {
+    min-width: 120px;
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
+  }
+
+  .market-tv-symbol h1 {
+    font-size: 22px;
+  }
+}
