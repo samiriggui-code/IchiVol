@@ -6,16 +6,13 @@ B4 — drop the still-forming bar via ``closed_candles`` (same as deep_history).
 
 from __future__ import annotations
 
-import time
-
 from fastapi import APIRouter, Header, HTTPException, Query
 
 from app.config import settings
+from app.cycle.closed_fetch import filter_closed_candles
 from app.cycle.engine import CycleParams, compute_cycle_state
 from app.cycle.study import CycleStudyParams, run_cycle_regime_study, validate_cycle_synthetic
 from app.market_data import twelve_data
-from app.market_data.quality import closed_candles
-from app.market_data.timeframes import TF_SECONDS
 
 router = APIRouter(prefix=settings.engine_api_prefix, tags=["cycle"])
 
@@ -40,13 +37,10 @@ def _fetch_closed_candles(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    tf_sec = TF_SECONDS.get(timeframe)
-    if tf_sec is None:
-        raise HTTPException(status_code=422, detail=f"unsupported timeframe: {timeframe}")
-    now_s = int(now) if now is not None else int(time.time())
-    closed = closed_candles(candles, tf_sec, now_s)
-    if not closed:
-        raise HTTPException(status_code=422, detail="no closed candles available")
+    try:
+        closed, now_s = filter_closed_candles(candles, timeframe, now=now)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return provider, provider_symbol, closed, now_s
 
 

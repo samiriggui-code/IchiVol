@@ -64,6 +64,7 @@ def _state_at_window(
         min_period=int(params.min_period),
         max_period=int(acf_max),
     )
+    # Hint for phase only — not double-counted in dominant median (Claude R5).
     hint = median_period([fft.dominant_period, acf.dominant_period])
     hilbert = estimate_hilbert(
         px,
@@ -74,7 +75,7 @@ def _state_at_window(
     trend = estimate_trend(px)
     agreement = methods_agreement(fft, hilbert, acf)
     dominant = median_period(
-        [fft.dominant_period, hilbert.dominant_period, acf.dominant_period, hint]
+        [fft.dominant_period, hilbert.dominant_period, acf.dominant_period]
     )
     period_history.append(dominant)
     hist = period_history[-params.stability_lookback :]
@@ -99,6 +100,7 @@ def _state_at_window(
         acf_peak=acf.peak_corr,
     )
 
+    # R1 — phase already gated inside estimate_hilbert; keep bars_to_next None if no phase
     phase = hilbert.phase
     phase_deg = hilbert.phase_deg
     bars_to_next = None
@@ -139,6 +141,7 @@ def _state_at_window(
                 "dominant_period": hilbert.dominant_period,
                 "phase_deg": hilbert.phase_deg,
                 "phase_delay_bars": hilbert.phase_delay_bars,
+                "phase_confidence": hilbert.phase_confidence,
                 "trend_mode": False,
                 "strength": hilbert.strength,
             },

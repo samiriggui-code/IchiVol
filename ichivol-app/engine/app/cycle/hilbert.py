@@ -3,10 +3,11 @@
 Period: Ehlers Homodyne Discriminator with gain-compensated FIR (when it
 locks); otherwise ``None`` so consensus can rely on FFT/ACF.
 
-Phase: single-bin OLS / Goertzel fit of the detrended log-price at a period
-hint (FFT/ACF median), with time origin at the **last bar**. That yields the
-instantaneous phase at T with group delay ≈ 0 (verified on pure sines).
-The earlier FIR/Homodyne atan2(Q,I) and EMA demod paths did not (Claude B1).
+Phase: single-bin OLS / Goertzel on the **last ~2 periods** of detrended
+log-price (not the full window — full-window OLS amplifies period error
+into the last bar under noise; Claude R1). Time origin at the last bar.
+``phase_confidence`` is the OLS R² on that short fit; below
+``PHASE_CONFIDENCE_MIN`` phase fields are cleared.
 
 ``trend_mode`` always False — TREND lives in ``app.cycle.trend``.
 """
@@ -20,8 +21,10 @@ from typing import Sequence
 from app.cycle.preprocess import detrend_linear, log_prices
 
 _H_TAPS = (0.0962, 0.5769, 0.5769, 0.0962)
-# Goertzel / OLS phase is end-relative → no group delay to compensate in tests.
 PHASE_GROUP_DELAY_BARS = 0.0
+# Publish phase only when short-window OLS R² clears this floor (R1).
+PHASE_CONFIDENCE_MIN = 0.55
+PHASE_FIT_PERIODS = 2.0
 
 
 @dataclass(frozen=True)
@@ -34,6 +37,7 @@ class HilbertEstimate:
     trend_mode: bool
     strength: float
     phase_delay_bars: float = PHASE_GROUP_DELAY_BARS
+    phase_confidence: float | None = None
 
 
 def _hilbert_fir(xs: Sequence[float], i: int, gain: float) -> float:
@@ -88,14 +92,12 @@ def _homodyne_period(
             period = abs(2.0 * math.pi / math.atan2(im[i], re[i]))
         else:
             period = sp
-        # N3 — soft clamp: blend toward band instead of hard park at bounds
         if period < min_period:
             period = 0.5 * (period + min_period)
         elif period > max_period:
             period = 0.5 * (period + max_period)
         period = max(min_period * 0.75, min(max_period * 1.25, period))
         sp = 0.33 * period + 0.67 * sp
-        # Report only in-band smoothed period
         periods.append(max(min_period, min(max_period, sp)))
 
     if len(periods) < 16:
@@ -110,25 +112,33 @@ def _homodyne_period(
     return mean_p
 
 
-def _goertzel_phase(
+def _goertzel_phase_short(
     series: Sequence[float],
     period: float,
-) -> tuple[float | None, float | None, float | None]:
-    """OLS single-bin fit → (phase01, I, Q) at last bar (t=0 at end).
+    *,
+    n_periods: float = PHASE_FIT_PERIODS,
+) -> tuple[float | None, float | None, float | None, float]:
+    """OLS on last ``n_periods`` cycles → (phase01, I, Q, R²).
 
-    Models ``x[t] ≈ A·cos(ωt) + B·sin(ωt)`` with ``t = i - (n-1)``.
-    For ``amp·sin(ωt + φ)``: A = amp·sin(φ), B = amp·cos(φ) → φ = atan2(A, B).
+    Fitting the full window lets a small period hint error wind up into a
+    large phase bias at the last bar; restricting to ~2P keeps the bias
+    bounded (Claude R1).
     """
     n = len(series)
-    if period < 4 or n < int(period) + 8:
-        return None, None, None
+    if period < 4 or n < int(period) + 4:
+        return None, None, None, 0.0
+    fit_len = max(int(n_periods * period), int(period) + 4)
+    fit_len = min(fit_len, n)
+    start = n - fit_len
     omega = 2.0 * math.pi / period
     cc = ss = cs = 0.0
     yc = ys = 0.0
-    for i, x in enumerate(series):
+    ys_vals: list[tuple[float, float, float]] = []  # x, cos, sin
+    for i in range(start, n):
+        x = series[i]
         if not math.isfinite(x):
             continue
-        t = i - (n - 1)
+        t = i - (n - 1)  # last bar = 0
         c = math.cos(omega * t)
         s = math.sin(omega * t)
         yc += x * c
@@ -136,15 +146,27 @@ def _goertzel_phase(
         cc += c * c
         ss += s * s
         cs += c * s
+        ys_vals.append((x, c, s))
+    if len(ys_vals) < 8:
+        return None, None, None, 0.0
     det = cc * ss - cs * cs
     if abs(det) < 1e-18:
-        return None, None, None
-    a = (yc * ss - ys * cs) / det  # cos coeff = I
-    b = (ys * cc - yc * cs) / det  # sin coeff = Q
+        return None, None, None, 0.0
+    a = (yc * ss - ys * cs) / det
+    b = (ys * cc - yc * cs) / det
     if abs(a) < 1e-15 and abs(b) < 1e-15:
-        return None, None, None
+        return None, None, None, 0.0
+
+    mean_x = sum(x for x, _, _ in ys_vals) / len(ys_vals)
+    ss_tot = sum((x - mean_x) ** 2 for x, _, _ in ys_vals)
+    ss_res = sum((x - (a * c + b * s)) ** 2 for x, c, s in ys_vals)
+    if ss_tot <= 1e-18:
+        r2 = 0.0
+    else:
+        r2 = max(0.0, min(1.0, 1.0 - ss_res / ss_tot))
+
     phase01 = (math.atan2(a, b) / (2.0 * math.pi)) % 1.0
-    return phase01, a, b
+    return phase01, a, b, r2
 
 
 def estimate_hilbert(
@@ -177,8 +199,13 @@ def estimate_hilbert(
     phase01 = None
     i_val = None
     q_val = None
+    phase_conf: float | None = None
     if period is not None:
-        phase01, i_val, q_val = _goertzel_phase(series, period)
+        phase01, i_val, q_val, r2 = _goertzel_phase_short(series, period)
+        phase_conf = r2
+        # R1 — refuse to publish a high-confidence-looking wrong phase
+        if phase01 is not None and r2 < PHASE_CONFIDENCE_MIN:
+            phase01 = None
 
     phase_deg = (phase01 * 360.0) if phase01 is not None else None
 
@@ -188,7 +215,6 @@ def estimate_hilbert(
     amp = 0.0
     if i_val is not None and q_val is not None:
         amp = math.hypot(i_val, q_val)
-    # N4 — normalize amplitude by window std so strength is scale-free
     strength = 0.0
     if period is not None:
         strength = max(0.0, min(1.0, amp / std_p))
@@ -202,4 +228,5 @@ def estimate_hilbert(
         trend_mode=False,
         strength=strength,
         phase_delay_bars=PHASE_GROUP_DELAY_BARS,
+        phase_confidence=phase_conf,
     )

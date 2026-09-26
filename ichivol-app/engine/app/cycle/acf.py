@@ -62,8 +62,9 @@ def estimate_acf(
     # Always compare lag-1 even when lag-1 < min_period — otherwise the left
     # edge (lag==min_period) is a false peak whenever ρ is still declining
     # from a non-searched lag (e.g. P=40 → spurious lag=8).
-    first_lag: int | None = None
-    first_corr = -1.0
+    # Absolute peak floor 0.30: under moderate noise ACF on returns for long
+    # cycles is weak; returning None lets FFT carry the phase hint (R1).
+    peaks: list[tuple[int, float]] = []
     for lag in range(min_period, lag_cap + 1):
         c = _acf_at_lag(series, lag)
         if c is None or c < min_corr:
@@ -72,10 +73,20 @@ def estimate_acf(
         c_next = _acf_at_lag(series, lag + 1) if lag + 1 <= lag_cap else None
         is_local = (c_prev is None or c > c_prev) and (c_next is None or c >= c_next)
         if is_local:
+            peaks.append((lag, c))
+
+    if not peaks:
+        return empty
+    best_corr = max(c for _, c in peaks)
+    if best_corr < 0.30:
+        return empty
+    first_lag = None
+    first_corr = -1.0
+    for lag, c in peaks:
+        if c >= 0.75 * best_corr:
             first_lag = lag
             first_corr = c
             break
-
     if first_lag is None:
         return empty
 

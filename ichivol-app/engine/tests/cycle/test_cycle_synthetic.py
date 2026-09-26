@@ -126,3 +126,91 @@ def test_no_buy_sell_fields_after_fix():
     blob = str(d).lower()
     for forbidden in ("buy", "sell", "long", "short", "probability_win"):
         assert forbidden not in blob
+
+
+@pytest.mark.parametrize("period", [12.0, 20.0, 40.0])
+def test_r1_phase_robust_light_noise(period: float):
+    """R1 — amp=0.03 noise=0.01 → R ≥ 0.85, bias ≤ 0.08."""
+    from app.cycle.acf import estimate_acf
+    from app.cycle.consensus import median_period
+    from app.cycle.fft import estimate_fft
+
+    window = 128
+    n = max(window + 100, int(period * 16))
+    candles = make_sine_candles(n, period, amp=0.03, noise=0.01, seed=1)
+    phases: list[float] = []
+    truths: list[float] = []
+    max_p = min(80.0, window / 2.5)
+    for end in range(n - 50, n):
+        closes = [c.close for c in candles[end + 1 - window : end + 1]]
+        fft = estimate_fft(closes, min_period=8.0, max_period=max_p)
+        acf = estimate_acf(closes, min_period=8, max_period=int(window / 3.0))
+        hint = median_period([fft.dominant_period, acf.dominant_period])
+        h = estimate_hilbert(closes, min_period=8.0, max_period=max_p, period_hint=hint)
+        if h.phase is None:
+            continue
+        phases.append(h.phase)
+        truths.append(((end - PHASE_GROUP_DELAY_BARS) / period) % 1.0)
+    assert len(phases) >= 15, f"P={period} too few published phases"
+    r = _resultant_R(phases, truths)
+    err = sum(_circ_delta(p, t) for p, t in zip(phases, truths)) / len(phases)
+    assert r >= 0.85, f"noise0.01 P={period} R={r:.3f} err={err:.3f}"
+    assert err <= 0.08, f"noise0.01 P={period} err={err:.3f} R={r:.3f}"
+
+
+@pytest.mark.parametrize("period", [12.0, 20.0, 40.0])
+def test_r1_phase_heavy_noise_not_confidently_wrong(period: float):
+    """R1 — noise=0.03 → phase None or low conf; never high-conf wrong phase."""
+    from app.cycle.acf import estimate_acf
+    from app.cycle.consensus import median_period
+    from app.cycle.fft import estimate_fft
+    from app.cycle.hilbert import PHASE_CONFIDENCE_MIN
+
+    window = 128
+    n = max(window + 100, int(period * 16))
+    candles = make_sine_candles(n, period, amp=0.03, noise=0.03, seed=2)
+    max_p = min(80.0, window / 2.5)
+    high_wrong = 0
+    for end in range(n - 50, n):
+        closes = [c.close for c in candles[end + 1 - window : end + 1]]
+        fft = estimate_fft(closes, min_period=8.0, max_period=max_p)
+        acf = estimate_acf(closes, min_period=8, max_period=int(window / 3.0))
+        hint = median_period([fft.dominant_period, acf.dominant_period])
+        h = estimate_hilbert(closes, min_period=8.0, max_period=max_p, period_hint=hint)
+        true_ph = ((end - PHASE_GROUP_DELAY_BARS) / period) % 1.0
+        conf = h.phase_confidence or 0.0
+        if h.phase is None:
+            continue
+        assert conf >= PHASE_CONFIDENCE_MIN
+        if _circ_delta(h.phase, true_ph) > 0.15 and conf >= PHASE_CONFIDENCE_MIN:
+            high_wrong += 1
+    assert high_wrong == 0, f"P={period} confidently-wrong phases={high_wrong}"
+
+
+def test_r2_agent_cycle_drops_forming_bar(monkeypatch):
+    """R2 — agent get_cycle_state uses closed_candles with injected now."""
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+    from app.market_data import binance
+
+    tf = 3600
+    t0 = 1_700_000_000
+    candles = [
+        Candle(time=t0 + i * tf, open=1, high=1, low=1, close=100 + i, volume=1)
+        for i in range(80)
+    ]
+    monkeypatch.setattr(binance, "fetch_klines", lambda symbol, timeframe, limit: candles)
+    client = TestClient(app)
+    now = t0 + 79 * tf + tf // 2
+    res = client.post(
+        "/api/engine/agent/command",
+        json={
+            "cmd": "get_cycle_state",
+            "args": {"symbol": "BTCUSDT", "window": 64, "limit": 80, "now": now},
+        },
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()["data"]
+    assert body["n_bars"] == 79
+    assert body["now"] == now

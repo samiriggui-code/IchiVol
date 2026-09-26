@@ -98,8 +98,9 @@ def estimate_fft(
     win = hann_window(n)
     windowed = apply_window(series, win)
 
-    # Zero-pad for finer frequency grid (N2)
-    pad_factor = 4
+    # Zero-pad for finer frequency grid (N2 / R4).
+    # pad×4 was ~390 ms/symbole; pad×2 keeps parabolic refine cheap (<1 s).
+    pad_factor = 2
     n_pad = n * pad_factor
     padded = list(windowed) + [0.0] * (n_pad - n)
     powers: list[float] = []

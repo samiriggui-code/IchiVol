@@ -16,7 +16,7 @@ def test_regime_study_returns_surrogates_and_future_er():
     candles = make_sine_candles(280, period=20.0)
     result = run_cycle_regime_study(
         candles,
-        CycleStudyParams(window=96, horizon=8, min_period=8, max_period=40),
+        CycleStudyParams(window=96, horizon=8, min_period=8, max_period=40, null_draws=2),
     )
     assert result["ok"] is True
     assert result["kind"] == "regime_filter_study"
@@ -24,6 +24,10 @@ def test_regime_study_returns_surrogates_and_future_er():
     assert "surrogate_cycle_rates" in result
     assert "random_walk" in result["surrogate_cycle_rates"]
     assert "future_er_by_regime" in result
+    assert "er_gap_cycle_minus_global" in result
+    assert "null_er_gap_distributions" in result
+    assert result["null_draws"] == 2
+    assert "observed_gap_percentile" in result["null_er_gap_distributions"]["random_walk"]
     assert result["verdict"]["promote_to_decision"] is False
 
 
@@ -31,7 +35,7 @@ def test_walk_forward_alias_insufficient_bars():
     candles = make_sine_candles(50, period=16.0)
     result = run_cycle_walk_forward(
         candles,
-        CycleStudyParams(window=96, horizon=8),
+        CycleStudyParams(window=96, horizon=8, null_draws=1),
     )
     assert result["ok"] is False
     assert result["error"] == "insufficient_bars"
@@ -41,7 +45,7 @@ def test_walk_forward_alias_ok_shape():
     candles = make_sine_candles(280, period=20.0)
     result = run_cycle_walk_forward(
         candles,
-        CycleStudyParams(window=96, horizon=8, min_period=8, max_period=40),
+        CycleStudyParams(window=96, horizon=8, min_period=8, max_period=40, null_draws=2),
     )
     assert result["ok"] is True
     assert math.isfinite(result["series_cycle_rate"])
