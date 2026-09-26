@@ -8,7 +8,7 @@
 
 | ID | Correction |
 |----|------------|
-| **CI-R7** | Frames slim : `as_of` + `objects` + `market_state` seulement. Candles / ichimoku / projection **une fois** à la racine du pack ; front tronque par `as_of`. Objectif &lt; 1,5 Mo pour 48 frames × 300 bougies (assertion dans CI-R1). |
+| **CI-R7** | Frames slim : `as_of` + `objects` + `market_state` seulement. Candles / ichimoku / projection **une fois** à la racine du pack ; front tronque par `as_of`. Origin frame allégé ; BOS/CHoCH plafonnés à 16 ; breakouts éphémères exclus du pack CI. **Mesuré : 0,94 Mo** pour 48 frames × 300 bougies (budget &lt; 1,5 Mo). |
 | **CI-R8** | `origin.lineage_key` produit par chaque producteur (hors empreinte d’id) : FVG = direction+start_time+bornes ; zone = side+bornes ; BOS/CHoCH = type+swing_time ; Fib = `group_id` ; breakout = kind+bar. `known_at` / `status_history` indexés par `lineage_key`. |
 | **CI-R9** | Cache replay = LRU **32** + purge des entrées expirées à chaque écriture. |
 
