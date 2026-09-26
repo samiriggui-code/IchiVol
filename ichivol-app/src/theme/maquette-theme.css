@@ -126,7 +126,7 @@ html.dark
     .agents-page,
     .params-page
   )
-  button:hover {
+  button:hover:not(.mkt-layers-btn-head):not(.mkt-layer-row) {
   border-color: #4a5568;
   background: #22262f;
 }
@@ -384,7 +384,7 @@ html.dark
     .agents-page,
     .params-page
   )
-  button:not(.primary):not(.kill) {
+  button:not(.primary):not(.kill):not(.active):not(.mkt-layers-btn-head):not(.mkt-layer-row) {
   background: var(--card);
   color: var(--ink);
   border-color: var(--line);
