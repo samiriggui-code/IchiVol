@@ -312,25 +312,66 @@
 }
 
 @media (max-width: 900px) {
+  .market-tv {
+    height: auto;
+    min-height: 100dvh;
+    overflow: auto;
+  }
+
+  .market-tv-bar {
+    padding: 12px 14px 8px;
+    gap: 10px;
+  }
+
   .market-tv-body {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(280px, 1fr);
+    padding: 10px 12px 16px;
   }
 
   .market-tv-watch {
     display: flex;
+    flex-direction: row;
     overflow-x: auto;
     overflow-y: hidden;
     max-height: none;
+    -webkit-overflow-scrolling: touch;
   }
 
   .market-tv-watch button {
-    min-width: 120px;
+    flex: 0 0 auto;
+    min-width: 118px;
     border-bottom: 0;
     border-right: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .market-tv-watch button.active {
+    border-left: 0;
+    border-bottom: 3px solid var(--blue);
+  }
+
+  .market-tv-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 8px 14px 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .market-tv-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .market-tv-chips button {
+    flex: 0 0 auto;
   }
 
   .market-tv-symbol h1 {
     font-size: 22px;
+  }
+
+  .market-tv-chart-slot {
+    min-height: min(50vh, 380px);
   }
 }
