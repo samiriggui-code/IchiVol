@@ -11,11 +11,14 @@ import {
   statusTone,
   type IntelligenceObject,
 } from '../../lib/chartIntelligence'
+import { WhyPanel, type WhyTarget } from './WhyPanel'
 
 interface Props {
   /** Objets de la sélection (un Fib = plusieurs niveaux du même group_id). */
   selection: IntelligenceObject[]
   onClose?: () => void
+  /** AW1 : contexte pour « Pourquoi ? » (API moteur seulement, pas en mock). */
+  why?: Omit<WhyTarget, 'objectId' | 'lineageKey'> | null
 }
 
 function Row({ k, children }: { k: string; children: ReactNode }) {
@@ -27,7 +30,7 @@ function Row({ k, children }: { k: string; children: ReactNode }) {
   )
 }
 
-export function DrawingInspector({ selection, onClose }: Props) {
+export function DrawingInspector({ selection, onClose, why = null }: Props) {
   const o = selection[0]
   if (!o) {
     return (
@@ -125,12 +128,24 @@ export function DrawingInspector({ selection, onClose }: Props) {
           <p className="ci-why">{og.reason}</p>
         </div>
       )}
-      <div className="ci-block ci-decision-row">
-        <div className="ci-eyebrow">USED BY DECISION ENGINE</div>
-        <span className={`ci-tag ${og.used_by_decision ? 'green' : 'gray'}`}>
-          {og.used_by_decision ? 'YES' : 'NO'}
-        </span>
-      </div>
+      {og.used_by_decision != null && (
+        <div className="ci-block ci-decision-row">
+          <div className="ci-eyebrow">USED BY DECISION ENGINE</div>
+          <span className={`ci-tag ${og.used_by_decision ? 'green' : 'gray'}`}>
+            {og.used_by_decision ? 'YES' : 'NO'}
+          </span>
+        </div>
+      )}
+      {why && o.source === 'engine' && (
+        <WhyPanel
+          key={`${o.id}:${why.asOf ?? 'live'}`}
+          target={{
+            ...why,
+            objectId: o.id,
+            lineageKey: typeof og.lineage_key === 'string' ? og.lineage_key : null,
+          }}
+        />
+      )}
       <p className="ci-id mono" title="Identifiant déterministe ChartObject">
         {o.origin.group_id ?? o.id}
       </p>

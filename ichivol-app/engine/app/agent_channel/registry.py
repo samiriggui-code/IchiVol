@@ -28,6 +28,7 @@ from app.agent_channel.commands import (
     cmd_draw_trend_line,
     cmd_draw_zone,
     cmd_get_calendar,
+    cmd_explain_chart_object,
     cmd_get_chart_objects,
     cmd_get_correlations,
     cmd_get_cycle_state,
@@ -560,6 +561,23 @@ TOOLS: dict[str, ToolSpec] = {
                 "include_pytrendline": "bool, défaut false",
             },
             cmd_get_chart_objects,
+        ),
+        ToolSpec(
+            "explain_chart_object",
+            "AW1 « Pourquoi ? » — faits moteur d'un objet du graphique (zone, trendline, BOS/CHoCH, FVG, Fib) : "
+            "provenance, known_at walk-forward, historique de statut, maturité registre, validation VP. "
+            "Cite uniquement ces faits ; n'en ajoute aucun.",
+            True,
+            {
+                "symbol": "str, requis",
+                "timeframe": "str, défaut '1h'",
+                "object_id": "str, id ChartObject (ou lineage_key)",
+                "lineage_key": "str, identité stable origin.lineage_key (ou object_id)",
+                "as_of": "int unix s, optionnel (défaut : dernière barre clôturée)",
+                "limit": "int, défaut 300",
+                "lookback_bars": "int, défaut 48",
+            },
+            cmd_explain_chart_object,
         ),
         ToolSpec(
             "draw_horizontal_line",
