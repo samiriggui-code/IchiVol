@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from app.agent_channel import commands as cmds
+from tests.golden_compare import assert_golden_equal
 from tests.indicators.test_ichimoku_lookahead import _make_candles
 
 _ICHI = Path(__file__).resolve().parent / "fixtures" / "calculate_ichimoku_golden.json"
@@ -30,7 +31,7 @@ def test_calculate_ichimoku_matches_golden(seed: int, monkeypatch):
         {"symbol": "BTCUSDT", "timeframe": "1h", "limit": 300}
     )
     golden = json.loads(_ICHI.read_text(encoding="utf-8"))[f"seed_{seed}"]
-    assert actual == golden
+    assert_golden_equal(actual, golden)
 
 
 @pytest.mark.parametrize("seed", [7, 42])
@@ -49,4 +50,4 @@ def test_calculate_rvol_matches_golden(seed: int, monkeypatch):
         {"symbol": "BTCUSDT", "timeframe": "1h", "limit": 300}
     )
     golden = json.loads(_RVOL.read_text(encoding="utf-8"))[f"seed_{seed}"]
-    assert actual == golden
+    assert_golden_equal(actual, golden)
