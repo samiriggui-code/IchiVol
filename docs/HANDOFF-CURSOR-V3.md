@@ -1,5 +1,48 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — Review Claude APPROUVÉ · corrections VP0 pre-gel + AW0 §12
+
+### Claude APPROUVÉ
+
+- **#139** mergé (`c46eda1`). Doublons supprimés.
+- **AW1** (`cursor/aw1-explain-a2fe` @ `a38cdbb`) : APPROUVÉ — merge **après** gel VP0, **avant** AG0.
+- **AG0** (`cursor/ag0-agent-hygiene-a2fe` / #144 draft) : prêt après AW1 ; hygiène only.
+
+### VALIDATION-PROTOCOL — corrections pre-gel (ce commit)
+
+1. §1bis **Univers VP** (ex-Banc S1) + §1ter **Simulateur** = `research_lab/sim.py` (S1) figé
+2. §2.1 B1 = TK cross + nuage **affiché** (≤ t−26) ; pas de chikou
+3. §2.2 direction HTF = close vs nuage HTF affiché (long/short/neutre)
+4. B7 / §6 : sortie **uniquement** stop/TP/time-stop (plus de stages→flat)
+5. §6 gap → fill à l’open
+6. §8.1 Sortino = `sqrt(mean(min(r,0)²))` sur **toutes** les barres
+7. §9.2 bootstrap **par barre** apparié ; **pas** de DSR du Δ ; DSR(Bi) ≥ 0.95
+8. §5.1 points 7–10 (pli d’entrée, fin de fenêtre, &lt;5 trades, train=warm-up)
+9. EDGE (6) maxDD &lt; 35 % B1–B8 ; B0 exempt
+10. Carte roadmap : VP3=A,B,H,J ; VP4=sensibilité ; … VP8 shadow ; VP9 synthèse
+
+### AW0 §12 — aligné AW/AG
+
+- **Autorisés** dès gel VP0 (parallèle VP1–VP3) : AW1 Pourquoi?, AW3 budgets, AG0–AG2
+- **avec VP2** : `assemble.py` / `collect_engine_objects`
+- **Interdits** jusqu’au déblocage VP : AW5, AW6, reco d’entrée agent
+
+### File
+
+**Gel VP0** (Claude + utilisateur) → merge **AW1** → **AG0** → **VP1**.  
+Attente review / gel. Pas de runs Lab.
+
+### Tip / SHA
+
+| Ref | SHA / PR |
+|-----|----------|
+| `main` | `c46eda1` |
+| Docs VP/AW0 | `cursor/validation-protocol-a2fe` (#140) |
+| AW1 | #143 draft @ `a38cdbb` |
+| AG0 | #144 draft |
+
+---
+
 ## 2026-09-26 — PRIORITÉ Claude · #139 MERGÉ · corrections a→l VP + AW0 · UI en attente
 
 ### Fait
