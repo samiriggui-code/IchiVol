@@ -1,5 +1,15 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — Chart Intelligence API LIVE — PR #128 · tip `1f56aff`
+
+- **PR** : [#128](https://github.com/samiriggui-code/IchiVol/pull/128) → `main` @ `1f56aff`
+- **API** : `GET /api/engine/chart-intelligence/{symbol}` (OHLCV + Ichimoku + ChartObjects + market_state + analysis + `as_of`)
+- **Front** : `source="api"` (Marché + `/app/chart-intelligence`) — plus de mock en prod
+- **VPS** : `RELEASE=1f56aff` · rebuild `engine`+`web` · endpoint **200** `mock=false` BTCUSDT
+- Smoke VPS : `n_obj=32` candles=80 sur BTCUSDT 1h
+
+---
+
 ## 2026-09-26 — Chart Intelligence BRANCHÉ + VPS — PR #126 · tip `e52dcba`
 
 - **PR** : [#126](https://github.com/samiriggui-code/IchiVol/pull/126) squash → `main` @ `e52dcba`
