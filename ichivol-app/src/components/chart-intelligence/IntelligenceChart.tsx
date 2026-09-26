@@ -26,6 +26,7 @@ import type { IntelligenceIchimokuPoint } from '../../lib/chartIntelligence'
 import { type ChartColors, readChartColors, withAlpha } from '../../lib/chartColors'
 import type { ProjectedKumoPoint } from '../../lib/engineIndicators'
 import { THEME_CHANGE_EVENT } from '../../lib/theme'
+import type { ChartCamera } from '../../lib/chartIntelligenceBriefing'
 import type { Candle } from '../../lib/types'
 import { ChartProjectionContext, type ChartProjection } from './chartProjection'
 
@@ -37,6 +38,11 @@ interface Props {
   showVolume?: boolean
   /** Changer cette clé (symbole / timeframe) recadre le graphique. */
   resetKey?: string
+  /**
+   * Caméra briefing : follow N barres / fit tout / manual (ne pas forcer).
+   * `token` force un re-cadrage (changement de période).
+   */
+  camera?: ChartCamera | null
   /** Clic sur le fond du graphique (hors dessin) — ex. désélection. */
   onBackgroundClick?: () => void
   /** Couches React (DrawingLayer…). */
@@ -97,6 +103,19 @@ function applyTheme(chart: IChartApi, s: SeriesBag, colors: ChartColors) {
   s.cloudLower.applyOptions({ topColor: colors.background, bottomColor: colors.background })
 }
 
+function applyCamera(chart: IChartApi, nBars: number, camera: ChartCamera | null | undefined) {
+  if (!camera || camera.mode === 'manual' || nBars <= 0) return
+  const scale = chart.timeScale()
+  if (camera.mode === 'fit' || camera.visibleBars == null) {
+    scale.fitContent()
+    return
+  }
+  const span = Math.max(8, Math.min(camera.visibleBars, nBars))
+  const to = nBars - 1 + 2
+  const from = Math.max(-2, to - span)
+  scale.setVisibleLogicalRange({ from, to })
+}
+
 export function IntelligenceChart({
   candles,
   ichimoku = [],
@@ -104,6 +123,7 @@ export function IntelligenceChart({
   showIchimoku = true,
   showVolume = true,
   resetKey,
+  camera = null,
   onBackgroundClick,
   children,
   height = 460,
@@ -114,6 +134,7 @@ export function IntelligenceChart({
   const colorsRef = useRef<ChartColors | null>(null)
   const originRef = useRef<{ t0: number; bar: number }>({ t0: 0, bar: 3600 })
   const fittedKeyRef = useRef<string | null>(null)
+  const cameraTokenRef = useRef<number | null>(null)
   const rafRef = useRef<number | null>(null)
   const onBgRef = useRef(onBackgroundClick)
   const [projectionCtx, setProjectionCtx] = useState<ChartProjection | null>(null)
@@ -256,14 +277,22 @@ export function IntelligenceChart({
     s.cloudLower.setData(projection.map((p) => ({ time: ts(p.time), value: Math.min(p.senkouA, p.senkouB) })))
 
     const key = resetKey ?? 'default'
-    if (candles.length && fittedKeyRef.current !== key) {
-      chart.timeScale().fitContent()
+    const camToken = camera?.token ?? -1
+    const needFit =
+      candles.length > 0 &&
+      (fittedKeyRef.current !== key || cameraTokenRef.current !== camToken)
+    if (needFit) {
+      applyCamera(chart, candles.length, camera)
       fittedKeyRef.current = key
+      cameraTokenRef.current = camToken
+    } else if (camera?.mode === 'follow' && candles.length > 0) {
+      // Replay progressif : coller la fenêtre à droite quand le slice avance.
+      applyCamera(chart, candles.length, camera)
     }
     // Autoscale appliqué au frame suivant → deux frames avant de reprojeter.
     requestAnimationFrame(() => bump())
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [candles, ichimoku, projection, resetKey])
+  }, [candles, ichimoku, projection, resetKey, camera?.token, camera?.mode, camera?.visibleBars])
 
   useEffect(() => {
     const s = seriesRef.current

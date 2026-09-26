@@ -3,10 +3,21 @@
  * (symbole sélectionné). Le graphique live Marché reste PriceChart.
  *
  * variant brief = densifié pour dialogues ; full = page / route preview.
+ * Briefing V0 : période + pack calques + caméra (directeur heuristique).
  */
 
+import { useEffect, useMemo, useState } from 'react'
+import {
+  cameraForPeriod,
+  defaultBriefing,
+  matchLayerPack,
+  packById,
+  type BriefingPeriodId,
+  type LayerPackId,
+} from '../../lib/chartIntelligenceBriefing'
 import { useChartIntelligence, type ChartIntelligenceSource } from '../../lib/useChartIntelligence'
 import { AIAnalysisPanel } from './AIAnalysisPanel'
+import { BriefingControls } from './BriefingControls'
 import { ConfluenceLayer } from './ConfluenceZone'
 import { DrawingInspector } from './DrawingInspector'
 import { DrawingLayer } from './DrawingLayer'
@@ -49,10 +60,35 @@ export function ChartIntelligencePanel({
   variant = 'full',
   context = 'explore',
 }: Props) {
+  const defaults = defaultBriefing(context)
+  const [period, setPeriod] = useState<BriefingPeriodId>(defaults.period)
+  const [camToken, setCamToken] = useState(0)
   const ci = useChartIntelligence({ symbol, timeframe, source })
   const res = ci.response
   const height = chartHeight ?? (variant === 'brief' ? 300 : 540)
   const eyebrow = CONTEXT_EYEBROW[context] + (res?.mock ? ' · MOCK' : '')
+
+  // Directeur V0 : appliquer le pack par défaut au montage / changement de contexte.
+  useEffect(() => {
+    const d = defaultBriefing(context)
+    setPeriod(d.period)
+    setCamToken((t) => t + 1)
+    ci.setLayers(packById(d.pack).layers)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context, symbol, timeframe])
+
+  const activePack: LayerPackId | null = useMemo(() => matchLayerPack(ci.layers), [ci.layers])
+
+  const camera = useMemo(() => cameraForPeriod(period, camToken), [period, camToken])
+
+  const onPeriod = (id: BriefingPeriodId) => {
+    setPeriod(id)
+    setCamToken((t) => t + 1)
+  }
+
+  const onPack = (id: LayerPackId) => {
+    ci.setLayers(packById(id).layers)
+  }
 
   return (
     <div className={`ci-root${variant === 'brief' ? ' ci-root--brief' : ''}`}>
@@ -67,6 +103,8 @@ export function ChartIntelligencePanel({
           </div>
           <ReplayControls replay={ci.replay} />
         </header>
+
+        <BriefingControls period={period} pack={activePack} onPeriod={onPeriod} onPack={onPack} />
 
         {ci.error && (
           <div className="ci-notice" role="alert">
@@ -87,6 +125,7 @@ export function ChartIntelligencePanel({
             projection={res.projection}
             showIchimoku={ci.layers.ichimoku}
             resetKey={`${res.symbol}:${res.timeframe}`}
+            camera={camera}
             onBackgroundClick={() => ci.select(null)}
             height={height}
           >
@@ -109,8 +148,8 @@ export function ChartIntelligencePanel({
           </IntelligenceChart>
         )}
         <p className="ci-foot ci-muted">
-          Calques moteur (ChartObject) — Fib, FVG, structure, casses. React affiche et filtre ;
-          aucun calcul de marché côté front.
+          Briefing = période + pack + caméra. Calques moteur (ChartObject) uniquement —
+          aucun niveau inventé côté front.
         </p>
       </section>
 

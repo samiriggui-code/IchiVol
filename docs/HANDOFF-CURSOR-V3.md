@@ -1,5 +1,48 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — Chart Intelligence Briefing (période + packs + caméra) — chantier ouvert · branche `cursor/chart-intel-briefing-a2fe`
+
+**Pour Claude :** relecture produit/UX de ce chantier (V0 heuristique). Cursor code en parallèle ; pas de merge forcé avant ton OK si tu bloques sur le contrat.
+
+### Intent
+
+Sur les fiches **Décisions** (`context=prep`) et **Position** (`context=position`) uniquement — **pas** Marché (`PriceChart`) — piloter le Chart Intelligence comme un **briefing** :
+
+1. **Période** — fenêtre visible (Focus 24 / Setup 48 / Swing 120 / Tout) — ne change pas le timeframe API
+2. **Pack calques** — presets d’affichage (Calme / Structure / Setup / Liquidité / Tout) sur les calques déjà fournis par le moteur (`ChartObject` only)
+3. **Caméra** — `follow` N barres ou `fit` selon la période ; suit le replay progressif
+
+Directeur V0 = **heuristique contextuelle** (`defaultBriefing`) ; **Eve** pourra proposer plus tard (humain confirme). Moteur valide les objets ; **aucun niveau inventé** côté front.
+
+### Fichiers
+
+| Fichier | Rôle |
+|---------|------|
+| `src/lib/chartIntelligenceBriefing.ts` | Contrat période / packs / `ChartCamera` / `defaultBriefing` |
+| `src/components/chart-intelligence/BriefingControls.tsx` | UI segmented période + pack |
+| `IntelligenceChart.tsx` | prop `camera` → `setVisibleLogicalRange` / `fitContent` |
+| `ChartIntelligencePanel.tsx` | wire briefing + défauts par `context` |
+
+### Contraintes (inchangées)
+
+- `ChartObject` uniquement — **pas** de `DrawingObject`
+- CI **hors** page Marché globale
+- Eve propose / engine valide / humain confirme — V0 n’appelle pas Eve
+- Replay client `as_of` + lookback ~48 inchangé (#132)
+
+### Questions pour Claude
+
+1. Les défauts `prep→setup/setup` et `position→swing/structure` sont-ils bons ?
+2. Packs trop nombreux / mal nommés ? Faut-il un pack « Position ouverte » (entry/stop/TP overlays) plus tard ?
+3. Caméra `follow` pendant PLAY : OK ou faut-il un mode « ancré sur l’événement » (BOS/CHOCH) ?
+4. Eve-piloted briefing (période+packs+camera proposés) : chantier suivant ou trop tôt ?
+
+### CDC
+
+Checkbox `T-CI-BRIEF` ouverte dans `CAHIER-DES-CHARGES.md` (V3 / expérimental).
+
+---
+
 ## 2026-09-26 — Chart Intelligence placement — PR #130 · tip `14ed73e`
 
 - **Marché** = `PriceChart` live uniquement (CI retiré)
