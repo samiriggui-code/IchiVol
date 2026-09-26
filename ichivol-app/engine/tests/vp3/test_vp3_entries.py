@@ -27,9 +27,9 @@ def test_b0_single_entry_after_warmup_hold_to_end():
     n = WARMUP_BARS + 10
     candles = candles_flat(n)
     mask = entry_mask("B0", candles)
-    assert sum(mask) == 1
+    assert sum(mask) == n - WARMUP_BARS
     assert mask[WARMUP_BARS] is True
-    assert all(not m for i, m in enumerate(mask) if i != WARMUP_BARS)
+    assert all(not mask[i] for i in range(WARMUP_BARS))
 
     # Wire into sim via decisions
     from research_lab.signals import BarSignal

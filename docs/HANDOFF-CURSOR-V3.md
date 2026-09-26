@@ -1,5 +1,35 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — VP1→VP3 MERGÉS · compare A/B/H provisoire
+
+### Merges (OK utilisateur · file gel Claude pause)
+
+| PR | Tip | Contenu |
+|----|-----|---------|
+| #140 VP0 | `34991b4` | **GEL** VALIDATION-PROTOCOL + AW0 |
+| #143 AW1 | `7723e53` | Pourquoi? / explain_chart_object |
+| #144 AG0 | `c3d9a3c` | Hygiène agent |
+| #145 filtre | `7741c92` | outcomes exclut pré-AG0 sans entry_source |
+| **#146 VP1** | `89e950a` | Vision + manifest + loader |
+| **#147 VP2** | `91c2795` | Harness §6 / §1ter |
+| **#148 VP3** | `d3abe6f` | B0–B7 + WF + métriques + DSR |
+
+### VP3 compare (local) — voir [`VP3-REPORT-BTCUSDT-1h.md`](./VP3-REPORT-BTCUSDT-1h.md)
+
+BTCUSDT 1h · base · n_boot=500 smoke :
+
+| Q | Pair | bi_beats_bj | Note |
+|---|------|-------------|------|
+| A | B1 vs B0 | **false** | B1 dominé (Δ&lt;0) |
+| B | B2 vs B1 | **false** | Δ&gt;0 mais DSR 0.52 |
+| H | B5 vs B2 | **false** | IC Δ inclut 0 |
+
+Fix B0 WF : mask BUY dès warm-up (gate pli = 1ʳᵉ entrée). CLI `python -m vp3 compare`.
+
+Claude review au retour (≥17h30). Suite : n_boot=10k · grille ETH/SOL · 4h · Q J (B7).
+
+---
+
 ## 2026-09-26 — VP2 harness · VP1 funding OK · file gel (Claude pause)
 
 ### Merges (OK utilisateur)
@@ -25,13 +55,9 @@
 - Package `engine/vp2/` : Rules §6/§1ter, loader VP1→feed, run metadata (seed, sha256, protocol, cost base|adverse).
 - Tests `tests/vp2/`.
 
-### VP3 (draft) — [#148](https://github.com/samiriggui-code/IchiVol/pull/148) `cursor/vp3-baselines-a2fe`
+### VP3 — MERGED [#148](https://github.com/samiriggui-code/IchiVol/pull/148) → `main` @ `d3abe6f`
 
-- `engine/vp3/` : entrées B0/B1/B2/B5/B6/B7 (§2) sur harness VP2 ; B0 = `exit_mode=hold`.
-- Folds WF1–7 + purge · métriques §8.1 (Sortino all-bars) · bootstrap apparié · DSR scaffold · `python -m vp3 wf`.
-- Tests `tests/vp3/`. Verdicts A/B/H/J chiffrés = après runs locaux WF.
-
-Claude review au retour (≥17h30). File : undraft/merge VP3.
+- `engine/vp3/` : entrées B0–B7 · WF · §8.1 · bootstrap · DSR · `vp3 wf|compare`.
 
 ---
 

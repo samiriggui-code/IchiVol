@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from vp3 import STRATEGIES
+from vp3.compare import COMPARE_QUESTIONS, compare_question
 from vp3.run import run_strategy
 from vp3.wf import run_wf
 
@@ -32,6 +33,14 @@ def main(argv: list[str] | None = None) -> int:
     w.add_argument("--symbol", default="BTCUSDT")
     w.add_argument("--interval", default="1h", choices=("1h", "4h"))
     w.add_argument("--cost", default="base", choices=("base", "adverse"))
+
+    c = sub.add_parser("compare", help="Question A/B/H paired Δ (local VP1 data)")
+    c.add_argument("--question", required=True, choices=sorted(COMPARE_QUESTIONS))
+    c.add_argument("--symbol", default="BTCUSDT")
+    c.add_argument("--interval", default="1h", choices=("1h", "4h"))
+    c.add_argument("--cost", default="base", choices=("base", "adverse"))
+    c.add_argument("--n-trials", type=int, default=1, help="T10b N for DSR")
+    c.add_argument("--n-boot", type=int, default=2000)
 
     args = p.parse_args(argv)
     if args.cmd == "list":
@@ -60,6 +69,18 @@ def main(argv: list[str] | None = None) -> int:
             root=args.root,
         )
         print(json.dumps(report.summary(), indent=2, default=str))
+        return 0
+    if args.cmd == "compare":
+        rep = compare_question(
+            args.question,
+            symbol=args.symbol,
+            interval=args.interval,
+            cost_profile=args.cost,
+            root=args.root,
+            n_trials=args.n_trials,
+            n_boot=args.n_boot,
+        )
+        print(json.dumps(rep.summary(), indent=2, default=str))
         return 0
     return 2
 

@@ -96,9 +96,9 @@ def entry_mask(
         return mask
 
     if strategy == "B0":
+        # Eligible from warm-up onward; WF gate + one_entry_per_signal_run pick the first bar in-fold.
         for i in range(WARMUP_BARS, n):
             mask[i] = True
-            break
         return mask
 
     ichi = compute_ichimoku(candles, ICHI_PARAMS)
