@@ -302,6 +302,9 @@ export interface ToolLoopResult {
   usageTotal?: { input_tokens: number; output_tokens: number }
 }
 
+/** Message for tool_use blocks skipped by AG0 ceilings (must still get a tool_result). */
+export const TOOL_CAP_SKIP_CONTENT = "non exécuté : plafond d'appels atteint (AG0)"
+
 export async function runClaudeToolLoop(opts: ToolLoopOptions): Promise<ToolLoopResult> {
   const doFetch = opts.fetchImpl ?? fetch
   const maxIterations = opts.maxIterations ?? DEFAULT_MAX_ITERATIONS
@@ -315,6 +318,10 @@ export async function runClaudeToolLoop(opts: ToolLoopOptions): Promise<ToolLoop
   let model = opts.model
   let usageTotal = { input_tokens: 0, output_tokens: 0 }
   let stopReason = ''
+  /** Tools actually invoked (ceiling skips do not count toward maxTotal). */
+  let executedCount = 0
+  /** After hitting the total tool ceiling, the next Anthropic call must be text-only. */
+  let forceTextNext = false
 
   const call = async (forceText: boolean): Promise<AnthropicResponse> => {
     const timeoutCtrl = new AbortController()
@@ -364,45 +371,84 @@ export async function runClaudeToolLoop(opts: ToolLoopOptions): Promise<ToolLoop
   const budgetExceeded = () =>
     usageTotal.input_tokens + usageTotal.output_tokens >= tokenBudget
 
+  const pushCapSkip = (
+    use: { id?: string; name?: string; input?: unknown },
+  ): Record<string, unknown> => {
+    const name = String(use.name ?? 'unknown')
+    const input = (use.input && typeof use.input === 'object' ? use.input : {}) as Record<
+      string,
+      unknown
+    >
+    opts.onEvent?.({ type: 'tool_start', name, input })
+    toolCalls.push({
+      name,
+      input,
+      ok: false,
+      ms: 0,
+      outputHash: hashToolOutput(TOOL_CAP_SKIP_CONTENT),
+      outputChars: TOOL_CAP_SKIP_CONTENT.length,
+      outputPreview: TOOL_CAP_SKIP_CONTENT,
+    })
+    opts.onEvent?.({ type: 'tool_end', name, ok: false, ms: 0 })
+    return {
+      type: 'tool_result',
+      tool_use_id: use.id,
+      content: TOOL_CAP_SKIP_CONTENT,
+      is_error: true,
+    }
+  }
+
   for (let iteration = 1; iteration <= maxIterations + 1; iteration++) {
-    // Dernier tour / budget épuisé : on interdit les outils pour obtenir une réponse rédigée.
-    const forceText = iteration === maxIterations + 1 || budgetExceeded()
+    // Dernier tour / budget / plafond total : texte forcé (pas d'outils).
+    const forceText =
+      iteration === maxIterations + 1 || budgetExceeded() || forceTextNext
+    forceTextNext = false
     const data = await call(forceText)
     model = data.model || model
     accumulateUsage(data)
     stopReason = data.stop_reason || stopReason
 
-    let uses = data.content.filter((b) => b.type === 'tool_use')
-    if (uses.length > maxPerTurn) {
-      uses = uses.slice(0, maxPerTurn)
-    }
-    if (toolCalls.length + uses.length > maxTotal) {
-      uses = uses.slice(0, Math.max(0, maxTotal - toolCalls.length))
-    }
+    const allUses = data.content.filter((b) => b.type === 'tool_use')
 
-    if (data.stop_reason !== 'tool_use' || uses.length === 0 || forceText) {
+    // Text-only turn (or model finished without tools): return. Never drop tool_use
+    // without pairing tool_result — that path is handled below when stop_reason is tool_use.
+    if (forceText || data.stop_reason !== 'tool_use' || allUses.length === 0) {
       const text = data.content
         .filter((b) => b.type === 'text' && b.text)
         .map((b) => b.text)
         .join('\n')
       const suffix =
-        forceText && budgetExceeded() && !text
-          ? 'Budget tokens atteint — arrêt propre.'
+        !text && forceText
+          ? budgetExceeded()
+            ? 'Budget tokens atteint — arrêt propre.'
+            : executedCount >= maxTotal
+              ? "Plafond d'appels d'outils atteint — arrêt propre."
+              : ''
           : ''
       return {
         text: text || suffix,
         model,
         toolCalls,
         iterations: iteration,
-        stopReason: budgetExceeded() ? 'token_budget' : stopReason,
+        stopReason: budgetExceeded()
+          ? 'token_budget'
+          : executedCount >= maxTotal && forceText
+            ? 'tool_cap'
+            : stopReason,
         usageTotal,
       }
     }
 
+    // Anthropic requires a tool_result for EVERY tool_use in the assistant message.
+    const roomTotal = Math.max(0, maxTotal - executedCount)
+    const toRunCount = Math.min(allUses.length, maxPerTurn, roomTotal)
+    const toRun = allUses.slice(0, toRunCount)
+    const skipped = allUses.slice(toRunCount)
+
     messages.push({ role: 'assistant', content: data.content as Array<Record<string, unknown>> })
 
-    const results = await Promise.all(
-      uses.map(async (use) => {
+    const runResults = await Promise.all(
+      toRun.map(async (use) => {
         const name = String(use.name)
         const input = (use.input && typeof use.input === 'object' ? use.input : {}) as Record<
           string,
@@ -423,6 +469,7 @@ export async function runClaudeToolLoop(opts: ToolLoopOptions): Promise<ToolLoop
         const ms = Date.now() - started
         const raw = exec.content
         const preview = truncateToolResult(raw)
+        executedCount += 1
         toolCalls.push({
           name,
           input,
@@ -441,16 +488,17 @@ export async function runClaudeToolLoop(opts: ToolLoopOptions): Promise<ToolLoop
         }
       }),
     )
-    messages.push({ role: 'user', content: results })
+    const skipResults = skipped.map((use) => pushCapSkip(use))
+    messages.push({ role: 'user', content: [...runResults, ...skipResults] })
 
-    if (toolCalls.length >= maxTotal || budgetExceeded()) {
-      // Force a closing text turn next.
-      continue
+    // Total ceiling or token budget → next turn must be text-only (never continue with tools).
+    if (executedCount >= maxTotal || budgetExceeded()) {
+      forceTextNext = true
     }
   }
 
   return {
-    text: '',
+    text: "Plafond d'itérations atteint — arrêt propre.",
     model,
     toolCalls,
     iterations: maxIterations + 1,

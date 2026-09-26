@@ -288,32 +288,96 @@ test('boucle streamée : événements texte + outil dans l\'ordre, stream:true e
   assert.ok(result.toolCalls[0].outputHash)
 })
 
-test('plafond outils par tour et total (AG0)', async () => {
-  const many = {
+test('plafond par tour : 6 tool_use → exactement 6 tool_result dont 2 is_error (AG0)', async () => {
+  const { TOOL_CAP_SKIP_CONTENT } = await import('./claudeTools.js')
+  const six = {
     stop_reason: 'tool_use',
     model: 'm',
-    content: [
-      { type: 'tool_use', id: 'a', name: 'get_symbol_context', input: { symbol: 'A' } },
-      { type: 'tool_use', id: 'b', name: 'get_symbol_context', input: { symbol: 'B' } },
-      { type: 'tool_use', id: 'c', name: 'get_symbol_context', input: { symbol: 'C' } },
-    ],
+    content: [0, 1, 2, 3, 4, 5].map((i) => ({
+      type: 'tool_use',
+      id: `t${i}`,
+      name: 'get_symbol_context',
+      input: { symbol: `S${i}` },
+    })),
   }
-  const { fetchImpl } = fakeAnthropic([
-    many,
-    { stop_reason: 'end_turn', model: 'm', content: [{ type: 'text', text: 'ok' }] },
+  const { fetchImpl, bodies } = fakeAnthropic([
+    six,
+    { stop_reason: 'end_turn', model: 'm', content: [{ type: 'text', text: 'synthèse' }] },
   ])
+  let executed = 0
   const result = await runClaudeToolLoop({
     apiKey: 'k',
     model: 'm',
     system: 's',
     messages: [{ role: 'user', content: 'x' }],
     tools: toolsFromEngineManifest([CONTEXT_SPEC]),
-    maxToolCallsPerTurn: 2,
+    maxToolCallsPerTurn: 4,
+    maxToolCallsTotal: 16,
+    fetchImpl,
+    execute: async () => {
+      executed += 1
+      return { ok: true, content: '{}' }
+    },
+  })
+  assert.equal(executed, 4)
+  const second = bodies[1].messages as Array<{ role: string; content: unknown }>
+  const toolResults = (second.at(-1)?.content as Array<Record<string, unknown>>) ?? []
+  assert.equal(toolResults.length, 6)
+  assert.equal(toolResults.filter((r) => r.is_error === true).length, 2)
+  assert.deepEqual(
+    toolResults.map((r) => r.tool_use_id),
+    ['t0', 't1', 't2', 't3', 't4', 't5'],
+  )
+  const skipped = result.toolCalls.filter((t) => t.outputPreview === TOOL_CAP_SKIP_CONTENT)
+  assert.equal(skipped.length, 2)
+  assert.ok(skipped.every((t) => t.ok === false && t.ms === 0))
+  assert.equal(result.text, 'synthèse')
+})
+
+test('plafond total atteint → forceText + réponse texte non vide (AG0)', async () => {
+  const { TOOL_CAP_SKIP_CONTENT } = await import('./claudeTools.js')
+  const burst = (ids: string[]) => ({
+    stop_reason: 'tool_use',
+    model: 'm',
+    content: ids.map((id) => ({
+      type: 'tool_use',
+      id,
+      name: 'get_symbol_context',
+      input: { symbol: id },
+    })),
+  })
+  const { fetchImpl, bodies } = fakeAnthropic([
+    burst(['a', 'b', 'c']),
+    { stop_reason: 'end_turn', model: 'm', content: [{ type: 'text', text: 'clôture après plafond' }] },
+  ])
+  let executed = 0
+  const result = await runClaudeToolLoop({
+    apiKey: 'k',
+    model: 'm',
+    system: 's',
+    messages: [{ role: 'user', content: 'x' }],
+    tools: toolsFromEngineManifest([CONTEXT_SPEC]),
+    maxToolCallsPerTurn: 4,
     maxToolCallsTotal: 2,
     fetchImpl,
-    execute: async () => ({ ok: true, content: '{}' }),
+    execute: async () => {
+      executed += 1
+      return { ok: true, content: '{}' }
+    },
   })
-  assert.equal(result.toolCalls.length, 2)
+  assert.equal(executed, 2)
+  const firstUserTools = (
+    (bodies[1].messages as Array<{ role: string; content: unknown }>).at(-1)
+      ?.content as Array<Record<string, unknown>>
+  )
+  assert.equal(firstUserTools.length, 3)
+  assert.equal(firstUserTools.filter((r) => r.is_error === true).length, 1)
+  assert.equal(firstUserTools.filter((r) => r.content === TOOL_CAP_SKIP_CONTENT).length, 1)
+  // 2e appel Anthropic : tool_choice none (texte forcé)
+  assert.deepEqual(bodies[1].tool_choice, { type: 'none' })
+  assert.ok(result.text.length > 0)
+  assert.equal(result.text, 'clôture après plafond')
+  assert.equal(result.stopReason, 'tool_cap')
 })
 
 test('budget tokens → arrêt propre avec tool_choice none (AG0)', async () => {
