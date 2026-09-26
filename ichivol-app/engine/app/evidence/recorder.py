@@ -7,10 +7,10 @@ holds a direction, with the full context (gates, RVOL, structure, regime) and
 the pipeline's decision -- so signals can later be grouped by confluence and
 their outcome measured (app/evidence/outcomes.py).
 
-One row per (symbol, timeframe, candle). The last candle of a scan is still
-forming, so the row is refreshed on each scan until that candle's outcome
-starts being measured; the stored state is therefore the last one seen before
-the bar closed, not a first tick.
+One row per (symbol, timeframe, candle). Entry price is NOT the live forming
+bar (AG0): outcomes use the open of the first closed bar after the signal
+(`outcomes.update_pending_outcomes`). The recorder never refreshes an entry
+price from `row.price`.
 """
 
 from __future__ import annotations
@@ -65,7 +65,10 @@ def _first_of_run(session: Session, symbol: str, timeframe: str, ts: datetime, d
 def record_signal_evidence(session: Session, row: Any) -> str | None:
     """Returns "created", "updated", or None when nothing was written.
 
-    Does not commit -- the caller owns the transaction."""
+    Does not commit -- the caller owns the transaction.
+    Entry price is intentionally omitted here (AG0): outcomes set
+    ``market_snapshot.price`` to the open of the first closed bar after the
+    signal, once that bar exists. Never refresh from ``row.price`` (live)."""
     report = row.evidence
     direction = _directional(row)
     if report is None or direction is None or not row.candles:
@@ -90,7 +93,8 @@ def record_signal_evidence(session: Session, row: Any) -> str | None:
         if existing.decision == decision and existing.context_json == context:
             return None
         snapshot = dict(existing.market_snapshot or {})
-        snapshot.update(price=row.price, direction=direction)
+        # AG0: do NOT refresh entry from live row.price — keep frozen entry if set.
+        snapshot["direction"] = direction
         existing.decision = decision
         existing.context_json = context
         existing.evidence_json = evidence_report_dict(report)
@@ -105,7 +109,7 @@ def record_signal_evidence(session: Session, row: Any) -> str | None:
         report=report,
         decision=decision,
         market_snapshot={
-            "price": row.price,
+            # No live entry price (AG0). Filled by outcomes from first closed-after open.
             "direction": direction,
             "volume_type": last.volume_type.value,
             "first_of_run": _first_of_run(session, row.symbol, row.timeframe, ts, direction),

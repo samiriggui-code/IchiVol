@@ -43,7 +43,7 @@ from app.indicators.rvol import RvolParams
 from app.market_data.resolve import ProviderNotWiredError, resolve_and_fetch
 from app.screener.cache import screener_cache
 from app.screener.persistence import persist_scan
-from app.screener.service import scan_symbol
+from app.screener.service import _closed_only, scan_symbol
 from app.strategy_lab.catalog import get_builtin_ruleset, list_builtin_rulesets
 from app.strategy_lab.event_study import event_study_dict, run_event_study
 from app.strategy_lab.ruleset import parse_ruleset
@@ -639,7 +639,7 @@ def cmd_run_cycle_study(args: dict) -> dict:
 def cmd_calculate_ichimoku(args: dict) -> dict:
     """Raw indicator only -- no RVOL, no pipeline, no decision. For a caller
     that wants the Ichimoku state itself (tenkan/kijun/cloud/score/...), not
-    an interpreted trade decision."""
+    an interpreted trade decision. Closed candles only (same filter as screener)."""
     symbol = _require_str(args, "symbol").upper()
     timeframe = args.get("timeframe", "1h")
     limit = int(args.get("limit", 300))
@@ -647,6 +647,7 @@ def cmd_calculate_ichimoku(args: dict) -> dict:
         provider, _provider_symbol, candles = resolve_and_fetch(symbol, timeframe, limit)
     except ValueError as exc:
         raise CommandError(str(exc)) from exc
+    candles = _closed_only(candles, timeframe)
     if len(candles) < 2:
         raise CommandError(f"not enough candles returned for {symbol} {timeframe}")
 
@@ -655,7 +656,7 @@ def cmd_calculate_ichimoku(args: dict) -> dict:
 
 
 def cmd_calculate_rvol(args: dict) -> dict:
-    """Raw indicator only -- no pipeline, no decision."""
+    """Raw indicator only -- no pipeline, no decision. Closed candles only."""
     symbol = _require_str(args, "symbol").upper()
     timeframe = args.get("timeframe", "1h")
     limit = int(args.get("limit", 300))
@@ -663,6 +664,7 @@ def cmd_calculate_rvol(args: dict) -> dict:
         provider, _provider_symbol, candles = resolve_and_fetch(symbol, timeframe, limit)
     except ValueError as exc:
         raise CommandError(str(exc)) from exc
+    candles = _closed_only(candles, timeframe)
     if len(candles) < 2:
         raise CommandError(f"not enough candles returned for {symbol} {timeframe}")
 

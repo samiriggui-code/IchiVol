@@ -1,28 +1,26 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
-## 2026-09-26 — GEL VP0 · file merges (OK utilisateur — Claude en pause jusqu’à 17h30)
+## 2026-09-26 — GEL VP0 · AW1 MERGÉ · AG0 en merge · Claude pause → 17h30
 
-### Gel
+### Fait
 
-- **VP0 GELÉ + MERGÉ** [#140](https://github.com/samiriggui-code/IchiVol/pull/140) squash → `main` @ `34991b4` (`VP0-2026-09-26` + AW0 §12).
-- OK utilisateur : enchaîner sans Claude ; Claude review au retour.
+| Étape | Statut |
+|-------|--------|
+| **VP0 gel + merge** #140 | **FAIT** → `main` @ `34991b4` |
+| **AW1** #143 Pourquoi? | **FAIT** → `main` @ `7723e53` |
+| **AG0** #144 hygiène | **APPROUVÉ** Claude @ `f0c464a` — merge en cours |
+| **Filtre entry_source** #145 | Après AG0 |
+| **VP1** données + manifeste | Ensuite |
 
-### File en cours
+### AG0 (rappel)
 
-1. ~~Gel + merge VP0~~ **FAIT**
-2. **Merge AW1** [#143](https://github.com/samiriggui-code/IchiVol/pull/143) (Pourquoi? / `explain_chart_object`) — en cours (rebase sur main post-VP0)
-3. **Merge AG0** [#144](https://github.com/samiriggui-code/IchiVol/pull/144) hygiène agent
-4. **Merge filtre entry_source** [#145](https://github.com/samiriggui-code/IchiVol/pull/145)
-5. **VP1** : download spot+1d+perp OI/funding ; manifeste sha256 ; loader figé
+Read-only tools, closed-only calc, evidence entry=`first_closed_open`, meta persist, ceilings/timeout/budget, UI outils ; fix plafond tool_result. Stats pré-AG0 biaisées → filtre #145.
 
-### Références
+### File suite
 
-| Ref | SHA / PR |
-|-----|----------|
-| `main` (post-VP0) | `34991b4` |
-| AW1 | #143 |
-| AG0 | #144 @ `f0c464a` APPROUVÉ |
-| Filtre evidence | #145 |
+Merge AG0 → merge #145 → démarrer **VP1** (download Univers VP + sha256 + loader figé).
+
+---
 
 ---
 

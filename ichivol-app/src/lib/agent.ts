@@ -69,6 +69,9 @@ export interface AgentToolCall {
   input: Record<string, unknown>
   ok: boolean
   ms: number
+  outputHash?: string
+  outputChars?: number
+  outputPreview?: string
 }
 
 export interface AgentChatResponse {

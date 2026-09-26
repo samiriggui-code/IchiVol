@@ -6,7 +6,7 @@ import { resolveLlmForUser } from '../settings/resolve.js'
 import { SOURCES } from '../sources/registry.js'
 import { formatDecisionContext, formatLiveContext, formatScreenerRows } from './context.js'
 import { intentToMode, planIntent } from './planner.js'
-import { runClaudeAgent } from './claudeAgent.js'
+import { runClaudeAgent, toolTraceMeta } from './claudeAgent.js'
 import { buildAgentSystemPrompt, buildSystemPrompt, TRADE_IDEA_DISCLAIMER } from './systemPrompt.js'
 import {
   appendMessage,
@@ -225,6 +225,7 @@ export async function handleAgentChat(req: Request, res: Response): Promise<void
         mode: effectiveMode,
         intent: plan.intent,
         citations: out.citations,
+        meta: toolTraceMeta(out),
       })
 
       const agentResponse: AgentChatResponse = {

@@ -11,6 +11,7 @@ import {
   type ToolExecutor,
 } from './claudeTools.js'
 import { engineAgentCommand, engineAgentTools } from './engineAgentChannel.js'
+import { AGENT_PROMPT_VERSION } from './systemPrompt.js'
 import {
   executeScheduleRecheck,
   SCHEDULE_RECHECK_TOOL,
@@ -36,6 +37,10 @@ export interface ClaudeAgentToolContext {
   threadId?: string | null
   maxIterations?: number
   maxTokens?: number
+  maxToolCallsPerTurn?: number
+  maxToolCallsTotal?: number
+  anthropicTimeoutMs?: number
+  tokenBudget?: number
 }
 
 export interface ClaudeAgentInput {
@@ -55,6 +60,10 @@ export interface ClaudeAgentOutput {
   model: string
   toolCalls: ToolCallTrace[]
   citations: Citation[]
+  promptVersion: string
+  stopReason?: string
+  usageTotal?: { input_tokens: number; output_tokens: number }
+  iterations: number
 }
 
 export async function runClaudeAgent(input: ClaudeAgentInput): Promise<ClaudeAgentOutput> {
@@ -98,6 +107,10 @@ export async function runClaudeAgent(input: ClaudeAgentInput): Promise<ClaudeAge
     signal: input.signal,
     maxIterations: ctx?.maxIterations,
     maxTokens: ctx?.maxTokens,
+    maxToolCallsPerTurn: ctx?.maxToolCallsPerTurn,
+    maxToolCallsTotal: ctx?.maxToolCallsTotal,
+    anthropicTimeoutMs: ctx?.anthropicTimeoutMs,
+    tokenBudget: ctx?.tokenBudget,
   })
 
   const seen = new Set<string>()
@@ -110,5 +123,29 @@ export async function runClaudeAgent(input: ClaudeAgentInput): Promise<ClaudeAge
     model: result.model,
     toolCalls: result.toolCalls,
     citations,
+    promptVersion: AGENT_PROMPT_VERSION,
+    stopReason: result.stopReason,
+    usageTotal: result.usageTotal,
+    iterations: result.iterations,
+  }
+}
+
+/** Shape persisted on AgentMessage.meta (AG0). */
+export function toolTraceMeta(out: ClaudeAgentOutput): Record<string, unknown> {
+  return {
+    promptVersion: out.promptVersion,
+    model: out.model,
+    stopReason: out.stopReason ?? null,
+    iterations: out.iterations,
+    usage: out.usageTotal ?? null,
+    toolCalls: out.toolCalls.map((t) => ({
+      name: t.name,
+      input: t.input,
+      ok: t.ok,
+      ms: t.ms,
+      outputHash: t.outputHash,
+      outputChars: t.outputChars,
+      outputPreview: t.outputPreview,
+    })),
   }
 }

@@ -1,6 +1,9 @@
 import type { ScoredChunk } from '../knowledge/types.js'
 import type { AgentMode } from './types.js'
 
+/** Bump when buildAgentSystemPrompt semantics change (AG0 persistence). */
+export const AGENT_PROMPT_VERSION = 'ag0-v1'
+
 const MODE_INSTRUCTIONS: Record<AgentMode, string> = {
   explain_signal:
     "Explique le signal courant affiché dans l'app (biais Ichimoku + confirmation RVOL) à un utilisateur qui regarde son écran maintenant. Reste concis (5-8 phrases). Appuie-toi sur LIVE_DATA pour les chiffres et sur KNOWLEDGE_CHUNKS pour la théorie.",
