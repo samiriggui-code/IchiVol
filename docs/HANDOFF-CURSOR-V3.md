@@ -19,19 +19,19 @@
 - OI daily metrics = optionnel / gros volume (B4+) — resume-friendly.
 - `vp1/data/` gitignored.
 
-### VP2 (draft) — [#147](https://github.com/samiriggui-code/IchiVol/pull/147) `cursor/vp2-harness-a2fe`
+### VP2 — MERGED [#147](https://github.com/samiriggui-code/IchiVol/pull/147) → `main` @ `91c2795`
 
 - `research_lab/sim.py` : `exit_mode=levels_only`, `time_stop_bars`, `full_cash`, `force_flat_at_end`.
 - Package `engine/vp2/` : Rules §6/§1ter, loader VP1→feed, run metadata (seed, sha256, protocol, cost base|adverse).
-- Tests `tests/vp2/` — pas d’entrées B* (VP3). Smoke : `python -m vp2 smoke`.
+- Tests `tests/vp2/`.
 
-### VP3 (en cours) — `cursor/vp3-baselines-a2fe`
+### VP3 (draft) — [#148](https://github.com/samiriggui-code/IchiVol/pull/148) `cursor/vp3-baselines-a2fe`
 
 - `engine/vp3/` : entrées B0/B1/B2/B5/B6/B7 (§2) sur harness VP2 ; B0 = `exit_mode=hold`.
-- Tests `tests/vp3/` (masques + hold). Runs WF / verdicts A,B,H,J = suite après merge VP2.
+- Tests `tests/vp3/` (masques + hold). Runs WF / verdicts A,B,H,J = suite.
 - CLI : `python -m vp3 run --strategy B1 --symbol BTCUSDT --interval 1h`.
 
-Claude review au retour (≥17h30). File : undraft/merge VP2 → draft VP3.
+Claude review au retour (≥17h30). File : undraft/merge VP3 → WF/metrics.
 
 ---
 
