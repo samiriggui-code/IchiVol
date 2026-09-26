@@ -3,9 +3,10 @@
  * Classes HTML = maquette. Données = engine (pas de démo inventée).
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
+import { MarketLayersMenu } from '../components/MarketLayersMenu'
 import { PriceChart } from '../components/PriceChart'
 import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
 import '../components/engineEvidence.css'
@@ -24,6 +25,8 @@ import {
 } from '../lib/decisionPipeline'
 import { buildDecisionSummary } from '../lib/decisionLabels'
 import {
+  OBJECT_LAYER_META,
+  countObjectsByLayer,
   loadLayerPrefs,
   saveLayerPrefs,
   withIchimoku,
@@ -100,6 +103,9 @@ export function MarketPage() {
   const [watchMsg, setWatchMsg] = useState<string | null>(null)
   const [watchBusy, setWatchBusy] = useState(false)
   const [engineObjects, setEngineObjects] = useState<ChartObject[]>([])
+  const [layersOpen, setLayersOpen] = useState(false)
+  const [layersSheet, setLayersSheet] = useState(false)
+  const layersAnchorRef = useRef<HTMLDivElement>(null)
 
   const ichimokuOn =
     layerPrefs.tenkan && layerPrefs.kijun && layerPrefs.spanA && layerPrefs.spanB
@@ -109,6 +115,39 @@ export function MarketPage() {
     setLayerPrefs(next)
     saveLayerPrefs(next)
   }, [])
+
+  const layerCounts = useMemo(() => countObjectsByLayer(engineObjects), [engineObjects])
+  const activeObjectLayerCount = useMemo(
+    () => OBJECT_LAYER_META.filter((m) => layerPrefs[m.key]).length,
+    [layerPrefs],
+  )
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 800px)')
+    const sync = () => setLayersSheet(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  useEffect(() => {
+    if (!layersOpen || layersSheet) return
+    const onDoc = (e: MouseEvent) => {
+      const el = layersAnchorRef.current
+      if (el && e.target instanceof Node && !el.contains(e.target)) {
+        setLayersOpen(false)
+      }
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLayersOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [layersOpen, layersSheet])
 
   useEffect(() => {
     let cancelled = false
@@ -196,12 +235,12 @@ export function MarketPage() {
     }
   }, [symbol, interval])
 
-  // Supports / résistances : objets STRUCTURE du moteur → niveau le plus proche de chaque côté.
+  // Objets chart moteur (structure / fib / FVG / breaks) + USER / CLAUDE.
   useEffect(() => {
     if (!symbol) return
     let cancelled = false
     setEngineObjects([])
-    getChartObjects(symbol, interval, 300, ['engine'])
+    getChartObjects(symbol, interval, 300, ['engine', 'user', 'claude'])
       .then((objs) => {
         if (!cancelled) setEngineObjects(objs)
       })
@@ -213,16 +252,18 @@ export function MarketPage() {
     }
   }, [symbol, interval])
 
-  const srObjects = useMemo(
-    () =>
-      nearestSrObjects(
-        engineObjects,
-        candles.length ? candles[candles.length - 1]!.close : null,
-        symbol,
-        interval,
-      ),
-    [engineObjects, candles, symbol, interval],
-  )
+  // Toutes les couches + libellés RÉSISTANCE / SUPPORT les plus proches (structure).
+  const chartObjectsForView = useMemo(() => {
+    const nearest = layerPrefs.structure
+      ? nearestSrObjects(
+          engineObjects,
+          candles.length ? candles[candles.length - 1]!.close : null,
+          symbol,
+          interval,
+        )
+      : []
+    return [...engineObjects, ...nearest]
+  }, [engineObjects, candles, symbol, interval, layerPrefs.structure])
 
   useEffect(() => {
     if (!symbol) return
@@ -483,7 +524,7 @@ export function MarketPage() {
                 timeframe={interval}
                 layerPrefs={layerPrefs}
                 onLayerPrefsChange={setLayers}
-                chartObjects={srObjects}
+                chartObjects={chartObjectsForView}
               />
             ) : (
               <div className="empty">Aucune bougie</div>
@@ -508,9 +549,41 @@ export function MarketPage() {
                 />{' '}
                 Supports / résistances
               </label>
+              <div className="mkt-layers-anchor" ref={layersAnchorRef}>
+                <button
+                  type="button"
+                  className={`mkt-layers-btn${layersOpen ? ' is-open' : ''}`}
+                  aria-expanded={layersOpen}
+                  aria-haspopup="dialog"
+                  onClick={() => setLayersOpen((o) => !o)}
+                >
+                  Calques{activeObjectLayerCount ? ` · ${activeObjectLayerCount}` : ''}
+                </button>
+                {layersOpen && !layersSheet && (
+                  <MarketLayersMenu
+                    open
+                    onClose={() => setLayersOpen(false)}
+                    prefs={layerPrefs}
+                    onChange={setLayers}
+                    counts={layerCounts}
+                    variant="menu"
+                  />
+                )}
+              </div>
             </div>
           </div>
         </section>
+
+        {layersOpen && layersSheet && (
+          <MarketLayersMenu
+            open
+            onClose={() => setLayersOpen(false)}
+            prefs={layerPrefs}
+            onChange={setLayers}
+            counts={layerCounts}
+            variant="sheet"
+          />
+        )}
 
         <section className="card analysis-panel">
           <div className="card-head">

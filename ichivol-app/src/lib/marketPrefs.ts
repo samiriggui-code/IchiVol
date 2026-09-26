@@ -1,4 +1,4 @@
-/** Persisted Marché layer prefs (Ichimoku / S-R / volume). Pas de prefs drawer/dock. */
+/** Persisted Marché layer prefs (Ichimoku / S-R / Fib / FVG / breaks…). */
 
 export type ObjectLayerKey =
   | 'structure'
@@ -37,11 +37,62 @@ export const OBJECT_LAYER_KEYS: ObjectLayerKey[] = [
   'backtest',
 ]
 
-/** Bump when DEFAULT_LAYERS change so devices pick up maquette defaults. */
-const LAYERS_PREFS_VERSION = 3
+export const OBJECT_LAYER_META: {
+  key: ObjectLayerKey
+  label: string
+  subtitle: string
+  color: string
+  emptyUntil?: string
+}[] = [
+  {
+    key: 'structure',
+    label: 'Structure',
+    subtitle: 'Zones S/R et trendlines moteur',
+    color: '#0b8f83',
+  },
+  {
+    key: 'breaks',
+    label: 'Cassures',
+    subtitle: 'BOS / CHoCH / breakouts',
+    color: '#7d8288',
+  },
+  {
+    key: 'fibonacci',
+    label: 'Fibonacci',
+    subtitle: 'Retracements impulsifs',
+    color: '#a4a9c2',
+  },
+  {
+    key: 'fvg',
+    label: 'FVG',
+    subtitle: 'Fair value gaps',
+    color: '#6b7c93',
+  },
+  {
+    key: 'claude',
+    label: 'Claude',
+    subtitle: 'Objets dessinés par l’agent',
+    color: '#1a7df5',
+  },
+  {
+    key: 'user_trades',
+    label: 'Trades',
+    subtitle: 'ENTRY / STOP / TARGET utilisateur',
+    color: '#c8412f',
+  },
+  {
+    key: 'backtest',
+    label: 'Backtest',
+    subtitle: 'Overlay stratégie catalogue',
+    color: '#91989d',
+  },
+]
+
+/** Bump when DEFAULT_LAYERS change so devices pick up restored object layers. */
+const LAYERS_PREFS_VERSION = 4
 const LAYERS_KEY = `ichivol.market.layers.v${LAYERS_PREFS_VERSION}`
 
-/** Maquette : Ichimoku + S/R cochés ; calques avancés off. */
+/** V1/V2 : structure + cassures + fib + FVG visibles ; trades/agent on. */
 export const DEFAULT_LAYERS: LayerPrefs = {
   candles: true,
   tenkan: true,
@@ -51,11 +102,11 @@ export const DEFAULT_LAYERS: LayerPrefs = {
   volume: true,
   signals: false,
   structure: true,
-  fibonacci: false,
-  fvg: false,
-  breaks: false,
-  claude: false,
-  user_trades: false,
+  fibonacci: true,
+  fvg: true,
+  breaks: true,
+  claude: true,
+  user_trades: true,
   backtest: false,
   fadeFilledFvg: true,
   showInvalidated: false,
@@ -108,4 +159,24 @@ export function layerFromSource(
   if (source === 'claude') return 'claude'
   if (source === 'backtest') return 'backtest'
   return 'structure'
+}
+
+export function countObjectsByLayer(
+  objects: { source: string; layer?: string | null }[] | null | undefined,
+): Record<ObjectLayerKey, number> {
+  const counts: Record<ObjectLayerKey, number> = {
+    structure: 0,
+    fibonacci: 0,
+    fvg: 0,
+    breaks: 0,
+    claude: 0,
+    user_trades: 0,
+    backtest: 0,
+  }
+  if (!objects) return counts
+  for (const o of objects) {
+    const k = layerFromSource(o.source, o.layer)
+    counts[k] += 1
+  }
+  return counts
 }
