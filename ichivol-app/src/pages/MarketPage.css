@@ -473,65 +473,227 @@
 }
 
 @media (max-width: 800px) {
-  .market-page .page-head {
-    align-items: flex-start;
-    gap: 18px;
+  .market-page {
+    overflow-x: clip;
+    max-width: 100%;
   }
+
+  .market-page .page-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
   .dash-shell .market-page .page-head h1,
   .dash-shell.is-mobile .market-page .page-head h1,
   .market-page .page-head h1 {
-    font-size: 32px;
+    font-size: 28px;
     font-weight: 400;
     font-family: Newsreader, Georgia, serif;
-    line-height: normal;
-    letter-spacing: -1px;
+    line-height: 1.15;
+    letter-spacing: -0.8px;
   }
+
+  .market-page .actions {
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  /* TV déjà dans le card-head — évite une rangée vide sous le titre */
+  .market-page .actions .market-tv-open {
+    display: none;
+  }
+
+  .market-page .actions .tag {
+    flex: 0 0 auto;
+  }
+
+  /* Chips : scroll horizontal plutôt que wrap sur 2 lignes */
+  .market-page .class-chips {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-bottom: 10px;
+    padding: 2px 0 6px;
+    min-height: 40px;
+  }
+
+  .market-page .class-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .market-page .class-chips button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  /* Rangée actions vide si TV + tag masqués */
+  .market-page .page-head .actions:not(:has(:not([hidden]):not(.market-tv-open))) {
+    display: none;
+  }
+
+  .market-page .actions:empty {
+    display: none;
+  }
+
+  /*
+   * Critique : en desktop le graphique est forcé en column 2.
+   * Sur 1 colonne ça le poussait hors grille → watchlist ~30px + chart serré.
+   */
   .market-page .market-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
   }
+
+  .market-page .market-layout > .card:nth-child(2) {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .market-page .analysis-panel {
+    grid-column: 1;
+  }
+
   .market-page .watchlist {
     display: flex;
-    overflow: auto;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    height: auto;
+    min-height: 0;
+    max-height: none;
   }
+
   .market-page .watchlist button {
-    min-width: 130px;
+    flex: 0 0 auto;
+    min-width: 118px;
+    max-width: 140px;
     border-bottom: 0;
     border-right: 1px solid var(--line);
+    border-left: 0;
+    padding: 12px 14px;
   }
+
+  .market-page .watchlist button.active {
+    border-left: 0;
+    border-bottom: 3px solid var(--blue);
+    background: #eef4fc;
+  }
+
+  .market-page .watchlist .up,
+  .market-page .watchlist .down,
+  .market-page .watchlist .chg-na {
+    float: none;
+    display: block;
+    margin: 2px 0 0;
+    font-size: 10px;
+  }
+
   .market-page .analysis-gates {
     grid-template-columns: 1fr;
   }
+
   .engine-evidence.is-wide {
     grid-template-columns: 1fr;
   }
-  /* Maquette ≤800 : card-head wrap → TF sous le titre symbole */
+
   .market-page .card-head {
-    padding: 18px;
+    padding: 14px 16px 10px;
     flex-wrap: wrap;
     flex-direction: column;
     align-items: stretch;
-  }
-  .market-page .card-head .segmented {
-    align-self: flex-start;
-    margin-top: 4px;
-  }
-  .market-page .card-body {
-    padding-left: 18px;
-    padding-right: 18px;
-  }
-  .market-page .chart-summary {
     gap: 10px;
   }
-  /* Cases Ichimoku / S-R empilées */
+
+  .market-page .card-head-tools {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .market-page .card-head .segmented {
+    align-self: stretch;
+    flex: 1;
+    justify-content: space-between;
+  }
+
+  .market-page .card-head .segmented button {
+    flex: 1;
+    padding: 7px 4px;
+    text-align: center;
+  }
+
+  .market-page .card-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .market-page .chart-summary {
+    gap: 8px 14px;
+    flex-wrap: wrap;
+    padding: 0 16px 8px;
+    font-size: 11px;
+  }
+
   .market-page .checkrow {
-    gap: 12px;
+    gap: 10px;
     flex-wrap: wrap;
     flex-direction: column;
     align-items: flex-start;
+    margin: 10px 0 4px;
   }
+
   .market-page .market-chart-slot {
-    height: 280px;
-    min-height: 240px;
+    height: min(46vh, 340px);
+    min-height: 250px;
+  }
+
+  .market-page .market-chart-slot .chart-wrap {
+    min-height: 220px;
+  }
+
+  .market-page .analysis-actions {
+    width: 100%;
+  }
+
+  .market-page .analysis-actions button.suggestion {
+    width: auto;
+    margin-top: 0;
+    display: inline-block;
+  }
+
+  .market-page .analysis-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .market-page .analysis-body {
+    padding-bottom: 8px;
+  }
+}
+
+/* Très petit téléphone */
+@media (max-width: 400px) {
+  .market-page .actions {
+    display: none;
+  }
+
+  .market-page .page-head h1 {
+    font-size: 26px;
+  }
+
+  .market-page .market-chart-slot {
+    height: min(42vh, 300px);
+    min-height: 220px;
   }
 }
 

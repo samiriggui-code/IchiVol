@@ -4,6 +4,14 @@ import type { Interval } from './types'
 export function openMarketTvWindow(symbol: string, interval: Interval): void {
   const q = new URLSearchParams({ symbol, interval })
   const url = `/app/tv?${q.toString()}`
+  // Sur téléphone : même onglet (pas de popup).
+  const narrow =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(max-width: 800px), (pointer: coarse) and (max-width: 1024px)').matches
+  if (narrow) {
+    window.location.assign(url)
+    return
+  }
   const features = [
     'popup=yes',
     'width=1480',
@@ -12,5 +20,9 @@ export function openMarketTvWindow(symbol: string, interval: Interval): void {
     'top=40',
   ].join(',')
   const win = window.open(url, 'ichivol-market-tv', features)
-  win?.focus()
+  if (!win) {
+    window.location.assign(url)
+    return
+  }
+  win.focus()
 }
