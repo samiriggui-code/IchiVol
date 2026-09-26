@@ -3,12 +3,15 @@
  * Même données moteur que Marché (univers, OHLCV, watchlist multi-classe).
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { MarketLayersMenu } from '../components/MarketLayersMenu'
 import { PriceChart } from '../components/PriceChart'
 import { fetchTickers24h } from '../lib/binance'
 import { getScreener, type ScreenerDecisionRow } from '../lib/decisions'
 import {
+  OBJECT_LAYER_META,
+  countObjectsByLayer,
   loadLayerPrefs,
   saveLayerPrefs,
   withIchimoku,
@@ -68,6 +71,8 @@ export function MarketTvPage() {
   const [layerPrefs, setLayerPrefs] = useState<LayerPrefs>(() => loadLayerPrefs())
   const [engineObjects, setEngineObjects] = useState<ChartObject[]>([])
   const [rvol, setRvol] = useState<number | null>(null)
+  const [layersOpen, setLayersOpen] = useState(false)
+  const layersAnchorRef = useRef<HTMLDivElement>(null)
 
   const ichimokuOn =
     layerPrefs.tenkan && layerPrefs.kijun && layerPrefs.spanA && layerPrefs.spanB
@@ -77,6 +82,29 @@ export function MarketTvPage() {
     setLayerPrefs(next)
     saveLayerPrefs(next)
   }, [])
+
+  const layerCounts = useMemo(() => countObjectsByLayer(engineObjects), [engineObjects])
+  const activeObjectLayerCount = useMemo(
+    () => OBJECT_LAYER_META.filter((m) => layerPrefs[m.key]).length,
+    [layerPrefs],
+  )
+
+  useEffect(() => {
+    if (!layersOpen) return
+    const onDoc = (e: MouseEvent) => {
+      const el = layersAnchorRef.current
+      if (el && e.target instanceof Node && !el.contains(e.target)) setLayersOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLayersOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [layersOpen])
 
   // Sync URL (bookmark / refresh TV)
   useEffect(() => {
@@ -178,7 +206,7 @@ export function MarketTvPage() {
     if (!symbol) return
     let cancelled = false
     setEngineObjects([])
-    getChartObjects(symbol, interval, 300, ['engine'])
+    getChartObjects(symbol, interval, 300, ['engine', 'user', 'claude'])
       .then((objs) => {
         if (!cancelled) setEngineObjects(objs)
       })
@@ -200,16 +228,17 @@ export function MarketTvPage() {
     setRvol(screenerById.get(symbol)?.rvol ?? null)
   }, [screenerById, symbol])
 
-  const srObjects = useMemo(
-    () =>
-      nearestSrObjects(
-        engineObjects,
-        candles.length ? candles[candles.length - 1]!.close : null,
-        symbol,
-        interval,
-      ),
-    [engineObjects, candles, symbol, interval],
-  )
+  const chartObjectsForView = useMemo(() => {
+    const nearest = layerPrefs.structure
+      ? nearestSrObjects(
+          engineObjects,
+          candles.length ? candles[candles.length - 1]!.close : null,
+          symbol,
+          interval,
+        )
+      : []
+    return [...engineObjects, ...nearest]
+  }, [engineObjects, candles, symbol, interval, layerPrefs.structure])
 
   const current = useMemo(
     () => instruments.find((i) => i.id === symbol) ?? null,
@@ -385,7 +414,7 @@ export function MarketTvPage() {
                 timeframe={interval}
                 layerPrefs={layerPrefs}
                 onLayerPrefsChange={setLayers}
-                chartObjects={srObjects}
+                chartObjects={chartObjectsForView}
               />
             ) : (
               <div className="market-tv-empty">Aucune bougie</div>
@@ -408,6 +437,26 @@ export function MarketTvPage() {
               />{' '}
               Supports / résistances
             </label>
+            <div className="mkt-layers-anchor" ref={layersAnchorRef}>
+              <button
+                type="button"
+                className={`mkt-layers-btn${layersOpen ? ' is-open' : ''}`}
+                aria-expanded={layersOpen}
+                onClick={() => setLayersOpen((o) => !o)}
+              >
+                Calques{activeObjectLayerCount ? ` · ${activeObjectLayerCount}` : ''}
+              </button>
+              {layersOpen && (
+                <MarketLayersMenu
+                  open
+                  onClose={() => setLayersOpen(false)}
+                  prefs={layerPrefs}
+                  onChange={setLayers}
+                  counts={layerCounts}
+                  variant="menu"
+                />
+              )}
+            </div>
           </div>
         </section>
       </div>
