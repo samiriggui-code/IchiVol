@@ -73,22 +73,39 @@ export function ChartIntelligencePanel({
   entryTime = null,
 }: Props) {
   const entryUnix = toUnixSeconds(entryTime)
-  const defaults = defaultBriefing(context, { entryTime: entryUnix })
-  const [period, setPeriod] = useState<BriefingPeriodId>(defaults.period)
-  const [camToken, setCamToken] = useState(0)
   const ci = useChartIntelligence({ symbol, timeframe, source })
   const res = ci.response
+  const seriesFirst = res?.candles?.[0]?.time ?? null
+  const defaults = defaultBriefing(context, {
+    entryTime: entryUnix,
+    seriesFirstTime: seriesFirst,
+  })
+  const [period, setPeriod] = useState<BriefingPeriodId>(defaults.period)
+  const [camToken, setCamToken] = useState(0)
   const height = chartHeight ?? (variant === 'brief' ? 300 : 540)
   const eyebrow = CONTEXT_EYEBROW[context] + (res?.mock ? ' · MOCK' : '')
 
   // Directeur V0 : appliquer le pack par défaut au montage / changement de contexte.
   useEffect(() => {
-    const d = defaultBriefing(context, { entryTime: entryUnix })
+    const d = defaultBriefing(context, {
+      entryTime: entryUnix,
+      seriesFirstTime: ci.response?.candles?.[0]?.time ?? null,
+    })
     setPeriod(d.period)
     setCamToken((t) => t + 1)
     ci.setLayers(packById(d.pack).layers)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [context, symbol, timeframe, entryUnix])
+
+  // Quand les bougies arrivent : entry hors série → repli swing (évite fenêtre vide).
+  useEffect(() => {
+    const first = ci.response?.candles?.[0]?.time
+    if (first == null || entryUnix == null) return
+    if (period === 'since_entry' && entryUnix < first) {
+      setPeriod('swing')
+      setCamToken((t) => t + 1)
+    }
+  }, [ci.response?.candles, entryUnix, period])
 
   const activePack: LayerPackId | null = useMemo(() => matchLayerPack(ci.layers), [ci.layers])
 
@@ -97,8 +114,9 @@ export function ChartIntelligencePanel({
       cameraForPeriod(period, camToken, {
         entryTime: entryUnix,
         barSeconds: res?.replay?.bar_seconds ?? 3600,
+        seriesFirstTime: res?.candles?.[0]?.time ?? null,
       }),
-    [period, camToken, entryUnix, res?.replay?.bar_seconds],
+    [period, camToken, entryUnix, res?.replay?.bar_seconds, res?.candles],
   )
   const onPeriod = (id: BriefingPeriodId) => {
     setPeriod(id)

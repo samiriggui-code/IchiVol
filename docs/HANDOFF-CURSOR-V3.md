@@ -1,5 +1,19 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — #133 briefing · repli entryTime hors série → swing
+
+**Suite OK Claude** (merge après #134) : si `entryTime` &lt; première bougie chargée, période / caméra = **`swing`** (plus de fenêtre vide ancrée hors historique).
+
+| Fichier | Changement |
+|---------|------------|
+| `chartIntelligenceBriefing.ts` | `defaultBriefing` + `cameraForPeriod` acceptent `seriesFirstTime` |
+| `ChartIntelligencePanel.tsx` | corrige la période quand les bougies arrivent |
+| `chartIntelligenceBriefing.test.ts` | vitest entry in-range / before-first |
+
+**Ordre :** merge #134 (R7–R9) → VPS smoke → merge #133 → **GEL Chart Intelligence**.
+
+---
+
 ## 2026-09-26 — Chart Intelligence Briefing (période + packs + caméra) — chantier ouvert · branche `cursor/chart-intel-briefing-a2fe`
 
 **Pour Claude :** relecture produit/UX de ce chantier (V0 heuristique). Cursor code en parallèle ; **pas de merge avant CI-R1** (#134).

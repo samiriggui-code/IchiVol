@@ -151,9 +151,21 @@ export const ENTRY_MARGIN_BARS = 8
 export function cameraForPeriod(
   period: BriefingPeriodId,
   token: number,
-  opts?: { entryTime?: number | null; barSeconds?: number },
+  opts?: {
+    entryTime?: number | null
+    barSeconds?: number
+    /** Première bougie chargée — si entry &lt; first, repli swing (évite fenêtre vide). */
+    seriesFirstTime?: number | null
+  },
 ): ChartCamera {
   if (period === 'since_entry' && opts?.entryTime != null && Number.isFinite(opts.entryTime)) {
+    const first = opts.seriesFirstTime
+    if (first != null && Number.isFinite(first) && Number(opts.entryTime) < Number(first)) {
+      // Entrée hors historique chargé → swing (pas une fenêtre ancrée hors série).
+      return cameraForPeriod('swing', token, {
+        barSeconds: opts.barSeconds,
+      })
+    }
     const bar = opts.barSeconds ?? 3600
     return {
       mode: 'follow',
@@ -182,15 +194,22 @@ export interface BriefingDefaults {
  * Défauts selon le contexte d’usage (fiche Décisions / Position / explore).
  * Heuristique produit V0 — pas un LLM, pas un vote pipeline.
  * Position : période ancrée sur la bougie d’entrée (pas 120 barres fixes).
+ * Si `entryTime` &lt; première bougie chargée → `swing` (pas de fenêtre vide).
  */
 export function defaultBriefing(
   context: BriefingContext,
-  opts?: { entryTime?: number | null },
+  opts?: { entryTime?: number | null; seriesFirstTime?: number | null },
 ): BriefingDefaults {
   if (context === 'prep') return { period: 'setup', pack: 'setup' }
   if (context === 'position') {
+    const entry = opts?.entryTime
+    const first = opts?.seriesFirstTime
+    const entryOk =
+      entry != null &&
+      Number.isFinite(entry) &&
+      (first == null || !Number.isFinite(first) || Number(entry) >= Number(first))
     return {
-      period: opts?.entryTime != null ? 'since_entry' : 'swing',
+      period: entryOk ? 'since_entry' : 'swing',
       pack: 'structure',
     }
   }
