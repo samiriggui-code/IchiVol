@@ -1,5 +1,58 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 soir — SYNC LOCAL · tip `7d0f5f4` · journal journée
+
+**PC local** fast-forward `3038eed` → `main` @ **`7d0f5f4`** (= GitHub).  
+Ce bloc = résumé unique de **toute la journée** pour reprise Claude / Cursor.
+
+### Tip HEAD
+
+`7d0f5f4` — docs(vp3): formalize A/B/H BTCUSDT 1h report at n_boot=10000 (#150)
+
+### Journal (ordre chronologique approximatif)
+
+| Bloc | Tips / PRs | Statut |
+|------|------------|--------|
+| Landing V3 | `c2cf1cf` | MERGED |
+| Market TV plein écran + mobile + calques | `396a917` … `8ddeec2` | MERGED |
+| Chart Intelligence prototype → API → Décisions | #124→#134 | **GEL** (bugs only) |
+| T-CI-BRIEF packs/caméra | #133 `df013fb` | MERGED · sous GEL CI |
+| T-CYCLE B1–B4 + P1–P6 | #123 `9e2b02f` | **GEL** |
+| GOLDEN-RVOL py3.12 | #139 `c46eda1` | MERGED |
+| Handoff GEL CI+T-CYCLE + VP0 | #136 `6634438` | MERGED |
+| **VP0** VALIDATION-PROTOCOL + AW0 | #140 `34991b4` | **GEL DOC** |
+| AW1 « Pourquoi ? » | #143 `7723e53` | MERGED |
+| AG0 hygiène agent + filtre evidence | #144+#145 | MERGED |
+| **VP1** Vision freeze | #146 `89e950a` | MERGED |
+| **VP2** harness §6/§1ter | #147 `91c2795` | MERGED |
+| **VP3** B0–B7 + compare A/B/H | #148–#150 → `7d0f5f4` | MERGED · **pas de claim EDGE** |
+
+### VP3 A/B/H — BTCUSDT 1h · n_boot=10 000 · [`VP3-REPORT-BTCUSDT-1h.md`](./VP3-REPORT-BTCUSDT-1h.md)
+
+| Q | Pair | bi_beats_bj |
+|---|------|-------------|
+| A | B1 vs B0 | **false** (B1 dominé) |
+| B | B2 vs B1 | **false** (Δ ok · DSR 0.52) |
+| H | B5 vs B2 | **false** (IC inclut 0) |
+
+### GEL actifs (ne pas rouvrir sans OK Claude)
+
+- Chart Intelligence (features) · T-CYCLE (features) · VP0 doc  
+- Pas de regen goldens · pas de claim EDGE (N T10b=1 provisoire)
+
+### Suite file (Claude review puis OK utilisateur)
+
+1. Revue Claude rapport VP3 A/B/H  
+2. ETH/SOL · 4h · Q **J** (B7) · N T10b figé · adverse stress  
+3. Bugs/hotfixes CI ou T-CYCLE OK hors gel feature
+
+### Docs à lire
+
+- [`VALIDATION-PROTOCOL.md`](./VALIDATION-PROTOCOL.md) · [`AW0-CONSOLIDATION.md`](./AW0-CONSOLIDATION.md)  
+- [`VP3-REPORT-BTCUSDT-1h.md`](./VP3-REPORT-BTCUSDT-1h.md) · [`HANDOFF-LOCAL-CLAUDE.md`](../HANDOFF-LOCAL-CLAUDE.md)
+
+---
+
 ## 2026-09-26 — VP1→VP3 MERGÉS · compare A/B/H provisoire
 
 ### Merges (OK utilisateur · file gel Claude pause)
@@ -13,8 +66,10 @@
 | **#146 VP1** | `89e950a` | Vision + manifest + loader |
 | **#147 VP2** | `91c2795` | Harness §6 / §1ter |
 | **#148 VP3** | `d3abe6f` | B0–B7 + WF + métriques + DSR |
+| **#149** | `e352c3c` | compare A/B/H CLI + B0 WF fix + BTC 1h |
+| **#150** | `7d0f5f4` | rapport formalisé n_boot=10 000 |
 
-### VP3 compare — [`VP3-REPORT-BTCUSDT-1h.md`](./VP3-REPORT-BTCUSDT-1h.md) · tip `e352c3c`+
+### VP3 compare — [`VP3-REPORT-BTCUSDT-1h.md`](./VP3-REPORT-BTCUSDT-1h.md) · tip `7d0f5f4`
 
 BTCUSDT 1h · base · **n_boot=10 000** :
 
@@ -24,7 +79,7 @@ BTCUSDT 1h · base · **n_boot=10 000** :
 | B | B2 vs B1 | **false** | Δ&gt;0 IC ok · DSR 0.52 |
 | H | B5 vs B2 | **false** | IC Δ inclut 0 · DSR 0.72 |
 
-Claude review au retour (≥17h30). Suite : ETH/SOL · 4h · Q J (B7) · N T10b.
+Claude review au retour. Suite : ETH/SOL · 4h · Q J (B7) · N T10b.
 ---
 
 ## 2026-09-26 — VP2 harness · VP1 funding OK · file gel (Claude pause)

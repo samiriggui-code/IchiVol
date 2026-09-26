@@ -1,6 +1,6 @@
 # VP3 — rapports A / B / H (BTCUSDT 1h, coûts base)
 
-**Tip code :** `main` @ `e352c3c` (+ ce PR)  
+**Tip code :** `main` @ `7d0f5f4` (#150 formalize · code compare `e352c3c`)  
 **Protocole :** `VP0-2026-09-26`  
 **Données :** VP1 frozen spot local (`vp1/data/`, gitignored)  
 **Bootstrap :** block apparié, **n = 10 000**, seed 7  
