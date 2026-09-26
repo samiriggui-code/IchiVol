@@ -1,6 +1,8 @@
 /** Calques menu (desktop dropdown + mobile sheet) — Structure / Fib / FVG / Cassures… */
 
 import {
+  DEFAULT_LAYERS,
+  OBJECT_LAYER_KEYS,
   OBJECT_LAYER_META,
   type LayerPrefs,
   type ObjectLayerKey,
@@ -30,6 +32,26 @@ export function MarketLayersMenu({
     onChange({ ...prefs, [key]: !prefs[key] })
   }
 
+  const hideAllObjects = () => {
+    const next = { ...prefs }
+    for (const k of OBJECT_LAYER_KEYS) next[k] = false
+    onChange(next)
+  }
+
+  const structureOnly = () => {
+    const next = { ...prefs }
+    for (const k of OBJECT_LAYER_KEYS) next[k] = k === 'structure'
+    onChange(next)
+  }
+
+  const resetDefaults = () => {
+    const next = { ...prefs }
+    for (const k of OBJECT_LAYER_KEYS) next[k] = DEFAULT_LAYERS[k]
+    next.fadeFilledFvg = DEFAULT_LAYERS.fadeFilledFvg
+    next.showInvalidated = DEFAULT_LAYERS.showInvalidated
+    onChange(next)
+  }
+
   const body = (
     <div className={`mkt-layers-panel ${variant === 'sheet' ? 'is-sheet' : 'is-menu'}`}>
       {variant === 'sheet' && (
@@ -40,6 +62,17 @@ export function MarketLayersMenu({
           </button>
         </header>
       )}
+      <div className="mkt-layers-quick">
+        <button type="button" onClick={structureOnly}>
+          Structure seule
+        </button>
+        <button type="button" onClick={hideAllObjects}>
+          Tout masquer
+        </button>
+        <button type="button" onClick={resetDefaults}>
+          Défaut
+        </button>
+      </div>
       <ul className="mkt-layers-list">
         {OBJECT_LAYER_META.map((m) => (
           <li key={m.key}>

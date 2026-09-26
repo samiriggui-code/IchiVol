@@ -342,6 +342,27 @@ export function MarketTvPage() {
             </button>
           ))}
         </div>
+        <div className="mkt-layers-anchor" ref={layersAnchorRef}>
+          <button
+            type="button"
+            className={`mkt-layers-btn mkt-layers-btn-head${layersOpen ? ' is-open' : ''}`}
+            aria-expanded={layersOpen}
+            title="Afficher / masquer Structure, Fib, FVG, Cassures…"
+            onClick={() => setLayersOpen((o) => !o)}
+          >
+            Calques{activeObjectLayerCount ? ` · ${activeObjectLayerCount}` : ''}
+          </button>
+          {layersOpen && (
+            <MarketLayersMenu
+              open
+              onClose={() => setLayersOpen(false)}
+              prefs={layerPrefs}
+              onChange={setLayers}
+              counts={layerCounts}
+              variant="menu"
+            />
+          )}
+        </div>
         <div className="market-tv-actions">
           <Link className="market-tv-link" to={`/app/market?symbol=${encodeURIComponent(symbol)}`}>
             Page Marché
@@ -437,26 +458,9 @@ export function MarketTvPage() {
               />{' '}
               Supports / résistances
             </label>
-            <div className="mkt-layers-anchor" ref={layersAnchorRef}>
-              <button
-                type="button"
-                className={`mkt-layers-btn${layersOpen ? ' is-open' : ''}`}
-                aria-expanded={layersOpen}
-                onClick={() => setLayersOpen((o) => !o)}
-              >
-                Calques{activeObjectLayerCount ? ` · ${activeObjectLayerCount}` : ''}
-              </button>
-              {layersOpen && (
-                <MarketLayersMenu
-                  open
-                  onClose={() => setLayersOpen(false)}
-                  prefs={layerPrefs}
-                  onChange={setLayers}
-                  counts={layerCounts}
-                  variant="menu"
-                />
-              )}
-            </div>
+            <span className="market-tv-tools-hint">
+              Fib · FVG · Cassures → <b>Calques</b> en haut
+            </span>
           </div>
         </section>
       </div>

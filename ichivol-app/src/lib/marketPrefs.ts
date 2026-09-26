@@ -89,10 +89,13 @@ export const OBJECT_LAYER_META: {
 ]
 
 /** Bump when DEFAULT_LAYERS change so devices pick up restored object layers. */
-const LAYERS_PREFS_VERSION = 4
+const LAYERS_PREFS_VERSION = 5
 const LAYERS_KEY = `ichivol.market.layers.v${LAYERS_PREFS_VERSION}`
 
-/** V1/V2 : structure + cassures + fib + FVG visibles ; trades/agent on. */
+/**
+ * Defaults sobres : Ichimoku + Structure (S/R) seulement.
+ * Fib / FVG / Cassures / agent / trades off — à activer via palette Calques.
+ */
 export const DEFAULT_LAYERS: LayerPrefs = {
   candles: true,
   tenkan: true,
@@ -102,11 +105,11 @@ export const DEFAULT_LAYERS: LayerPrefs = {
   volume: true,
   signals: false,
   structure: true,
-  fibonacci: true,
-  fvg: true,
-  breaks: true,
-  claude: true,
-  user_trades: true,
+  fibonacci: false,
+  fvg: false,
+  breaks: false,
+  claude: false,
+  user_trades: false,
   backtest: false,
   fadeFilledFvg: true,
   showInvalidated: false,

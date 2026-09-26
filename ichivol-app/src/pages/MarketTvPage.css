@@ -308,8 +308,14 @@
   font-size: 13px;
 }
 
-.market-tv-tools .mkt-layers-anchor {
+.market-tv-tools-hint {
   margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.market-tv-tools-hint b {
+  color: var(--blue);
 }
 
 .market-tv-tools input {
