@@ -157,13 +157,13 @@ export type IntelligenceLayerPrefs = Record<IntelligenceLayerKey, boolean>
 
 export const DEFAULT_INTELLIGENCE_LAYERS: IntelligenceLayerPrefs = {
   market_structure: true,
-  support_resistance: true,
-  trendlines: true,
+  support_resistance: false,
+  trendlines: false,
   fibonacci: true,
   fvg: true,
-  liquidity: true,
+  liquidity: false,
   ichimoku: true,
-  confluence: true,
+  confluence: false,
 }
 
 /** Couleurs : reprises de OBJECT_LAYER_META (palette Calques du Marché) quand la couche existe. */
@@ -272,6 +272,42 @@ export function objectTitle(o: IntelligenceObject): string {
   if (kind === 'trendline' || o.type === 'trend_line' || o.type === 'ray') return 'Trendline'
   if (o.side === 'resistance') return 'Resistance'
   return 'Support'
+}
+
+/** Instant à partir duquel l'objet peut être montré en replay (anti-lookahead UI). */
+export function objectKnownAt(o: IntelligenceObject): number {
+  const known = o.origin?.known_at
+  if (typeof known === 'number' && Number.isFinite(known)) return known
+  if (typeof o.as_of === 'number' && Number.isFinite(o.as_of)) return o.as_of
+  const t = o.points?.[0]?.time
+  if (typeof t === 'number' && Number.isFinite(t)) return t
+  return Number.POSITIVE_INFINITY
+}
+
+/**
+ * Coupe un snapshot live à `asOf` pour un replay progressif côté client
+ * (sans re-fetch à chaque bougie).
+ */
+export function sliceIntelligenceAt(
+  live: ChartIntelligenceResponse,
+  asOf: number,
+): ChartIntelligenceResponse {
+  const candles = live.candles.filter((c) => c.time <= asOf)
+  const ichimoku = live.ichimoku.filter((p) => p.time <= asOf)
+  const projection = live.projection.filter((p) => p.time <= asOf)
+  const objects = live.objects.filter((o) => objectKnownAt(o) <= asOf)
+  return {
+    ...live,
+    as_of: asOf,
+    candles,
+    ichimoku,
+    projection,
+    objects,
+    count: objects.length,
+    // Analyse = verdict live ; masquée pendant le replay pour ne pas spoiler.
+    analysis: null,
+    mock: live.mock,
+  }
 }
 
 /** Format prix identique à l'axe fr-FR de PriceChart. */

@@ -22,16 +22,29 @@ interface Props {
   onSelect: (key: string) => void
   /** Instant as_of courant (bord droit des objets vivants). */
   asOf: number | null
+  /** Clés apparues sur la dernière bougie du curseur. */
+  freshKeys?: ReadonlySet<string>
+  /** Atténue les objets non « fresh » pendant le replay. */
+  dimStale?: boolean
   children: ReactNode
 }
 
-export function DrawingLayer({ objects, selectedKey, onSelect, asOf, children }: Props) {
+export function DrawingLayer({
+  objects,
+  selectedKey,
+  onSelect,
+  asOf,
+  freshKeys,
+  dimStale = false,
+  children,
+}: Props) {
   const proj = useChartProjection()
   if (!proj) return null
+  const fresh = freshKeys ?? new Set<string>()
   return (
-    <DrawingContext.Provider value={{ objects, selectedKey, onSelect, asOf }}>
+    <DrawingContext.Provider value={{ objects, selectedKey, onSelect, asOf, freshKeys: fresh, dimStale }}>
       <svg
-        className="ci-drawing-svg"
+        className={`ci-drawing-svg${dimStale ? ' is-replay' : ''}`}
         width={proj.width}
         height={proj.height}
         viewBox={`0 0 ${proj.width} ${proj.height}`}
@@ -54,6 +67,8 @@ export function DrawingLayer({ objects, selectedKey, onSelect, asOf, children }:
             asOf={asOf}
             selectedKey={selectedKey}
             onSelect={onSelect}
+            freshKeys={fresh}
+            dimStale={dimStale}
           />
         </g>
       </svg>
@@ -103,19 +118,37 @@ interface GutterProps {
   asOf: number | null
   selectedKey: string | null
   onSelect: (key: string) => void
+  freshKeys: ReadonlySet<string>
+  dimStale: boolean
 }
 
+/** Max d’étiquettes gouttière — évite la pollution visuelle. */
+const MAX_GUTTER = 8
+
 /** Étiquettes des objets vivants, empilées à droite du dernier prix (sans chevauchement). */
-function GutterLabels({ objects, proj, asOf, selectedKey, onSelect }: GutterProps) {
+function GutterLabels({ objects, proj, asOf, selectedKey, onSelect, freshKeys, dimStale }: GutterProps) {
   const compact = proj.width < COMPACT_WIDTH
-  const placed = layoutGutter(gutterEntries(objects, proj, asOf), proj.height, compact ? 15 : 17)
+  const entries = gutterEntries(objects, proj, asOf)
+  // Priorité : sélection > fresh > le reste (cap pour lisibilité).
+  const ranked = [...entries].sort((a, b) => {
+    const sa = selectedKey === a.selKey ? 2 : freshKeys.has(a.selKey) ? 1 : 0
+    const sb = selectedKey === b.selKey ? 2 : freshKeys.has(b.selKey) ? 1 : 0
+    return sb - sa
+  })
+  const kept = ranked.slice(0, MAX_GUTTER)
+  const placed = layoutGutter(kept, proj.height, compact ? 15 : 17)
   return (
     <g className="ci-gutter">
       {placed.map((e) => {
         const x = e.fromX + 14
         const moved = Math.abs(e.ly - e.y) > 1
+        const fresh = freshKeys.has(e.selKey)
+        const dim = dimStale && !fresh && selectedKey !== e.selKey
         return (
-          <g key={e.id} className={`ci-tone-${e.tone}`}>
+          <g
+            key={e.id}
+            className={`ci-tone-${e.tone}${fresh ? ' is-fresh' : ''}${dim ? ' is-dim' : ''}`}
+          >
             <path
               className={`ci-leader${moved ? ' is-moved' : ''}`}
               d={`M${e.fromX},${e.y} L${e.fromX + 7},${e.y} L${x - 1},${e.ly}`}
@@ -126,7 +159,7 @@ function GutterLabels({ objects, proj, asOf, selectedKey, onSelect }: GutterProp
               text={compact && selectedKey !== e.selKey ? e.short : e.text}
               tone={e.tone}
               proj={proj}
-              strong={selectedKey === e.selKey}
+              strong={selectedKey === e.selKey || fresh}
               onClick={() => onSelect(e.selKey)}
             />
           </g>

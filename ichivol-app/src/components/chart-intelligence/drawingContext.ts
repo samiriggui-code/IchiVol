@@ -17,6 +17,10 @@ export interface DrawingContextValue {
   selectedKey: string | null
   onSelect: (key: string) => void
   asOf: number | null
+  /** Clés apparues sur la dernière bougie (révélation PLAY). */
+  freshKeys: ReadonlySet<string>
+  /** true pendant un replay non-live → on atténue le bruit hors « fresh ». */
+  dimStale: boolean
 }
 
 export const DrawingContext = createContext<DrawingContextValue | null>(null)
@@ -32,6 +36,8 @@ export function useDrawingLayer(layer: IntelligenceLayerKey) {
     asOf: ctx?.asOf ?? null,
     isSelected: (o: IntelligenceObject) => ctx?.selectedKey === selectionKeyOf(o),
     select: (o: IntelligenceObject) => ctx?.onSelect(selectionKeyOf(o)),
+    isFresh: (o: IntelligenceObject) => ctx?.freshKeys.has(selectionKeyOf(o)) ?? false,
+    dimStale: ctx?.dimStale ?? false,
   }
 }
 

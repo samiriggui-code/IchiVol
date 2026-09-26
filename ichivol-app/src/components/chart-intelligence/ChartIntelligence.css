@@ -490,6 +490,30 @@ html.dark .ci-root .ci-tag.gray {
   color: var(--ci-blue);
 }
 
+.ci-replay-speeds {
+  display: flex;
+  gap: 2px;
+  background: var(--ci-soft);
+  padding: 2px;
+  border-radius: 6px;
+}
+
+.ci-replay-speeds button {
+  border: none;
+  background: transparent;
+  font: 10px 'DM Mono', ui-monospace, monospace;
+  padding: 5px 7px;
+  color: var(--ci-muted);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.ci-replay-speeds button.is-on {
+  background: var(--ci-card);
+  color: var(--ci-ink);
+  box-shadow: 0 1px 2px #0001;
+}
+
 .ci-replay-range {
   width: 160px;
   accent-color: var(--ci-blue);
@@ -504,6 +528,15 @@ html.dark .ci-root .ci-tag.gray {
   border: 1px solid var(--ci-blue);
   color: var(--ci-blue);
   background: var(--ci-blue-soft);
+}
+
+.ci-gutter .is-dim {
+  opacity: 0.28;
+}
+
+.ci-gutter .is-fresh {
+  opacity: 1;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--ci-blue) 55%, transparent));
 }
 
 /* ---------- Inspecteur / analyse ---------- */
