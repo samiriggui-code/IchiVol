@@ -1,5 +1,59 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 nuit — REVIEW Claude a posteriori #140→#150 · VP-FIX1 ouvert
+
+**Revue réalisée par Claude en local** sur `main` @ `65419b9` : vrai diff + tests (serveur 67/67 ✅ · moteur : voir fin de bloc).
+Ces 9 PR avaient été mergées sans revue Claude (« file gel Claude pause »). Verdicts ci-dessous = **opposables**.
+
+### Verdicts par PR
+
+| PR | Sujet | Verdict |
+|----|-------|---------|
+| #140 | VP0 VALIDATION-PROTOCOL + AW0 | **VALIDÉ** (reste GEL DOC) |
+| #143 | AW1 « Pourquoi ? » `explain_chart_object` | **VALIDÉ** — déterministe, observe-only, aucun niveau inventé, `NON_VALIDE` affiché |
+| #144 | AG0 hygiène agent | **VALIDÉ** + 1 mineur (AG0-R1) |
+| #145 | Filtre `entry_source` outcomes | **VALIDÉ** |
+| #146 | VP1 Vision + manifest | **À CORRIGER — CRITIQUE** (VP1-R1) |
+| #147 | VP2 harness §6 | **À CORRIGER** (VP2-R1 à trancher, VP2-R2) |
+| #148/#149 | VP3 B0–B7 + compare | **À CORRIGER** (VP3-R1→R5) |
+| #150 | Rapport BTC 1h | **PROVISOIRE** — lecture qualitative plausible, chiffres à rejouer après VP-FIX1 |
+
+Vérifié OK (pas de lookahead) : nuage **affiché** = `span[i−26]` ; HTF B5 = dernière bougie HTF **close** à `t+Δ` ; RVOL/ATR causaux ; `levels_only` n'a aucune sortie pipeline ; gap stop/TP → fill à l'open ; stop avant TP ; attribution trade → pli d'entrée ; outcomes AG0 = open 1ʳᵉ barre close après signal.
+
+### Corrections demandées (VP-FIX1)
+
+| ID | Sévérité | Constat | Correction attendue |
+|----|----------|---------|---------------------|
+| **VP1-R1** | **CRITIQUE** | Binance Vision **spot** passe en **microsecondes** au 2025-01-01 (vérifié : `BTCUSDT-1d-2025-01.zip` col0 = `1735689600000000`). `klines_from_spot_zip` compare à des ms → **toutes les barres 2025–2026 sont silencieusement jetées**. Preuve : 1d = **1583** barres = 2020-09-01→2024-12-31 exactement (fenêtre complète ≈ 2191). **Validation 2025 et holdout 2026 seraient vides.** WF1–WF7 non affectés. | Normaliser `open_time`/`close_time` (≥ 1e15 → µs → `//1000`). Test fixture µs. **Contrôle de complétude** : compter barres attendues vs obtenues par intervalle sur la fenêtre et **échouer** si trou > seuil (lister les trous). Rebuild séries + manifest (nouveaux sha256), noter les anciens sha dans le rapport. Vérifier aussi funding/OI (unités). |
+| **VP3-R1** | **HAUTE** (bloque « figer N T10b ») | `expected_max_sr(sr_std=1.0)` : échelle fausse — SR est **par barre** (~1e-2), σ=1 ⇒ dès N>1, SR* ≈ 0.3+ et DSR → 0 quoi qu'il arrive. `skew=0 / kurt=3` codés en dur. | σ(SR) = écart-type **empirique** des SR (même échelle par barre) des N essais T10b ; skew/kurt **d'échantillon** des returns de Bi dans PSR. Tests : N=1 ⇒ DSR = PSR(0) ; N croissant ⇒ DSR décroissant mais pas écrasé sur un cas synthétique. |
+| **VP3-R2** | MOYENNE | §9.2 exige un block bootstrap **stationnaire** (longueurs géométriques, moyenne 24 / 6). Implémenté : blocs **fixes** circulaires. | Politis–Romano stationnaire (p = 1/bloc_moyen), indices appariés. Test sur longueur moyenne des blocs. |
+| **VP3-R3** | MOYENNE | `force_flat_at_end=True` dans chaque pli WF ⇒ trades ouverts dans les 48 dernières barres **coupés en fin de pli** (`window_end`). Viole §5.1.7 (peut finir après le pli) et §5.1.8 (sortie forcée seulement fin validation / holdout). | Sim jusqu'à `fin pli + horizon time-stop` ; entrées gatées à `[gate, fin pli)` ; trades attribués au pli d'entrée ; `force_flat` seulement VAL2025 / HOLD2026. Même fenêtre de returns pour Bi et Bj (appariement). |
+| **VP3-R4** | BASSE | `compare_pair` et CLI `--n-boot` par défaut = **2000** (§9.2 : 10 000). | Défaut 10 000. |
+| **VP3-R5** | BASSE | Appariement par troncature `min(len)` sans vérifier les timestamps. | `assert` timestamps identiques barre à barre (lever une erreur sinon). |
+| **VP2-R1** | **À TRANCHER (utilisateur)** | Time-stop : sortie au close de `entry_bar + 48` ⇒ **49 barres** en position (test `exit_time == T0+H+n*H` le fige). §6 dit « 48 barres ». | Proposition Claude : barre d'entrée = barre 1 ⇒ sortie au close de `entry + 47` (48 barres exposées). Si l'utilisateur valide : note de **clarification** datée dans VALIDATION-PROTOCOL §12 (lecture, pas nouvelle règle), test mis à jour. |
+| **VP2-R2** | BASSE | Stop/TP ancrés sur `fill` (open × (1+spread+slip)) au lieu de `entry = open(t+1)` (§6). | Niveaux depuis l'open **brut** ; coûts restent sur le fill. |
+| **VP3-R6** | INFO | B7 aligne HTF sur `candle.time` (open) ⇒ une bougie HTF plus tard que B5 (`time+Δ`). Causal, conservateur. | Documenter dans le rapport J (parité live) ; pas de changement. |
+| **AG0-R1** | BASSE | Streaming : `return readAnthropicStream(...)` sans `await` dans le `try` ⇒ `clearTimeout` avant la lecture du corps ; le timeout ne couvre pas le stream. | `return await readAnthropicStream(...)` + test timeout en mode stream. |
+
+### Suite (ordre strict)
+
+1. **Cursor — VP-FIX1** : une branche `cursor/vp-fix1-*`, PR **draft**, VP1-R1 + VP3-R1→R5 + VP2-R2 + AG0-R1 (VP2-R1 seulement si OK utilisateur). Rebuild VP1, puis **rejouer BTCUSDT 1h A/B/H** (n_boot 10 000) → `VP3-REPORT-BTCUSDT-1h.md` **v2** avec tableau avant/après. Entrée handoff → **STOP**.
+2. **Claude** : revue VP-FIX1 (diff + tests + contrôle complétude VP1).
+3. Seulement après : grille ETH/SOL × 1h/4h · Q **J** (B7) · N T10b figé (avec DSR corrigé) · adverse.
+
+**Aucun merge sans verdict Claude écrit ici.**
+
+### Tests locaux (Windows, Postgres, venv py3.14)
+
+- Serveur : **67/67** ✅
+- Moteur, suites revues (vp1/vp2/vp3, AW1 explain, AG0 closed-only, evidence, entry_source) : **toutes vertes** ✅
+- Moteur, suite complète : **8 échecs sans rapport avec #140→#150** :
+  - 6 × `fcntl` absent sous Windows (`strategy_lab/deep_history.py:116`, `test_t11a_bis`) → **ENV-R1** : ajouter un repli portable (`msvcrt` ou `filelock`) ou un skip Windows explicite.
+  - `test_p1_study_budget_limit500_under_20s` : 22,5 s pour un budget de 20 s sur ce PC (performance machine) → budget à paramétrer, ou marquer `slow`.
+  - `test_trip_daily_loss_latches_and_needs_unlock` : `tripped=False`. Le test utilise le portefeuille baseline de la base locale, donc il dépend de l'état de la DB ; fichier inchangé depuis #81. → **ENV-R2** : isoler le test dans un portefeuille dédié.
+
+---
+
 ## 2026-09-26 soir — SYNC LOCAL · tip `7d0f5f4` · journal journée
 
 **PC local** fast-forward `3038eed` → `main` @ **`7d0f5f4`** (= GitHub).  

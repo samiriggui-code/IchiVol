@@ -37,9 +37,11 @@ Landing V3 · Market TV plein écran · calques Structure/Fib/FVG · fixes mobil
 
 ## Prochain job (ordre)
 
-1. **Review Claude** du rapport VP3 A/B/H + tip `7d0f5f4`.
-2. Si OK utilisateur : étendre grille **ETH/SOL · 4h · Q J (B7)** · figer **N T10b** · profil **adverse**.
-3. Ne **pas** rouvrir features CI / T-CYCLE sans lever de gel explicite.
+1. ~~Review Claude du rapport VP3 A/B/H + tip `7d0f5f4`~~ **FAIT 2026-09-26 nuit** : #140/#143/#144/#145 validés ; **#146 VP1 critique** (timestamps µs 2025+ jetés → validation/holdout vides) ; VP2/VP3 à corriger (DSR σ, bootstrap stationnaire, force_flat par pli…). Détail : bloc « REVIEW Claude a posteriori » de `docs/HANDOFF-CURSOR-V3.md`.
+2. **Cursor : VP-FIX1** (PR draft) → rebuild VP1 → rapport BTC 1h **v2** → STOP.
+3. **Claude : revue VP-FIX1.** Décision utilisateur en attente : **VP2-R1** (time-stop 48 vs 49 barres).
+4. Seulement après : grille **ETH/SOL · 4h · Q J (B7)** · figer **N T10b** · profil **adverse**.
+5. Ne **pas** rouvrir features CI / T-CYCLE sans lever de gel explicite.
 
 ## Méthode (rappel strict)
 
