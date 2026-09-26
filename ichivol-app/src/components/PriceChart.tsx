@@ -123,7 +123,10 @@ function filterObjectsByLayers(
   if (!objects?.length) return []
   return objects.filter((o) => {
     const layer = layerFromSource(o.source, o.layer)
-    return prefs[layer] !== false
+    if (prefs[layer] === false) return false
+    const status = typeof o.origin?.status === 'string' ? o.origin.status : ''
+    if (!prefs.showInvalidated && status === 'invalidated') return false
+    return true
   })
 }
 
