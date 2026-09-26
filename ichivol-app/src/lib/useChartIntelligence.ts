@@ -1,10 +1,6 @@
 /**
- * Hook Chart Intelligence : chargement (mock | API Python), replay as_of,
- * sélection d'objet, visibilité des couches.
- *
- * Aucune logique financière : le hook demande un snapshot « as_of » et
- * affiche ce que la source renvoie. L'anti-lookahead est la responsabilité
- * de la source (Python — ici simulé par chartIntelligenceMock).
+ * Hook Chart Intelligence : charge UN snapshot live, puis replay progressif
+ * côté client (filtre as_of) — sans re-fetch à chaque bougie.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -12,7 +8,9 @@ import {
   DEFAULT_INTELLIGENCE_LAYERS,
   getChartIntelligence,
   intelligenceLayerOf,
+  objectKnownAt,
   selectionKeyOf,
+  sliceIntelligenceAt,
   type ChartIntelligenceResponse,
   type IntelligenceLayerKey,
   type IntelligenceLayerPrefs,
@@ -22,24 +20,30 @@ import { mockChartIntelligenceAt } from './chartIntelligenceMock'
 
 export type ChartIntelligenceSource = 'mock' | 'api'
 
+export type ReplaySpeed = 0.5 | 1 | 2
+
 export interface UseChartIntelligenceOptions {
   symbol: string
   timeframe: string
-  /** 'api' = engine Python ; 'mock' réservé aux tests locaux. */
   source?: ChartIntelligenceSource
-  /** Vitesse du replay (ms par bougie). */
+  /** ms de base pour 1× (ralenti volontairement pour suivre l’évolution). */
   replayIntervalMs?: number
+  /** Nombre de bougies avant la fin pour démarrer PLAY (fenêtre récente). */
+  playLookbackBars?: number
 }
 
 const LAYERS_KEY = 'ichivol.chart-intelligence.layers.v1'
+/** Fenêtre de départ du PLAY — assez courte pour suivre sans polluer. */
+const DEFAULT_PLAY_LOOKBACK = 48
 
 function loadLayers(): IntelligenceLayerPrefs {
   try {
     const raw = localStorage.getItem(LAYERS_KEY)
-    if (!raw) return DEFAULT_INTELLIGENCE_LAYERS
+    if (!raw) return { ...DEFAULT_INTELLIGENCE_LAYERS }
+    // Merge : nouvelles clés (ex. calques off par défaut) gagnent si absentes du storage.
     return { ...DEFAULT_INTELLIGENCE_LAYERS, ...(JSON.parse(raw) as Partial<IntelligenceLayerPrefs>) }
   } catch {
-    return DEFAULT_INTELLIGENCE_LAYERS
+    return { ...DEFAULT_INTELLIGENCE_LAYERS }
   }
 }
 
@@ -51,64 +55,68 @@ function saveLayers(prefs: IntelligenceLayerPrefs) {
   }
 }
 
-async function fetchSnapshot(
+async function fetchLive(
   source: ChartIntelligenceSource,
   symbol: string,
   timeframe: string,
-  asOf: number | null,
 ): Promise<ChartIntelligenceResponse> {
-  if (source === 'api') return getChartIntelligence({ symbol, timeframe, asOf })
-  return mockChartIntelligenceAt(asOf ?? undefined)
+  if (source === 'api') return getChartIntelligence({ symbol, timeframe, asOf: null })
+  return mockChartIntelligenceAt()
 }
 
 export function useChartIntelligence({
   symbol,
   timeframe,
   source = 'api',
-  replayIntervalMs = 450,
+  replayIntervalMs = 900,
+  playLookbackBars = DEFAULT_PLAY_LOOKBACK,
 }: UseChartIntelligenceOptions) {
   /** null = live (dernière bougie). */
   const [asOf, setAsOf] = useState<number | null>(null)
   const [playing, setPlaying] = useState(false)
+  const [speed, setSpeed] = useState<ReplaySpeed>(1)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [layers, setLayersState] = useState<IntelligenceLayerPrefs>(loadLayers)
-  /** Dernier résultat reçu, étiqueté par la requête qui l'a produit. */
-  const [result, setResult] = useState<{
-    key: string
-    response: ChartIntelligenceResponse | null
-    error: string | null
-  }>({ key: '', response: null, error: null })
-  /** Bornes de replay conservées d'une réponse à l'autre. */
-  const [bounds, setBounds] = useState<ChartIntelligenceResponse['replay'] | null>(null)
+  const [live, setLive] = useState<ChartIntelligenceResponse | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const requestKey = `${source}|${symbol}|${timeframe}|${asOf ?? 'live'}`
-  const loading = result.key !== requestKey
+  const liveKey = `${source}|${symbol}|${timeframe}`
 
   useEffect(() => {
     let cancelled = false
-    fetchSnapshot(source, symbol, timeframe, asOf)
+    setLoading(true)
+    setError(null)
+    setAsOf(null)
+    setPlaying(false)
+    setSelectedKey(null)
+    fetchLive(source, symbol, timeframe)
       .then((res) => {
         if (cancelled) return
-        if (res.replay) setBounds(res.replay)
-        setResult({ key: requestKey, response: res, error: null })
+        setLive(res)
+        setLoading(false)
       })
       .catch((e: unknown) => {
         if (cancelled) return
-        setResult((prev) => ({
-          key: requestKey,
-          response: prev.response,
-          error: e instanceof Error ? e.message : 'Chart Intelligence indisponible',
-        }))
+        setLive(null)
+        setLoading(false)
+        setError(e instanceof Error ? e.message : 'Chart Intelligence indisponible')
         setPlaying(false)
       })
     return () => {
       cancelled = true
     }
-  }, [source, symbol, timeframe, asOf, requestKey])
+  }, [source, symbol, timeframe, liveKey])
 
-  const response = result.response
-  const error = result.error
-  const cursor = asOf ?? response?.as_of ?? null
+  const bounds = live?.replay ?? null
+  const liveAsOf = live?.as_of ?? null
+  const cursor = asOf ?? liveAsOf
+
+  const response = useMemo(() => {
+    if (!live) return null
+    if (asOf == null) return live
+    return sliceIntelligenceAt(live, asOf)
+  }, [live, asOf])
 
   const step = useCallback(
     (dir: 1 | -1) => {
@@ -119,33 +127,47 @@ export function useChartIntelligence({
         setPlaying(false)
         return
       }
-      setAsOf(Math.max(bounds.first, next))
+      if (next <= bounds.first) {
+        setAsOf(bounds.first)
+        return
+      }
+      setAsOf(next)
     },
     [bounds, cursor],
   )
 
   const seek = useCallback(
     (t: number | null) => {
-      if (t == null || !bounds || t >= bounds.last) setAsOf(null)
-      else setAsOf(Math.max(bounds.first, t))
+      if (t == null || !bounds || t >= bounds.last) {
+        setAsOf(null)
+        setPlaying(false)
+        return
+      }
+      setAsOf(Math.max(bounds.first, t))
     },
     [bounds],
   )
 
   const play = useCallback(() => {
-    if (!bounds) return
-    // Relance depuis le début si on est déjà au live.
-    if (asOf == null) setAsOf(bounds.first)
+    if (!bounds || liveAsOf == null) return
+    // Départ sur une fenêtre récente — pas depuis le début de l’historique.
+    if (asOf == null || asOf >= bounds.last) {
+      const lookback = Math.max(8, playLookbackBars) * bounds.bar_seconds
+      const start = Math.max(bounds.first, liveAsOf - lookback)
+      setAsOf(start)
+    }
     setPlaying(true)
-  }, [asOf, bounds])
+  }, [asOf, bounds, liveAsOf, playLookbackBars])
 
   const pause = useCallback(() => setPlaying(false), [])
 
+  const intervalMs = Math.round(replayIntervalMs / speed)
+
   useEffect(() => {
-    if (!playing || loading) return
-    const id = window.setTimeout(() => step(1), replayIntervalMs)
+    if (!playing || loading || !live) return
+    const id = window.setTimeout(() => step(1), intervalMs)
     return () => window.clearTimeout(id)
-  }, [playing, loading, step, replayIntervalMs, cursor])
+  }, [playing, loading, live, step, intervalMs, cursor])
 
   const setLayers = useCallback((next: IntelligenceLayerPrefs) => {
     setLayersState(next)
@@ -164,6 +186,18 @@ export function useChartIntelligence({
     [objects, layers],
   )
 
+  /** Objets apparus sur la dernière bougie du curseur (révélation progressive). */
+  const freshKeys = useMemo(() => {
+    if (cursor == null || !bounds) return new Set<string>()
+    const prev = cursor - bounds.bar_seconds
+    const keys = new Set<string>()
+    for (const o of objects) {
+      const known = objectKnownAt(o)
+      if (known > prev && known <= cursor) keys.add(selectionKeyOf(o))
+    }
+    return keys
+  }, [objects, cursor, bounds])
+
   const counts = useMemo(() => {
     const c = Object.fromEntries(
       Object.keys(DEFAULT_INTELLIGENCE_LAYERS).map((k) => [k, 0]),
@@ -178,12 +212,10 @@ export function useChartIntelligence({
     return c
   }, [objects])
 
-  /** Objets de la sélection courante (plusieurs pour un Fib groupé). */
   const selection = useMemo<IntelligenceObject[]>(
     () => (selectedKey ? objects.filter((o) => selectionKeyOf(o) === selectedKey) : []),
     [objects, selectedKey],
   )
-
 
   return {
     response,
@@ -191,11 +223,11 @@ export function useChartIntelligence({
     error,
     objects,
     visibleObjects,
+    freshKeys,
     counts,
     layers,
     setLayers,
     toggleLayer,
-    // Un objet pas encore connu à as_of n'est pas sélectionnable (replay).
     selectedKey: selection.length ? selectedKey : null,
     select: setSelectedKey,
     selection,
@@ -204,6 +236,8 @@ export function useChartIntelligence({
       isLive: asOf == null,
       bounds,
       playing,
+      speed,
+      setSpeed,
       play,
       pause,
       step,

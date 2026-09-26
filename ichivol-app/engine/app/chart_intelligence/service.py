@@ -40,11 +40,39 @@ def _candle_dict(c: Candle) -> dict[str, Any]:
     }
 
 
+def _object_known_at(obj: dict[str, Any], *, fallback: int | None) -> int | None:
+    """Premier instant où l'objet est ancré (points), pas la fin de fenêtre."""
+    origin = obj.get("origin") or {}
+    raw = origin.get("known_at")
+    if raw is not None:
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            pass
+    times: list[int] = []
+    for p in obj.get("points") or []:
+        t = p.get("time") if isinstance(p, dict) else None
+        if t is not None:
+            try:
+                times.append(int(t))
+            except (TypeError, ValueError):
+                pass
+    if times:
+        return min(times)
+    if obj.get("as_of") is not None:
+        try:
+            return int(obj["as_of"])
+        except (TypeError, ValueError):
+            pass
+    return fallback
+
+
 def _enrich_object(obj: dict[str, Any], *, known_at: int | None) -> dict[str, Any]:
     """Additive origin keys expected by Chart Intelligence UI."""
     origin = dict(obj.get("origin") or {})
-    if known_at is not None and origin.get("known_at") is None:
-        origin["known_at"] = int(known_at)
+    resolved = _object_known_at(obj, fallback=known_at)
+    if resolved is not None and origin.get("known_at") is None:
+        origin["known_at"] = int(resolved)
     if origin.get("producer") is None and obj.get("source") == "engine":
         layer = obj.get("layer")
         if layer == "fibonacci":

@@ -86,7 +86,7 @@ export function ChartIntelligencePanel({
             ichimoku={res.ichimoku}
             projection={res.projection}
             showIchimoku={ci.layers.ichimoku}
-            resetKey={`${res.symbol}:${res.timeframe}:${res.as_of ?? 'live'}`}
+            resetKey={`${res.symbol}:${res.timeframe}`}
             onBackgroundClick={() => ci.select(null)}
             height={height}
           >
@@ -95,6 +95,8 @@ export function ChartIntelligencePanel({
               selectedKey={ci.selectedKey}
               onSelect={ci.select}
               asOf={res.as_of}
+              freshKeys={ci.freshKeys}
+              dimStale={!ci.replay.isLive}
             >
               <ConfluenceLayer />
               <SupportResistanceLayer />

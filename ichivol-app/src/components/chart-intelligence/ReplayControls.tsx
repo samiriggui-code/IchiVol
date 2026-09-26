@@ -1,20 +1,22 @@
 /**
- * ReplayControls — ◀ PLAY ▶ + curseur as_of. Chaque pas redemande un snapshot
- * « tel que connu à as_of » à la source (mock aujourd'hui, Python demain).
+ * ReplayControls — PLAY progressif sur fenêtre récente + vitesse 0.5× / 1× / 2×.
+ * Le curseur filtre le snapshot live côté client (pas de re-fetch fulgurant).
  */
 
 import { fmtTime } from '../../lib/chartIntelligence'
-import type { ChartIntelligenceState } from '../../lib/useChartIntelligence'
+import type { ChartIntelligenceState, ReplaySpeed } from '../../lib/useChartIntelligence'
 
 interface Props {
   replay: ChartIntelligenceState['replay']
 }
 
+const SPEEDS: ReplaySpeed[] = [0.5, 1, 2]
+
 export function ReplayControls({ replay }: Props) {
-  const { bounds, asOf, isLive, playing } = replay
+  const { bounds, asOf, isLive, playing, speed, setSpeed } = replay
   if (!bounds || asOf == null) return null
-  const total = Math.round((bounds.last - bounds.first) / bounds.bar_seconds)
-  const idx = Math.round((asOf - bounds.first) / bounds.bar_seconds)
+  const total = Math.max(1, Math.round((bounds.last - bounds.first) / bounds.bar_seconds))
+  const idx = Math.max(0, Math.min(total, Math.round((asOf - bounds.first) / bounds.bar_seconds)))
   return (
     <div className="ci-replay" role="group" aria-label="Replay">
       <div className="ci-replay-btns">
@@ -31,6 +33,18 @@ export function ReplayControls({ replay }: Props) {
         <button type="button" onClick={() => replay.step(1)} disabled={isLive} aria-label="Bougie suivante">
           ▶
         </button>
+      </div>
+      <div className="ci-replay-speeds" role="group" aria-label="Vitesse">
+        {SPEEDS.map((s) => (
+          <button
+            key={s}
+            type="button"
+            className={speed === s ? 'is-on' : undefined}
+            onClick={() => setSpeed(s)}
+          >
+            {s}×
+          </button>
+        ))}
       </div>
       <input
         className="ci-replay-range"
