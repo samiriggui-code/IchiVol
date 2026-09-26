@@ -556,6 +556,13 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/chart-intelligence/{symbol}/explain",
+    "endpoint": "get_chart_intelligence_explain"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/chart-intelligence/{symbol}/replay",
     "endpoint": "get_chart_intelligence_replay"
   },
