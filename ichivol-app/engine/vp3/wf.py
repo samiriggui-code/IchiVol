@@ -15,7 +15,7 @@ from vp2.data import bars_to_candles, build_sim_feed, load_vp1_spot
 from vp3 import HTF_MAP, PROTOCOL_VERSION
 from vp3.entries import entry_mask
 from vp3.folds import WF_FOLDS, Fold, entry_gate_s, fold_test_window_s
-from vp3.metrics import EquityMetrics, equity_metrics, trade_expectancy
+from vp3.metrics import EquityMetrics, bar_returns_from_equity, equity_metrics, trade_expectancy
 from vp3.rules import strategy_rules
 
 
@@ -28,6 +28,8 @@ class FoldResult:
     equity: EquityMetrics
     exit_reasons: dict[str, int] = field(default_factory=dict)
     positive_fold: bool = False  # §5.1.9 / §9 — <5 trades ≠ positive
+    bar_returns: list[float] = field(default_factory=list, repr=False)
+    trade_nets: list[float] = field(default_factory=list, repr=False)
 
 
 @dataclass
@@ -43,7 +45,12 @@ class WfReport:
     n_positive_folds: int
 
     def summary(self) -> dict[str, Any]:
-        return asdict(self)
+        # Omit heavy series from default JSON
+        d = asdict(self)
+        for f in d.get("folds", []):
+            f.pop("bar_returns", None)
+            f.pop("trade_nets", None)
+        return d
 
 
 def _watch_signal(t: int, sd: float | None) -> BarSignal:
@@ -117,6 +124,8 @@ def run_fold(
         equity=eq,
         exit_reasons=reasons,
         positive_fold=positive,
+        bar_returns=bar_returns_from_equity(result.equity),
+        trade_nets=nets,
     )
 
 
