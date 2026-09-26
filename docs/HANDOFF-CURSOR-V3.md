@@ -1,5 +1,44 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — Suite plan V3 · étape 1 FINIE · VP0+AW0 docs · tip `6634438` · branche `cursor/vp-aw0-docs-a2fe`
+
+**Pour Claude :** review docs VP/AW. **Pas de merge feature.** Attendre OK avant VP1 / consolidation code.
+
+### 1) File en cours — FAIT
+
+| Étape | Statut | Preuve |
+|-------|--------|--------|
+| **1a** Merge #134 puis #133 | **FAIT** | `50ea9c4` · `df013fb` |
+| **1b** Smoke VPS CI | **FAIT** · **CI GELÉ** | Live BTCUSDT 1h : 200, 120 candles, 28 obj, mock=false, 1.0 s. Replay 48×300 : **1,022 Mo**, 6.8 s, `cached=false` ; 2ᵉ `cached=true` 1.2 s ; frame_keys=`as_of,objects,market_state`. Web `/` `/app` 200. RELEASE `6634438`. |
+| **1c** T-CYCLE P6 + merge | **FAIT** · **T-CYCLE GELÉ** | #123 → `9e2b02f` ; `lru_cache` validate_cycle_synthetic ; VPS engine rebuild |
+| **1d** GOLDEN-RVOL | **RAPPORT** (pas de regen) | Tip agent+CI : 14/14 RVOL goldens PASS ; suite `tests --ignore=cycle` verte ; sha seed_42 `20e5f00266862b9f` = golden. Bisect N/A (tip rouge absent). Issue [#135](https://github.com/samiriggui-code/IchiVol/issues/135). Si échec local Claude → coller `-vv` + numpy. |
+
+### 2) VP0 — docs
+
+- **Nouveau canon :** [`docs/VP-PROTOCOL.md`](./VP-PROTOCOL.md) — B0→B8, IS/OOS 70/30, fees/slip/adverse, critères PASS/INCONCLUSIVE/REJECT, questions **A–L**.
+- Ancien stub : `docs/VP0-PROTOCOLE-VALIDATION.md` (gardé en archive courte ; pointer vers VP-PROTOCOL).
+
+### 3) AW0 — docs only
+
+- [`docs/AW0-CONSOLIDATION.md`](./AW0-CONSOLIDATION.md) — doublons pipeline (screener / experiments / research_lab), collect vs CI, trend labels, front display-only, draw_* → `ref_object_id`, **contrat provenance ChartObject** (pas de `MarketObservation`). Consolidation code = après VP, ∥ VP2.
+
+### Reste (après review Claude)
+
+1. OK Claude sur VP-PROTOCOL + AW0  
+2. Alignement GOLDEN-RVOL si Claude a encore un tip rouge local  
+3. VP1 runbook (toujours pas de feature CI/T-CYCLE)  
+4. AW1+ **INTERDIT** tant que VP n’a pas débloqué  
+
+### Tests lancés cette itération
+
+```
+pytest tests/agents/test_agents_golden.py::test_rvol_agent_matches_golden[42]  # PASS
+# (précédent) pytest tests --ignore=tests/cycle  # all green @ 9e2b02f
+# VPS smoke live + replay BTCUSDT 1h  # chiffres ci-dessus
+```
+
+---
+
 ## 2026-09-26 — MERGED #134+#133 · GEL Chart Intelligence · T-CYCLE P6 · tip `9e2b02f`
 
 ### Merges

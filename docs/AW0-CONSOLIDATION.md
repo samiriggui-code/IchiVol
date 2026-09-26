@@ -1,4 +1,4 @@
-# AW0 — Consolidation audit (duplication map)
+# AW0 — Consolidation (audit docs only)
 
 **Date:** 2026-09-26  
 **Tip:** `main` @ `6634438` (GEL CI + T-CYCLE + VP0 handoff)  
@@ -13,6 +13,24 @@
 Le **math** (indicateurs / `build_pipeline` / producteurs ChartObject) est déjà centralisé ; ce qui est dupliqué, c’est l’**assemblage** (fetch → agents → REGISTRY → pipeline → objets → labels tendance / front).
 
 ---
+
+
+
+## Contrat proposé (pas de `MarketObservation`)
+
+**Décision AW0 :** étendre la **provenance** de `ChartObject` (`origin`, `known_at`, `lineage_key`, futurs `ref_object_id` / `ref_lineage_key`) — **pas** de nouveau modèle `MarketObservation`.
+
+| Champ | Rôle |
+|-------|------|
+| `id` | Empreinte drawable (peut changer si coords/as_of changent) |
+| `origin.lineage_key` | Identité stable cross-bar (CI-R8) |
+| `origin.known_at` | Première barre où le lineage est observable (walk-forward) |
+| `origin.ref_object_id` / `ref_lineage_key` | (AW1) agent ancre un draw CLAUDE sur un objet ENGINE |
+
+**Consolidation code** (assemble.py, collect_engine_objects partagé, draw ref_*) : **après** validation VP, en parallèle de VP2 — **pas maintenant**.
+
+**AW1+ INTERDIT** tant que VP n’a pas débloqué : `explain_chart_object`, profils fast/standard/deep, order blocks, scénarios.
+
 
 ## 1. Pipeline assembly duplicates
 
