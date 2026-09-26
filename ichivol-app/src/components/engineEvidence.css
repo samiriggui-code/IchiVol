@@ -40,12 +40,14 @@
   margin: 0;
 }
 
+/* Cartes Preuves + Pipeline — --card (pas #fff hardcodé) */
 .engine-evidence .decision-pipeline,
 .engine-evidence .signal-evidence-card {
-  border: 1px solid var(--line, #ddd9d3);
+  border: 1px solid var(--line, #e5e1db);
   border-radius: 12px;
   padding: 14px;
-  background: #fff;
+  background: var(--card, #fefdfb);
+  color: var(--ink, #202b36);
 }
 .engine-evidence .decision-pipeline-head,
 .engine-evidence .sec-head,
@@ -68,16 +70,17 @@
   gap: 8px;
 }
 .engine-evidence .pipeline-stage {
-  border: 1px solid var(--line, #ddd9d3);
+  border: 1px solid var(--line, #e5e1db);
   border-left-width: 3px;
   border-radius: 8px;
   padding: 8px 10px;
+  background: transparent;
 }
 .engine-evidence .pipeline-stage--pass { border-left-color: var(--green, #0b8f83); }
 .engine-evidence .pipeline-stage--fail { border-left-color: var(--red, #c8412f); }
 .engine-evidence .pipeline-stage--watch { border-left-color: var(--amber, #a76c17); }
 .engine-evidence .pipeline-stage--pending,
-.engine-evidence .pipeline-stage--skip { border-left-color: var(--line, #ddd9d3); }
+.engine-evidence .pipeline-stage--skip { border-left-color: var(--line, #e5e1db); }
 .engine-evidence .pipeline-stage-top {
   display: flex;
   gap: 8px;
@@ -90,19 +93,20 @@
   display: grid;
   place-items: center;
   font-size: 11px;
-  background: #f4f1ec;
+  background: var(--soft, #f3f2ef);
+  color: var(--ink, #202b36);
 }
 .engine-evidence .pipeline-stage-titles { flex: 1; display: flex; flex-direction: column; }
 .engine-evidence .pipeline-stage-q,
 .engine-evidence .pipeline-stage-summary,
-.engine-evidence .pipeline-reading-body { font-size: 12px; }
+.engine-evidence .pipeline-reading-body { font-size: 12px; color: inherit; }
 .engine-evidence .pipeline-stage-summary { margin-top: 6px; }
 .engine-evidence .pipeline-stage-badge {
   font-size: 10px;
   letter-spacing: 0.04em;
   border-radius: 999px;
   padding: 2px 7px;
-  border: 1px solid var(--line, #ddd9d3);
+  border: 1px solid var(--line, #e5e1db);
 }
 .engine-evidence .pipeline-stage-badge--pass { color: var(--green, #0b8f83); }
 .engine-evidence .pipeline-stage-badge--fail { color: var(--red, #c8412f); }
@@ -131,9 +135,11 @@
   grid-template-columns: 1fr 1fr;
 }
 .engine-evidence .pipeline-reading-card {
-  border: 1px solid var(--line, #ddd9d3);
+  border: 1px solid var(--line, #e5e1db);
   border-radius: 8px;
   padding: 8px 10px;
+  background: transparent;
+  color: inherit;
 }
 .engine-evidence .pipeline-reading-facts {
   margin: 6px 0 0;
@@ -144,6 +150,7 @@
 .engine-evidence .sec-symbol {
   margin: 0;
   font: 18px Newsreader, Georgia, serif;
+  color: inherit;
 }
 .engine-evidence .sec-block { margin-top: 12px; }
 .engine-evidence .sec-grid {
@@ -154,12 +161,16 @@
 .engine-evidence .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .engine-evidence .sig-chip {
   font-size: 11px;
-  border: 1px solid var(--line, #ddd9d3);
+  border: 1px solid var(--line, #e5e1db);
   border-radius: 999px;
   padding: 3px 8px;
-  background: #f7f4ef;
+  background: var(--soft, #f3f2ef);
+  color: var(--ink, #202b36);
 }
-.engine-evidence .risk-chip { background: #f8ecea; color: var(--red, #c8412f); }
+.engine-evidence .risk-chip {
+  background: #f8ecea;
+  color: var(--red, #c8412f);
+}
 .engine-evidence .sec-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -167,8 +178,104 @@
   margin: 8px 0 0;
 }
 .engine-evidence .sec-stats dt { font-size: 10px; color: var(--muted, #7d8288); }
-.engine-evidence .sec-stats dd { margin: 0; font-size: 13px; }
+.engine-evidence .sec-stats dd { margin: 0; font-size: 13px; color: inherit; }
 .engine-evidence .sec-ablation { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
 .engine-evidence .sec-ablation th,
-.engine-evidence .sec-ablation td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line, #ddd9d3); }
+.engine-evidence .sec-ablation td {
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--line, #e5e1db);
+  color: inherit;
+}
 .engine-evidence .sec-foot { margin-top: 12px; font-size: 11px; }
+
+/*
+ * Dark — cartes #fff + texte clair = illisible.
+ * Couleurs littérales (pas seulement var(--card)) : les pages maquette
+ * re-déclarent --card clair sur .*-page et peuvent gagner selon l’ordre.
+ * html.dark obligatoire sur chaque sélecteur.
+ */
+html.dark .engine-evidence {
+  color: #f1eee6;
+}
+
+html.dark .engine-evidence .muted,
+html.dark .engine-evidence .subhead,
+html.dark .engine-evidence .pipeline-headline,
+html.dark .engine-evidence .pipeline-legend {
+  color: #a0a8b5;
+}
+
+html.dark .engine-evidence .argumentaire {
+  color: #f1eee6;
+}
+
+html.dark .engine-evidence .decision-pipeline,
+html.dark .engine-evidence .signal-evidence-card,
+html.dark .decision-pipeline,
+html.dark .signal-evidence-card {
+  background: #1a1e26 !important;
+  border-color: #333944 !important;
+  color: #f1eee6 !important;
+}
+
+html.dark .engine-evidence .pipeline-stage,
+html.dark .engine-evidence .pipeline-reading-card {
+  border-color: #333944;
+  background: #22262f;
+  color: #f1eee6;
+}
+
+html.dark .engine-evidence .pipeline-stage-index {
+  background: #2a303a;
+  color: #f1eee6;
+}
+
+html.dark .engine-evidence .pipeline-stage-q,
+html.dark .engine-evidence .pipeline-stage-summary,
+html.dark .engine-evidence .pipeline-reading-body,
+html.dark .engine-evidence .sec-symbol,
+html.dark .engine-evidence p,
+html.dark .engine-evidence strong {
+  color: #f1eee6;
+}
+
+html.dark .engine-evidence .sig-chip {
+  background: #22262f;
+  border-color: #333944;
+  color: #f1eee6;
+}
+
+html.dark .engine-evidence .risk-chip {
+  background: #33201d;
+  border-color: #4a3030;
+  color: #d48478;
+}
+
+html.dark .engine-evidence .bias-bull {
+  background: #16302c;
+  border-color: #2a4a44;
+  color: #3aa99a;
+}
+
+html.dark .engine-evidence .bias-bear {
+  background: #33201d;
+  border-color: #4a3030;
+  color: #d48478;
+}
+
+html.dark .engine-evidence .bias-neutral {
+  background: #2a2418;
+  border-color: #4a3f2a;
+  color: #e8b86d;
+}
+
+html.dark .engine-evidence .pipeline-stage-badge {
+  border-color: #333944;
+}
+
+html.dark .engine-evidence .sec-ablation th,
+html.dark .engine-evidence .sec-ablation td {
+  border-color: #333944;
+  color: #f1eee6;
+}
