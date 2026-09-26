@@ -71,17 +71,20 @@ async function fetchLive(
 }
 
 function frameToResponse(
-  live: ChartIntelligenceResponse,
+  series: ChartIntelligenceResponse,
   frame: ChartIntelligenceReplayFrame,
 ): ChartIntelligenceResponse {
+  // CI-R7: series once at pack/live root; truncate by as_of (objects from walk-forward).
+  const barSec = series.replay?.bar_seconds ?? 3600
+  const asOf = frame.as_of
   return {
-    ...live,
-    as_of: frame.as_of,
-    candles: frame.candles,
-    ichimoku: frame.ichimoku,
-    projection: frame.projection,
+    ...series,
+    as_of: asOf,
+    candles: series.candles.filter((c) => c.time <= asOf),
+    ichimoku: series.ichimoku.filter((p) => p.time <= asOf),
+    projection: series.projection.filter((p) => p.time - 25 * barSec <= asOf),
     objects: frame.objects,
-    count: frame.count,
+    count: frame.objects.length,
     market_state: frame.market_state,
     analysis: null, // pas de spoiler pendant replay
   }
@@ -153,13 +156,17 @@ export function useChartIntelligence({
     // API prod : frame walk-forward uniquement (pas de slice objets live).
     if (source === 'api') {
       const frame = framesByAsOf.get(asOf)
-      if (frame) return frameToResponse(live, frame)
+      if (frame) {
+        // Prefer pack root series (CI-R7) — same walk-forward window as objects.
+        const series = (replayPack as ChartIntelligenceResponse | null) ?? live
+        return frameToResponse(series, frame)
+      }
       // Pas de frame → rester live (PLAY désactivé / pack absent).
       return live
     }
     // Mock : slice client (known_at déjà datés correctement dans le mock).
     return sliceIntelligenceAt(live, asOf)
-  }, [live, asOf, source, framesByAsOf])
+  }, [live, asOf, source, framesByAsOf, replayPack])
 
   const ensureReplayPack = useCallback(async (): Promise<ChartIntelligenceReplayPack | null> => {
     if (source !== 'api') return null

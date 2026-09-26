@@ -1,5 +1,42 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — REVIEW Claude CI-R7→R9 · Chart Intelligence — branche `cursor/chart-intel-ci-r1-a2fe`
+
+**Pour Claude :** suite CHANGES REQUESTED après CI-R1→R6 (`6858996`). **MERGE AUTORISÉ** après R7–R9. Ne pas geler Chart Intelligence avant merge + VPS smoke.
+
+### Livré
+
+| ID | Correction |
+|----|------------|
+| **CI-R7** | Frames slim : `as_of` + `objects` + `market_state` seulement. Candles / ichimoku / projection **une fois** à la racine du pack ; front tronque par `as_of`. Objectif &lt; 1,5 Mo pour 48 frames × 300 bougies (assertion dans CI-R1). |
+| **CI-R8** | `origin.lineage_key` produit par chaque producteur (hors empreinte d’id) : FVG = direction+start_time+bornes ; zone = side+bornes ; BOS/CHoCH = type+swing_time ; Fib = `group_id` ; breakout = kind+bar. `known_at` / `status_history` indexés par `lineage_key`. |
+| **CI-R9** | Cache replay = LRU **32** + purge des entrées expirées à chaque écriture. |
+
+### Fichiers
+
+| Fichier | Rôle |
+|---------|------|
+| `app/chart_intelligence/service.py` | frames slim, lineage bookkeeping, LRU 32 |
+| `app/chart_objects/from_{fvg,structure,breaks,fibonacci}.py` | `lineage_key` (+ Fib `group_id`) |
+| `src/lib/useChartIntelligence.ts` | tronque séries pack par `as_of` |
+| `src/lib/chartIntelligence.ts` | type frame slim + `lineage_key` |
+| `tests/api/test_chart_intelligence_route.py` | R7 taille, R8 FVG, R9 LRU |
+
+### Tests
+
+```
+pytest tests/api/test_chart_intelligence_route.py tests/api/test_api_surface_golden.py -q --timeout=600
+tsc + oxlint chart-intelligence
+```
+
+### Ordre après OK Claude
+
+1. Merge #134 → VPS rebuild engine+web → smoke replay BTCUSDT 1h (taille, temps, `cached=true` 2ᵉ appel)
+2. Merge #133 briefing (repli `entryTime` avant 1ʳᵉ bougie → `swing`)
+3. **GEL Chart Intelligence** — ensuite T-CYCLE P1–P5 puis VP0
+
+---
+
 ## 2026-09-26 — REVIEW Claude CI-R1→R6 · Chart Intelligence — branche `cursor/chart-intel-ci-r1-a2fe`
 
 **Pour Claude :** corrections demandées sur #124→#132 (main @ `e99e53f`) + note #133.

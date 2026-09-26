@@ -16,6 +16,7 @@ from app.chart_objects.types import (
     ChartObjectSource,
     ChartObjectType,
     ChartPoint,
+    round_chart_coord,
 )
 from app.indicators.ichimoku import Candle
 from app.structure.types import (
@@ -136,6 +137,10 @@ def structure_to_chart_objects(
                         "score": line.score,
                         "touch_count": line.touch_count,
                         "source": line.source.value,
+                        "lineage_key": (
+                            f"trendline:{det_name}:{line.side.value}:"
+                            f"{pts[0].time}:{pts[1].time}"
+                        ),
                     },
                     subtype=line.side.value,
                 )
@@ -152,6 +157,8 @@ def _zone_object(
     max_score: float,
 ) -> ChartObject:
     letter = "S" if z.side.value == "support" else "R"
+    pl = round_chart_coord(z.low)
+    ph = round_chart_coord(z.high)
     return ChartObject(
         type=ChartObjectType.ZONE,
         source=ChartObjectSource.ENGINE,
@@ -172,6 +179,8 @@ def _zone_object(
             "touch_count": z.touch_count,
             "mid": z.mid,
             "sources": [s.value for s in z.sources],
+            # CI-R8: side + rounded bounds (stable across walk-forward).
+            "lineage_key": f"zone:{z.side.value}:{pl}:{ph}",
         },
         subtype=z.side.value,
     )

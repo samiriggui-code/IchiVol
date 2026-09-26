@@ -4,6 +4,9 @@ Observe-only: reuses ChartObjects + Ichimoku + pipeline stages. Does not write
 orders or mutate paper. ``as_of`` truncates candles before computing overlays.
 
 CI-R1: progressive replay uses ``build_chart_intelligence_replay`` (walk-forward).
+CI-R7: frames omit candles/ichimoku/projection (sent once at pack root).
+CI-R8: ``known_at`` / ``status_history`` keyed by ``origin.lineage_key``.
+CI-R9: replay cache is an LRU of 32 with expired purge on write.
 Client-side filtering of a live snapshot by anchor ``known_at`` is NOT safe —
 do not claim anti-lookahead for that path.
 """
@@ -12,6 +15,7 @@ from __future__ import annotations
 
 import threading
 import time
+from collections import OrderedDict
 from typing import Any
 
 from app.agents import ichimoku_agent, rvol_agent
@@ -37,9 +41,10 @@ from app.structure.params import StructureEngineParams
 from app.structure.service import detect_market_structure
 
 # (symbol, timeframe, last_bar_time, from_ts, to_ts, lookback) → (expires_at, payload)
-_REPLAY_CACHE: dict[tuple[Any, ...], tuple[float, dict[str, Any]]] = {}
+_REPLAY_CACHE: OrderedDict[tuple[Any, ...], tuple[float, dict[str, Any]]] = OrderedDict()
 _REPLAY_CACHE_LOCK = threading.Lock()
 _REPLAY_CACHE_TTL_S = 60.0
+_REPLAY_CACHE_MAX = 32
 _DEFAULT_REPLAY_LOOKBACK = 48
 
 
@@ -65,6 +70,15 @@ def _closed_only(
         return candles
     closed = closed_candles(candles, int(tf), int(time.time()) if now is None else int(now))
     return closed if len(closed) >= 2 else candles
+
+
+def _lineage_key(obj: dict[str, Any]) -> str:
+    """Stable identity for known_at / status_history (CI-R8). Falls back to id."""
+    origin = obj.get("origin") or {}
+    lk = origin.get("lineage_key")
+    if lk is not None and str(lk).strip():
+        return str(lk)
+    return str(obj.get("id") or "")
 
 
 def _enrich_object(obj: dict[str, Any], *, known_at: int | None = None) -> dict[str, Any]:
@@ -137,6 +151,37 @@ def _status_snapshot(obj: dict[str, Any], *, at: int) -> dict[str, Any]:
         "price_low": obj.get("price_low"),
         "price_high": obj.get("price_high"),
     }
+
+
+def _purge_expired_replay_cache(now_m: float) -> None:
+    """Drop expired entries. Caller must hold ``_REPLAY_CACHE_LOCK``."""
+    dead = [k for k, (exp, _) in _REPLAY_CACHE.items() if exp <= now_m]
+    for k in dead:
+        _REPLAY_CACHE.pop(k, None)
+
+
+def _replay_cache_get(cache_key: tuple[Any, ...], now_m: float) -> dict[str, Any] | None:
+    with _REPLAY_CACHE_LOCK:
+        _purge_expired_replay_cache(now_m)
+        hit = _REPLAY_CACHE.get(cache_key)
+        if hit is None or hit[0] <= now_m:
+            return None
+        _REPLAY_CACHE.move_to_end(cache_key)
+        cached = dict(hit[1])
+        cached["cached"] = True
+        return cached
+
+
+def _replay_cache_put(
+    cache_key: tuple[Any, ...], payload: dict[str, Any], now_m: float
+) -> None:
+    """CI-R9: purge expired, insert, trim LRU to ``_REPLAY_CACHE_MAX``."""
+    with _REPLAY_CACHE_LOCK:
+        _purge_expired_replay_cache(now_m)
+        _REPLAY_CACHE[cache_key] = (now_m + _REPLAY_CACHE_TTL_S, dict(payload))
+        _REPLAY_CACHE.move_to_end(cache_key)
+        while len(_REPLAY_CACHE) > _REPLAY_CACHE_MAX:
+            _REPLAY_CACHE.popitem(last=False)
 
 
 def _collect_engine_objects(
@@ -242,8 +287,8 @@ def _payload_from_candles(
     replay_first: int,
     replay_last: int,
     tf_sec: int,
-    known_at_by_id: dict[str, int] | None = None,
-    status_history_by_id: dict[str, list[dict[str, Any]]] | None = None,
+    known_at_by_lineage: dict[str, int] | None = None,
+    status_history_by_lineage: dict[str, list[dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
     if not candles:
         raise ValueError(f"no_candles:{sym}")
@@ -280,14 +325,14 @@ def _payload_from_candles(
 
     enriched: list[dict[str, Any]] = []
     for o in objects:
-        oid = str(o.get("id") or "")
+        lk = _lineage_key(o)
         ka = None
-        if known_at_by_id is not None and oid in known_at_by_id:
-            ka = known_at_by_id[oid]
+        if known_at_by_lineage is not None and lk in known_at_by_lineage:
+            ka = known_at_by_lineage[lk]
         row = _enrich_object(o, known_at=ka)
-        if status_history_by_id is not None and oid in status_history_by_id:
+        if status_history_by_lineage is not None and lk in status_history_by_lineage:
             origin = dict(row.get("origin") or {})
-            origin["status_history"] = list(status_history_by_id[oid])
+            origin["status_history"] = list(status_history_by_lineage[lk])
             row["origin"] = origin
         enriched.append(row)
     objects = enriched
@@ -415,8 +460,10 @@ def build_chart_intelligence_replay(
     """Walk-forward replay (CI-R1a).
 
     Recalculates objects bar-by-bar on candles ≤ T. Sets ``origin.known_at`` to
-    the first bar where the object id appears, plus ``status_history``.
-    Cached by (symbol, timeframe, last closed bar, from, to, lookback).
+    the first bar where the object's ``lineage_key`` appears (CI-R8), plus
+    ``status_history``. Candles / ichimoku / projection are sent once at pack
+    root (CI-R7); frames keep only ``as_of``, ``objects``, ``market_state``.
+    Cache: LRU 32, TTL 60 s, purge on write (CI-R9).
     """
     sym = symbol.upper()
     requested = parse_sources(sources)
@@ -454,15 +501,12 @@ def build_chart_intelligence_replay(
 
     cache_key = (sym, timeframe, int(series[-1].time), start_t, end_t, lookback)
     now_m = time.monotonic()
-    with _REPLAY_CACHE_LOCK:
-        hit = _REPLAY_CACHE.get(cache_key)
-        if hit is not None and hit[0] > now_m:
-            cached = dict(hit[1])
-            cached["cached"] = True
-            return cached
+    cached = _replay_cache_get(cache_key, now_m)
+    if cached is not None:
+        return cached
 
-    known_at_by_id: dict[str, int] = {}
-    status_history_by_id: dict[str, list[dict[str, Any]]] = {}
+    known_at_by_lineage: dict[str, int] = {}
+    status_history_by_lineage: dict[str, list[dict[str, Any]]] = {}
     frames: list[dict[str, Any]] = []
 
     for t in walk_times:
@@ -481,42 +525,34 @@ def build_chart_intelligence_replay(
             tf_sec=tf_sec,
         )
         for o in snap["objects"]:
-            oid = str(o.get("id") or "")
-            if not oid:
+            lk = _lineage_key(o)
+            if not lk:
                 continue
-            if oid not in known_at_by_id:
-                known_at_by_id[oid] = int(t)
-            hist = status_history_by_id.setdefault(oid, [])
+            if lk not in known_at_by_lineage:
+                known_at_by_lineage[lk] = int(t)
+            hist = status_history_by_lineage.setdefault(lk, [])
             snap_row = _status_snapshot(o, at=t)
             if not hist or any(
                 hist[-1].get(k) != snap_row.get(k)
                 for k in ("status", "touch_count", "confidence", "price_low", "price_high")
             ):
                 hist.append(snap_row)
-        # Attach walk-forward known_at for this frame (parity ids/status/bounds unchanged).
         frame_objects = []
         for o in snap["objects"]:
-            oid = str(o.get("id") or "")
+            lk = _lineage_key(o)
             frame_objects.append(
-                _enrich_object(o, known_at=known_at_by_id.get(oid))
+                _enrich_object(o, known_at=known_at_by_lineage.get(lk))
             )
-        snap = dict(snap)
-        snap["objects"] = frame_objects
-        snap["count"] = len(frame_objects)
+        # CI-R7: slim frame — series sent once at pack root; front truncates by as_of.
         frames.append(
             {
                 "as_of": int(t),
-                "candles": snap["candles"],
-                "ichimoku": snap["ichimoku"],
-                "projection": snap["projection"],
                 "objects": frame_objects,
-                "count": len(frame_objects),
                 "market_state": snap["market_state"],
-                "analysis": snap["analysis"],
             }
         )
 
-    # Final enriched live-at-end payload (for clients that filter by known_at).
+    # Final enriched live-at-end payload (candles/ichi/proj once for the pack).
     final = _payload_from_candles(
         sym=sym,
         timeframe=timeframe,
@@ -529,8 +565,8 @@ def build_chart_intelligence_replay(
         replay_first=int(series[0].time),
         replay_last=int(series[-1].time),
         tf_sec=tf_sec,
-        known_at_by_id=known_at_by_id,
-        status_history_by_id=status_history_by_id,
+        known_at_by_lineage=known_at_by_lineage,
+        status_history_by_lineage=status_history_by_lineage,
     )
     payload = {
         **final,
@@ -541,6 +577,5 @@ def build_chart_intelligence_replay(
         "cached": False,
         "replay_mode": "walk_forward",
     }
-    with _REPLAY_CACHE_LOCK:
-        _REPLAY_CACHE[cache_key] = (now_m + _REPLAY_CACHE_TTL_S, dict(payload))
+    _replay_cache_put(cache_key, payload, now_m)
     return payload

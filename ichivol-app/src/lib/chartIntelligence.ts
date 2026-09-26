@@ -84,6 +84,11 @@ export interface IntelligenceOrigin extends Record<string, unknown> {
     price_low?: number
     price_high?: number
   }>
+  /**
+   * Identité stable hors empreinte d’id (CI-R8).
+   * FVG / zone / BOS / Fib group / breakout — utilisée pour known_at.
+   */
+  lineage_key?: string
 }
 
 export interface ConfluenceComponent {
@@ -395,13 +400,9 @@ export interface ChartIntelligenceReplayQuery {
 
 export interface ChartIntelligenceReplayFrame {
   as_of: number
-  candles: ChartIntelligenceResponse['candles']
-  ichimoku: ChartIntelligenceResponse['ichimoku']
-  projection: ChartIntelligenceResponse['projection']
+  /** CI-R7: candles/ichimoku/projection are on the pack root; front truncates by as_of. */
   objects: IntelligenceObject[]
-  count: number
   market_state: ChartIntelligenceResponse['market_state']
-  analysis: ChartIntelligenceResponse['analysis']
 }
 
 export interface ChartIntelligenceReplayPack extends ChartIntelligenceResponse {
