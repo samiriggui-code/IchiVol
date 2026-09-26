@@ -33,6 +33,7 @@ from app.chart_objects.types import ChartObjectType
 from app.context.calendar import fetch_calendar_events
 from app.context.news import fetch_news
 from app.correlation.engine import compute_correlation_matrix
+from app.cycle.closed_fetch import filter_closed_candles
 from app.cycle.engine import CycleParams, compute_cycle_state
 from app.cycle.study import CycleStudyParams, run_cycle_walk_forward
 from app.db.session import SessionLocal
@@ -552,9 +553,12 @@ def cmd_get_cycle_state(args: dict) -> dict:
         raise CommandError("window must be in [32, 512]")
     if limit < window:
         raise CommandError("limit must be >= window")
+    now_arg = args.get("now")
+    now = int(now_arg) if now_arg is not None else None
 
     try:
         provider, provider_symbol, candles = resolve_and_fetch(symbol, timeframe, min(limit, 1000))
+        candles, now_s = filter_closed_candles(candles, timeframe, now=now)
     except ProviderNotWiredError as exc:
         raise CommandError(str(exc)) from exc
     except ValueError as exc:
@@ -567,17 +571,18 @@ def cmd_get_cycle_state(args: dict) -> dict:
         "provider": provider.id,
         "provider_symbol": provider_symbol,
         "window": window,
+        "now": now_s,
         "n_bars": len(candles),
         "cycle": state.to_dict(),
         "disclaimer": (
-            "Observe-only CycleState. Not a trade signal. "
+            "Observe-only CycleState on closed candles. Not a trade signal. "
             "methods_agreement is period consensus, not probability of profit."
         ),
     }
 
 
 def cmd_run_cycle_study(args: dict) -> dict:
-    """Walk-forward + null models — same as GET /cycle/{symbol}/study."""
+    """Regime-filter study — same as GET /cycle/{symbol}/study (closed bars)."""
     symbol = _require_str(args, "symbol").upper()
     timeframe = args.get("timeframe", "1h")
     if not isinstance(timeframe, str) or not timeframe.strip():
@@ -585,13 +590,23 @@ def cmd_run_cycle_study(args: dict) -> dict:
     limit = int(args.get("limit", 500))
     window = int(args.get("window", 96))
     horizon = int(args.get("horizon", 8))
+    null_draws = int(args.get("null_draws", 5))
+    stride_raw = args.get("stride")
+    stride = int(stride_raw) if stride_raw is not None else None
     if window < 32 or window > 512:
         raise CommandError("window must be in [32, 512]")
     if horizon < 1 or horizon > 64:
         raise CommandError("horizon must be in [1, 64]")
+    if null_draws < 1 or null_draws > 50:
+        raise CommandError("null_draws must be in [1, 50]")
+    if stride is not None and (stride < 1 or stride > 64):
+        raise CommandError("stride must be in [1, 64]")
+    now_arg = args.get("now")
+    now = int(now_arg) if now_arg is not None else None
 
     try:
         provider, provider_symbol, candles = resolve_and_fetch(symbol, timeframe, min(limit, 1000))
+        candles, now_s = filter_closed_candles(candles, timeframe, now=now)
     except ProviderNotWiredError as exc:
         raise CommandError(str(exc)) from exc
     except ValueError as exc:
@@ -599,16 +614,23 @@ def cmd_run_cycle_study(args: dict) -> dict:
 
     study = run_cycle_walk_forward(
         candles,
-        CycleStudyParams(window=window, horizon=horizon),
+        CycleStudyParams(
+            window=window,
+            horizon=horizon,
+            null_draws=null_draws,
+            stride=stride,
+        ),
     )
     return {
         "symbol": symbol,
         "timeframe": timeframe,
         "provider": provider.id,
         "provider_symbol": provider_symbol,
+        "now": now_s,
+        "n_closed_bars": len(candles),
         "study": study,
         "disclaimer": (
-            "Research walk-forward only. Not a trade signal. "
+            "Research only (independent future ER + surrogates). Not a trade signal. "
             "Does not modify the decision pipeline."
         ),
     }

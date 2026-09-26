@@ -1,4 +1,4 @@
-"""Compose FFT + Hilbert + ACF into causal CycleState series."""
+"""Compose FFT + Hilbert + ACF + trend into causal CycleState series."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from app.cycle.consensus import (
 from app.cycle.fft import estimate_fft
 from app.cycle.hilbert import estimate_hilbert
 from app.cycle.preprocess import closes
+from app.cycle.trend import estimate_trend
 from app.cycle.types import CycleRegime, CycleState
 from app.indicators.ichimoku import Candle
 
@@ -55,13 +56,23 @@ def _state_at_window(
 ) -> CycleState:
     px = closes(window_candles)
     t = int(window_candles[-1].time)
-    fft = estimate_fft(px, min_period=params.min_period, max_period=params.max_period)
-    hilbert = estimate_hilbert(px, min_period=params.min_period, max_period=params.max_period)
+    max_p = min(params.max_period, max(8.0, len(px) / 2.5))
+    acf_max = min(max_p, max(8.0, len(px) / 3.0))
+    fft = estimate_fft(px, min_period=params.min_period, max_period=max_p)
     acf = estimate_acf(
         px,
         min_period=int(params.min_period),
-        max_period=int(params.max_period),
+        max_period=int(acf_max),
     )
+    # Hint for phase only — not double-counted in dominant median (Claude R5).
+    hint = median_period([fft.dominant_period, acf.dominant_period])
+    hilbert = estimate_hilbert(
+        px,
+        min_period=params.min_period,
+        max_period=max_p,
+        period_hint=hint,
+    )
+    trend = estimate_trend(px)
     agreement = methods_agreement(fft, hilbert, acf)
     dominant = median_period(
         [fft.dominant_period, hilbert.dominant_period, acf.dominant_period]
@@ -70,23 +81,30 @@ def _state_at_window(
     hist = period_history[-params.stability_lookback :]
     stability = cycle_stability(hist)
 
-    strength = max(fft.strength, hilbert.strength, acf.strength)
-    # Quality: enough bars + some method signal + agreement soft weight
+    # N4 — do not take max of noisy strengths alone; blend with agreement
+    raw_strength = (fft.strength + hilbert.strength + acf.strength) / 3.0
+    strength = max(0.0, min(1.0, 0.55 * raw_strength + 0.45 * agreement))
+    # N4 — quality must be able to go low: require signal, not just full window
     bar_q = min(1.0, len(window_candles) / float(params.window))
-    quality = max(0.0, min(1.0, 0.4 * bar_q + 0.35 * strength + 0.25 * agreement))
+    quality = max(
+        0.0,
+        min(1.0, 0.25 * bar_q + 0.45 * strength + 0.30 * agreement),
+    )
     regime = infer_regime(
         agreement=agreement,
         strength=strength,
         stability=stability,
-        hilbert=hilbert,
+        trend=trend,
         quality=quality,
+        spectral_concentration=fft.spectral_concentration,
+        acf_peak=acf.peak_corr,
     )
 
+    # R1 — phase already gated inside estimate_hilbert; keep bars_to_next None if no phase
     phase = hilbert.phase
     phase_deg = hilbert.phase_deg
     bars_to_next = None
     if phase is not None and dominant is not None and dominant > 0 and regime == CycleRegime.CYCLE:
-        # Distance to next half-turn (phase 0.5) or peak (0) — use next 0.25 boundary
         frac = phase % 1.0
         next_boundary = (int(frac * 4) + 1) / 4.0
         if next_boundary >= 1.0:
@@ -117,17 +135,26 @@ def _state_at_window(
                 "secondary_period": fft.secondary_period,
                 "concentration": fft.spectral_concentration,
                 "strength": fft.strength,
+                "hann_latency_note": "Hann centers energy ~window/2 bars before last bar",
             },
             "hilbert": {
                 "dominant_period": hilbert.dominant_period,
                 "phase_deg": hilbert.phase_deg,
-                "trend_mode": hilbert.trend_mode,
+                "phase_delay_bars": hilbert.phase_delay_bars,
+                "phase_confidence": hilbert.phase_confidence,
+                "trend_mode": False,
                 "strength": hilbert.strength,
             },
             "acf": {
                 "dominant_period": acf.dominant_period,
                 "peak_corr": acf.peak_corr,
                 "strength": acf.strength,
+            },
+            "trend": {
+                "efficiency_ratio": trend.efficiency_ratio,
+                "r_squared": trend.r_squared,
+                "is_trend": trend.is_trend,
+                "strength": trend.strength,
             },
         },
     )
@@ -136,21 +163,34 @@ def _state_at_window(
 def compute_cycle_series(
     candles: Sequence[Candle],
     params: CycleParams | None = None,
+    *,
+    stride: int = 1,
 ) -> list[CycleState]:
-    """One CycleState per bar; early bars are NOISE warmup. Causal by construction."""
+    """One CycleState per bar; early bars are NOISE warmup. Causal by construction.
+
+    ``stride`` > 1 (P1 study path): only recompute every ``stride`` bars and
+    carry the previous state forward — same length list, far fewer windows.
+    """
     p = params or CycleParams()
     n = len(candles)
     out: list[CycleState] = []
     period_history: list[float | None] = []
     min_bars = max(32, int(p.min_period) * 3)
+    step = max(1, int(stride))
+    last_state = _empty_state(int(candles[0].time) if candles else 0)
     for i in range(n):
         if i + 1 < min_bars:
-            out.append(_empty_state(int(candles[i].time)))
+            last_state = _empty_state(int(candles[i].time))
+            out.append(last_state)
             period_history.append(None)
             continue
-        start = max(0, i + 1 - p.window)
-        window = candles[start : i + 1]
-        out.append(_state_at_window(window, params=p, period_history=period_history))
+        if ((i - (min_bars - 1)) % step == 0) or i == n - 1:
+            start = max(0, i + 1 - p.window)
+            window = candles[start : i + 1]
+            last_state = _state_at_window(window, params=p, period_history=period_history)
+        else:
+            period_history.append(period_history[-1] if period_history else None)
+        out.append(last_state)
     return out
 
 
@@ -158,14 +198,7 @@ def compute_cycle_state(
     candles: Sequence[Candle],
     params: CycleParams | None = None,
 ) -> CycleState:
-    """CycleState at the last candle only (API / agent helper).
-
-    Does **not** recompute the full series (that path is O(n) windows and
-    is reserved for ``compute_cycle_series`` / Lab walk-forward). Builds a
-    short causal period history over the last ``stability_lookback`` bars
-    only — same values at T as the full series for fields that depend on
-    the final window + that short history.
-    """
+    """CycleState at the last candle only (API / agent helper)."""
     p = params or CycleParams()
     if not candles:
         return _empty_state(0)

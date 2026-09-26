@@ -1,5 +1,43 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — MERGED #134+#133 · GEL Chart Intelligence · T-CYCLE P6 · tip `df013fb`+
+
+### Merges
+
+| PR | Tip squash | Contenu |
+|----|------------|---------|
+| **#134** | `50ea9c4` | CI-R1→R9 (walk-forward, slim replay, lineage_key, LRU 32) |
+| **#133** | `df013fb` | Briefing période/packs/caméra + entryTime hors série → swing |
+
+### VPS smoke replay (#134) — BTCUSDT 1h lookback=48 limit=300
+
+| Métrique | Valeur |
+|----------|--------|
+| Taille | **1,023 Mo** |
+| 1ʳᵉ appel | **7,33 s** · `cached=false` · 48 frames · walk_forward |
+| 2ᵉ appel | **`cached=true`** · 1,2 s (hit + transfert) |
+| Frame keys | `as_of`, `objects`, `market_state` |
+| Lineage | union frames **397** `lineage_key` / 937 ids |
+| RELEASE | `df013fb main` (web rebuild post-#133) · backup `pre-ci-r7-r9-20260926-115211.tgz` |
+
+### GEL Chart Intelligence
+
+**Aucune nouvelle fonctionnalité** Chart Intelligence jusqu’à VP0+ (protocole validation). Bugs / hotfixes OK.
+
+### T-CYCLE P6 (branche `cursor/t-cycle-b1-b4-a2fe`)
+
+- `validate_cycle_synthetic` → `_validate_cycle_synthetic_cached` + `@lru_cache(maxsize=32)`
+- Test : 2ᵉ appel &lt; 1 s
+- Puis merge #123 + VPS + **GEL T-CYCLE** (pas de nouvelle feature jusqu’au programme VP)
+
+### Ticket GOLDEN-RVOL (ne pas régénérer à l’aveugle)
+
+Sur `main`, ~10 goldens RVOL échouent (`seed=42` / `42,7`). **Bisect** `test_rvol_agent_matches_golden[42]` → dire si changement voulu (PR goldens dédiée + diff expliqué) ou régression (fix code). Rapport HANDOFF **avant** toute régénération.
+
+### VP0
+
+Protocole de validation (document only) — voir `docs/VP0-PROTOCOLE-VALIDATION.md`.
+
 ## 2026-09-26 — MERGED #134 CI-R1→R9 · VPS smoke replay · tip `50ea9c4`
 
 **Claude APPROUVÉ · squash-merge #134** → `main` @ `50ea9c4`.

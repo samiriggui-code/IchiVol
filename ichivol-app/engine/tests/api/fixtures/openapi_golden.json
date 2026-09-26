@@ -2450,9 +2450,55 @@
         ]
       }
     },
+    "/api/engine/cycle/synthetic/validate": {
+      "get": {
+        "description": "(a) Synthetic truth probes \u2014 no market fetch. Observe-only.",
+        "operationId": "get_cycle_synthetic_validate_api_engine_cycle_synthetic_validate_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "window",
+            "required": false,
+            "schema": {
+              "default": 128,
+              "title": "Window",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Cycle Synthetic Validate Api Engine Cycle Synthetic Validate Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Cycle Synthetic Validate",
+        "tags": [
+          "cycle"
+        ]
+      }
+    },
     "/api/engine/cycle/{symbol}": {
       "get": {
-        "description": "Causal CycleState at the last closed bar (FFT + Hilbert + ACF).\n\nObserve-only \u2014 never wired into ``decision/pipeline.py``, never a\nBUY/SELL/LONG/SHORT field. Projections are not returned as certainties;\n``quality`` / ``methods_agreement`` are agreement metrics, not win odds.",
+        "description": "Causal CycleState at the last **closed** bar (FFT + Homodyne + ACF).",
         "operationId": "get_cycle_state_api_engine_cycle__symbol__get",
         "parameters": [
           {
@@ -2492,6 +2538,24 @@
               "default": 128,
               "title": "Window",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Unix seconds for closed-bar filter (tests). Default: server now.",
+            "in": "query",
+            "name": "now",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Unix seconds for closed-bar filter (tests). Default: server now.",
+              "title": "Now"
             }
           },
           {
@@ -2543,7 +2607,7 @@
     },
     "/api/engine/cycle/{symbol}/study": {
       "get": {
-        "description": "Causal walk-forward + null models for CycleState (Lab / research).\n\nNever changes gates. ``verdict.promote_to_decision`` is always false here.",
+        "description": "Regime-filter study with independent future ER + surrogate CYCLE rates.",
         "operationId": "get_cycle_study_api_engine_cycle__symbol__study_get",
         "parameters": [
           {
@@ -2593,6 +2657,58 @@
               "default": 8,
               "title": "Horizon",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Null surrogate draws per family (P1 \u2014 default 5, was 20).",
+            "in": "query",
+            "name": "null_draws",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "description": "Null surrogate draws per family (P1 \u2014 default 5, was 20).",
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Null Draws",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Score one bar every stride in future-ER loop (default = horizon).",
+            "in": "query",
+            "name": "stride",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 64,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Score one bar every stride in future-ER loop (default = horizon).",
+              "title": "Stride"
+            }
+          },
+          {
+            "description": "Unix seconds for closed-bar filter (tests). Default: server now.",
+            "in": "query",
+            "name": "now",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Unix seconds for closed-bar filter (tests). Default: server now.",
+              "title": "Now"
             }
           },
           {

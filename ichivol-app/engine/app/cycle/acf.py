@@ -45,43 +45,54 @@ def estimate_acf(
     if len(closes) < max(min_period * 3, 32):
         return empty
 
-    rets = detrend_linear(log_returns(closes)[1:])  # drop leading nan from returns
-    # log_returns[0]=nan already dropped by [1:]; still may have nan — zero-fill for ACF length
+    rets = detrend_linear(log_returns(closes)[1:])
     series = [r if math.isfinite(r) else 0.0 for r in rets]
-    if len(series) < max_period + 8:
+    # N1 — usable lag ≤ len//3
+    lag_cap = min(max_period, len(series) // 3)
+    if len(series) < min_period + 8 or lag_cap < min_period:
         return empty
 
-    best_lag: int | None = None
-    best_corr = -1.0
-    # Seek local maxima of ACF in [min_period, max_period]
-    prev = None
-    for lag in range(min_period, min(max_period, len(series) // 3) + 1):
+    # N5 — noise floor ≈ 1/√n ; require peak above ~1.5× that
+    noise_floor = 1.0 / math.sqrt(max(len(series), 1))
+    min_corr = max(0.12, 1.5 * noise_floor)
+
+    # Prefer the *first* significant local peak (fundamental). Harmonics of a
+    # pure sine also have |ρ|≈1, so max-peak picking returns 2P/3P and breaks
+    # short-period agreement (Claude B2 / N5).
+    # Always compare lag-1 even when lag-1 < min_period — otherwise the left
+    # edge (lag==min_period) is a false peak whenever ρ is still declining
+    # from a non-searched lag (e.g. P=40 → spurious lag=8).
+    # Absolute peak floor 0.30: under moderate noise ACF on returns for long
+    # cycles is weak; returning None lets FFT carry the phase hint (R1).
+    peaks: list[tuple[int, float]] = []
+    for lag in range(min_period, lag_cap + 1):
         c = _acf_at_lag(series, lag)
-        if c is None:
+        if c is None or c < min_corr:
             continue
-        if prev is not None and lag > min_period:
-            c_prev = _acf_at_lag(series, lag - 1)
-            c_next = _acf_at_lag(series, lag + 1) if lag + 1 <= max_period else None
-            if (
-                c_prev is not None
-                and c > c_prev
-                and (c_next is None or c >= c_next)
-                and c > best_corr
-            ):
-                best_corr = c
-                best_lag = lag
-        prev = c
+        c_prev = _acf_at_lag(series, lag - 1)
+        c_next = _acf_at_lag(series, lag + 1) if lag + 1 <= lag_cap else None
+        is_local = (c_prev is None or c > c_prev) and (c_next is None or c >= c_next)
+        if is_local:
+            peaks.append((lag, c))
 
-    if best_lag is None:
-        # Fallback: global max ACF in band (may be weak)
-        for lag in range(min_period, min(max_period, len(series) // 3) + 1):
-            c = _acf_at_lag(series, lag)
-            if c is not None and c > best_corr:
-                best_corr = c
-                best_lag = lag
-
-    if best_lag is None or best_corr < 0.05:
+    if not peaks:
+        return empty
+    best_corr = max(c for _, c in peaks)
+    if best_corr < 0.30:
+        return empty
+    first_lag = None
+    first_corr = -1.0
+    for lag, c in peaks:
+        if c >= 0.75 * best_corr:
+            first_lag = lag
+            first_corr = c
+            break
+    if first_lag is None:
         return empty
 
-    strength = max(0.0, min(1.0, best_corr))
-    return AcfEstimate(dominant_period=float(best_lag), peak_corr=best_corr, strength=strength)
+    strength = max(0.0, min(1.0, (first_corr - min_corr) / max(1e-9, 1.0 - min_corr)))
+    return AcfEstimate(
+        dominant_period=float(first_lag),
+        peak_corr=first_corr,
+        strength=strength,
+    )

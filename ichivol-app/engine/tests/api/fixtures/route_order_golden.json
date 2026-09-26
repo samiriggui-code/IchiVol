@@ -353,6 +353,13 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/cycle/synthetic/validate",
+    "endpoint": "get_cycle_synthetic_validate"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/cycle/{symbol}",
     "endpoint": "get_cycle_state"
   },
