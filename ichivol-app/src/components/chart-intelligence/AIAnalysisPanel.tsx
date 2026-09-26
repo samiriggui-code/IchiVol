@@ -61,7 +61,13 @@ export function AIAnalysisPanel({ analysis, marketState, asOf }: Props) {
             </div>
           )}
           <div className="ci-decision">
-            <div className="ci-eyebrow">DECISION ENGINE</div>
+            <div className="ci-eyebrow">
+              {analysis.kind === 'pipeline' || analysis.strategy_version
+                ? 'DECISION ENGINE · PIPELINE'
+                : analysis.kind === 'combiner'
+                  ? 'BRUT ICHIMOKU × RVOL (COMBINER)'
+                  : 'DECISION ENGINE'}
+            </div>
             <div className="ci-decision-state">
               <span className={`ci-tag ci-tag-lg ${analysisTone(analysis.state)}`}>{analysis.state}</span>
               <small className="ci-meta">conf. {fmtPct(analysis.confidence)}</small>

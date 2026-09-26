@@ -46,6 +46,7 @@ def breaks_to_chart_objects(
     snapshot: MarketStructureSnapshot | None = None,
     params: StructureParams | None = None,
     max_events: int = 40,
+    include_breakouts: bool = True,
 ) -> list[ChartObject]:
     """Emit MARKER overlays for structure breaks (ENGINE, layer=breaks)."""
     if not candles:
@@ -66,6 +67,8 @@ def breaks_to_chart_objects(
         if t > as_of:
             continue
         side = "support" if ev.direction == "bullish" else "resistance"
+        # CI-R8: type + swing_time (event bar), independent of as_of.
+        lineage_key = f"structure_event:{ev.type.value}:{t}"
         event_objs.append(
             ChartObject(
                 type=ChartObjectType.MARKER,
@@ -85,8 +88,10 @@ def breaks_to_chart_objects(
                     "break_quality": ev.break_quality.value,
                     "level": ev.level,
                     "bar": ev.bar,
+                    "swing_time": t,
                     "displacement_atr": ev.displacement_atr,
                     "rvol": ev.rvol,
+                    "lineage_key": lineage_key,
                 },
                 subtype=ev.type.value.lower(),
             )
@@ -95,11 +100,13 @@ def breaks_to_chart_objects(
     event_objs.sort(key=lambda o: o.points[0].time)
     out.extend(event_objs[-max_events:])
 
-    if snapshot is not None:
+    if include_breakouts and snapshot is not None:
         last = candles[-1]
         for b in snapshot.breakout_candidates:
             score = float(getattr(b.zone, "score", 0.0) or 0.0)
             conf = min(1.0, score / max(score, 1.0)) if score > 0 else 0.5
+            # CI-R8: kind + bar (ephemeral candidate at current bar).
+            lineage_key = f"breakout:{b.side.value}:{as_of}"
             out.append(
                 ChartObject(
                     type=ChartObjectType.MARKER,
@@ -122,6 +129,7 @@ def breaks_to_chart_objects(
                         "rvol": b.rvol,
                         "score": score,
                         "last_open": last.open,
+                        "lineage_key": lineage_key,
                     },
                     subtype="breakout",
                 )

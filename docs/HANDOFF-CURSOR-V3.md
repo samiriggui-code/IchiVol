@@ -1,63 +1,93 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — MERGED #134 CI-R1→R9 · VPS smoke replay · tip `50ea9c4`
+
+**Claude APPROUVÉ · squash-merge #134** → `main` @ `50ea9c4`.
+
+### VPS smoke (post-rebuild engine+web)
+
+| Métrique | Valeur |
+|----------|--------|
+| Endpoint | `GET /chart-intelligence/BTCUSDT/replay?timeframe=1h&limit=300&lookback_bars=48` |
+| Taille | **1,023 Mo** (1 072 573 bytes) — budget &lt; 1,5 Mo |
+| 1ʳᵉ appel | **7,33 s** · `cached=false` · `replay_mode=walk_forward` · 48 frames · 300 candles · 40 objets |
+| 2ᵉ appel | **`cached=true`** · 1,2 s (transfert payload ; hit cache moteur) |
+| Frame keys | `as_of`, `objects`, `market_state` (séries une fois à la racine) |
+| Lineage | root 40 ids / 36 `lineage_key` ; union frames 937 ids / **397 lineage_keys** |
+| RELEASE | `50ea9c4 main` · backup `/opt/ichivol-backup/pre-ci-r7-r9-20260926-115211.tgz` |
+| FQDN | https://ichivol.global-it-ss.com |
+
+### Suite ordre Claude
+
+1. ~~Squash-merge #134 + VPS smoke~~ **FAIT**
+2. Squash-merge #133 (repli entryTime) + rebuild web
+3. **GEL Chart Intelligence** (aucune nouvelle fonctionnalité)
+4. T-CYCLE P6 (`lru_cache` `validate_cycle_synthetic`) puis merge + VPS + gel
+5. Ticket **GOLDEN-RVOL** (bisect, rapport HANDOFF — pas de régénération à l’aveugle)
+6. **VP0** protocole validation (doc only)
+
+---
+
 ## 2026-09-26 — #133 briefing · repli entryTime hors série → swing
 
-**Suite OK Claude** (merge après #134) : si `entryTime` &lt; première bougie chargée, période / caméra = **`swing`** (plus de fenêtre vide ancrée hors historique).
+**Suite OK Claude** (merge après #134) : si `entryTime` &lt; première bougie chargée, période / caméra = **`swing`**.
 
 | Fichier | Changement |
 |---------|------------|
 | `chartIntelligenceBriefing.ts` | `defaultBriefing` + `cameraForPeriod` acceptent `seriesFirstTime` |
 | `ChartIntelligencePanel.tsx` | corrige la période quand les bougies arrivent |
-| `chartIntelligenceBriefing.test.ts` | vitest entry in-range / before-first |
-
-**Ordre :** merge #134 (R7–R9) → VPS smoke → merge #133 → **GEL Chart Intelligence**.
 
 ---
 
-## 2026-09-26 — Chart Intelligence Briefing (période + packs + caméra) — chantier ouvert · branche `cursor/chart-intel-briefing-a2fe`
+## 2026-09-26 — Chart Intelligence Briefing (période + packs + caméra) — PR #133 · branche `cursor/chart-intel-briefing-a2fe`
 
-**Pour Claude :** relecture produit/UX de ce chantier (V0 heuristique). Cursor code en parallèle ; **pas de merge avant CI-R1** (#134).
+- **PR** : [#133](https://github.com/samiriggui-code/IchiVol/pull/133)
+- **Revue** : APPROUVÉ ; `context=position` → **Depuis entrée** (entry − 8 barres) ; repli swing si entry hors série
+- Placement : fiches Décisions (`prep`) / Position (`position`) — **pas** Marché
 
-- **PR** : [#133](https://github.com/samiriggui-code/IchiVol/pull/133) (draft)
-- **Revue** : OK principe ; `context=position` → période **Depuis entrée** (bougie d’entrée − 8 barres) via `entryTime` ; pack « Position ouverte » / Eve = plus tard
-- **Bloqué par** : merge CI-R1→R6 (#134) d’abord
-
-### Intent
-
-Sur les fiches **Décisions** (`context=prep`) et **Position** (`context=position`) uniquement — **pas** Marché (`PriceChart`) — piloter le Chart Intelligence comme un **briefing** :
-
-1. **Période** — fenêtre visible (Focus 24 / Setup 48 / Swing 120 / Tout) — ne change pas le timeframe API
-2. **Pack calques** — presets d’affichage (Calme / Structure / Setup / Liquidité / Tout) sur les calques déjà fournis par le moteur (`ChartObject` only)
-3. **Caméra** — `follow` N barres ou `fit` selon la période ; suit le replay progressif
-
-Directeur V0 = **heuristique contextuelle** (`defaultBriefing`) ; **Eve** pourra proposer plus tard (humain confirme). Moteur valide les objets ; **aucun niveau inventé** côté front.
-
-### Fichiers
+### Fichiers briefing
 
 | Fichier | Rôle |
 |---------|------|
-| `src/lib/chartIntelligenceBriefing.ts` | Contrat période / packs / `ChartCamera` / `defaultBriefing` |
-| `src/components/chart-intelligence/BriefingControls.tsx` | UI segmented période + pack |
-| `IntelligenceChart.tsx` | prop `camera` → `setVisibleLogicalRange` / `fitContent` |
-| `ChartIntelligencePanel.tsx` | wire briefing + défauts par `context` |
+| `src/lib/chartIntelligenceBriefing.ts` | période / packs / `ChartCamera` / `defaultBriefing` |
+| `src/components/chart-intelligence/BriefingControls.tsx` | UI segmented |
+| `IntelligenceChart.tsx` | prop `camera` |
+| `ChartIntelligencePanel.tsx` | wire + `entryTime` |
 
-### Contraintes (inchangées)
+---
 
-- `ChartObject` uniquement — **pas** de `DrawingObject`
-- CI **hors** page Marché globale
-- Eve propose / engine valide / humain confirme — V0 n’appelle pas Eve
-- Replay client `as_of` + lookback ~48 inchangé (#132)
+## 2026-09-26 — REVIEW Claude CI-R7→R9 · Chart Intelligence — MERGÉ #134 @ `50ea9c4`
 
-### Questions pour Claude
+| ID | Correction |
+|----|------------|
+| **CI-R7** | Frames slim ; séries une fois ; **mesuré local 0,94 Mo / VPS 1,02 Mo** (48×300) |
+| **CI-R8** | `origin.lineage_key` ; known_at/status_history par lineage |
+| **CI-R9** | Cache replay LRU **32** + purge à l’écriture |
 
-1. Les défauts `prep→setup/setup` et `position→swing/structure` sont-ils bons ?
-2. Packs trop nombreux / mal nommés ? Faut-il un pack « Position ouverte » (entry/stop/TP overlays) plus tard ?
-3. Caméra `follow` pendant PLAY : OK ou faut-il un mode « ancré sur l’événement » (BOS/CHOCH) ?
-4. Eve-piloted briefing (période+packs+camera proposés) : chantier suivant ou trop tôt ?
+### Fichiers R7–R9
 
-### CDC
+| Fichier | Rôle |
+|---------|------|
+| `app/chart_intelligence/service.py` | frames slim, lineage, LRU 32 |
+| `app/chart_objects/from_{fvg,structure,breaks,fibonacci}.py` | `lineage_key` |
+| `src/lib/useChartIntelligence.ts` | tronque séries par `as_of` |
+| `tests/api/test_chart_intelligence_route.py` | R7 taille, R8 FVG, R9 LRU |
 
-Checkbox `T-CI-BRIEF` ouverte dans `CAHIER-DES-CHARGES.md` (V3 / expérimental).
+---
+
+## 2026-09-26 — REVIEW Claude CI-R1→R6 · Chart Intelligence — MERGÉ dans #134
+
+| ID | Correction |
+|----|------------|
+| **CI-R1** | replay walk-forward ; known_at ; status_history |
+| **CI-R2** | closed_candles mid-bar |
+| **CI-R3** | analysis = pipeline Option B |
+| **CI-R4** | RVOL via `LiveScreenerSettings` |
+| **CI-R5** | kumo projeté `time - 25×bar ≤ T` |
+| **CI-R6** | docstring anti-lookahead clarifiée |
+
+**GEL Chart Intelligence** après merge #133.
+
 
 ---
 
