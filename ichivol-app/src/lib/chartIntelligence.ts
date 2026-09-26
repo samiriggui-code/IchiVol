@@ -291,6 +291,194 @@ export function objectTitle(o: IntelligenceObject): string {
   return 'Support'
 }
 
+/* ------------------------------------------------------------------ */
+/* Infobulle survol (calques Chart Intelligence)                       */
+/* ------------------------------------------------------------------ */
+
+export interface ObjectTooltipRow {
+  label: string
+  value: string
+}
+
+export interface ObjectTooltipContent {
+  title: string
+  subtitle?: string
+  badge?: string
+  badgeTone?: Tone
+  rows: ObjectTooltipRow[]
+  /** Lignes secondaires (composants confluence, niveaux Fib…). */
+  extras?: ObjectTooltipRow[]
+  note?: string
+}
+
+function tipRow(label: string, value: string | null | undefined): ObjectTooltipRow | null {
+  if (value == null || value === '' || value === '—') return null
+  return { label, value }
+}
+
+function pushRow(rows: ObjectTooltipRow[], label: string, value: string | null | undefined) {
+  const r = tipRow(label, value)
+  if (r) rows.push(r)
+}
+
+/**
+ * Contenu d’infobulle pour un ChartObject (données Python uniquement —
+ * pas de niveau inventé). `group` = autres niveaux Fib du même group_id.
+ */
+export function buildObjectTooltip(
+  o: IntelligenceObject,
+  group: IntelligenceObject[] = [],
+): ObjectTooltipContent {
+  const og = o.origin
+  const kind = og.kind
+  const tf = String(og.htf ?? o.timeframe ?? '').toUpperCase()
+  const status = og.status
+  const rows: ObjectTooltipRow[] = []
+  const extras: ObjectTooltipRow[] = []
+
+  pushRow(rows, 'Source', producerLabel(o))
+  pushRow(rows, 'Timeframe', tf || null)
+  pushRow(rows, 'Confiance', fmtPct(o.confidence))
+  if (og.score_is_mock) pushRow(rows, 'Score', 'MOCK (prototype)')
+
+  if (kind === 'fvg') {
+    pushRow(rows, 'Direction', og.direction === 'bearish' ? 'Bearish' : 'Bullish')
+    pushRow(rows, 'Bas', fmtPrice(o.price_low))
+    pushRow(rows, 'Haut', fmtPrice(o.price_high))
+    pushRow(rows, 'Remplissage', og.fill_ratio != null ? fmtPct(og.fill_ratio) : null)
+    pushRow(rows, 'Statut', status ? STATUS_LABELS[status] : null)
+    pushRow(rows, 'Connu à', fmtTime(og.known_at))
+    return {
+      title: objectTitle(o),
+      subtitle: 'Fair Value Gap',
+      badge: status ? STATUS_LABELS[status] : undefined,
+      badgeTone: statusTone(status),
+      rows,
+      note: og.reason ?? undefined,
+    }
+  }
+
+  if (kind === 'fibonacci') {
+    const levels = (group.length ? group : [o]).slice().sort((a, b) => (a.origin.ratio ?? 0) - (b.origin.ratio ?? 0))
+    pushRow(rows, 'Swing bas', fmtPrice(og.anchor_start?.price ?? og.swing_low))
+    pushRow(rows, 'Swing haut', fmtPrice(og.anchor_end?.price ?? og.swing_high))
+    const focusRatio = og.ratio
+    if (focusRatio != null) {
+      pushRow(rows, 'Niveau', `${(focusRatio * 100).toFixed(focusRatio === 0.5 || focusRatio === 0 || focusRatio === 1 ? 0 : 1)} %`)
+      pushRow(rows, 'Prix', fmtPrice(o.points[0]?.price))
+    }
+    for (const lv of levels) {
+      const r = lv.origin.ratio ?? Number(lv.label)
+      if (!Number.isFinite(r)) continue
+      const pct = (r * 100).toFixed(r === 0 || r === 1 || r === 0.5 ? 0 : 1)
+      extras.push({ label: `${pct} %`, value: fmtPrice(lv.points[0]?.price) })
+    }
+    pushRow(rows, 'Connu à', fmtTime(og.known_at))
+    return {
+      title: 'Fibonacci',
+      subtitle: 'Retracement auto',
+      badge: fmtPct(o.confidence),
+      badgeTone: 'blue',
+      rows,
+      extras: extras.length ? extras : undefined,
+      note: og.reason ?? undefined,
+    }
+  }
+
+  if (kind === 'structure_event') {
+    pushRow(rows, 'Événement', og.event_type === 'CHOCH' ? 'CHOCH' : 'BOS')
+    pushRow(rows, 'Direction', og.direction === 'bearish' ? 'Bearish' : 'Bullish')
+    pushRow(rows, 'Niveau', fmtPrice(og.level ?? o.points[0]?.price))
+    pushRow(rows, 'Interne', og.internal ? 'Oui' : 'Non')
+    pushRow(rows, 'À', fmtTime(o.points[0]?.time ?? og.known_at))
+    return {
+      title: objectTitle(o),
+      subtitle: og.internal ? 'Structure interne' : 'Structure',
+      badge: og.event_type ?? 'BOS',
+      badgeTone: og.direction === 'bearish' ? 'red' : 'green',
+      rows,
+      note: og.reason ?? undefined,
+    }
+  }
+
+  if (kind === 'swing') {
+    pushRow(rows, 'Type', og.swing ?? o.label ?? null)
+    pushRow(rows, 'Prix', fmtPrice(o.points[0]?.price))
+    pushRow(rows, 'À', fmtTime(o.points[0]?.time))
+    return {
+      title: objectTitle(o),
+      subtitle: 'Swing structure',
+      rows,
+    }
+  }
+
+  if (kind === 'liquidity') {
+    pushRow(rows, 'Côté', o.side === 'resistance' ? 'BSL (buy-side)' : 'SSL (sell-side)')
+    pushRow(rows, 'Prix', fmtPrice(o.points[0]?.price ?? og.level))
+    pushRow(rows, 'Statut', status ? STATUS_LABELS[status] : null)
+    pushRow(rows, 'Connu à', fmtTime(og.known_at))
+    return {
+      title: objectTitle(o),
+      subtitle: 'Liquidité',
+      badge: status ? STATUS_LABELS[status] : undefined,
+      badgeTone: statusTone(status),
+      rows,
+      note: og.reason ?? undefined,
+    }
+  }
+
+  if (kind === 'confluence') {
+    pushRow(rows, 'Bas', fmtPrice(o.price_low))
+    pushRow(rows, 'Haut', fmtPrice(o.price_high))
+    for (const c of og.components ?? []) {
+      extras.push({
+        label: c.label,
+        value: `${c.value ?? ''}${c.satisfied === false ? ' ✗' : c.satisfied ? ' ✓' : ''}`.trim() || c.family,
+      })
+    }
+    return {
+      title: 'Confluence',
+      subtitle: og.score_is_mock ? 'Score prototype' : 'Zone multi-signaux',
+      badge: fmtPct(o.confidence),
+      badgeTone: 'blue',
+      rows,
+      extras: extras.length ? extras : undefined,
+      note: og.reason ?? undefined,
+    }
+  }
+
+  if (kind === 'trendline' || o.type === 'trend_line' || o.type === 'ray') {
+    const [p0, p1] = o.points
+    pushRow(rows, 'Type', o.type === 'ray' ? 'Ray' : 'Segment')
+    pushRow(rows, 'Côté', o.side === 'resistance' ? 'Résistance' : 'Support')
+    pushRow(rows, 'De', p0 ? `${fmtPrice(p0.price)} · ${fmtTime(p0.time)}` : null)
+    pushRow(rows, 'À', p1 ? `${fmtPrice(p1.price)} · ${fmtTime(p1.time)}` : null)
+    return {
+      title: objectTitle(o),
+      subtitle: 'Trendline',
+      rows,
+      note: og.reason ?? undefined,
+    }
+  }
+
+  // Zones S/R (kind zone / défaut) — seuils, touches, HTF.
+  const isRes = o.side === 'resistance'
+  pushRow(rows, 'Côté', isRes ? 'Résistance' : 'Support')
+  pushRow(rows, 'Bas', fmtPrice(o.price_low))
+  pushRow(rows, 'Haut', fmtPrice(o.price_high))
+  pushRow(rows, 'Touches', og.touch_count != null ? String(og.touch_count) : null)
+  pushRow(rows, 'Statut', status ? STATUS_LABELS[status] : null)
+  pushRow(rows, 'Connu à', fmtTime(og.known_at))
+  return {
+    title: isRes ? 'Résistance' : 'Support',
+    subtitle: og.htf ? `Zone ${String(og.htf).toUpperCase()}` : 'Zone de prix',
+    badge: og.touch_count != null ? `${og.touch_count} touches` : fmtPct(o.confidence),
+    badgeTone: isRes ? 'red' : 'green',
+    rows,
+    note: og.reason ?? undefined,
+  }
+}
+
 /** Instant à partir duquel l'objet peut être montré en replay (anti-lookahead UI). */
 export function objectKnownAt(o: IntelligenceObject): number {
   const known = o.origin?.known_at

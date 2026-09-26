@@ -171,18 +171,25 @@ export function IntelligenceChart({
       rafRef.current = null
       const chart = chartRef.current
       const series = seriesRef.current
+      const host = hostRef.current
       if (!chart || !series) return
       const scale = chart.timeScale()
       const toX = (logical: number) => {
         const c = scale.logicalToCoordinate(logical as Logical)
         return c == null ? null : Number(c)
       }
-      const width = scale.width()
-      const height = chart.paneSize(0)?.height ?? hostRef.current?.clientHeight ?? 0
+      // Host fallback : en dialog, timeScale.width() peut rester 0 au 1er paint
+      // → sans ça les calques SVG ne se montent jamais (compteurs OK, dessin vide).
+      const width = Math.max(scale.width() || 0, host?.clientWidth || 0)
+      const height = Math.max(
+        chart.paneSize(0)?.height || 0,
+        host?.clientHeight || 0,
+      )
+      if (!(width > 0) || !(height > 0)) return
       setProjectionCtx((prev) => ({
         x: (time: number) => {
           const { t0, bar } = originRef.current
-          return toX((time - t0) / bar)
+          return toX((time - t0) / (bar || 3600))
         },
         y: (price: number) => {
           const c = series.candle.priceToCoordinate(price)
@@ -190,7 +197,7 @@ export function IntelligenceChart({
         },
         width,
         height,
-        barSpacing: Math.abs((toX(1) ?? 0) - (toX(0) ?? 0)),
+        barSpacing: Math.abs((toX(1) ?? 0) - (toX(0) ?? 0)) || 6,
         rev: (prev?.rev ?? 0) + 1,
       }))
     })
@@ -327,8 +334,8 @@ export function IntelligenceChart({
     <div className="ci-chart" style={{ height }}>
       <div className="ci-chart-host" ref={hostRef} />
       <ChartProjectionContext.Provider value={projectionCtx}>
-        <div className="ci-chart-overlay" style={{ width: projectionCtx?.width || undefined }}>
-          {projectionCtx && projectionCtx.width > 0 ? children : null}
+        <div className="ci-chart-overlay">
+          {projectionCtx && projectionCtx.width > 0 && projectionCtx.height > 0 ? children : null}
         </div>
       </ChartProjectionContext.Provider>
     </div>
