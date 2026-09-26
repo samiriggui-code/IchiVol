@@ -8,6 +8,7 @@ from typing import Sequence
 from app.cycle.acf import AcfEstimate
 from app.cycle.fft import FftEstimate
 from app.cycle.hilbert import HilbertEstimate
+from app.cycle.trend import TrendEstimate
 from app.cycle.types import CycleRegime
 
 
@@ -68,15 +69,34 @@ def infer_regime(
     agreement: float,
     strength: float,
     stability: float,
-    hilbert: HilbertEstimate,
+    trend: TrendEstimate,
     quality: float,
+    spectral_concentration: float | None = None,
+    acf_peak: float | None = None,
 ) -> CycleRegime:
-    if quality < 0.25 or strength < 0.15:
+    """
+    TREND from real trend measures (ER + R²), not Hilbert |I|/|Q|.
+    CYCLE requires agreement + spectral/ACF evidence + non-trend window.
+    """
+    conc = spectral_concentration or 0.0
+    peak = acf_peak or 0.0
+    # Strong ACF peak alone is enough spectral evidence on a clean sine;
+    # require both only when each is merely moderate (keeps RW CYCLE low).
+    spectral_ok = (conc >= 0.12 and peak >= 0.15) or peak >= 0.35 or conc >= 0.22
+
+    if quality < 0.18 and not trend.is_trend:
         return CycleRegime.NOISE
-    if hilbert.trend_mode and agreement < 0.5:
+    if trend.is_trend and agreement < 0.66:
         return CycleRegime.TREND
-    if agreement >= 0.66 and stability >= 0.5 and strength >= 0.35:
+    # Pure oscillation: methods agree, stable, spectral peak, not trending
+    if (
+        not trend.is_trend
+        and spectral_ok
+        and agreement >= 0.5
+        and stability >= 0.35
+        and strength >= 0.22
+    ):
         return CycleRegime.CYCLE
-    if agreement >= 0.33 or stability >= 0.35:
+    if agreement >= 0.33 or stability >= 0.35 or trend.strength >= 0.35:
         return CycleRegime.TRANSITION
     return CycleRegime.NOISE

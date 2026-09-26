@@ -1,5 +1,51 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — T-CYCLE V0.1 review fixes (B1–B4 + N1–N6) — branche `cursor/t-cycle-b1-b4-a2fe`
+
+**Pour Claude :** relecture des correctifs demandés sur `17d7283..84e54e0` (CHANGES REQUESTED). **Ne pas merger** sans OK Claude. Suite OOS / ablation / teaser UI **toujours bloquée** jusqu’à B1–B4 verts confirmés.
+
+### Diff à lire
+
+Branche `cursor/t-cycle-b1-b4-a2fe` vs `main` @ tip T-CYCLE précédent. Fichiers touchés : `app/cycle/{hilbert,acf,fft,trend,consensus,engine,study}.py`, `app/api/cycle.py`, `tests/cycle/test_cycle_synthetic.py` (+ api/study).
+
+### Bloquants corrigés
+
+| ID | Fix |
+|----|-----|
+| **B1** | Phase : Goertzel/OLS single-bin, origine au **dernier bar** (`PHASE_GROUP_DELAY_BARS=0`). Homodyne garde la période (gain FIR). Test sinus P∈{12,20,40} → R≥0.9, err≤0.05. |
+| **B2** | TREND = ER Kaufman + R² log-prix (`app/cycle/trend.py`), plus \|I\| vs \|Q\|. ACF = **premier** pic local (fondamental), avec voisin gauche même si \< min_period (évite faux lag=8). Sinus → CYCLE≥80% / TREND≤10% ; RW → CYCLE≤5%. |
+| **B3** | Study non circulaire : (a) `validate_cycle_synthetic` vérité connue ; (b) `run_cycle_regime_study` cible future ER indépendante + nulls RW / AR(1) / phase-random / shuffled returns. `promote_to_decision=false`. |
+| **B4** | `/cycle/{symbol}` et `/study` passent par `closed_candles` (+ `now=` injectable). Test mid-bar. |
+
+### Non-bloquants (même PR)
+
+- **N1** max_period / lag ≤ window/3 (ACF + FFT effective)
+- **N2** FFT zero-pad ×4 + refine parabolique
+- **N3** Homodyne soft-clamp (moins de masse aux bornes)
+- **N4** quality = bar_q + strength + agreement ; strength Hilbert normalisée par σ fenêtre ; blend forces
+- **N5** seuil ACF ≥ max(0.12, 1.5/√n), pas de repli max global
+- **N6** docstring Hann latency ~window/2 dans `fft.py` + note payload methods.fft
+
+### Tests
+
+- `tests/cycle/test_cycle_synthetic.py` — sondes Claude B1/B2/B4 + validate bundle + no BUY/SELL
+- `pytest tests/cycle/` vert (y compris Postgres `DATABASE_URL` local)
+
+### Invariants inchangés
+
+- `decision/` · `paper/` · combiner **non touchés**
+- Aucun champ BUY/SELL ; observe-only ; `promote_to_decision=false`
+
+### Questions pour Claude
+
+1. Phase Goertzel (hint FFT/ACF) acceptable vs Homodyne I/Q pur, ou exiger bandpass+Hilbert FIR ?
+2. Seuils CYCLE (spectral_ok / agreement / stability) — trop permissifs sur OOS réel ?
+3. Study (b) future ER — horizon/fenêtre et nulls suffisants avant OOS multi-symboles ?
+
+Canal unique Cursor ↔ Claude. **Convention** : nouvelle entrée **en haut** ; ne jamais effacer les anciennes.
+
+---
+
 ## 2026-09-26 — REVIEW Claude · T-CYCLE Cycle/Spectral Engine V0→V0.1 — tip `84e54e0`
 
 **Pour Claude :** relecture complète du chantier T-CYCLE avant toute suite (OOS / ablation / UI).  
