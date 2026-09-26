@@ -46,6 +46,7 @@ import {
   nearestSrObjects,
   shortSymbol,
 } from './market/marketMaquetteHelpers'
+import { openMarketTvWindow } from '../lib/marketTv'
 import './MarketPage.css'
 
 const TFS: { id: Interval; label: string }[] = [
@@ -354,6 +355,13 @@ export function MarketPage() {
           <p className="subtitle">Lire le prix. Comprendre le mouvement.</p>
         </div>
         <div className="actions">
+          <button
+            type="button"
+            className="suggestion market-tv-open"
+            onClick={() => openMarketTvWindow(symbol, interval)}
+          >
+            Ouvrir en TV
+          </button>
           <span className="tag gray">BOUGIES CLÔTURÉES</span>
         </div>
       </div>
@@ -428,17 +436,27 @@ export function MarketPage() {
                 {chartLoading ? ' · chargement…' : ''}
               </small>
             </div>
-            <div className="segmented">
-              {TFS.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  className={interval === t.id ? 'active' : undefined}
-                  onClick={() => setInterval(t.id)}
-                >
-                  {t.label}
-                </button>
-              ))}
+            <div className="card-head-tools">
+              <button
+                type="button"
+                className="market-tv-open-inline"
+                title="Ouvrir le graphique en fenêtre TV"
+                onClick={() => openMarketTvWindow(symbol, interval)}
+              >
+                TV
+              </button>
+              <div className="segmented">
+                {TFS.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={interval === t.id ? 'active' : undefined}
+                    onClick={() => setInterval(t.id)}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 

@@ -11,6 +11,7 @@ import { JournalPage } from './pages/JournalPage'
 import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { MarketPage } from './pages/MarketPage'
+import { MarketTvPage } from './pages/MarketTvPage'
 import { OverviewPage } from './pages/OverviewPage'
 import { PortfolioPage } from './pages/PortfolioPage'
 import { RequireAuth } from './pages/RequireAuth'
@@ -32,6 +33,8 @@ export function Root() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route element={<RequireAuth />}>
+          {/* TV Marché — plein écran hors DashboardShell (popup / second moniteur) */}
+          <Route path="/app/tv" element={<MarketTvPage />} />
           <Route path="/app" element={<DashboardShell />}>
             <Route index element={<Navigate to="desk" replace />} />
             {/* T14a canonical routes */}
