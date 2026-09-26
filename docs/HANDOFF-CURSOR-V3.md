@@ -1,5 +1,14 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — Chart Intelligence placement — PR #130 · tip `14ed73e`
+
+- **Marché** = `PriceChart` live uniquement (CI retiré)
+- **Opportunités** = clic valeur → fiche + Chart Intelligence (`context=prep`, palette signaux)
+- **Portefeuille** = clic position → fiche + Chart Intelligence (`context=position`)
+- **VPS** : `RELEASE=14ed73e` · rebuild `web` · public **200**
+
+---
+
 ## 2026-09-26 — Chart Intelligence API LIVE — PR #128 · tip `1f56aff`
 
 - **PR** : [#128](https://github.com/samiriggui-code/IchiVol/pull/128) → `main` @ `1f56aff`
