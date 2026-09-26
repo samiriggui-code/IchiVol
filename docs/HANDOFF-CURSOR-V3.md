@@ -1,5 +1,53 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — Review Claude tip `6634438` · GOLDEN-RVOL · VP0 redo · AW0
+
+### Claude APPROUVÉ (moteur)
+
+| Check | Résultat |
+|-------|----------|
+| Merges #134 / #133 / #123 | OK |
+| Suite engine py3.12 + Postgres | **1164 passed**, 0 fail |
+| `tsc` | OK |
+| lint | warnings only |
+| GEL CI + T-CYCLE | confirmé |
+
+### GOLDEN-RVOL #135 — CAUSE (pas de régression) → PR #139
+
+- Écart ULP (~1e-16) sur `avg_volume` / `rvol*` / `vol_accel` uniquement.
+- Cause : Python **3.12** `sum()` compensé vs **3.11** ; goldens générés en 3.12 ; `rvol.py` L65 inchangé.
+- **PR [#139](https://github.com/samiriggui-code/IchiVol/pull/139)** `cursor/golden-rvol-py312-a2fe` @ `8324a54` : pin `>=3.12,<3.13` + `assert_golden_equal` / `pytest.approx(1e-12)` ; **pas** de regen goldens ; **pas** de touche `rvol.py`.
+- Tests locaux : 8/8 goldens agents + agent_channel **PASS**.
+- **Action :** fermer [#135](https://github.com/samiriggui-code/IchiVol/issues/135) avec ce diagnostic après merge #139.
+
+### VP0 — REFUSÉ Claude (ancien) → REFAIT
+
+- Ancien `docs/VP0-PROTOCOLE-VALIDATION.md` = invariants techniques seulement → **rétrogradé en annexe**.
+- **Livrable :** [`docs/VALIDATION-PROTOCOL.md`](./VALIDATION-PROTOCOL.md) version **`VP0-2026-09-26`** — question centrale, B0–B8 exacts, A–L, données, plis datés, exécution, coûts unifiés 5+2+3 / adverse, métriques, verdicts EDGE, T10b, no-Claude-in-runs, versionnement.
+- **DOC ONLY** — pas de code, pas de run. Validation Claude + utilisateur **avant VP1**.
+- PR docs : cette branche `cursor/validation-protocol-a2fe` (remplace le fond de #137).
+
+### AW0 — DOC ONLY (après VP0)
+
+- [`docs/AW0-CONSOLIDATION.md`](./AW0-CONSOLIDATION.md) — audit assemblages ; contrat provenance ChartObject (**pas** `MarketObservation`).
+- AW1+ code **interdit** jusqu’à déblocage VP.
+
+### Suite
+
+1. Review Claude **#139** (GOLDEN) → merge → close #135  
+2. Review Claude **VALIDATION-PROTOCOL** + AW0 → gel `VP0-2026-09-26`  
+3. Ensuite seulement VP1 (données + manifeste)
+
+### Tip / SHA
+
+| Ref | SHA |
+|-----|-----|
+| `main` | `6634438` |
+| GOLDEN PR | `8324a54` (#139) |
+| Docs VP/AW0 | (SHA de cette PR) |
+
+---
+
 ## 2026-09-26 — MERGED #134+#133 · GEL Chart Intelligence · T-CYCLE P6 · tip `9e2b02f`
 
 ### Merges
@@ -32,21 +80,12 @@
 
 ### Ticket GOLDEN-RVOL — rapport bisect (ne pas régénérer)
 
-**Issue :** voir [#135](https://github.com/samiriggui-code/IchiVol/issues/135).
-
-| Check | Résultat agent VM @ `9e2b02f` |
-|-------|------------------------------|
-| 14 nodeids RVOL listés par Claude | **PASS** |
-| `pytest tests --ignore=tests/cycle` | **tout vert** |
-| Engine CI GitHub `main` (#134/#133/#123) | **success** |
-
-**Bisect :** non exécutable — tip `main` vert ici (pas de commit « rouge » à isoler).  
-**Suspect historique si échec réapparaît :** `51b0edf` (T1d) — `rvol_agent` → `REGISTRY.compute("rvol")` (**changement voulu**, parity goldens `89caa75`→`51b0edf`).  
-**Next :** Claude colle le diff `-vv` + versions numpy/python. Puis : tolérance / pin deps, **ou** PR goldens dédiée (diff valeurs), **ou** fix code. **Pas de régénération à l’aveugle.**
+**Issue :** voir [#135](https://github.com/samiriggui-code/IchiVol/issues/135).  
+**Update 2026-09-26 soir :** cause = py3.11 vs 3.12 `sum()` — voir § Review Claude + PR #139. Bisect agent (tip vert) reste valide ; pas de regen.
 
 ### VP0
 
-Protocole de validation (document only) — voir `docs/VP0-PROTOCOLE-VALIDATION.md`.
+Voir [`VALIDATION-PROTOCOL.md`](./VALIDATION-PROTOCOL.md). Ancien fichier = annexe technique seulement.
 
 ## 2026-09-26 — MERGED #134 CI-R1→R9 · VPS smoke replay · tip `50ea9c4`
 
