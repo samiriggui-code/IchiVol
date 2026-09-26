@@ -1,6 +1,6 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
-## 2026-09-26 — GEL VP0 · AW1 · AG0 · filtre MERGÉS · VP1 scaffold (Claude pause)
+## 2026-09-26 — VP2 harness · VP1 funding OK · file gel (Claude pause)
 
 ### Merges (OK utilisateur)
 
@@ -11,15 +11,21 @@
 | #144 AG0 | `c3d9a3c` | Hygiène agent |
 | #145 filtre | `7741c92` | outcomes exclut pré-AG0 sans entry_source |
 
-### VP1 (en cours) — [#146](https://github.com/samiriggui-code/IchiVol/pull/146) `cursor/vp1-data-manifest-a2fe`
+### VP1 — [#146](https://github.com/samiriggui-code/IchiVol/pull/146) `cursor/vp1-data-manifest-a2fe`
 
 - Package `engine/vp1/` : Vision download + CHECKSUM + manifest + frozen loader.
-- **Spot Univers téléchargé** : 648 monthly zips (BTC/ETH/SOL × 1h/4h/1d), 0 missing ; `verify` OK.
-- Series figées : 1h **37973** / 4h **9498** / 1d **1583** bars / symbole (fenêtre VP).
-- Funding download en cours ; OI daily metrics = gros volume (resume-friendly).
-- Données `vp1/data/` gitignored — pas de run Lab avant funding (+ OI si B4) figés.
+- **Spot** : 648 monthly zips · series 1h **37973** / 4h **9498** / 1d **1583** / symbole.
+- **Funding** : 216 monthly zips OK (BTC/ETH/SOL).
+- OI daily metrics = optionnel / gros volume (B4+) — resume-friendly.
+- `vp1/data/` gitignored. Undraft/merge #146 quand CI vert.
 
-Claude review au retour (≥17h30).
+### VP2 (en cours) — `cursor/vp2-harness-a2fe`
+
+- `research_lab/sim.py` : `exit_mode=levels_only`, `time_stop_bars`, `full_cash`, `force_flat_at_end`.
+- Package `engine/vp2/` : Rules §6/§1ter, loader VP1→feed, run metadata (seed, sha256, protocol, cost base|adverse).
+- Tests `tests/vp2/` — pas d’entrées B* (VP3). Smoke : `python -m vp2 smoke`.
+
+Claude review au retour (≥17h30). File : undraft VP1 → merge → VP2 draft.
 
 ---
 

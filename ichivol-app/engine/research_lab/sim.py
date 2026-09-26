@@ -68,11 +68,18 @@ class Rules:
     decision_hook: Callable[[BarSignal], str] | None = field(default=None, compare=False)
     hook_label: str = ""
     # exit rule: "decision" = baseline (leave when the effective decision stops supporting the position);
-    # "direction" = leave only on stop/target or when the Ichimoku direction no longer matches (experiment E)
+    # "direction" = leave only on stop/target or when the Ichimoku direction no longer matches (experiment E);
+    # "levels_only" = VP2 common exit — stop / TP / time-stop only (never pipeline/direction flip)
     exit_mode: str = "decision"
     # live-replica mode: decide and fill in the same step at the step's price (old intrabar behaviour)
     immediate_fill: bool = False
     bar_seconds: int = 3600
+    # VP2 §6 time-stop: close at bar close after N bars held (None = disabled)
+    time_stop_bars: int | None = None
+    # VP2 §6: size = 100 % of available cash (1 position); stop_distance still sets SL/TP levels
+    full_cash: bool = False
+    # VP §5.1.8: force exit open positions at the last bar's close
+    force_flat_at_end: bool = False
 
 
 @dataclass
@@ -232,14 +239,8 @@ def simulate(
         eq = equity_now()
         fill = _fill(raw, direction, "in", cost)
         sd = sig.stop_distance
-        qty = eq * rules.risk_pct / sd
-        notional = qty * fill
-        cap = eq * rules.max_notional_pct
-        if notional > cap:
-            qty = cap / fill
-            notional = qty * fill
-        fee = _fee(notional, cost)
-        if notional + fee > cash:
+        if rules.full_cash:
+            # §6: 100 % cash after entry commission (stop_distance only for levels)
             aff = cash / (1 + cost.commission_bps / 10_000.0)
             if aff <= 0:
                 rej["insufficient_cash"] += 1
@@ -247,6 +248,22 @@ def simulate(
             qty = aff / fill
             notional = qty * fill
             fee = _fee(notional, cost)
+        else:
+            qty = eq * rules.risk_pct / sd
+            notional = qty * fill
+            cap = eq * rules.max_notional_pct
+            if notional > cap:
+                qty = cap / fill
+                notional = qty * fill
+            fee = _fee(notional, cost)
+            if notional + fee > cash:
+                aff = cash / (1 + cost.commission_bps / 10_000.0)
+                if aff <= 0:
+                    rej["insufficient_cash"] += 1
+                    return
+                qty = aff / fill
+                notional = qty * fill
+                fee = _fee(notional, cost)
         if notional < rules.min_notional:
             rej["below_min_notional"] += 1
             return
@@ -311,6 +328,13 @@ def simulate(
                 close_position(p, p.stop, t, "stop_hit_ambiguous" if hit_tp else "stop_hit")
             elif hit_tp:
                 close_position(p, p.tp, t, "take_profit_hit")
+            elif (
+                rules.time_stop_bars is not None
+                and t != p.entry_time
+                and (t - p.entry_time) // rules.bar_seconds >= rules.time_stop_bars
+            ):
+                # §6: time-stop exits at this bar's close (not next open)
+                close_position(p, c.close, t, "time_stop")
         # 4) mark to market at this bar's close
         for sym in symbols:
             item = data[sym].get(t)
@@ -336,6 +360,9 @@ def simulate(
             run_start = run_state[sym][1]
             p = positions.get(sym)
             if p is not None:
+                if rules.exit_mode == "levels_only":
+                    # VP2: no pipeline / direction exits — SL/TP/time-stop only.
+                    continue
                 want = "BUY" if p.direction == "LONG" else "SELL"
                 if rules.exit_mode == "direction":
                     leave = sig.direction.value != p.direction
@@ -372,23 +399,38 @@ def simulate(
                 continue
             eq = equity_now()
             px = last_close[sym]
-            est_qty = min(eq * rules.risk_pct / sig.stop_distance, eq * rules.max_notional_pct / px)
-            est_risk = est_qty * sig.stop_distance
-            if open_risk() + est_risk > eq * rules.max_open_risk_pct + 1e-9:
-                rej["open_risk_cap"] += 1
-                continue
-            if est_qty * px > eq * rules.max_symbol_notional_pct + 1e-9:
-                rej["symbol_exposure_cap"] += 1
-                continue
-            if est_qty * px > cash:
-                rej["insufficient_cash"] += 1
-                continue
+            if rules.full_cash:
+                if cash < rules.min_notional:
+                    rej["insufficient_cash"] += 1
+                    continue
+                est_qty = cash / px
+                est_risk = est_qty * sig.stop_distance
+            else:
+                est_qty = min(eq * rules.risk_pct / sig.stop_distance, eq * rules.max_notional_pct / px)
+                est_risk = est_qty * sig.stop_distance
+                if open_risk() + est_risk > eq * rules.max_open_risk_pct + 1e-9:
+                    rej["open_risk_cap"] += 1
+                    continue
+                if est_qty * px > eq * rules.max_symbol_notional_pct + 1e-9:
+                    rej["symbol_exposure_cap"] += 1
+                    continue
+                if est_qty * px > cash:
+                    rej["insufficient_cash"] += 1
+                    continue
             entered_runs.add((sym, run_start))
             if rules.immediate_fill:
                 fill_entry(sym, sig, direction, last_close[sym], data[sym][t][0], t)
                 continue
             pending_entry[sym] = (sig, direction)
             pending_risk[sym] = est_risk
+    if rules.force_flat_at_end and times:
+        t_end = times[-1]
+        for sym in list(positions):
+            p = positions[sym]
+            item = data[sym].get(t_end)
+            if item is None:
+                continue
+            close_position(p, item[0].close, t_end, "window_end")
     open_end = [
         {
             "symbol": p.symbol, "direction": p.direction, "entry_time": p.entry_time, "qty": p.qty,
