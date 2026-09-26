@@ -17,12 +17,12 @@ import {
 /* Période (fenêtre visible, pas le timeframe API)                     */
 /* ------------------------------------------------------------------ */
 
-export type BriefingPeriodId = 'focus' | 'setup' | 'swing' | 'full'
+export type BriefingPeriodId = 'focus' | 'setup' | 'swing' | 'since_entry' | 'full'
 
 export interface BriefingPeriod {
   id: BriefingPeriodId
   label: string
-  /** Nombre de bougies visibles depuis la droite ; null = tout (fit). */
+  /** Nombre de bougies visibles depuis la droite ; null = tout / ancré entrée. */
   bars: number | null
   hint: string
 }
@@ -31,6 +31,7 @@ export const BRIEFING_PERIODS: BriefingPeriod[] = [
   { id: 'focus', label: 'Focus', bars: 24, hint: '~1 j en 1H' },
   { id: 'setup', label: 'Setup', bars: 48, hint: 'fenêtre récente' },
   { id: 'swing', label: 'Swing', bars: 120, hint: '~5 j en 1H' },
+  { id: 'since_entry', label: 'Depuis entrée', bars: null, hint: 'bougie d’entrée − marge' },
   { id: 'full', label: 'Tout', bars: null, hint: 'historique chargé' },
 ]
 
@@ -134,15 +135,36 @@ export type CameraMode = 'follow' | 'fit' | 'manual'
  */
 export interface ChartCamera {
   mode: CameraMode
-  /** Bougies visibles (follow) ; null si fit / full. */
+  /** Bougies visibles (follow) ; null si fit / full / fromTime. */
   visibleBars: number | null
   token: number
+  /**
+   * Ancrage temporel (unix s) — fenêtre depuis cette heure jusqu’à la droite.
+   * Utilisé pour `since_entry` (fiche Position).
+   */
+  fromTime?: number | null
 }
 
-export function cameraForPeriod(period: BriefingPeriodId, token: number): ChartCamera {
+/** Marge avant la bougie d’entrée (bougies). */
+export const ENTRY_MARGIN_BARS = 8
+
+export function cameraForPeriod(
+  period: BriefingPeriodId,
+  token: number,
+  opts?: { entryTime?: number | null; barSeconds?: number },
+): ChartCamera {
+  if (period === 'since_entry' && opts?.entryTime != null && Number.isFinite(opts.entryTime)) {
+    const bar = opts.barSeconds ?? 3600
+    return {
+      mode: 'follow',
+      visibleBars: null,
+      fromTime: Number(opts.entryTime) - ENTRY_MARGIN_BARS * bar,
+      token,
+    }
+  }
   const p = periodById(period)
-  if (p.bars == null) return { mode: 'fit', visibleBars: null, token }
-  return { mode: 'follow', visibleBars: p.bars, token }
+  if (p.bars == null) return { mode: 'fit', visibleBars: null, token, fromTime: null }
+  return { mode: 'follow', visibleBars: p.bars, token, fromTime: null }
 }
 
 /* ------------------------------------------------------------------ */
@@ -159,9 +181,18 @@ export interface BriefingDefaults {
 /**
  * Défauts selon le contexte d’usage (fiche Décisions / Position / explore).
  * Heuristique produit V0 — pas un LLM, pas un vote pipeline.
+ * Position : période ancrée sur la bougie d’entrée (pas 120 barres fixes).
  */
-export function defaultBriefing(context: BriefingContext): BriefingDefaults {
+export function defaultBriefing(
+  context: BriefingContext,
+  opts?: { entryTime?: number | null },
+): BriefingDefaults {
   if (context === 'prep') return { period: 'setup', pack: 'setup' }
-  if (context === 'position') return { period: 'swing', pack: 'structure' }
+  if (context === 'position') {
+    return {
+      period: opts?.entryTime != null ? 'since_entry' : 'swing',
+      pack: 'structure',
+    }
+  }
   return { period: 'setup', pack: 'calm' }
 }

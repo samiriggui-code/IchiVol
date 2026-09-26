@@ -710,6 +710,7 @@ export function PortfolioPage() {
                 source="api"
                 variant="brief"
                 context="position"
+                entryTime={fiche.entry_time}
               />
             </div>
             <div className="statline">

@@ -103,9 +103,27 @@ function applyTheme(chart: IChartApi, s: SeriesBag, colors: ChartColors) {
   s.cloudLower.applyOptions({ topColor: colors.background, bottomColor: colors.background })
 }
 
-function applyCamera(chart: IChartApi, nBars: number, camera: ChartCamera | null | undefined) {
+function applyCamera(
+  chart: IChartApi,
+  nBars: number,
+  camera: ChartCamera | null | undefined,
+  candles?: { time: number }[],
+) {
   if (!camera || camera.mode === 'manual' || nBars <= 0) return
   const scale = chart.timeScale()
+  if (camera.fromTime != null && candles?.length) {
+    let fromIdx = 0
+    for (let i = 0; i < candles.length; i++) {
+      if (candles[i]!.time >= camera.fromTime) {
+        fromIdx = i
+        break
+      }
+      fromIdx = i
+    }
+    const to = nBars - 1 + 2
+    scale.setVisibleLogicalRange({ from: Math.max(-2, fromIdx - 1), to })
+    return
+  }
   if (camera.mode === 'fit' || camera.visibleBars == null) {
     scale.fitContent()
     return
@@ -282,17 +300,17 @@ export function IntelligenceChart({
       candles.length > 0 &&
       (fittedKeyRef.current !== key || cameraTokenRef.current !== camToken)
     if (needFit) {
-      applyCamera(chart, candles.length, camera)
+      applyCamera(chart, candles.length, camera, candles)
       fittedKeyRef.current = key
       cameraTokenRef.current = camToken
     } else if (camera?.mode === 'follow' && candles.length > 0) {
       // Replay progressif : coller la fenêtre à droite quand le slice avance.
-      applyCamera(chart, candles.length, camera)
+      applyCamera(chart, candles.length, camera, candles)
     }
     // Autoscale appliqué au frame suivant → deux frames avant de reprojeter.
     requestAnimationFrame(() => bump())
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [candles, ichimoku, projection, resetKey, camera?.token, camera?.mode, camera?.visibleBars])
+  }, [candles, ichimoku, projection, resetKey, camera?.token, camera?.mode, camera?.visibleBars, camera?.fromTime])
 
   useEffect(() => {
     const s = seriesRef.current

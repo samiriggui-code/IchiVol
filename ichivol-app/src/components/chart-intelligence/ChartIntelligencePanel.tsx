@@ -44,6 +44,17 @@ interface Props {
   variant?: Variant
   /** Libellé d’eyebrow selon le contexte d’usage */
   context?: Context
+  /** Unix s ou ISO — ancre caméra « Depuis entrée » (fiche Position). */
+  entryTime?: number | string | null
+}
+
+function toUnixSeconds(raw: number | string | null | undefined): number | null {
+  if (raw == null) return null
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    return raw > 1e12 ? Math.floor(raw / 1000) : raw
+  }
+  const ms = Date.parse(String(raw))
+  return Number.isFinite(ms) ? Math.floor(ms / 1000) : null
 }
 
 const CONTEXT_EYEBROW: Record<Context, string> = {
@@ -59,8 +70,10 @@ export function ChartIntelligencePanel({
   chartHeight,
   variant = 'full',
   context = 'explore',
+  entryTime = null,
 }: Props) {
-  const defaults = defaultBriefing(context)
+  const entryUnix = toUnixSeconds(entryTime)
+  const defaults = defaultBriefing(context, { entryTime: entryUnix })
   const [period, setPeriod] = useState<BriefingPeriodId>(defaults.period)
   const [camToken, setCamToken] = useState(0)
   const ci = useChartIntelligence({ symbol, timeframe, source })
@@ -70,17 +83,23 @@ export function ChartIntelligencePanel({
 
   // Directeur V0 : appliquer le pack par défaut au montage / changement de contexte.
   useEffect(() => {
-    const d = defaultBriefing(context)
+    const d = defaultBriefing(context, { entryTime: entryUnix })
     setPeriod(d.period)
     setCamToken((t) => t + 1)
     ci.setLayers(packById(d.pack).layers)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [context, symbol, timeframe])
+  }, [context, symbol, timeframe, entryUnix])
 
   const activePack: LayerPackId | null = useMemo(() => matchLayerPack(ci.layers), [ci.layers])
 
-  const camera = useMemo(() => cameraForPeriod(period, camToken), [period, camToken])
-
+  const camera = useMemo(
+    () =>
+      cameraForPeriod(period, camToken, {
+        entryTime: entryUnix,
+        barSeconds: res?.replay?.bar_seconds ?? 3600,
+      }),
+    [period, camToken, entryUnix, res?.replay?.bar_seconds],
+  )
   const onPeriod = (id: BriefingPeriodId) => {
     setPeriod(id)
     setCamToken((t) => t + 1)

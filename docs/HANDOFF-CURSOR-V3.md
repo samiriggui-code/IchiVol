@@ -2,10 +2,11 @@
 
 ## 2026-09-26 — Chart Intelligence Briefing (période + packs + caméra) — chantier ouvert · branche `cursor/chart-intel-briefing-a2fe`
 
-**Pour Claude :** relecture produit/UX de ce chantier (V0 heuristique). Cursor code en parallèle ; pas de merge forcé avant ton OK si tu bloques sur le contrat.
+**Pour Claude :** relecture produit/UX de ce chantier (V0 heuristique). Cursor code en parallèle ; **pas de merge avant CI-R1** (#134).
 
-- **PR** : [#133](https://github.com/samiriggui-code/IchiVol/pull/133) (draft) · tip `14661d3`
-- **VPS** : `RELEASE=14661d3 cursor/chart-intel-briefing-a2fe` · rebuild `web` · public/health **200** · bundle `Période` / `Focus` / `Setup` / `Swing`
+- **PR** : [#133](https://github.com/samiriggui-code/IchiVol/pull/133) (draft)
+- **Revue** : OK principe ; `context=position` → période **Depuis entrée** (bougie d’entrée − 8 barres) via `entryTime` ; pack « Position ouverte » / Eve = plus tard
+- **Bloqué par** : merge CI-R1→R6 (#134) d’abord
 
 ### Intent
 
