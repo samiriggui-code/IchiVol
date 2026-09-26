@@ -81,6 +81,50 @@ def _lineage_key(obj: dict[str, Any]) -> str:
     return str(obj.get("id") or "")
 
 
+# Origin keys kept on slim replay frames (CI-R7 size budget). Full origin stays on pack root.
+_FRAME_ORIGIN_KEYS = frozenset(
+    {
+        "kind",
+        "lineage_key",
+        "known_at",
+        "status",
+        "touch_count",
+        "producer",
+        "group_id",
+        "direction",
+        "event_type",
+        "swing_time",
+        "ratio",
+        "fill_ratio",
+        "reason",
+        "swing",
+    }
+)
+
+
+def _slim_frame_object(obj: dict[str, Any]) -> dict[str, Any]:
+    """Drop bulky origin meta from per-frame copies (CI-R7)."""
+    origin = obj.get("origin") or {}
+    slim_origin = {k: origin[k] for k in _FRAME_ORIGIN_KEYS if k in origin}
+    return {
+        "id": obj.get("id"),
+        "type": obj.get("type"),
+        "source": obj.get("source"),
+        "layer": obj.get("layer"),
+        "symbol": obj.get("symbol"),
+        "timeframe": obj.get("timeframe"),
+        "points": obj.get("points") or [],
+        "price_low": obj.get("price_low"),
+        "price_high": obj.get("price_high"),
+        "side": obj.get("side"),
+        "label": obj.get("label"),
+        "confidence": obj.get("confidence"),
+        "as_of": obj.get("as_of"),
+        "subtype": obj.get("subtype"),
+        "origin": slim_origin,
+    }
+
+
 def _enrich_object(obj: dict[str, Any], *, known_at: int | None = None) -> dict[str, Any]:
     """Additive origin keys for the UI.
 
@@ -195,8 +239,18 @@ def _collect_engine_objects(
     snap = detect_market_structure(window, params, include_pytrendline=include_pytrendline)
     objects: list[dict[str, Any]] = []
     objects.extend(o.to_dict() for o in structure_to_chart_objects(snap, sym, timeframe, window))
+    # CI-R7 budget: cap BOS/CHoCH markers; skip ephemeral breakout candidates
+    # (as_of in point → new id every bar, ~2 Mo wasted on 48-frame packs).
     objects.extend(
-        o.to_dict() for o in breaks_to_chart_objects(window, sym, timeframe, snapshot=snap)
+        o.to_dict()
+        for o in breaks_to_chart_objects(
+            window,
+            sym,
+            timeframe,
+            snapshot=snap,
+            max_events=16,
+            include_breakouts=False,
+        )
     )
     objects.extend(o.to_dict() for o in fvg_to_chart_objects(window, sym, timeframe))
     objects.extend(
@@ -540,9 +594,8 @@ def build_chart_intelligence_replay(
         frame_objects = []
         for o in snap["objects"]:
             lk = _lineage_key(o)
-            frame_objects.append(
-                _enrich_object(o, known_at=known_at_by_lineage.get(lk))
-            )
+            enriched = _enrich_object(o, known_at=known_at_by_lineage.get(lk))
+            frame_objects.append(_slim_frame_object(enriched))
         # CI-R7: slim frame — series sent once at pack root; front truncates by as_of.
         frames.append(
             {

@@ -46,6 +46,7 @@ def breaks_to_chart_objects(
     snapshot: MarketStructureSnapshot | None = None,
     params: StructureParams | None = None,
     max_events: int = 40,
+    include_breakouts: bool = True,
 ) -> list[ChartObject]:
     """Emit MARKER overlays for structure breaks (ENGINE, layer=breaks)."""
     if not candles:
@@ -99,7 +100,7 @@ def breaks_to_chart_objects(
     event_objs.sort(key=lambda o: o.points[0].time)
     out.extend(event_objs[-max_events:])
 
-    if snapshot is not None:
+    if include_breakouts and snapshot is not None:
         last = candles[-1]
         for b in snapshot.breakout_candidates:
             score = float(getattr(b.zone, "score", 0.0) or 0.0)
