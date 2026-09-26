@@ -30,6 +30,24 @@
   min-width: 0;
 }
 
+/* Fiches Décisions / Position — densifié, empilé pour rester lisible en dialog */
+.ci-root--brief {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin: 16px 0 8px;
+}
+
+.ci-root--brief .ci-side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.ci-root--brief .ci-side > .ci-card:first-child {
+  grid-column: 1 / -1;
+}
+
 .ci-root *,
 .ci-root *::before,
 .ci-root *::after {
@@ -645,6 +663,9 @@ html.dark .ci-root .ci-tag.gray {
 }
 
 @media (max-width: 640px) {
+  .ci-root--brief .ci-side {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .ci-card-head {
     padding: 14px 14px 10px;
   }

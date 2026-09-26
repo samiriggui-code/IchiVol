@@ -1289,7 +1289,9 @@
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 0;
-  width: min(560px, 94vw);
+  width: min(960px, 96vw);
+  max-height: 92vh;
+  overflow: auto;
   background: var(--card);
   color: var(--ink);
   box-shadow: 0 25px 80px #0003;
