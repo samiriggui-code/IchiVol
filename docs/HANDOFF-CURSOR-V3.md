@@ -1,6 +1,6 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
-## 2026-09-26 — MERGED #134+#133 · GEL Chart Intelligence · T-CYCLE P6 · tip `df013fb`+
+## 2026-09-26 — MERGED #134+#133 · GEL Chart Intelligence · T-CYCLE P6 · tip `9e2b02f`
 
 ### Merges
 
@@ -24,15 +24,25 @@
 
 **Aucune nouvelle fonctionnalité** Chart Intelligence jusqu’à VP0+ (protocole validation). Bugs / hotfixes OK.
 
-### T-CYCLE P6 (branche `cursor/t-cycle-b1-b4-a2fe`)
+### T-CYCLE P6 — MERGÉ #123 @ `9e2b02f` · GEL
 
 - `validate_cycle_synthetic` → `_validate_cycle_synthetic_cached` + `@lru_cache(maxsize=32)`
 - Test : 2ᵉ appel &lt; 1 s
-- Puis merge #123 + VPS + **GEL T-CYCLE** (pas de nouvelle feature jusqu’au programme VP)
+- Squash-merge #123 · VPS engine `RELEASE=9e2b02f` · **GEL T-CYCLE** (bugs only jusqu’à VP)
 
-### Ticket GOLDEN-RVOL (ne pas régénérer à l’aveugle)
+### Ticket GOLDEN-RVOL — rapport bisect (ne pas régénérer)
 
-Sur `main`, ~10 goldens RVOL échouent (`seed=42` / `42,7`). **Bisect** `test_rvol_agent_matches_golden[42]` → dire si changement voulu (PR goldens dédiée + diff expliqué) ou régression (fix code). Rapport HANDOFF **avant** toute régénération.
+**Issue :** voir [#135](https://github.com/samiriggui-code/IchiVol/issues/135).
+
+| Check | Résultat agent VM @ `9e2b02f` |
+|-------|------------------------------|
+| 14 nodeids RVOL listés par Claude | **PASS** |
+| `pytest tests --ignore=tests/cycle` | **tout vert** |
+| Engine CI GitHub `main` (#134/#133/#123) | **success** |
+
+**Bisect :** non exécutable — tip `main` vert ici (pas de commit « rouge » à isoler).  
+**Suspect historique si échec réapparaît :** `51b0edf` (T1d) — `rvol_agent` → `REGISTRY.compute("rvol")` (**changement voulu**, parity goldens `89caa75`→`51b0edf`).  
+**Next :** Claude colle le diff `-vv` + versions numpy/python. Puis : tolérance / pin deps, **ou** PR goldens dédiée (diff valeurs), **ou** fix code. **Pas de régénération à l’aveugle.**
 
 ### VP0
 
