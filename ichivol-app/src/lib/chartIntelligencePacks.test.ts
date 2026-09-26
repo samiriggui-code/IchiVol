@@ -1,45 +1,62 @@
 /**
- * Non-régression packs : le filtre d’objets par pack est stable
- * (infobulles = UI additive, ne doit pas changer ces comptes).
+ * Non-régression packs + repli largeur overlay (CI-T1 / CI-T2).
  */
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { intelligenceLayerOf, type IntelligenceObject } from './chartIntelligence.js'
 import { LAYER_PACKS, countVisibleForPack } from './chartIntelligenceBriefing.js'
+import { plotWidthPx } from '../components/chart-intelligence/IntelligenceChart.js'
 
-function fake(kind: string, layer?: string): IntelligenceObject {
+function fake(layer: string): IntelligenceObject {
   return {
-    id: `${kind}-1`,
-    lineage_key: `${kind}-1`,
-    type: kind,
-    layer: layer ?? kind,
+    id: `${layer}-1`,
+    lineage_key: `${layer}-1`,
+    type: 'zone',
+    layer,
     timeframe: '1h',
     points: [],
     confidence: 0.5,
-    origin: { kind: kind as IntelligenceObject['origin']['kind'] },
+    origin: { kind: 'zone' },
   } as IntelligenceObject
 }
 
-test('countVisibleForPack : chaque pack filtre de façon déterministe', () => {
-  const objects = [
-    fake('structure_event', 'market_structure'),
-    fake('fvg', 'fvg'),
-    fake('fibonacci', 'fibonacci'),
-    fake('liquidity', 'liquidity'),
-    fake('zone', 'support_resistance'),
-  ]
-  // baseline counts (avant infobulles) — figés ici comme contrat
-  const expected: Record<string, number> = {
-    calm: countVisibleForPack(objects, 'calm', intelligenceLayerOf),
-    structure: countVisibleForPack(objects, 'structure', intelligenceLayerOf),
-    setup: countVisibleForPack(objects, 'setup', intelligenceLayerOf),
-    liquidity: countVisibleForPack(objects, 'liquidity', intelligenceLayerOf),
-    full: countVisibleForPack(objects, 'full', intelligenceLayerOf),
-  }
+/**
+ * Fixture dérivée à la main de LAYER_PACKS + intelligenceLayerOf :
+ * - breaks → market_structure
+ * - support_resistance, fibonacci, fvg, liquidity → homonymes
+ *
+ * Attendu :
+ *   calm (MS)           → 1
+ *   structure (MS+SR)   → 2
+ *   setup (MS+Fib+FVG)  → 3
+ *   liquidity (MS+SR+L) → 3
+ *   full                → 5
+ */
+const FIXTURE: IntelligenceObject[] = [
+  fake('breaks'),
+  fake('fvg'),
+  fake('fibonacci'),
+  fake('liquidity'),
+  fake('support_resistance'),
+]
+
+const EXPECTED_BY_PACK: Record<string, number> = {
+  calm: 1,
+  structure: 2,
+  setup: 3,
+  liquidity: 3,
+  full: 5,
+}
+
+test('countVisibleForPack : nombres figés dérivés de LAYER_PACKS', () => {
   for (const pack of LAYER_PACKS) {
-    const n = countVisibleForPack(objects, pack.id, intelligenceLayerOf)
-    assert.equal(n, expected[pack.id], `pack ${pack.id}`)
+    const n = countVisibleForPack(FIXTURE, pack.id, intelligenceLayerOf)
+    assert.equal(n, EXPECTED_BY_PACK[pack.id], `pack ${pack.id}`)
   }
-  assert.ok(expected.setup >= 2) // structure + fvg + fib at least via layerOf
-  assert.equal(expected.full, objects.length)
+})
+
+test('plotWidthPx : scale>0 inchangé ; scale=0 → hôte − échelle droite', () => {
+  assert.equal(plotWidthPx(640, 700, 55), 640)
+  assert.equal(plotWidthPx(0, 700, 55), 645)
+  assert.equal(plotWidthPx(0, 100, 120), 0)
 })

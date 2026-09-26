@@ -356,7 +356,9 @@ html.dark .ci-root .ci-tag.gray {
 
 .ci-chart-overlay {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  bottom: 0;
   pointer-events: none;
   z-index: 3;
   overflow: visible;

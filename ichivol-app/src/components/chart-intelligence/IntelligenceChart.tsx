@@ -48,6 +48,8 @@ interface Props {
   /** Couches React (DrawingLayer…). */
   children?: ReactNode
   height?: number
+  /** Durée d’une barre (s) du timeframe courant (ex. 3600 pour 1h). */
+  barSeconds?: number
 }
 
 type SeriesBag = {
@@ -134,6 +136,19 @@ function applyCamera(
   scale.setVisibleLogicalRange({ from, to })
 }
 
+/**
+ * Largeur de la zone de tracé (hors échelle de prix droite).
+ * Repli hôte uniquement si `scaleWidth === 0` (1er paint dialog).
+ */
+export function plotWidthPx(
+  scaleWidth: number,
+  hostClientWidth: number,
+  rightPriceScaleWidth: number,
+): number {
+  if (scaleWidth > 0) return scaleWidth
+  return Math.max(0, hostClientWidth - Math.max(0, rightPriceScaleWidth))
+}
+
 export function IntelligenceChart({
   candles,
   ichimoku = [],
@@ -145,17 +160,29 @@ export function IntelligenceChart({
   onBackgroundClick,
   children,
   height = 460,
+  barSeconds,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<SeriesBag | null>(null)
   const colorsRef = useRef<ChartColors | null>(null)
-  const originRef = useRef<{ t0: number; bar: number }>({ t0: 0, bar: 3600 })
+  const originRef = useRef<{ t0: number; bar: number }>({
+    t0: 0,
+    bar: barSeconds && barSeconds > 0 ? barSeconds : 3600,
+  })
+  const barSecondsRef = useRef(barSeconds)
   const fittedKeyRef = useRef<string | null>(null)
   const cameraTokenRef = useRef<number | null>(null)
   const rafRef = useRef<number | null>(null)
   const onBgRef = useRef(onBackgroundClick)
   const [projectionCtx, setProjectionCtx] = useState<ChartProjection | null>(null)
+
+  useEffect(() => {
+    barSecondsRef.current = barSeconds
+    if (barSeconds && barSeconds > 0) {
+      originRef.current = { ...originRef.current, bar: barSeconds }
+    }
+  }, [barSeconds])
 
   useEffect(() => {
     onBgRef.current = onBackgroundClick
@@ -178,25 +205,26 @@ export function IntelligenceChart({
         const c = scale.logicalToCoordinate(logical as Logical)
         return c == null ? null : Number(c)
       }
-      // Host fallback : en dialog, timeScale.width() peut rester 0 au 1er paint
-      // → sans ça les calques SVG ne se montent jamais (compteurs OK, dessin vide).
-      const width = Math.max(scale.width() || 0, host?.clientWidth || 0)
-      const height = Math.max(
+      // CI-T1 : repli hôte − échelle droite seulement si timeScale.width() === 0
+      const rightW = chart.priceScale('right').width()
+      const width = plotWidthPx(scale.width() || 0, host?.clientWidth || 0, rightW)
+      const heightPx = Math.max(
         chart.paneSize(0)?.height || 0,
         host?.clientHeight || 0,
       )
-      if (!(width > 0) || !(height > 0)) return
+      if (!(width > 0) || !(heightPx > 0)) return
       setProjectionCtx((prev) => ({
         x: (time: number) => {
           const { t0, bar } = originRef.current
-          return toX((time - t0) / (bar || 3600))
+          const step = bar > 0 ? bar : barSecondsRef.current && barSecondsRef.current > 0 ? barSecondsRef.current : 3600
+          return toX((time - t0) / step)
         },
         y: (price: number) => {
           const c = series.candle.priceToCoordinate(price)
           return c == null ? null : Number(c)
         },
         width,
-        height,
+        height: heightPx,
         barSpacing: Math.abs((toX(1) ?? 0) - (toX(0) ?? 0)) || 6,
         rev: (prev?.rev ?? 0) + 1,
       }))
@@ -277,8 +305,14 @@ export function IntelligenceChart({
     const s = seriesRef.current
     const colors = colorsRef.current
     if (!chart || !s || !colors) return
-    if (candles.length > 1) {
-      originRef.current = { t0: candles[0]!.time, bar: candles[1]!.time - candles[0]!.time }
+    if (candles.length >= 1) {
+      const fromSeries =
+        candles.length >= 2 ? candles[1]!.time - candles[0]!.time : 0
+      const fromTf = barSecondsRef.current && barSecondsRef.current > 0 ? barSecondsRef.current : 0
+      originRef.current = {
+        t0: candles[0]!.time,
+        bar: fromSeries > 0 ? fromSeries : fromTf > 0 ? fromTf : originRef.current.bar,
+      }
     }
     s.candle.setData(
       candles.map((c) => ({ time: ts(c.time), open: c.open, high: c.high, low: c.low, close: c.close })),
@@ -334,7 +368,7 @@ export function IntelligenceChart({
     <div className="ci-chart" style={{ height }}>
       <div className="ci-chart-host" ref={hostRef} />
       <ChartProjectionContext.Provider value={projectionCtx}>
-        <div className="ci-chart-overlay">
+        <div className="ci-chart-overlay" style={{ width: projectionCtx?.width || undefined }}>
           {projectionCtx && projectionCtx.width > 0 && projectionCtx.height > 0 ? children : null}
         </div>
       </ChartProjectionContext.Provider>
