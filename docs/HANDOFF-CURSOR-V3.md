@@ -44,7 +44,7 @@
 |-----|-----|
 | `main` | `6634438` |
 | GOLDEN PR | `8324a54` (#139) |
-| Docs VP/AW0 | (SHA de cette PR) |
+| Docs VP/AW0 | `3f30c41` (cette PR) |
 
 ---
 
