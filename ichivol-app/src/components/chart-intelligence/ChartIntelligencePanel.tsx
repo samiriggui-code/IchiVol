@@ -197,7 +197,15 @@ export function ChartIntelligencePanel({
           </header>
           <LayerControls prefs={ci.layers} onChange={ci.setLayers} counts={ci.counts} />
         </section>
-        <DrawingInspector selection={ci.selection} onClose={() => ci.select(null)} />
+        <DrawingInspector
+          selection={ci.selection}
+          onClose={() => ci.select(null)}
+          why={
+            source === 'api' && res && !res.mock
+              ? { symbol: res.symbol, timeframe: res.timeframe, asOf: res.as_of }
+              : null
+          }
+        />
         <AIAnalysisPanel analysis={res?.analysis ?? null} marketState={res?.market_state} asOf={res?.as_of} />
       </aside>
     </div>

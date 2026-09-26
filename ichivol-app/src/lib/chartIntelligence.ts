@@ -454,3 +454,99 @@ export async function getChartIntelligenceReplay(
   }
   return (await res.json()) as ChartIntelligenceReplayPack
 }
+
+/* ------------------------------------------------------------------ */
+/* AW1 — « Pourquoi ? » (explication moteur d'un objet)                */
+/* ------------------------------------------------------------------ */
+
+export interface ChartObjectExplainFact {
+  key: string
+  label: string
+  value: unknown
+  /** Champ Python d'où vient la valeur (traçabilité, rien d'inventé). */
+  field: string
+}
+
+export interface ChartObjectExplanation {
+  version: string
+  symbol: string
+  timeframe: string
+  as_of: number
+  object_id: string
+  lineage_key: string | null
+  identity: {
+    layer: string | null
+    type: string | null
+    kind: string | null
+    label: string | null
+    side: string | null
+    producer: string | null
+    engine: string | null
+    maturity: { status: string; feature: string | null; field: string | null }
+    pipeline: string
+  }
+  timeline: {
+    anchor_time: number | null
+    known_at: number | null
+    known_at_is_upper_bound: boolean
+    detection_lag_bars: number | null
+    window: { from: number | null; to: number | null; bar_seconds: number }
+    status_history: Array<{ at: number; status: string | null; touch_count: number | null; confidence: number | null }>
+  }
+  facts: ChartObjectExplainFact[]
+  context: {
+    close: number | null
+    reference_price: number | null
+    reference_field: string | null
+    distance_pct?: number
+    position?: 'above' | 'below' | 'inside'
+  }
+  validation: { status: string; label: string; note: string }
+  caveats: string[]
+}
+
+export interface ChartObjectExplainQuery {
+  symbol: string
+  timeframe: string
+  objectId: string
+  lineageKey?: string | null
+  asOf?: number | null
+}
+
+/** GET /api/engine/chart-intelligence/{symbol}/explain (AW1). */
+export async function getChartObjectExplanation(q: ChartObjectExplainQuery): Promise<ChartObjectExplanation> {
+  const params = new URLSearchParams({ timeframe: q.timeframe, object_id: q.objectId })
+  if (q.lineageKey) params.set('lineage_key', q.lineageKey)
+  if (q.asOf != null) params.set('as_of', String(q.asOf))
+  const res = await fetch(
+    `/api/engine/chart-intelligence/${encodeURIComponent(q.symbol)}/explain?${params}`,
+    { credentials: 'include' },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { detail?: string } | null
+    throw new Error(body?.detail ?? `Erreur ${res.status}`)
+  }
+  return (await res.json()) as ChartObjectExplanation
+}
+
+const POSITION_LABELS: Record<string, string> = {
+  above: 'au-dessus',
+  below: 'en dessous',
+  inside: 'dans la zone',
+}
+
+/** Mise en forme d'un fait (affichage uniquement, valeur Python inchangée). */
+export function fmtExplainValue(v: unknown): string {
+  if (v == null) return '—'
+  if (typeof v === 'number') return Number.isInteger(v) ? String(v) : String(Number(v.toPrecision(6)))
+  if (Array.isArray(v)) return v.map((x) => String(x)).join(' · ')
+  if (typeof v === 'boolean') return v ? 'oui' : 'non'
+  return String(v)
+}
+
+/** Phrase de position du prix vs objet — lit context.* (Python), ne calcule rien. */
+export function explainPositionLine(ctx: ChartObjectExplanation['context']): string | null {
+  if (ctx.position == null || ctx.distance_pct == null) return null
+  const pct = `${ctx.distance_pct > 0 ? '+' : ''}${ctx.distance_pct.toFixed(2)} %`
+  return `Dernière clôture ${POSITION_LABELS[ctx.position] ?? ctx.position} (${pct} vs ${fmtPrice(ctx.reference_price)}).`
+}

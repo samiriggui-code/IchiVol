@@ -1,120 +1,28 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
-## 2026-09-26 — Review Claude APPROUVÉ · corrections VP0 pre-gel + AW0 §12
+## 2026-09-26 — GEL VP0 · file merges (OK utilisateur — Claude en pause jusqu’à 17h30)
 
-### Claude APPROUVÉ
+### Gel
 
-- **#139** mergé (`c46eda1`). Doublons supprimés.
-- **AW1** (`cursor/aw1-explain-a2fe` @ `a38cdbb`) : APPROUVÉ — merge **après** gel VP0, **avant** AG0.
-- **AG0** (`cursor/ag0-agent-hygiene-a2fe` / #144 draft) : prêt après AW1 ; hygiène only.
+- **VP0 GELÉ + MERGÉ** [#140](https://github.com/samiriggui-code/IchiVol/pull/140) squash → `main` @ `34991b4` (`VP0-2026-09-26` + AW0 §12).
+- OK utilisateur : enchaîner sans Claude ; Claude review au retour.
 
-### VALIDATION-PROTOCOL — corrections pre-gel (ce commit)
+### File en cours
 
-1. §1bis **Univers VP** (ex-Banc S1) + §1ter **Simulateur** = `research_lab/sim.py` (S1) figé
-2. §2.1 B1 = TK cross + nuage **affiché** (≤ t−26) ; pas de chikou
-3. §2.2 direction HTF = close vs nuage HTF affiché (long/short/neutre)
-4. B7 / §6 : sortie **uniquement** stop/TP/time-stop (plus de stages→flat)
-5. §6 gap → fill à l’open
-6. §8.1 Sortino = `sqrt(mean(min(r,0)²))` sur **toutes** les barres
-7. §9.2 bootstrap **par barre** apparié ; **pas** de DSR du Δ ; DSR(Bi) ≥ 0.95
-8. §5.1 points 7–10 (pli d’entrée, fin de fenêtre, &lt;5 trades, train=warm-up)
-9. EDGE (6) maxDD &lt; 35 % B1–B8 ; B0 exempt
-10. Carte roadmap : VP3=A,B,H,J ; VP4=sensibilité ; … VP8 shadow ; VP9 synthèse
+1. ~~Gel + merge VP0~~ **FAIT**
+2. **Merge AW1** [#143](https://github.com/samiriggui-code/IchiVol/pull/143) (Pourquoi? / `explain_chart_object`) — en cours (rebase sur main post-VP0)
+3. **Merge AG0** [#144](https://github.com/samiriggui-code/IchiVol/pull/144) hygiène agent
+4. **Merge filtre entry_source** [#145](https://github.com/samiriggui-code/IchiVol/pull/145)
+5. **VP1** : download spot+1d+perp OI/funding ; manifeste sha256 ; loader figé
 
-### AW0 §12 — aligné AW/AG
-
-- **Autorisés** dès gel VP0 (parallèle VP1–VP3) : AW1 Pourquoi?, AW3 budgets, AG0–AG2
-- **avec VP2** : `assemble.py` / `collect_engine_objects`
-- **Interdits** jusqu’au déblocage VP : AW5, AW6, reco d’entrée agent
-
-### File
-
-**Gel VP0** (Claude + utilisateur) → merge **AW1** → **AG0** → **VP1**.  
-Attente review / gel. Pas de runs Lab.
-
-### Tip / SHA
+### Références
 
 | Ref | SHA / PR |
 |-----|----------|
-| `main` | `c46eda1` |
-| Docs VP/AW0 | `cursor/validation-protocol-a2fe` (#140) |
-| AW1 | #143 draft @ `a38cdbb` |
-| AG0 | #144 draft |
-
----
-
-## 2026-09-26 — PRIORITÉ Claude · #139 MERGÉ · corrections a→l VP + AW0 · UI en attente
-
-### Fait
-
-1. **#139 MERGÉ** squash → `main` @ `c46eda1` (GOLDEN-RVOL pin py3.12 + approx).
-2. **#135** : toujours OPEN — API agent **403** sur issues ; **à fermer manuellement** (diagnostic = #139).
-3. **VALIDATION-PROTOCOL** corrections **a→l** appliquées (review Claude) :
-   - **a** Banc S1 figé · **b** déclencheur B1 événement (cross Tenkan) · **c** sortie commune **stricte** (plus de close sous Kijun) · **d** stop/TP/time-stop exacts · **e** HTF fermée + data **1d** · **f** OI/funding **perp** · **g** **DSR ≥ 0.95** · **h** bootstrap **apparié** · **i** B0 jugé sur **equity** · **j** règles de plis · **k** annualisation/Sortino · **l** carte VP alignée roadmap (VP3=A,B ; VP4=H,J ; …)
-   - **adverse ≠ nouvel essai** (T10b)
-4. **AW0** +2 ajouts : §11 matrice risque régression ; §12 gel/déblocage VP↔AW.
-5. Branches doublons **supprimées** : `vp-aw0-docs-a2fe`, `engine-evidence-dark-a2fe` ; **#141** fermée.
-
-### Suite — ATTENTE REVIEW Claude
-
-1. Gel **#140** (`VP0-2026-09-26`) après relecture
-2. **Ensuite seulement** merge UI **#142** + **#138** (build+lint verts)
-3. **Pas** de nouvelle PR UI tant que VP0 non gelé
-
-### Tip / SHA
-
-| Ref | SHA |
-|-----|-----|
-| `main` (après #139) | `c46eda1` |
-| Docs VP/AW0 (#140) | (ce commit) |
-
----
-
-## 2026-09-26 — Review Claude tip `6634438` · GOLDEN-RVOL · VP0 redo · AW0
-
-### Claude APPROUVÉ (moteur)
-
-| Check | Résultat |
-|-------|----------|
-| Merges #134 / #133 / #123 | OK |
-| Suite engine py3.12 + Postgres | **1164 passed**, 0 fail |
-| `tsc` | OK |
-| lint | warnings only |
-| GEL CI + T-CYCLE | confirmé |
-
-### GOLDEN-RVOL #135 — CAUSE (pas de régression) → PR #139
-
-- Écart ULP (~1e-16) sur `avg_volume` / `rvol*` / `vol_accel` uniquement.
-- Cause : Python **3.12** `sum()` compensé vs **3.11** ; goldens générés en 3.12 ; `rvol.py` L65 inchangé.
-- **PR [#139](https://github.com/samiriggui-code/IchiVol/pull/139)** **MERGÉE** squash → `main` @ `c46eda1` (branche `8324a54`) : pin `>=3.12,<3.13` + `assert_golden_equal` / `pytest.approx(1e-12)` ; **pas** de regen goldens ; **pas** de touche `rvol.py`.
-- Tests locaux : 8/8 goldens agents + agent_channel **PASS**.
-- **Action :** fermer [#135](https://github.com/samiriggui-code/IchiVol/issues/135) (agent API issues = 403 — à fermer manuellement / Claude).
-
-### VP0 — REFUSÉ Claude (ancien) → REFAIT
-
-- Ancien `docs/VP0-PROTOCOLE-VALIDATION.md` = invariants techniques seulement → **rétrogradé en annexe**.
-- **Livrable :** [`docs/VALIDATION-PROTOCOL.md`](./VALIDATION-PROTOCOL.md) version **`VP0-2026-09-26`** — question centrale, B0–B8 exacts, A–L, données, plis datés, exécution, coûts unifiés 5+2+3 / adverse, métriques, verdicts EDGE, T10b, no-Claude-in-runs, versionnement.
-- **DOC ONLY** — pas de code, pas de run. Validation Claude + utilisateur **avant VP1**.
-- PR docs : cette branche `cursor/validation-protocol-a2fe` (remplace le fond de #137).
-
-### AW0 — DOC ONLY (après VP0)
-
-- [`docs/AW0-CONSOLIDATION.md`](./AW0-CONSOLIDATION.md) — audit assemblages ; contrat provenance ChartObject (**pas** `MarketObservation`).
-- AW1+ code **interdit** jusqu’à déblocage VP.
-
-### Suite
-
-1. Review Claude **#139** (GOLDEN) → merge → close #135  
-2. Review Claude **VALIDATION-PROTOCOL** + AW0 → gel `VP0-2026-09-26`  
-3. Ensuite seulement VP1 (données + manifeste)
-
-### Tip / SHA
-
-| Ref | SHA |
-|-----|-----|
-| `main` | `6634438` |
-| GOLDEN PR | `8324a54` (#139) |
-| Docs VP/AW0 | `3f30c41` (cette PR) |
+| `main` (post-VP0) | `34991b4` |
+| AW1 | #143 |
+| AG0 | #144 @ `f0c464a` APPROUVÉ |
+| Filtre evidence | #145 |
 
 ---
 

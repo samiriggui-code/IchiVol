@@ -2,6 +2,7 @@
 
 GET /chart-intelligence/{symbol}?timeframe&limit&as_of&sources
 GET /chart-intelligence/{symbol}/replay?timeframe&from&to&lookback_bars
+GET /chart-intelligence/{symbol}/explain?timeframe&object_id|lineage_key&as_of (AW1)
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Query
 
+from app.chart_intelligence.explain import ExplainError, explain_chart_object
 from app.chart_intelligence.service import (
     build_chart_intelligence,
     build_chart_intelligence_replay,
@@ -29,6 +31,37 @@ def _http_map(exc: Exception) -> HTTPException:
             return HTTPException(status_code=422, detail=detail)
         return HTTPException(status_code=404, detail=detail)
     return HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get("/chart-intelligence/{symbol}/explain")
+def get_chart_intelligence_explain(
+    symbol: str,
+    timeframe: str = "1h",
+    object_id: str | None = Query(default=None, max_length=64),
+    lineage_key: str | None = Query(default=None, max_length=256),
+    as_of: int | None = Query(default=None, description="Unix seconds — barre de référence"),
+    limit: int = Query(300, ge=1, le=500),
+    lookback_bars: int = Query(48, ge=2, le=120),
+    x_twelve_data_key: str | None = Header(default=None, alias="X-Twelve-Data-Key"),
+) -> dict[str, Any]:
+    """AW1 « Pourquoi ? » — faits moteur d'un ChartObject ENGINE (observe-only)."""
+    if not object_id and not lineage_key:
+        raise HTTPException(status_code=422, detail="object_id_or_lineage_key_required")
+    try:
+        return explain_chart_object(
+            symbol=symbol,
+            timeframe=timeframe,
+            object_id=object_id,
+            lineage_key=lineage_key,
+            as_of=as_of,
+            limit=limit,
+            lookback_bars=lookback_bars,
+            x_twelve_data_key=x_twelve_data_key,
+        )
+    except ExplainError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ProviderNotWiredError, ValueError) as exc:
+        raise _http_map(exc) from exc
 
 
 @router.get("/chart-intelligence/{symbol}/replay")
