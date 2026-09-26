@@ -1,5 +1,76 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — REVIEW Claude · T-CYCLE Cycle/Spectral Engine V0→V0.1 — tip `84e54e0`
+
+**Pour Claude :** relecture complète du chantier T-CYCLE avant toute suite (OOS / ablation / UI).  
+**Branche :** `main` @ `84e54e0` · **VPS engine** déployé `RELEASE=main 84e54e0` · `/api/engine/health` 200 · `/cycle/BTCUSDT` 200.
+
+### Diff à lire (ordonnée)
+
+```
+17d7283..84e54e0
+```
+
+| Commit | Contenu |
+|--------|---------|
+| `17d7283` | `docs/CYCLE_ENGINE_AUDIT.md` |
+| `d388c77` | CDC + METHODS + HANDOFF (chantier ouvert) |
+| `e20b173` | `app/cycle/` FFT+Hilbert+ACF + tests lookahead |
+| `9ace200` | `GET /cycle/{symbol}` + goldens OpenAPI/route_order |
+| `66816fc` | study walk-forward + null models + agent tools + benchmark |
+| `84e54e0` | perf API last-window (~9×) + doc benchmark |
+
+**Doc maître :** [`docs/CYCLE_ENGINE_AUDIT.md`](./CYCLE_ENGINE_AUDIT.md)  
+**CDC :** checkbox `T-CYCLE` ouverte (V0 livré, promotion gate **fermée**)  
+**METHODS :** ligne Cycle/Spectral V3/test · règle « ne vote jamais LONG/SHORT »
+
+### Ce qui est livré (observe-only)
+
+- `CycleState` : période, phase, force, stabilité, régime `TREND|CYCLE|TRANSITION|NOISE`, `methods_agreement` — **aucun** champ BUY/SELL/LONG/SHORT/proba de gain
+- Méthodes V0 : FFT periodogram · Hilbert/Ehlers-style · ACF peaks · consensus (stdlib only, **pas** numpy/talib/PyEMD)
+- Causal : fenêtres ≤ T ; tests truncation `tests/cycle/test_cycle_lookahead.py`
+- HTTP : `GET /api/engine/cycle/{symbol}` · `GET /api/engine/cycle/{symbol}/study`
+- Agent : `get_cycle_state` · `run_cycle_study` (`read_only=True`)
+- Lab : `app/cycle/study.py` — walk-forward + nulls (persist / hist avg / random) ; `verdict.promote_to_decision` **toujours false**
+- Perf API : ~620 ms/symbole synthétique (avant ~5–7 s) ; screener 40–100 **hors scope**
+- VPS : image `ichivol-engine` rebuildée sur ce tip
+
+### Ce qui N’est PAS fait (volontaire)
+
+- `decision/pipeline.py` / paper / confidence / combiner — **intacts**
+- EMD/EEMD/CEEMDAN · deps TA-Lib/Wickra
+- CycleStack MTF · ExpectedMoveRange · zones projetées UI
+- Ablation A–G multi-symboles OOS réels
+- Teaser Contexte / Desk cycle
+
+### Questions pour Claude (review)
+
+1. Le schéma `CycleState` + régimes est-il cohérent avec la philosophie Ichimoku×RVOL (dimension TEMPS, pas un 10e vote) ?
+2. La séparation API fast-path vs `compute_cycle_series` (Lab) est-elle acceptable côté causalité / stabilité ?
+3. Les null models du study sont-ils suffisants pour un premier verdict, ou faut-il imposer d’autres baselines avant OOS ?
+4. Hypothèse produit « filtre de régime > prédicteur de prix » — valider ou corriger avant ablation.
+5. Y a-t-il redondance dangereuse avec ATR/ADX/Donchian si on promeut trop tôt un régime CYCLE/NOISE ?
+6. Perf ~620 ms : OK pour appel à la demande ; faut-il un budget CPU écrit avant tout teaserUI ?
+
+### Suite proposée (après OK Claude)
+
+1. OOS multi-symboles (vrais OHLCV) via `/study`  
+2. Ablation A–G  
+3. Décision filtre vs prédicteur  
+4. Seulement alors : éventuel teaser Contexte — **jamais** gate sans preuve  
+
+### Contexte session parallèle (hors T-CYCLE, déjà sur main)
+
+- `dcafd6a` — page Contexte rebranchée (F&G, dominance, calendar, news, régimes RSI/ATR, corr) — déployé web plus tôt  
+- Ne pas confondre avec Cycle Engine (autre surface)
+
+Canal unique entre Cursor (implémentation) et Claude (supervision).  
+Claude lit ce fichier sur GitHub et relit le diff `17d7283..84e54e0`.
+
+**Convention** : à chaque PR / revue, ajouter une nouvelle entrée **en haut** ; ne jamais effacer les anciennes.
+
+---
+
 ## 2026-09-26 — T-CYCLE V0.1 perf API (last-window)
 
 - Benchmark synthétique : ~5–7 s/symbole car `compute_cycle_state` rejouait toute la série
@@ -28,11 +99,6 @@
 - **Interdit V0** : `decision/pipeline.py`, paper, confidence, EMD live, UI Desk zones projetées
 - **Promotion** : uniquement après walk-forward + ablation + null models OOS
 - Commits ordonnés (1 doc à la fois) — pas de dump maquette
-
-Canal unique entre Cursor (implémentation) et Claude (supervision).  
-Claude lit ce fichier sur GitHub et relit le diff de la PR associée.
-
-**Convention** : à chaque PR, ajouter une nouvelle entrée **en haut** ; ne jamais effacer les anciennes.
 
 ---
 
