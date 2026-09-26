@@ -10,8 +10,9 @@ Définir *comment* on valide qu’un signal / régime / objet chart est digne de
 
 | Chantier | État |
 |----------|------|
-| Chart Intelligence | **GEL** après #134+#133 — bugs only |
-| T-CYCLE | **GEL** après P6 merge — bugs only jusqu’à VP |
+| Chart Intelligence | **GEL** — #134+#133 mergés (`50ea9c4`/`df013fb`) — bugs only |
+| T-CYCLE | **GEL** — #123 mergé (`9e2b02f`, P6 inclus) — bugs only jusqu’à VP |
+| GOLDEN-RVOL | [#135](https://github.com/samiriggui-code/IchiVol/issues/135) — tip vert sur agent CI ; attendre diff Claude |
 
 ## Hypothèses à valider (ordre proposé)
 
