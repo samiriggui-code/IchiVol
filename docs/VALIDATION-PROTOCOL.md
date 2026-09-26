@@ -2,7 +2,7 @@
 
 **Statut :** DOC ONLY · gelé avant tout run · 2026-09-26  
 **Tip référence :** `main` @ `c46eda1` (review Claude @ `6634438` ; GOLDEN-RVOL #139 mergé)  
-**Version :** `VP0-2026-09-26`  
+**Version :** `VP0-2026-09-26` (corrections Claude pre-gel : Univers VP, §1ter sim, B1 TK, Sortino, bootstrap barre, carte VP3–VP9)  
 **Interdit :** code, runs Lab/backtest, régénération de goldens, trading réel, intervention Claude dans VP1→VP7.
 
 > Toute modification **après** review Claude + utilisateur = **nouvelle version datée** (`VP0-YYYY-MM-DD`) avec justification (§12).  
@@ -18,12 +18,12 @@ Réponse attendue en trois verdicts figés (§9) : **EDGE** / **PAS D’EDGE** /
 
 ---
 
-## 1bis. Banc S1 (banc d’essai primaire — figé)
+## 1bis. Univers VP (config univers — figé)
 
-Tout run VP cite **Banc S1**. Un autre banc = autre hypothèse + nouvel `hypothesis_id` (§10).
+Tout run VP cite **Univers VP**. Un autre univers = autre hypothèse + nouvel `hypothesis_id` (§10).
 
-| Champ | Valeur Banc S1 |
-|-------|----------------|
+| Champ | Valeur Univers VP |
+|-------|-------------------|
 | Univers | `BTCUSDT`, `ETHUSDT`, `SOLUSDT` |
 | Exécution | **Spot** long-only (§6) |
 | TF signal | **1h** et **4h** (runs séparés) |
@@ -32,6 +32,12 @@ Tout run VP cite **Banc S1**. Un autre banc = autre hypothèse + nouvel `hypothe
 | Capital | 10 000 USDT / strate |
 | Coûts | profil **base** pour le verdict ; **adverse** = stress (§7, §10) |
 | Sortie | **uniquement** sortie commune §6 (sauf B0) |
+
+---
+
+## 1ter. Simulateur de référence
+
+Simulateur = `research_lab/sim.py` (S1), seul simulateur autorisé pour VP. Réglages figés : `allow_short=False` ; immediate_fill interdit ; plafonds portefeuille (risque 1 %, notionnel 25 %, daily halt, open-risk) neutralisés pour appliquer §6 (100 % cash, 1 position) ; seed d'ordonnancement figée ; chaque sortie de run contient seed, sha256 des données (manifeste VP1), version du protocole et profil de coûts. Les biais de S3 (`docs/VP2-AUDIT-BANC.md`) rendent les anciens verdicts Lab/ADN non comparables.
 
 ---
 
@@ -48,26 +54,27 @@ Chaque niveau a des **règles d’entrée** exactes. La **sortie** de B1–B8 es
 | **B4** | Ichimoku + OI + CVD | Déclencheur B1 **et** OI perp en hausse vs barre N−1 **et** CVD aligné long | §6 uniquement | **Après C2** ; OI = **perp** (§4) |
 | **B5** | + MTF | B2 **et** HTF **fermée** ≠ short (§2.2) | §6 uniquement | HTF : 4h←1h, 1d←4h |
 | **B6** | + régime | B5 **et** régime ATR/ADX **pas** `dead` / `extreme` (seuils pipeline live) | §6 uniquement | `LiveScreenerSettings` / ATR production |
-| **B7** | IchiVol Core | Signal = pipeline live Option B (`build_pipeline` → BUY) sur barre **fermée** | §6 uniquement (stages → flat = sortie au fill §6, pas de règle parallèle) | `strategy_version` tip gelé au run |
+| **B7** | IchiVol Core | Signal = pipeline live Option B (`build_pipeline` → BUY) sur barre **fermée** | §6 uniquement | `strategy_version` tip gelé au run |
 | **B8** | Full | **B7 + une seule** brique additionnelle mesurée | §6 uniquement | Ajouts **un par un** depuis B7 |
 
 **Règle d’arrêt :** si Bi n’améliore pas Bi−1 sous §9 sur les plis de test WF (§5), on ne revendique pas Bi+1 pour ce symbole/TF.
 
 ### 2.1 Déclencheur B1 (événement, pas état)
 
-Sur la barre signal **clôturée** `t` (indices Tenkan/Kijun/nuage à `t`) :
+Sur la barre signal **clôturée** `t` :
 
-1. **Cross Tenkan :** `close[t-1] ≤ tenkan[t-1]` **et** `close[t] > tenkan[t]`
-2. **Filtre nuage :** `close[t] > max(senkou_a[t], senkou_b[t])` (prix au‑dessus du nuage)
-3. **Filtre TK :** `tenkan[t] > kijun[t]`
+1. **TK cross haussier :** `tenkan[t-1] ≤ kijun[t-1]` **et** `tenkan[t] > kijun[t]`.
+2. **Filtre nuage :** `close[t] > max(SA_aff[t], SB_aff[t])`, où `SA_aff[t]` et `SB_aff[t]` sont les valeurs du nuage **AFFICHÉ** à `t`, c’est-à-dire calculées sur les données ≤ `t−26` (déplacement 26). Jamais de valeur calculée après `t`.
+3. **Pas de chikou.**
 
-Entrée **une fois** par cross (pas de re-entrée tant que la position est ouverte). Pas d’entrée sur simple « état » true sans cross.
+Une entrée par cross ; pas de ré-entrée tant que la position est ouverte.
 
 ### 2.2 HTF fermée (B5+)
 
 - La direction HTF est lue sur la **dernière bougie HTF entièrement close** à l’instant de décision du signal (pas de bougie HTF en formation).
 - Mapping : signal **1h** → HTF **4h** ; signal **4h** → HTF **1d** (données 1d obligatoires, §4).
-- Filtre : direction HTF **≠ short** (long ou neutre OK).
+- Direction HTF = `close HTF > haut du nuage HTF affiché` → **long** ; `close HTF < bas du nuage HTF affiché` → **short** ; sinon **neutre**.
+- Filtre B5+ : direction HTF **≠ short** (long ou neutre OK).
 
 ---
 
@@ -77,16 +84,16 @@ Si l’utilisateur fournit une liste A–L d’origine, **elle remplace** celle-
 
 | Q | Comparaison exacte | Métrique décisive | Étape VP |
 |---|--------------------|-------------------|----------|
-| **A** | B1 vs B0 | B0 = **equity** (§9.1) ; B1 = espérance/trade + DSR ; Δ via bootstrap **apparié** (§9.2) | **VP3** |
-| **B** | B2 vs B1 | Δ espérance nette ; IC bootstrap **apparié** ; DSR du Δ (§9) | **VP3** |
+| **A** | B1 vs B0 | B0 = **equity** (§9.1) ; B1 = espérance/trade + DSR(B1) ; Δ via bootstrap **apparié** sur returns par barre (§9.2) | **VP3** |
+| **B** | B2 vs B1 | Δ rendement moyen / barre + Δ Sharpe (IC apparié) ; DSR(B2) ≥ 0.95 (§9) | **VP3** |
 | **C** | B3 vs B2 | Idem B (après C1) | **VP5** |
-| **D** | Contribution de chaque brique de B7 **par ablation** | Δ espérance ; DSR du Δ ; bootstrap apparié | **VP6** |
-| **E** | Apport OI **perp** (B4 ± OI, ou ablation OI dans B7) | Δ espérance ; IC / DSR appariés | **VP5** |
+| **D** | Contribution de chaque brique de B7 **par ablation** | Δ barre apparié ; DSR(Bi) ; bootstrap apparié | **VP6** |
+| **E** | Apport OI **perp** (B4 ± OI, ou ablation OI dans B7) | Δ barre ; IC apparié ; DSR(Bi) | **VP5** |
 | **F** | Apport CVD | Idem E | **VP5** |
 | **G** | Apport funding **perp** | Idem E | **VP5** |
-| **H** | B5 vs B2 | Δ espérance ; IC / DSR appariés | **VP4** |
+| **H** | B5 vs B2 | Δ barre ; IC apparié ; DSR(Bi) | **VP3** |
 | **I** | Redondance / corrélation des briques B7 | Corrélation signaux booléens ; redondance → candidat retrait | **VP6** |
-| **J** | B7 vs meilleur de B0–B6 | Espérance (ou equity si vs B0) ; DSR ; maxDD | **VP4** |
+| **J** | B7 vs meilleur de B0–B6 | Espérance reportée ; equity si vs B0 ; DSR(Bi) ; maxDD | **VP3** |
 | **K** | Stabilité par régime et par actif | Même **signe** d’espérance (ou equity B0) sur régimes × actifs ; instabilité → NON CONCLUANT | **VP7** |
 | **L** | Holdout 2026 (**une fois**) + **3 mois** paper forward | Critères §9 sur holdout **et** paper (B7 : paper = seul OOS crédible) | **VP7** |
 
@@ -137,7 +144,11 @@ Pas de Twelve Data / proxy live pour les runs VP (crédits + non-reproductibilit
 3. **Warm-up** — barres sans Ichimoku/RVOL/ATR complets (min ~52+26) : hors score, gardées en contexte.
 4. **Figé avant test** — aucun paramètre choisi en regardant le pli de test, la validation 2025, ou le holdout.
 5. **Agrégat WF** — verdict §9 sur l’union des plis de **test** (pas le train).
-6. **Symbole × TF** — chaque couple Banc S1 est un run séparé ; pas de pooling pour le claim EDGE primaire.
+6. **Symbole × TF** — chaque couple Univers VP est un run séparé ; pas de pooling pour le claim EDGE primaire.
+7. **Appartenance pli** — un trade appartient au pli de sa barre d’entrée ; il peut se terminer après la fin du pli.
+8. **Fin de fenêtre** — fin de validation 2025 et fin de holdout : sortie forcée au close de la dernière barre.
+9. **Pli maigre** — un pli avec &lt; 5 trades ne compte pas comme pli positif (critère 4).
+10. **Train = warm-up uniquement** — les paramètres étant fixés a priori, le « train » ne sert à aucun ajustement : il sert au warm-up et à la calibration saisonnière / régime uniquement.
 
 **Note B7 / 2026 :** 2026 a déjà été vu par le pipeline live → pour B7, le holdout historique n’est **pas** un vrai hors-échantillon. Le **paper forward ≥ 3 mois** (§3 L) est le seul OOS crédible pour B7.
 
@@ -157,8 +168,9 @@ Pas de Twelve Data / proxy live pour les runs VP (crédits + non-reproductibilit
 | **Time-stop (exact)** | **48** barres si TF signal = 1h ; **24** barres si TF signal = 4h ; sortie au **close** de la barre time-stop si ni SL ni TP touchés |
 | Priorité sortie | Sur une barre : **stop avant TP** (conservateur) ; sinon time-stop en close |
 | Slippage fill | Profils coûts §7 |
+| Gap au-delà du stop/TP | Gap au-delà du stop ou du TP à l’ouverture → **fill à l’open** de cette barre |
 
-**Sortie commune stricte :** B1–B8 ne sortent **que** par stop, TP ou time-stop ci‑dessus. Interdit : close sous Kijun, sous nuage, flip pipeline, etc. comme règle de sortie parallèle. (B7 : un flat stages déclenche la **même** mécanique de sortie au prochain fill autorisé — pas une 2ᵉ logique PnL.)
+**Sortie commune stricte :** B1–B8 sortent **UNIQUEMENT** par stop, TP ou time-stop ci‑dessus — **comme B1–B6**. Interdit : close sous Kijun, sous nuage, flip pipeline, « stages → flat », ou toute autre règle où un état du pipeline provoque une sortie. (B7 inclus : pas de sortie parallèle liée aux stages.)
 
 B0 ignore stop/TP/time-stop (toujours long).
 
@@ -196,7 +208,7 @@ Toutes **nettes de coûts** sauf mention contraire.
 | 1d | **365** |
 
 - **Sharpe** (rf = 0) : `(mean(r) / std(r)) × √N_year` sur returns de barre (equity) **ou** annualisation trade documentée si série = trades (même `N_year` du TF signal).
-- **Sortino** (rf = 0) : `(mean(r) / downside_std(r)) × √N_year` où `downside_std` = écart-type des returns **strictement &lt; 0** (zéros exclus du dénominateur ; si aucun return &lt; 0 → Sortino non défini, reporter `inf` / N/A).
+- **Sortino** (rf = 0) : `downside_dev = sqrt(mean(min(r, 0)²))` sur **TOUTES** les barres (zéros et positifs compris, comptés 0) ; `Sortino = mean(r) / downside_dev × √N_year`. (La std des seules barres négatives — `app/backtest/metrics.py` — est **incorrecte** et n’est pas le Sortino VP.)
 - **CAGR** : `(equity_end / equity_start) ^ (N_year / n_bars) − 1` sur la fenêtre du pli.
 
 ### 8.2 Table
@@ -236,10 +248,11 @@ B0 n’a **pas** de trades discrets. Pour B0 et pour toute comparaison impliquan
 
 ### 9.2 Bootstrap apparié
 
-Pour toute comparaison Bi vs Bj (et Δ d’espérance) :
+Toute comparaison Bi vs Bj se fait sur les **rendements PAR BARRE** de l’equity des deux stratégies, sur les **mêmes barres** : block bootstrap stationnaire **apparié** (mêmes indices tirés pour Bi et Bj), bloc moyen **24** barres (1h) / **6** barres (4h), **10 000** tirages, seed figée. On compare le **Δ de rendement moyen par barre** et le **Δ de Sharpe** ; IC 95 % du Δ. L’espérance par trade reste **REPORTÉE** pour chaque B mais **ne sert pas** au test de Δ.
 
-- rééchantillonnage **apparié** (mêmes tirages d’indices) des returns de trades (ou de barres si vs B0) ;
-- IC 95 % du **Δ** ; pas deux bootstraps indépendants puis soustraction.
+Pour l’IC de l’espérance d’**UNE** stratégie (critère EDGE 2) : bootstrap simple sur ses trades, 10 000 tirages, seed figée.
+
+**Pas de « DSR du Δ ».** Pour une comparaison : IC apparié du Δ exclut 0 **et** DSR(Bi) ≥ 0.95.
 
 ### 9.3 DSR (Deflated Sharpe Ratio)
 
@@ -247,13 +260,13 @@ Pour toute comparaison Bi vs Bj (et Δ d’espérance) :
 
 | Verdict | Conditions (toutes requises sauf NON CONCLUANT) |
 |---------|--------------------------------------------------|
-| **EDGE** | (1) Espérance nette / trade **> 0** sur agrégat WF (**sauf** jugements B0 → CAGR&gt;0 et Sharpe equity&gt;0) ; (2) IC bootstrap 95 % **apparié** exclut 0 ; (3) **DSR ≥ 0.95** ; (4) Espérance (ou CAGR B0) **> 0** sur **≥ 5 / 7** plis WF ; (5) **N trades ≥ 40** sur agrégat WF pour B1–B8 (symbole×TF) — N/A pour B0 seul ; (6) maxDD **&lt; 35 %** sur chaque pli WF |
+| **EDGE** | (1) Espérance nette / trade **> 0** sur agrégat WF (**sauf** jugements B0 → CAGR&gt;0 et Sharpe equity&gt;0) ; (2) IC bootstrap 95 % sur trades de **la** stratégie exclut 0 ; (3) **DSR(Bi) ≥ 0.95** ; (4) Espérance (ou CAGR B0) **> 0** sur **≥ 5 / 7** plis WF (pli &lt; 5 trades ≠ positif, §5.1) ; (5) **N trades ≥ 40** sur agrégat WF pour B1–B8 (symbole×TF) — N/A pour B0 seul ; (6) maxDD **&lt; 35 %** sur chaque pli WF (**B1–B8** ; **B0 exempté**, c’est le benchmark) |
 | **PAS D’EDGE** | N trades ≥ 40 (B1–B8) **et** (espérance ≤ 0 **ou** DSR &lt; 0.95 **ou** &lt; 3/7 plis positifs) |
 | **NON CONCLUANT** | N &lt; 40, **ou** IC apparié inclut 0, **ou** EDGE en base mais pas en adverse, **ou** instabilité (signe inverse sur &gt; 3 plis) |
 
 Le **win rate n’entre pas** dans le verdict.
 
-Comparaisons A–L « Bi bat Bj » : EDGE sur le **Δ** (IC apparié exclut 0) **et** DSR du Δ **≥ 0.95**, sinon PAS D’EDGE / NON CONCLUANT selon N.
+Comparaisons A–L « Bi bat Bj » : IC apparié du **Δ** (returns par barre) exclut 0 **et** DSR(Bi) ≥ 0.95 — **pas** de DSR du Δ. Sinon PAS D’EDGE / NON CONCLUANT selon N.
 
 ---
 
@@ -286,20 +299,22 @@ Après les runs : Claude peut lire les rapports chiffrés pour revue, **sans** r
 
 ---
 
-## Carte VP1 → VP7 (alignée roadmap V3)
+## Carte VP1 → VP9 (alignée roadmap V3 — ne pas redéfinir)
 
 | Étape | Contenu (roadmap) | Questions | Débloque |
 |-------|-------------------|-----------|----------|
 | **VP0** | Ce protocole (DOC ONLY) | — | Gel |
-| **VP1** | Download spot + **1d** + perp OI/funding ; manifeste sha256 ; loader figé | — | Données Banc S1 |
-| **VP2** | Harness exécution commune (§6–§7) + sortie stricte + coûts base/adverse | — | Runs reproductibles |
-| **VP3** | B0–B2 sur Banc S1 | **A**, **B** | Première lecture edge |
-| **VP4** | B5, B7 (+ B6 si prêt) | **H**, **J** | MTF / core |
-| **VP5** | B3, B4 (après C1/C2) + funding | **C**, **E**, **F**, **G** | Microstructure / perp |
-| **VP6** | Ablation B7 + redondance | **D**, **I** | ADN |
-| **VP7** | Stabilité régimes / actifs ; holdout **une fois** ; paper ≥ 3 mois | **K**, **L** | Promo / stop |
+| **VP1** | Download spot + **1d** + perp OI/funding ; manifeste sha256 ; loader figé | — | Données Univers VP |
+| **VP2** | Harness exécution commune (§6–§7) + sortie stricte + coûts base/adverse ; simulateur §1ter | — | Runs reproductibles |
+| **VP3** | B0, B1, B2, B5, B6, B7 → **A, B, H, J** (provisoires) | **A**, **B**, **H**, **J** | Première lecture edge |
+| **VP4** | **SENSIBILITÉ** (RVOL 1.2→1.8, âge du TK cross, multiple ATR du stop), plis de **dev** uniquement, plateau vs pic isolé, aucun paramètre choisi sur le test | — | Robustesse params |
+| **VP5** | B3, B4, funding → **C, E, F, G** | **C**, **E**, **F**, **G** | Microstructure / perp |
+| **VP6** | Ablation + redondance → **D, I** | **D**, **I** | ADN |
+| **VP7** | Régimes, holdout **une fois**, paper ≥ 3 mois → **K, L** | **K**, **L** | Promo / stop |
+| **VP8** | Moteur seul vs moteur + Claude en shadow (si VP7 positif) | — | Shadow agent |
+| **VP9** | Verdict par question, actif, TF | A–L | Synthèse |
 
-**AW0** (consolidation assemblages) = doc only **après** gel de ce protocole ; code AW1+ **après** déblocage VP (en parallèle de VP2+).
+**AW / AG (parallèle, hors runs VP) :** voir `AW0-CONSOLIDATION.md` §12 — AW1/AW3 et AG0–AG2 autorisés selon contrat ; AW5/AW6 interdits jusqu’au déblocage VP.
 
 ---
 

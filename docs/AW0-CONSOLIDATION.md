@@ -4,9 +4,10 @@
 **Tip:** `main` @ `c46eda1` (après #139 ; review Claude @ `6634438`)  
 **Branch:** `cursor/validation-protocol-a2fe` · `cursor/vp-aw0-docs-a2fe` **supprimée**  
 **Prérequis :** protocole VP gelable — [`VALIDATION-PROTOCOL.md`](./VALIDATION-PROTOCOL.md) (`VP0-2026-09-26`).  
-**Périmètre :** lecture seule — inventaire des assemblages dupliqués avant toute raffactor AW1+.  
+**Périmètre :** lecture seule — inventaire des assemblages dupliqués avant toute raffactor.  
 **Livrable :** ce fichier uniquement.  
-**Code AW1+ :** **INTERDIT** tant que VP n’a pas débloqué.
+**AW1 / AW3 / AG0–AG2 :** autorisés après gel VP0 en parallèle VP1–VP3 (§12) — AW1/AW3 observe-only.  
+**AW5 / AW6 / reco d’entrée :** **INTERDITS** jusqu’au déblocage VP (§12).
 
 ---
 
@@ -31,7 +32,7 @@ Le **math** (indicateurs / `build_pipeline` / producteurs ChartObject) est déj�
 
 **Consolidation code** (assemble.py, collect_engine_objects partagé, draw ref_*) : **après** gel + déblocage VP, en parallèle de VP2 — **pas maintenant**.
 
-**AW1+ INTERDIT** tant que VP n’a pas débloqué : `explain_chart_object`, profils fast/standard/deep, order blocks, scénarios.
+**AW1+ features produit (AW5/AW6, reco d’entrée) INTERDITES** jusqu’au déblocage VP. AW1 `explain_chart_object` et AW3 budgets : autorisés observe-only dès gel VP0 (§12).
 
 
 ## 1. Pipeline assembly duplicates
@@ -399,13 +400,17 @@ Bénéfice : plus d’hallucination de niveaux « proches » ; alignement replay
 
 ---
 
-## 12. Ajout AW0-2 — Gel / déblocage (contrat VP ↔ AW)
+## 12. Ajout AW0-2 — Gel / déblocage (contrat VP ↔ AW / AG)
+
+Aligné roadmap sections **AW** et **AG** (ne pas redéfinir ici).
 
 | État | Autorisé | Interdit |
 |------|----------|----------|
-| **Avant gel VP0** | Ce doc AW0 uniquement | Tout code AW1+ ; tout run VP |
-| **Après gel VP0, pendant VP1** | Prep données ; relecture AW0 | `assemble.py`, `collect_engine_objects` partagé, `ref_*` draw |
-| **VP2+ (harness)** | AW1 code **en parallèle** : assemble + collect partagé + tests parity | AW1+ features produit (`explain_chart_object`, profils fast/standard/deep, order blocks, scénarios) tant que VP ne les a pas **explicitement** débloqués |
-| **Promo / paper** | Hors AW — critères VP7 / T10e | AW ne mute jamais `decision/` ni `paper/` |
+| **Avant gel VP0** | Doc AW0 ; prep docs VP | Runs VP ; AW5/AW6 ; reco d’entrée agent |
+| **Après gel VP0 (dès maintenant / parallèle VP1–VP3)** | **AW1** « Pourquoi ? » (`explain_chart_object`) observe-only ; **AW3** profils fast/standard/deep (= budgets) observe-only ; **AG0** hygiène agent ; **AG1** contrat d’outil + `as_of` ; **AG2** analyse structurée | **AW5** (order blocks / zone d’entrée) ; **AW6** (scénarios conditionnels) ; toute **recommandation d’entrée** par l’agent |
+| **Avec VP2** | Refactor `assemble.py` / `collect_engine_objects` partagé (+ tests parity) | Muter `decision/` ou `paper/` via AW/AG |
+| **Promo / paper** | Hors AW/AG — critères VP7 / T10e | AW/AG ne mute jamais `decision/` ni `paper/` |
+
+**File post-gel :** gel VP0 (Claude + utilisateur) → merge AW1 → AG0 → VP1.
 
 **Pas de `MarketObservation`.** Toute ancre agent = provenance `ChartObject` (`ref_object_id` / `ref_lineage_key`).
