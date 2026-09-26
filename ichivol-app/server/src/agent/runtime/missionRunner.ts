@@ -9,7 +9,7 @@ import type { Prisma } from '@prisma/client'
 import { resolveLlmForUser } from '../../settings/resolve.js'
 import { writeAgentLog } from '../agentLog.js'
 import { deferOneBar } from '../candleDue.js'
-import { runClaudeAgent } from '../claudeAgent.js'
+import { runClaudeAgent, toolTraceMeta } from '../claudeAgent.js'
 import { buildAgentSystemPrompt } from '../systemPrompt.js'
 import {
   appendMessage,
@@ -285,6 +285,7 @@ async function wakeMissionLlm(
       mode: 'explain_decision',
       intent: 'mission_wake',
       citations: out.citations,
+      meta: toolTraceMeta(out),
     })
 
     await writeAgentLog({
@@ -299,6 +300,8 @@ async function wakeMissionLlm(
         skills: loadedSkills,
         toolCalls: out.toolCalls.length,
         model: out.model,
+        promptVersion: out.promptVersion,
+        usage: out.usageTotal ?? null,
       },
     })
 

@@ -58,6 +58,8 @@ export async function appendMessage(input: {
   mode?: string
   intent?: string
   citations?: Citation[]
+  /** AG0: tool traces, model, promptVersion, usage — full rebuild from DB. */
+  meta?: Record<string, unknown> | null
 }) {
   return db.agentMessage.create({
     data: {
@@ -68,6 +70,9 @@ export async function appendMessage(input: {
       intent: input.intent ?? null,
       citations: input.citations
         ? (JSON.parse(JSON.stringify(input.citations)) as object)
+        : undefined,
+      meta: input.meta
+        ? (JSON.parse(JSON.stringify(input.meta)) as object)
         : undefined,
     },
   })

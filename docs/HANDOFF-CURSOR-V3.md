@@ -1,5 +1,37 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — AG0 Hygiène agent (draft PR) · tip `cursor/ag0-agent-hygiene-a2fe`
+
+**Petite PR hygiène — pas de nouvelle feature.** Après #139 (GOLDEN-RVOL) et gel VP0. **Ne pas merger avant review Claude / gel VP0.** Aucun changement decision engine ni paper.
+
+### Défauts corrigés
+
+| # | Fix |
+|---|-----|
+| 1 | `isExposedToClaude` : write chart (`draw_*` / `delete_chart_object`) **retirés** du LLM (reviendront AG2 via `chart_refs`). Prompt « lecture seule » ↔ outils : test dédié. |
+| 2 | `cmd_calculate_ichimoku` / `cmd_calculate_rvol` : filtre `_closed_only` (comme screener) + test. |
+| 3 | Evidence entry = **open de la 1ʳᵉ bougie clôturée après le signal** (`outcomes.update_pending_outcomes`) ; recorder **ne stocke / ne rafraîchit plus** `row.price` live. |
+
+### Garde-fous
+
+| # | Fix |
+|---|-----|
+| 4 | `AgentMessage.meta` (Prisma) : toolCalls (args + hash/preview sortie), ok, ms, model, `promptVersion`, usage — chat + missions. |
+| 5 | `runClaudeToolLoop` : plafond outils / tour + total, timeout Anthropic, budget tokens → arrêt propre. |
+| 6 | `AgentPage` : activité outils (`onToolStart` / `onToolEnd`) — nom, durée, ok/erreur. |
+
+### Note bias outcome (IMPORTANT)
+
+Les **stats outcome déjà en base** (avant AG0) sont **biaisées** : l’entrée était le prix live de la bougie T+1 en formation, rafraîchi jusqu’au début de l’outcome, alors que T+1 compte dans h=1 et MFE/MAE. **Ne pas comparer** les cohortes pré-AG0 aux post-AG0 sans recalcul. Recalcul / invalidation des `outcome_json` historiques = ticket séparé (hors AG0).
+
+### Hors scope AG0
+
+- AG2 chart_refs / write tools
+- Decision engine / paper
+- Merge avant review
+
+---
+
 ## 2026-09-26 — MERGED #134+#133 · GEL Chart Intelligence · T-CYCLE P6 · tip `9e2b02f`
 
 ### Merges

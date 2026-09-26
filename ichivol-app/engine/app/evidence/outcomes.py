@@ -107,9 +107,9 @@ def update_pending_outcomes(session, fetch: CandleFetcher, now_ts: float | None 
         oldest_visible = min((c.time for c in candles), default=None)
 
         for rec in records:
-            snapshot = rec.market_snapshot or {}
-            entry, direction = snapshot.get("price"), snapshot.get("direction")
-            if not isinstance(entry, (int, float)) or entry <= 0 or direction not in ("LONG", "SHORT"):
+            snapshot = dict(rec.market_snapshot or {})
+            direction = snapshot.get("direction")
+            if direction not in ("LONG", "SHORT"):
                 continue
             stamp = rec.timestamp if rec.timestamp.tzinfo else rec.timestamp.replace(tzinfo=timezone.utc)
             signal_ts = int(stamp.timestamp())
@@ -120,6 +120,20 @@ def update_pending_outcomes(session, fetch: CandleFetcher, now_ts: float | None 
                 updated += 1
                 continue
             bars = select_bars_after(candles, signal_ts, tf_s, now)
+
+            # AG0: entry = open of the first closed bar after the signal.
+            # Never use / refresh from the live forming-bar price.
+            entry = snapshot.get("price")
+            if not isinstance(entry, (int, float)) or entry <= 0:
+                if not bars:
+                    continue  # wait until the first post-signal bar closes
+                entry = float(bars[0].open)
+                if entry <= 0:
+                    continue
+                snapshot["price"] = entry
+                snapshot["entry_source"] = "first_closed_open"
+                rec.market_snapshot = snapshot
+
             outcome = compute_outcome(direction, float(entry), bars)
             previous = (rec.outcome_json or {}).get("bars_observed", 0)
             if outcome["bars_observed"] == previous and not outcome["complete"]:

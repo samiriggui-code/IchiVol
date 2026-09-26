@@ -11,6 +11,12 @@ import './AgentPage.css'
 
 type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
 
+type ToolActivity = {
+  name: string
+  status: 'running' | 'ok' | 'error'
+  ms?: number
+}
+
 const SUGGESTIONS = [
   'Pourquoi BTC attend-il ?',
   'Quel est le risque du portefeuille ?',
@@ -36,6 +42,7 @@ export function AgentPage() {
     useAgentSession()
   const [llmReady, setLlmReady] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [toolActivity, setToolActivity] = useState<ToolActivity[]>([])
 
   useEffect(() => {
     getSettings()
@@ -49,6 +56,7 @@ export function AgentPage() {
       if (!q || loading) return
       setError(null)
       setInput('')
+      setToolActivity([])
       setHistory((h) => [...h, { role: 'user', content: q }])
       setLoading(true)
       try {
@@ -73,6 +81,21 @@ export function AgentPage() {
                 return copy
               })
             },
+            onToolStart: (name) => {
+              setToolActivity((prev) => [...prev, { name, status: 'running' }])
+            },
+            onToolEnd: (name, ok, ms) => {
+              setToolActivity((prev) => {
+                const copy = [...prev]
+                for (let i = copy.length - 1; i >= 0; i--) {
+                  if (copy[i].name === name && copy[i].status === 'running') {
+                    copy[i] = { name, status: ok ? 'ok' : 'error', ms }
+                    break
+                  }
+                }
+                return copy
+              })
+            },
           },
         )
         if (res.threadId) setThreadId(res.threadId)
@@ -81,9 +104,13 @@ export function AgentPage() {
           const copy = [...h]
           const last = copy[copy.length - 1]
           if (last?.role === 'assistant') {
-            copy[copy.length - 1] = { ...last, content: finalText }
+            copy[copy.length - 1] = {
+              ...last,
+              content: finalText,
+              toolCalls: res.toolCalls,
+            }
           } else {
-            copy.push({ role: 'assistant', content: finalText })
+            copy.push({ role: 'assistant', content: finalText, toolCalls: res.toolCalls })
           }
           return copy
         })
@@ -138,8 +165,41 @@ export function AgentPage() {
               <div className="bubble" key={`${m.role}-${i}`}>
                 <span className="eyebrow">{m.role === 'user' ? 'VOUS' : 'COPILOT'}</span>
                 <p>{m.content || '—'}</p>
+                {m.role === 'assistant' && m.toolCalls && m.toolCalls.length > 0 && (
+                  <ul className="tool-activity done">
+                    {m.toolCalls.map((t, j) => (
+                      <li key={`${t.name}-${j}`}>
+                        <code>{t.name}</code>
+                        <span className={`tag ${t.ok ? 'green' : 'red'}`.trim()}>
+                          {t.ok ? 'OK' : 'ERREUR'}
+                        </span>
+                        <span className="tool-ms">{t.ms} ms</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             ))}
+            {(loading || toolActivity.length > 0) && toolActivity.length > 0 && (
+              <div className="bubble tool-live">
+                <span className="eyebrow">OUTILS</span>
+                <ul className="tool-activity">
+                  {toolActivity.map((t, j) => (
+                    <li key={`${t.name}-${j}-${t.status}`}>
+                      <code>{t.name}</code>
+                      <span
+                        className={`tag ${
+                          t.status === 'running' ? 'amber' : t.status === 'ok' ? 'green' : 'red'
+                        }`.trim()}
+                      >
+                        {t.status === 'running' ? '…' : t.status === 'ok' ? 'OK' : 'ERREUR'}
+                      </span>
+                      {t.ms != null && <span className="tool-ms">{t.ms} ms</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {error && (
               <div className="bubble">
                 <p style={{ color: 'var(--red)' }}>{error}</p>

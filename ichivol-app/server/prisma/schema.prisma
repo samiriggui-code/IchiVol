@@ -142,6 +142,8 @@ model AgentMessage {
   mode      String?
   intent    String?
   citations Json?
+  /// AG0: tool calls, model, promptVersion, usage — rebuild a conversation from DB.
+  meta      Json?
   createdAt DateTime @default(now())
 
   @@index([threadId, createdAt])

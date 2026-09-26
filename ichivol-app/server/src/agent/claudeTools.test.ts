@@ -54,7 +54,7 @@ test('schema points = array d\'objets {time,price} (pas string[])', () => {
   assert.ok(points.items.properties?.price)
 })
 
-test("n'expose que lecture seule + draw_*/delete (pas place_order ni list_tools)", () => {
+test("n'expose que lecture seule (pas draw_*/delete/place_order/list_tools)", () => {
   const tools = toolsFromEngineManifest([
     CONTEXT_SPEC,
     { ...CONTEXT_SPEC, name: 'place_order', read_only: false },
@@ -64,8 +64,36 @@ test("n'expose que lecture seule + draw_*/delete (pas place_order ni list_tools)
   ])
   assert.deepEqual(
     tools.map((t) => t.name).sort(),
-    ['delete_chart_object', 'draw_horizontal_line', 'get_symbol_context'],
+    ['get_symbol_context'],
   )
+})
+
+test('prompt « lecture seule » ↔ outils exposés cohérents (AG0)', async () => {
+  const { buildAgentSystemPrompt } = await import('./systemPrompt.js')
+  const { CHART_WRITE_TOOL_NAMES, isExposedToClaude } = await import('./claudeTools.js')
+  const prompt = buildAgentSystemPrompt({
+    mode: 'research',
+    liveBlock: null,
+    screenerBlock: null,
+    decisionBlock: null,
+  })
+  assert.match(prompt, /lecture seule/i)
+  for (const name of CHART_WRITE_TOOL_NAMES) {
+    assert.equal(
+      isExposedToClaude({ name, description: 'x', read_only: false, args: {} }),
+      false,
+      `${name} must not be exposed while prompt says read-only`,
+    )
+  }
+  const tools = toolsFromEngineManifest([
+    CONTEXT_SPEC,
+    ...[...CHART_WRITE_TOOL_NAMES].map((name) => ({
+      ...CONTEXT_SPEC,
+      name,
+      read_only: false,
+    })),
+  ])
+  assert.ok(tools.every((t) => !CHART_WRITE_TOOL_NAMES.has(t.name)))
 })
 
 test('tronque les gros résultats', () => {
@@ -257,4 +285,80 @@ test('boucle streamée : événements texte + outil dans l\'ordre, stream:true e
   ])
   assert.equal(result.text, 'Bonjour é')
   assert.equal(bodies[0].stream, true)
+  assert.ok(result.toolCalls[0].outputHash)
+})
+
+test('plafond outils par tour et total (AG0)', async () => {
+  const many = {
+    stop_reason: 'tool_use',
+    model: 'm',
+    content: [
+      { type: 'tool_use', id: 'a', name: 'get_symbol_context', input: { symbol: 'A' } },
+      { type: 'tool_use', id: 'b', name: 'get_symbol_context', input: { symbol: 'B' } },
+      { type: 'tool_use', id: 'c', name: 'get_symbol_context', input: { symbol: 'C' } },
+    ],
+  }
+  const { fetchImpl } = fakeAnthropic([
+    many,
+    { stop_reason: 'end_turn', model: 'm', content: [{ type: 'text', text: 'ok' }] },
+  ])
+  const result = await runClaudeToolLoop({
+    apiKey: 'k',
+    model: 'm',
+    system: 's',
+    messages: [{ role: 'user', content: 'x' }],
+    tools: toolsFromEngineManifest([CONTEXT_SPEC]),
+    maxToolCallsPerTurn: 2,
+    maxToolCallsTotal: 2,
+    fetchImpl,
+    execute: async () => ({ ok: true, content: '{}' }),
+  })
+  assert.equal(result.toolCalls.length, 2)
+})
+
+test('budget tokens → arrêt propre avec tool_choice none (AG0)', async () => {
+  const { fetchImpl, bodies } = fakeAnthropic([
+    {
+      stop_reason: 'end_turn',
+      model: 'm',
+      usage: { input_tokens: 100, output_tokens: 50 },
+      content: [{ type: 'text', text: 'assez' }],
+    },
+  ])
+  const result = await runClaudeToolLoop({
+    apiKey: 'k',
+    model: 'm',
+    system: 's',
+    messages: [{ role: 'user', content: 'x' }],
+    tools: toolsFromEngineManifest([CONTEXT_SPEC]),
+    tokenBudget: 10,
+    fetchImpl,
+    execute: async () => ({ ok: true, content: '{}' }),
+  })
+  // First call already exceeds budget after accumulate → still returns text from that call
+  assert.equal(result.text, 'assez')
+  assert.ok((result.usageTotal?.input_tokens ?? 0) + (result.usageTotal?.output_tokens ?? 0) >= 10)
+  void bodies
+})
+
+test('timeout Anthropic lève une erreur claire (AG0)', async () => {
+  const fetchImpl = (async (_u: string, init: { signal?: AbortSignal }) => {
+    await new Promise<void>((_, reject) => {
+      init.signal?.addEventListener('abort', () => reject(new Error('aborted')))
+    })
+    return { ok: true, json: async () => ({}) }
+  }) as unknown as typeof fetch
+  await assert.rejects(
+    runClaudeToolLoop({
+      apiKey: 'k',
+      model: 'm',
+      system: 's',
+      messages: [{ role: 'user', content: 'x' }],
+      tools: toolsFromEngineManifest([CONTEXT_SPEC]),
+      anthropicTimeoutMs: 20,
+      fetchImpl,
+      execute: async () => ({ ok: true, content: '{}' }),
+    }),
+    /timeout/i,
+  )
 })

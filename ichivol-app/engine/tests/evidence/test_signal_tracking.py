@@ -179,13 +179,18 @@ def test_consecutive_bars_in_the_same_direction_are_one_run(session):
 def test_outcome_is_measured_incrementally_then_frozen(session):
     record_signal_evidence(session, _scan_row(T0, price=100.0))
     session.commit()
+    # Live row.price must NOT be stored as entry (AG0); entry set from first closed open.
+    assert "price" not in (session.query(SignalEvidenceRecord).one().market_snapshot or {})
     candles = [_bar(T0 + HOUR * i, 100, 102, 99, 100 + i) for i in range(4)]  # signal bar + 3 closed
     now = T0 + 4 * HOUR + 60
 
     assert update_pending_outcomes(session, lambda s, tf: candles, now_ts=now) == 1
     rec = session.query(SignalEvidenceRecord).one()
+    assert rec.market_snapshot["price"] == 100.0
+    assert rec.market_snapshot["entry_source"] == "first_closed_open"
     assert rec.outcome_json["bars_observed"] == 3 and rec.outcome_recorded_at is None
     assert rec.outcome_json["forward_returns"]["3"] == pytest.approx(0.03)
+    assert rec.outcome_json["entry_price"] == 100.0
 
     assert update_pending_outcomes(session, lambda s, tf: candles, now_ts=now) == 0  # nothing new
 
@@ -194,6 +199,36 @@ def test_outcome_is_measured_incrementally_then_frozen(session):
     rec = session.query(SignalEvidenceRecord).one()
     assert rec.outcome_json["complete"] is True and rec.outcome_recorded_at is not None
     assert record_signal_evidence(session, _scan_row(T0, decision="SELL")) is None  # frozen once measured
+
+
+def test_entry_is_open_of_first_closed_bar_not_live_price_and_never_refreshed(session):
+    """AG0: entry = open of first closed bar after signal; no live-price refresh."""
+    record_signal_evidence(session, _scan_row(T0, price=999.0))
+    session.commit()
+    rec = session.query(SignalEvidenceRecord).one()
+    assert "price" not in (rec.market_snapshot or {})
+
+    # Refresh while forming must still not write live price.
+    assert record_signal_evidence(session, _scan_row(T0, price=888.0, decision="WATCH")) == "updated"
+    assert "price" not in (session.query(SignalEvidenceRecord).one().market_snapshot or {})
+
+    candles = [
+        _bar(T0, 100, 101, 99, 100),
+        _bar(T0 + HOUR, 111.0, 120, 110, 115),  # first closed after → entry
+        _bar(T0 + 2 * HOUR, 115, 118, 114, 116),
+    ]
+    now = T0 + 3 * HOUR + 60
+    assert update_pending_outcomes(session, lambda s, tf: candles, now_ts=now) == 1
+    rec = session.query(SignalEvidenceRecord).one()
+    assert rec.market_snapshot["price"] == 111.0
+    assert rec.outcome_json["entry_price"] == 111.0
+    # h=1 return vs 111 open, not vs live 999
+    assert rec.outcome_json["forward_returns"]["1"] == pytest.approx(115 / 111.0 - 1.0)
+
+    # Second pass: entry frozen even if more bars arrive
+    more = candles + [_bar(T0 + 3 * HOUR, 200, 201, 199, 200)]
+    update_pending_outcomes(session, lambda s, tf: more, now_ts=T0 + 4 * HOUR + 60)
+    assert session.query(SignalEvidenceRecord).one().market_snapshot["price"] == 111.0
 
 
 def test_a_signal_that_left_the_provider_window_is_closed_as_stale(session):
