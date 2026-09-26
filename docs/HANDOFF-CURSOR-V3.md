@@ -1,5 +1,17 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — Chart Intelligence prototype MERGÉ — PR #124 · tip `e0c84ba`
+
+- **PR** : [#124](https://github.com/samiriggui-code/IchiVol/pull/124) squash-merge → `main` @ `e0c84ba`
+- **SHA** : `e0c84ba44259d269b4e38d3ac3ade700fe7dcd79`
+- **Scope** : prototype React/TS isolé sous `ichivol-app/src/components/chart-intelligence/` + `lib/chartIntelligence*` (mock Python, replay `as_of`)
+- **Contrat** : `ChartObject` uniquement — **pas** de type `DrawingObject` (voir `INTEGRATION.md`)
+- **Non fait (volontaire)** : aucun branchement pages / `Root.tsx` ; pas de route ; pas de dépendance ajoutée
+- **Vérifs** : `tsc` (seule erreur préexistante `OverviewPage.tsx:389`) · `oxlint chart-intelligence` = 0
+- **Revue Claude** : reportée (restriction jusqu’à ~12:30) — à relire quand dispo ; pas de suite UI sans lecture `INTEGRATION.md`
+
+---
+
 ## 2026-09-26 — REVIEW Claude · T-CYCLE Cycle/Spectral Engine V0→V0.1 — tip `84e54e0`
 
 **Pour Claude :** relecture complète du chantier T-CYCLE avant toute suite (OOS / ablation / UI).  
