@@ -1,5 +1,39 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — AW1 « Pourquoi ? » explain_chart_object — PR draft (attente gel VP0)
+
+### Contenu (patch Claude + goldens additifs)
+
+- Branche : `cursor/aw1-explain-a2fe` (base `main` @ `c46eda1` = #139 mergé)
+- Commits : `e5f1474` (feat AW1) + `adc0a34` (goldens OpenAPI + route_order, +1 route `/explain`)
+- Engine : `app/chart_intelligence/explain.py` + `GET /chart-intelligence/{symbol}/explain` + commande agent read-only `explain_chart_object`
+- Front : `WhyPanel` (bouton « Pourquoi ? », API only, pas mock) ; "USED BY DECISION ENGINE" masqué si champ absent
+- Eve : systemPrompt cite `explain_chart_object`
+- Observe-only : pas de changement calcul / pipeline / décision ; validation VP = `NON_VALIDE`
+
+### Vérifs locales
+
+| Check | Résultat |
+|-------|----------|
+| pytest py3.12 + Postgres | **1171** nodeids ; **1** flaky hors AW1 `test_open_flow::test_account_identity_after_refresh` (equity DB polluée locale — pas de régression AW1) ; 7 nouveaux explain + goldens surface **PASS** |
+| `tsc -b` | OK |
+| oxlint chart-intelligence | OK (0) |
+| `vite build` | OK |
+
+### Suite
+
+- **#139** déjà mergé. **Ne pas merger AW1** avant **gel VP0** (#140).
+- Pas de nouvelle PR UI tant que VP0 non gelé (ordre Claude).
+
+### Tip / SHA
+
+| Ref | SHA |
+|-----|-----|
+| `main` | `c46eda1` |
+| AW1 tip | `adc0a34` |
+
+---
+
 ## 2026-09-26 — MERGED #134+#133 · GEL Chart Intelligence · T-CYCLE P6 · tip `9e2b02f`
 
 ### Merges
