@@ -20,15 +20,25 @@
 | 5 | `runClaudeToolLoop` : plafond outils / tour + total, timeout Anthropic, budget tokens → arrêt propre. |
 | 6 | `AgentPage` : activité outils (`onToolStart` / `onToolEnd`) — nom, durée, ok/erreur. |
 
+### Fix plafond tool_use / tool_result (BLOQUANT, post-review Claude)
+
+Quand `uses` dépassait `maxToolCallsPerTurn` / `maxToolCallsTotal`, les `tool_use` non exécutés restaient dans le message assistant **sans** `tool_result` → Anthropic **400**.  
+**Corrigé :** chaque `tool_use` skip reçoit `tool_result` `{ is_error: true, content: "non exécuté : plafond d'appels atteint (AG0)" }` + trace `ok:false, ms:0` ; plafond total → tour suivant `forceText` (texte non vide). Tests : 6→6 results (2 errors) ; total cap → texte.
+
 ### Note bias outcome (IMPORTANT)
 
-Les **stats outcome déjà en base** (avant AG0) sont **biaisées** : l’entrée était le prix live de la bougie T+1 en formation, rafraîchi jusqu’au début de l’outcome, alors que T+1 compte dans h=1 et MFE/MAE. **Ne pas comparer** les cohortes pré-AG0 aux post-AG0 sans recalcul. Recalcul / invalidation des `outcome_json` historiques = ticket séparé (hors AG0).
+Les **`signal_evidence` antérieurs à AG0** ont une **entrée biaisée** (prix live T+1 rafraîchi). **À exclure des stats** : filtre `entry_source` **absent** (ou ≠ `first_closed_open`), ou les marquer. Ne pas comparer cohortes pré/post AG0 sans recalcul. Recalcul historique = ticket séparé.
+
+### File
+
+Correction AG0 → (après OK utilisateur) **gel + merge VP0** → merge **AW1** → merge **AG0** → **VP1**.  
+VP0 (#140 @ `fa04bec`) : APPROUVÉ Claude — **ne pas merger** avant OK utilisateur.
 
 ### Hors scope AG0
 
 - AG2 chart_refs / write tools
 - Decision engine / paper
-- Merge avant review
+- Merge avant review / gel VP0
 
 ---
 
