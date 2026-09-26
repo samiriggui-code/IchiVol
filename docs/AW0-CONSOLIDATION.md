@@ -382,3 +382,30 @@ Bénéfice : plus d’hallucination de niveaux « proches » ; alignement replay
 2. Extraire `decision/assemble` ; brancher screener + experiments ; migrer research_lab hors `compute_*` directs.  
 3. Spécifier contrat `ref_object_id` sur `draw_stop` / `draw_entry` / `draw_target`.  
 4. Clarifier trend labels (doc + fn unique) ; décider du sort de `_structure_label` / swings.
+
+---
+
+## 11. Ajout AW0-1 — Matrice risque de régression (par doublon)
+
+| Doublon | Source unique cible | Risque si on consolide mal | Tests garde-fous |
+|---------|---------------------|----------------------------|------------------|
+| Assemblage pipeline (screener / experiments / research_lab / CI / …) | `decision/assemble.py` | Drift live vs Lab vs research → faux EDGE VP | `test_scan_symbol_golden`, `test_prepare_variants_golden`, `test_t12b_lab_live_parity`, parity assemble (à ajouter) |
+| Bundle ChartObjects ENGINE (collect vs CI) | `collect_engine_objects(...)` partagé | Replay CI ≠ API chart-objects ; breakouts/caps divergents | `test_chart_intelligence_route`, `test_chart_objects`, shared-collect bit-identique (à ajouter) |
+| Trend CI `_trend_label` vs agent / front | `trend_label_from_ichi` unique (≠ pipeline Direction) | Badge CI / UI contredit le vote pipeline | unit `trend_label` + CI consomme la même fn |
+| `research_lab/signals.py` `compute_*` directs | REGISTRY via assemble | Params REGISTRY changent, research ne suit pas | `test_signals_causal` + golden après bascule |
+| `draw_*` free price | `ref_object_id` / `ref_lineage_key` | Niveaux hallucinés ; replay non ancré | `test_t2b_store_and_agent`, `test_grounding`, test ref_* (à ajouter) |
+
+**Règle :** aucun merge AW1 sans que la ligne correspondante ait au moins un test garde-fou **vert** sur tip gelé.
+
+---
+
+## 12. Ajout AW0-2 — Gel / déblocage (contrat VP ↔ AW)
+
+| État | Autorisé | Interdit |
+|------|----------|----------|
+| **Avant gel VP0** | Ce doc AW0 uniquement | Tout code AW1+ ; tout run VP |
+| **Après gel VP0, pendant VP1** | Prep données ; relecture AW0 | `assemble.py`, `collect_engine_objects` partagé, `ref_*` draw |
+| **VP2+ (harness)** | AW1 code **en parallèle** : assemble + collect partagé + tests parity | AW1+ features produit (`explain_chart_object`, profils fast/standard/deep, order blocks, scénarios) tant que VP ne les a pas **explicitement** débloqués |
+| **Promo / paper** | Hors AW — critères VP7 / T10e | AW ne mute jamais `decision/` ni `paper/` |
+
+**Pas de `MarketObservation`.** Toute ancre agent = provenance `ChartObject` (`ref_object_id` / `ref_lineage_key`).

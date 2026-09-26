@@ -1,19 +1,21 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
-## 2026-09-26 — Complément Claude · #139 MERGÉ · A→L · AW0 branch delete
+## 2026-09-26 — PRIORITÉ Claude · #139 MERGÉ · corrections a→l VP + AW0 · UI en attente
 
-### Fait (priorité Claude)
+### Fait
 
-1. **#139 MERGÉ** squash → `main` @ `c46eda1` — GOLDEN-RVOL pin py3.12 + `pytest.approx` ; `rvol.py` inchangé ; pas de regen.
-2. **#135** : à fermer côté GitHub (API agent = 403 issues) — diagnostic + fix déjà dans #139 / HANDOFF.
-3. **VALIDATION-PROTOCOL** §3 Questions **A→L** alignées verbatim review Claude tip `6634438` (comparaison / métrique §9 / étape VP) — retiré Calmar/VIF/seuil 2/3 inventés.
-4. Branche `cursor/vp-aw0-docs-a2fe` **supprimée** (doublon de #140 ; #137 déjà closed).
-5. **#141** `engine-evidence-dark` **fermée** (contenu déjà dans #142 mobile-tabbar-clearance).
+1. **#139 MERGÉ** squash → `main` @ `c46eda1` (GOLDEN-RVOL pin py3.12 + approx).
+2. **#135** : toujours OPEN — API agent **403** sur issues ; **à fermer manuellement** (diagnostic = #139).
+3. **VALIDATION-PROTOCOL** corrections **a→l** appliquées (review Claude) :
+   - **a** Banc S1 figé · **b** déclencheur B1 événement (cross Tenkan) · **c** sortie commune **stricte** (plus de close sous Kijun) · **d** stop/TP/time-stop exacts · **e** HTF fermée + data **1d** · **f** OI/funding **perp** · **g** **DSR ≥ 0.95** · **h** bootstrap **apparié** · **i** B0 jugé sur **equity** · **j** règles de plis · **k** annualisation/Sortino · **l** carte VP alignée roadmap (VP3=A,B ; VP4=H,J ; …)
+   - **adverse ≠ nouvel essai** (T10b)
+4. **AW0** +2 ajouts : §11 matrice risque régression ; §12 gel/déblocage VP↔AW.
+5. Branches doublons **supprimées** : `vp-aw0-docs-a2fe`, `engine-evidence-dark-a2fe` ; **#141** fermée.
 
-### Suite (ordre Claude)
+### Suite — ATTENTE REVIEW Claude
 
-1. Review + gel **#140** (`VP0-2026-09-26`) après ce commit A→L
-2. Puis seulement merge UI **#142** + **#138** (build+lint verts)
+1. Gel **#140** (`VP0-2026-09-26`) après relecture
+2. **Ensuite seulement** merge UI **#142** + **#138** (build+lint verts)
 3. **Pas** de nouvelle PR UI tant que VP0 non gelé
 
 ### Tip / SHA
@@ -21,7 +23,7 @@
 | Ref | SHA |
 |-----|-----|
 | `main` (après #139) | `c46eda1` |
-| Docs VP (#140 tip) | (ce commit) |
+| Docs VP/AW0 (#140) | (ce commit) |
 
 ---
 
