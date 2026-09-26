@@ -1,69 +1,93 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
-## 2026-09-26 — REVIEW Claude CI-R7→R9 · Chart Intelligence — branche `cursor/chart-intel-ci-r1-a2fe`
+## 2026-09-26 — MERGED #134 CI-R1→R9 · VPS smoke replay · tip `50ea9c4`
 
-**Pour Claude :** suite CHANGES REQUESTED après CI-R1→R6 (`6858996`). **MERGE AUTORISÉ** après R7–R9. Ne pas geler Chart Intelligence avant merge + VPS smoke.
+**Claude APPROUVÉ · squash-merge #134** → `main` @ `50ea9c4`.
 
-### Livré
+### VPS smoke (post-rebuild engine+web)
 
-| ID | Correction |
-|----|------------|
-| **CI-R7** | Frames slim : `as_of` + `objects` + `market_state` seulement. Candles / ichimoku / projection **une fois** à la racine du pack ; front tronque par `as_of`. Origin frame allégé ; BOS/CHoCH plafonnés à 16 ; breakouts éphémères exclus du pack CI. **Mesuré : 0,94 Mo** pour 48 frames × 300 bougies (budget &lt; 1,5 Mo). |
-| **CI-R8** | `origin.lineage_key` produit par chaque producteur (hors empreinte d’id) : FVG = direction+start_time+bornes ; zone = side+bornes ; BOS/CHoCH = type+swing_time ; Fib = `group_id` ; breakout = kind+bar. `known_at` / `status_history` indexés par `lineage_key`. |
-| **CI-R9** | Cache replay = LRU **32** + purge des entrées expirées à chaque écriture. |
+| Métrique | Valeur |
+|----------|--------|
+| Endpoint | `GET /chart-intelligence/BTCUSDT/replay?timeframe=1h&limit=300&lookback_bars=48` |
+| Taille | **1,023 Mo** (1 072 573 bytes) — budget &lt; 1,5 Mo |
+| 1ʳᵉ appel | **7,33 s** · `cached=false` · `replay_mode=walk_forward` · 48 frames · 300 candles · 40 objets |
+| 2ᵉ appel | **`cached=true`** · 1,2 s (transfert payload ; hit cache moteur) |
+| Frame keys | `as_of`, `objects`, `market_state` (séries une fois à la racine) |
+| Lineage | root 40 ids / 36 `lineage_key` ; union frames 937 ids / **397 lineage_keys** |
+| RELEASE | `50ea9c4 main` · backup `/opt/ichivol-backup/pre-ci-r7-r9-20260926-115211.tgz` |
+| FQDN | https://ichivol.global-it-ss.com |
 
-### Fichiers
+### Suite ordre Claude
 
-| Fichier | Rôle |
-|---------|------|
-| `app/chart_intelligence/service.py` | frames slim, lineage bookkeeping, LRU 32 |
-| `app/chart_objects/from_{fvg,structure,breaks,fibonacci}.py` | `lineage_key` (+ Fib `group_id`) |
-| `src/lib/useChartIntelligence.ts` | tronque séries pack par `as_of` |
-| `src/lib/chartIntelligence.ts` | type frame slim + `lineage_key` |
-| `tests/api/test_chart_intelligence_route.py` | R7 taille, R8 FVG, R9 LRU |
-
-### Tests
-
-```
-pytest tests/api/test_chart_intelligence_route.py tests/api/test_api_surface_golden.py -q --timeout=600
-tsc + oxlint chart-intelligence
-```
-
-### Ordre après OK Claude
-
-1. Merge #134 → VPS rebuild engine+web → smoke replay BTCUSDT 1h (taille, temps, `cached=true` 2ᵉ appel)
-2. Merge #133 briefing (repli `entryTime` avant 1ʳᵉ bougie → `swing`)
-3. **GEL Chart Intelligence** — ensuite T-CYCLE P1–P5 puis VP0
+1. ~~Squash-merge #134 + VPS smoke~~ **FAIT**
+2. Squash-merge #133 (repli entryTime) + rebuild web
+3. **GEL Chart Intelligence** (aucune nouvelle fonctionnalité)
+4. T-CYCLE P6 (`lru_cache` `validate_cycle_synthetic`) puis merge + VPS + gel
+5. Ticket **GOLDEN-RVOL** (bisect, rapport HANDOFF — pas de régénération à l’aveugle)
+6. **VP0** protocole validation (doc only)
 
 ---
 
-## 2026-09-26 — REVIEW Claude CI-R1→R6 · Chart Intelligence — branche `cursor/chart-intel-ci-r1-a2fe`
+## 2026-09-26 — #133 briefing · repli entryTime hors série → swing
 
-**Pour Claude :** corrections demandées sur #124→#132 (main @ `e99e53f`) + note #133.
+**Suite OK Claude** (merge après #134) : si `entryTime` &lt; première bougie chargée, période / caméra = **`swing`**.
 
-### Livré
+| Fichier | Changement |
+|---------|------------|
+| `chartIntelligenceBriefing.ts` | `defaultBriefing` + `cameraForPeriod` acceptent `seriesFirstTime` |
+| `ChartIntelligencePanel.tsx` | corrige la période quand les bougies arrivent |
+
+---
+
+## 2026-09-26 — Chart Intelligence Briefing (période + packs + caméra) — PR #133 · branche `cursor/chart-intel-briefing-a2fe`
+
+- **PR** : [#133](https://github.com/samiriggui-code/IchiVol/pull/133)
+- **Revue** : APPROUVÉ ; `context=position` → **Depuis entrée** (entry − 8 barres) ; repli swing si entry hors série
+- Placement : fiches Décisions (`prep`) / Position (`position`) — **pas** Marché
+
+### Fichiers briefing
+
+| Fichier | Rôle |
+|---------|------|
+| `src/lib/chartIntelligenceBriefing.ts` | période / packs / `ChartCamera` / `defaultBriefing` |
+| `src/components/chart-intelligence/BriefingControls.tsx` | UI segmented |
+| `IntelligenceChart.tsx` | prop `camera` |
+| `ChartIntelligencePanel.tsx` | wire + `entryTime` |
+
+---
+
+## 2026-09-26 — REVIEW Claude CI-R7→R9 · Chart Intelligence — MERGÉ #134 @ `50ea9c4`
 
 | ID | Correction |
 |----|------------|
-| **CI-R1** | `GET /chart-intelligence/{symbol}/replay` — walk-forward bougie par bougie ; `known_at` = 1ʳᵉ barre d’apparition ; `status_history` ; cache 60 s. Front PLAY charge le pack ; plus de `sliceIntelligenceAt` sur objets live. Si pack échoue → PLAY grisé « Replay en cours de correction ». |
-| **CI-R2** | `closed_candles` + `TF_SECONDS` avant calcul ; test mid-bar. |
-| **CI-R3** | `analysis` = verdict **pipeline** Option B (`kind=pipeline`, `strategy_version`) ; UI « DECISION ENGINE · PIPELINE ». |
-| **CI-R4** | Seuil waiting RVOL via `LiveScreenerSettings.rvol_significant` (plus 1.5 en dur). |
-| **CI-R5** | `sliceIntelligenceAt` : kumo projeté si `time - 25×bar ≤ T` (+ filtre moteur). |
-| **CI-R6** | Docstring service : plus de claim « anti-lookahead » sur le path live/slice. |
+| **CI-R7** | Frames slim ; séries une fois ; **mesuré local 0,94 Mo / VPS 1,02 Mo** (48×300) |
+| **CI-R8** | `origin.lineage_key` ; known_at/status_history par lineage |
+| **CI-R9** | Cache replay LRU **32** + purge à l’écriture |
 
-### Tests
+### Fichiers R7–R9
 
-- `pytest tests/api/test_chart_intelligence_route.py` (+ surface golden) — CI-R1 parité 3×T, CI-R2 mid-bar
-- `tsc` + `oxlint` chart-intelligence
+| Fichier | Rôle |
+|---------|------|
+| `app/chart_intelligence/service.py` | frames slim, lineage, LRU 32 |
+| `app/chart_objects/from_{fvg,structure,breaks,fibonacci}.py` | `lineage_key` |
+| `src/lib/useChartIntelligence.ts` | tronque séries par `as_of` |
+| `tests/api/test_chart_intelligence_route.py` | R7 taille, R8 FVG, R9 LRU |
 
-### #133 briefing
+---
 
-OK principe — **pas de merge avant CI-R1**. Suite demandée : `context=position` → période depuis bougie d’entrée (− marge) ; pack « Position ouverte » / Eve = plus tard. Traité sur la branche briefing après merge R1.
+## 2026-09-26 — REVIEW Claude CI-R1→R6 · Chart Intelligence — MERGÉ dans #134
 
-### Gel
+| ID | Correction |
+|----|------------|
+| **CI-R1** | replay walk-forward ; known_at ; status_history |
+| **CI-R2** | closed_candles mid-bar |
+| **CI-R3** | analysis = pipeline Option B |
+| **CI-R4** | RVOL via `LiveScreenerSettings` |
+| **CI-R5** | kumo projeté `time - 25×bar ≤ T` |
+| **CI-R6** | docstring anti-lookahead clarifiée |
 
-Après merge R1→R6 : **geler Chart Intelligence** (pas de nouvelle feature). Prochain chantier = **VP0** (programme validation). T-CYCLE R1–R5 reste ouvert.
+**GEL Chart Intelligence** après merge #133.
+
 
 ---
 

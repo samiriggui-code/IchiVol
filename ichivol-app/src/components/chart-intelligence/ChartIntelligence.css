@@ -150,6 +150,67 @@ html.dark .ci-root {
   padding: 0 12px;
 }
 
+/* ---------- Briefing (période + packs) ---------- */
+
+.ci-briefing {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 20px 12px;
+}
+
+.ci-briefing-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.ci-briefing-label {
+  font: 10px 'DM Mono', ui-monospace, monospace;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--ci-muted);
+  width: 56px;
+  flex: 0 0 auto;
+}
+
+.ci-briefing-seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ci-briefing-seg button {
+  font: 11px Manrope, sans-serif;
+  padding: 5px 10px;
+  border: 1px solid var(--ci-line);
+  border-radius: 6px;
+  background: var(--ci-soft);
+  color: var(--ci-ink);
+  cursor: pointer;
+}
+
+.ci-briefing-seg button:hover {
+  border-color: var(--ci-muted);
+}
+
+.ci-briefing-seg button.is-on {
+  background: var(--ci-blue-soft);
+  border-color: var(--ci-blue);
+  color: var(--ci-blue);
+  font-weight: 600;
+}
+
+.ci-briefing-custom {
+  font-size: 10px;
+  color: var(--ci-amber);
+  align-self: center;
+  padding: 0 4px;
+}
+
 /* ---------- Tags (valeurs .market-page .tag) ---------- */
 
 .ci-tag {
