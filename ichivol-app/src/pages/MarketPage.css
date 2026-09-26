@@ -351,15 +351,21 @@
 .market-page .checkrow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  justify-content: flex-start;
+  gap: 14px;
   margin: 17px 0;
   font-size: 14px;
   flex-wrap: wrap;
 }
 
-.market-page .checkrow .mkt-layers-anchor {
+.market-page .chart-tools-hint {
+  font-size: 11px;
+  color: var(--muted);
   margin-left: auto;
+}
+
+.market-page .chart-tools-hint b {
+  color: var(--blue);
 }
 
 .market-page .checkrow input {

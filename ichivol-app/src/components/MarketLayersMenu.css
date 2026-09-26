@@ -16,10 +16,48 @@
   white-space: nowrap;
 }
 
+.mkt-layers-btn-head {
+  font: 11px 'DM Mono', ui-monospace, monospace;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border: 1px solid #1a7df5;
+  background: #eef4fc;
+  color: #1a7df5;
+  font-weight: 700;
+  padding: 7px 11px;
+}
+
 .mkt-layers-btn:hover,
-.mkt-layers-btn.is-open {
-  border-color: var(--blue, #1a7df5);
-  color: var(--blue, #1a7df5);
+.mkt-layers-btn.is-open,
+.mkt-layers-btn-head:hover,
+.mkt-layers-btn-head.is-open {
+  border-color: #096cde;
+  color: #fff;
+  background: #1a7df5;
+}
+
+.mkt-layers-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line, #e5e1db);
+}
+
+.mkt-layers-quick button {
+  border: 1px solid var(--line, #e5e1db);
+  background: #f3f2ef;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--ink, #202b36);
+}
+
+.mkt-layers-quick button:hover {
+  border-color: #1a7df5;
+  color: #1a7df5;
   background: #eef4fc;
 }
 

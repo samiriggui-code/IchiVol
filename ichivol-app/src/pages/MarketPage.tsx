@@ -478,6 +478,28 @@ export function MarketPage() {
               </small>
             </div>
             <div className="card-head-tools">
+              <div className="mkt-layers-anchor" ref={layersAnchorRef}>
+                <button
+                  type="button"
+                  className={`mkt-layers-btn mkt-layers-btn-head${layersOpen ? ' is-open' : ''}`}
+                  aria-expanded={layersOpen}
+                  aria-haspopup="dialog"
+                  title="Afficher / masquer Structure, Fib, FVG, Cassures…"
+                  onClick={() => setLayersOpen((o) => !o)}
+                >
+                  Calques{activeObjectLayerCount ? ` · ${activeObjectLayerCount}` : ''}
+                </button>
+                {layersOpen && !layersSheet && (
+                  <MarketLayersMenu
+                    open
+                    onClose={() => setLayersOpen(false)}
+                    prefs={layerPrefs}
+                    onChange={setLayers}
+                    counts={layerCounts}
+                    variant="menu"
+                  />
+                )}
+              </div>
               <button
                 type="button"
                 className="market-tv-open-inline"
@@ -549,27 +571,9 @@ export function MarketPage() {
                 />{' '}
                 Supports / résistances
               </label>
-              <div className="mkt-layers-anchor" ref={layersAnchorRef}>
-                <button
-                  type="button"
-                  className={`mkt-layers-btn${layersOpen ? ' is-open' : ''}`}
-                  aria-expanded={layersOpen}
-                  aria-haspopup="dialog"
-                  onClick={() => setLayersOpen((o) => !o)}
-                >
-                  Calques{activeObjectLayerCount ? ` · ${activeObjectLayerCount}` : ''}
-                </button>
-                {layersOpen && !layersSheet && (
-                  <MarketLayersMenu
-                    open
-                    onClose={() => setLayersOpen(false)}
-                    prefs={layerPrefs}
-                    onChange={setLayers}
-                    counts={layerCounts}
-                    variant="menu"
-                  />
-                )}
-              </div>
+              <span className="chart-tools-hint">
+                Fib · FVG · Cassures → bouton <b>Calques</b> en haut à droite
+              </span>
             </div>
           </div>
         </section>
