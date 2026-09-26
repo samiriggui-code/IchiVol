@@ -1,5 +1,16 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 — Chart Intelligence BRANCHÉ + VPS — PR #126 · tip `e52dcba`
+
+- **PR** : [#126](https://github.com/samiriggui-code/IchiVol/pull/126) squash → `main` @ `e52dcba`
+- **Wiring** : `ChartIntelligencePanel` sous PriceChart (`MarketPage`) + route `/app/chart-intelligence` (mock SOLUSDT)
+- **Fix build** : `OverviewPage` `drawdownRatio` (tsc 0) — requis pour rebuild `web`
+- **VPS** : https://ichivol.global-it-ss.com — `RELEASE=e52dcba main` · rebuild `web` · public/api **200**
+- **Backup** : `/opt/ichivol-backup/pre-chart-intel-wire-*.tgz`
+- Mock Python uniquement ; API `chart-intelligence` pas encore côté engine
+
+---
+
 ## 2026-09-26 — Chart Intelligence prototype MERGÉ — PR #124 · tip `e0c84ba`
 
 - **PR** : [#124](https://github.com/samiriggui-code/IchiVol/pull/124) squash-merge → `main` @ `e0c84ba`
