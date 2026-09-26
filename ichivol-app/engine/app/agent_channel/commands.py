@@ -590,10 +590,17 @@ def cmd_run_cycle_study(args: dict) -> dict:
     limit = int(args.get("limit", 500))
     window = int(args.get("window", 96))
     horizon = int(args.get("horizon", 8))
+    null_draws = int(args.get("null_draws", 5))
+    stride_raw = args.get("stride")
+    stride = int(stride_raw) if stride_raw is not None else None
     if window < 32 or window > 512:
         raise CommandError("window must be in [32, 512]")
     if horizon < 1 or horizon > 64:
         raise CommandError("horizon must be in [1, 64]")
+    if null_draws < 1 or null_draws > 50:
+        raise CommandError("null_draws must be in [1, 50]")
+    if stride is not None and (stride < 1 or stride > 64):
+        raise CommandError("stride must be in [1, 64]")
     now_arg = args.get("now")
     now = int(now_arg) if now_arg is not None else None
 
@@ -607,7 +614,12 @@ def cmd_run_cycle_study(args: dict) -> dict:
 
     study = run_cycle_walk_forward(
         candles,
-        CycleStudyParams(window=window, horizon=horizon),
+        CycleStudyParams(
+            window=window,
+            horizon=horizon,
+            null_draws=null_draws,
+            stride=stride,
+        ),
     )
     return {
         "symbol": symbol,

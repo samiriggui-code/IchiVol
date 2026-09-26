@@ -214,3 +214,27 @@ def test_r2_agent_cycle_drops_forming_bar(monkeypatch):
     body = res.json()["data"]
     assert body["n_bars"] == 79
     assert body["now"] == now
+
+
+def test_p2_goertzel_phase_sine_plus_linear_trend_non_integer_period():
+    """P2 — sinus + linear trend + non-integer period → phase err ≤ 0.05 when confident."""
+    from app.cycle.hilbert import PHASE_CONFIDENCE_MIN, _goertzel_phase_short
+    from app.cycle.preprocess import detrend_linear
+
+    period = 17.3  # non-integer
+    n = 200
+    amp = 0.02
+    drift = 0.0015  # linear trend in log-price space
+    true_phase0 = 0.37  # desired phase at last bar (fit t=0)
+    series_raw: list[float] = []
+    for i in range(n):
+        # Align so last bar has phase true_phase0 under the fit time origin.
+        ph = ((i - (n - 1)) / period + true_phase0) % 1.0
+        series_raw.append(drift * i + amp * math.sin(2.0 * math.pi * ph))
+
+    series = detrend_linear(series_raw)
+    phase01, _a, _b, r2 = _goertzel_phase_short(series, period)
+    assert phase01 is not None
+    assert r2 >= PHASE_CONFIDENCE_MIN, f"R²={r2:.3f} below floor"
+    err = _circ_delta(phase01, true_phase0)
+    assert err <= 0.05, f"phase err={err:.4f} R²={r2:.3f} est={phase01:.4f} true={true_phase0}"

@@ -36,7 +36,10 @@ class CycleStudyParams:
     max_period: float = 60.0
     horizon: int = 8
     seed: int = 7
-    null_draws: int = 20
+    # P1 — API/agent default 5 (was 20); clamp [1, 50] at run time.
+    null_draws: int = 5
+    # P1 — score one bar every ``stride`` in the future-ER loop (default = horizon).
+    stride: int | None = None
 
 
 def _circ_delta(a: float, b: float) -> float:
@@ -408,22 +411,29 @@ def _future_er_gap_cycle_vs_global(
     params: CycleParams,
     *,
     horizon: int,
+    stride: int = 1,
 ) -> tuple[float | None, float, dict[str, list[float]]]:
-    """Mean future ER on CYCLE bars minus mean future ER on all scored bars."""
-    states = compute_cycle_series(candles, params)
+    """Mean future ER on CYCLE bars minus mean future ER on all scored bars.
+
+    P1 — ``stride`` scores one bar every ``stride`` steps and passes the same
+    stride into ``compute_cycle_series`` (fewer windows → /study under budget).
+    """
+    step = max(1, int(stride))
+    states = compute_cycle_series(candles, params, stride=step)
     px = closes(candles)
     n = len(states)
     min_i = max(params.window, 40)
     max_i = n - horizon - 1
     by_regime: dict[str, list[float]] = {r.value: [] for r in CycleRegime}
     all_er: list[float] = []
-    usable = states[params.window :]
+    min_bars = max(32, int(params.min_period) * 3)
+    scored_states = [states[i] for i in range(min_bars - 1, n, step)]
     cycle_rate = (
-        sum(1 for s in usable if s.regime == CycleRegime.CYCLE) / len(usable)
-        if usable
+        sum(1 for s in scored_states if s.regime == CycleRegime.CYCLE) / len(scored_states)
+        if scored_states
         else 0.0
     )
-    for i in range(min_i, max_i + 1):
+    for i in range(min_i, max_i + 1, step):
         fut = _future_efficiency(px, i, horizon)
         if fut is None:
             continue
@@ -454,8 +464,9 @@ def run_cycle_regime_study(
 ) -> dict:
     """(b) Product study: future ER conditioned on regime; surrogate CYCLE rates.
 
-    R3 — reports ``er_gap_cycle_minus_global`` and its percentile vs ≥20 draws
-    of each null (RW, AR(1), phase-randomized, shuffled returns).
+    P1 — ``null_draws`` default 5 (clamped [1, 50]); ``stride`` defaults to
+    ``horizon``. Publishes ``null_draws``, ``stride``, and percentile resolution
+    ``1/(n_gaps+1)`` per null family.
     """
     p = params or CycleStudyParams()
     cycle_params = CycleParams(
@@ -463,8 +474,12 @@ def run_cycle_regime_study(
         min_period=p.min_period,
         max_period=min(p.max_period, p.window / 3.0),
     )
+    stride = int(p.stride) if p.stride is not None else int(p.horizon)
+    stride = max(1, stride)
+    n_draws = max(1, min(50, int(p.null_draws)))
+
     observed_gap, series_cycle_rate, by_regime = _future_er_gap_cycle_vs_global(
-        candles, cycle_params, horizon=p.horizon
+        candles, cycle_params, horizon=p.horizon, stride=stride
     )
     n = len(candles)
     n_scored = sum(len(v) for v in by_regime.values())
@@ -474,6 +489,8 @@ def run_cycle_regime_study(
             "error": "insufficient_bars",
             "n_bars": n,
             "need": max(p.window, 40) + p.horizon + 1,
+            "null_draws": n_draws,
+            "stride": stride,
         }
 
     def _mean(xs: list[float]) -> float | None:
@@ -483,13 +500,14 @@ def run_cycle_regime_study(
         k: {"n": len(v), "mean_future_er": _mean(v)} for k, v in by_regime.items()
     }
 
-    n_draws = max(1, int(p.null_draws))
     null_seed_base = {
         "random_walk": 1000,
         "ar1": 2000,
         "phase_randomized": 3000,
         "shuffled_returns": 4000,
+        "garch": 5000,
     }
+    # P4 — wire make_garch_candles into nulls (was dead code).
     null_specs = (
         ("random_walk", lambda s: make_random_walk_candles(n, seed=s)),
         ("ar1", lambda s: make_ar1_candles(n, seed=s)),
@@ -498,6 +516,7 @@ def run_cycle_regime_study(
             lambda s: phase_randomized_surrogate(candles, seed=s),
         ),
         ("shuffled_returns", lambda s: shuffled_return_candles(candles, seed=s)),
+        ("garch", lambda s: make_garch_candles(n, seed=s)),
     )
     surrogate_cycle_rates: dict[str, float] = {}
     null_gap_distributions: dict[str, dict] = {}
@@ -508,19 +527,22 @@ def run_cycle_regime_study(
             seed = p.seed + null_seed_base[name] + d
             sur = factory(seed)
             gap, rate, _ = _future_er_gap_cycle_vs_global(
-                sur, cycle_params, horizon=p.horizon
+                sur, cycle_params, horizon=p.horizon, stride=stride
             )
             rates.append(rate)
             if gap is not None:
                 gaps.append(gap)
         surrogate_cycle_rates[name] = sum(rates) / len(rates) if rates else 0.0
+        n_gaps = len(gaps)
         null_gap_distributions[name] = {
             "n_draws": n_draws,
-            "n_gaps": len(gaps),
+            "n_gaps": n_gaps,
             "gaps_mean": _mean(gaps),
             "observed_gap_percentile": (
                 _percentile_of(observed_gap, gaps) if observed_gap is not None else None
             ),
+            # P1 — resolution of the empirical percentile (Laplace-style).
+            "percentile_resolution": 1.0 / (n_gaps + 1),
         }
 
     return {
@@ -531,6 +553,7 @@ def run_cycle_regime_study(
         "horizon": p.horizon,
         "window": p.window,
         "null_draws": n_draws,
+        "stride": stride,
         "series_cycle_rate": series_cycle_rate,
         "future_er_by_regime": regime_future_er,
         "er_gap_cycle_minus_global": observed_gap,

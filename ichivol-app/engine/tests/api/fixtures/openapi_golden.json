@@ -2388,6 +2388,40 @@
             }
           },
           {
+            "description": "Null surrogate draws per family (P1 \u2014 default 5, was 20).",
+            "in": "query",
+            "name": "null_draws",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "description": "Null surrogate draws per family (P1 \u2014 default 5, was 20).",
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Null Draws",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Score one bar every stride in future-ER loop (default = horizon).",
+            "in": "query",
+            "name": "stride",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 64,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Score one bar every stride in future-ER loop (default = horizon).",
+              "title": "Stride"
+            }
+          },
+          {
             "description": "Unix seconds for closed-bar filter (tests). Default: server now.",
             "in": "query",
             "name": "now",

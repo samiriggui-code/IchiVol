@@ -51,6 +51,18 @@ def get_cycle_study(
     limit: int = 500,
     window: int = 96,
     horizon: int = 8,
+    null_draws: int = Query(
+        5,
+        ge=1,
+        le=50,
+        description="Null surrogate draws per family (P1 — default 5, was 20).",
+    ),
+    stride: int | None = Query(
+        default=None,
+        ge=1,
+        le=64,
+        description="Score one bar every stride in future-ER loop (default = horizon).",
+    ),
     now: int | None = Query(
         default=None,
         description="Unix seconds for closed-bar filter (tests). Default: server now.",
@@ -73,7 +85,12 @@ def get_cycle_study(
     )
     study = run_cycle_regime_study(
         candles,
-        CycleStudyParams(window=window, horizon=horizon),
+        CycleStudyParams(
+            window=window,
+            horizon=horizon,
+            null_draws=null_draws,
+            stride=stride,
+        ),
     )
     return {
         "symbol": symbol.upper(),

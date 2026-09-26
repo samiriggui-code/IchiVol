@@ -163,21 +163,34 @@ def _state_at_window(
 def compute_cycle_series(
     candles: Sequence[Candle],
     params: CycleParams | None = None,
+    *,
+    stride: int = 1,
 ) -> list[CycleState]:
-    """One CycleState per bar; early bars are NOISE warmup. Causal by construction."""
+    """One CycleState per bar; early bars are NOISE warmup. Causal by construction.
+
+    ``stride`` > 1 (P1 study path): only recompute every ``stride`` bars and
+    carry the previous state forward — same length list, far fewer windows.
+    """
     p = params or CycleParams()
     n = len(candles)
     out: list[CycleState] = []
     period_history: list[float | None] = []
     min_bars = max(32, int(p.min_period) * 3)
+    step = max(1, int(stride))
+    last_state = _empty_state(int(candles[0].time) if candles else 0)
     for i in range(n):
         if i + 1 < min_bars:
-            out.append(_empty_state(int(candles[i].time)))
+            last_state = _empty_state(int(candles[i].time))
+            out.append(last_state)
             period_history.append(None)
             continue
-        start = max(0, i + 1 - p.window)
-        window = candles[start : i + 1]
-        out.append(_state_at_window(window, params=p, period_history=period_history))
+        if ((i - (min_bars - 1)) % step == 0) or i == n - 1:
+            start = max(0, i + 1 - p.window)
+            window = candles[start : i + 1]
+            last_state = _state_at_window(window, params=p, period_history=period_history)
+        else:
+            period_history.append(period_history[-1] if period_history else None)
+        out.append(last_state)
     return out
 
 

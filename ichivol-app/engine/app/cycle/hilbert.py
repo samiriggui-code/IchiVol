@@ -5,9 +5,10 @@ locks); otherwise ``None`` so consensus can rely on FFT/ACF.
 
 Phase: single-bin OLS / Goertzel on the **last ~2 periods** of detrended
 log-price (not the full window — full-window OLS amplifies period error
-into the last bar under noise; Claude R1). Time origin at the last bar.
-``phase_confidence`` is the OLS R² on that short fit; below
-``PHASE_CONFIDENCE_MIN`` phase fields are cleared.
+into the last bar under noise; Claude R1). Model ``x ≈ c + a·cos + b·sin``
+(P2 — constant term). Time origin at the last bar. ``phase_confidence`` is
+the OLS R² on that short fit; below ``PHASE_CONFIDENCE_MIN`` phase fields
+are cleared.
 
 ``trend_mode`` always False — TREND lives in ``app.cycle.trend``.
 """
@@ -120,9 +121,10 @@ def _goertzel_phase_short(
 ) -> tuple[float | None, float | None, float | None, float]:
     """OLS on last ``n_periods`` cycles → (phase01, I, Q, R²).
 
-    Fitting the full window lets a small period hint error wind up into a
-    large phase bias at the last bar; restricting to ~2P keeps the bias
-    bounded (Claude R1).
+    Model: ``x ≈ c + a·cos(ωt) + b·sin(ωt)`` (P2 — constant term so a linear
+    trend residual / DC offset does not inflate R² or bias phase). Time origin
+    at the last bar. Fitting the full window lets a small period hint error
+    wind up into a large phase bias; restricting to ~2P keeps the bias bounded.
     """
     n = len(series)
     if period < 4 or n < int(period) + 4:
@@ -131,9 +133,13 @@ def _goertzel_phase_short(
     fit_len = min(fit_len, n)
     start = n - fit_len
     omega = 2.0 * math.pi / period
-    cc = ss = cs = 0.0
-    yc = ys = 0.0
-    ys_vals: list[tuple[float, float, float]] = []  # x, cos, sin
+
+    # Accumulate normal equations for [c, a, b].
+    n_obs = 0.0
+    sc = ss = 0.0  # Σ cos, Σ sin
+    scc = sss = scs = 0.0  # Σ cos², Σ sin², Σ cos·sin
+    sx = sxc = sxs = 0.0  # Σ x, Σ x·cos, Σ x·sin
+    samples: list[tuple[float, float, float]] = []  # x, cos, sin
     for i in range(start, n):
         x = series[i]
         if not math.isfinite(x):
@@ -141,25 +147,52 @@ def _goertzel_phase_short(
         t = i - (n - 1)  # last bar = 0
         c = math.cos(omega * t)
         s = math.sin(omega * t)
-        yc += x * c
-        ys += x * s
-        cc += c * c
-        ss += s * s
-        cs += c * s
-        ys_vals.append((x, c, s))
-    if len(ys_vals) < 8:
+        n_obs += 1.0
+        sc += c
+        ss += s
+        scc += c * c
+        sss += s * s
+        scs += c * s
+        sx += x
+        sxc += x * c
+        sxs += x * s
+        samples.append((x, c, s))
+    if len(samples) < 8:
         return None, None, None, 0.0
-    det = cc * ss - cs * cs
+
+    # Solve 3×3: M · [c, a, b]^T = [sx, sxc, sxs]^T via Cramer's / cofactors.
+    # M = [[n, sc, ss], [sc, scc, scs], [ss, scs, sss]]
+    det = (
+        n_obs * (scc * sss - scs * scs)
+        - sc * (sc * sss - scs * ss)
+        + ss * (sc * scs - scc * ss)
+    )
     if abs(det) < 1e-18:
         return None, None, None, 0.0
-    a = (yc * ss - ys * cs) / det
-    b = (ys * cc - yc * cs) / det
+    det_c = (
+        sx * (scc * sss - scs * scs)
+        - sc * (sxc * sss - scs * sxs)
+        + ss * (sxc * scs - scc * sxs)
+    )
+    det_a = (
+        n_obs * (sxc * sss - scs * sxs)
+        - sx * (sc * sss - scs * ss)
+        + ss * (sc * sxs - sxc * ss)
+    )
+    det_b = (
+        n_obs * (scc * sxs - sxc * scs)
+        - sc * (sc * sxs - sxc * ss)
+        + sx * (sc * scs - scc * ss)
+    )
+    const = det_c / det
+    a = det_a / det
+    b = det_b / det
     if abs(a) < 1e-15 and abs(b) < 1e-15:
         return None, None, None, 0.0
 
-    mean_x = sum(x for x, _, _ in ys_vals) / len(ys_vals)
-    ss_tot = sum((x - mean_x) ** 2 for x, _, _ in ys_vals)
-    ss_res = sum((x - (a * c + b * s)) ** 2 for x, c, s in ys_vals)
+    mean_x = sx / n_obs
+    ss_tot = sum((x - mean_x) ** 2 for x, _, _ in samples)
+    ss_res = sum((x - (const + a * c + b * s)) ** 2 for x, c, s in samples)
     if ss_tot <= 1e-18:
         r2 = 0.0
     else:

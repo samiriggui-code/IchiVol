@@ -316,6 +316,8 @@ TOOLS: dict[str, ToolSpec] = {
                 "limit": "int, défaut 500",
                 "window": "int, défaut 96",
                 "horizon": "int, défaut 8",
+                "null_draws": "int, défaut 5, bornes [1, 50]",
+                "stride": "int, optionnel (défaut = horizon)",
             },
             cmd_run_cycle_study,
         ),
