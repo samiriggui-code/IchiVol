@@ -310,8 +310,8 @@ export interface ChartIntelligenceQuery {
 }
 
 /**
- * Endpoint cible (NON EXISTANT à ce jour) — même conventions que getChartObjects :
- * cookie de session, proxy Node /api/engine/*, erreurs `detail`.
+ * Endpoint Python GET /api/engine/chart-intelligence/{symbol}
+ * — cookie de session, proxy Node /api/engine/*, erreurs `detail`.
  */
 export async function getChartIntelligence(q: ChartIntelligenceQuery): Promise<ChartIntelligenceResponse> {
   const params = new URLSearchParams({ timeframe: q.timeframe, limit: String(q.limit ?? 300) })

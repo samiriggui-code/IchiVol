@@ -20,6 +20,8 @@ export type ChartObjectLayer =
   | 'fibonacci'
   | 'fvg'
   | 'breaks'
+  | 'liquidity'
+  | 'confluence'
   | 'claude'
   | 'user_trades'
   | 'backtest'

@@ -47,6 +47,8 @@ class ChartObjectLayer(str, Enum):
     FIBONACCI = "fibonacci"
     FVG = "fvg"
     BREAKS = "breaks"
+    LIQUIDITY = "liquidity"
+    CONFLUENCE = "confluence"
     CLAUDE = "claude"
     USER_TRADES = "user_trades"
     BACKTEST = "backtest"

@@ -29,7 +29,7 @@ interface Props {
   chartHeight?: number
 }
 
-export function ChartIntelligencePanel({ symbol, timeframe, source = 'mock', chartHeight = 540 }: Props) {
+export function ChartIntelligencePanel({ symbol, timeframe, source = 'api', chartHeight = 540 }: Props) {
   const ci = useChartIntelligence({ symbol, timeframe, source })
   const res = ci.response
 
