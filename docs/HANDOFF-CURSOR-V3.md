@@ -1,21 +1,24 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
-## 2026-09-26 — GEL VP0 · AW1 · AG0 MERGÉS · filtre entry_source · VP1 next
+## 2026-09-26 — GEL VP0 · AW1 · AG0 · filtre MERGÉS · VP1 scaffold (Claude pause)
 
-### Merges (OK utilisateur — Claude pause jusqu’à 17h30)
+### Merges (OK utilisateur)
 
-| PR | Tip squash | Contenu |
-|----|------------|---------|
-| **#140** VP0 | `34991b4` | VALIDATION-PROTOCOL + AW0 — **GEL** |
-| **#143** AW1 | `7723e53` | Pourquoi? / `explain_chart_object` |
-| **#144** AG0 | `c3d9a3c` | Hygiène agent (RO tools, closed-only, evidence entry, caps) |
-| **#145** filtre | (ce PR) | `/evidence/outcomes` exclut rows sans `entry_source=first_closed_open` |
+| PR | Tip | Contenu |
+|----|-----|---------|
+| #140 VP0 | `34991b4` | **GEL** VALIDATION-PROTOCOL + AW0 |
+| #143 AW1 | `7723e53` | Pourquoi? / explain_chart_object |
+| #144 AG0 | `c3d9a3c` | Hygiène agent |
+| #145 filtre | `7741c92` | outcomes exclut pré-AG0 sans entry_source |
 
-### Suite
+### VP1 (en cours) — `cursor/vp1-data-manifest-a2fe`
 
-**VP1** — download Univers VP (BTC/ETH/SOL spot + 1d + perp OI/funding) ; manifeste sha256 ; loader figé. Pas de run Lab avant manifeste.
+- Package `ichivol-app/engine/vp1/` : download Vision (`data.binance.vision`) + CHECKSUM sha256 + manifest + frozen loader + `build-spot`.
+- Smoke : BTCUSDT 1h 2020-09 zip OK (checksum match) → series 720 bars.
+- Full `download-spot` / `download-funding` / `download-oi` à lancer ; données sous `vp1/data/` (gitignored).
+- Pas de run Lab tant que manifeste spot (+ funding) n’est pas figé.
 
-Claude review au retour (17h30+).
+Claude review au retour (≥17h30).
 
 ---
 
