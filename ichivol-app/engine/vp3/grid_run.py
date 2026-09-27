@@ -16,6 +16,7 @@ QUESTIONS = ("A", "B", "H")
 def main() -> int:
     out_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/tmp/vp3_grid_results.jsonl")
     n_boot = int(sys.argv[2]) if len(sys.argv) > 2 else 10_000
+    out_path.write_text("", encoding="utf-8")  # truncate — avoid append duplicates on relaunch
     results: list[dict] = []
     for symbol in SYMBOLS:
         for interval in INTERVALS:

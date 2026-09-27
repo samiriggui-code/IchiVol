@@ -36,6 +36,27 @@ SOLUSDT 4h 0c75aed211b7cfcd851bc2f00d09dc803e1001779683f79a5c0119eea4e623df
 SOLUSDT 1d 84c36bf4756517d57bf381757753fa1a111f6f7459399cf64bb0ae368a8c7096
 ```
 
+### Note — 19 barres 1h manquantes (Vision)
+
+Les **mêmes 10 plages** (19 barres) manquent sur **BTCUSDT, ETHUSDT et SOLUSDT** 1h (timestamps identiques) :
+
+| from (UTC) | to (UTC) | missing |
+|---|---|---:|
+| 2020-11-30 06:00 | 2020-11-30 07:00 | 1 |
+| 2020-12-21 15:00 | 2020-12-21 18:00 | 3 |
+| 2020-12-25 02:00 | 2020-12-25 03:00 | 1 |
+| 2021-02-11 04:00 | 2021-02-11 05:00 | 1 |
+| 2021-03-06 02:00 | 2021-03-06 03:00 | 1 |
+| 2021-04-20 02:00 | 2021-04-20 04:00 | 2 |
+| 2021-04-25 05:00 | 2021-04-25 08:00 | 3 |
+| 2021-08-13 02:00 | 2021-08-13 06:00 | 4 |
+| 2021-09-29 07:00 | 2021-09-29 09:00 | 2 |
+| 2023-03-24 13:00 | 2023-03-24 14:00 | 1 |
+
+**Time-stop vs trous :** le décompte S1 est en **temps réel** `(t − entry_time) // bar_seconds` (VP2-R1). Un trade qui traverse un trou atteint donc le seuil time-stop avec **moins de 48 barres réellement présentes** dans la série. Documenté seulement — **pas de changement de règle** dans cette PR.
+
+---
+
 ## BTCUSDT · 1h
 
 *(v3 — remplace la v2 post-VP-FIX1 ; time-stop VP2-R1)*
@@ -101,8 +122,12 @@ SOLUSDT 1d 84c36bf4756517d57bf381757753fa1a111f6f7459399cf64bb0ae368a8c7096
 
 - Aucun `bi_beats_bj=true` sur la grille (confirmé).
 - B0 reste difficile à battre en equity sur plusieurs couples.
-- Quand Δ mean > 0 (souvent B vs B1), DSR(Bi) reste &lt; 0.95 sauf cas limites à re-vérifier.
-- BTCUSDT 4h H : DSR(B5) peut être ≥ 0.95 localement — voir tableau ; claim EDGE toujours bloqué (N T10b non figé, adverse non joué).
+- **Cas DSR_i ≥ 0.95** (liste exhaustive sur la grille) :
+  - BTCUSDT 4h · H (B5) · DSR_i = **0.9503**
+  - SOLUSDT 4h · B (B2) · DSR_i = **0.955**
+- DSR calculés avec **N trials = 1** → **surévalués** ; **non interprétables** avant gel N T10b.
+- **4h :** N trades **14–26** → **puissance faible**, aucune conclusion.
+- Claim EDGE toujours bloqué (N T10b non figé, adverse non joué, Q J hors scope).
 
 ## Rejouer
 

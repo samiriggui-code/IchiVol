@@ -134,6 +134,7 @@ def test_time_stop_vp2_r1_forty_eight_bars():
     assert t.exit_reason == "time_stop"
     assert t.exit_time == t.entry_time + (n - 1) * H
 
+
 def test_full_cash_sizes_near_initial():
     rows = [(100, 100, 100, 100, "BUY", 2.0), (100, 100, 100, 100, "BUY", 2.0), (100, 100, 96, 97, "WATCH", 2.0)] + flat(
         3, 97
