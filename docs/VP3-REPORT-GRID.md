@@ -8,6 +8,10 @@
 
 > **Hors scope :** Q J (B7), B3/B4/B6, retuning. Artefact JSON : [`docs/vp3-artifacts/nt1_results.json`](./vp3-artifacts/nt1_results.json).
 
+### Conclusion
+
+**0 EDGE / 36** cases (18 base + 18 adverse). SR*_ann = **0.897** (base) / **1.249** (adverse). Meilleur DSR_i = **0.49** (B2 · SOLUSDT 4h · 26 trades). B1/B2/B5 = **PAS D'EDGE** ou **NON CONCLUANT** partout (4h : N trades souvent &lt; 40). **Aucune case n’est éligible** à la validation 2025.
+
 ### Contamination pré-gel (rappel)
 
 Lab `research_lab/runs/2026-09-20` a déjà joué **BTCUSDT / ETHUSDT / SOLUSDT** (A=20, B=40). Fenêtres DEV (2025-06-01→2026-01-01) et VAL (2026-01-01→2026-09) marquent validation **2025 S2** et **holdout 2026** comme **« déjà vus »** pour ces symboles. N T10b **inchangé** (autre harnais). La règle HTF B5 VP a été formalisée **après** le Lab (`#148`, 2026-09-26).
@@ -94,16 +98,25 @@ Lab `research_lab/runs/2026-09-20` a déjà joué **BTCUSDT / ETHUSDT / SOLUSDT*
 | B | SOLUSDT | 4h | 3.919e-06 | [-1.059e-04, 1.117e-04] ∋0 | [-134, 513] ∋0 | 0.1901 | 2/7 | 26 | -0.161 | False | NON CONCLUANT | **NON CONCLUANT** |
 | H | SOLUSDT | 4h | -4.555e-05 | [-1.060e-04, 8.873e-06] ∋0 | [-314, 489] ∋0 | 0.03949 | 0/7 | 17 | -0.161 | False | NON CONCLUANT | **NON CONCLUANT** |
 
-## Synthèse verdict_final
+## Synthèse verdict_final (base / adverse)
+
+Format : `verdict_final base / verdict_final adverse`.
 
 | Symbole×TF | A | B | H |
 |---|---|---|---|
-| BTCUSDT 1h | PAS D'EDGE | PAS D'EDGE | NON CONCLUANT |
-| BTCUSDT 4h | NON CONCLUANT | NON CONCLUANT | NON CONCLUANT |
-| ETHUSDT 1h | PAS D'EDGE | PAS D'EDGE | PAS D'EDGE |
-| ETHUSDT 4h | PAS D'EDGE | NON CONCLUANT | NON CONCLUANT |
-| SOLUSDT 1h | PAS D'EDGE | PAS D'EDGE | PAS D'EDGE |
-| SOLUSDT 4h | PAS D'EDGE | NON CONCLUANT | NON CONCLUANT |
+| BTCUSDT 1h | PAS D'EDGE / PAS D'EDGE | PAS D'EDGE / PAS D'EDGE | **NON CONCLUANT / PAS D'EDGE** |
+| BTCUSDT 4h | NON CONCLUANT / NON CONCLUANT | NON CONCLUANT / NON CONCLUANT | NON CONCLUANT / NON CONCLUANT |
+| ETHUSDT 1h | PAS D'EDGE / PAS D'EDGE | PAS D'EDGE / PAS D'EDGE | PAS D'EDGE / PAS D'EDGE |
+| ETHUSDT 4h | PAS D'EDGE / PAS D'EDGE | NON CONCLUANT / NON CONCLUANT | NON CONCLUANT / NON CONCLUANT |
+| SOLUSDT 1h | PAS D'EDGE / PAS D'EDGE | PAS D'EDGE / PAS D'EDGE | **PAS D'EDGE / NON CONCLUANT** |
+| SOLUSDT 4h | PAS D'EDGE / PAS D'EDGE | NON CONCLUANT / NON CONCLUANT | NON CONCLUANT / NON CONCLUANT |
+
+**Cases qui diffèrent base ↔ adverse (2) :**
+
+| Case | base | adverse |
+|---|---|---|
+| BTCUSDT 1h · H | NON CONCLUANT | PAS D'EDGE |
+| SOLUSDT 1h · H | PAS D'EDGE | NON CONCLUANT |
 
 ## Séries VP1 (sha256)
 
