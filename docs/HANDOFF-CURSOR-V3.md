@@ -1,5 +1,33 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-27 — VP-J1 étape 1 — N=36 proposé, STOP
+
+**Branche :** `cursor/vp-j1-a2fe`  
+**Base main :** `2a585f8` (#154 VP-NT1 **VALIDÉ** + squash-mergé)  
+**PR draft :** à lier au push — **aucun run** / **aucun merge** avant validation.
+
+### Livré (étape 1 seulement)
+
+| Item | Contenu |
+|------|---------|
+| Ledger | +12 hyps B6/B7 × BTC/ETH/SOL × 1h/4h → **N proposé = 36** |
+| Gel B6 | ATR dead=**0.15** · extreme=**0.90** · `LiveScreenerSettings` / `AtrParams` @ main |
+| Gel B7 | `strategy_version=ichivol_pipeline_v1` · blob `pipeline.py` `9403d9f4…` |
+| Déf. **J** | Bj = max DSR_i parmi B0–B6 (base, N=36) ; égalité → plus simple B0&lt;…&lt;B6 ; même Bj en adverse |
+| Audit §2 | B6 : **pas de filtre ADX** (écart) ; B7 warm-up sans `WARMUP_BARS` (écart mineur) ; sorties §6 OK — **aucune correction** |
+| HANDOFF-LOCAL | tip main **`2a585f8`** |
+
+### STOP
+
+Attendre validation Claude + utilisateur de **N=36**, de la **définition de J**, et du **point c** (écarts).  
+**Étape 2 non commencée.**
+
+### Hors scope
+
+B3/B4/B8 · changement params/règles · val 2025 / holdout · features CI/T-CYCLE.
+
+---
+
 ## 2026-09-27 — VP-NT1 étape 2 DONE
 
 **Branche :** `cursor/vp-nt1-a2fe` · **PR draft :** [#154](https://github.com/samiriggui-code/IchiVol/pull/154)  

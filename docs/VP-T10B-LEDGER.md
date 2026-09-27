@@ -116,7 +116,7 @@ N proposé :                      24
 | D4 | Compter **questions** (18) au lieu de B* ? | **Non** — §10 = B*×symbole×TF | N=18 | — |
 | D5 | Tests unitaires `tests/vp3` | **Non** — pas données VP1 | 0 | — |
 | D6 | Runs Lab pré-VP (`research_lab/runs/2026-09-20`) | **N inchangé** (autre harnais, pré-gel) — voir section Contamination | si on comptait chaque variante Lab → N≫24 | **oui** |
-| D7 | B6 codé mais jamais lancé = +1 « latent » ? | **Non** — seuls essais **joués** | 0 | — |
+| D7 | B6/B7 avant 1ʳᵉ run VP-J1 | **Pas encore joués** — +12 prévus à l’étape 2 si N=36 validé | N=24 tant que non joués | — |
 | D8 | TF **1d** (HTF B5) = hyp signal ? | **Non** | 0 | — |
 
 ---
@@ -160,12 +160,105 @@ Conclusion params : les **nombres** 20 / 1.5 existaient déjà dans l’indicate
 
 ### Conclusion (D6) — N inchangé
 
-- Lab = **autre harnais**, **pré-gel VP0** → **ne compte pas** dans N T10b (**N reste 24**).
+- Lab = **autre harnais**, **pré-gel VP0** → **ne compte pas** dans N T10b (**N reste 24** jusqu’à VP-J1).
 - Pour **BTCUSDT, ETHUSDT, SOLUSDT** (présents dans A et B) : fenêtres **validation 2025 S2** et **holdout 2026** sont marquées **« déjà vus »** (contamination d’information, pas d’incrément N). Doc seulement — aucun retuning.
 
 ---
 
-## Hors scope ledger (étape 2 = autre job)
+## VP-J1 — extension ledger (étape 1, **pas encore joué**)
 
-- Rerun grille `n_trials=24` + adverse (VP-NT1 étape 2)  
-- Q J / B7 · changement params · features CI / T-CYCLE  
+**Base main :** `2a585f8` (#154 VP-NT1 mergé)  
+**N actuel gelé :** 24  
+**N proposé après J1 étape 2 (si validé) :** **36** = 24 + 12
+
+### 12 hypothèses à ajouter (+1 chacune au 1ʳᵉ run)
+
+Params :
+
+| B* | Définition | Params figés pour le run |
+|----|------------|--------------------------|
+| **B6** | B5 + régime ATR ≠ dead/extreme | seuils ci-dessous (LiveScreenerSettings / AtrParams) |
+| **B7** | pipeline live Option B → BUY | `strategy_version` + blob SHA ci-dessous |
+
+| # | hypothesis_id | B* | symbole | TF | coûts | statut | compte prévu |
+|---|----------------|----|---------|----|-------|--------|--------------|
+| 25 | `B6-BTCUSDT-1h-base` | B6 | BTCUSDT | 1h | base | **à jouer** (VP-J1 étape 2) | **+1** |
+| 26 | `B6-BTCUSDT-4h-base` | B6 | BTCUSDT | 4h | base | à jouer | **+1** |
+| 27 | `B6-ETHUSDT-1h-base` | B6 | ETHUSDT | 1h | base | à jouer | **+1** |
+| 28 | `B6-ETHUSDT-4h-base` | B6 | ETHUSDT | 4h | base | à jouer | **+1** |
+| 29 | `B6-SOLUSDT-1h-base` | B6 | SOLUSDT | 1h | base | à jouer | **+1** |
+| 30 | `B6-SOLUSDT-4h-base` | B6 | SOLUSDT | 4h | base | à jouer | **+1** |
+| 31 | `B7-BTCUSDT-1h-base` | B7 | BTCUSDT | 1h | base | à jouer | **+1** |
+| 32 | `B7-BTCUSDT-4h-base` | B7 | BTCUSDT | 4h | base | à jouer | **+1** |
+| 33 | `B7-ETHUSDT-1h-base` | B7 | ETHUSDT | 1h | base | à jouer | **+1** |
+| 34 | `B7-ETHUSDT-4h-base` | B7 | ETHUSDT | 4h | base | à jouer | **+1** |
+| 35 | `B7-SOLUSDT-1h-base` | B7 | SOLUSDT | 1h | base | à jouer | **+1** |
+| 36 | `B7-SOLUSDT-4h-base` | B7 | SOLUSDT | 4h | base | à jouer | **+1** |
+
+```
+N_proposé = 24 (gelé NT1) + 12 (B6/B7 × 3 × 2) = 36
+Adverse sur les mêmes hyps = pas +1
+```
+
+**Proposition VP-J1 : geler `N = 36`** avant tout run étape 2 (sous réserve validation Claude + utilisateur).
+
+### Gel B6 — seuils ATR (LiveScreenerSettings)
+
+Lu dans `LiveScreenerSettings.production_defaults()` / `AtrParams` (égaux numériquement) :
+
+| Champ | Valeur | Fichier | Commit / blob @ `main` `2a585f8` |
+|-------|--------|---------|----------------------------------|
+| `atr_dead_percentile` / `dead_percentile` | **0.15** | `app/strategy_lab/adn_ichivol.py` (`DEFAULT_LIVE_ATR_DEAD`) et `app/indicators/atr.py` (`AtrParams`) | ADN blob `4c9b608e9b6e…` · atr blob `e019b7774ba6…` · tip `bbcb5f4` (ADN) |
+| `atr_extreme_percentile` / `extreme_percentile` | **0.90** | idem | idem |
+| `atr_stop_multiplier` | **1.5** | idem | (sizing hint ; B6 filtre régime, pas le stop) |
+| `period` / `regime_lookback` | 14 / 100 | `app/indicators/atr.py` | atr blob `e019b7774ba6…` |
+
+`vp3/entries.py` B6 appelle `compute_atr(candles)` **sans** injecter `LiveScreenerSettings.atr_params()` — les défauts `AtrParams` **coïncident** avec `DEFAULT_LIVE_*` (0.15 / 0.90). Documenté ; pas de correction dans cette étape.
+
+### Gel B7 — pipeline live Option B
+
+| Champ | Valeur figée | Source @ `main` `2a585f8` |
+|-------|--------------|---------------------------|
+| `strategy_version` | **`ichivol_pipeline_v1`** | `app/decision/pipeline.py` `STRATEGY_VERSION` |
+| Blob SHA `pipeline.py` | `9403d9f4d48ee4e054f722e6581d5f8e0883b2db` | `git rev-parse HEAD:ichivol-app/engine/app/decision/pipeline.py` |
+| Entrée B7 | `build_pipeline(...)` → `p.decision == "BUY"` sur barre fermée | `vp3/entries.py` blob `d16adb024fb3…` |
+| Sortie B7 | `strategy_rules("B7")` → `common_rules` (§6) — **pas** de sortie stage | `vp3/rules.py` |
+
+---
+
+## Définition de J (écrite **avant** tout run VP-J1)
+
+**Question J :** B7 vs **Bj**, où Bj = « meilleur de B0–B6 » **par case symbole×TF**.
+
+Règle de sélection de Bj (profil **base**, **N=36**) :
+
+1. Parmi `{B0, B1, B2, B5, B6}` sur ce symbole×TF, prendre la stratégie avec le **DSR_i le plus élevé** (DSR recalculé à N=36, profil base).
+2. En cas d’**égalité** de DSR_i : la plus **simple** — ordre `B0 < B1 < B2 < B5 < B6`.
+3. Le **même Bj** est réutilisé en profil **adverse** (pas de re-sélection adverse).
+4. B7 n’entre **pas** dans le pool Bj.
+5. Comparaison J : mêmes métriques §9 / bi_beats que A/B/H (Δmean IC, DSR(B7) ≥ 0.95, etc.).
+
+Cette définition est **figée avant run** ; aucun regard validation 2025 / holdout pour choisir Bj.
+
+---
+
+## Audit `vp3/entries.py` B6 / B7 vs §2 (doc only, **aucune correction**)
+
+| Point | §2 / contrat | Code actuel | Écart ? |
+|-------|--------------|-------------|---------|
+| B6 = B5 + régime ≠ dead/extreme | Oui | B5 filters + `atr.regime not in (DEAD, EXTREME)` | **Partiel** — voir ADX |
+| B6 seuils ATR live | LiveScreenerSettings | `compute_atr()` défauts = 0.15/0.90 (= live defaults) | **Non** (numériquement aligné) ; wiring explicite absent |
+| B6 « ATR/**ADX** » | libellé §2 | **ADX non filtré** dans B6 (seul ATR régime) ; le pipeline live échoue aussi si ADX absent/developing | **Oui** — B6 plus permissif que le régime live complet |
+| B7 = BUY pipeline barre fermée | Oui | `build_pipeline` → `decision == "BUY"` | **Non** |
+| B7 sortie §6 uniquement | Oui | `common_rules` / pas de sortie stage | **Non** |
+| B7 warm-up | implicite | boucle B7 **sans** `WARMUP_BARS` (contrairement à B1–B6) | **Oui** (mineur) — documenté |
+| B7 HTF | pipeline MTF | `_align_mtf_directions` (≠ `align_htf_directions` de B5/B6) | **INFO** déjà VP3-R6 (conservateur) — pas un bug §2 |
+
+**Pas de correction dans VP-J1 étape 1.** Claude + utilisateur tranchent si les écarts ADX / warm-up bloquent avant étape 2.
+
+---
+
+## Hors scope
+
+- VP-J1 **étape 2** (runs) avant validation N=36 + déf. J + point c  
+- B3 / B4 / B8 · changement params/règles · features CI / T-CYCLE · décisions sur val 2025 / holdout  
