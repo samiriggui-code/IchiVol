@@ -1,5 +1,58 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 — JOB CI-LIQ-CONF : calques Liquidity + Confluence (gel CI levé par Samir pour ces 2 calques)
+
+**Constat vérifié :** `ChartObjectLayer.LIQUIDITY` / `CONFLUENCE` existent ([`types.py`](../ichivol-app/engine/app/chart_objects/types.py)) et l'UI est prête (`LiquidityDrawing`, `ConfluenceZone`, infobulles, statut `swept`), mais **aucun producteur moteur** : seuls `from_structure / from_breaks / from_fvg / from_fibonacci` sont branchés dans `chart_intelligence/service.py`. D'où un compteur à 0. Le bloc « CONFLUENCE » de l'AI Analyst est le texte des étapes du pipeline, c'est autre chose.
+
+**Décision Samir :** construire les deux, « on verra ce que ça change ». **Observe-only** : aucun effet sur le pipeline, le paper, les gates ou la confidence (`used_by_decision=False`), affichés `NON_VALIDE` dans « Pourquoi ? ». Le **gel reste en vigueur** pour toute autre feature CI.
+
+### A. Liquidity (BSL / SSL) — paramètres figés a priori
+
+- Indicateur `app/indicators/liquidity.py`, **enregistré dans `REGISTRY`** (règle T1e : pas d'appel direct hors `app/indicators/`).
+- Pivots = swings **confirmés** existants (même détecteur que la structure) ; un pivot n'est connu qu'à son `confirmed_at`, **jamais avant**.
+- **Pool** = ≥ 2 swing highs (BSL) ou swing lows (SSL) dont les prix diffèrent de **≤ 0.1 × ATR(14)** (ATR pris à la confirmation du 2ᵉ pivot), dans les **100 dernières barres**. Niveau = max des highs (BSL) / min des lows (SSL). `known_at` = confirmation du 2ᵉ pivot.
+- **Statut** (causal, barres closes seulement) :
+  - `open` ;
+  - `swept` si une barre ultérieure dépasse le niveau en mèche **et clôture de l'autre côté** ;
+  - `broken` si elle **clôture au-delà**.
+- Émis : pools `open`, plus les `swept` / `broken` des **20 dernières barres** ; au plus **6 par côté**, les plus proches du prix.
+- ChartObject : segment horizontal (2 points : 1ᵉʳ pivot → `as_of`, ou barre de sweep), `layer=liquidity`, `side` = `resistance` (BSL) / `support` (SSL), `label` BSL/SSL.
+- `origin` : `kind=liquidity`, `producer=liquidity_engine`, `status`, `known_at`, `touch_count`, `pivot_times`, `tolerance_atr`, `level`, `lineage_key`.
+
+### B. Confluence — dérivée **uniquement** des ChartObjects moteur du même `as_of` (aucun nouveau calcul de marché)
+
+- Bandes candidates :
+  - FVG actifs (bas/haut) ;
+  - niveaux Fib 0.5 / 0.618 / 0.786 (± 0.1 × ATR) ;
+  - zones S/R de structure ;
+  - niveaux Liquidity `open` (± 0.1 × ATR) ;
+  - niveaux cassés BOS/CHOCH récents (± 0.1 × ATR).
+- Regroupement : bandes qui se chevauchent ou sont à ≤ **0.25 × ATR** → une zone = union des bandes.
+- Émise seulement si **≥ 2 familles distinctes** (fvg, fibonacci, structure, liquidity, breaks). Au plus **5 zones**, les plus proches du prix.
+- `confidence` = familles distinctes / 5. `origin.components` = `[{family, label, object_id, satisfied: true}]`, `score_is_mock=false`, `reason` déterministe (ex. « FVG haussier + Fib 0.618 + zone S/R »), `kind=confluence`, `producer=confluence_engine`, `lineage_key`, `known_at` = max des `known_at` des composants.
+- ChartObject `RECTANGLE`, `layer=confluence`.
+
+### C. Branchement et UI
+
+- Brancher les deux producteurs dans `_collect_engine_objects` (Liquidity **avant** Confluence) ; ajouter les sources à `parse_sources` ; respecter le **replay walk-forward** (CI-R1) et le `lineage_key` (CI-R8).
+- AW1 `explain.py` : entrées `_ENGINES` pour `liquidity` et `confluence` (pipeline : « Non lu par le pipeline de décision »).
+- UI : sous-titre du calque Confluence « Zones multi-calculs (score mock) » → « Zones multi-signaux » ; aucun autre changement de rendu.
+
+### D. Tests exigés
+
+- Troncature / anti-lookahead : les objets à `as_of = T` sont identiques, que les données s'arrêtent à T ou continuent après.
+- Pool : exactement à la tolérance vs juste au-delà.
+- Sweep vs broken.
+- Confluence : 1 famille → rien ; 2 familles qui se chevauchent → 1 zone ; ids et lineage déterministes.
+- Goldens OpenAPI / route_order inchangés, sauf ajout volontaire documenté. `pytest` Postgres + `npx tsc -b`.
+- **Preuve** : BTCUSDT 1h, nombre d'objets Liquidity / Confluence dans la PR + 1 capture **réelle** de l'app (pas de page fabriquée, pas de route publique).
+
+### Ordre dans la file Cursor
+
+Après : #156 merge → #158 merge → corrections #157 (STOP). Branche `cursor/ci-liq-conf-a2fe`, PR draft → STOP → revue Claude.
+
+---
+
 ## 2026-09-27 ~23h — VERDICTS Claude #156 · #157 · #158
 
 ### #156 UI-VP-BADGE (après `5e8cc89`) — **À CORRIGER (1 point)** puis merge prioritaire
