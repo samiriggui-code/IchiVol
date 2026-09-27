@@ -1,5 +1,74 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-27 — VP-GRID1 réserves Claude traitées
+
+**Branche :** `cursor/vp-grid1-a2fe` · **PR draft :** [#153](https://github.com/samiriggui-code/IchiVol/pull/153)  
+**Commit fixes :** `2d34ffb`  
+**STOP :** pas de merge sans OK final Claude. **VP-NT1 non commencé.**
+
+### Réserves corrigées
+
+| # | Fix |
+|---|-----|
+| 1 | `VP3-REPORT-GRID.md` Lecture courte : DSR_i ≥ 0.95 exhaustif (BTC 4h H = 0.9503, SOL 4h B = 0.955) + ligne N trials=1 surévalués + ligne 4h N=14–26 puissance faible |
+| 2 | Note 19 barres 1h manquantes : 10 plages identiques BTC/ETH/SOL + time-stop temps réel → moins de 48 barres réelles si trou (doc only) |
+| 3 | `vp3/grid_run.py` : `out_path.write_text("")` au démarrage |
+| 4 | `test_vp2_harness.py` : 2 lignes vides avant `test_full_cash_sizes_near_initial` |
+| 5 | Postgres : `test_routes` (daily_halt + no_atr) + `test_manual_buy` — **passent** sur `main@848f194` **et** sur la branche → **pas de régression** |
+
+### Postgres — sortie collée
+
+Commande (identique main / branche) :
+
+```bash
+cd ichivol-app/engine
+.venv/bin/pytest -q \
+  tests/api/test_routes.py::test_open_paper_route_uses_disposable_even_if_baseline_halted \
+  tests/api/test_routes.py::test_open_paper_position_reports_no_atr_stop_honestly \
+  tests/paper/test_manual_buy.py \
+  --tb=line
+```
+
+**main @ `848f194` :**
+
+```
+.....                                                                    [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/fastapi/testclient.py:1
+  /workspace/ichivol-app/engine/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+.venv/lib/python3.12/site-packages/starlette/testclient.py:53
+  /workspace/ichivol-app/engine/.venv/lib/python3.12/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+```
+
+**branche `cursor/vp-grid1-a2fe` :**
+
+```
+.....                                                                    [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/fastapi/testclient.py:1
+  /workspace/ichivol-app/engine/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+.venv/lib/python3.12/site-packages/starlette/testclient.py:53
+  /workspace/ichivol-app/engine/.venv/lib/python3.12/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+```
+
+Verdict tests : **5/5 pass** des deux côtés → pas de régression GRID1.
+
+### Hors scope (toujours)
+
+Q J (B7) · gel N T10b · profil adverse · features CI / T-CYCLE. Job suivant **VP-NT1** seulement après merge #153.
+
+---
+
 ## 2026-09-27 — Cursor VP-GRID1 DONE · PR draft · STOP
 
 **Branche :** `cursor/vp-grid1-a2fe` @ `4381ea2`  
