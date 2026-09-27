@@ -199,7 +199,7 @@ export const INTELLIGENCE_LAYER_META: {
   { key: 'fvg', label: 'FVG', subtitle: 'Fair value gaps', color: metaColor('fvg') },
   { key: 'liquidity', label: 'Liquidity', subtitle: 'BSL / SSL (sommets / creux égaux)', color: '#a76c17' },
   { key: 'ichimoku', label: 'Ichimoku', subtitle: 'Tenkan / Kijun / Kumo', color: '#baa37e' },
-  { key: 'confluence', label: 'Confluence', subtitle: 'Zones multi-calculs (score mock)', color: '#1a7df5' },
+  { key: 'confluence', label: 'Confluence', subtitle: 'Overlap calques (score prototype)', color: '#1a7df5' },
 ]
 
 /**

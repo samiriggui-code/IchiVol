@@ -21,8 +21,10 @@ from typing import Any
 from app.agents import ichimoku_agent, rvol_agent
 from app.chart_objects.collect import parse_sources
 from app.chart_objects.from_breaks import breaks_to_chart_objects
+from app.chart_objects.from_confluence import confluence_to_chart_objects
 from app.chart_objects.from_fibonacci import fibonacci_to_chart_objects
 from app.chart_objects.from_fvg import fvg_to_chart_objects
+from app.chart_objects.from_liquidity import liquidity_to_chart_objects
 from app.chart_objects.from_structure import structure_to_chart_objects
 from app.chart_objects.store import list_chart_objects
 from app.chart_objects.types import ChartObjectSource
@@ -143,6 +145,10 @@ def _enrich_object(obj: dict[str, Any], *, known_at: int | None = None) -> dict[
             origin["producer"] = "fvg_engine"
         elif layer == "breaks":
             origin["producer"] = "structure_engine"
+        elif layer == "liquidity":
+            origin["producer"] = "liquidity_engine"
+        elif layer == "confluence":
+            origin["producer"] = "confluence_engine"
         else:
             origin["producer"] = "structure_engine"
     obj = dict(obj)
@@ -255,6 +261,12 @@ def _collect_engine_objects(
     objects.extend(o.to_dict() for o in fvg_to_chart_objects(window, sym, timeframe))
     objects.extend(
         o.to_dict() for o in fibonacci_to_chart_objects(window, sym, timeframe, key_only=True)
+    )
+    objects.extend(o.to_dict() for o in liquidity_to_chart_objects(window, sym, timeframe))
+    # Confluence = overlap des objets déjà produits (score prototype / mock).
+    objects.extend(
+        o.to_dict()
+        for o in confluence_to_chart_objects(window, sym, timeframe, objects)
     )
     return objects
 
