@@ -2,47 +2,51 @@
 
 **LIS CE FICHIER EN PREMIER, avant tout autre fichier du repo.**
 
-**Sync local :** 2026-09-27 · `main` @ **`2a585f8`** (= origin/main · squash #154 VP-NT1).
+**Sync local :** 2026-09-27 soir · `main` @ **`99ae3e4`** (+ ce commit handoff).
 
 ## Contexte
 
-Tu (Claude, en local) supervisues. **Cursor code, tu vérifies**. Canal : [`docs/HANDOFF-CURSOR-V3.md`](docs/HANDOFF-CURSOR-V3.md) — lire **VP-J1 étape 2 DONE** en premier.
+Tu (Claude, en local) supervises. **Cursor code, tu vérifies.** Canal : [`docs/HANDOFF-CURSOR-V3.md`](docs/HANDOFF-CURSOR-V3.md). Lis en premier le bloc **« 2026-09-27 soir — Claude : VP3 CLÔTURÉ »**.
 
-## État au tip `main` `2a585f8`
+## État
 
-### Mergé récemment
+- **VP3 clôturé** : #151→#155 mergés et revus. **0 EDGE / 48.** B0 (buy & hold) fait mieux presque partout ; B7 (pipeline live) ne bat rien. Rapport : [`docs/VP3-REPORT-FINAL.md`](docs/VP3-REPORT-FINAL.md).
+- **Programme VP en PAUSE** (décision de Samir) : on n'ouvre ni la validation 2025 ni le holdout 2026 ; pas de VP4 à VP9.
+- **Paper trading** : inchangé, il continue.
+- **Gels actifs** : Chart Intelligence (features), T-CYCLE (features), VP0 (doc).
 
-| PR | Tip | Contenu |
-|----|-----|---------|
-| #154 VP-NT1 | `2a585f8` | N=24 gelé · DSR barre · grille base+adverse · **0 EDGE / 36** |
-| #153 VP-GRID1 | `b1cd43d` | Grille A/B/H N=1 provisoire + VP2-R1 |
-| #152 / #151 | … | CI tooltips / VP-FIX1 |
+## Prochain job (ordre)
 
-### Job en cours
+1. **Séance de réflexion stratégie Claude + Samir (sans code).** Piste principale : timing de sortie / mise à l'abri (rester investi, sortir en régime baissier ; viser un drawdown bien plus faible que B0 pour un rendement proche). Chaque idée retenue = nouvelle hypothèse T10b (N=37…).
+2. **UI-VP-BADGE** (proposé, en attente de l'OK de Samir) : badge « Signal non validé — VP3 : pas d'edge mesuré » sur les verdicts ACHAT/VENTE. Affichage seulement.
+3. **Avant tout déploiement VPS** : traiter #142 (CSS mobile qui tourne en prod mais n'est pas mergé).
 
-**VP-J1 étape 2 DONE** — branche `cursor/vp-j1-a2fe`, PR **draft [#155](https://github.com/samiriggui-code/IchiVol/pull/155)** :
+## Méthode (rappel strict)
 
-1. Fixes B6 (ATR+ADX live) + B7 (`WARMUP_BARS`) @ `9a7a019` + tests  
-2. Run N=36 · A/B/H/J · base+adverse · n_boot=10 000  
-3. Rapport [`docs/VP3-REPORT-FINAL.md`](docs/VP3-REPORT-FINAL.md) · artefact [`docs/vp3-artifacts/j1_results.json`](docs/vp3-artifacts/j1_results.json)  
-4. **Résultat :** **0 EDGE / 48** · 0 `bi_beats_bj`  
-5. **STOP** — PR draft, **pas de merge**
+1. Cursor : branche + PR draft + entrée handoff → **STOP**.
+2. Claude : vrai diff + tests Postgres → verdict écrit dans le handoff.
+3. Pas de merge sans verdict Claude (et OK de Samir pour les décisions de fond).
 
-**Interdit** sans OK : merge, B3/B4/B8, retuning, CI/T-CYCLE, val 2025 / holdout.
+## Setup tests
 
-## Méthode
+```bash
+cd ichivol-app/engine
+.venv/Scripts/python -m pytest tests -q -p no:cacheprovider --tb=short
+cd ../server && npm test
+```
 
-1. Cursor : branche + PR draft + handoff → **STOP**.  
-2. Claude : vrai diff + verdict.  
-3. Pas de merge sans OK.
+Échecs connus sous Windows local : `test_p1_study_budget_limit500_under_20s` (budget CPU dépassé sur cette machine).
 
 ## Docs clés
 
 | Fichier | Rôle |
 |---------|------|
-| [`docs/HANDOFF-CURSOR-V3.md`](docs/HANDOFF-CURSOR-V3.md) | Journal |
-| [`docs/VP-T10B-LEDGER.md`](docs/VP-T10B-LEDGER.md) | N=36 gelé · B6/B7 joués · déf. J |
-| [`docs/VP3-REPORT-FINAL.md`](docs/VP3-REPORT-FINAL.md) | Rapport FINAL J1 |
-| [`docs/vp3-artifacts/j1_results.json`](docs/vp3-artifacts/j1_results.json) | Artefact J1 |
-| [`docs/VP3-REPORT-GRID.md`](docs/VP3-REPORT-GRID.md) | Grille v2 NT1 |
-| [`docs/VALIDATION-PROTOCOL.md`](docs/VALIDATION-PROTOCOL.md) | VP0 §2 B6/B7 / §9 / §10 |
+| [`docs/HANDOFF-CURSOR-V3.md`](docs/HANDOFF-CURSOR-V3.md) | Journal Cursor ↔ Claude |
+| [`docs/VP3-REPORT-FINAL.md`](docs/VP3-REPORT-FINAL.md) | Verdict VP3 (0 EDGE / 48) |
+| [`docs/VP-T10B-LEDGER.md`](docs/VP-T10B-LEDGER.md) | Registre des hypothèses, N=36 |
+| [`docs/VALIDATION-PROTOCOL.md`](docs/VALIDATION-PROTOCOL.md) | Protocole VP0 (gelé) |
+| [`docs/CAHIER-DES-CHARGES.md`](docs/CAHIER-DES-CHARGES.md) | CDC + cases à cocher des chantiers |
+
+## Backlog hors file immédiate
+
+T0-MANAGE-d/e/f (prise partielle / pyramiding), promotion de T-CYCLE, T8 brokers, réactivation des shorts (5 conditions) : **après** la réflexion stratégie.

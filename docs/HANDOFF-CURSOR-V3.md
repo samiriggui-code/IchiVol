@@ -1,5 +1,48 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-27 soir — Claude : VP3 CLÔTURÉ · décisions Samir · programme VP en PAUSE
+
+**Tip :** `main` @ `99ae3e4`. Vérifié après merge #155 : les bornes lo/hi réelles des IC sont affichées ✅ ; les notes §9 (IC∋0 ∧ N≥40 → PAS D'EDGE) et B6 ATR UNKNOWN sont présentes ✅.
+
+### Journée 2026-09-27 (cloud + local)
+
+| PR | Contenu | Revue |
+|----|---------|-------|
+| #151 | VP-FIX1 (Vision µs, DSR, bootstrap stationnaire, WF) | Claude local ✅ |
+| #152 | Infobulles packs CI + fix `rafRef` StrictMode (calques invisibles) | Claude local ✅ + test navigateur |
+| #153 | VP-GRID1 + VP2-R1 time-stop 48 barres | Claude cloud ✅ |
+| #154 | VP-NT1 N=24, DSR barre, base + adverse | Claude cloud ✅ |
+| #155 | VP-J1 N=36, B6/B7, Q J — **rapport FINAL** | Claude local ✅ |
+
+### Lecture du résultat (0 EDGE / 48)
+
+- Sur les plis WF 2021–2024, après coûts, **aucune règle d'entrée B1→B7 ne bat B0 (buy & hold)** de façon significative. Ajouter des filtres n'aide pas : **B7 (pipeline live) fait moins bien que des versions plus simples.**
+- **Limites :**
+  1. La sortie testée est la **sortie commune §6** (stop 1,5 ATR, objectif 2R, time-stop 48 barres), pas la sortie du paper live (changement de direction). La stratégie paper exacte n'a pas été testée telle quelle.
+  2. 2020–2024 est une période très haussière pour la crypto.
+  3. §9 juge le **rendement**, pas la protection contre les baisses (B0 : maxDD jusqu'à −63 % sur un pli).
+
+### Décisions Samir (2026-09-27) — opposables
+
+1. **Programme VP en PAUSE.** On n'ouvre **ni la validation 2025 ni le holdout 2026** (le holdout ne sert qu'une fois ; pas de gaspillage sur des stratégies sans edge). Pas de VP4 à VP9, pas de B3/B4/B8.
+2. **Paper trading inchangé** : il continue (forward test de la vraie stratégie avec ses vraies sorties).
+3. **Prochaine étape : séance de réflexion stratégie (Claude + Samir), sans code.** Piste principale : **timing de sortie / mise à l'abri** plutôt que choix des entrées (rester investi par défaut, sortir en régime baissier ; objectif = presque le rendement de B0 avec une chute nettement plus faible). Chaque idée retenue = nouvelle hypothèse T10b (N passe de 36 à 37…), sans toucher au holdout.
+4. **Pas d'argent réel** sur les signaux IchiVol : la condition « preuve d'edge » du passage broker live n'est **pas** remplie.
+
+### Tâche proposée à Cursor (en attente de l'OK de Samir, NE PAS commencer)
+
+**UI-VP-BADGE** : sur les verdicts ACHAT/VENTE (Décisions, fiches, Opportunités), badge discret « Signal non validé — VP3 : pas d'edge mesuré (0/48) » avec un lien vers `VP3-REPORT-FINAL.md`, dans l'esprit du `NON_VALIDE` d'AW1. Affichage seulement : aucun changement moteur, paper ou gates.
+
+### ⚠️ Rappel déploiement
+
+**#142** (CSS mobile, draft, **non mergé**) tourne en prod sur le VPS (`RELEASE=9ab99fb`). Déployer `main` sans #142 **supprime ces correctifs mobiles en prod**. Avant tout déploiement : reviewer puis merger #142, ou le rebaser.
+
+### Cursor
+
+**Aucun job actif.** Attendre la décision de Samir (badge) et l'issue de la séance stratégie.
+
+---
+
 ## 2026-09-27 — #155 VP-J1 MERGED
 
 **Squash-merge :** [`e2af12b`](https://github.com/samiriggui-code/IchiVol/commit/e2af12b) · PR [#155](https://github.com/samiriggui-code/IchiVol/pull/155)  
