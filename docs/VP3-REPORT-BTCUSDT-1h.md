@@ -1,4 +1,12 @@
-# VP3 — rapports A / B / H (BTCUSDT 1h) — **v2** post VP-FIX1
+# VP3 — rapports A / B / H (BTCUSDT 1h)
+
+> **v3 (VP-GRID1, 2026-09-27)** — time-stop VP2-R1 (entrée = barre 1).  
+> Chiffres à jour : [`VP3-REPORT-GRID.md`](./VP3-REPORT-GRID.md) section **BTCUSDT · 1h**.  
+> Ce fichier conserve l’historique **v1 / v2** ci-dessous.
+
+---
+
+# Historique — **v2** post VP-FIX1
 
 **Tip code :** branche `cursor/vp-fix1-a2fe` @ `80ffc37` (+ ce doc)  
 **Protocole :** `VP0-2026-09-26`  

@@ -1,5 +1,40 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-27 — Cursor VP-GRID1 DONE · PR draft · STOP
+
+**Branche :** `cursor/vp-grid1-a2fe`  
+**PR draft :** (à ouvrir / déjà ouverte) — **aucun merge** sans verdict Claude.
+
+### Livré
+
+| ID | Contenu |
+|----|---------|
+| **VP2-R1** | `sim.py` : `(t−entry)//bar >= n−1` ; tests `exit_time == entry+(n−1)·bar` (+ cas n=48) ; note datée VALIDATION-PROTOCOL §12 |
+| **VP1** | Rebuild ETH/SOL (+ BTC) 1h/4h/1d via `build-spot` + `assert_series_completeness` ; sha256 dans le rapport |
+| **Grille** | A/B/H × BTC/ETH/SOL × 1h/4h · base · n_boot=10 000 → [`VP3-REPORT-GRID.md`](./VP3-REPORT-GRID.md) |
+| **BTC 1h v3** | Remplace v2 : pointeur en tête de [`VP3-REPORT-BTCUSDT-1h.md`](./VP3-REPORT-BTCUSDT-1h.md) |
+| Helper | `python -m vp3.grid_run` |
+| Handoff local | `HANDOFF-LOCAL-CLAUDE.md` sync `848f194` · #151/#152 · VP2-R1 tranché · job GRID1 |
+
+### Résultat grille (synthèse)
+
+**18/18** `bi_beats_bj=false`. Aucun claim EDGE. Détail + sha256 séries dans le rapport GRID.
+
+### Tests
+
+- `tests/vp2` time-stop + `tests/vp1/vp3` : verts (locaux).  
+- `pytest tests` Postgres : 3 échecs **préexistants / flaky DB** (`test_open_flow` equity drift, `test_routes` daily_halt vs no_atr, `test_manual_buy`) — reproduits hors branche sur `main` pour `test_open_flow` ; **hors scope VP-GRID1**.
+
+### Hors scope (respecté)
+
+Q J (B7) · figer N T10b · profil adverse · features CI / T-CYCLE.
+
+### STOP
+
+Revue Claude sur cette PR. Pas de merge autonome.
+
+---
+
 ## 2026-09-26 ~22h45 — DÉCISIONS Claude (délégation explicite de Samir : « démerde-toi »)
 
 ### #152 infobulles — **VALIDÉ + test visuel fait par Claude** → merge
