@@ -77,59 +77,64 @@
 
 | Q | Symbole | TF | Bj | Δmean | IC Δ | IC trades Bi | DSR_i | +plis | N | maxDD | beats | verdict | verdict_final |
 |---|---|---|---|---:|---|---|---:|---:|---:|---:|---|---|---|
-| A | BTCUSDT | 1h | B0 | -7.037e-05 | [—, —] excl.0 | [—, —] excl.0 | 9.629e-05 | 2/7 | 317 | -0.2683 | False | PAS D'EDGE | **PAS D'EDGE** |
-| B | BTCUSDT | 1h | B1 | 1.993e-05 | [—, —] excl.0 | [—, —] ∋0 | 0.02437 | 3/7 | 129 | -0.1323 | False | PAS D'EDGE | **PAS D'EDGE** |
-| H | BTCUSDT | 1h | B2 | 3.614e-06 | [—, —] ∋0 | [—, —] ∋0 | 0.07994 | 3/7 | 99 | -0.1203 | False | NON CONCLUANT | **NON CONCLUANT** |
-| J | BTCUSDT | 1h | B6 | -2.108e-05 | [—, —] excl.0 | [—, —] ∋0 | 1.294e-04 | 2/7 | 205 | -0.1669 | False | PAS D'EDGE | **PAS D'EDGE** |
-| A | BTCUSDT | 4h | B0 | -1.853e-04 | [—, —] ∋0 | [—, —] ∋0 | 0.1071 | 3/7 | 71 | -0.2226 | False | NON CONCLUANT | **NON CONCLUANT** |
-| B | BTCUSDT | 4h | B1 | -8.131e-08 | [—, —] ∋0 | [—, —] ∋0 | 0.2251 | 0/7 | 22 | -0.127 | False | NON CONCLUANT | **NON CONCLUANT** |
-| H | BTCUSDT | 4h | B2 | 3.213e-06 | [—, —] ∋0 | [—, —] ∋0 | 0.4229 | 0/7 | 14 | -0.03434 | False | NON CONCLUANT | **NON CONCLUANT** |
-| J | BTCUSDT | 4h | B5 | -2.474e-05 | [—, —] ∋0 | [—, —] ∋0 | 0.0307 | 4/7 | 67 | -0.1529 | False | NON CONCLUANT | **NON CONCLUANT** |
-| A | ETHUSDT | 1h | B0 | -6.302e-05 | [—, —] ∋0 | [—, —] excl.0 | 8.560e-05 | 1/7 | 296 | -0.2578 | False | PAS D'EDGE | **PAS D'EDGE** |
-| B | ETHUSDT | 1h | B1 | 2.250e-05 | [—, —] excl.0 | [—, —] ∋0 | 0.02562 | 3/7 | 119 | -0.1274 | False | PAS D'EDGE | **PAS D'EDGE** |
-| H | ETHUSDT | 1h | B2 | 1.160e-06 | [—, —] ∋0 | [—, —] ∋0 | 0.03673 | 2/7 | 91 | -0.1132 | False | PAS D'EDGE | **PAS D'EDGE** |
-| J | ETHUSDT | 1h | B0 | -4.658e-05 | [—, —] ∋0 | [—, —] ∋0 | 0.007714 | 2/7 | 210 | -0.2316 | False | PAS D'EDGE | **PAS D'EDGE** |
-| A | ETHUSDT | 4h | B0 | -1.900e-04 | [—, —] ∋0 | [—, —] ∋0 | 0.007301 | 2/7 | 76 | -0.1916 | False | PAS D'EDGE | **PAS D'EDGE** |
-| B | ETHUSDT | 4h | B1 | -2.634e-06 | [—, —] ∋0 | [—, —] ∋0 | 7.780e-04 | 1/7 | 21 | -0.1472 | False | NON CONCLUANT | **NON CONCLUANT** |
-| H | ETHUSDT | 4h | B2 | 2.532e-06 | [—, —] ∋0 | [—, —] ∋0 | 9.056e-04 | 1/7 | 17 | -0.09156 | False | NON CONCLUANT | **NON CONCLUANT** |
-| J | ETHUSDT | 4h | B0 | -1.353e-04 | [—, —] ∋0 | [—, —] ∋0 | 0.1279 | 5/7 | 53 | -0.1862 | False | PAS D'EDGE | **PAS D'EDGE** |
-| A | SOLUSDT | 1h | B0 | -8.583e-05 | [—, —] ∋0 | [—, —] ∋0 | 0.4114 | 4/7 | 265 | -0.273 | False | PAS D'EDGE | **PAS D'EDGE** |
-| B | SOLUSDT | 1h | B1 | -1.280e-05 | [—, —] ∋0 | [—, —] ∋0 | 0.4145 | 4/7 | 98 | -0.1645 | False | PAS D'EDGE | **PAS D'EDGE** |
-| H | SOLUSDT | 1h | B2 | -4.796e-06 | [—, —] ∋0 | [—, —] ∋0 | 0.2995 | 5/7 | 80 | -0.1291 | False | PAS D'EDGE | **PAS D'EDGE** |
-| J | SOLUSDT | 1h | B0 | -1.427e-04 | [—, —] excl.0 | [—, —] ∋0 | 3.834e-04 | 0/7 | 191 | -0.3258 | False | PAS D'EDGE | **PAS D'EDGE** |
-| A | SOLUSDT | 4h | B0 | -3.723e-04 | [—, —] ∋0 | [—, —] ∋0 | 0.268 | 4/7 | 68 | -0.2593 | False | PAS D'EDGE | **PAS D'EDGE** |
-| B | SOLUSDT | 4h | B1 | -9.180e-06 | [—, —] ∋0 | [—, —] ∋0 | 0.4615 | 2/7 | 26 | -0.1589 | False | NON CONCLUANT | **NON CONCLUANT** |
-| H | SOLUSDT | 4h | B2 | -4.838e-05 | [—, —] ∋0 | [—, —] ∋0 | 0.154 | 0/7 | 17 | -0.1589 | False | NON CONCLUANT | **NON CONCLUANT** |
-| J | SOLUSDT | 4h | B0 | -4.251e-04 | [—, —] ∋0 | [—, —] ∋0 | 0.09728 | 3/7 | 62 | -0.2287 | False | NON CONCLUANT | **NON CONCLUANT** |
+| A | BTCUSDT | 1h | B0 | -7.037e-05 | [-1.321e-04, -6.120e-06] excl.0 | [-38.67, -1.608] excl.0 | 9.629e-05 | 2/7 | 317 | -0.2683 | False | PAS D'EDGE | **PAS D'EDGE** |
+| B | BTCUSDT | 1h | B1 | 1.993e-05 | [4.274e-06, 3.548e-05] excl.0 | [-32.95, 25.78] ∋0 | 0.02437 | 3/7 | 129 | -0.1323 | False | PAS D'EDGE | **PAS D'EDGE** |
+| H | BTCUSDT | 1h | B2 | 3.614e-06 | [-2.230e-06, 9.737e-06] ∋0 | [-27.13, 39.81] ∋0 | 0.07994 | 3/7 | 99 | -0.1203 | False | NON CONCLUANT | **NON CONCLUANT** |
+| J | BTCUSDT | 1h | B6 | -2.108e-05 | [-3.628e-05, -5.645e-06] excl.0 | [-44.94, 0.924] ∋0 | 1.294e-04 | 2/7 | 205 | -0.1669 | False | PAS D'EDGE | **PAS D'EDGE** |
+| A | BTCUSDT | 4h | B0 | -1.853e-04 | [-4.333e-04, 6.881e-05] ∋0 | [-53.48, 106.4] ∋0 | 0.1071 | 3/7 | 71 | -0.2226 | False | NON CONCLUANT | **NON CONCLUANT** |
+| B | BTCUSDT | 4h | B1 | -8.131e-08 | [-6.068e-05, 5.754e-05] ∋0 | [-58.84, 191.2] ∋0 | 0.2251 | 0/7 | 22 | -0.127 | False | NON CONCLUANT | **NON CONCLUANT** |
+| H | BTCUSDT | 4h | B2 | 3.213e-06 | [-1.979e-05, 2.496e-05] ∋0 | [-35.57, 264] ∋0 | 0.4229 | 0/7 | 14 | -0.03434 | False | NON CONCLUANT | **NON CONCLUANT** |
+| J | BTCUSDT | 4h | B5 | -2.474e-05 | [-8.808e-05, 3.988e-05] ∋0 | [-76.59, 70.07] ∋0 | 0.0307 | 4/7 | 67 | -0.1529 | False | NON CONCLUANT | **NON CONCLUANT** |
+| A | ETHUSDT | 1h | B0 | -6.302e-05 | [-1.410e-04, 1.753e-05] ∋0 | [-46.66, -0.6612] excl.0 | 8.560e-05 | 1/7 | 296 | -0.2578 | False | PAS D'EDGE | **PAS D'EDGE** |
+| B | ETHUSDT | 1h | B1 | 2.250e-05 | [4.316e-06, 4.088e-05] excl.0 | [-39.69, 33.38] ∋0 | 0.02562 | 3/7 | 119 | -0.1274 | False | PAS D'EDGE | **PAS D'EDGE** |
+| H | ETHUSDT | 1h | B2 | 1.160e-06 | [-4.673e-06, 6.964e-06] ∋0 | [-42.48, 41.87] ∋0 | 0.03673 | 2/7 | 91 | -0.1132 | False | PAS D'EDGE | **PAS D'EDGE** |
+| J | ETHUSDT | 1h | B0 | -4.658e-05 | [-1.263e-04, 3.493e-05] ∋0 | [-41.41, 18.75] ∋0 | 7.714e-03 | 2/7 | 210 | -0.2316 | False | PAS D'EDGE | **PAS D'EDGE** |
+| A | ETHUSDT | 4h | B0 | -1.900e-04 | [-4.998e-04, 1.311e-04] ∋0 | [-119.5, 50] ∋0 | 7.301e-03 | 2/7 | 76 | -0.1916 | False | PAS D'EDGE | **PAS D'EDGE** |
+| B | ETHUSDT | 4h | B1 | -2.634e-06 | [-7.374e-05, 6.700e-05] ∋0 | [-261.6, 26.78] ∋0 | 7.780e-04 | 1/7 | 21 | -0.1472 | False | NON CONCLUANT | **NON CONCLUANT** |
+| H | ETHUSDT | 4h | B2 | 2.532e-06 | [-1.798e-05, 2.005e-05] ∋0 | [-285.4, 17.12] ∋0 | 9.056e-04 | 1/7 | 17 | -0.09156 | False | NON CONCLUANT | **NON CONCLUANT** |
+| J | ETHUSDT | 4h | B0 | -1.353e-04 | [-4.487e-04, 1.850e-04] ∋0 | [-77.07, 144.8] ∋0 | 0.1279 | 5/7 | 53 | -0.1862 | False | PAS D'EDGE | **PAS D'EDGE** |
+| A | SOLUSDT | 1h | B0 | -8.583e-05 | [-2.067e-04, 3.545e-05] ∋0 | [-17.56, 87.74] ∋0 | 0.4114 | 4/7 | 265 | -0.273 | False | PAS D'EDGE | **PAS D'EDGE** |
+| B | SOLUSDT | 1h | B1 | -1.280e-05 | [-4.459e-05, 1.822e-05] ∋0 | [-17.09, 123.3] ∋0 | 0.4145 | 4/7 | 98 | -0.1645 | False | PAS D'EDGE | **PAS D'EDGE** |
+| H | SOLUSDT | 1h | B2 | -4.796e-06 | [-1.668e-05, 5.108e-06] ∋0 | [-28.4, 118.2] ∋0 | 0.2995 | 5/7 | 80 | -0.1291 | False | PAS D'EDGE | **PAS D'EDGE** |
+| J | SOLUSDT | 1h | B0 | -1.427e-04 | [-2.679e-04, -1.883e-05] excl.0 | [-88.55, 0.2809] ∋0 | 3.834e-04 | 0/7 | 191 | -0.3258 | False | PAS D'EDGE | **PAS D'EDGE** |
+| A | SOLUSDT | 4h | B0 | -3.723e-04 | [-8.615e-04, 1.208e-04] ∋0 | [-97.48, 276.3] ∋0 | 0.268 | 4/7 | 68 | -0.2593 | False | PAS D'EDGE | **PAS D'EDGE** |
+| B | SOLUSDT | 4h | B1 | -9.180e-06 | [-1.191e-04, 9.847e-05] ∋0 | [-109.3, 540.5] ∋0 | 0.4615 | 2/7 | 26 | -0.1589 | False | NON CONCLUANT | **NON CONCLUANT** |
+| H | SOLUSDT | 4h | B2 | -4.838e-05 | [-1.097e-04, 6.409e-06] ∋0 | [-290.7, 513.5] ∋0 | 0.154 | 0/7 | 17 | -0.1589 | False | NON CONCLUANT | **NON CONCLUANT** |
+| J | SOLUSDT | 4h | B0 | -4.251e-04 | [-9.065e-04, 7.162e-05] ∋0 | [-151.6, 215.6] ∋0 | 0.09728 | 3/7 | 62 | -0.2287 | False | NON CONCLUANT | **NON CONCLUANT** |
 
 ## Compares — profil **adverse**
 
 | Q | Symbole | TF | Bj | Δmean | IC Δ | IC trades Bi | DSR_i | +plis | N | maxDD | beats | verdict | verdict_final |
 |---|---|---|---|---:|---|---|---:|---:|---:|---:|---|---|---|
-| A | BTCUSDT | 1h | B0 | -9.482e-05 | [—, —] excl.0 | [—, —] excl.0 | 2.262e-11 | 0/7 | 317 | -0.3244 | False | PAS D'EDGE | **PAS D'EDGE** |
-| B | BTCUSDT | 1h | B1 | 3.459e-05 | [—, —] excl.0 | [—, —] ∋0 | 3.001e-05 | 2/7 | 129 | -0.1677 | False | PAS D'EDGE | **PAS D'EDGE** |
-| H | BTCUSDT | 1h | B2 | 5.953e-06 | [—, —] ∋0 | [—, —] ∋0 | 4.514e-04 | 3/7 | 99 | -0.1569 | False | PAS D'EDGE | **PAS D'EDGE** |
-| J | BTCUSDT | 1h | B6 | -3.522e-05 | [—, —] excl.0 | [—, —] excl.0 | 5.422e-10 | 1/7 | 205 | -0.2285 | False | PAS D'EDGE | **PAS D'EDGE** |
-| A | BTCUSDT | 4h | B0 | -2.063e-04 | [—, —] ∋0 | [—, —] ∋0 | 0.006301 | 3/7 | 71 | -0.2428 | False | NON CONCLUANT | **NON CONCLUANT** |
-| B | BTCUSDT | 4h | B1 | 1.521e-05 | [—, —] ∋0 | [—, —] ∋0 | 0.03739 | 0/7 | 22 | -0.1384 | False | NON CONCLUANT | **NON CONCLUANT** |
-| H | BTCUSDT | 4h | B2 | 5.706e-06 | [—, —] ∋0 | [—, —] ∋0 | 0.1198 | 0/7 | 14 | -0.03448 | False | NON CONCLUANT | **NON CONCLUANT** |
-| J | BTCUSDT | 4h | B5 | -4.121e-05 | [—, —] ∋0 | [—, —] ∋0 | 7.552e-04 | 3/7 | 67 | -0.1657 | False | PAS D'EDGE | **PAS D'EDGE** |
-| A | ETHUSDT | 1h | B0 | -8.578e-05 | [—, —] excl.0 | [—, —] excl.0 | 1.601e-10 | 1/7 | 296 | -0.3151 | False | PAS D'EDGE | **PAS D'EDGE** |
-| B | ETHUSDT | 1h | B1 | 3.624e-05 | [—, —] excl.0 | [—, —] ∋0 | 5.311e-05 | 2/7 | 119 | -0.1471 | False | PAS D'EDGE | **PAS D'EDGE** |
-| H | ETHUSDT | 1h | B2 | 3.341e-06 | [—, —] ∋0 | [—, —] ∋0 | 2.131e-04 | 2/7 | 91 | -0.1311 | False | PAS D'EDGE | **PAS D'EDGE** |
-| J | ETHUSDT | 1h | B0 | -6.269e-05 | [—, —] ∋0 | [—, —] excl.0 | 3.279e-06 | 1/7 | 210 | -0.2798 | False | PAS D'EDGE | **PAS D'EDGE** |
-| A | ETHUSDT | 4h | B0 | -2.126e-04 | [—, —] ∋0 | [—, —] ∋0 | 1.731e-04 | 1/7 | 76 | -0.2108 | False | PAS D'EDGE | **PAS D'EDGE** |
-| B | ETHUSDT | 4h | B1 | 1.451e-05 | [—, —] ∋0 | [—, —] ∋0 | 2.330e-05 | 1/7 | 21 | -0.1544 | False | NON CONCLUANT | **NON CONCLUANT** |
-| H | ETHUSDT | 4h | B2 | 3.780e-06 | [—, —] ∋0 | [—, —] excl.0 | 3.322e-05 | 1/7 | 17 | -0.09591 | False | NON CONCLUANT | **NON CONCLUANT** |
-| J | ETHUSDT | 4h | B0 | -1.507e-04 | [—, —] ∋0 | [—, —] ∋0 | 0.0137 | 4/7 | 53 | -0.1988 | False | PAS D'EDGE | **PAS D'EDGE** |
-| A | SOLUSDT | 1h | B0 | -1.062e-04 | [—, —] ∋0 | [—, —] ∋0 | 0.02757 | 4/7 | 265 | -0.3151 | False | PAS D'EDGE | **PAS D'EDGE** |
-| B | SOLUSDT | 1h | B1 | 1.931e-07 | [—, —] ∋0 | [—, —] ∋0 | 0.06081 | 4/7 | 98 | -0.1853 | False | PAS D'EDGE | **PAS D'EDGE** |
-| H | SOLUSDT | 1h | B2 | -3.393e-06 | [—, —] ∋0 | [—, —] ∋0 | 0.03636 | 3/7 | 80 | -0.1395 | False | NON CONCLUANT | **NON CONCLUANT** |
-| J | SOLUSDT | 1h | B0 | -1.573e-04 | [—, —] excl.0 | [—, —] excl.0 | 6.044e-07 | 0/7 | 191 | -0.3497 | False | PAS D'EDGE | **PAS D'EDGE** |
-| A | SOLUSDT | 4h | B0 | -3.925e-04 | [—, —] ∋0 | [—, —] ∋0 | 0.06259 | 4/7 | 68 | -0.269 | False | PAS D'EDGE | **PAS D'EDGE** |
-| B | SOLUSDT | 4h | B1 | 3.919e-06 | [—, —] ∋0 | [—, —] ∋0 | 0.1793 | 2/7 | 26 | -0.1609 | False | NON CONCLUANT | **NON CONCLUANT** |
-| H | SOLUSDT | 4h | B2 | -4.555e-05 | [—, —] ∋0 | [—, —] ∋0 | 0.03619 | 0/7 | 17 | -0.1609 | False | NON CONCLUANT | **NON CONCLUANT** |
-| J | SOLUSDT | 4h | B0 | -4.435e-04 | [—, —] ∋0 | [—, —] ∋0 | 0.01367 | 3/7 | 62 | -0.2388 | False | NON CONCLUANT | **NON CONCLUANT** |
+| A | BTCUSDT | 1h | B0 | -9.482e-05 | [-1.570e-04, -3.002e-05] excl.0 | [-58.55, -23.23] excl.0 | 2.262e-11 | 0/7 | 317 | -0.3244 | False | PAS D'EDGE | **PAS D'EDGE** |
+| B | BTCUSDT | 1h | B1 | 3.459e-05 | [1.849e-05, 5.064e-05] excl.0 | [-55.56, 1.921] ∋0 | 3.001e-05 | 2/7 | 129 | -0.1677 | False | PAS D'EDGE | **PAS D'EDGE** |
+| H | BTCUSDT | 1h | B2 | 5.953e-06 | [-4.910e-08, 1.231e-05] ∋0 | [-50.41, 15.6] ∋0 | 4.514e-04 | 3/7 | 99 | -0.1569 | False | PAS D'EDGE | **PAS D'EDGE** |
+| J | BTCUSDT | 1h | B6 | -3.522e-05 | [-5.091e-05, -1.950e-05] excl.0 | [-65.87, -21.37] excl.0 | 5.422e-10 | 1/7 | 205 | -0.2285 | False | PAS D'EDGE | **PAS D'EDGE** |
+| A | BTCUSDT | 4h | B0 | -2.063e-04 | [-4.548e-04, 4.869e-05] ∋0 | [-76.32, 81.53] ∋0 | 6.301e-03 | 3/7 | 71 | -0.2428 | False | NON CONCLUANT | **NON CONCLUANT** |
+| B | BTCUSDT | 4h | B1 | 1.521e-05 | [-4.571e-05, 7.349e-05] ∋0 | [-82.05, 166.3] ∋0 | 0.03739 | 0/7 | 22 | -0.1384 | False | NON CONCLUANT | **NON CONCLUANT** |
+| H | BTCUSDT | 4h | B2 | 5.706e-06 | [-1.707e-05, 2.787e-05] ∋0 | [-59.51, 239] ∋0 | 0.1198 | 0/7 | 14 | -0.03448 | False | NON CONCLUANT | **NON CONCLUANT** |
+| J | BTCUSDT | 4h | B5 | -4.121e-05 | [-1.051e-04, 2.329e-05] ∋0 | [-99.49, 45.14] ∋0 | 7.552e-04 | 3/7 | 67 | -0.1657 | False | PAS D'EDGE | **PAS D'EDGE** |
+| A | ETHUSDT | 1h | B0 | -8.578e-05 | [-1.642e-04, -4.463e-06] excl.0 | [-66.16, -22.02] excl.0 | 1.601e-10 | 1/7 | 296 | -0.3151 | False | PAS D'EDGE | **PAS D'EDGE** |
+| B | ETHUSDT | 1h | B1 | 3.624e-05 | [1.776e-05, 5.516e-05] excl.0 | [-62.48, 9.405] ∋0 | 5.311e-05 | 2/7 | 119 | -0.1471 | False | PAS D'EDGE | **PAS D'EDGE** |
+| H | ETHUSDT | 1h | B2 | 3.341e-06 | [-2.539e-06, 9.333e-06] ∋0 | [-65.49, 17.81] ∋0 | 2.131e-04 | 2/7 | 91 | -0.1311 | False | PAS D'EDGE | **PAS D'EDGE** |
+| J | ETHUSDT | 1h | B0 | -6.269e-05 | [-1.428e-04, 1.987e-05] ∋0 | [-62.88, -4.867] excl.0 | 3.279e-06 | 1/7 | 210 | -0.2798 | False | PAS D'EDGE | **PAS D'EDGE** |
+| A | ETHUSDT | 4h | B0 | -2.126e-04 | [-5.232e-04, 1.085e-04] ∋0 | [-141.1, 26.16] ∋0 | 1.731e-04 | 1/7 | 76 | -0.2108 | False | PAS D'EDGE | **PAS D'EDGE** |
+| B | ETHUSDT | 4h | B1 | 1.451e-05 | [-5.683e-05, 8.472e-05] ∋0 | [-284, 2.722] ∋0 | 2.330e-05 | 1/7 | 21 | -0.1544 | False | NON CONCLUANT | **NON CONCLUANT** |
+| H | ETHUSDT | 4h | B2 | 3.780e-06 | [-1.642e-05, 2.163e-05] ∋0 | [-308, -6.822] excl.0 | 3.322e-05 | 1/7 | 17 | -0.09591 | False | NON CONCLUANT | **NON CONCLUANT** |
+| J | ETHUSDT | 4h | B0 | -1.507e-04 | [-4.652e-04, 1.713e-04] ∋0 | [-100.6, 119.2] ∋0 | 0.0137 | 4/7 | 53 | -0.1988 | False | PAS D'EDGE | **PAS D'EDGE** |
+| A | SOLUSDT | 1h | B0 | -1.062e-04 | [-2.277e-04, 1.573e-05] ∋0 | [-41.01, 59.61] ∋0 | 0.02757 | 4/7 | 265 | -0.3151 | False | PAS D'EDGE | **PAS D'EDGE** |
+| B | SOLUSDT | 1h | B1 | 1.931e-07 | [-3.180e-05, 3.129e-05] ∋0 | [-41.11, 96.72] ∋0 | 0.06081 | 4/7 | 98 | -0.1853 | False | PAS D'EDGE | **PAS D'EDGE** |
+| H | SOLUSDT | 1h | B2 | -3.393e-06 | [-1.507e-05, 6.526e-06] ∋0 | [-52.77, 91.6] ∋0 | 0.03636 | 3/7 | 80 | -0.1395 | False | NON CONCLUANT | **NON CONCLUANT** |
+| J | SOLUSDT | 1h | B0 | -1.573e-04 | [-2.831e-04, -3.255e-05] excl.0 | [-107.5, -21.68] excl.0 | 6.044e-07 | 0/7 | 191 | -0.3497 | False | PAS D'EDGE | **PAS D'EDGE** |
+| A | SOLUSDT | 4h | B0 | -3.925e-04 | [-8.843e-04, 1.019e-04] ∋0 | [-120.8, 247.2] ∋0 | 0.06259 | 4/7 | 68 | -0.269 | False | PAS D'EDGE | **PAS D'EDGE** |
+| B | SOLUSDT | 4h | B1 | 3.919e-06 | [-1.059e-04, 1.117e-04] ∋0 | [-133.5, 512.9] ∋0 | 0.1793 | 2/7 | 26 | -0.1609 | False | NON CONCLUANT | **NON CONCLUANT** |
+| H | SOLUSDT | 4h | B2 | -4.555e-05 | [-1.060e-04, 8.873e-06] ∋0 | [-313.6, 488.5] ∋0 | 0.03619 | 0/7 | 17 | -0.1609 | False | NON CONCLUANT | **NON CONCLUANT** |
+| J | SOLUSDT | 4h | B0 | -4.435e-04 | [-9.255e-04, 5.337e-05] ∋0 | [-173.9, 189.1] ∋0 | 0.01367 | 3/7 | 62 | -0.2388 | False | NON CONCLUANT | **NON CONCLUANT** |
+
+## Notes §9 / lecture IC
+
+- **IC apparié ∋ 0 et N ≥ 40** → `verdict_compare` rend **PAS D'EDGE** (et non NON CONCLUANT). Lecture de §9 : l’IC qui contient 0 bloque EDGE, mais avec N suffisant le verdict n’est pas « non concluant ». **Sans impact** sur le total **0 EDGE / 48**.
+- **INFO B6 ATR** : le lab B6 laisse passer un ATR **UNKNOWN** ; le live le met en **PENDING**. Pas d’impact sur ce run — ne concerne que les barres **avant WF1**.
 
 ## Synthèse verdict_final (base / adverse)
 
