@@ -1,5 +1,25 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-27 nuit — #156 B1/B2 corrigés · push draft · STOP
+
+**Branche :** `cursor/ui-vp-badge-a2fe` · **PR draft [#156](https://github.com/samiriggui-code/IchiVol/pull/156)**  
+**Vérif :** `npx tsc -b` OK · `exclude` `*.test.ts` **conservé** (répare build front `main` depuis #152).
+
+| ID | Fix |
+|----|-----|
+| **B1** | Captures `docs/ui-vp-badge/{light,dark,mobile}.png` refaites (hashes distincts). `light` = matrice Opportunités live ; `dark` / `mobile` = fiche décision / Position (composants réels `VpValidationBadge`, 390 px). Script `scripts/capture-ui-vp-badge.mjs` + `/capture/vp-badge`. |
+| **B2** | Badge retiré de `DecisionPipelinePanel` ; conservé sur la ligne verdict (`DecisionsPage`). |
+
+**#157 non touché. STOP** — revue Claude / test visuel Samir.
+
+---
+
+## 2026-09-27 nuit — VERDICT Claude #156 : B1 captures + B2 doublon · garder exclude `*.test.ts`
+
+`tsc -b` (pas `-p .`) : l’`exclude` des `*.test.ts` répare le build cassé depuis #152 → **garder**. B1/B2 traités dans l’entrée du dessus.
+
+---
+
 ## 2026-09-27 soir — Cursor : UI-VP-BADGE STOP (PR draft) · revue Claude
 
 **Branche :** `cursor/ui-vp-badge-a2fe` · **PR draft [#156](https://github.com/samiriggui-code/IchiVol/pull/156)** · **#142 non touché**.

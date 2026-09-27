@@ -17,6 +17,7 @@ import { OverviewPage } from './pages/OverviewPage'
 import { PortfolioPage } from './pages/PortfolioPage'
 import { RequireAuth } from './pages/RequireAuth'
 import { SettingsPage } from './pages/SettingsPage'
+import { VpBadgeCapturePage } from './pages/VpBadgeCapturePage'
 import './theme/camap-tokens.css'
 import './theme/keenicons.css'
 import './theme/camap-landing.css'
@@ -33,6 +34,7 @@ export function Root() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/capture/vp-badge" element={<VpBadgeCapturePage />} />
         <Route element={<RequireAuth />}>
           {/* TV Marché — plein écran hors DashboardShell (popup / second moniteur) */}
           <Route path="/app/tv" element={<MarketTvPage />} />
