@@ -81,6 +81,7 @@ def test_levels_only_ignores_pipeline_flip():
 
 
 def test_time_stop_exits_at_close_after_n_bars():
+    """VP2-R1: entry bar = bar 1 → exit at close of entry+(n-1)."""
     n = 3
     rows = [(100, 100, 100, 100, "BUY", 5.0), (100, 100, 100, 100, "BUY", 5.0)] + [
         (100, 101, 99, 100.5, "WATCH", 5.0)
@@ -104,9 +105,34 @@ def test_time_stop_exits_at_close_after_n_bars():
     t = res.trades[0]
     assert t.exit_reason == "time_stop"
     assert t.entry_time == T0 + H
-    assert t.exit_time == T0 + H + n * H
+    assert t.exit_time == T0 + H + (n - 1) * H
     assert t.exit_raw == 100.5
 
+
+def test_time_stop_vp2_r1_forty_eight_bars():
+    """§6 / VP2-R1: 48 bars → exit at entry + 47·bar_seconds."""
+    n = 48
+    rows = [(100, 100, 100, 100, "BUY", 5.0), (100, 100, 100, 100, "BUY", 5.0)] + [
+        (100, 101, 99, 100.5, "WATCH", 5.0)
+    ] * (n + 2)
+    rules = Rules(
+        "t",
+        exit_mode="levels_only",
+        time_stop_bars=n,
+        bar_seconds=H,
+        full_cash=True,
+        max_open=1,
+        max_notional_pct=1.0,
+        daily_loss_limit_pct=0.0,
+        max_open_risk_pct=10.0,
+        allow_short=False,
+        liquidity_cap_pct=1.0,
+        force_flat_at_end=False,
+    )
+    res = simulate({"X": series(rows)}, rules, NOFEE, (T0, T0 + (n + 10) * H), initial=10_000.0)
+    t = res.trades[0]
+    assert t.exit_reason == "time_stop"
+    assert t.exit_time == t.entry_time + (n - 1) * H
 
 def test_full_cash_sizes_near_initial():
     rows = [(100, 100, 100, 100, "BUY", 2.0), (100, 100, 100, 100, "BUY", 2.0), (100, 100, 96, 97, "WATCH", 2.0)] + flat(
