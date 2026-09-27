@@ -11,7 +11,7 @@
   --red: #c8412f;
   --amber: #a76c17;
   color: var(--ink);
-  font: 14px Manrope, Arial, sans-serif;
+  font: 12px Manrope, Arial, sans-serif;
   padding: 0;
   max-width: 1800px;
   margin: 0 auto;
@@ -61,12 +61,12 @@
   margin-bottom:10px;
 }
 .opps-page h1 {
-  font:38px Newsreader,Georgia,serif;
-  margin:0 0 6px;
-  letter-spacing:-1px;
+  font:24px Newsreader,Georgia,serif;
+  margin:0 0 4px;
+  letter-spacing:-0.5px;
 }
 .opps-page h2 {
-  font:23px Newsreader,Georgia,serif;
+  font:18px Newsreader,Georgia,serif;
   margin:0;
 }
 .opps-page h3 {
@@ -313,15 +313,15 @@
   text-align:left;
 }
 .opps-page th {
-  font-size:9px;
-  letter-spacing:.6px;
+  font-size:8px;
+  letter-spacing:.5px;
   font-weight:500;
   color:#8d9297;
   background:#f9f8f5;
-  padding:12px 20px;
+  padding:7px 10px;
 }
 .opps-page td {
-  padding:17px 20px;
+  padding:8px 10px;
   border-bottom:1px solid #eeebe6;
   font-size:11px;
 }
@@ -1213,37 +1213,37 @@
 
 .dash-shell .opps-page .page-head h1,
 .opps-page .page-head h1 {
-  font: 38px Newsreader, Georgia, serif;
-  margin: 0 0 6px;
-  letter-spacing: -1px;
+  font: 24px Newsreader, Georgia, serif;
+  margin: 0 0 4px;
+  letter-spacing: -0.5px;
 }
 .opps-page .table-wrap {
   overflow: auto;
   padding: 0;
 }
 
-/* Contre les resets globaux index.css (table 0.68rem, mobile page-head p 0.72rem). */
+/* Densité cockpit — tables pages (pas le reset global trop petit). */
 .opps-page table {
-  font-size: 14px;
+  font-size: 11px;
 }
 .opps-page tr.clickable {
-  font-size: 14px;
+  font-size: 11px;
 }
 .opps-page td {
-  font-size: 14px;
+  font-size: 11px;
 }
 .dash-shell .opps-page .page-head h1,
 .dash-shell.is-mobile .opps-page .page-head h1,
 .opps-page .page-head h1 {
-  font: 38px Newsreader, Georgia, serif;
-  margin: 0 0 6px;
-  letter-spacing: -1px;
+  font: 24px Newsreader, Georgia, serif;
+  margin: 0 0 4px;
+  letter-spacing: -0.5px;
 }
 .dash-shell.is-mobile .opps-page .page-head .subtitle,
 .dash-shell.is-mobile .opps-page .page-head p,
 .opps-page .subtitle {
-  font-size: 12px !important;
-  line-height: 1.7;
+  font-size: 11px !important;
+  line-height: 1.45;
   color: var(--muted);
   margin: 0;
 }
@@ -1251,7 +1251,7 @@
   .dash-shell .opps-page .page-head h1,
   .dash-shell.is-mobile .opps-page .page-head h1,
   .opps-page .page-head h1 {
-    font-size: 32px;
+    font-size: 22px;
   }
   .opps-page .page-head {
     flex-wrap: wrap;

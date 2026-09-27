@@ -711,8 +711,16 @@ export async function getChartObjectExplanation(q: ChartObjectExplainQuery): Pro
     { credentials: 'include' },
   )
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { detail?: string } | null
-    throw new Error(body?.detail ?? `Erreur ${res.status}`)
+    const body = (await res.json().catch(() => null)) as { detail?: unknown } | null
+    const d = body?.detail
+    let msg = `Erreur ${res.status}`
+    if (typeof d === 'string') msg = d
+    else if (Array.isArray(d)) {
+      msg = d
+        .map((x) => (typeof x === 'object' && x && 'msg' in x ? String((x as { msg: unknown }).msg) : String(x)))
+        .join(' · ')
+    } else if (d != null) msg = String(d)
+    throw new Error(msg)
   }
   return (await res.json()) as ChartObjectExplanation
 }

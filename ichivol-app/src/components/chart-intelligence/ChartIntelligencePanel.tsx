@@ -7,6 +7,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { intelligenceLayerOf } from '../../lib/chartIntelligence'
 import {
   cameraForPeriod,
   defaultBriefing,
@@ -141,6 +142,13 @@ export function ChartIntelligencePanel({
     ci.select(null)
   }, [ci.select])
 
+  // Calque OFF → désélection si l’objet n’est plus inspectable.
+  useEffect(() => {
+    const sel = ci.selection[0]
+    if (!sel) return
+    if (!ci.layers[intelligenceLayerOf(sel)]) selectKey(null)
+  }, [ci.layers, ci.selection, selectKey])
+
   return (
     <div className={`ci-root${variant === 'brief' ? ' ci-root--brief' : ''}`}>
       <section className="ci-card ci-chart-card" aria-label="Chart Intelligence">
@@ -215,6 +223,7 @@ export function ChartIntelligencePanel({
         <DrawingInspector
           selection={ci.selection}
           candidates={ci.visibleObjects}
+          layers={ci.layers}
           onSelect={selectKey}
           onClose={() => selectKey(null)}
           why={

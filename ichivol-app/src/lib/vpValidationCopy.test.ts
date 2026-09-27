@@ -18,7 +18,7 @@ test('copy VP : label + tooltip + chemin rapport stables', () => {
   assert.match(VP_VALIDATION_TOOLTIP, /0\/48/)
   assert.equal(VP_VALIDATION_REPORT_PATH, 'docs/VP3-REPORT-FINAL.md')
   assert.match(VP_VALIDATION_REPORT_HREF, /VP3-REPORT-FINAL\.md/)
-  assert.equal(vpValidationTitle(), `${VP_VALIDATION_TOOLTIP} → ${VP_VALIDATION_REPORT_PATH}`)
+  assert.equal(vpValidationTitle(), `${VP_VALIDATION_TOOLTIP} (${VP_VALIDATION_REPORT_PATH})`)
 })
 
 test('isActionableBuySell : seulement ACHAT/VENTE', () => {

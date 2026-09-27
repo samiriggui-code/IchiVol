@@ -11,7 +11,7 @@
   --red: #c8412f;
   --amber: #a76c17;
   color: var(--ink);
-  font: 14px Manrope, Arial, sans-serif;
+  font: 12px Manrope, Arial, sans-serif;
   padding: 0;
   max-width: 1800px;
   margin: 0 auto;
@@ -1219,9 +1219,9 @@
   color: var(--muted);
   margin: 0;
 }
-.agents-page table { font-size: 14px; }
-.agents-page tr.clickable { font-size: 14px; }
-.agents-page td { font-size: 14px; }
+.agents-page table { font-size: 12px; }
+.agents-page tr.clickable { font-size: 12px; }
+.agents-page td { font-size: 12px; }
 .agents-page .table-wrap { overflow: auto; padding: 0; }
 @media (max-width: 800px) {
   .dash-shell .agents-page .page-head h1,

@@ -1,24 +1,31 @@
 /** DrawingInspector — détail de l'objet sélectionné (lecture seule des champs Python). */
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   fmtPct,
   fmtPrice,
   fmtTime,
+  INTELLIGENCE_LAYER_META,
+  intelligenceLayerOf,
   objectTitle,
   producerLabel,
   selectionKeyOf,
   STATUS_LABELS,
   statusTone,
+  type IntelligenceLayerPrefs,
   type IntelligenceObject,
 } from '../../lib/chartIntelligence'
 import { WhyPanel, type WhyTarget } from './WhyPanel'
 
+const PER_LAYER_CAP = 6
+
 interface Props {
   /** Objets de la sélection (un Fib = plusieurs niveaux du même group_id). */
   selection: IntelligenceObject[]
-  /** Objets visibles (calques actifs) — liste de secours si rien n’est sélectionné. */
+  /** Objets visibles (calques actifs). */
   candidates?: IntelligenceObject[]
+  /** Préférences calques — une section inspecteur par calque ON. */
+  layers?: IntelligenceLayerPrefs | null
   onSelect?: (key: string) => void
   onClose?: () => void
   /** AW1 : contexte pour « Pourquoi ? » (API moteur seulement, pas en mock). */
@@ -47,7 +54,7 @@ function uniqueCandidates(objects: IntelligenceObject[]): IntelligenceObject[] {
   return out
 }
 
-/** Libellé liste de secours : titre lisible + prix pour distinguer les doublons. */
+/** Libellé liste : titre lisible + prix pour distinguer les doublons. */
 function pickLabel(o: IntelligenceObject): { title: string; meta: string; tone: 'bull' | 'bear' | 'muted' } {
   const og = o.origin
   const dir = og.direction === 'bearish' ? ' ↓' : og.direction === 'bullish' ? ' ↑' : ''
@@ -87,48 +94,122 @@ function pickLabel(o: IntelligenceObject): { title: string; meta: string; tone: 
   return { title: objectTitle(o), meta: price || fmtPct(o.confidence), tone: 'muted' }
 }
 
+function LayerBrowser({
+  candidates,
+  layers,
+  onSelect,
+}: {
+  candidates: IntelligenceObject[]
+  layers: IntelligenceLayerPrefs
+  onSelect: (key: string) => void
+}) {
+  const byKey = uniqueCandidates(candidates)
+  const activeMeta = INTELLIGENCE_LAYER_META.filter(
+    (m) => m.key !== 'ichimoku' && layers[m.key],
+  )
+  /** Étagères repliées par défaut — une seule ouverte à la fois. */
+  const [openKey, setOpenKey] = useState<string | null>(null)
+
+  if (activeMeta.length === 0) {
+    return (
+      <p className="ci-muted">
+        Aucun calque objet actif. Activez Market Structure, FVG, Fib… dans Palette signaux.
+      </p>
+    )
+  }
+
+  return (
+    <div className="ci-inspect-layers" aria-label="Objets par calque actif">
+      <p className="ci-inspect-hint">
+        Compteurs = objets moteur à cet as_of. Fib = 1 dessin (plusieurs niveaux). 0 = rien détecté.
+      </p>
+      {activeMeta.map((m) => {
+        const layerItems = byKey.filter((o) => intelligenceLayerOf(o) === m.key)
+        const total = layerItems.length
+        const items = layerItems.slice(0, PER_LAYER_CAP)
+        const open = openKey === m.key
+        return (
+          <section key={m.key} className={`ci-inspect-layer${open ? ' is-open' : ''}`}>
+            <button
+              type="button"
+              className="ci-inspect-layer-head"
+              aria-expanded={open}
+              onClick={() => setOpenKey(open ? null : m.key)}
+            >
+              <span className="ci-inspect-swatch" style={{ background: m.color }} aria-hidden />
+              <div className="ci-inspect-layer-copy">
+                <strong>{m.label}</strong>
+                <small>{m.subtitle}</small>
+              </div>
+              <span className="ci-inspect-layer-count mono">{total}</span>
+              <span className="ci-inspect-chevron" aria-hidden>
+                {open ? '▾' : '▸'}
+              </span>
+            </button>
+            {open &&
+              (items.length === 0 ? (
+                <p className="ci-inspect-empty">
+                  {m.key === 'fibonacci'
+                    ? 'Aucun Fib ancré sur la structure à cet as_of (ou 1 groupe déjà compté ailleurs).'
+                    : 'Aucun objet moteur à cet as_of — normal si le calque n’a rien produit.'}
+                </p>
+              ) : (
+                <ul className="ci-pick-list">
+                  {items.map((c) => {
+                    const pick = pickLabel(c)
+                    return (
+                      <li key={selectionKeyOf(c)}>
+                        <button
+                          type="button"
+                          className={`ci-pick-btn ci-pick-btn--${pick.tone}`}
+                          onClick={() => onSelect(selectionKeyOf(c))}
+                        >
+                          <span className="ci-pick-title">{pick.title}</span>
+                          <span className="ci-pick-meta mono">
+                            {pick.meta}
+                            {pick.meta ? ' · ' : ''}
+                            {fmtPct(c.confidence)}
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                  {total > items.length && (
+                    <li className="ci-inspect-more muted">
+                      +{total - items.length} autres — voir le graphique
+                    </li>
+                  )}
+                </ul>
+              ))}
+          </section>
+        )
+      })}
+    </div>
+  )
+}
+
 export function DrawingInspector({
   selection,
   candidates = [],
+  layers = null,
   onSelect,
   onClose,
   why = null,
 }: Props) {
   const o = selection[0]
   if (!o) {
-    const picks = uniqueCandidates(candidates).slice(0, 10)
     return (
       <section className="ci-card ci-inspector is-empty" aria-label="Inspecteur">
         <header className="ci-card-head">
-          <div className="ci-eyebrow">DRAWING INSPECTOR</div>
+          <div>
+            <div className="ci-eyebrow">DRAWING INSPECTOR</div>
+            <p className="ci-source-line">Calques ON · étagères ▸ pour dérouler</p>
+          </div>
         </header>
-        <p className="ci-muted">
-          Cliquez une zone / Fib / FVG / BOS sur le graphique, ou une ligne ci-dessous pour inspecter.
-        </p>
-        {picks.length > 0 && onSelect ? (
-          <ul className="ci-pick-list" aria-label="Objets visibles">
-            {picks.map((c) => {
-              const pick = pickLabel(c)
-              return (
-                <li key={selectionKeyOf(c)}>
-                  <button
-                    type="button"
-                    className={`ci-pick-btn ci-pick-btn--${pick.tone}`}
-                    onClick={() => onSelect(selectionKeyOf(c))}
-                  >
-                    <span className="ci-pick-title">{pick.title}</span>
-                    <span className="ci-pick-meta mono">
-                      {pick.meta}
-                      {pick.meta ? ' · ' : ''}
-                      {fmtPct(c.confidence)}
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
+        {layers && onSelect ? (
+          <LayerBrowser candidates={candidates} layers={layers} onSelect={onSelect} />
         ) : (
-          <p className="ci-muted">Aucun objet sur les calques actifs. Activez un pack (Structure, FVG…).</p>
+          <p className="ci-muted">Sélectionner un objet sur le graphique (zone, Fib, FVG, BOS…).</p>
         )}
       </section>
     )
@@ -136,6 +217,7 @@ export function DrawingInspector({
   const og = o.origin
   const status = og.status
   const tf = (og.htf ?? o.timeframe).toUpperCase()
+  const layerMeta = INTELLIGENCE_LAYER_META.find((m) => m.key === intelligenceLayerOf(o))
 
   let range: ReactNode = null
   if (og.kind === 'fibonacci') {
@@ -174,6 +256,12 @@ export function DrawingInspector({
       <header className="ci-card-head">
         <div>
           <div className="ci-eyebrow">DRAWING INSPECTOR</div>
+          {layerMeta && (
+            <p className="ci-source-line" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span className="ci-inspect-swatch" style={{ background: layerMeta.color }} aria-hidden />
+              {layerMeta.label}
+            </p>
+          )}
           <h3>{objectTitle(o).toUpperCase()}</h3>
         </div>
         {onClose && (

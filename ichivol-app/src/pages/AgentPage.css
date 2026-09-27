@@ -11,7 +11,7 @@
   --red: #c8412f;
   --amber: #a76c17;
   color: var(--ink);
-  font: 14px Manrope, Arial, sans-serif;
+  font: 12px Manrope, Arial, sans-serif;
   padding: 0;
   max-width: 1800px;
   margin: 0 auto;
@@ -1241,9 +1241,9 @@
   color: var(--muted);
   margin: 0;
 }
-.copilot-page table { font-size: 14px; }
-.copilot-page tr.clickable { font-size: 14px; }
-.copilot-page td { font-size: 14px; }
+.copilot-page table { font-size: 12px; }
+.copilot-page tr.clickable { font-size: 12px; }
+.copilot-page td { font-size: 12px; }
 .copilot-page .table-wrap { overflow: auto; padding: 0; }
 @media (max-width: 800px) {
   .dash-shell .copilot-page .page-head h1,
