@@ -1,7 +1,8 @@
 """VP-NT1 — DSR with frozen N=24 (annualized σ across 24 hyps), then A/B/H compares.
 
-Does NOT modify dsr.py / compare.py / B* rules. Uses expected_max_sr +
-probabilistic_sharpe_ratio from vp3.dsr, and paired_block_delta_ci from bootstrap.
+Does NOT modify dsr.py / compare.py / B* rules.
+σ / SR*_ann stay annualized; PSR is evaluated at BAR scale:
+  SR*_bar = SR*_ann / √bpy ; DSR = PSR(SR_bar, n_obs, skew, kurt, SR*_bar).
 """
 
 from __future__ import annotations
@@ -9,11 +10,11 @@ from __future__ import annotations
 import json
 import math
 import sys
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from vp3.bootstrap import DEFAULT_BOOT_N, BootstrapCI, paired_block_delta_ci
+from vp3.bootstrap import DEFAULT_BOOT_N, BootstrapCI, bootstrap_mean_ci, paired_block_delta_ci
 from vp3.compare import COMPARE_QUESTIONS
 from vp3.dsr import (
     empirical_sr_std,
@@ -30,6 +31,7 @@ SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
 INTERVALS = ("1h", "4h")
 QUESTIONS = ("A", "B", "H")
 BPY: dict[str, float] = {"1h": float(N_YEAR["1h"]), "4h": float(N_YEAR["4h"])}  # 8760 / 2190
+MDD_LIMIT = -0.35  # maxDD < 35% ⇒ fold equity max_drawdown > -0.35
 
 
 def bars_per_year(interval: str) -> float:
@@ -69,6 +71,13 @@ def concat_times(report: WfReport) -> list[int]:
     return out
 
 
+def concat_nets(report: WfReport) -> list[float]:
+    out: list[float] = []
+    for f in report.folds:
+        out.extend(f.trade_nets)
+    return out
+
+
 @dataclass
 class HypTrial:
     strategy: str
@@ -85,12 +94,9 @@ class HypTrial:
     n_positive_folds: int
     n_folds: int
     max_dd_worst_fold: float | None
+    fold_max_dds: list[float] = field(default_factory=list)
+    fold_expectancies: list[float | None] = field(default_factory=list)
     dsr: float | None = None
-
-
-def _worst_mdd(report: WfReport) -> float | None:
-    mdds = [f.equity.max_drawdown for f in report.folds]
-    return min(mdds) if mdds else None
 
 
 def hyp_trial_from_wf(report: WfReport) -> HypTrial:
@@ -98,6 +104,8 @@ def hyp_trial_from_wf(report: WfReport) -> HypTrial:
     skew, kurt = sample_skew_kurtosis(rets)
     sb = sr_bar(rets)
     sa = sr_ann_from_bar(sb, report.interval) if sb is not None else None
+    mdds = [f.equity.max_drawdown for f in report.folds]
+    fold_exps = [f.expectancy for f in report.folds]
     return HypTrial(
         strategy=report.strategy,
         symbol=report.symbol,
@@ -112,11 +120,13 @@ def hyp_trial_from_wf(report: WfReport) -> HypTrial:
         expectancy=report.aggregate_expectancy,
         n_positive_folds=report.n_positive_folds,
         n_folds=len(report.folds),
-        max_dd_worst_fold=_worst_mdd(report),
+        max_dd_worst_fold=min(mdds) if mdds else None,
+        fold_max_dds=mdds,
+        fold_expectancies=fold_exps,
     )
 
 
-def dsr_ann_scaled(
+def dsr_bar_scaled(
     *,
     sr_b: float,
     n_obs: int,
@@ -125,23 +135,48 @@ def dsr_ann_scaled(
     interval: str,
     sr_star_ann: float,
 ) -> float | None:
-    """DSR on the annualized scale (same σ / SR* space as the 24-trial ledger).
+    """DSR = PSR(SR_bar, SR*_bar) with SR*_bar = SR*_ann / √bpy.
 
-    SR_ann = SR_bar × √bpy ; SR*_ann = E[max SR]_ann.
-    PSR is evaluated on (SR_ann, SR*_ann) so that the same SR_ann yields the
-    same DSR at equal n_obs across 1h/4h (bar-scale PSR is not scale-invariant
-    via SR*_bar = SR*_ann/√bpy because the SE term depends non-linearly on SR).
+    σ and SR*_ann stay annualized; PSR is evaluated at bar scale so n_obs
+    (bar count) matches the SR units (no √bpy inflation of the z-score).
     """
-    sr_a = sr_ann_from_bar(sr_b, interval)
+    sr_star_bar = sr_bar_from_ann(sr_star_ann, interval)
     return probabilistic_sharpe_ratio(
-        sr_a, n_obs, skew=skew, kurt=kurt, sr_benchmark=sr_star_ann
+        sr_b, n_obs, skew=skew, kurt=kurt, sr_benchmark=sr_star_bar
     )
+
+
+# Back-compat alias removed intentionally — callers must use dsr_bar_scaled.
 
 
 def sigma_and_sr_star(sr_anns: list[float], n_trials: int = N_T10B) -> tuple[float, float]:
     """σ of annualized SRs + E[max SR]_ann."""
     sigma = empirical_sr_std(sr_anns)
     return sigma, expected_max_sr(n_trials, sigma)
+
+
+def fold_sign_instability(
+    fold_expectancies: list[float | None],
+    aggregate_expectancy: float | None,
+) -> bool:
+    """True if >3 folds have expectancy sign opposite to the aggregate."""
+    if aggregate_expectancy is None or aggregate_expectancy == 0:
+        return False
+    agg_sign = 1 if aggregate_expectancy > 0 else -1
+    opposite = 0
+    for e in fold_expectancies:
+        if e is None or e == 0:
+            continue
+        if (1 if e > 0 else -1) != agg_sign:
+            opposite += 1
+    return opposite > 3
+
+
+def mdd_ok_all_folds(fold_max_dds: list[float], *, bi: str) -> bool:
+    """§9 EDGE (6): maxDD < 35% on each WF fold; B0 exempted."""
+    if bi == "B0":
+        return True
+    return all(dd > MDD_LIMIT for dd in fold_max_dds)
 
 
 def verdict_compare(
@@ -151,29 +186,60 @@ def verdict_compare(
     dsr_i: float | None,
     n_trades_i: int,
     expectancy_i: float | None,
+    expectancy_ci_excludes_zero: bool,
     n_positive_folds: int,
-    delta_excludes_zero: bool,
-    delta_mean: float,
-    max_dd_worst: float | None,
+    fold_max_dds: list[float],
+    fold_expectancies: list[float | None],
 ) -> str:
-    """§9 verdict for a Bi≻Bj cell (reportable; no look at val/holdout)."""
-    if bi == "B0":
-        # B0 as Bi never in A/B/H (Bi is B1/B2/B5)
-        pass
+    """§9 verdict for a Bi≻Bj cell (no val/holdout look).
+
+    EDGE = bi_beats_bj AND exp>0 AND IC trades excl.0 AND DSR≥0.95
+           AND ≥5/7 positive folds AND N≥40 AND maxDD<35% each fold (B0 exempt).
+    Else if instability (>3 folds opposite sign) → NON CONCLUANT (priority).
+    Else if N<40 → NON CONCLUANT.
+    Else → PAS D'EDGE.
+    """
     n_ok = n_trades_i >= 40
     dsr_ok = dsr_i is not None and dsr_i >= 0.95
     folds_ok = n_positive_folds >= 5
-    folds_fail = n_positive_folds < 3
     exp_ok = expectancy_i is not None and expectancy_i > 0
-    mdd_ok = max_dd_worst is None or max_dd_worst > -0.35  # maxDD < 35% ⇒ dd > -0.35
+    mdd_ok = mdd_ok_all_folds(fold_max_dds, bi=bi)
+    unstable = fold_sign_instability(fold_expectancies, expectancy_i)
 
-    if bi_beats_bj and n_ok and exp_ok and folds_ok and mdd_ok and dsr_ok:
+    if (
+        bi_beats_bj
+        and exp_ok
+        and expectancy_ci_excludes_zero
+        and dsr_ok
+        and folds_ok
+        and n_ok
+        and mdd_ok
+    ):
         return "EDGE"
-    if not n_ok or not delta_excludes_zero:
+    if unstable:
         return "NON CONCLUANT"
-    if n_ok and (not exp_ok or not dsr_ok or folds_fail or delta_mean <= 0):
-        return "PAS D'EDGE"
-    return "NON CONCLUANT"
+    if not n_ok:
+        return "NON CONCLUANT"
+    return "PAS D'EDGE"
+
+
+def apply_adverse_final(
+    base_compares: list[dict[str, Any]],
+    adverse_compares: list[dict[str, Any]],
+) -> None:
+    """EDGE in base but not EDGE in adverse → verdict_final = NON CONCLUANT (both)."""
+    adv_by_key = {
+        (c["question"], c["symbol"], c["interval"]): c for c in adverse_compares
+    }
+    for bc in base_compares:
+        key = (bc["question"], bc["symbol"], bc["interval"])
+        ac = adv_by_key[key]
+        if bc["verdict"] == "EDGE" and ac["verdict"] != "EDGE":
+            bc["verdict_final"] = "NON CONCLUANT"
+            ac["verdict_final"] = "NON CONCLUANT"
+        else:
+            bc["verdict_final"] = bc["verdict"]
+            ac["verdict_final"] = ac["verdict"]
 
 
 def run_profile(
@@ -206,12 +272,13 @@ def run_profile(
     if len(sr_anns) < 2:
         raise RuntimeError("need ≥2 finite SR_ann for σ")
     sigma, sr_star_ann = sigma_and_sr_star(sr_anns, N_T10B)
+    sr_star_bar = {tf: sr_bar_from_ann(sr_star_ann, tf) for tf in INTERVALS}
 
     for t in trials:
         if t.sr_bar is None:
             t.dsr = None
         else:
-            t.dsr = dsr_ann_scaled(
+            t.dsr = dsr_bar_scaled(
                 sr_b=t.sr_bar,
                 n_obs=t.n_obs,
                 skew=t.skew,
@@ -231,12 +298,16 @@ def run_profile(
                 rj = cache[(bj, symbol, interval)]
                 ra, rb = concat_returns(ri), concat_returns(rj)
                 ta, tb = concat_times(ri), concat_times(rj)
+                nets_i = concat_nets(ri)
                 print(f"COMPARE {cost_profile} {q} {symbol} {interval}", flush=True)
                 d_mean = paired_block_delta_ci(
                     ra, rb, interval=interval, n_boot=n_boot, metric="mean", times_a=ta, times_b=tb
                 )
                 d_sr = paired_block_delta_ci(
                     ra, rb, interval=interval, n_boot=n_boot, metric="sharpe", times_a=ta, times_b=tb
+                )
+                exp_ci = bootstrap_mean_ci(nets_i, n_boot=n_boot) if nets_i else BootstrapCI(
+                    float("nan"), float("nan"), float("nan"), 0, False
                 )
                 ti = trial_index[(bi, symbol, interval)]
                 tj = trial_index[(bj, symbol, interval)]
@@ -252,10 +323,10 @@ def run_profile(
                     dsr_i=ti.dsr,
                     n_trades_i=ti.n_trades,
                     expectancy_i=ti.expectancy,
+                    expectancy_ci_excludes_zero=exp_ci.excludes_zero,
                     n_positive_folds=ti.n_positive_folds,
-                    delta_excludes_zero=d_mean.excludes_zero,
-                    delta_mean=d_mean.mean,
-                    max_dd_worst=ti.max_dd_worst_fold,
+                    fold_max_dds=ti.fold_max_dds,
+                    fold_expectancies=ti.fold_expectancies,
                 )
                 compares.append(
                     {
@@ -269,8 +340,10 @@ def run_profile(
                         "score_j": asdict(tj),
                         "delta_mean": asdict(d_mean),
                         "delta_sharpe": asdict(d_sr),
+                        "expectancy_ci_i": asdict(exp_ci),
                         "bi_beats_bj": beats,
                         "verdict": verd,
+                        "verdict_final": verd,  # overwritten after both profiles
                     }
                 )
 
@@ -279,6 +352,7 @@ def run_profile(
         "cost_profile": cost_profile,
         "sigma_sr_ann": sigma,
         "sr_star_ann": sr_star_ann,
+        "sr_star_bar": sr_star_bar,
         "trials": [asdict(t) for t in trials],
         "compares": compares,
     }
@@ -292,13 +366,16 @@ def main() -> int:
     for profile in ("base", "adverse"):
         block = run_profile(profile, n_boot=n_boot)
         all_rows.append(block)
-        with out_path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(block, default=str) + "\n")
         print(
             f"DONE profile={profile} σ={block['sigma_sr_ann']:.6g} "
             f"SR*_ann={block['sr_star_ann']:.6g} compares={len(block['compares'])}",
             flush=True,
         )
+    apply_adverse_final(all_rows[0]["compares"], all_rows[1]["compares"])
+    out_path.write_text("", encoding="utf-8")
+    with out_path.open("a", encoding="utf-8") as f:
+        for block in all_rows:
+            f.write(json.dumps(block, default=str) + "\n")
     out_path.with_suffix(".json").write_text(
         json.dumps(all_rows, indent=2, default=str), encoding="utf-8"
     )
