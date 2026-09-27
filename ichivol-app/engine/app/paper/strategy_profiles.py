@@ -85,6 +85,10 @@ BASELINE_PROFILE: dict[str, Any] = {
     "require_atr_stop": True,
     "valuation_mode": "USDT_AS_EUR_PROXY",
     "initial_cash_eur": 5000.0,
+    # 2026-09-28 (user decision): the automatic strategy trades the 1h background loop only. Viewing or refreshing
+    # the screener on another timeframe never opens/closes paper positions. Another timeframe = explicit key here,
+    # ideally in a separate profile. (A DB row without the key behaves the same: see engine.auto_timeframes.)
+    "auto_timeframes": ["1h"],
     # Phase 2 — baseline ignores Market Structure filters
     "structure_filter": None,
     "structure_detectors": [],
