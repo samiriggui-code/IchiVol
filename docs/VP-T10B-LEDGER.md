@@ -102,29 +102,70 @@ Rejeux / adverse / B3–B7 :       +0
 N proposé :                      24
 ```
 
-**Proposition : geler `N = 24`** pour le DSR (§8 / §10) à partir de VP-NT1 étape 2.
+**N T10b gelé = 24** (VALIDÉ Claude + utilisateur, 2026-09-27) — B0 compté, rejeux non comptés, adverse non compté.
 
 ---
 
 ## Cas douteux (arbitrages)
 
-| ID | Question | Arbitrage Cursor | Impact si inverse |
-|----|----------|------------------|-------------------|
-| D1 | **B0** compte-t-il ? | **Oui** — B0 est une définition B* jouée (baseline Q A) sur chaque symbole×TF | N=18 (exclure 6×B0) |
-| D2 | Smoke #149 (n_boot=500) = +1 distinct de #150 ? | **Non** — même hyp ; #150 = formalisation | N inchangé (déjà 0) |
-| D3 | v2 VP-FIX1 / v3 VP2-R1 = nouvelles hyps ? | **Non** — brief + §10/§12 (bugfix / clarification) | N+=4 (BTC 1h) → 28 si on comptait chaque rejeu |
-| D4 | Compter **questions** (18 cellules A/B/H) au lieu de B* ? | **Non** — §10 = hyp B*×symbole×TF, pas la paire | N=18 |
-| D5 | Tests unitaires `tests/vp3` / synthetic | **Non** — pas données VP1 | 0 |
-| D6 | Runs Lab pré-VP (`research_lab/runs/2026-09-20`) | **Non** — hors Univers VP / pré-gel VP0 pour ce ledger | 0 |
-| D7 | B6 codé mais jamais lancé = +1 « latent » ? | **Non** — seuls les essais **joués** | 0 ; B6 reste +1 **le jour** du 1ʳᵉ run |
-| D8 | TF **1d** (série HTF B5) = hyp signal ? | **Non** — 1d n’est pas TF signal des compares | 0 |
-
-En cas de doute résiduel sur D1/D3 : la règle brief dit **compter**. D1 est déjà compté. D3 **n’est pas** compté (règle explicite rejeu bug/clarification) — signalé ici pour revue Claude.
+| ID | Question | Arbitrage | Impact si inverse | doute |
+|----|----------|-----------|-------------------|-------|
+| D1 | **B0** compte-t-il ? | **Oui** — B0 est une définition B* jouée (baseline Q A) | N=18 | — |
+| D2 | Smoke #149 (n_boot=500) = +1 distinct de #150 ? | **Non** — même hyp | 0 | — |
+| D3 | v2 VP-FIX1 / v3 VP2-R1 = nouvelles hyps ? | **Non** — bugfix / clarification §12 | N+=4 → 28 | — |
+| D4 | Compter **questions** (18) au lieu de B* ? | **Non** — §10 = B*×symbole×TF | N=18 | — |
+| D5 | Tests unitaires `tests/vp3` | **Non** — pas données VP1 | 0 | — |
+| D6 | Runs Lab pré-VP (`research_lab/runs/2026-09-20`) | **N inchangé** (autre harnais, pré-gel) — voir section Contamination | si on comptait chaque variante Lab → N≫24 | **oui** |
+| D7 | B6 codé mais jamais lancé = +1 « latent » ? | **Non** — seuls essais **joués** | 0 | — |
+| D8 | TF **1d** (HTF B5) = hyp signal ? | **Non** | 0 | — |
 
 ---
 
-## Hors scope de ce ledger / étape 1
+## Contamination pré-gel (Lab 2026-09-20)
 
-- Rerun grille avec `n_trials=N` (étape 2)  
-- Profil adverse (étape 2, pas +1)  
-- Q J / B7 · changement de params · features CI / T-CYCLE  
+Sources : `ichivol-app/engine/research_lab/runs/2026-09-20/` (manifest + trades_*.csv) et `research_lab/results_main.json` (40 lignes agrégées).
+
+### Symboles
+
+| Variante | n_symbols | Liste | BTC / ETH / SOL |
+|----------|----------:|-------|-----------------|
+| **A** (`A_reference`) | **20** | ADAUSDT, APTUSDT, ARBUSDT, ATOMUSDT, AVAXUSDT, BNBUSDT, **BTCUSDT**, DOGEUSDT, DOTUSDT, **ETHUSDT**, LINKUSDT, LTCUSDT, NEARUSDT, OPUSDT, PEPEUSDT, **SOLUSDT**, SUIUSDT, TONUSDT, UNIUSDT, XRPUSDT | **oui les trois** |
+| **B** (`B_extended_universe`) | **40** | AAVEUSDT, ADAUSDT, APTUSDT, ARBUSDT, ATOMUSDT, AVAXUSDT, BNBUSDT, BONKUSDT, **BTCUSDT**, CRVUSDT, DOGEUSDT, DOTUSDT, ENAUSDT, ETHFIUSDT, **ETHUSDT**, FETUSDT, HBARUSDT, INITUSDT, KAITOUSDT, LINKUSDT, LTCUSDT, NEARUSDT, NEIROUSDT, OPUSDT, PENGUUSDT, PEPEUSDT, PNUTUSDT, SHIBUSDT, **SOLUSDT**, SUIUSDT, SUSDT, TAOUSDT, TONUSDT, TRUMPUSDT, TRXUSDT, UNIUSDT, VIRTUALUSDT, WIFUSDT, WLDUSDT, XRPUSDT | **oui les trois** |
+| C / E | 20 | même univers que A (trades_C / trades_E) | **oui** |
+
+### Fenêtres (manifest)
+
+| Fenêtre | UTC | Chevauchement protocole VP |
+|---------|-----|----------------------------|
+| **DEV** | 2025-06-01 → 2026-01-01 | chevauche **validation 2025 S2** |
+| **VAL** | 2026-01-01 → 2026-09-20 (~16:00) | = **holdout 2026** (partiel jusqu’au run Lab) |
+
+### Variantes jouées
+
+- `A_reference`, `B_extended_universe`, `C_breakout_persistence_k3`, `E_exit_direction_flip`
+- Suivi : `results_review.json` (run_review) · `results_costsweep.json` (run_extra)
+
+Harnais Lab ≠ VP2/VP3 : pipeline live (long+short, multi-positions, `exit_mode=decision|direction`), **pas** B0–B5 §6.
+
+### Params B2 / B5 vs date Lab (git log -S / blame)
+
+| Artefact | Introduit | vs 2026-09-20 |
+|----------|-----------|---------------|
+| `app/indicators/rvol.py` defaults `primary_window=20`, `significant_threshold=1.5` | ship `3719c1f` **2026-09-16** | **AVANT** Lab |
+| `vp3` `RVOL_WINDOW=20`, `RVOL_MIN=1.5` (B2/B5 formels) | #148 `d3abe6f` **2026-09-26** | **APRÈS** Lab |
+| `vp3` `HTF_MAP` + règle B5 « HTF ≠ short » | #148 `d3abe6f` **2026-09-26** | **APRÈS** Lab |
+| Lab `research_lab/signals.py` HTF align (pipeline live) | présent au tip Lab `60c9428` (manifest 2026-09-20) | **au jour** du Lab (autre contrat que B5 VP) |
+
+Conclusion params : les **nombres** 20 / 1.5 existaient déjà dans l’indicateur app avant le Lab ; la **définition VP B2/B5** (et le filtre HTF B5) est formalisée **après** le 2026-09-20.
+
+### Conclusion (D6) — N inchangé
+
+- Lab = **autre harnais**, **pré-gel VP0** → **ne compte pas** dans N T10b (**N reste 24**).
+- Pour **BTCUSDT, ETHUSDT, SOLUSDT** (présents dans A et B) : fenêtres **validation 2025 S2** et **holdout 2026** sont marquées **« déjà vus »** (contamination d’information, pas d’incrément N). Doc seulement — aucun retuning.
+
+---
+
+## Hors scope ledger (étape 2 = autre job)
+
+- Rerun grille `n_trials=24` + adverse (VP-NT1 étape 2)  
+- Q J / B7 · changement params · features CI / T-CYCLE  
