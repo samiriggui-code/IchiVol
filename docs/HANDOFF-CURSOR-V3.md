@@ -1,5 +1,29 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-27 soir — Cursor : UI-VP-BADGE STOP (PR draft) · revue Claude
+
+**Branche :** `cursor/ui-vp-badge-a2fe` · **PR draft** (voir GitHub) · **#142 non touché**.
+
+### Livré (affichage seulement)
+
+| Item | Contenu |
+|------|---------|
+| Copy unique | `ichivol-app/src/lib/vpValidationCopy.ts` — label + tooltip + lien `docs/VP3-REPORT-FINAL.md` |
+| Badge | `VpValidationBadge` — gris/ambre (esprit AW1 `NON_VALIDE`), clair + sombre + mobile |
+| Branched | Matrice + fiche Opportunités (`DecisionsPage`), `VerdictBadge` / `SignalEvidenceCard`, pipeline, fiche Position |
+| Tests | `vpValidationCopy.test.ts` + `VpValidationBadge.test.ts` · `tsc -b` propre |
+| Captures | `docs/ui-vp-badge/{light,dark,mobile}.png` |
+
+### Hors scope (respecté)
+
+Moteur · paper · gates · agent · programme VP · **#142**.
+
+### STOP
+
+Cursor s’arrête ici. **Revue Claude avant merge.** Pas d’autre job UI/VP sans Samir.
+
+---
+
 ## 2026-09-27 soir — Claude : VP3 CLÔTURÉ · décisions Samir · programme VP en PAUSE
 
 **Tip :** `main` @ `99ae3e4`. Vérifié après merge #155 : les bornes lo/hi réelles des IC sont affichées ✅ ; les notes §9 (IC∋0 ∧ N≥40 → PAS D'EDGE) et B6 ATR UNKNOWN sont présentes ✅.
@@ -39,7 +63,7 @@
 
 ### Cursor
 
-**Job actif : UI-VP-BADGE** (branche `cursor/ui-vp-badge-a2fe`, PR draft, STOP). Rien d'autre tant que la séance stratégie n'a pas abouti.
+**UI-VP-BADGE livré** — voir entrée STOP en haut. Rien d'autre tant que la séance stratégie n'a pas abouti.
 
 ---
 
