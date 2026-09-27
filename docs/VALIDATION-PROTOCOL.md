@@ -293,7 +293,7 @@ Après les runs : Claude peut lire les rapports chiffrés pour revue, **sans** r
 
 | Champ | Valeur |
 |-------|--------|
-| Version courante | `VP0-2026-09-26` + amendement `VP0-2026-09-27` (M/N Bouclier) |
+| Version courante | `VP0-2026-09-26` + amendements `VP0-2026-09-27` (M/N Bouclier), `VP0-2026-09-28b` (RS-D Donchian 4h) |
 | Gel | Après APPROUVÉ Claude **et** OK utilisateur |
 | Modification post-gel | Nouveau fichier ou section `VP0-YYYY-MM-DD` + justification + invalidation des runs antérieurs non rejoués |
 
@@ -347,6 +347,40 @@ Comparaison de Bi ∈ {BM, BN} à **B0** (même symbole × TF), sur l'agrégat d
 ### Suite si BOUCLIER VALIDÉ
 
 Profil paper **séparé** (le baseline actuel n'est pas touché), **8 semaines minimum** (56 jours) en argent virtuel. Toute décision au-delà (argent réel) = **décision explicite de Samir**, jamais automatique. Pas de somme réelle prévue par ce protocole.
+
+---
+
+## Amendement `VP0-2026-09-28b` — Question RS-D « Cassure Donchian 4h + sortie de tendance » (pré-enregistré)
+
+**Statut :** figé **avant** tout code et tout run RS-D1 · chantier RS piloté par Claude local sur mandat de Samir (2026-09-28).
+**Justification (§12) :**
+- VP3 (0 EDGE / 48) et VP-P (paper fidèle : −62,5 % sur la période de développement) mesurent des stratégies qui **coupent la queue droite** : objectif 2R ou time-stop.
+- L'hypothèse RS-D est distincte : une entrée simple sur cassure, **sans objectif fixe**, avec un stop suiveur large et une sortie de canal.
+- Ce n'est **pas** une correction de B7.
+
+**Règles, références, critères :** le document normatif est [`RS-03-DONCHIAN-4H-SPEC.md`](./RS-03-DONCHIAN-4H-SPEC.md), figé dans le même commit que cet amendement. Toute divergence d'implémentation est un défaut, pas une variante.
+
+Résumé :
+- **Univers et données :** BTC / ETH / SOL spot 4h, VP1 tronquée < 2025-01-01, capital commun 5 000, parcours continu 2021-07-01 → 2024-12-31.
+- **Règles :**
+  - entrée `close > max(high[t−55..t−1])` à `open(t+1)` ;
+  - stop `fill − 3 ATR(14)`, puis stop suiveur `max close − 3 ATR` (montée seule, appliqué à `k+1`) ;
+  - sortie de canal `close < min(low[t−20..t−1])` à `open(k+1)` ;
+  - pas de 2R, de time-stop, de renforcement ni de levier ;
+  - taille et limites du paper (0,5 % / plafond 10 % / 4 % / 3 % jour) ;
+  - coûts paper et adverse.
+- **Références :** B7-P (R4 de #159), B0-F (passif investi), B0-E (passif à exposition égale), cash.
+- **Critères D1–D7 :**
+  - rendement net et moyenne mensuelle > 0 avec intervalle ;
+  - maxDD ≤ 15 % ;
+  - Δ mensuel vs B7-P > 0 avec intervalle ;
+  - Calmar > B0-E ;
+  - ≥ 2/3 actifs et ≥ 4/7 plis positifs ;
+  - > 0 en adverse ;
+  - ≥ 30 trades.
+- **Verdicts :** CANDIDAT À VALIDATION SUPPLÉMENTAIRE / REJETÉ / NON CONCLUANT.
+- **T10b :** +1 (`RS-D1-U3-4h`).
+- **Interdit :** validation 2025, holdout 2026, datasets externes, variantes de paramètres.
 
 ---
 

@@ -264,3 +264,17 @@ Commit corrections : `9a7a019` sur `cursor/vp-j1-a2fe`
 ## Hors scope
 
 - B3 / B4 / B8 · autre retuning · val 2025 / holdout · features CI / T-CYCLE · merge sans OK Claude  
+
+
+---
+
+## Chantier RS (stratégie alternative) — centralisé par le pilote RS (Claude local)
+
+| Lineage | Hypothèse | Amendement | Statut | Compte |
+|---------|-----------|------------|--------|--------|
+| `RS-D1-U3-4h` | Cassure Donchian 55 / sortie de tendance (stop 3 ATR suiveur, canal 20), BTC / ETH / SOL 4h, capital commun paper | `VP0-2026-09-28b` | pré-enregistré, **non joué** | **+1** |
+
+Règles de tenue :
+- les lignes RS ne sont ajoutées **que** par le pilote RS ;
+- VP-S1 (+12, #157) et P1 / P2 / P3 (#159) restent tenues par leurs chantiers ;
+- le total N se lit après merge de chaque PR.
