@@ -41,9 +41,11 @@ def _git_head() -> str:
 
 def _full_report(res, window, series, sigmap) -> dict[str, Any]:
     rows = dg.trade_rows(res.trades, series, sigmap)
+    timing = dg.entry_timing(rows, series, window)  # also attaches each row's symbol drift
     return {
         "portfolio": dg.portfolio_stats(res, window),
         "trades": dg.trade_stats(rows),
+        "ci_95_month_bootstrap": dg.expectancy_ci(rows),
         "by_symbol": dg.group_stats(rows, "symbol"),
         "by_fold": dg.group_stats(rows, "fold"),
         "by_year": dg.group_stats(rows, "year"),
@@ -51,7 +53,7 @@ def _full_report(res, window, series, sigmap) -> dict[str, Any]:
         "continuous_path_by_fold": dg.fold_slices(res),
         "flags": dg.flag_stats(rows),
         "exit_quality": dg.exit_quality(rows),
-        "entry_timing": dg.entry_timing(rows, series, window),
+        "entry_timing": timing,
         "loss_contexts": dg.loss_contexts(rows),
         "_rows": rows,
     }
@@ -63,7 +65,7 @@ def _short(res, window) -> dict[str, Any]:
                               "exposure_mean_pct", "daily_halt_days")} | {"n_trades": len(res.trades)}
 
 
-def run_all(root: Path | None = None, workers: int = 4, c1_n: int = 300) -> dict[str, Any]:
+def run_all(root: Path | None = None, workers: int = 4, c1_n: int = 300, v2: bool = False) -> dict[str, Any]:
     root = data_root(root)
     man = load_manifest(root)
     candles = {s: load_candles(s, "1h", root)[0] for s in U20}
@@ -121,4 +123,53 @@ def run_all(root: Path | None = None, workers: int = 4, c1_n: int = 300) -> dict
     (ART / "vpp_results.json").write_text(json.dumps(out, indent=1, default=str), encoding="utf-8")
     (ART / "vpp_r1_trades.json").write_text(json.dumps(rows, default=str), encoding="utf-8")
     print("written", ART, flush=True)
+    if not v2:
+        return out
+
+    # --- amendement VP0-2026-09-28 ---------------------------------------------------------------------------
+    from vpp import event_study, fidelity, replay
+
+    meta = {k: out[k] for k in ("protocol", "git_head", "generated_at", "seed")} | {
+        "amendment": "VP0-2026-09-28"}
+    print("C2…", flush=True)
+    samples = fidelity.draw_samples(sigs, candles, CONTINUOUS)
+    near, n_near_pool = fidelity.draw_near(samples.pop("_long_pool"), str(root), workers)
+    samples["C2-SEUIL"] = near
+    c2 = fidelity.compare(samples, root, workers, sigs=sigs)
+    c2["_near_pool_size"] = n_near_pool
+    (ART / "vpp_fidelity_c2.json").write_text(json.dumps(meta | c2, indent=1, default=str), encoding="utf-8")
+
+    print("C3…", flush=True)
+    wc = _window_most_full_hours(ART / "v1" / "vpp_r1_trades.json")
+    windows = {"W-a": (_ts("2021-07-01"), _ts("2021-07-15")), "W-b": (_ts("2024-01-01"), _ts("2024-01-15")),
+               "W-c": wc}
+    c3 = {name: replay.compare_window(feeds, w) for name, w in windows.items()}
+    (ART / "vpp_fidelity_c3.json").write_text(json.dumps(meta | c3, indent=1, default=str), encoding="utf-8")
+
+    print("P3…", flush=True)
+    p3 = event_study.run(sigs, candles, CONTINUOUS, cp, ca, r1.trades)
+    (ART / "vpp_p3_event_study.json").write_text(json.dumps(meta | p3, indent=1, default=str), encoding="utf-8")
+    print("written v2", flush=True)
     return out
+
+
+def _window_most_full_hours(v1_trades_path: Path) -> tuple[int, int]:
+    """W-c: the 14-day window (starting at UTC midnight) with the most hours at 10 open positions in R1 v1."""
+    rows = json.loads(v1_trades_path.read_text(encoding="utf-8"))
+    iv = [(_ts_hm(r["entry"]), _ts_hm(r["exit"])) for r in rows]
+    counts: dict[int, int] = {}
+    for a, b in iv:
+        for t in range(a, b, 3600):
+            counts[t] = counts.get(t, 0) + 1
+    full = sorted(t for t, k in counts.items() if k >= 10)
+    best, best_n = None, -1
+    day0 = CONTINUOUS[0]
+    for d in range(day0, CONTINUOUS[1] - 14 * 86400 + 1, 86400):
+        n = sum(1 for t in full if d <= t < d + 14 * 86400)
+        if n > best_n:
+            best, best_n = d, n
+    return best, best + 14 * 86400
+
+
+def _ts_hm(s: str) -> int:
+    return int(datetime.strptime(s, "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc).timestamp())

@@ -25,6 +25,18 @@ RUNUP_H = (12, 24)
 F1_MFE_MAX = 0.5
 F2_MFE_MIN = 1.0
 F34_MOVE_R = 1.0
+# VP0-2026-09-28 Q.1: R-thresholds compared with a tolerance (a target exit sits at 2R ± 1e-13 in float)
+EPS_R = 1e-9
+BOOT_N = 10_000
+BOOT_SEED = 7
+
+
+def ge_r(x: float, threshold: float) -> bool:
+    return x >= threshold - EPS_R
+
+
+def lt_r(x: float, threshold: float) -> bool:
+    return x < threshold - EPS_R
 
 
 def _iso(t: int) -> str:
@@ -111,9 +123,10 @@ def trade_rows(
         x = s.idx(tr.exit_time)
         si = s.idx(tr.signal_time)
         sig = sigs[tr.symbol].get(tr.signal_time)
+        # all price moves in R are measured from the entry fill, the anchor of stop and target (Q.1)
         mfe_r = max(0.0, (tr.high_seen - tr.entry_fill) / sd)
         mae_r = max(0.0, (tr.entry_fill - tr.low_seen) / sd)
-        gross_r = (tr.exit_raw - tr.entry_raw) / sd
+        gross_r = (tr.exit_raw - tr.entry_fill) / sd  # realized price move (target = 2R, stop = -1R)
         net_r = tr.net / tr.risk_amount if tr.risk_amount else 0.0
         fwd = {}
         for h in FWD_H:
@@ -150,19 +163,20 @@ def trade_rows(
             "gross_r": gross_r,
             "mfe_r": mfe_r,
             "mae_r": mae_r,
-            "capture": gross_r / mfe_r if mfe_r > 0 else None,
+            "capture": gross_r / mfe_r if mfe_r > EPS_R else None,
+            "entry_month": datetime.fromtimestamp(tr.entry_time, timezone.utc).strftime("%Y-%m"),
             "fwd": fwd,
             "runup": runup,
             "mtf_aligned": None if sig is None else sig.mtf_aligned,
             "rvol": None if sig is None else sig.rvol,
             "post_high_r_vs_exit": None if post_high is None else (post_high - tr.exit_raw) / sd,
             "post_close_r_vs_exit": None if post_close is None else (post_close - tr.exit_raw) / sd,
-            "F1_entry_adverse": mfe_r < F1_MFE_MAX,
-            "F2_gave_back": mfe_r >= F2_MFE_MIN and tr.gross <= 0,
+            "F1_entry_adverse": lt_r(mfe_r, F1_MFE_MAX),
+            "F2_gave_back": ge_r(mfe_r, F2_MFE_MIN) and tr.gross <= 0,
             "F3_exit_then_continued": (not stop_exit) and post_high is not None
-                                      and post_high >= tr.exit_raw + F34_MOVE_R * sd,
+                                      and ge_r((post_high - tr.exit_raw) / sd, F34_MOVE_R),
             "F4_stop_then_rebound": stop_exit and post_high is not None
-                                    and post_high >= tr.entry_raw + F34_MOVE_R * sd,
+                                    and ge_r((post_high - tr.entry_fill) / sd, F34_MOVE_R),
             "F5_gross_pos_net_neg": tr.gross > 0 and tr.net <= 0,
         })
     return rows
@@ -244,8 +258,8 @@ def exit_quality(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "capture_winners_median": _median(r["capture"] for r in winners if r["capture"] is not None),
         "mfe_r_quantiles": _quantiles([r["mfe_r"] for r in rows]),
         "mae_r_quantiles": _quantiles([r["mae_r"] for r in rows]),
-        "share_reaching_1r_pct": 100 * sum(1 for r in rows if r["mfe_r"] >= 1) / len(rows) if rows else None,
-        "share_reaching_2r_pct": 100 * sum(1 for r in rows if r["mfe_r"] >= 2) / len(rows) if rows else None,
+        "share_reaching_1r_pct": 100 * sum(1 for r in rows if ge_r(r["mfe_r"], 1)) / len(rows) if rows else None,
+        "share_reaching_2r_pct": 100 * sum(1 for r in rows if ge_r(r["mfe_r"], 2)) / len(rows) if rows else None,
         "post_exit_by_reason": {
             reason: {
                 "n": len(g),
@@ -254,6 +268,57 @@ def exit_quality(rows: list[dict[str, Any]]) -> dict[str, Any]:
                                            if r["post_close_r_vs_exit"] is not None),
             }
             for reason, g in _by(rows, "exit_reason").items()
+        },
+    }
+
+
+def month_cluster_ci(
+    items: list[tuple[str, float]], *, level: float = 0.95, n_boot: int = BOOT_N, seed: int = BOOT_SEED,
+) -> dict[str, Any]:
+    """Mean of values with a bootstrap over calendar months (whole months resampled, all assets together).
+
+    ``items`` = [(month_key, value)]. Percentile interval at ``level`` (two-sided)."""
+    import random
+
+    by_m: dict[str, list[float]] = defaultdict(list)
+    for m, v in items:
+        by_m[m].append(v)
+    months = sorted(by_m)
+    if not months:
+        return {"n": 0}
+    sums = [sum(by_m[m]) for m in months]
+    cnts = [len(by_m[m]) for m in months]
+    rng = random.Random(seed)
+    k = len(months)
+    stats = []
+    for _ in range(n_boot):
+        s = c = 0.0
+        for _ in range(k):
+            j = rng.randrange(k)
+            s += sums[j]
+            c += cnts[j]
+        stats.append(s / c)
+    stats.sort()
+    a = (1 - level) / 2
+    return {
+        "n": sum(cnts),
+        "months": k,
+        "mean": sum(sums) / sum(cnts),
+        "level": level,
+        "lo": stats[int(a * n_boot)],
+        "hi": stats[min(n_boot - 1, int((1 - a) * n_boot))],
+    }
+
+
+def expectancy_ci(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "expectancy_eur": month_cluster_ci([(r["entry_month"], r["net"]) for r in rows]),
+        "expectancy_r": month_cluster_ci([(r["entry_month"], r["net_r"]) for r in rows]),
+        "gross_pct_notional": month_cluster_ci([(r["entry_month"], 100 * r["gross"] / r["notional"]) for r in rows]),
+        "excess_fwd_pct": {
+            str(h): month_cluster_ci([(r["entry_month"], r["fwd"][h]["pct"] - r["drift"][h])
+                                      for r in rows if h in r["fwd"] and h in r.get("drift", {})])
+            for h in FWD_H
         },
     }
 
@@ -292,6 +357,8 @@ def entry_timing(rows, series: dict[str, SeriesIndex], window: tuple[int, int]) 
         per_sym_drift[sym] = {h: _mean(v) for h, v in acc.items()}
         for h, v in acc.items():
             drift_pos[h].append(sum(1 for x in v if x > 0) / len(v))
+    for r in rows:
+        r["drift"] = per_sym_drift[r["symbol"]]  # used by expectancy_ci (excess over the symbol's drift)
     out = {}
     for h in FWD_H:
         got = [r["fwd"][h] for r in rows if h in r["fwd"]]

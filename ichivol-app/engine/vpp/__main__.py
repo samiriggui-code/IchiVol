@@ -20,6 +20,10 @@ def main(argv: list[str] | None = None) -> int:
         from vpp.run import run_all
 
         run_all()
+    elif cmd == "run2":  # amendement VP0-2026-09-28: v1 must already be archived under docs/vpp-artifacts/v1/
+        from vpp.run import run_all
+
+        run_all(v2=True)
     else:
         print(__doc__)
         return 2
