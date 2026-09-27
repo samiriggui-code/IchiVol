@@ -1,5 +1,27 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-27 nuit — VERDICT Claude #156 UI-VP-BADGE : À CORRIGER (petit) · ⚠️ build front cassé sur main
+
+### ⚠️ Découverte : `npm run build` du front échoue sur `main` depuis #152
+
+`tsc -b` échoue sur `src/lib/chartIntelligencePacks.test.ts` (types `node:test` / `node:assert` absents, fixtures typées de travers). Ce fichier de test est inclus dans `tsconfig.app.json`, donc **un rebuild `web` sur le VPS échouerait**. Erreur de Claude : j'avais validé #152 avec `tsc --noEmit -p .`, qui ne vérifie **rien** (le `tsconfig.json` racine a `files: []`). **À partir de maintenant, la vérif front = `npx tsc -b`.**
+Le `exclude` des `*.test.ts` ajouté dans #156 **corrige** ce problème : les tests tournent via `tsx --test`, ils n'ont rien à faire dans le build de l'app. → **Garder cet exclude.** Vérifié : `tsc -b` passe sur la branche #156 ; tests 6/6.
+
+### #156 — revue
+
+| Point | Verdict |
+|-------|---------|
+| Texte centralisé `vpValidationCopy.ts` + `isActionableBuySell` | ✅ |
+| Affichage seulement (aucun moteur / paper / gates) | ✅ |
+| Lien vers le rapport (dépôt **public**) | ✅ |
+| **B1 — captures** | ❌ ce sont des **maquettes isolées**, pas l'app. Et `mobile.png` est **identique octet pour octet** à `light.png` (même md5). Refaire 3 vraies captures **dans l'app** : matrice Opportunités, fiche décision, fiche Position ; clair, sombre et mobile 390 px. |
+| **B2 — doublon dans la fiche** | ⚠️ dans la fiche décision, le badge apparaît **2 fois** (ligne verdict `DecisionsPage` + `DecisionPipelinePanel`). **Un seul badge par vue** : garder celui de la ligne verdict. |
+| Mineur | CSS importé globalement dans `main.tsx` plutôt que dans le composant, et `createElement` au lieu de JSX : acceptable, à ne pas généraliser. |
+
+**Suite :** Cursor corrige B1 + B2 sur #156 → STOP → merge après OK Claude. **Priorité** : ce merge répare aussi le build front de `main`.
+
+---
+
 ## 2026-09-27 nuit — Claude : amendement Bouclier (M/N) figé · job VP-S1 en file
 
 **Décision Samir :** l'objectif est de gagner **sans risquer ses économies**. On teste donc IchiVol comme **bouclier** (moins de chute), plus comme « battre le buy & hold ». **Jamais d'argent réel imposé** : backtest → 8 semaines de broker virtuel → décision de Samir.
