@@ -1,5 +1,109 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-27 — VP-GRID1 réserves Claude traitées
+
+**Branche :** `cursor/vp-grid1-a2fe` · **PR draft :** [#153](https://github.com/samiriggui-code/IchiVol/pull/153)  
+**Commit fixes :** `2d34ffb`  
+**STOP :** pas de merge sans OK final Claude. **VP-NT1 non commencé.**
+
+### Réserves corrigées
+
+| # | Fix |
+|---|-----|
+| 1 | `VP3-REPORT-GRID.md` Lecture courte : DSR_i ≥ 0.95 exhaustif (BTC 4h H = 0.9503, SOL 4h B = 0.955) + ligne N trials=1 surévalués + ligne 4h N=14–26 puissance faible |
+| 2 | Note 19 barres 1h manquantes : 10 plages identiques BTC/ETH/SOL + time-stop temps réel → moins de 48 barres réelles si trou (doc only) |
+| 3 | `vp3/grid_run.py` : `out_path.write_text("")` au démarrage |
+| 4 | `test_vp2_harness.py` : 2 lignes vides avant `test_full_cash_sizes_near_initial` |
+| 5 | Postgres : `test_routes` (daily_halt + no_atr) + `test_manual_buy` — **passent** sur `main@848f194` **et** sur la branche → **pas de régression** |
+
+### Postgres — sortie collée
+
+Commande (identique main / branche) :
+
+```bash
+cd ichivol-app/engine
+.venv/bin/pytest -q \
+  tests/api/test_routes.py::test_open_paper_route_uses_disposable_even_if_baseline_halted \
+  tests/api/test_routes.py::test_open_paper_position_reports_no_atr_stop_honestly \
+  tests/paper/test_manual_buy.py \
+  --tb=line
+```
+
+**main @ `848f194` :**
+
+```
+.....                                                                    [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/fastapi/testclient.py:1
+  /workspace/ichivol-app/engine/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+.venv/lib/python3.12/site-packages/starlette/testclient.py:53
+  /workspace/ichivol-app/engine/.venv/lib/python3.12/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+```
+
+**branche `cursor/vp-grid1-a2fe` :**
+
+```
+.....                                                                    [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/fastapi/testclient.py:1
+  /workspace/ichivol-app/engine/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+.venv/lib/python3.12/site-packages/starlette/testclient.py:53
+  /workspace/ichivol-app/engine/.venv/lib/python3.12/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+```
+
+Verdict tests : **5/5 pass** des deux côtés → pas de régression GRID1.
+
+### Hors scope (toujours)
+
+Q J (B7) · gel N T10b · profil adverse · features CI / T-CYCLE. Job suivant **VP-NT1** seulement après merge #153.
+
+---
+
+## 2026-09-27 — Cursor VP-GRID1 DONE · PR draft · STOP
+
+**Branche :** `cursor/vp-grid1-a2fe` @ `4381ea2`  
+**PR draft :** [#153](https://github.com/samiriggui-code/IchiVol/pull/153) — **aucun merge** sans verdict Claude.
+
+### Livré
+
+| ID | Contenu |
+|----|---------|
+| **VP2-R1** | `sim.py` : `(t−entry)//bar >= n−1` ; tests `exit_time == entry+(n−1)·bar` (+ cas n=48) ; note datée VALIDATION-PROTOCOL §12 |
+| **VP1** | Rebuild ETH/SOL (+ BTC) 1h/4h/1d via `build-spot` + `assert_series_completeness` ; sha256 dans le rapport |
+| **Grille** | A/B/H × BTC/ETH/SOL × 1h/4h · base · n_boot=10 000 → [`VP3-REPORT-GRID.md`](./VP3-REPORT-GRID.md) |
+| **BTC 1h v3** | Remplace v2 : pointeur en tête de [`VP3-REPORT-BTCUSDT-1h.md`](./VP3-REPORT-BTCUSDT-1h.md) |
+| Helper | `python -m vp3.grid_run` |
+| Handoff local | `HANDOFF-LOCAL-CLAUDE.md` sync `848f194` · #151/#152 · VP2-R1 tranché · job GRID1 |
+
+### Résultat grille (synthèse)
+
+**18/18** `bi_beats_bj=false`. Aucun claim EDGE. Détail + sha256 séries dans le rapport GRID.
+
+### Tests
+
+- `tests/vp2` time-stop + `tests/vp1/vp3` : verts (locaux).  
+- `pytest tests` Postgres : 3 échecs **préexistants / flaky DB** (`test_open_flow` equity drift, `test_routes` daily_halt vs no_atr, `test_manual_buy`) — reproduits hors branche sur `main` pour `test_open_flow` ; **hors scope VP-GRID1**.
+
+### Hors scope (respecté)
+
+Q J (B7) · figer N T10b · profil adverse · features CI / T-CYCLE.
+
+### STOP
+
+Revue Claude sur cette PR. Pas de merge autonome.
+
+---
+
 ## 2026-09-26 ~22h45 — DÉCISIONS Claude (délégation explicite de Samir : « démerde-toi »)
 
 ### #152 infobulles — **VALIDÉ + test visuel fait par Claude** → merge

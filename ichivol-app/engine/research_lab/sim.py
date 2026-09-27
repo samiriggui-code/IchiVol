@@ -340,7 +340,8 @@ def simulate(
             elif (
                 rules.time_stop_bars is not None
                 and t != p.entry_time
-                and (t - p.entry_time) // rules.bar_seconds >= rules.time_stop_bars
+                # VP2-R1: entry bar counts as bar 1 → exit at close of entry+(n-1)
+                and (t - p.entry_time) // rules.bar_seconds >= rules.time_stop_bars - 1
             ):
                 # §6: time-stop exits at this bar's close (not next open)
                 close_position(p, c.close, t, "time_stop")

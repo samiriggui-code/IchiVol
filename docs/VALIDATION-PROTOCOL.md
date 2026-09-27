@@ -297,6 +297,17 @@ Après les runs : Claude peut lire les rapports chiffrés pour revue, **sans** r
 | Gel | Après APPROUVÉ Claude **et** OK utilisateur |
 | Modification post-gel | Nouveau fichier ou section `VP0-YYYY-MM-DD` + justification + invalidation des runs antérieurs non rejoués |
 
+### Clarification de lecture — time-stop §6 (2026-09-26, VP2-R1)
+
+**Pas une nouvelle règle** — précision du décompte « 48 barres » / « 24 barres » :
+
+- La **barre d'entrée** compte comme **barre 1**.
+- Time-stop 1h (**48**) → sortie au **close** de `entry_bar + 47` (= `entry_time + 47 × 3600`).
+- Time-stop 4h (**24**) → sortie au **close** de `entry_bar + 23`.
+- Implémentation S1 : `(t - entry_time) // bar_seconds >= time_stop_bars - 1` (avec `t ≠ entry_time`).
+
+Les runs antérieurs à cette clarification (décompte `>= n` ⇒ 49 / 25 barres) sont **non comparables** et doivent être rejoués (VP-GRID1 / rapport v3+).
+
 ---
 
 ## Carte VP1 → VP9 (alignée roadmap V3 — ne pas redéfinir)
