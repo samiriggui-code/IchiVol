@@ -261,6 +261,21 @@ Commit corrections : `9a7a019` sur `cursor/vp-j1-a2fe`
 
 ---
 
+## VP-P — lignes diagnostiques (amendement `VP0-2026-09-27b`)
+
+Pré-enregistrées le 2026-09-27 (Claude local, branche `claude/vp-p-paper-fidele`) **avant** tout run P.
+Diagnostic descriptif : **aucun claim, aucun DSR**. Comptées au lineage pour la traçabilité.
+
+| # | hypothesis_id | Définition | Univers | TF | coûts | compte |
+|---|----------------|-----------|---------|----|-------|--------|
+| P1 | `P1-U20-1h-paper` | paper fidèle (`ICHIVOL_BASELINE_V1` @ `99ffc66`) : B7 + sorties paper + tailles paper + capital commun 5 000 | 20 cryptos `A_UNIVERSE` | 1h | paper (7,5 bps + friction/symbole) | **+1** (diag.) |
+| P2 | `P2-U3-1h-paper` | idem | BTC / ETH / SOL | 1h | idem | **+1** (diag.) |
+
+Adverse (R2), reset par pli (R3) et seeds d'ordre (R1-s) = même hypothèse → **pas +1**.
+Lineage : 36 (gelé VP-J1) + 12 (VP-S1, si validé) + 2 (VP-P) = **50** ; sans VP-S1 = 38.
+
+---
+
 ## Hors scope
 
 - B3 / B4 / B8 · autre retuning · val 2025 / holdout · features CI / T-CYCLE · merge sans OK Claude  
