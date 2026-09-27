@@ -200,65 +200,67 @@ N_proposé = 24 (gelé NT1) + 12 (B6/B7 × 3 × 2) = 36
 Adverse sur les mêmes hyps = pas +1
 ```
 
-**Proposition VP-J1 : geler `N = 36`** avant tout run étape 2 (sous réserve validation Claude + utilisateur).
+**N T10b gelé = 36** (VALIDÉ Claude + utilisateur, 2026-09-27) — 24 (NT1) + 12 (B6/B7 × 3 × 2). Adverse non compté.
 
 ### Gel B6 — seuils ATR (LiveScreenerSettings)
 
-Lu dans `LiveScreenerSettings.production_defaults()` / `AtrParams` (égaux numériquement) :
+Lu dans `LiveScreenerSettings.production_defaults()` / passé **explicitement** à `compute_atr` :
 
-| Champ | Valeur | Fichier | Commit / blob @ `main` `2a585f8` |
-|-------|--------|---------|----------------------------------|
-| `atr_dead_percentile` / `dead_percentile` | **0.15** | `app/strategy_lab/adn_ichivol.py` (`DEFAULT_LIVE_ATR_DEAD`) et `app/indicators/atr.py` (`AtrParams`) | ADN blob `4c9b608e9b6e…` · atr blob `e019b7774ba6…` · tip `bbcb5f4` (ADN) |
-| `atr_extreme_percentile` / `extreme_percentile` | **0.90** | idem | idem |
-| `atr_stop_multiplier` | **1.5** | idem | (sizing hint ; B6 filtre régime, pas le stop) |
-| `period` / `regime_lookback` | 14 / 100 | `app/indicators/atr.py` | atr blob `e019b7774ba6…` |
+| Champ | Valeur | Fichier | Blob @ `main` `2a585f8` |
+|-------|--------|---------|-------------------------|
+| `atr_dead_percentile` | **0.15** | `app/strategy_lab/adn_ichivol.py` `DEFAULT_LIVE_ATR_DEAD` | ADN `4c9b608e9b6e…` |
+| `atr_extreme_percentile` | **0.90** | `DEFAULT_LIVE_ATR_EXTREME` | idem |
+| `atr_stop_multiplier` | **1.5** | `DEFAULT_LIVE_ATR_STOP_MULT` | (hint stop ; pas le filtre B6) |
+| `period` / `regime_lookback` | 14 / 100 | `app/indicators/atr.py` `AtrParams` | atr `e019b7774ba6…` |
 
-`vp3/entries.py` B6 appelle `compute_atr(candles)` **sans** injecter `LiveScreenerSettings.atr_params()` — les défauts `AtrParams` **coïncident** avec `DEFAULT_LIVE_*` (0.15 / 0.90). Documenté ; pas de correction dans cette étape.
+### Gel B6 — params ADX (même source que le pipeline)
+
+`LIVE_ADX_PARAMS = AdxParams()` — identique aux défauts utilisés par `compute_adx` / `pipeline._regime_stage` :
+
+| Champ | Valeur | Fichier | Blob |
+|-------|--------|---------|------|
+| `period` | **14** | `app/indicators/adx.py` `AdxParams` | `b7e6f7a50d3f4e511bd5e37fba04b763af736d2e` |
+| `weak_threshold` (ABSENT) | **20.0** | idem | idem |
+| `trending_threshold` (TRENDING) | **25.0** | idem | idem |
+| `strong_threshold` (STRONG) | **40.0** | idem | idem |
+| Gate B6 | passe si `adx is None` OR `UNKNOWN` OR ∈ {TRENDING, STRONG} ; bloque ABSENT/DEVELOPING | `vp3.entries.live_regime_ok` (= logique `pipeline._regime_stage`) | — |
 
 ### Gel B7 — pipeline live Option B
 
 | Champ | Valeur figée | Source @ `main` `2a585f8` |
 |-------|--------------|---------------------------|
 | `strategy_version` | **`ichivol_pipeline_v1`** | `app/decision/pipeline.py` `STRATEGY_VERSION` |
-| Blob SHA `pipeline.py` | `9403d9f4d48ee4e054f722e6581d5f8e0883b2db` | `git rev-parse HEAD:ichivol-app/engine/app/decision/pipeline.py` |
-| Entrée B7 | `build_pipeline(...)` → `p.decision == "BUY"` sur barre fermée | `vp3/entries.py` blob `d16adb024fb3…` |
-| Sortie B7 | `strategy_rules("B7")` → `common_rules` (§6) — **pas** de sortie stage | `vp3/rules.py` |
+| Blob SHA `pipeline.py` | `9403d9f4d48ee4e054f722e6581d5f8e0883b2db` | `git rev-parse …/pipeline.py` |
+| Entrée B7 | `build_pipeline(...)` → `BUY` · **`i >= WARMUP_BARS` (78)** | `vp3/entries.py` |
+| Sortie B7 | `common_rules` (§6) | `vp3/rules.py` |
 
 ---
 
-## Définition de J (écrite **avant** tout run VP-J1)
+## Définition de J (VALIDÉE avant run)
 
 **Question J :** B7 vs **Bj**, où Bj = « meilleur de B0–B6 » **par case symbole×TF**.
 
-Règle de sélection de Bj (profil **base**, **N=36**) :
-
-1. Parmi `{B0, B1, B2, B5, B6}` sur ce symbole×TF, prendre la stratégie avec le **DSR_i le plus élevé** (DSR recalculé à N=36, profil base).
-2. En cas d’**égalité** de DSR_i : la plus **simple** — ordre `B0 < B1 < B2 < B5 < B6`.
-3. Le **même Bj** est réutilisé en profil **adverse** (pas de re-sélection adverse).
-4. B7 n’entre **pas** dans le pool Bj.
-5. Comparaison J : mêmes métriques §9 / bi_beats que A/B/H (Δmean IC, DSR(B7) ≥ 0.95, etc.).
-
-Cette définition est **figée avant run** ; aucun regard validation 2025 / holdout pour choisir Bj.
+1. Parmi `{B0, B1, B2, B5, B6}` : **max DSR_i** (N=36, profil base).
+2. Égalité → plus simple : `B0 < B1 < B2 < B5 < B6`.
+3. Même Bj en adverse.
+4. B7 hors pool Bj.
 
 ---
 
-## Audit `vp3/entries.py` B6 / B7 vs §2 (doc only, **aucune correction**)
+## Audit `vp3/entries.py` B6 / B7 vs §2
 
-| Point | §2 / contrat | Code actuel | Écart ? |
-|-------|--------------|-------------|---------|
-| B6 = B5 + régime ≠ dead/extreme | Oui | B5 filters + `atr.regime not in (DEAD, EXTREME)` | **Partiel** — voir ADX |
-| B6 seuils ATR live | LiveScreenerSettings | `compute_atr()` défauts = 0.15/0.90 (= live defaults) | **Non** (numériquement aligné) ; wiring explicite absent |
-| B6 « ATR/**ADX** » | libellé §2 | **ADX non filtré** dans B6 (seul ATR régime) ; le pipeline live échoue aussi si ADX absent/developing | **Oui** — B6 plus permissif que le régime live complet |
-| B7 = BUY pipeline barre fermée | Oui | `build_pipeline` → `decision == "BUY"` | **Non** |
-| B7 sortie §6 uniquement | Oui | `common_rules` / pas de sortie stage | **Non** |
-| B7 warm-up | implicite | boucle B7 **sans** `WARMUP_BARS` (contrairement à B1–B6) | **Oui** (mineur) — documenté |
-| B7 HTF | pipeline MTF | `_align_mtf_directions` (≠ `align_htf_directions` de B5/B6) | **INFO** déjà VP3-R6 (conservateur) — pas un bug §2 |
+| Point | Statut |
+|-------|--------|
+| B6 ATR via `LiveScreenerSettings.production_defaults().atr_params()` | **CORRIGÉ avant 1ʳᵉ run** |
+| B6 gate ADX (= pipeline) | **CORRIGÉ avant 1ʳᵉ run** |
+| B7 `WARMUP_BARS` | **CORRIGÉ avant 1ʳᵉ run** |
+| B7 sortie §6 | OK (inchangé) |
+| B7 HTF `_align_mtf_directions` | INFO VP3-R6 (inchangé) |
 
-**Pas de correction dans VP-J1 étape 1.** Claude + utilisateur tranchent si les écarts ADX / warm-up bloquent avant étape 2.
+Commit corrections : voir tip branche `cursor/vp-j1-a2fe` (ce push).
 
 ---
 
 ## Hors scope
 
-- VP-J1 **étape 2** (runs) avant validation N=36 + déf. J + point c  
-- B3 / B4 / B8 · changement params/règles · features CI / T-CYCLE · décisions sur val 2025 / holdout  
+- B3 / B4 / B8 · autre retuning · val 2025 / holdout · features CI / T-CYCLE · merge sans OK Claude  

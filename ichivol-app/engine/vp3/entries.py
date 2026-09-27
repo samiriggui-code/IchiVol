@@ -6,19 +6,41 @@ from app.agents import ichimoku_agent, rvol_agent
 from app.agents.types import Direction
 from app.backtest.experiments import _align_mtf_directions
 from app.decision.pipeline import build_pipeline
-from app.indicators.adx import compute_adx
-from app.indicators.atr import VolatilityRegime, compute_atr
+from app.indicators.adx import AdxParams, AdxState, TrendStrength, compute_adx
+from app.indicators.atr import AtrState, VolatilityRegime, compute_atr
 from app.indicators.cvd import compute_cvd
 from app.indicators.donchian import compute_donchian
 from app.indicators.ichimoku import Candle, IchimokuParams, compute_ichimoku
 from app.indicators.location import compute_location
 from app.indicators.rvol import RvolParams, compute_rvol
 from app.indicators.structure import compute_structure
+from app.strategy_lab.adn_ichivol import LiveScreenerSettings
 
 from vp3 import RVOL_MIN, RVOL_WINDOW, WARMUP_BARS
 
 ICHI_PARAMS = IchimokuParams(tenkan=9, kijun=26, senkou_b=52, displacement=26)
 RVOL_PARAMS = RvolParams(primary_window=RVOL_WINDOW, significant_threshold=RVOL_MIN)
+
+# Same ADX confirmation set as app.decision.pipeline._ADX_TREND_CONFIRMED
+_ADX_TREND_CONFIRMED = (TrendStrength.TRENDING, TrendStrength.STRONG)
+
+# Live ADX params = pipeline defaults (AdxParams); frozen for VP-J1 ledger
+LIVE_ADX_PARAMS = AdxParams()
+
+
+def live_regime_ok(atr: AtrState | None, adx: AdxState | None) -> bool:
+    """§2 B6 — ATR ∉ {DEAD, EXTREME} AND ADX gate identical to pipeline._regime_stage.
+
+    Passes when:
+      - ATR regime is not DEAD and not EXTREME (UNKNOWN/NORMAL OK), AND
+      - adx is None OR strength == UNKNOWN OR strength ∈ {TRENDING, STRONG}.
+    Blocks ABSENT and DEVELOPING when ADX has a confirmed reading.
+    """
+    if atr is not None and atr.regime in (VolatilityRegime.DEAD, VolatilityRegime.EXTREME):
+        return False
+    if adx is not None and adx.strength not in (TrendStrength.UNKNOWN, *_ADX_TREND_CONFIRMED):
+        return False
+    return True
 
 
 def _bullish_tk_cross(ichi: list, i: int) -> bool:
@@ -103,7 +125,15 @@ def entry_mask(
 
     ichi = compute_ichimoku(candles, ICHI_PARAMS)
     rvol = compute_rvol(candles, RVOL_PARAMS) if strategy in ("B2", "B5", "B6") else None
-    atr = compute_atr(candles)
+
+    # B6: explicit LiveScreenerSettings ATR params (no silent AtrParams default dependency)
+    if strategy == "B6":
+        atr_params = LiveScreenerSettings.production_defaults().atr_params()
+        atr = compute_atr(candles, atr_params)
+        adx = compute_adx(candles, LIVE_ADX_PARAMS)
+    else:
+        atr = compute_atr(candles)
+        adx = compute_adx(candles) if strategy == "B7" else None
 
     htf_dir: list[str] | None = None
     if strategy in ("B5", "B6") and htf_candles:
@@ -119,7 +149,7 @@ def entry_mask(
         struct = compute_structure(candles)
         loc = compute_location(candles, struct)
         cvd = compute_cvd(candles)
-        adx = compute_adx(candles)
+        assert adx is not None
         don = compute_donchian(candles)
         if htf_candles and len(htf_candles) >= 2:
             htf_out = ichimoku_agent.analyze(htf_candles)
@@ -127,6 +157,8 @@ def entry_mask(
         else:
             mtf = [None] * n
         for i in range(n):
+            if i < WARMUP_BARS:
+                continue
             io = ichi_out[i]
             aligned = (
                 mtf[i] == io.direction
@@ -170,16 +202,14 @@ def entry_mask(
             )
             continue
         if strategy == "B6":
-            assert rvol is not None and htf_dir is not None
+            assert rvol is not None and htf_dir is not None and adx is not None
             rv = rvol[i].rvol20
-            regime = atr[i].regime
-            ok_regime = regime not in (VolatilityRegime.DEAD, VolatilityRegime.EXTREME)
             mask[i] = (
                 b1_trigger(ichi, candles, i)
                 and rv is not None
                 and rv >= RVOL_MIN
                 and htf_dir[i] != "short"
-                and ok_regime
+                and live_regime_ok(atr[i], adx[i])
             )
             continue
         raise ValueError(f"unsupported strategy: {strategy}")
