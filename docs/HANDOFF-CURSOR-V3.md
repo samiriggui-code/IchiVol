@@ -2,7 +2,7 @@
 
 ## 2026-09-27 — VP-NT1 étape 1 — ledger prêt, STOP
 
-**Branche :** `cursor/vp-nt1-a2fe`  
+**Branche :** `cursor/vp-nt1-a2fe` @ `cb2f390`  
 **Base main :** `b1cd43d` (#153 VP-GRID1 squash-mergé, VALIDÉ Claude)  
 **PR draft :** à ouvrir avec ce push — **aucun merge** / **aucun rerun** avant validation de N.
 
