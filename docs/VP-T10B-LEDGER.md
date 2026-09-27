@@ -168,8 +168,7 @@ Conclusion params : les **nombres** 20 / 1.5 existaient déjà dans l’indicate
 ## VP-J1 — extension ledger (étape 1, **pas encore joué**)
 
 **Base main :** `2a585f8` (#154 VP-NT1 mergé)  
-**N actuel gelé :** 24  
-**N proposé après J1 étape 2 (si validé) :** **36** = 24 + 12
+**N gelé (VP-J1) :** **36** = 24 + 12
 
 ### 12 hypothèses à ajouter (+1 chacune au 1ʳᵉ run)
 
@@ -257,7 +256,7 @@ Lu dans `LiveScreenerSettings.production_defaults()` / passé **explicitement** 
 | B7 sortie §6 | OK (inchangé) |
 | B7 HTF `_align_mtf_directions` | INFO VP3-R6 (inchangé) |
 
-Commit corrections : voir tip branche `cursor/vp-j1-a2fe` (ce push).
+Commit corrections : `9a7a019` sur `cursor/vp-j1-a2fe`
 
 ---
 
