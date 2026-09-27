@@ -6,17 +6,15 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from vp3.bootstrap import BootstrapCI, bootstrap_mean_ci, paired_block_delta_ci
+from vp3.bootstrap import DEFAULT_BOOT_N, BootstrapCI, bootstrap_mean_ci, paired_block_delta_ci
 from vp3.dsr import deflated_sharpe_ratio
 from vp3.metrics import N_YEAR, sharpe_ratio
 from vp3.wf import WfReport, run_wf
 
-# Provisional VP3 questions (§3)
 COMPARE_QUESTIONS: dict[str, tuple[str, str]] = {
     "A": ("B1", "B0"),
     "B": ("B2", "B1"),
     "H": ("B5", "B2"),
-    # J resolved after seeing best of B0–B6
 }
 
 
@@ -45,7 +43,7 @@ class CompareReport:
     score_j: StrategyScore
     delta_mean: BootstrapCI
     delta_sharpe: BootstrapCI
-    bi_beats_bj: bool  # IC Δ mean excludes 0 in favor of Bi AND DSR(Bi)≥0.95
+    bi_beats_bj: bool
 
     def summary(self) -> dict[str, Any]:
         return asdict(self)
@@ -58,6 +56,13 @@ def _concat_returns(report: WfReport) -> list[float]:
     return out
 
 
+def _concat_times(report: WfReport) -> list[int]:
+    out: list[int] = []
+    for f in report.folds:
+        out.extend(f.bar_times)
+    return out
+
+
 def _concat_nets(report: WfReport) -> list[float]:
     out: list[float] = []
     for f in report.folds:
@@ -65,12 +70,16 @@ def _concat_nets(report: WfReport) -> list[float]:
     return out
 
 
-def _score(report: WfReport, *, n_trials: int = 1) -> StrategyScore:
+def _score(
+    report: WfReport,
+    *,
+    n_trials: int = 1,
+    trial_srs: list[float] | None = None,
+) -> StrategyScore:
     rets = _concat_returns(report)
     nets = _concat_nets(report)
     n_year = N_YEAR[report.interval]
     sr = sharpe_ratio(rets, n_year)
-    # DSR uses non-annualised SR scale consistent with PSR se formula → use raw mean/std
     sr_raw = None
     if len(rets) >= 2:
         import math
@@ -79,7 +88,13 @@ def _score(report: WfReport, *, n_trials: int = 1) -> StrategyScore:
         var = sum((r - mu) ** 2 for r in rets) / (len(rets) - 1)
         sr_raw = mu / math.sqrt(var) if var > 0 else None
     dsr = (
-        deflated_sharpe_ratio(sr_raw, len(rets), n_trials=n_trials)
+        deflated_sharpe_ratio(
+            sr_raw,
+            len(rets),
+            n_trials=n_trials,
+            trial_srs=trial_srs,
+            returns=rets,
+        )
         if sr_raw is not None
         else None
     )
@@ -108,17 +123,24 @@ def compare_pair(
     root: Path | None = None,
     question: str = "",
     n_trials: int = 1,
-    n_boot: int = 2000,
+    n_boot: int = DEFAULT_BOOT_N,
+    trial_srs: list[float] | None = None,
 ) -> CompareReport:
     """Run WF for Bi and Bj then paired Δ on concatenated bar returns."""
     ri = run_wf(bi, symbol=symbol, interval=interval, cost_profile=cost_profile, root=root)
     rj = run_wf(bj, symbol=symbol, interval=interval, cost_profile=cost_profile, root=root)
     ra = _concat_returns(ri)
     rb = _concat_returns(rj)
-    d_mean = paired_block_delta_ci(ra, rb, interval=interval, n_boot=n_boot, metric="mean")
-    d_sr = paired_block_delta_ci(ra, rb, interval=interval, n_boot=n_boot, metric="sharpe")
-    score_i = _score(ri, n_trials=n_trials)
-    score_j = _score(rj, n_trials=n_trials)
+    ta = _concat_times(ri)
+    tb = _concat_times(rj)
+    d_mean = paired_block_delta_ci(
+        ra, rb, interval=interval, n_boot=n_boot, metric="mean", times_a=ta, times_b=tb
+    )
+    d_sr = paired_block_delta_ci(
+        ra, rb, interval=interval, n_boot=n_boot, metric="sharpe", times_a=ta, times_b=tb
+    )
+    score_i = _score(ri, n_trials=n_trials, trial_srs=trial_srs)
+    score_j = _score(rj, n_trials=n_trials, trial_srs=trial_srs)
     beats = bool(
         d_mean.excludes_zero
         and d_mean.mean > 0
@@ -148,7 +170,8 @@ def compare_question(
     cost_profile: str = "base",
     root: Path | None = None,
     n_trials: int = 1,
-    n_boot: int = 2000,
+    n_boot: int = DEFAULT_BOOT_N,
+    trial_srs: list[float] | None = None,
 ) -> CompareReport:
     if question not in COMPARE_QUESTIONS:
         raise ValueError(f"unknown question {question}; choose {sorted(COMPARE_QUESTIONS)}")
@@ -163,4 +186,5 @@ def compare_question(
         question=question,
         n_trials=n_trials,
         n_boot=n_boot,
+        trial_srs=trial_srs,
     )

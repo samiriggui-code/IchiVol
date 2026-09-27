@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -10,13 +10,16 @@ from app.agents.types import Direction
 from research_lab.signals import BarSignal
 from research_lab.sim import BASE_COST, CostModel, simulate
 
-from vp2 import BAR_SECONDS, DEFAULT_SEED, INITIAL_CAPITAL
+from vp2 import BAR_SECONDS, DEFAULT_SEED, INITIAL_CAPITAL, TIME_STOP_BARS
 from vp2.data import bars_to_candles, build_sim_feed, load_vp1_spot
 from vp3 import HTF_MAP, PROTOCOL_VERSION
 from vp3.entries import entry_mask
-from vp3.folds import WF_FOLDS, Fold, entry_gate_s, fold_test_window_s
+from vp3.folds import HOLDOUT, VALIDATION, WF_FOLDS, Fold, entry_gate_s, fold_test_window_s
 from vp3.metrics import EquityMetrics, bar_returns_from_equity, equity_metrics, trade_expectancy
 from vp3.rules import strategy_rules
+
+# §5.1.8 — force_flat only at end of validation / holdout
+_FORCE_FLAT_FOLDS = frozenset({VALIDATION.id, HOLDOUT.id})
 
 
 @dataclass
@@ -29,6 +32,7 @@ class FoldResult:
     exit_reasons: dict[str, int] = field(default_factory=dict)
     positive_fold: bool = False  # §5.1.9 / §9 — <5 trades ≠ positive
     bar_returns: list[float] = field(default_factory=list, repr=False)
+    bar_times: list[int] = field(default_factory=list, repr=False)
     trade_nets: list[float] = field(default_factory=list, repr=False)
 
 
@@ -45,16 +49,24 @@ class WfReport:
     n_positive_folds: int
 
     def summary(self) -> dict[str, Any]:
-        # Omit heavy series from default JSON
         d = asdict(self)
         for f in d.get("folds", []):
             f.pop("bar_returns", None)
+            f.pop("bar_times", None)
             f.pop("trade_nets", None)
         return d
 
 
 def _watch_signal(t: int, sd: float | None) -> BarSignal:
     return BarSignal(t, "WATCH", Direction.NEUTRAL, sd, None, (), (), "vp3_gate", None)
+
+
+def _clip_equity_to_fold(
+    equity: list[tuple[int, float, float]],
+    win: tuple[int, int],
+) -> list[tuple[int, float, float]]:
+    """Keep equity marks whose bar time falls in [win_start, win_end) for paired Δ."""
+    return [e for e in equity if win[0] <= e[0] < win[1]]
 
 
 def run_fold(
@@ -87,30 +99,39 @@ def run_fold(
     )
     gate = entry_gate_s(fold, interval)
     win = fold_test_window_s(fold)
+    # VP3-R3: allow exits after fold end up to time-stop horizon; no new entries at/after win[1]
+    horizon = TIME_STOP_BARS.get(interval, 48) * BAR_SECONDS[interval]
+    sim_end = win[1] + horizon
+    # §5.1.8 force_flat only VAL/HOLD; B0 hold still needs flat to realize window PnL
+    force_flat = strategy == "B0" or fold.id in _FORCE_FLAT_FOLDS
+    rules = replace(rules, force_flat_at_end=force_flat)
 
-    # Gate: no new entries before purge horizon into the test fold
     gated = list(mask)
     for i, c in enumerate(candles):
-        if c.time < gate:
+        if c.time < gate or c.time >= win[1]:
             gated[i] = False
 
     def decide(i: int, _c, _sd) -> str:
         return "BUY" if gated[i] else "WATCH"
 
     feed = build_sim_feed(candles, decide=decide)
-    # Ensure gated WATCH preserves stop_distance for any stray BUY cleared above
     for t, (c, sig) in list(feed.items()):
-        if t < gate and sig.decision == "BUY":
+        if (t < gate or t >= win[1]) and sig.decision == "BUY":
             feed[t] = (c, _watch_signal(t, sig.stop_distance))
 
-    result = simulate({symbol: feed}, rules, cost, win, initial=initial, seed=seed)
+    result = simulate({symbol: feed}, rules, cost, (win[0], sim_end), initial=initial, seed=seed)
     # §5.1.7 — trade belongs to fold of its entry bar
     trades = [t for t in result.trades if win[0] <= t.entry_time < win[1]]
     nets = [t.net for t in trades]
     reasons: dict[str, int] = {}
     for t in trades:
         reasons[t.exit_reason] = reasons.get(t.exit_reason, 0) + 1
-    eq = equity_metrics(result.equity, interval=interval, equity_start=initial)
+
+    eq_fold = _clip_equity_to_fold(result.equity, win)
+    eq = equity_metrics(eq_fold, interval=interval, equity_start=initial)
+    rets = bar_returns_from_equity(eq_fold)
+    # timestamps aligned with returns: time of the *current* equity mark (i≥1)
+    bar_times = [eq_fold[i][0] for i in range(1, len(eq_fold))]
     exp = trade_expectancy(nets)
     if strategy == "B0":
         positive = eq.cagr is not None and eq.cagr > 0
@@ -124,7 +145,8 @@ def run_fold(
         equity=eq,
         exit_reasons=reasons,
         positive_fold=positive,
-        bar_returns=bar_returns_from_equity(result.equity),
+        bar_returns=rets,
+        bar_times=bar_times,
         trade_nets=nets,
     )
 

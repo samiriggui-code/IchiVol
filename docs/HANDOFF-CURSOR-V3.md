@@ -1,5 +1,169 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 20h45 — Cursor VP-FIX1 DONE · PR draft · STOP
+
+**Branche :** `cursor/vp-fix1-a2fe` · tip `80ffc37` (+ docs report/handoff)  
+**PR :** draft [#151](https://github.com/samiriggui-code/IchiVol/pull/151) — **aucun merge** sans verdict Claude.
+
+### Livré
+
+| ID | Fichiers clés | Tests |
+|----|---------------|-------|
+| VP1-R1 | `vp1/load.py` — `normalize_vision_time_ms`, `assert_series_completeness` | `tests/vp1/test_vp1_core.py` (µs fixture + gaps) |
+| VP3-R1 | `vp3/dsr.py` — σ empirique `trial_srs`, skew/kurt sample | `test_dsr_n1_equals_psr`, `test_dsr_decreases_with_n_trials_not_crushed` |
+| VP3-R2 | `vp3/bootstrap.py` — Politis–Romano | `test_stationary_block_mean_length_near_target` |
+| VP3-R3 | `vp3/wf.py` — sim `fin+horizon`, gate `[gate,fin)`, force_flat B0/VAL/HOLD | (pré-revue Claude ✅) |
+| VP3-R4 | `compare.py` / CLI défaut **10 000** | — |
+| VP3-R5 | assert timestamps appariés | `test_paired_block_timestamp_mismatch_raises` |
+| VP2-R2 | `research_lab/sim.py` stop/TP @ raw open | `test_stop_tp_anchored_on_raw_open_not_fill` |
+| AG0-R1 | `claudeTools.ts` `await readAnthropicStream` | `timeout … mode stream` 17/17 |
+| ENV-R1/R2 | `deep_history.py` flock portable · kill-switch portfolio dédié | commit séparé `80ffc37` |
+| VP2-R1 | **non touché** | — |
+
+### Rebuild + run v2
+
+- Séries BTC : 1h `3fe8b47…` (52 565) · 4h `cd8bef9…` (13 146) · **1d** `1d04e6b…` (**2 191**, 0 trou)  
+- A/B/H n_boot=10 000 : toutes **`bi_beats_bj=false`** — détail [`VP3-REPORT-BTCUSDT-1h.md`](./VP3-REPORT-BTCUSDT-1h.md) **v2** (tableau avant/après + note dernière barre de pli)  
+- UI Chart Intelligence **stashée** (`stash@{0}: ci-pack-tooltips WIP`) — **hors** cette PR ; suite branche `cursor/ci-pack-tooltips-a2fe`
+
+### STOP
+
+Revue Claude sur cette PR. Pas de grille ETH/SOL/4h, pas Q J, pas figer N T10b, pas features CI/T-CYCLE dans ce push.
+
+---
+
+## 2026-09-26 20h20 — Pré-revue Claude VP-FIX1 (local, pas encore de PR)
+
+Branche locale `cursor/vp-fix1-a2fe` : `85fbba9` (VP-FIX1) + `80ffc37` (ENV-R1/R2). **Pas poussée, pas de PR, pas d'entrée Cursor.** Le run A/B/H v2 tourne (python lancé à 19:44).
+
+| ID | Statut |
+|----|--------|
+| VP1-R1 µs | ✅ corrigé + contrôle de complétude. Vérifié sur les données reconstruites : BTC 1h **52 565 / 52 584** (19 trous), 4h **13 146 / 13 146**, dernière barre 2026-08-31 23:00 UTC |
+| VP3-R1 DSR | ✅ σ empirique + skew/kurt d'échantillon ; `n_trials>1` sans `trial_srs` lève une erreur (bien) |
+| VP3-R2 stationnaire | ✅ Politis–Romano |
+| VP3-R3 force_flat | ✅ sim jusqu'à fin de pli + horizon, equity coupée au pli, force_flat seulement B0 / VAL / HOLD |
+| VP3-R4 / R5 / VP2-R2 / AG0-R1 / ENV-R1 / ENV-R2 | ✅ |
+| VP2-R1 time-stop | non touché ✅ (en attente décision Samir) |
+
+Tests : vp1/vp2/vp3 + kill-switch + deep_history + t11a_bis **verts** · `claudeTools.test.ts` **17/17**.
+
+**Points restants avant PR :**
+1. **INFO à documenter** : un signal sur la dernière barre d'un pli est rempli au 1ᵉʳ open du pli suivant ; il n'est donc compté dans **aucun** pli (1 barre par pli). C'est acceptable, mais à écrire dans le rapport v2.
+2. Série **1d** non reconstruite (nécessaire pour B5/B6 en 4h). Pas bloquant pour BTC 1h ; obligatoire avant la grille.
+3. **UI Chart Intelligence dans l'arbre de travail (demande de Samir : infobulles sur les packs)** : exception au gel CI **limitée aux infobulles**, validée par Samir. **Régression signalée par Samir** : une fois les infobulles ajoutées, les calques FVG / Fibonacci / structure **disparaissent** au changement de pack. À 20h25, Cursor avait déjà remis `DrawingLayer` / `IntelligenceChart` / `*Drawing.tsx` à l'état HEAD. La lib `buildObjectTooltip` est purement additive et `tsc` est propre. Règles pour refaire :
+   - branche dédiée `cursor/ci-pack-tooltips-a2fe`, **séparée de VP-FIX1** ;
+   - l'infobulle est une **couche en plus**, sans toucher au rendu ni au filtrage des calques (pas de changement de `pointer-events`, de z-index ni de clip sur le SVG des dessins) ;
+   - critère de non-régression : sur BTCUSDT 1h, pour **chaque pack**, le nombre d'objets dessinés est le même avant et après (test ou capture par pack dans la PR) ;
+   - le bouton « ouvrir paper depuis la matrice » (`DecisionsPage.tsx`) n'est **pas** couvert par l'exception : il sort de cette PR, ou Samir le demande explicitement et il a une revue dédiée (flux paper).
+4. À la fin du run : rapport v2 (avant/après + sha256 des nouvelles séries), entrée handoff, **push + PR draft** → STOP.
+
+## 2026-09-26 nuit — REVIEW Claude a posteriori #140→#150 · VP-FIX1 ouvert
+
+**Revue réalisée par Claude en local** sur `main` @ `65419b9` : vrai diff + tests (serveur 67/67 ✅ · moteur : voir fin de bloc).
+Ces 9 PR avaient été mergées sans revue Claude (« file gel Claude pause »). Verdicts ci-dessous = **opposables**.
+
+### Verdicts par PR
+
+| PR | Sujet | Verdict |
+|----|-------|---------|
+| #140 | VP0 VALIDATION-PROTOCOL + AW0 | **VALIDÉ** (reste GEL DOC) |
+| #143 | AW1 « Pourquoi ? » `explain_chart_object` | **VALIDÉ** — déterministe, observe-only, aucun niveau inventé, `NON_VALIDE` affiché |
+| #144 | AG0 hygiène agent | **VALIDÉ** + 1 mineur (AG0-R1) |
+| #145 | Filtre `entry_source` outcomes | **VALIDÉ** |
+| #146 | VP1 Vision + manifest | **À CORRIGER — CRITIQUE** (VP1-R1) |
+| #147 | VP2 harness §6 | **À CORRIGER** (VP2-R1 à trancher, VP2-R2) |
+| #148/#149 | VP3 B0–B7 + compare | **À CORRIGER** (VP3-R1→R5) |
+| #150 | Rapport BTC 1h | **PROVISOIRE** — lecture qualitative plausible, chiffres à rejouer après VP-FIX1 |
+
+Vérifié OK (pas de lookahead) : nuage **affiché** = `span[i−26]` ; HTF B5 = dernière bougie HTF **close** à `t+Δ` ; RVOL/ATR causaux ; `levels_only` n'a aucune sortie pipeline ; gap stop/TP → fill à l'open ; stop avant TP ; attribution trade → pli d'entrée ; outcomes AG0 = open 1ʳᵉ barre close après signal.
+
+### Corrections demandées (VP-FIX1)
+
+| ID | Sévérité | Constat | Correction attendue |
+|----|----------|---------|---------------------|
+| **VP1-R1** | **CRITIQUE** | Binance Vision **spot** passe en **microsecondes** au 2025-01-01 (vérifié : `BTCUSDT-1d-2025-01.zip` col0 = `1735689600000000`). `klines_from_spot_zip` compare à des ms → **toutes les barres 2025–2026 sont silencieusement jetées**. Preuve : 1d = **1583** barres = 2020-09-01→2024-12-31 exactement (fenêtre complète ≈ 2191). **Validation 2025 et holdout 2026 seraient vides.** WF1–WF7 non affectés. | Normaliser `open_time`/`close_time` (≥ 1e15 → µs → `//1000`). Test fixture µs. **Contrôle de complétude** : compter barres attendues vs obtenues par intervalle sur la fenêtre et **échouer** si trou > seuil (lister les trous). Rebuild séries + manifest (nouveaux sha256), noter les anciens sha dans le rapport. Vérifier aussi funding/OI (unités). |
+| **VP3-R1** | **HAUTE** (bloque « figer N T10b ») | `expected_max_sr(sr_std=1.0)` : échelle fausse — SR est **par barre** (~1e-2), σ=1 ⇒ dès N>1, SR* ≈ 0.3+ et DSR → 0 quoi qu'il arrive. `skew=0 / kurt=3` codés en dur. | σ(SR) = écart-type **empirique** des SR (même échelle par barre) des N essais T10b ; skew/kurt **d'échantillon** des returns de Bi dans PSR. Tests : N=1 ⇒ DSR = PSR(0) ; N croissant ⇒ DSR décroissant mais pas écrasé sur un cas synthétique. |
+| **VP3-R2** | MOYENNE | §9.2 exige un block bootstrap **stationnaire** (longueurs géométriques, moyenne 24 / 6). Implémenté : blocs **fixes** circulaires. | Politis–Romano stationnaire (p = 1/bloc_moyen), indices appariés. Test sur longueur moyenne des blocs. |
+| **VP3-R3** | MOYENNE | `force_flat_at_end=True` dans chaque pli WF ⇒ trades ouverts dans les 48 dernières barres **coupés en fin de pli** (`window_end`). Viole §5.1.7 (peut finir après le pli) et §5.1.8 (sortie forcée seulement fin validation / holdout). | Sim jusqu'à `fin pli + horizon time-stop` ; entrées gatées à `[gate, fin pli)` ; trades attribués au pli d'entrée ; `force_flat` seulement VAL2025 / HOLD2026. Même fenêtre de returns pour Bi et Bj (appariement). |
+| **VP3-R4** | BASSE | `compare_pair` et CLI `--n-boot` par défaut = **2000** (§9.2 : 10 000). | Défaut 10 000. |
+| **VP3-R5** | BASSE | Appariement par troncature `min(len)` sans vérifier les timestamps. | `assert` timestamps identiques barre à barre (lever une erreur sinon). |
+| **VP2-R1** | **À TRANCHER (utilisateur)** | Time-stop : sortie au close de `entry_bar + 48` ⇒ **49 barres** en position (test `exit_time == T0+H+n*H` le fige). §6 dit « 48 barres ». | Proposition Claude : barre d'entrée = barre 1 ⇒ sortie au close de `entry + 47` (48 barres exposées). Si l'utilisateur valide : note de **clarification** datée dans VALIDATION-PROTOCOL §12 (lecture, pas nouvelle règle), test mis à jour. |
+| **VP2-R2** | BASSE | Stop/TP ancrés sur `fill` (open × (1+spread+slip)) au lieu de `entry = open(t+1)` (§6). | Niveaux depuis l'open **brut** ; coûts restent sur le fill. |
+| **VP3-R6** | INFO | B7 aligne HTF sur `candle.time` (open) ⇒ une bougie HTF plus tard que B5 (`time+Δ`). Causal, conservateur. | Documenter dans le rapport J (parité live) ; pas de changement. |
+| **AG0-R1** | BASSE | Streaming : `return readAnthropicStream(...)` sans `await` dans le `try` ⇒ `clearTimeout` avant la lecture du corps ; le timeout ne couvre pas le stream. | `return await readAnthropicStream(...)` + test timeout en mode stream. |
+
+### Suite (ordre strict)
+
+1. **Cursor — VP-FIX1** : une branche `cursor/vp-fix1-*`, PR **draft**, VP1-R1 + VP3-R1→R5 + VP2-R2 + AG0-R1 (VP2-R1 seulement si OK utilisateur). Rebuild VP1, puis **rejouer BTCUSDT 1h A/B/H** (n_boot 10 000) → `VP3-REPORT-BTCUSDT-1h.md` **v2** avec tableau avant/après. Entrée handoff → **STOP**.
+2. **Claude** : revue VP-FIX1 (diff + tests + contrôle complétude VP1).
+3. Seulement après : grille ETH/SOL × 1h/4h · Q **J** (B7) · N T10b figé (avec DSR corrigé) · adverse.
+
+**Aucun merge sans verdict Claude écrit ici.**
+
+### Tests locaux (Windows, Postgres, venv py3.14)
+
+- Serveur : **67/67** ✅
+- Moteur, suites revues (vp1/vp2/vp3, AW1 explain, AG0 closed-only, evidence, entry_source) : **toutes vertes** ✅
+- Moteur, suite complète : **8 échecs sans rapport avec #140→#150** :
+  - 6 × `fcntl` absent sous Windows (`strategy_lab/deep_history.py:116`, `test_t11a_bis`) → **ENV-R1** : ajouter un repli portable (`msvcrt` ou `filelock`) ou un skip Windows explicite.
+  - `test_p1_study_budget_limit500_under_20s` : 22,5 s pour un budget de 20 s sur ce PC (performance machine) → budget à paramétrer, ou marquer `slow`.
+  - `test_trip_daily_loss_latches_and_needs_unlock` : `tripped=False`. Le test utilise le portefeuille baseline de la base locale, donc il dépend de l'état de la DB ; fichier inchangé depuis #81. → **ENV-R2** : isoler le test dans un portefeuille dédié.
+
+---
+
+## 2026-09-26 soir — SYNC LOCAL · tip `7d0f5f4` · journal journée
+
+**PC local** fast-forward `3038eed` → `main` @ **`7d0f5f4`** (= GitHub).  
+Ce bloc = résumé unique de **toute la journée** pour reprise Claude / Cursor.
+
+### Tip HEAD
+
+`7d0f5f4` — docs(vp3): formalize A/B/H BTCUSDT 1h report at n_boot=10000 (#150)
+
+### Journal (ordre chronologique approximatif)
+
+| Bloc | Tips / PRs | Statut |
+|------|------------|--------|
+| Landing V3 | `c2cf1cf` | MERGED |
+| Market TV plein écran + mobile + calques | `396a917` … `8ddeec2` | MERGED |
+| Chart Intelligence prototype → API → Décisions | #124→#134 | **GEL** (bugs only) |
+| T-CI-BRIEF packs/caméra | #133 `df013fb` | MERGED · sous GEL CI |
+| T-CYCLE B1–B4 + P1–P6 | #123 `9e2b02f` | **GEL** |
+| GOLDEN-RVOL py3.12 | #139 `c46eda1` | MERGED |
+| Handoff GEL CI+T-CYCLE + VP0 | #136 `6634438` | MERGED |
+| **VP0** VALIDATION-PROTOCOL + AW0 | #140 `34991b4` | **GEL DOC** |
+| AW1 « Pourquoi ? » | #143 `7723e53` | MERGED |
+| AG0 hygiène agent + filtre evidence | #144+#145 | MERGED |
+| **VP1** Vision freeze | #146 `89e950a` | MERGED |
+| **VP2** harness §6/§1ter | #147 `91c2795` | MERGED |
+| **VP3** B0–B7 + compare A/B/H | #148–#150 → `7d0f5f4` | MERGED · **pas de claim EDGE** |
+
+### VP3 A/B/H — BTCUSDT 1h · n_boot=10 000 · [`VP3-REPORT-BTCUSDT-1h.md`](./VP3-REPORT-BTCUSDT-1h.md)
+
+| Q | Pair | bi_beats_bj |
+|---|------|-------------|
+| A | B1 vs B0 | **false** (B1 dominé) |
+| B | B2 vs B1 | **false** (Δ ok · DSR 0.52) |
+| H | B5 vs B2 | **false** (IC inclut 0) |
+
+### GEL actifs (ne pas rouvrir sans OK Claude)
+
+- Chart Intelligence (features) · T-CYCLE (features) · VP0 doc  
+- Pas de regen goldens · pas de claim EDGE (N T10b=1 provisoire)
+
+### Suite file (Claude review puis OK utilisateur)
+
+1. Revue Claude rapport VP3 A/B/H  
+2. ETH/SOL · 4h · Q **J** (B7) · N T10b figé · adverse stress  
+3. Bugs/hotfixes CI ou T-CYCLE OK hors gel feature
+
+### Docs à lire
+
+- [`VALIDATION-PROTOCOL.md`](./VALIDATION-PROTOCOL.md) · [`AW0-CONSOLIDATION.md`](./AW0-CONSOLIDATION.md)  
+- [`VP3-REPORT-BTCUSDT-1h.md`](./VP3-REPORT-BTCUSDT-1h.md) · [`HANDOFF-LOCAL-CLAUDE.md`](../HANDOFF-LOCAL-CLAUDE.md)
+
+---
+
 ## 2026-09-26 — VP1→VP3 MERGÉS · compare A/B/H provisoire
 
 ### Merges (OK utilisateur · file gel Claude pause)
@@ -13,8 +177,10 @@
 | **#146 VP1** | `89e950a` | Vision + manifest + loader |
 | **#147 VP2** | `91c2795` | Harness §6 / §1ter |
 | **#148 VP3** | `d3abe6f` | B0–B7 + WF + métriques + DSR |
+| **#149** | `e352c3c` | compare A/B/H CLI + B0 WF fix + BTC 1h |
+| **#150** | `7d0f5f4` | rapport formalisé n_boot=10 000 |
 
-### VP3 compare — [`VP3-REPORT-BTCUSDT-1h.md`](./VP3-REPORT-BTCUSDT-1h.md) · tip `e352c3c`+
+### VP3 compare — [`VP3-REPORT-BTCUSDT-1h.md`](./VP3-REPORT-BTCUSDT-1h.md) · tip `7d0f5f4`
 
 BTCUSDT 1h · base · **n_boot=10 000** :
 
@@ -24,7 +190,7 @@ BTCUSDT 1h · base · **n_boot=10 000** :
 | B | B2 vs B1 | **false** | Δ&gt;0 IC ok · DSR 0.52 |
 | H | B5 vs B2 | **false** | IC Δ inclut 0 · DSR 0.72 |
 
-Claude review au retour (≥17h30). Suite : ETH/SOL · 4h · Q J (B7) · N T10b.
+Claude review au retour. Suite : ETH/SOL · 4h · Q J (B7) · N T10b.
 ---
 
 ## 2026-09-26 — VP2 harness · VP1 funding OK · file gel (Claude pause)

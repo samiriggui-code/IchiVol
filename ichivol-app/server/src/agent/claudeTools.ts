@@ -349,7 +349,7 @@ export async function runClaudeToolLoop(opts: ToolLoopOptions): Promise<ToolLoop
       if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`)
       if (opts.onEvent) {
         const emit = opts.onEvent
-        return readAnthropicStream(res, (delta) => emit({ type: 'text', delta }))
+        return await readAnthropicStream(res, (delta) => emit({ type: 'text', delta }))
       }
       return (await res.json()) as AnthropicResponse
     } catch (e) {
