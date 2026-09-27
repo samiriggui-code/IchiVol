@@ -47,10 +47,10 @@ function uniqueCandidates(objects: IntelligenceObject[]): IntelligenceObject[] {
   return out
 }
 
-/** Libellé compact pour la liste de secours (évite 12× « Break of structure »). */
+/** Libellé liste de secours : titre lisible + prix pour distinguer les doublons. */
 function pickLabel(o: IntelligenceObject): { title: string; meta: string; tone: 'bull' | 'bear' | 'muted' } {
   const og = o.origin
-  const dir = og.direction === 'bearish' ? '↓' : og.direction === 'bullish' ? '↑' : ''
+  const dir = og.direction === 'bearish' ? ' ↓' : og.direction === 'bullish' ? ' ↑' : ''
   const tone: 'bull' | 'bear' | 'muted' =
     og.direction === 'bearish' ? 'bear' : og.direction === 'bullish' ? 'bull' : 'muted'
   const px =
@@ -60,25 +60,29 @@ function pickLabel(o: IntelligenceObject): { title: string; meta: string; tone: 
   const price = px != null ? fmtPrice(px) : ''
 
   if (og.kind === 'structure_event') {
-    const tag = og.event_type === 'CHOCH' ? 'CHOCH' : 'BOS'
+    const tag = og.event_type === 'CHOCH' ? 'Change of character' : 'Break of structure'
     return { title: `${tag}${dir}`, meta: price, tone }
   }
   if (og.kind === 'fvg') {
-    return { title: `${og.direction === 'bearish' ? 'FVG↓' : 'FVG↑'}`, meta: price, tone }
+    return {
+      title: `${og.direction === 'bearish' ? 'Bearish' : 'Bullish'} FVG`,
+      meta: price,
+      tone,
+    }
   }
   if (og.kind === 'fibonacci') {
-    return { title: 'Fib', meta: price, tone: 'muted' }
+    return { title: 'Fibonacci', meta: price, tone: 'muted' }
   }
   if (og.kind === 'liquidity') {
-    return { title: o.side === 'resistance' ? 'BSL' : 'SSL', meta: price, tone }
+    return { title: o.side === 'resistance' ? 'Buy-side liquidity' : 'Sell-side liquidity', meta: price, tone }
   }
   if (og.kind === 'confluence') {
     return { title: 'Confluence', meta: price, tone: 'muted' }
   }
   if (og.kind === 'swing') {
-    return { title: String(og.swing ?? 'Swing'), meta: price, tone }
+    return { title: `Swing ${og.swing ?? ''}`.trim(), meta: price, tone }
   }
-  if (o.side === 'resistance') return { title: 'Résistance', meta: price, tone: 'bear' }
+  if (o.side === 'resistance') return { title: 'Resistance', meta: price, tone: 'bear' }
   if (o.side === 'support') return { title: 'Support', meta: price, tone: 'bull' }
   return { title: objectTitle(o), meta: price || fmtPct(o.confidence), tone: 'muted' }
 }
