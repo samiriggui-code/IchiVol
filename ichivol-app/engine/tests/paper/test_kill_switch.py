@@ -112,13 +112,19 @@ def test_trip_daily_loss_latches_and_needs_unlock():
     session = SessionLocal()
     try:
         from app.paper.gates import day_start_equity
+        from app.paper.portfolio import ensure_portfolio
+        from app.paper.strategy_profiles import BASELINE_PROFILE
 
-        pf = ensure_baseline_portfolio(session)
+        # ENV-R2: dedicated portfolio — no shared baseline snapshot pollution
+        pf = ensure_portfolio(session, "TEST_KILL_DAILY_LOSS_VPFIX1")
         pf.daily_loss_locked = False
         pf.daily_loss_locked_at = None
+        pf.strategy_profile = dict(BASELINE_PROFILE)
+        pf.strategy_profile["daily_loss_limit_pct"] = 0.03
+        pf.initial_cash = 10_000.0
+        pf.cash = 10_000.0
         session.commit()
         start = day_start_equity(session, pf)
-        # Breach: 4% below day start (limit 3%)
         equity = start * 0.95
         tripped = maybe_trip_daily_loss_lock(session, pf, equity=equity)
         session.commit()
@@ -141,6 +147,7 @@ def test_trip_daily_loss_latches_and_needs_unlock():
             ),
             market,
         )
+        assert not d.accepted
         assert d.primary_code() == "daily_loss_halt"
         unlock_daily_loss(session, pf, confirm=True)
         session.commit()

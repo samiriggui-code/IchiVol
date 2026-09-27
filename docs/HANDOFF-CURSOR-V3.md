@@ -97,7 +97,7 @@ Unit test comptes/pack stables. Captures hover pack BTCUSDT 1h = à coller en re
 ## 2026-09-26 20h45 — Cursor VP-FIX1 DONE · PR draft · STOP
 
 **Branche :** `cursor/vp-fix1-a2fe` · tip `80ffc37` (+ docs report/handoff)  
-**PR :** draft (ce push) — **aucun merge** sans verdict Claude.
+**PR :** draft [#151](https://github.com/samiriggui-code/IchiVol/pull/151) — **aucun merge** sans verdict Claude.
 
 ### Livré
 

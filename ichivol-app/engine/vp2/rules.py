@@ -34,5 +34,5 @@ def common_rules(interval: str, *, name: str = "vp2_common") -> Rules:
         bar_seconds=BAR_SECONDS[interval],
         time_stop_bars=TIME_STOP_BARS[interval],
         full_cash=True,
-        force_flat_at_end=True,
+        force_flat_at_end=False,
     )

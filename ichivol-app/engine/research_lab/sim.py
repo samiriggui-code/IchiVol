@@ -272,8 +272,12 @@ def simulate(
         if notional > rules.liquidity_cap_pct * sc.volume * sc.close:
             rej["liquidity_cap"] += 1
             return
-        stop = fill - sd if direction == "LONG" else fill + sd
-        tp = fill + sd * rules.take_profit_r if direction == "LONG" else fill - sd * rules.take_profit_r
+        stop = raw - sd if direction == "LONG" else raw + sd
+        tp = (
+            raw + sd * rules.take_profit_r
+            if direction == "LONG"
+            else raw - sd * rules.take_profit_r
+        )
         if stop <= 0 or tp <= 0:
             rej["invalid_levels"] += 1
             return
@@ -289,6 +293,7 @@ def simulate(
         )
         positions[sym] = Position(sym, direction, sig.time, t, raw, fill, qty, notional, fee, stop, tp,
                                   qty * sd, pid)
+        # stop/TP anchored on raw open(t+1) (VP2-R2); fill still carries costs
 
     for t in times:
         # 1) signal exits decided at the previous close fill at this open

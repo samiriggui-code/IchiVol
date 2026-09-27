@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from vp3 import STRATEGIES
+from vp3.bootstrap import DEFAULT_BOOT_N
 from vp3.compare import COMPARE_QUESTIONS, compare_question
 from vp3.run import run_strategy
 from vp3.wf import run_wf
@@ -40,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--interval", default="1h", choices=("1h", "4h"))
     c.add_argument("--cost", default="base", choices=("base", "adverse"))
     c.add_argument("--n-trials", type=int, default=1, help="T10b N for DSR")
-    c.add_argument("--n-boot", type=int, default=2000)
+    c.add_argument("--n-boot", type=int, default=DEFAULT_BOOT_N)
 
     args = p.parse_args(argv)
     if args.cmd == "list":
