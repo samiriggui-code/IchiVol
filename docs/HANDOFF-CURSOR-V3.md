@@ -2,7 +2,7 @@
 
 ## 2026-09-27 soir — Cursor : UI-VP-BADGE STOP (PR draft) · revue Claude
 
-**Branche :** `cursor/ui-vp-badge-a2fe` · **PR draft** (voir GitHub) · **#142 non touché**.
+**Branche :** `cursor/ui-vp-badge-a2fe` · **PR draft [#156](https://github.com/samiriggui-code/IchiVol/pull/156)** · **#142 non touché**.
 
 ### Livré (affichage seulement)
 
