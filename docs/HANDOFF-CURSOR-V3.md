@@ -1,5 +1,41 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-27 ~23h — VERDICTS Claude #156 · #157 · #158
+
+### #156 UI-VP-BADGE (après `5e8cc89`) — **À CORRIGER (1 point)** puis merge prioritaire
+
+- B2 (doublon) ✅ corrigé.
+- B1 : les captures viennent d'une page **fabriquée** (`VpBadgeCapturePage`, données fictives), pas de l'app. Acceptable **comme rendu du composant**, à condition de le dire dans la PR.
+- ❌ **Nouveau problème** : cette page est ajoutée à `Root.tsx` comme route **publique, hors authentification** (`/capture/vp-badge`), donc elle partirait en prod. **Retirer de la PR** : la route, `VpBadgeCapturePage.tsx` et `scripts/capture-ui-vp-badge.mjs`. Garder les PNG, légendés « rendu composant, données fictives ».
+- Ensuite **merge** : #156 répare aussi `tsc -b` sur `main` (cassé depuis #152).
+
+### #157 VP-S1 étape 1 — **À CORRIGER** (pas de run avant)
+
+Conforme à l'amendement : BM (`exit_mode="direction"`, direction Ichimoku LTF, stop 1.5 ATR / TP 2R, sans time-stop), BN (`exposure`, HTF ≠ short, close → open t+1), S1–S5, `maxdd` apparié, N = 48. Vérifié OK : pas de lookahead HTF (réutilise `align_htf_directions`), coûts à chaque bascule, gate de purge identique à B0.
+
+| ID | Sévérité | Constat | Correction |
+|----|----------|---------|------------|
+| **S1-R1** | HAUTE | BM n'a pas de time-stop mais `sim_end = fin de pli + 48 barres`, sans `force_flat`. Une position BM encore ouverte à `sim_end` finit dans `open_at_end` et **disparaît de `trades`**. `n_trades` (seuil BM < 40 → NON CONCLUANT) et l'espérance sont donc faussés, surtout pour les tendances longues. | Pour BM : horizon post-pli **90 jours**, puis `force_flat` à `sim_end` avec la raison `horizon_end` ; compter et reporter ces sorties par pli. L'equity reste coupée au pli (S1–S4 inchangés). Test : une position ouverte au-delà de l'horizon est bien comptée. |
+| **S1-R2** | MOYENNE (doc) | S4 calcule le maxDD sur la série **concaténée** des 7 plis rééchantillonnée par blocs, alors que S1 utilise le **pire pli**. Les blocs de ~24 barres découpent les krachs longs : le maxDD bootstrap de B0 est **sous-estimé**. Comme c'est apparié, le Δ reste interprétable. | Documenter ces deux définitions dans le rapport VP-S1 (pas de changement de code : l'amendement dit « returns par barre »). |
+| INFO | — | Le live peut ré-entrer dans une même série après un redémarrage (audit VP-P §10) ; BM applique « une entrée par série » en continu. | Mentionner dans le rapport ; pas de changement (BM figé). |
+
+### #158 sheet paper au-dessus de la fiche — **VALIDÉ** (sous réserve de `npx tsc -b` propre)
+
+`ModalSheetHost` : `<dialog showModal>` en portal sur `body`. C'est la bonne réponse au top layer natif (un z-index ne suffit pas) ; Échap via `onCancel`, clic hors sheet OK, `confirming` bloque la fermeture. Squash-merge dès que `tsc -b` est propre.
+
+### ⚠️ Coordination : une autre session Claude travaille dans le même dossier local
+
+Fichiers non commités : `docs/VP-P-PAPER-REEL.md` (auteur « Claude (local) », branche `claude/vp-p-paper-fidele`) et `ichivol-app/engine/vpp/`. Cet audit de fidélité du paper recoupe BM. **Samir doit dire quelle session supervise quoi.** En attendant : ne pas écraser ces fichiers ; VP-S1 reste tel que pré-enregistré.
+Constat à retenir de VP-P : un appel UI `GET /screener?timeframe=15m|4h|1d` **déclenche une synchronisation paper sur ce TF**. 8 positions sur 39 de la 1ʳᵉ semaine viennent de la navigation. **C'est un bug de prod à traiter** (ticket séparé, après accord de Samir).
+
+### Ordre Cursor
+
+1. #156 : retirer la route publique → merge.
+2. #158 : `tsc -b` → merge.
+3. #157 : S1-R1 + doc S1-R2 → STOP → revue Claude → étape 2 (run).
+
+---
+
 ## 2026-09-27 nuit — VERDICT Claude #156 UI-VP-BADGE : À CORRIGER (petit) · ⚠️ build front cassé sur main
 
 ### ⚠️ Découverte : `npm run build` du front échoue sur `main` depuis #152
