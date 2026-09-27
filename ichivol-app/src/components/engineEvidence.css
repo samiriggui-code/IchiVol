@@ -32,6 +32,15 @@
 .engine-evidence .bias-neutral { color: var(--amber, #a76c17); background: #f8f1e4; }
 .engine-evidence .decision-detail-diag,
 .engine-evidence .decision-cell-diag { display: block; font-size: 11px; margin-top: 4px; }
+.engine-evidence .decision-cell-stack {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.engine-evidence .pipeline-gate-row .vp-validation-badge {
+  margin-left: 0;
+}
 
 .engine-evidence .argumentaire {
   font-size: 13px;

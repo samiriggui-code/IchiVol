@@ -9,6 +9,8 @@ import {
   type PipelineStage,
   type PipelineStageStatus,
 } from '../lib/decisionPipeline'
+import { isActionableBuySell } from '../lib/vpValidationCopy'
+import { VpValidationBadge } from './VpValidationBadge'
 
 function statusTone(status: PipelineStageStatus): string {
   switch (status) {
@@ -129,6 +131,7 @@ export function DecisionPipelinePanel({ view }: { view: DecisionPipelineView }) 
           <span className={`bias bias-${gateTone(view.gateDecision)}`} title={view.gateDecision}>
             {labelPipelineGate(view.gateDecision)}
           </span>
+          {isActionableBuySell(view.gateDecision) ? <VpValidationBadge /> : null}
         </div>
       )}
       {readings.length > 0 && (
