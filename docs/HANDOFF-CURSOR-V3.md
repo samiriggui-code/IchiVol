@@ -1,5 +1,99 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 ~22h45 — DÉCISIONS Claude (délégation explicite de Samir : « démerde-toi »)
+
+### #152 infobulles — **VALIDÉ + test visuel fait par Claude** → merge
+
+- **Vraie cause de la disparition des calques** (bug **déjà présent sur main**, visible en dev) : en React StrictMode, le démontage annulait le `requestAnimationFrame` sans remettre `rafRef.current = null`. Ensuite `bump()` sortait toujours tout de suite, la projection n'était jamais calculée, et l'overlay restait vide alors que les compteurs étaient justes (mesuré : `rafRef` bloqué à 2, 11 appels de `bump` sans effet). Corrigé : `rafRef.current = null` au nettoyage. Les nouvelles tentatives ajoutées par Cursor quand la taille vaut 0 (1ᵉʳ affichage en dialog) sont conservées.
+- Test navigateur (local, fiche BTCUSDT 1h, agent-browser) : pour chaque pack, calques dessinés **et** infobulle correcte. Overlay de **832 px** = zone de tracé (hôte 885 − échelle 52), donc aucun débordement.
+
+| Pack | Éléments SVG dessinés | Calques de l'infobulle |
+|------|-----------------------|------------------------|
+| Calme | 66 | Market Structure, Ichimoku |
+| Structure | 102 | + Support / Resistance |
+| Setup | 98 | Market Structure, Fibonacci, FVG, Ichimoku |
+| Liquidité | 102 | + S/R, Liquidity |
+| Tout | 133 | les 8 calques |
+
+`tsc` propre · tests packs 2/2.
+
+### #151 VP-FIX1 — **merge**
+
+### VP2-R1 time-stop — **décision : 48 barres, la barre d'entrée compte comme barre 1**
+
+Sortie au close de `entry_bar + 47` (1h) / `+ 23` (4h). C'est une **clarification de lecture** de §6 (« 48 barres »), pas une nouvelle règle : note datée à ajouter dans VALIDATION-PROTOCOL §12. Le rapport BTC 1h est à rejouer (v3) avec ce décompte.
+
+### Prochain job Cursor : VP-GRID1 (voir message en bas de ce bloc)
+
+1. VP2-R1 : `sim.py` time-stop `>= time_stop_bars - 1` (ou équivalent) + test `exit_time == entry + (n-1)·bar` + note §12 dans VALIDATION-PROTOCOL.
+2. VP1 : reconstruire les séries ETH et SOL (1h/4h/1d) avec contrôle de complétude ; sha256 dans le rapport.
+3. Rejouer A/B/H sur la grille **BTC/ETH/SOL × 1h/4h**, coûts **base**, n_boot 10 000 → `docs/VP3-REPORT-GRID.md` (un tableau par symbole×TF + synthèse). Remplacer BTC 1h v2 par v3.
+4. **Q J (B7) : pas encore.** **N T10b : pas encore** (on figera N après avoir vu la grille, sur le compte réel d'hypothèses jouées). **Adverse : pas encore.**
+5. PR draft → entrée handoff → STOP.
+
+---
+
+## 2026-09-26 ~21h30 — #152 CI-T1/T2/INFO corrigés · push draft · STOP
+
+**Branche :** `cursor/ci-pack-tooltips-a2fe`  
+**PR draft :** https://github.com/samiriggui-code/IchiVol/pull/152  
+**Tests :** `npx tsx --test src/lib/chartIntelligencePacks.test.ts` → 2/2 pass
+
+| ID | Fix |
+|----|-----|
+| **CI-T1** | `plotWidthPx(scale \|\| host−rightScale)` ; overlay `.ci-chart-overlay` reprend `style={{ width }}` (plus `inset:0` pleine largeur) |
+| **CI-T2** | `EXPECTED_BY_PACK` figé (calm1 / structure2 / setup3 / liquidity3 / full5) + test repli largeur |
+| **INFO** | `barSeconds` du timeframe courant (`res.replay.bar_seconds`) → `IntelligenceChart` (plus `bar \|\| 3600` seul) |
+
+**#151** — VALIDÉ ; ménage local fait (`.gitignore` UTF-16 supprimé ; `_ab_h_fix1.json` → `ichivol-app/engine/vp1/data/runs/`). **Merge uniquement sur OK Samir.**
+
+**STOP** — Samir : test visuel packs (hover + pas de débordement échelle prix).
+
+---
+
+## 2026-09-26 ~21h — VERDICTS Claude #151 + #152
+
+### #151 VP-FIX1 — **VALIDÉ** (merge possible dès OK Samir)
+
+- Code déjà pré-revu à 20h20 ✅. Rapport v2 cohérent : les verdicts A/B/H ne changent pas (`false` partout). B2 a une espérance **négative** (−4.31) après correctifs ; B5 passe de +10.20 à +5.39 ; 320→317 trades expliqués par la note sur la dernière barre de pli. Séries 1h/4h/**1d** complètes, avec sha256.
+- Ménage local (hors PR) : `engine/vp3/.gitignore` est en **UTF-16** (Git ne le lit pas correctement) et `vp3/_ab_h_fix1.json` traîne non suivi. Réécrire le `.gitignore` en UTF-8 ou le supprimer ; ranger les sorties de run dans `vp1/data/` (gitignored) ou `docs/`.
+- Toujours en attente de Samir : **VP2-R1** (time-stop 48 vs 49 barres). À trancher **avant** la grille, sinon il faudra tout rejouer.
+
+### #152 infobulles packs — **À CORRIGER**
+
+| ID | Constat | Correction |
+|----|---------|------------|
+| **CI-T1** | `IntelligenceChart` : `width = max(scale.width(), host.clientWidth)`. `host.clientWidth` **inclut l'échelle de prix de droite** (visible, `rightPriceScale`). Donc dans le cas normal, l'overlay devient plus large que la zone de tracé et les rayons / zones / extensions Fib **débordent sur les étiquettes de prix**. En plus, `style={{width}}` a été retiré de l'overlay (`inset:0`). | N'utiliser le repli hôte **que si** `scale.width()` vaut 0, et retrancher la largeur de l'échelle : `scale.width() \|\| (host.clientWidth − chart.priceScale('right').width())`. Remettre la largeur explicite de l'overlay. |
+| **CI-T2** | `chartIntelligencePacks.test.ts` est **tautologique** : `expected` est calculé avec la même fonction que le résultat, donc le test passe toujours. | Figer les nombres attendus en dur par pack (ex. `calm: 1, structure: 2, setup: 3, liquidity: 3, full: 5`, à dériver de `LAYER_PACKS` à la main). Ajouter un test du repli de largeur (`scale.width()=0` → hôte − échelle ; `scale.width()>0` → inchangé). |
+| **CI-T3** | Pas de preuve visuelle (« session auth »). | Samir valide à la main en local (voir ci-dessous) ; sinon, captures via un compte de dev. |
+| INFO | `bar \|\| 3600` : repli codé en dur sur 1h. | Utiliser la durée de barre du timeframe courant. |
+
+Le reste est OK : l'infobulle est une couche additive dans `BriefingControls`, sans toucher `DrawingLayer` / `*Drawing.tsx` ; le bouton paper de la matrice est bien exclu.
+
+**Test manuel pour Samir (après CI-T1) :** Décisions → fiche BTCUSDT 1h → passer la souris sur chaque pack (Calme / Structure / Setup / Liquidité / Complet). L'infobulle s'affiche, les calques FVG / Fib / structure sont toujours dessinés après chaque clic, et rien ne recouvre l'échelle de prix à droite.
+
+---
+
+## 2026-09-26 21h00 — Cursor CI pack tooltips · PR draft #152 · STOP
+
+**Branche :** `cursor/ci-pack-tooltips-a2fe` @ `80216ce`  
+**PR draft :** https://github.com/samiriggui-code/IchiVol/pull/152  
+**Exception gel CI** limitée aux infobulles packs (OK Samir).
+
+### Contenu
+- `BriefingControls` : tip riche (calques du pack) — `.ci-pack-tip`, hors SVG
+- `buildObjectTooltip` additif (`chartIntelligence.ts`)
+- `IntelligenceChart` : fallback width/height host (anti calques vides) — **DrawingLayer / \*Drawing.tsx inchangés**
+- Test `chartIntelligencePacks.test.ts` + `docs/CI-PACK-TOOLTIPS-PROOF.md`
+- **Exclu** : bouton paper matrice (`DecisionsPage`)
+
+### Preuve
+Unit test comptes/pack stables. Captures hover pack BTCUSDT 1h = à coller en review manuelle.
+
+**STOP** — revue Claude avant merge.
+
+---
+
 ## 2026-09-26 20h45 — Cursor VP-FIX1 DONE · PR draft · STOP
 
 **Branche :** `cursor/vp-fix1-a2fe` · tip `80ffc37` (+ docs report/handoff)  

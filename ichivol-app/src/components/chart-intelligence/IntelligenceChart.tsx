@@ -48,6 +48,8 @@ interface Props {
   /** Couches React (DrawingLayer…). */
   children?: ReactNode
   height?: number
+  /** Durée d’une barre (s) du timeframe courant (ex. 3600 pour 1h). */
+  barSeconds?: number
 }
 
 type SeriesBag = {
@@ -134,6 +136,19 @@ function applyCamera(
   scale.setVisibleLogicalRange({ from, to })
 }
 
+/**
+ * Largeur de la zone de tracé (hors échelle de prix droite).
+ * Repli hôte uniquement si `scaleWidth === 0` (1er paint dialog).
+ */
+export function plotWidthPx(
+  scaleWidth: number,
+  hostClientWidth: number,
+  rightPriceScaleWidth: number,
+): number {
+  if (scaleWidth > 0) return scaleWidth
+  return Math.max(0, hostClientWidth - Math.max(0, rightPriceScaleWidth))
+}
+
 export function IntelligenceChart({
   candles,
   ichimoku = [],
@@ -145,17 +160,30 @@ export function IntelligenceChart({
   onBackgroundClick,
   children,
   height = 460,
+  barSeconds,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<SeriesBag | null>(null)
   const colorsRef = useRef<ChartColors | null>(null)
-  const originRef = useRef<{ t0: number; bar: number }>({ t0: 0, bar: 3600 })
+  const originRef = useRef<{ t0: number; bar: number }>({
+    t0: 0,
+    bar: barSeconds && barSeconds > 0 ? barSeconds : 3600,
+  })
+  const barSecondsRef = useRef(barSeconds)
   const fittedKeyRef = useRef<string | null>(null)
   const cameraTokenRef = useRef<number | null>(null)
   const rafRef = useRef<number | null>(null)
+  const sizeRetryRef = useRef(0)
   const onBgRef = useRef(onBackgroundClick)
   const [projectionCtx, setProjectionCtx] = useState<ChartProjection | null>(null)
+
+  useEffect(() => {
+    barSecondsRef.current = barSeconds
+    if (barSeconds && barSeconds > 0) {
+      originRef.current = { ...originRef.current, bar: barSeconds }
+    }
+  }, [barSeconds])
 
   useEffect(() => {
     onBgRef.current = onBackgroundClick
@@ -171,26 +199,42 @@ export function IntelligenceChart({
       rafRef.current = null
       const chart = chartRef.current
       const series = seriesRef.current
+      const host = hostRef.current
       if (!chart || !series) return
       const scale = chart.timeScale()
       const toX = (logical: number) => {
         const c = scale.logicalToCoordinate(logical as Logical)
         return c == null ? null : Number(c)
       }
-      const width = scale.width()
-      const height = chart.paneSize(0)?.height ?? hostRef.current?.clientHeight ?? 0
+      // CI-T1 : repli hôte − échelle droite seulement si timeScale.width() === 0
+      const rightW = chart.priceScale('right').width()
+      const width = plotWidthPx(scale.width() || 0, host?.clientWidth || 0, rightW)
+      const heightPx = Math.max(
+        chart.paneSize(0)?.height || 0,
+        host?.clientHeight || 0,
+      )
+      // Dialog / 1er paint : taille 0 → réessayer (sans applyOptions(0) qui tue le chart).
+      if (!(width > 0) || !(heightPx > 0)) {
+        if (sizeRetryRef.current < 12) {
+          sizeRetryRef.current += 1
+          requestAnimationFrame(() => bump())
+        }
+        return
+      }
+      sizeRetryRef.current = 0
       setProjectionCtx((prev) => ({
         x: (time: number) => {
           const { t0, bar } = originRef.current
-          return toX((time - t0) / bar)
+          const step = bar > 0 ? bar : barSecondsRef.current && barSecondsRef.current > 0 ? barSecondsRef.current : 3600
+          return toX((time - t0) / step)
         },
         y: (price: number) => {
           const c = series.candle.priceToCoordinate(price)
           return c == null ? null : Number(c)
         },
         width,
-        height,
-        barSpacing: Math.abs((toX(1) ?? 0) - (toX(0) ?? 0)),
+        height: heightPx,
+        barSpacing: Math.abs((toX(1) ?? 0) - (toX(0) ?? 0)) || 6,
         rev: (prev?.rev ?? 0) + 1,
       }))
     })
@@ -229,8 +273,14 @@ export function IntelligenceChart({
     seriesRef.current = bag
 
     const ro = new ResizeObserver(() => {
-      if (!hostRef.current) return
-      chart.applyOptions({ width: hostRef.current.clientWidth, height: hostRef.current.clientHeight })
+      const host = hostRef.current
+      if (!host) return
+      const w = host.clientWidth
+      const h = host.clientHeight
+      // applyOptions(0) casse lightweight-charts (scale.width reste 0 → SVG FVG vides).
+      if (w > 0 && h > 0) {
+        chart.applyOptions({ width: w, height: h })
+      }
       bump()
     })
     ro.observe(el)
@@ -248,6 +298,11 @@ export function IntelligenceChart({
       bump()
     }
     window.addEventListener(THEME_CHANGE_EVENT, onTheme)
+    // 1er paint dialog : double frame une fois l’hôte dimensionné.
+    requestAnimationFrame(() => {
+      bump()
+      requestAnimationFrame(() => bump())
+    })
 
     return () => {
       window.removeEventListener(THEME_CHANGE_EVENT, onTheme)
@@ -257,6 +312,9 @@ export function IntelligenceChart({
       chart.unsubscribeClick(onClick)
       ro.disconnect()
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
+      // Sinon, après un remontage (StrictMode dev), bump() reste bloqué sur un id annulé
+      // et la projection n'est plus jamais recalculée → calques jamais dessinés.
+      rafRef.current = null
       chart.remove()
       chartRef.current = null
       seriesRef.current = null
@@ -270,8 +328,14 @@ export function IntelligenceChart({
     const s = seriesRef.current
     const colors = colorsRef.current
     if (!chart || !s || !colors) return
-    if (candles.length > 1) {
-      originRef.current = { t0: candles[0]!.time, bar: candles[1]!.time - candles[0]!.time }
+    if (candles.length >= 1) {
+      const fromSeries =
+        candles.length >= 2 ? candles[1]!.time - candles[0]!.time : 0
+      const fromTf = barSecondsRef.current && barSecondsRef.current > 0 ? barSecondsRef.current : 0
+      originRef.current = {
+        t0: candles[0]!.time,
+        bar: fromSeries > 0 ? fromSeries : fromTf > 0 ? fromTf : originRef.current.bar,
+      }
     }
     s.candle.setData(
       candles.map((c) => ({ time: ts(c.time), open: c.open, high: c.high, low: c.low, close: c.close })),
@@ -308,7 +372,10 @@ export function IntelligenceChart({
       applyCamera(chart, candles.length, camera, candles)
     }
     // Autoscale appliqué au frame suivant → deux frames avant de reprojeter.
-    requestAnimationFrame(() => bump())
+    requestAnimationFrame(() => {
+      bump()
+      requestAnimationFrame(() => bump())
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [candles, ichimoku, projection, resetKey, camera?.token, camera?.mode, camera?.visibleBars, camera?.fromTime])
 
@@ -328,7 +395,7 @@ export function IntelligenceChart({
       <div className="ci-chart-host" ref={hostRef} />
       <ChartProjectionContext.Provider value={projectionCtx}>
         <div className="ci-chart-overlay" style={{ width: projectionCtx?.width || undefined }}>
-          {projectionCtx && projectionCtx.width > 0 ? children : null}
+          {projectionCtx && projectionCtx.width > 0 && projectionCtx.height > 0 ? children : null}
         </div>
       </ChartProjectionContext.Provider>
     </div>

@@ -123,6 +123,20 @@ export function matchLayerPack(prefs: IntelligenceLayerPrefs): LayerPackId | nul
   return null
 }
 
+/**
+ * Nombre d’objets visibles pour un pack (même filtre que `visibleObjects`).
+ * Preuve non-régression infobulles : le compte ne doit pas changer quand on
+ * ajoute/retire uniquement l’UI tooltip.
+ */
+export function countVisibleForPack(
+  objects: { origin: { kind?: string }; layer?: string; type?: string }[],
+  packId: LayerPackId,
+  layerOf: (o: { origin: { kind?: string }; layer?: string; type?: string }) => keyof IntelligenceLayerPrefs,
+): number {
+  const layers = packById(packId).layers
+  return objects.filter((o) => layers[layerOf(o)]).length
+}
+
 /* ------------------------------------------------------------------ */
 /* Caméra                                                              */
 /* ------------------------------------------------------------------ */

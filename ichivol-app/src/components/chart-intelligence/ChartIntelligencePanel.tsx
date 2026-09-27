@@ -165,6 +165,7 @@ export function ChartIntelligencePanel({
             camera={camera}
             onBackgroundClick={() => ci.select(null)}
             height={height}
+            barSeconds={res.replay?.bar_seconds ?? undefined}
           >
             <DrawingLayer
               objects={ci.visibleObjects}
