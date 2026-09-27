@@ -219,15 +219,7 @@ def main() -> int:
     n_boot = int(sys.argv[2]) if len(sys.argv) > 2 else DEFAULT_BOOT_N
     out_path.write_text("", encoding="utf-8")
     base = run_profile("base", n_boot=n_boot, build_bj_map=True)
-    bj_map = {(s, i): bj for (s, i), bj in (
-        (k.split("|")[0], k.split("|")[1], v) for k, v in base["bj_map"].items()
-        for v in [base["bj_map"][k]]
-    )}
-    # rebuild bj_map cleanly
-    bj_map = {}
-    for k, v in base["bj_map"].items():
-        sym, tf = k.split("|", 1)
-        bj_map[(sym, tf)] = v
+    bj_map = {tuple(k.split("|", 1)): v for k, v in base["bj_map"].items()}
     adv = run_profile("adverse", n_boot=n_boot, bj_map=bj_map, build_bj_map=False)
     apply_adverse_final(base["compares"], adv["compares"])
     all_rows = [base, adv]
