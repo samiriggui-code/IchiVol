@@ -1,5 +1,37 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-27 nuit — Claude local : VP-P « paper fidèle » livré (PR draft) · PRIORITÉ recadrée par Samir
+
+**Branche :** `claude/vp-p-paper-fidele` (worktree séparé `IchiVol-vpp`) · **PR draft** (lien ci-dessous) · **aucun merge sans revue**.
+
+### Recadrage Samir (2026-09-27) — opposable
+1. **Priorité = simuler fidèlement le paper réel** (tailles, capital commun, sorties, coûts) et diagnostiquer entrées / sorties / filtres. Pas de réduction du problème au « manque de trades ».
+2. **BN (bouclier) reste une expérience séparée** (PR #157, rapport et verdict propres). « Bouclier validé » ≠ rentabilité du paper.
+3. **BM à 100 % du cash = variante à allocation normalisée**, elle ne représente pas le paper (précision écrite dans l'amendement P.0, aucune règle M/N changée).
+4. Validation 2025 et holdout 2026 **intacts** ; aucun nouvel indicateur / réglage sans problème observé + test pré-enregistré distinct.
+
+### Livré
+| Commit | Contenu |
+|--------|---------|
+| `e745f73` | Amendement `VP0-2026-09-27b` (Question P, **pré-enregistré avant run**) · audit [`VP-P-PAPER-REEL.md`](./VP-P-PAPER-REEL.md) (code + base prod en lecture seule) · ledger +2 lignes diag. |
+| `da8dab5` | `research_lab/sim.py` options opt-in (`cost_by_symbol`, `levels_anchor`, `gate_equity`, `min_fill_fraction`, MFE/MAE) — **défauts inchangés**, tests research_lab/vp1/vp2/vp3/paper verts · paquet `vpp/` · `tests/vpp` |
+| suivant | Runs R1–R4, C1, contexte → [`VP-P-REPORT.md`](./VP-P-REPORT.md) + `vpp-artifacts/` |
+
+### Résultat court (dev 2021-07 → 2024-12, 20 cryptos, capital commun 5 000 €)
+- **5 000 → 1 876 € (−62,5 %), DD −64 %, 2 867 trades, 7/7 plis négatifs** (continu et réinitialisé), seeds 0–4 identiques, adverse −80,6 %.
+- Brut déjà négatif (−0,04 R/trade) ; coûts ≈ 0,13 R/trade. Rendement après BUY ≈ dérive normale de l'actif (1–24 h) → **problème principal = information du signal d'entrée**.
+- Plafond 10 %/position **toujours** atteint → exposition moyenne 7,9 % : seconde limite (taille), indépendante.
+- MTF 4h **ne bloque jamais** un BUY (WATCH seulement) — écart vs descriptions.
+- Prod : les scans UI 15m/4h/1d **ouvrent des positions paper automatiques** (8/39 la 1ʳᵉ semaine).
+
+### Prochaine étape proposée (NON lancée, à pré-enregistrer si Samir valide)
+**P3 = étude d'événement** BUY vs barres aléatoires même actif / même mois, h = 24/48/96/168, IC bootstrap blocs, dev seulement. Si rien ne passe → on arrête d'optimiser l'entrée B7. Sinon **un** test de sortie à l'horizon trouvé.
+
+### ⚠️ Incident dépôt local (2026-09-27 ~22h)
+Un autre agent travaille dans `C:\laragon\www\IchiVol` : changements de branche, `git stash`, `git reset --hard`. Mes premières modifications ont été mises dans **`stash@{0}` (« wip-off-156-branch »)** — tout a été restauré dans le worktree, **ce stash n'a pas été supprimé** (il contient aussi des `.tmp-*.err` de l'autre agent). Les modifications de `sim.py` avaient été effacées par un `reset --hard` et ont été refaites. **Règle proposée :** un worktree par agent.
+
+---
+
 ## 2026-09-27 nuit — VERDICT Claude #156 UI-VP-BADGE : À CORRIGER (petit) · ⚠️ build front cassé sur main
 
 ### ⚠️ Découverte : `npm run build` du front échoue sur `main` depuis #152
