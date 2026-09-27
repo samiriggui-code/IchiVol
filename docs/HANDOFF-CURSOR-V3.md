@@ -1,5 +1,70 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-27 — VP-NT1 étape 2 DONE
+
+**Branche :** `cursor/vp-nt1-a2fe` · **PR draft :** [#154](https://github.com/samiriggui-code/IchiVol/pull/154)  
+**N T10b gelé :** **24** · tip code fixes `da6b5bb` (DSR barre + §9) · run complet + rapport ci-dessous.
+
+### Livré
+
+| Item | Contenu |
+|------|---------|
+| Run | `python -m vp3.nt1_run` base+adverse · n_boot=10 000 · N=24 |
+| Artefact | [`docs/vp3-artifacts/nt1_results.json`](./vp3-artifacts/nt1_results.json) |
+| Rapport | [`docs/VP3-REPORT-GRID.md`](./VP3-REPORT-GRID.md) **v2** (v1 en Historique) |
+| Ledger | contamination pré-gel validée @ `e588557` (N inchangé) |
+| Tests | `tests/vp3` 31/31 (validés Claude) |
+
+### Résultat court
+
+- **0** `bi_beats_bj` · **0** EDGE (base et adverse)
+- verdict_final : mix **PAS D'EDGE** / **NON CONCLUANT** (voir synthèse v2)
+- σ(SR_ann) base ≈ 0.645 · SR*_ann ≈ 0.897 ; adverse σ ≈ 0.898 · SR*_ann ≈ 1.249
+
+### STOP
+
+PR #154 reste **draft**. Pas de merge. Pas d’étape suivante autonome.
+
+### Hors scope (respecté)
+
+Q J (B7) · B3/B4/B6 · changement params/règles · features CI/T-CYCLE · décision sur val 2025 / holdout.
+
+---
+
+## 2026-09-27 — VP-NT1 étape 1 — ledger prêt, STOP
+
+**Branche :** `cursor/vp-nt1-a2fe` @ `cb2f390`  
+**Base main :** `b1cd43d` (#153 VP-GRID1 squash-mergé, VALIDÉ Claude)  
+**PR draft :** [#154](https://github.com/samiriggui-code/IchiVol/pull/154) — **aucun merge** / **aucun rerun** avant validation de N.
+
+### Livré (étape 1 seulement)
+
+| Item | Contenu |
+|------|---------|
+| Ledger | [`docs/VP-T10B-LEDGER.md`](./VP-T10B-LEDGER.md) — 24 hyps B0/B1/B2/B5 × BTC/ETH/SOL × 1h/4h × base |
+| Non joué | B3, B4, B6, B7 / Q J = **0** run VP1 documenté ; adverse = 0 |
+| Rejeux notés | BTC 1h : #149 smoke → #150 → v2 VP-FIX1 → v3 VP2-R1 (**pas +1**) |
+| **N proposé** | **`24`** = 4 × 3 × 2 |
+| Cas douteux | D1–D8 dans le ledger (B0 compté ; rejeux non comptés ; pas de count par question) |
+| HANDOFF-LOCAL | tip main sync **`b1cd43d`** |
+
+### Calcul court
+
+```
+4 (BTC 1h B0/B1/B2/B5, 1ʳᵉ #150) + 20 (GRID1 nouvelles cellules) = 24
+```
+
+### STOP
+
+Attendre validation de **N** par Claude + utilisateur.  
+**Étape 2 non commencée** (rerun grille base + adverse + verdicts §9).
+
+### Hors scope (respecté)
+
+Q J (B7) · changement params/règles · features CI / T-CYCLE · tuning validation 2025 / holdout.
+
+---
+
 ## 2026-09-27 — VP-GRID1 réserves Claude traitées
 
 **Branche :** `cursor/vp-grid1-a2fe` · **PR draft :** [#153](https://github.com/samiriggui-code/IchiVol/pull/153)  
