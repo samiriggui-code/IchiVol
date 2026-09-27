@@ -18,7 +18,7 @@ Tu (Claude, en local) supervises. **Cursor code, tu vérifies.** Canal : [`docs/
 ## Prochain job (ordre)
 
 1. **Séance de réflexion stratégie Claude + Samir (sans code).** Piste principale : timing de sortie / mise à l'abri (rester investi, sortir en régime baissier ; viser un drawdown bien plus faible que B0 pour un rendement proche). Chaque idée retenue = nouvelle hypothèse T10b (N=37…).
-2. **UI-VP-BADGE** (proposé, en attente de l'OK de Samir) : badge « Signal non validé — VP3 : pas d'edge mesuré » sur les verdicts ACHAT/VENTE. Affichage seulement.
+2. **UI-VP-BADGE** (APPROUVÉ, lancé chez Cursor) : badge « Signal non validé — VP3 : pas d'edge mesuré » sur les verdicts ACHAT/VENTE. Affichage seulement.
 3. **Avant tout déploiement VPS** : traiter #142 (CSS mobile qui tourne en prod mais n'est pas mergé).
 
 ## Méthode (rappel strict)

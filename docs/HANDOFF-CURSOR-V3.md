@@ -29,7 +29,7 @@
 3. **Prochaine étape : séance de réflexion stratégie (Claude + Samir), sans code.** Piste principale : **timing de sortie / mise à l'abri** plutôt que choix des entrées (rester investi par défaut, sortir en régime baissier ; objectif = presque le rendement de B0 avec une chute nettement plus faible). Chaque idée retenue = nouvelle hypothèse T10b (N passe de 36 à 37…), sans toucher au holdout.
 4. **Pas d'argent réel** sur les signaux IchiVol : la condition « preuve d'edge » du passage broker live n'est **pas** remplie.
 
-### Tâche proposée à Cursor (en attente de l'OK de Samir, NE PAS commencer)
+### Tâche Cursor : UI-VP-BADGE — **APPROUVÉE par Samir (2026-09-27), à lancer**
 
 **UI-VP-BADGE** : sur les verdicts ACHAT/VENTE (Décisions, fiches, Opportunités), badge discret « Signal non validé — VP3 : pas d'edge mesuré (0/48) » avec un lien vers `VP3-REPORT-FINAL.md`, dans l'esprit du `NON_VALIDE` d'AW1. Affichage seulement : aucun changement moteur, paper ou gates.
 
@@ -39,7 +39,7 @@
 
 ### Cursor
 
-**Aucun job actif.** Attendre la décision de Samir (badge) et l'issue de la séance stratégie.
+**Job actif : UI-VP-BADGE** (branche `cursor/ui-vp-badge-a2fe`, PR draft, STOP). Rien d'autre tant que la séance stratégie n'a pas abouti.
 
 ---
 
