@@ -1,5 +1,38 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-26 ~22h45 — DÉCISIONS Claude (délégation explicite de Samir : « démerde-toi »)
+
+### #152 infobulles — **VALIDÉ + test visuel fait par Claude** → merge
+
+- **Vraie cause de la disparition des calques** (bug **déjà présent sur main**, visible en dev) : en React StrictMode, le démontage annulait le `requestAnimationFrame` sans remettre `rafRef.current = null`. Ensuite `bump()` sortait toujours tout de suite, la projection n'était jamais calculée, et l'overlay restait vide alors que les compteurs étaient justes (mesuré : `rafRef` bloqué à 2, 11 appels de `bump` sans effet). Corrigé : `rafRef.current = null` au nettoyage. Les nouvelles tentatives ajoutées par Cursor quand la taille vaut 0 (1ᵉʳ affichage en dialog) sont conservées.
+- Test navigateur (local, fiche BTCUSDT 1h, agent-browser) : pour chaque pack, calques dessinés **et** infobulle correcte. Overlay de **832 px** = zone de tracé (hôte 885 − échelle 52), donc aucun débordement.
+
+| Pack | Éléments SVG dessinés | Calques de l'infobulle |
+|------|-----------------------|------------------------|
+| Calme | 66 | Market Structure, Ichimoku |
+| Structure | 102 | + Support / Resistance |
+| Setup | 98 | Market Structure, Fibonacci, FVG, Ichimoku |
+| Liquidité | 102 | + S/R, Liquidity |
+| Tout | 133 | les 8 calques |
+
+`tsc` propre · tests packs 2/2.
+
+### #151 VP-FIX1 — **merge**
+
+### VP2-R1 time-stop — **décision : 48 barres, la barre d'entrée compte comme barre 1**
+
+Sortie au close de `entry_bar + 47` (1h) / `+ 23` (4h). C'est une **clarification de lecture** de §6 (« 48 barres »), pas une nouvelle règle : note datée à ajouter dans VALIDATION-PROTOCOL §12. Le rapport BTC 1h est à rejouer (v3) avec ce décompte.
+
+### Prochain job Cursor : VP-GRID1 (voir message en bas de ce bloc)
+
+1. VP2-R1 : `sim.py` time-stop `>= time_stop_bars - 1` (ou équivalent) + test `exit_time == entry + (n-1)·bar` + note §12 dans VALIDATION-PROTOCOL.
+2. VP1 : reconstruire les séries ETH et SOL (1h/4h/1d) avec contrôle de complétude ; sha256 dans le rapport.
+3. Rejouer A/B/H sur la grille **BTC/ETH/SOL × 1h/4h**, coûts **base**, n_boot 10 000 → `docs/VP3-REPORT-GRID.md` (un tableau par symbole×TF + synthèse). Remplacer BTC 1h v2 par v3.
+4. **Q J (B7) : pas encore.** **N T10b : pas encore** (on figera N après avoir vu la grille, sur le compte réel d'hypothèses jouées). **Adverse : pas encore.**
+5. PR draft → entrée handoff → STOP.
+
+---
+
 ## 2026-09-26 ~21h30 — #152 CI-T1/T2/INFO corrigés · push draft · STOP
 
 **Branche :** `cursor/ci-pack-tooltips-a2fe`  

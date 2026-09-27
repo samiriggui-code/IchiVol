@@ -174,6 +174,7 @@ export function IntelligenceChart({
   const fittedKeyRef = useRef<string | null>(null)
   const cameraTokenRef = useRef<number | null>(null)
   const rafRef = useRef<number | null>(null)
+  const sizeRetryRef = useRef(0)
   const onBgRef = useRef(onBackgroundClick)
   const [projectionCtx, setProjectionCtx] = useState<ChartProjection | null>(null)
 
@@ -212,7 +213,15 @@ export function IntelligenceChart({
         chart.paneSize(0)?.height || 0,
         host?.clientHeight || 0,
       )
-      if (!(width > 0) || !(heightPx > 0)) return
+      // Dialog / 1er paint : taille 0 → réessayer (sans applyOptions(0) qui tue le chart).
+      if (!(width > 0) || !(heightPx > 0)) {
+        if (sizeRetryRef.current < 12) {
+          sizeRetryRef.current += 1
+          requestAnimationFrame(() => bump())
+        }
+        return
+      }
+      sizeRetryRef.current = 0
       setProjectionCtx((prev) => ({
         x: (time: number) => {
           const { t0, bar } = originRef.current
@@ -264,8 +273,14 @@ export function IntelligenceChart({
     seriesRef.current = bag
 
     const ro = new ResizeObserver(() => {
-      if (!hostRef.current) return
-      chart.applyOptions({ width: hostRef.current.clientWidth, height: hostRef.current.clientHeight })
+      const host = hostRef.current
+      if (!host) return
+      const w = host.clientWidth
+      const h = host.clientHeight
+      // applyOptions(0) casse lightweight-charts (scale.width reste 0 → SVG FVG vides).
+      if (w > 0 && h > 0) {
+        chart.applyOptions({ width: w, height: h })
+      }
       bump()
     })
     ro.observe(el)
@@ -283,6 +298,11 @@ export function IntelligenceChart({
       bump()
     }
     window.addEventListener(THEME_CHANGE_EVENT, onTheme)
+    // 1er paint dialog : double frame une fois l’hôte dimensionné.
+    requestAnimationFrame(() => {
+      bump()
+      requestAnimationFrame(() => bump())
+    })
 
     return () => {
       window.removeEventListener(THEME_CHANGE_EVENT, onTheme)
@@ -292,6 +312,9 @@ export function IntelligenceChart({
       chart.unsubscribeClick(onClick)
       ro.disconnect()
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
+      // Sinon, après un remontage (StrictMode dev), bump() reste bloqué sur un id annulé
+      // et la projection n'est plus jamais recalculée → calques jamais dessinés.
+      rafRef.current = null
       chart.remove()
       chartRef.current = null
       seriesRef.current = null
@@ -349,7 +372,10 @@ export function IntelligenceChart({
       applyCamera(chart, candles.length, camera, candles)
     }
     // Autoscale appliqué au frame suivant → deux frames avant de reprojeter.
-    requestAnimationFrame(() => bump())
+    requestAnimationFrame(() => {
+      bump()
+      requestAnimationFrame(() => bump())
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [candles, ichimoku, projection, resetKey, camera?.token, camera?.mode, camera?.visibleBars, camera?.fromTime])
 
