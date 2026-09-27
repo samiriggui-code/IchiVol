@@ -1,5 +1,38 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-27 — VP-J1 étape 2 DONE
+
+**Branche :** `cursor/vp-j1-a2fe`  
+**PR draft :** [#155](https://github.com/samiriggui-code/IchiVol/pull/155) — **STOP, pas de merge**  
+**N T10b gelé :** **36** · fixes B6/B7 `9a7a019` · tip run+rapport ci-dessous.
+
+### Livré
+
+| Item | Contenu |
+|------|---------|
+| Fixes pré-run | B6 live ATR+ADX gate · B7 `WARMUP_BARS` · tests `test_vp3_b6_b7.py` · `9a7a019` |
+| Run | `python -m vp3.j1_run` base+adverse · n_boot=10 000 · N=36 · Q A/B/H/J |
+| Artefact | [`docs/vp3-artifacts/j1_results.json`](./vp3-artifacts/j1_results.json) |
+| Rapport | [`docs/VP3-REPORT-FINAL.md`](./VP3-REPORT-FINAL.md) |
+| Ledger | 12 hyps B6/B7 marquées **jouées** · N=36 |
+
+### Résultat court
+
+- **0** `bi_beats_bj` · **0 EDGE / 48** (24 base + 24 adverse)
+- verdict_final : mix **PAS D'EDGE** / **NON CONCLUANT** (voir FINAL)
+- σ(SR_ann) base ≈ 0.631 · SR*_ann ≈ 0.935 ; adverse σ ≈ 0.858 · SR*_ann ≈ 1.270
+- Bj : BTC 1h=**B6**, BTC 4h=**B5**, ETH/SOL 1h+4h=**B0**
+
+### STOP
+
+PR #155 reste **draft**. Pas de merge. Pas d’étape suivante autonome.
+
+### Hors scope (respecté)
+
+B3/B4/B8 · retuning · val 2025 / holdout · features CI/T-CYCLE.
+
+---
+
 ## 2026-09-27 — VP-J1 étape 1 — N=36 proposé, STOP
 
 **Branche :** `cursor/vp-j1-a2fe` @ `6e56058`  
@@ -14,13 +47,13 @@
 | Gel B6 | ATR dead=**0.15** · extreme=**0.90** · `LiveScreenerSettings` / `AtrParams` @ main |
 | Gel B7 | `strategy_version=ichivol_pipeline_v1` · blob `pipeline.py` `9403d9f4…` |
 | Déf. **J** | Bj = max DSR_i parmi B0–B6 (base, N=36) ; égalité → plus simple B0&lt;…&lt;B6 ; même Bj en adverse |
-| Audit §2 | B6 : **pas de filtre ADX** (écart) ; B7 warm-up sans `WARMUP_BARS` (écart mineur) ; sorties §6 OK — **aucune correction** |
+| Audit §2 | B6 : **pas de filtre ADX** (écart) ; B7 warm-up sans `WARMUP_BARS` (écart mineur) ; sorties §6 OK — **aucune correction** (corrigé ensuite `9a7a019` avant étape 2) |
 | HANDOFF-LOCAL | tip main **`2a585f8`** |
 
 ### STOP
 
 Attendre validation Claude + utilisateur de **N=36**, de la **définition de J**, et du **point c** (écarts).  
-**Étape 2 non commencée.**
+**Étape 2 non commencée.** *(supersédé — étape 2 DONE ci-dessus)*
 
 ### Hors scope
 

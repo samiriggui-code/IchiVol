@@ -116,7 +116,7 @@ N proposé :                      24
 | D4 | Compter **questions** (18) au lieu de B* ? | **Non** — §10 = B*×symbole×TF | N=18 | — |
 | D5 | Tests unitaires `tests/vp3` | **Non** — pas données VP1 | 0 | — |
 | D6 | Runs Lab pré-VP (`research_lab/runs/2026-09-20`) | **N inchangé** (autre harnais, pré-gel) — voir section Contamination | si on comptait chaque variante Lab → N≫24 | **oui** |
-| D7 | B6/B7 avant 1ʳᵉ run VP-J1 | **Pas encore joués** — +12 prévus à l’étape 2 si N=36 validé | N=24 tant que non joués | — |
+| D7 | B6/B7 1ʳᵉ run VP-J1 | **Joués** étape 2 — +12 → N=36 | N=36 gelé | VP-J1 FINAL |
 | D8 | TF **1d** (HTF B5) = hyp signal ? | **Non** | 0 | — |
 
 ---
@@ -165,34 +165,35 @@ Conclusion params : les **nombres** 20 / 1.5 existaient déjà dans l’indicate
 
 ---
 
-## VP-J1 — extension ledger (étape 1, **pas encore joué**)
+## VP-J1 — extension ledger (étape 2 **jouée**)
 
 **Base main :** `2a585f8` (#154 VP-NT1 mergé)  
-**N gelé (VP-J1) :** **36** = 24 + 12
+**N gelé (VP-J1) :** **36** = 24 + 12  
+**Run :** `python -m vp3.j1_run` · n_boot=10 000 · rapport [`VP3-REPORT-FINAL.md`](./VP3-REPORT-FINAL.md) · artefact [`vp3-artifacts/j1_results.json`](./vp3-artifacts/j1_results.json)
 
-### 12 hypothèses à ajouter (+1 chacune au 1ʳᵉ run)
+### 12 hypothèses B6/B7 (+1 chacune au 1ʳᵉ run — **jouées**)
 
 Params :
 
 | B* | Définition | Params figés pour le run |
 |----|------------|--------------------------|
-| **B6** | B5 + régime ATR ≠ dead/extreme | seuils ci-dessous (LiveScreenerSettings / AtrParams) |
-| **B7** | pipeline live Option B → BUY | `strategy_version` + blob SHA ci-dessous |
+| **B6** | B5 + régime ATR ≠ dead/extreme + gate ADX | seuils ci-dessous (LiveScreenerSettings / AtrParams / AdxParams) |
+| **B7** | pipeline live Option B → BUY | `strategy_version` + blob SHA + `WARMUP_BARS` |
 
-| # | hypothesis_id | B* | symbole | TF | coûts | statut | compte prévu |
-|---|----------------|----|---------|----|-------|--------|--------------|
-| 25 | `B6-BTCUSDT-1h-base` | B6 | BTCUSDT | 1h | base | **à jouer** (VP-J1 étape 2) | **+1** |
-| 26 | `B6-BTCUSDT-4h-base` | B6 | BTCUSDT | 4h | base | à jouer | **+1** |
-| 27 | `B6-ETHUSDT-1h-base` | B6 | ETHUSDT | 1h | base | à jouer | **+1** |
-| 28 | `B6-ETHUSDT-4h-base` | B6 | ETHUSDT | 4h | base | à jouer | **+1** |
-| 29 | `B6-SOLUSDT-1h-base` | B6 | SOLUSDT | 1h | base | à jouer | **+1** |
-| 30 | `B6-SOLUSDT-4h-base` | B6 | SOLUSDT | 4h | base | à jouer | **+1** |
-| 31 | `B7-BTCUSDT-1h-base` | B7 | BTCUSDT | 1h | base | à jouer | **+1** |
-| 32 | `B7-BTCUSDT-4h-base` | B7 | BTCUSDT | 4h | base | à jouer | **+1** |
-| 33 | `B7-ETHUSDT-1h-base` | B7 | ETHUSDT | 1h | base | à jouer | **+1** |
-| 34 | `B7-ETHUSDT-4h-base` | B7 | ETHUSDT | 4h | base | à jouer | **+1** |
-| 35 | `B7-SOLUSDT-1h-base` | B7 | SOLUSDT | 1h | base | à jouer | **+1** |
-| 36 | `B7-SOLUSDT-4h-base` | B7 | SOLUSDT | 4h | base | à jouer | **+1** |
+| # | hypothesis_id | B* | symbole | TF | coûts | statut | compte |
+|---|----------------|----|---------|----|-------|--------|--------|
+| 25 | `B6-BTCUSDT-1h-base` | B6 | BTCUSDT | 1h | base | **joué** (VP-J1) | **+1** |
+| 26 | `B6-BTCUSDT-4h-base` | B6 | BTCUSDT | 4h | base | **joué** | **+1** |
+| 27 | `B6-ETHUSDT-1h-base` | B6 | ETHUSDT | 1h | base | **joué** | **+1** |
+| 28 | `B6-ETHUSDT-4h-base` | B6 | ETHUSDT | 4h | base | **joué** | **+1** |
+| 29 | `B6-SOLUSDT-1h-base` | B6 | SOLUSDT | 1h | base | **joué** | **+1** |
+| 30 | `B6-SOLUSDT-4h-base` | B6 | SOLUSDT | 4h | base | **joué** | **+1** |
+| 31 | `B7-BTCUSDT-1h-base` | B7 | BTCUSDT | 1h | base | **joué** | **+1** |
+| 32 | `B7-BTCUSDT-4h-base` | B7 | BTCUSDT | 4h | base | **joué** | **+1** |
+| 33 | `B7-ETHUSDT-1h-base` | B7 | ETHUSDT | 1h | base | **joué** | **+1** |
+| 34 | `B7-ETHUSDT-4h-base` | B7 | ETHUSDT | 4h | base | **joué** | **+1** |
+| 35 | `B7-SOLUSDT-1h-base` | B7 | SOLUSDT | 1h | base | **joué** | **+1** |
+| 36 | `B7-SOLUSDT-4h-base` | B7 | SOLUSDT | 4h | base | **joué** | **+1** |
 
 ```
 N_proposé = 24 (gelé NT1) + 12 (B6/B7 × 3 × 2) = 36

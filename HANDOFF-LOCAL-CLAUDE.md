@@ -6,9 +6,9 @@
 
 ## Contexte
 
-Tu (Claude, en local) supervisues. **Cursor code, tu vérifies**. Canal : [`docs/HANDOFF-CURSOR-V3.md`](docs/HANDOFF-CURSOR-V3.md) — lire **VP-J1 étape 1** en premier.
+Tu (Claude, en local) supervisues. **Cursor code, tu vérifies**. Canal : [`docs/HANDOFF-CURSOR-V3.md`](docs/HANDOFF-CURSOR-V3.md) — lire **VP-J1 étape 2 DONE** en premier.
 
-## État au tip `2a585f8`
+## État au tip `main` `2a585f8`
 
 ### Mergé récemment
 
@@ -20,27 +20,29 @@ Tu (Claude, en local) supervisues. **Cursor code, tu vérifies**. Canal : [`docs
 
 ### Job en cours
 
-**VP-J1 étape 1** — branche `cursor/vp-j1-a2fe`, PR **draft [#155](https://github.com/samiriggui-code/IchiVol/pull/155)** :
+**VP-J1 étape 2 DONE** — branche `cursor/vp-j1-a2fe`, PR **draft [#155](https://github.com/samiriggui-code/IchiVol/pull/155)** :
 
-1. Ledger +12 hyps B6/B7 → **N proposé = 36**  
-2. Définition J figée (Bj = max DSR_i B0–B6, tie → plus simple)  
-3. Audit B6/B7 vs §2 (écarts listés, **pas de fix**)  
-4. **STOP** — attendre validation N=36 + déf. J + écarts  
+1. Fixes B6 (ATR+ADX live) + B7 (`WARMUP_BARS`) @ `9a7a019` + tests  
+2. Run N=36 · A/B/H/J · base+adverse · n_boot=10 000  
+3. Rapport [`docs/VP3-REPORT-FINAL.md`](docs/VP3-REPORT-FINAL.md) · artefact [`docs/vp3-artifacts/j1_results.json`](docs/vp3-artifacts/j1_results.json)  
+4. **Résultat :** **0 EDGE / 48** · 0 `bi_beats_bj`  
+5. **STOP** — PR draft, **pas de merge**
 
-**Interdit** jusqu’à validation : runs, B3/B4/B8, retuning, CI/T-CYCLE.
+**Interdit** sans OK : merge, B3/B4/B8, retuning, CI/T-CYCLE, val 2025 / holdout.
 
 ## Méthode
 
 1. Cursor : branche + PR draft + handoff → **STOP**.  
 2. Claude : vrai diff + verdict.  
-3. Pas de merge / étape 2 sans OK.
+3. Pas de merge sans OK.
 
 ## Docs clés
 
 | Fichier | Rôle |
 |---------|------|
 | [`docs/HANDOFF-CURSOR-V3.md`](docs/HANDOFF-CURSOR-V3.md) | Journal |
-| [`docs/VP-T10B-LEDGER.md`](docs/VP-T10B-LEDGER.md) | N=24 gelé · N=36 proposé · déf. J · audit B6/B7 |
+| [`docs/VP-T10B-LEDGER.md`](docs/VP-T10B-LEDGER.md) | N=36 gelé · B6/B7 joués · déf. J |
+| [`docs/VP3-REPORT-FINAL.md`](docs/VP3-REPORT-FINAL.md) | Rapport FINAL J1 |
+| [`docs/vp3-artifacts/j1_results.json`](docs/vp3-artifacts/j1_results.json) | Artefact J1 |
 | [`docs/VP3-REPORT-GRID.md`](docs/VP3-REPORT-GRID.md) | Grille v2 NT1 |
-| [`docs/vp3-artifacts/nt1_results.json`](docs/vp3-artifacts/nt1_results.json) | Artefact NT1 |
 | [`docs/VALIDATION-PROTOCOL.md`](docs/VALIDATION-PROTOCOL.md) | VP0 §2 B6/B7 / §9 / §10 |
