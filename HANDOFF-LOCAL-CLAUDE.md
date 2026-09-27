@@ -27,7 +27,7 @@ Canal partagé : **`docs/HANDOFF-CURSOR-V3.md`** — nouvelles entrées **en hau
 
 ### Job en cours
 
-**VP-NT1 étape 1** — branche `cursor/vp-nt1-a2fe`, PR **draft** :
+**VP-NT1 étape 1** — branche `cursor/vp-nt1-a2fe`, PR **draft [#154](https://github.com/samiriggui-code/IchiVol/pull/154)** :
 
 1. Ledger exhaustif → [`docs/VP-T10B-LEDGER.md`](docs/VP-T10B-LEDGER.md)  
 2. **N proposé = 24** — **STOP** jusqu’à validation Claude + utilisateur  
