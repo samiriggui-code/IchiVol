@@ -2,52 +2,47 @@
 
 **LIS CE FICHIER EN PREMIER, avant tout autre fichier du repo.**
 
-**Sync local :** 2026-09-27 · branche `cursor/vp-nt1-a2fe` (PR draft [#154](https://github.com/samiriggui-code/IchiVol/pull/154)) · tip run VP-NT1 étape 2 DONE.  
-**main** reste @ `b1cd43d` (#153) jusqu’au merge #154.
+**Sync local :** 2026-09-27 · `main` @ **`2a585f8`** (= origin/main · squash #154 VP-NT1).
 
 ## Contexte
 
-Tu (Claude, en local) supervisues. **Cursor code, tu vérifies**. Canal : [`docs/HANDOFF-CURSOR-V3.md`](docs/HANDOFF-CURSOR-V3.md) — lire **VP-NT1 étape 2 DONE** en premier.
+Tu (Claude, en local) supervisues. **Cursor code, tu vérifies**. Canal : [`docs/HANDOFF-CURSOR-V3.md`](docs/HANDOFF-CURSOR-V3.md) — lire **VP-J1 étape 2 DONE** en premier.
 
-## État VP-NT1
+## État au tip `main` `2a585f8`
 
-| Item | Statut |
-|------|--------|
-| N T10b | **24 GELÉ** (Claude + utilisateur) |
-| Ledger + contamination pré-gel | OK |
-| `nt1_run` DSR barre + §9 | OK @ `da6b5bb` |
-| Run base+adverse n_boot=10k | DONE |
-| Rapport GRID **v2** | [`docs/VP3-REPORT-GRID.md`](docs/VP3-REPORT-GRID.md) |
-| JSON | [`docs/vp3-artifacts/nt1_results.json`](docs/vp3-artifacts/nt1_results.json) |
-| Verdict | **0 EDGE** · PAS D'EDGE / NON CONCLUANT |
+### Mergé récemment
 
-**STOP :** #154 draft — pas de merge sans OK final Claude.
+| PR | Tip | Contenu |
+|----|-----|---------|
+| #154 VP-NT1 | `2a585f8` | N=24 gelé · DSR barre · grille base+adverse · **0 EDGE / 36** |
+| #153 VP-GRID1 | `b1cd43d` | Grille A/B/H N=1 provisoire + VP2-R1 |
+| #152 / #151 | … | CI tooltips / VP-FIX1 |
 
-### Interdit jusqu’à nouveau job
+### Job en cours
 
-Q J (B7) · B3/B4/B6 · retuning · features CI/T-CYCLE · décider sur val 2025 / holdout.
+**VP-J1 étape 2 DONE** — branche `cursor/vp-j1-a2fe`, PR **draft [#155](https://github.com/samiriggui-code/IchiVol/pull/155)** :
 
-## Setup tests Postgres
+1. Fixes B6 (ATR+ADX live) + B7 (`WARMUP_BARS`) @ `9a7a019` + tests  
+2. Run N=36 · A/B/H/J · base+adverse · n_boot=10 000  
+3. Rapport [`docs/VP3-REPORT-FINAL.md`](docs/VP3-REPORT-FINAL.md) · artefact [`docs/vp3-artifacts/j1_results.json`](docs/vp3-artifacts/j1_results.json)  
+4. **Résultat :** **0 EDGE / 48** · 0 `bi_beats_bj`  
+5. **STOP** — PR draft, **pas de merge**
 
-```bash
-cd ichivol-app/engine
-alembic upgrade head
-python -m pytest tests -q -p no:cacheprovider --tb=short
-```
+**Interdit** sans OK : merge, B3/B4/B8, retuning, CI/T-CYCLE, val 2025 / holdout.
 
-VP-NT1 rejeu :
+## Méthode
 
-```bash
-cd ichivol-app/engine
-python -m vp3.nt1_run /tmp/vp3_nt1_results.jsonl 10000
-```
+1. Cursor : branche + PR draft + handoff → **STOP**.  
+2. Claude : vrai diff + verdict.  
+3. Pas de merge sans OK.
 
 ## Docs clés
 
 | Fichier | Rôle |
 |---------|------|
-| [`docs/HANDOFF-CURSOR-V3.md`](docs/HANDOFF-CURSOR-V3.md) | Journal Cursor ↔ Claude |
-| [`docs/VALIDATION-PROTOCOL.md`](docs/VALIDATION-PROTOCOL.md) | VP0 + VP2-R1 §12 |
-| [`docs/VP-T10B-LEDGER.md`](docs/VP-T10B-LEDGER.md) | N=24 + contamination Lab |
-| [`docs/VP3-REPORT-GRID.md`](docs/VP3-REPORT-GRID.md) | Grille v2 (NT1) |
-| [`docs/vp3-artifacts/nt1_results.json`](docs/vp3-artifacts/nt1_results.json) | Artefact run |
+| [`docs/HANDOFF-CURSOR-V3.md`](docs/HANDOFF-CURSOR-V3.md) | Journal |
+| [`docs/VP-T10B-LEDGER.md`](docs/VP-T10B-LEDGER.md) | N=36 gelé · B6/B7 joués · déf. J |
+| [`docs/VP3-REPORT-FINAL.md`](docs/VP3-REPORT-FINAL.md) | Rapport FINAL J1 |
+| [`docs/vp3-artifacts/j1_results.json`](docs/vp3-artifacts/j1_results.json) | Artefact J1 |
+| [`docs/VP3-REPORT-GRID.md`](docs/VP3-REPORT-GRID.md) | Grille v2 NT1 |
+| [`docs/VALIDATION-PROTOCOL.md`](docs/VALIDATION-PROTOCOL.md) | VP0 §2 B6/B7 / §9 / §10 |

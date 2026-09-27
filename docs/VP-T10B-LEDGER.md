@@ -116,7 +116,7 @@ N proposé :                      24
 | D4 | Compter **questions** (18) au lieu de B* ? | **Non** — §10 = B*×symbole×TF | N=18 | — |
 | D5 | Tests unitaires `tests/vp3` | **Non** — pas données VP1 | 0 | — |
 | D6 | Runs Lab pré-VP (`research_lab/runs/2026-09-20`) | **N inchangé** (autre harnais, pré-gel) — voir section Contamination | si on comptait chaque variante Lab → N≫24 | **oui** |
-| D7 | B6 codé mais jamais lancé = +1 « latent » ? | **Non** — seuls essais **joués** | 0 | — |
+| D7 | B6/B7 1ʳᵉ run VP-J1 | **Joués** étape 2 — +12 → N=36 | N=36 gelé | VP-J1 FINAL |
 | D8 | TF **1d** (HTF B5) = hyp signal ? | **Non** | 0 | — |
 
 ---
@@ -160,12 +160,107 @@ Conclusion params : les **nombres** 20 / 1.5 existaient déjà dans l’indicate
 
 ### Conclusion (D6) — N inchangé
 
-- Lab = **autre harnais**, **pré-gel VP0** → **ne compte pas** dans N T10b (**N reste 24**).
+- Lab = **autre harnais**, **pré-gel VP0** → **ne compte pas** dans N T10b (**N reste 24** jusqu’à VP-J1).
 - Pour **BTCUSDT, ETHUSDT, SOLUSDT** (présents dans A et B) : fenêtres **validation 2025 S2** et **holdout 2026** sont marquées **« déjà vus »** (contamination d’information, pas d’incrément N). Doc seulement — aucun retuning.
 
 ---
 
-## Hors scope ledger (étape 2 = autre job)
+## VP-J1 — extension ledger (étape 2 **jouée**)
 
-- Rerun grille `n_trials=24` + adverse (VP-NT1 étape 2)  
-- Q J / B7 · changement params · features CI / T-CYCLE  
+**Base main :** `2a585f8` (#154 VP-NT1 mergé)  
+**N gelé (VP-J1) :** **36** = 24 + 12  
+**Run :** `python -m vp3.j1_run` · n_boot=10 000 · rapport [`VP3-REPORT-FINAL.md`](./VP3-REPORT-FINAL.md) · artefact [`vp3-artifacts/j1_results.json`](./vp3-artifacts/j1_results.json)
+
+### 12 hypothèses B6/B7 (+1 chacune au 1ʳᵉ run — **jouées**)
+
+Params :
+
+| B* | Définition | Params figés pour le run |
+|----|------------|--------------------------|
+| **B6** | B5 + régime ATR ≠ dead/extreme + gate ADX | seuils ci-dessous (LiveScreenerSettings / AtrParams / AdxParams) |
+| **B7** | pipeline live Option B → BUY | `strategy_version` + blob SHA + `WARMUP_BARS` |
+
+| # | hypothesis_id | B* | symbole | TF | coûts | statut | compte |
+|---|----------------|----|---------|----|-------|--------|--------|
+| 25 | `B6-BTCUSDT-1h-base` | B6 | BTCUSDT | 1h | base | **joué** (VP-J1) | **+1** |
+| 26 | `B6-BTCUSDT-4h-base` | B6 | BTCUSDT | 4h | base | **joué** | **+1** |
+| 27 | `B6-ETHUSDT-1h-base` | B6 | ETHUSDT | 1h | base | **joué** | **+1** |
+| 28 | `B6-ETHUSDT-4h-base` | B6 | ETHUSDT | 4h | base | **joué** | **+1** |
+| 29 | `B6-SOLUSDT-1h-base` | B6 | SOLUSDT | 1h | base | **joué** | **+1** |
+| 30 | `B6-SOLUSDT-4h-base` | B6 | SOLUSDT | 4h | base | **joué** | **+1** |
+| 31 | `B7-BTCUSDT-1h-base` | B7 | BTCUSDT | 1h | base | **joué** | **+1** |
+| 32 | `B7-BTCUSDT-4h-base` | B7 | BTCUSDT | 4h | base | **joué** | **+1** |
+| 33 | `B7-ETHUSDT-1h-base` | B7 | ETHUSDT | 1h | base | **joué** | **+1** |
+| 34 | `B7-ETHUSDT-4h-base` | B7 | ETHUSDT | 4h | base | **joué** | **+1** |
+| 35 | `B7-SOLUSDT-1h-base` | B7 | SOLUSDT | 1h | base | **joué** | **+1** |
+| 36 | `B7-SOLUSDT-4h-base` | B7 | SOLUSDT | 4h | base | **joué** | **+1** |
+
+```
+N_proposé = 24 (gelé NT1) + 12 (B6/B7 × 3 × 2) = 36
+Adverse sur les mêmes hyps = pas +1
+```
+
+**N T10b gelé = 36** (VALIDÉ Claude + utilisateur, 2026-09-27) — 24 (NT1) + 12 (B6/B7 × 3 × 2). Adverse non compté.
+
+### Gel B6 — seuils ATR (LiveScreenerSettings)
+
+Lu dans `LiveScreenerSettings.production_defaults()` / passé **explicitement** à `compute_atr` :
+
+| Champ | Valeur | Fichier | Blob @ `main` `2a585f8` |
+|-------|--------|---------|-------------------------|
+| `atr_dead_percentile` | **0.15** | `app/strategy_lab/adn_ichivol.py` `DEFAULT_LIVE_ATR_DEAD` | ADN `4c9b608e9b6e…` |
+| `atr_extreme_percentile` | **0.90** | `DEFAULT_LIVE_ATR_EXTREME` | idem |
+| `atr_stop_multiplier` | **1.5** | `DEFAULT_LIVE_ATR_STOP_MULT` | (hint stop ; pas le filtre B6) |
+| `period` / `regime_lookback` | 14 / 100 | `app/indicators/atr.py` `AtrParams` | atr `e019b7774ba6…` |
+
+### Gel B6 — params ADX (même source que le pipeline)
+
+`LIVE_ADX_PARAMS = AdxParams()` — identique aux défauts utilisés par `compute_adx` / `pipeline._regime_stage` :
+
+| Champ | Valeur | Fichier | Blob |
+|-------|--------|---------|------|
+| `period` | **14** | `app/indicators/adx.py` `AdxParams` | `b7e6f7a50d3f4e511bd5e37fba04b763af736d2e` |
+| `weak_threshold` (ABSENT) | **20.0** | idem | idem |
+| `trending_threshold` (TRENDING) | **25.0** | idem | idem |
+| `strong_threshold` (STRONG) | **40.0** | idem | idem |
+| Gate B6 | passe si `adx is None` OR `UNKNOWN` OR ∈ {TRENDING, STRONG} ; bloque ABSENT/DEVELOPING | `vp3.entries.live_regime_ok` (= logique `pipeline._regime_stage`) | — |
+
+### Gel B7 — pipeline live Option B
+
+| Champ | Valeur figée | Source @ `main` `2a585f8` |
+|-------|--------------|---------------------------|
+| `strategy_version` | **`ichivol_pipeline_v1`** | `app/decision/pipeline.py` `STRATEGY_VERSION` |
+| Blob SHA `pipeline.py` | `9403d9f4d48ee4e054f722e6581d5f8e0883b2db` | `git rev-parse …/pipeline.py` |
+| Entrée B7 | `build_pipeline(...)` → `BUY` · **`i >= WARMUP_BARS` (78)** | `vp3/entries.py` |
+| Sortie B7 | `common_rules` (§6) | `vp3/rules.py` |
+
+---
+
+## Définition de J (VALIDÉE avant run)
+
+**Question J :** B7 vs **Bj**, où Bj = « meilleur de B0–B6 » **par case symbole×TF**.
+
+1. Parmi `{B0, B1, B2, B5, B6}` : **max DSR_i** (N=36, profil base).
+2. Égalité → plus simple : `B0 < B1 < B2 < B5 < B6`.
+3. Même Bj en adverse.
+4. B7 hors pool Bj.
+
+---
+
+## Audit `vp3/entries.py` B6 / B7 vs §2
+
+| Point | Statut |
+|-------|--------|
+| B6 ATR via `LiveScreenerSettings.production_defaults().atr_params()` | **CORRIGÉ avant 1ʳᵉ run** |
+| B6 gate ADX (= pipeline) | **CORRIGÉ avant 1ʳᵉ run** |
+| B7 `WARMUP_BARS` | **CORRIGÉ avant 1ʳᵉ run** |
+| B7 sortie §6 | OK (inchangé) |
+| B7 HTF `_align_mtf_directions` | INFO VP3-R6 (inchangé) |
+
+Commit corrections : `9a7a019` sur `cursor/vp-j1-a2fe`
+
+---
+
+## Hors scope
+
+- B3 / B4 / B8 · autre retuning · val 2025 / holdout · features CI / T-CYCLE · merge sans OK Claude  
