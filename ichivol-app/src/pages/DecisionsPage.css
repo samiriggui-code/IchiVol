@@ -11,7 +11,7 @@
   --red: #c8412f;
   --amber: #a76c17;
   color: var(--ink);
-  font: 12px Manrope, Arial, sans-serif;
+  font: 11px Manrope, Arial, sans-serif;
   padding: 0;
   max-width: 1800px;
   margin: 0 auto;

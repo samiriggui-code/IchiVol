@@ -13,7 +13,7 @@
   --green: #0b8f83;
   --red: #c8412f;
   color: var(--ink);
-  font: 12px Manrope, Arial, sans-serif;
+  font: 11px Manrope, Arial, sans-serif;
   background:
     radial-gradient(1200px 600px at 10% -10%, #e8eef6 0%, transparent 55%),
     radial-gradient(900px 500px at 100% 0%, #efe8dc 0%, transparent 50%),
@@ -79,7 +79,7 @@
 }
 
 .market-tv-symbol h1 span {
-  font: 12px Manrope, sans-serif;
+  font: 11px Manrope, sans-serif;
   color: var(--muted);
   margin-left: 6px;
 }
@@ -121,7 +121,7 @@
 .market-tv .segmented button {
   border: none;
   background: transparent;
-  font-size: 12px;
+  font-size: 11px;
   padding: 6px 10px;
   color: var(--muted);
   border-radius: 4px;
@@ -141,7 +141,7 @@
 }
 
 .market-tv-link {
-  font: 12px Manrope, sans-serif;
+  font: 11px Manrope, sans-serif;
   color: var(--blue);
   text-decoration: none;
   font-weight: 600;
@@ -149,7 +149,7 @@
 }
 
 .market-tv-close {
-  font: 12px Manrope, sans-serif;
+  font: 11px Manrope, sans-serif;
   border: 1px solid var(--line);
   background: var(--card);
   border-radius: 8px;
@@ -172,7 +172,7 @@
   border: 1px solid #e9dfcb;
   border-radius: 8px;
   color: #9b7a3d;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .market-tv-chips {
@@ -187,7 +187,7 @@
   background: var(--card);
   border-radius: 999px;
   padding: 6px 12px;
-  font: 12px Manrope, sans-serif;
+  font: 11px Manrope, sans-serif;
   color: var(--ink);
   cursor: pointer;
 }
