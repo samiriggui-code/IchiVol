@@ -20,7 +20,7 @@ Tu (Claude, en local) supervisues. **Cursor code, tu vérifies**. Canal : [`docs
 
 ### Job en cours
 
-**VP-J1 étape 1** — branche `cursor/vp-j1-a2fe`, PR **draft** :
+**VP-J1 étape 1** — branche `cursor/vp-j1-a2fe`, PR **draft [#155](https://github.com/samiriggui-code/IchiVol/pull/155)** :
 
 1. Ledger +12 hyps B6/B7 → **N proposé = 36**  
 2. Définition J figée (Bj = max DSR_i B0–B6, tie → plus simple)  

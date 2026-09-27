@@ -4,7 +4,7 @@
 
 **Branche :** `cursor/vp-j1-a2fe` @ `6e56058`  
 **Base main :** `2a585f8` (#154 VP-NT1 **VALIDÉ** + squash-mergé)  
-**PR draft :** à lier au push — **aucun run** / **aucun merge** avant validation.
+**PR draft :** [#155](https://github.com/samiriggui-code/IchiVol/pull/155) — **aucun run** / **aucun merge** avant validation.
 
 ### Livré (étape 1 seulement)
 
