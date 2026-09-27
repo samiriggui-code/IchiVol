@@ -1,5 +1,36 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-27 — VP-NT1 étape 2 DONE
+
+**Branche :** `cursor/vp-nt1-a2fe` · **PR draft :** [#154](https://github.com/samiriggui-code/IchiVol/pull/154)  
+**N T10b gelé :** **24** · tip code fixes `da6b5bb` (DSR barre + §9) · run complet + rapport ci-dessous.
+
+### Livré
+
+| Item | Contenu |
+|------|---------|
+| Run | `python -m vp3.nt1_run` base+adverse · n_boot=10 000 · N=24 |
+| Artefact | [`docs/vp3-artifacts/nt1_results.json`](./vp3-artifacts/nt1_results.json) |
+| Rapport | [`docs/VP3-REPORT-GRID.md`](./VP3-REPORT-GRID.md) **v2** (v1 en Historique) |
+| Ledger | contamination pré-gel validée @ `e588557` (N inchangé) |
+| Tests | `tests/vp3` 31/31 (validés Claude) |
+
+### Résultat court
+
+- **0** `bi_beats_bj` · **0** EDGE (base et adverse)
+- verdict_final : mix **PAS D'EDGE** / **NON CONCLUANT** (voir synthèse v2)
+- σ(SR_ann) base ≈ 0.645 · SR*_ann ≈ 0.897 ; adverse σ ≈ 0.898 · SR*_ann ≈ 1.249
+
+### STOP
+
+PR #154 reste **draft**. Pas de merge. Pas d’étape suivante autonome.
+
+### Hors scope (respecté)
+
+Q J (B7) · B3/B4/B6 · changement params/règles · features CI/T-CYCLE · décision sur val 2025 / holdout.
+
+---
+
 ## 2026-09-27 — VP-NT1 étape 1 — ledger prêt, STOP
 
 **Branche :** `cursor/vp-nt1-a2fe` @ `cb2f390`  
