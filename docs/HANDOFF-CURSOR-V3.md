@@ -2,8 +2,8 @@
 
 ## 2026-09-27 — Cursor VP-GRID1 DONE · PR draft · STOP
 
-**Branche :** `cursor/vp-grid1-a2fe`  
-**PR draft :** (à ouvrir / déjà ouverte) — **aucun merge** sans verdict Claude.
+**Branche :** `cursor/vp-grid1-a2fe` @ `4381ea2`  
+**PR draft :** [#153](https://github.com/samiriggui-code/IchiVol/pull/153) — **aucun merge** sans verdict Claude.
 
 ### Livré
 
