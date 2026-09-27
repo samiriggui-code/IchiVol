@@ -10,7 +10,7 @@ export function LiquidityLayer() {
   return (
     <g className="ci-layer ci-layer-liq">
       {objects.map((o) => (
-        <LiquidityDrawing key={o.id} o={o} selected={isSelected(o)} onSelect={() => select(o)} />
+        <LiquidityDrawing key={o.id} o={o} selected={isSelected(o)} onSelect={(e) => select(o, e)} />
       ))}
     </g>
   )
@@ -19,7 +19,7 @@ export function LiquidityLayer() {
 interface Props {
   o: IntelligenceObject
   selected: boolean
-  onSelect: () => void
+  onSelect: (e?: { stopPropagation?: () => void; preventDefault?: () => void }) => void
 }
 
 export function LiquidityDrawing({ o, selected, onSelect }: Props) {

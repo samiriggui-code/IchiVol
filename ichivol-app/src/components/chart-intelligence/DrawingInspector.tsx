@@ -7,6 +7,7 @@ import {
   fmtTime,
   objectTitle,
   producerLabel,
+  selectionKeyOf,
   STATUS_LABELS,
   statusTone,
   type IntelligenceObject,
@@ -16,6 +17,9 @@ import { WhyPanel, type WhyTarget } from './WhyPanel'
 interface Props {
   /** Objets de la sélection (un Fib = plusieurs niveaux du même group_id). */
   selection: IntelligenceObject[]
+  /** Objets visibles (calques actifs) — liste de secours si rien n’est sélectionné. */
+  candidates?: IntelligenceObject[]
+  onSelect?: (key: string) => void
   onClose?: () => void
   /** AW1 : contexte pour « Pourquoi ? » (API moteur seulement, pas en mock). */
   why?: Omit<WhyTarget, 'objectId' | 'lineageKey'> | null
@@ -30,15 +34,98 @@ function Row({ k, children }: { k: string; children: ReactNode }) {
   )
 }
 
-export function DrawingInspector({ selection, onClose, why = null }: Props) {
+/** Une entrée par clé de sélection (Fib = un bloc). */
+function uniqueCandidates(objects: IntelligenceObject[]): IntelligenceObject[] {
+  const seen = new Set<string>()
+  const out: IntelligenceObject[] = []
+  for (const o of objects) {
+    const k = selectionKeyOf(o)
+    if (seen.has(k)) continue
+    seen.add(k)
+    out.push(o)
+  }
+  return out
+}
+
+/** Libellé compact pour la liste de secours (évite 12× « Break of structure »). */
+function pickLabel(o: IntelligenceObject): { title: string; meta: string; tone: 'bull' | 'bear' | 'muted' } {
+  const og = o.origin
+  const dir = og.direction === 'bearish' ? '↓' : og.direction === 'bullish' ? '↑' : ''
+  const tone: 'bull' | 'bear' | 'muted' =
+    og.direction === 'bearish' ? 'bear' : og.direction === 'bullish' ? 'bull' : 'muted'
+  const px =
+    og.level ??
+    o.points[0]?.price ??
+    (o.price_low != null && o.price_high != null ? (o.price_low + o.price_high) / 2 : null)
+  const price = px != null ? fmtPrice(px) : ''
+
+  if (og.kind === 'structure_event') {
+    const tag = og.event_type === 'CHOCH' ? 'CHOCH' : 'BOS'
+    return { title: `${tag}${dir}`, meta: price, tone }
+  }
+  if (og.kind === 'fvg') {
+    return { title: `${og.direction === 'bearish' ? 'FVG↓' : 'FVG↑'}`, meta: price, tone }
+  }
+  if (og.kind === 'fibonacci') {
+    return { title: 'Fib', meta: price, tone: 'muted' }
+  }
+  if (og.kind === 'liquidity') {
+    return { title: o.side === 'resistance' ? 'BSL' : 'SSL', meta: price, tone }
+  }
+  if (og.kind === 'confluence') {
+    return { title: 'Confluence', meta: price, tone: 'muted' }
+  }
+  if (og.kind === 'swing') {
+    return { title: String(og.swing ?? 'Swing'), meta: price, tone }
+  }
+  if (o.side === 'resistance') return { title: 'Résistance', meta: price, tone: 'bear' }
+  if (o.side === 'support') return { title: 'Support', meta: price, tone: 'bull' }
+  return { title: objectTitle(o), meta: price || fmtPct(o.confidence), tone: 'muted' }
+}
+
+export function DrawingInspector({
+  selection,
+  candidates = [],
+  onSelect,
+  onClose,
+  why = null,
+}: Props) {
   const o = selection[0]
   if (!o) {
+    const picks = uniqueCandidates(candidates).slice(0, 10)
     return (
       <section className="ci-card ci-inspector is-empty" aria-label="Inspecteur">
         <header className="ci-card-head">
           <div className="ci-eyebrow">DRAWING INSPECTOR</div>
         </header>
-        <p className="ci-muted">Sélectionner un objet sur le graphique (zone, Fib, FVG, BOS…).</p>
+        <p className="ci-muted">
+          Cliquez une zone / Fib / FVG / BOS sur le graphique, ou une ligne ci-dessous pour inspecter.
+        </p>
+        {picks.length > 0 && onSelect ? (
+          <ul className="ci-pick-list" aria-label="Objets visibles">
+            {picks.map((c) => {
+              const pick = pickLabel(c)
+              return (
+                <li key={selectionKeyOf(c)}>
+                  <button
+                    type="button"
+                    className={`ci-pick-btn ci-pick-btn--${pick.tone}`}
+                    onClick={() => onSelect(selectionKeyOf(c))}
+                  >
+                    <span className="ci-pick-title">{pick.title}</span>
+                    <span className="ci-pick-meta mono">
+                      {pick.meta}
+                      {pick.meta ? ' · ' : ''}
+                      {fmtPct(c.confidence)}
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        ) : (
+          <p className="ci-muted">Aucun objet sur les calques actifs. Activez un pack (Structure, FVG…).</p>
+        )}
       </section>
     )
   }

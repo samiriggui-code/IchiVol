@@ -15,10 +15,10 @@ export function MarketStructureLayer() {
   return (
     <g className="ci-layer ci-layer-structure">
       {events.map((o) => (
-        <StructureEvent key={o.id} o={o} selected={isSelected(o)} onSelect={() => select(o)} />
+        <StructureEvent key={o.id} o={o} selected={isSelected(o)} onSelect={(e) => select(o, e)} />
       ))}
       {swings.map((o) => (
-        <SwingLabel key={o.id} o={o} selected={isSelected(o)} onSelect={() => select(o)} />
+        <SwingLabel key={o.id} o={o} selected={isSelected(o)} onSelect={(e) => select(o, e)} />
       ))}
     </g>
   )
@@ -27,7 +27,7 @@ export function MarketStructureLayer() {
 interface ItemProps {
   o: IntelligenceObject
   selected: boolean
-  onSelect: () => void
+  onSelect: (e?: { stopPropagation?: () => void; preventDefault?: () => void }) => void
 }
 
 function SwingLabel({ o, selected, onSelect }: ItemProps) {

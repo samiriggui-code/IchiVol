@@ -608,25 +608,25 @@
   backdrop-filter:blur(3px);
 }
 .opps-page .dialog-body {
-  padding:28px;
+  padding:18px;
 }
 .opps-page .dialog-head {
   display:flex;
   justify-content:space-between;
   align-items:center;
-  margin-bottom:20px;
+  margin-bottom:14px;
 }
 .opps-page .dialog-head button {
   border:0;
-  font-size:22px;
+  font-size:18px;
   background:none;
 }
 .opps-page .dialog-body h2 {
-  font-size:29px;
+  font-size:20px;
 }
 .opps-page .dialog-body p {
   color:var(--muted);
-  font-size:13px;
+  font-size:12px;
 }
 .opps-page .dialog-actions {
   display:flex;

@@ -1,6 +1,6 @@
 /**
  * AIAnalysisPanel — texte d'analyse + état du Decision Engine, fournis par
- * Python / agent. Le LLM n'est jamais l'autorité de décision : ce panneau affiche.
+ * Python / pipeline. Le LLM n'est jamais l'autorité de décision : ce panneau affiche.
  */
 
 import {
@@ -15,6 +15,7 @@ interface Props {
   analysis: IntelligenceAnalysis | null
   marketState?: MarketState | null
   asOf?: number | null
+  mock?: boolean
 }
 
 const TREND_TONE: Record<MarketState['trend'], string> = {
@@ -23,13 +24,32 @@ const TREND_TONE: Record<MarketState['trend'], string> = {
   range: 'gray',
 }
 
-export function AIAnalysisPanel({ analysis, marketState, asOf }: Props) {
+function analysisSourceLabel(analysis: IntelligenceAnalysis, mock?: boolean): string {
+  if (mock) return 'MOCK · démo locale'
+  if (analysis.kind === 'pipeline' || analysis.strategy_version) {
+    return analysis.strategy_version
+      ? `Decision Engine · ${analysis.strategy_version}`
+      : 'Decision Engine · pipeline Python'
+  }
+  if (analysis.kind === 'combiner') return 'Combiner Ichimoku × RVOL (Python)'
+  if (analysis.producer) return `Texte · ${analysis.producer}`
+  return 'Decision Engine · Python'
+}
+
+export function AIAnalysisPanel({ analysis, marketState, asOf, mock }: Props) {
   return (
     <section className="ci-card ci-analysis" aria-label="AI Analyst">
       <header className="ci-card-head">
         <div>
           <div className="ci-eyebrow">AI ANALYST</div>
           <h3>Lecture du graphique</h3>
+          <p className="ci-source-line">
+            {analysis
+              ? analysisSourceLabel(analysis, mock)
+              : 'En attente du moteur Python'}
+            {' · '}
+            affichage seulement, pas d’ordre auto
+          </p>
         </div>
         <small className="ci-meta">as_of {fmtTime(asOf)}</small>
       </header>

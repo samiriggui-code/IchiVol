@@ -99,10 +99,18 @@ export function Chip({ x, y, text, tone, align = 'start', proj, strong, onClick 
   let left = align === 'start' ? x : align === 'end' ? x - w : x - w / 2
   left = Math.max(2, Math.min(proj.width - w - 2, left))
   const top = Math.max(2, Math.min(proj.height - h - 2, y - h / 2))
+  const handleClick = onClick
+    ? (e: { stopPropagation: () => void; preventDefault: () => void }) => {
+        e.stopPropagation()
+        e.preventDefault()
+        onClick()
+      }
+    : undefined
   return (
     <g
       className={`ci-chip ci-tone-${tone}${strong ? ' is-strong' : ''}${onClick ? ' ci-hit' : ''}`}
-      onClick={onClick}
+      onClick={handleClick}
+      onPointerDown={handleClick ? (e) => e.stopPropagation() : undefined}
     >
       <rect x={left} y={top} width={w} height={h} rx={3} />
       <text x={left + 5} y={top + h / 2 + 3.5}>
@@ -160,7 +168,9 @@ function GutterLabels({ objects, proj, asOf, selectedKey, onSelect, freshKeys, d
               tone={e.tone}
               proj={proj}
               strong={selectedKey === e.selKey || fresh}
-              onClick={() => onSelect(e.selKey)}
+              onClick={() => {
+                onSelect(e.selKey)
+              }}
             />
           </g>
         )

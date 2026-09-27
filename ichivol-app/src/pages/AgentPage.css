@@ -631,25 +631,25 @@
   backdrop-filter:blur(3px);
 }
 .copilot-page .dialog-body {
-  padding:28px;
+  padding:18px;
 }
 .copilot-page .dialog-head {
   display:flex;
   justify-content:space-between;
   align-items:center;
-  margin-bottom:20px;
+  margin-bottom:14px;
 }
 .copilot-page .dialog-head button {
   border:0;
-  font-size:22px;
+  font-size:18px;
   background:none;
 }
 .copilot-page .dialog-body h2 {
-  font-size:29px;
+  font-size:20px;
 }
 .copilot-page .dialog-body p {
   color:var(--muted);
-  font-size:13px;
+  font-size:12px;
 }
 .copilot-page .dialog-actions {
   display:flex;

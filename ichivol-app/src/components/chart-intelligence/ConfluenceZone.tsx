@@ -13,7 +13,7 @@ export function ConfluenceLayer() {
   return (
     <g className="ci-layer ci-layer-conf">
       {objects.map((o) => (
-        <ConfluenceZone key={o.id} o={o} asOf={asOf} selected={isSelected(o)} onSelect={() => select(o)} />
+        <ConfluenceZone key={o.id} o={o} asOf={asOf} selected={isSelected(o)} onSelect={(e) => select(o, e)} />
       ))}
     </g>
   )
@@ -23,7 +23,7 @@ interface Props {
   o: IntelligenceObject
   asOf: number | null
   selected: boolean
-  onSelect: () => void
+  onSelect: (e?: { stopPropagation?: () => void; preventDefault?: () => void }) => void
 }
 
 export function ConfluenceZone({ o, asOf, selected, onSelect }: Props) {
@@ -51,6 +51,7 @@ export function ConfluenceZone({ o, asOf, selected, onSelect }: Props) {
         y={Math.min(yTop, yBot)}
         width={Math.max(2, x1 - x0)}
         height={Math.max(3, Math.abs(yBot - yTop))}
-      />    </g>
+      />
+    </g>
   )
 }
