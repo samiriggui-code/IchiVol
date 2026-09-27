@@ -14,6 +14,23 @@
   --green: #0b8f83;
   --red: #c8412f;
   --amber: #a76c17;
+  /* Surfaces « soft » hardcodées ailleurs — basculent en dark via html.dark */
+  --soft: #f3f2ef;
+  --blue-soft: #eef4fc;
+  --tag-bg: #edf3fa;
+  --tag-fg: #3978bb;
+  --tag-green-bg: #e7f3ee;
+  --tag-green-fg: #168579;
+  --tag-amber-bg: #faf0df;
+  --tag-amber-fg: #a8782a;
+  --tag-red-bg: #f9eae6;
+  --tag-red-fg: #b35346;
+  --tag-gray-bg: #f0efeb;
+  --tag-gray-fg: #888b89;
+  --chip-on-bg: #202b36;
+  --chip-on-fg: #faf8f5;
+  --step-line: #c7dfd9;
+  --eyebrow: #8c918f;
   color: var(--ink);
   font: 14px Manrope, Arial, sans-serif;
   padding: 0;
@@ -21,6 +38,26 @@
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
+}
+
+/* Soft / tags / chips — mêmes valeurs que ChartIntelligence dark */
+html.dark .market-page {
+  --soft: #22262f;
+  --blue-soft: #1a2433;
+  --tag-bg: #1a2433;
+  --tag-fg: #8eb0d8;
+  --tag-green-bg: #16302c;
+  --tag-green-fg: #3aa99a;
+  --tag-amber-bg: #2a2418;
+  --tag-amber-fg: #e8b86d;
+  --tag-red-bg: #33201d;
+  --tag-red-fg: #d48478;
+  --tag-gray-bg: #22262f;
+  --tag-gray-fg: #a0a8b5;
+  --chip-on-bg: #f1eee6;
+  --chip-on-fg: #12151a;
+  --step-line: #2a4a44;
+  --eyebrow: #a0a8b5;
 }
 
 .market-page *,
@@ -39,7 +76,7 @@
 .market-page .eyebrow {
   font: 11px 'DM Mono', ui-monospace, monospace;
   letter-spacing: 1.6px;
-  color: #8c918f;
+  color: var(--eyebrow);
   margin-bottom: 10px;
 }
 
@@ -91,7 +128,7 @@
 
 .market-page .market-tv-open-inline {
   border: 1px solid var(--line);
-  background: #f3f2ef;
+  background: var(--soft);
   border-radius: 6px;
   font: 11px 'DM Mono', ui-monospace, monospace;
   letter-spacing: 0.6px;
@@ -103,36 +140,36 @@
 .market-page .market-tv-open-inline:hover {
   border-color: var(--blue);
   color: var(--blue);
-  background: #eef4fc;
+  background: var(--blue-soft);
 }
 
 .market-page .tag {
   font: 10px 'DM Mono', ui-monospace, monospace;
   padding: 5px 7px;
-  background: #edf3fa;
+  background: var(--tag-bg);
   border-radius: 4px;
-  color: #3978bb;
+  color: var(--tag-fg);
   white-space: nowrap;
 }
 
 .market-page .tag.green {
-  background: #e7f3ee;
-  color: #168579;
+  background: var(--tag-green-bg);
+  color: var(--tag-green-fg);
 }
 
 .market-page .tag.amber {
-  background: #faf0df;
-  color: #a8782a;
+  background: var(--tag-amber-bg);
+  color: var(--tag-amber-fg);
 }
 
 .market-page .tag.red {
-  background: #f9eae6;
-  color: #b35346;
+  background: var(--tag-red-bg);
+  color: var(--tag-red-fg);
 }
 
 .market-page .tag.gray {
-  background: #f0efeb;
-  color: #888b89;
+  background: var(--tag-gray-bg);
+  color: var(--tag-gray-fg);
 }
 
 .market-page .notice {
@@ -246,7 +283,7 @@
 .market-page .segmented {
   display: flex;
   gap: 3px;
-  background: #f3f2ef;
+  background: var(--soft);
   padding: 3px;
   border-radius: 6px;
 }
@@ -262,7 +299,7 @@
 }
 
 .market-page .segmented button.active {
-  background: white;
+  background: var(--card);
   box-shadow: 0 1px 3px #0001;
   color: var(--ink);
 }
@@ -283,9 +320,9 @@
   cursor: pointer;
 }
 .market-page .class-chips button.active {
-  background: #202b36;
-  color: #faf8f5;
-  border-color: #202b36;
+  background: var(--chip-on-bg);
+  color: var(--chip-on-fg);
+  border-color: var(--chip-on-bg);
 }
 
 .market-page .watchlist button {
@@ -302,7 +339,7 @@
 }
 
 .market-page .watchlist button.active {
-  background: #eef4fc;
+  background: var(--blue-soft);
   border-left: 3px solid var(--blue);
 }
 
@@ -381,7 +418,7 @@
 }
 
 .market-page .step {
-  border-left: 2px solid #c7dfd9;
+  border-left: 2px solid var(--step-line);
   padding: 3px 0 20px 18px;
   margin-left: 5px;
 }
@@ -599,7 +636,7 @@
   .market-page .watchlist button.active {
     border-left: 0;
     border-bottom: 3px solid var(--blue);
-    background: #eef4fc;
+    background: var(--blue-soft);
   }
 
   .market-page .watchlist .up,
