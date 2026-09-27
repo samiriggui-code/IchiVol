@@ -1,5 +1,24 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-27 nuit — Claude : amendement Bouclier (M/N) figé · job VP-S1 en file
+
+**Décision Samir :** l'objectif est de gagner **sans risquer ses économies**. On teste donc IchiVol comme **bouclier** (moins de chute), plus comme « battre le buy & hold ». **Jamais d'argent réel imposé** : backtest → 8 semaines de broker virtuel → décision de Samir.
+
+**Protocole :** amendement daté `VP0-2026-09-27` dans [`VALIDATION-PROTOCOL.md`](./VALIDATION-PROTOCOL.md) (section « Questions M / N »), **figé avant tout run** :
+- **BM** = paper réel (entrées B7 ; sorties live : stop 1.5 ATR + TP 2R + sortie quand la direction n'est plus LONG ; pas de time-stop ; 100 % cash).
+- **BN** = bouclier régime (investi tant que la direction HTF close ≠ short, cash sinon).
+- **N T10b = 48.** Critères S1–S5 : chute ≤ ½ de B0 · CAGR > 0 et ≥ ½ de B0 · Calmar > B0 · IC Δ maxDD apparié exclut 0 · tient en adverse. DSR reporté, non bloquant.
+
+### File Cursor (ordre)
+
+1. **UI-VP-BADGE** (en cours) → PR draft → STOP.
+2. **VP-S1** (après revue du badge) :
+   - **Étape 1** : code BM (`exit_mode="direction"` + stop/TP, sans time-stop, via Rules dédiées dans `vp3/rules.py`) et BN (masque d'exposition HTF ≠ short, exécution close → open t+1, sans stop). Tests unitaires (sortie direction, bascule BN, pas de lookahead HTF, coûts à chaque bascule). Ledger T10b +12 → N = 48. Métriques S1–S5 + bootstrap Δ maxDD apparié. **Aucun run.** PR draft → STOP.
+   - **Étape 2** (après OK Claude) : run base + adverse, n_boot 10 000 → `docs/VP-S1-REPORT.md` (un tableau S1–S5 par symbole × TF, avec verdict) + artefact JSON. STOP.
+   - **Interdit :** validation 2025, holdout 2026, toute variante de paramètre, toucher au paper live.
+
+---
+
 ## 2026-09-27 soir — Claude : VP3 CLÔTURÉ · décisions Samir · programme VP en PAUSE
 
 **Tip :** `main` @ `99ae3e4`. Vérifié après merge #155 : les bornes lo/hi réelles des IC sont affichées ✅ ; les notes §9 (IC∋0 ∧ N≥40 → PAS D'EDGE) et B6 ATR UNKNOWN sont présentes ✅.

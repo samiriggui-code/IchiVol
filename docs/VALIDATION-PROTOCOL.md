@@ -293,7 +293,7 @@ Après les runs : Claude peut lire les rapports chiffrés pour revue, **sans** r
 
 | Champ | Valeur |
 |-------|--------|
-| Version courante | `VP0-2026-09-26` |
+| Version courante | `VP0-2026-09-26` + amendement `VP0-2026-09-27` (M/N Bouclier) |
 | Gel | Après APPROUVÉ Claude **et** OK utilisateur |
 | Modification post-gel | Nouveau fichier ou section `VP0-YYYY-MM-DD` + justification + invalidation des runs antérieurs non rejoués |
 
@@ -307,6 +307,46 @@ Après les runs : Claude peut lire les rapports chiffrés pour revue, **sans** r
 - Implémentation S1 : `(t - entry_time) // bar_seconds >= time_stop_bars - 1` (avec `t ≠ entry_time`).
 
 Les runs antérieurs à cette clarification (décompte `>= n` ⇒ 49 / 25 barres) sont **non comparables** et doivent être rejoués (VP-GRID1 / rapport v3+).
+
+---
+
+## Amendement `VP0-2026-09-27` — Questions M / N « Bouclier » (pré-enregistré)
+
+**Statut :** figé **avant** tout run M/N · OK Samir 2026-09-27 · rédigé par Claude.
+**Justification (§12) :** VP3 clos à 0 EDGE / 48. §9 teste « rendre **plus** que Bj ». L'objectif produit de Samir est « gagner **sans risquer ses économies** ». Or une stratégie peu exposée ne peut pas battre B0 en rendement brut dans un marché haussier, même avec un meilleur rapport gain/risque. On ajoute donc une question **défensive**, jugée par des critères propres fixés **maintenant**. §1–§10 restent inchangés pour A–L ; aucun run antérieur n'est invalidé.
+
+### Hypothèses (paramètres figés ; aucun réglage après résultats)
+
+| ID | Nom | Entrée | Sortie | Taille |
+|----|-----|--------|--------|--------|
+| **BM** | Paper réel | Signal B7 (pipeline live `BUY`, barre close, fill open t+1) | **Comme le paper live** : stop `1.5 × ATR(14)`, TP `2R`, **et** sortie à l'open suivant quand la direction Ichimoku n'est plus LONG (`exit_mode="direction"`). **Pas** de time-stop | 100 % cash (§6), pour être comparable à B0 ; écart de taille vs live (0,5 % de risque) documenté |
+| **BN** | Bouclier régime | Investi à 100 % tant que la direction HTF **close** (§2.2) est **≠ short** | Cash quand la direction HTF close devient **short** ; décision au close LTF, fill à l'open suivant. **Pas** de stop / TP / time-stop | 100 % cash |
+
+- HTF : 4h pour un signal 1h, 1d pour un signal 4h (§2.2). Coûts §7 à chaque bascule.
+- Univers, plis WF1–WF7, purge, warm-up, coûts base / adverse : **identiques à §1bis, §5, §7**.
+- **T10b :** BM et BN × 3 symboles × 2 TF = **+12 hypothèses → N = 48**. Adverse ≠ nouvel essai.
+- **Interdit :** validation 2025, holdout 2026 ; toute variante (« ≠ short » vs « = long », multiple ATR…) = **nouvelle** hypothèse.
+
+### Question M / N — critères « BOUCLIER VALIDÉ » (toutes requises, par symbole × TF)
+
+Comparaison de Bi ∈ {BM, BN} à **B0** (même symbole × TF), sur l'agrégat des plis de **test** WF.
+`CAGR_agg` = `∏(1+r_barre)^(N_year / n_barres) − 1` sur les returns concaténés des plis (§8.1). `DD_pire` = pire maxDD de pli.
+
+| # | Règle | Formule |
+|---|-------|---------|
+| **S1** | Chute divisée au moins par 2 | `DD_pire(Bi) ≤ 0.5 × DD_pire(B0)` (en valeur absolue) |
+| **S2** | Rendement positif, au moins la moitié de B0 | `CAGR_agg(Bi) > 0` **et** `CAGR_agg(Bi) ≥ 0.5 × CAGR_agg(B0)` (si `CAGR_agg(B0) ≤ 0` : seulement `> 0`) |
+| **S3** | Meilleur gain par point de chute | `Calmar(Bi) = CAGR_agg / |DD_pire|` **>** `Calmar(B0)` |
+| **S4** | Pas un coup de chance | Bootstrap stationnaire **apparié** (§9.2, n = 10 000, seed 7) sur les returns par barre : IC 95 % de **Δ maxDD** (Bi − B0, calculé sur chaque tirage) **exclut 0** en faveur de Bi (Δ Sharpe apparié : reporté, non bloquant — S2/S3 couvrent le rendement) |
+| **S5** | Tient avec des frais élevés | S1–S4 aussi vrais en profil **adverse** |
+
+- **DSR(Bi)** avec N = 48 : **reporté** mais **non bloquant** pour M/N. Même B0 n'atteint pas 0.95 (0.38–0.51 à N = 36) : ce seuil rend toute stratégie défensive invérifiable sur 3,5 ans.
+- **BM** : N trades agrégé < 40 → **NON CONCLUANT**.
+- Verdicts : **BOUCLIER VALIDÉ** (S1–S5) / **PAS VALIDÉ** / **NON CONCLUANT** (BM < 40 trades, ou S1–S4 vrais en base mais pas en adverse).
+
+### Suite si BOUCLIER VALIDÉ
+
+Profil paper **séparé** (le baseline actuel n'est pas touché), **8 semaines minimum** (56 jours) en argent virtuel. Toute décision au-delà (argent réel) = **décision explicite de Samir**, jamais automatique. Pas de somme réelle prévue par ce protocole.
 
 ---
 
