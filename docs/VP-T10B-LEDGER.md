@@ -272,6 +272,10 @@ Diagnostic descriptif : **aucun claim, aucun DSR**. Comptées au lineage pour la
 | P2 | `P2-U3-1h-paper` | idem | BTC / ETH / SOL | 1h | idem | **+1** (diag.) |
 
 Adverse (R2), reset par pli (R3) et seeds d'ordre (R1-s) = même hypothèse → **pas +1**.
+
+| P3 | `P3-U20-1h-event` | étude d'événement : début de série BUY contre 20 témoins même symbole / même mois, h = 24/48/96/168 (amendement `VP0-2026-09-28`) | 20 cryptos | 1h | paper + adverse | **+1** (diag.) |
+
+C2 / C3 (contrôles de fidélité) et la correction ε (Q.1) : **pas +1**.
 Lineage : 36 (gelé VP-J1) + 12 (VP-S1, si validé) + 2 (VP-P) = **50** ; sans VP-S1 = 38.
 
 ---

@@ -293,7 +293,7 @@ Après les runs : Claude peut lire les rapports chiffrés pour revue, **sans** r
 
 | Champ | Valeur |
 |-------|--------|
-| Version courante | `VP0-2026-09-26` + amendements `VP0-2026-09-27` (M/N Bouclier) et `VP0-2026-09-27b` (P paper fidèle, diagnostic) |
+| Version courante | `VP0-2026-09-26` + amendements `VP0-2026-09-27` (M/N Bouclier) et `VP0-2026-09-27b` (P paper fidèle, diagnostic), `VP0-2026-09-28` (contrôles C2/C3, ε, intervalles, P3 étude d'événement) |
 | Gel | Après APPROUVÉ Claude **et** OK utilisateur |
 | Modification post-gel | Nouveau fichier ou section `VP0-YYYY-MM-DD` + justification + invalidation des runs antérieurs non rejoués |
 
@@ -455,6 +455,99 @@ P1 et P2 sont des lignes **diagnostiques** du ledger (+2 au lineage). Elles ne s
 `docs/VP-P-REPORT.md` (rapport) · `docs/vpp-artifacts/*.json` (résultats bruts, sha256 des séries, seed, version) ·
 code `ichivol-app/engine/vpp/` + options opt-in de `research_lab/sim.py` (défauts inchangés : tous les runs VP antérieurs
 restent identiques, vérifié par les tests existants).
+
+---
+
+## Amendement `VP0-2026-09-28` — P : contrôles de fidélité, correction de définition, intervalles · Question P3 (étude d'événement)
+
+**Statut :** figé **avant** les runs qu'il décrit · rédigé par Claude (local) le 2026-09-28 · demandé et validé sur le principe par Samir
+(« je valide la préparation et l'exécution de l'étude d'événement, après ces vérifications »).
+**Justification (§12) :** la revue de Samir sur la PR #159 demande (1) une fidélité vérifiée sur les BUY et sur le cycle complet des
+positions, (2) la réconciliation « 857 sorties à 2R » contre « 22 % des trades atteignent 2R », (3) des conclusions nuancées,
+avec intervalles, et (4) l'étude d'événement P3. Données : **développement seulement** (≤ 2024-12-31) ; 2025 et 2026 ne sont ni téléchargés ni lus.
+
+### Q.1 Correction de définition (constatée avant ce texte, sans effet sur les règles de trading)
+
+Cause de l'écart : les excursions sont en virgule flottante. Un trade sorti à l'objectif a `MFE = 1,99999999999995…2,00000000000004 R`,
+et le test strict `≥ 2` en exclut 217 sur 857. **Correction :** tous les seuils exprimés en R sont comparés avec une tolérance
+`ε = 1e-9 R` (`≥ x − ε`, `< x − ε`). Les mouvements de prix en R (MFE, MAE, mouvement réalisé, part conservée) sont tous mesurés
+**depuis le prix d'exécution d'entrée**, qui sert aussi d'ancrage au stop et à l'objectif ; R = `entry_fill − stop`. Le **P&L brut**
+(F2, F5) reste celui du simulateur, du prix brut d'entrée au prix brut de sortie, comme pré-enregistré. Les résultats v1
+(`vpp_results.json`, commit `8afcd5b`) sont conservés sous `vpp-artifacts/v1/`, et les écarts v1 → v2 sont listés dans le rapport.
+
+### Q.2 C2 — fidélité des décisions sur des BUY et des cas limites (live 299 barres contre historique complet)
+
+Échantillons tirés avec la seed **7**, barres éligibles des plis de test 2021-07-01 → 2024-12-31 :
+
+| Échantillon | Tirage |
+|-------------|--------|
+| **C2-BUY** | Barres `BUY` (historique complet), stratifiées : jusqu'à **8 par symbole × année** |
+| **C2-SEUIL** | Barres Ichimoku **LONG non-BUY proches d'un seuil** : percentile ATR à ±0,02 de 0,15 ou 0,90, **ou** ADX à ±1 de 25, **ou** clôture à ≤ 0,1 ATR du plus haut Donchian 20, **ou** RVOL à ±0,05 de 0,7. **150** barres |
+| **C2-SEUL** | Barres LONG dont le régime est le **seul** bloqueur (un pas du BUY). **150** barres |
+
+Pour chaque barre, on compare le calcul live (299 barres 1h closes, 299 barres 4h closes à l'instant de décision) au calcul sur
+l'historique complet : décision, direction, statut de chaque étape, ATR, distance de stop (1,5 ATR), percentile et régime ATR,
+ADX, état Donchian, RVOL. On reporte le taux d'accord par champ, l'écart relatif sur l'ATR (médiane, maximum), et **tous** les désaccords
+dans les deux sens (BUY seulement dans le simulateur ; BUY seulement en live).
+
+### Q.3 C3 — cycle de vie et capital commun à travers le **vrai moteur paper**
+
+Rejeu, dans la base Postgres de **dev** et sur un portefeuille jetable supprimé ensuite, des décisions du flux R1, à travers
+`app.paper.engine.sync_position` (gates, Risk Kernel, taille, ouverture, sorties stop / objectif / direction)
+et `app.brokerage.execution.resolve_bar_exit` + `paper_broker.close_capital_position` pour les protections dans la barre.
+Profil `ICHIVOL_BASELINE_V1` tel quel, sauf `daily_loss_limit_pct = 0` des **deux** côtés : le verrou du moteur lit l'horloge système
+(1 seul déclenchement dans R1, reporté à part). À chaque ouverture de barre t, les symboles sont traités dans l'ordre aléatoire du
+simulateur (même seed). Pour chacun : une position ouverte est d'abord contrôlée (stop/objectif au prix, puis sortie direction),
+sinon une entrée BUY de la barre t−1 est tentée au prix `open(t)`. Viennent ensuite les protections sur la barre t.
+
+Trois fenêtres de **14 jours**, capital neuf de 5 000 € de chaque côté (le simulateur est relancé sur la même fenêtre) :
+**W-a** 2021-07-01, **W-b** 2024-01-01, **W-c** les 14 jours (début à minuit UTC) de R1 v1 qui comptent le plus d'heures avec **10 positions ouvertes**, c'est-à-dire au plafond, là où tombent les rejets `max_positions`
+(pour contrôler le capital commun ; fenêtre choisie pour sa contrainte, pas pour sa performance).
+
+Comparaison trade par trade (clé : symbole et barre d'entrée) : ouvertures et rejets, quantité, notionnel, prix d'exécution, stop,
+objectif, motif et barre de sortie, prix de sortie, frais, P&L réalisé ; puis cash final.
+
+**Critères de fidélité suffisante, fixés d'avance :**
+- C2-BUY : accord sur la décision ≥ 98 % ; C2-SEUIL et C2-SEUL ≥ 95 % ;
+- ATR : écart relatif médian < 0,1 % ;
+- C3 : ≥ 95 % des trades appariés, avec la même barre d'entrée, une quantité à ±0,5 %, le même motif et la même barre de sortie ; cash final à ±1 %.
+
+Si un critère échoue : cause documentée, correction si c'est un défaut du simulateur, puis rejeu de R1–R4, les anciens résultats étant conservés.
+
+### Q.4 Intervalles
+
+Espérance par trade (en € et en R) de R1, et écarts de rendement après entrée : **bootstrap par mois calendaire** (on tire des mois
+entiers, tous actifs confondus), 10 000 tirages, seed 7, intervalle percentile à 95 %.
+
+### Q.5 P3 — étude d'événement BUY contre témoins (pré-enregistrée)
+
+| Élément | Choix figé |
+|---------|------------|
+| **Événement (principal)** | **Début de série BUY** : barre close `t` en `BUY` alors que `t−1` ne l'était pas, symbole éligible (≥ 299ᵉ barre), `t` dans 2021-07-01 → 2024-12-31. Les répétitions d'une même série ne sont pas des événements. |
+| Événements (secondaires, descriptifs) | (i) **toutes** les barres BUY ; (ii) les **entrées exécutées** de R1 (elles dépendent du portefeuille) |
+| Rendement | Entrée à `open(t+1)`, sortie à `close(t+h)` : `r = close(t+h) / open(t+1) − 1`, brut, h ∈ {**24, 48, 96, 168**} barres. Un événement dont la fenêtre dépasse 2024-12-31 est exclu à cet horizon (jamais de donnée 2025) |
+| **Témoins** | Pour chaque événement : **20** barres tirées sans remise dans le **même symbole** et le **même mois calendaire UTC**, éligibles, fenêtre complète, hors barre de l'événement ; même définition de rendement. Moyenne des 20 = rendement témoin de l'événement |
+| Pondération | Chaque événement pèse autant ; différence par événement `d = r − r̄_témoins` |
+| **Rentabilité nette hypothétique** | `r − c`, avec `c` = aller-retour **paper** du symbole `2 × (7,5 + friction)` bps ; stress **adverse** `2 × (10 + max(friction, 4) + 8)` bps |
+| Chevauchements et dépendance entre actifs | Traités par le **bootstrap par mois calendaire** : chaque tirage reprend des mois entiers, avec tous leurs événements et tous les actifs. Le chevauchement d'une fenêtre sur le mois suivant (≤ 7 jours) reste une limite documentée |
+| **Intervalle** | Bootstrap par mois, 10 000 tirages, seed 7, percentile. **Correction pour 4 horizons : Bonferroni**, intervalle bilatéral à **98,75 %** pour décider ; 95 % reporté pour information |
+| Rapport séparé | Moyenne (et médiane) du rendement après BUY, du rendement témoin, de la différence et du net hypothétique (paper et adverse), avec les intervalles, par horizon ; plus une description par année et par symbole, sans intervalle |
+
+**Critères de décision (horizon par horizon) :**
+- **A_h — surperformance établie :** borne basse (98,75 %) de la moyenne de `d` > 0.
+- **B_h — rentabilité nette hypothétique établie (coûts paper) :** borne basse (98,75 %) de la moyenne de `r − c` > 0.
+- **Horizon favorable = A_h et B_h.** C'est une **hypothèse issue des données de développement**, pas une stratégie validée.
+  S'il y en a au moins un, on propose **un seul** test de stratégie, cohérent avec l'horizon favorable le plus court, **pré-enregistré
+  dans un amendement séparé et non exécuté ici**, sans recherche de paramètres.
+- **Si aucun horizon n'est favorable :** l'optimisation de cette entrée est **suspendue sur cette base**. Le rapport indique ce que l'étude
+  exclut : pour chaque horizon, un avantage moyen supérieur à la borne haute de `d` est exclu au niveau choisi, et cette borne est comparée
+  au coût d'un aller-retour. Il indique aussi ce qu'elle **n'exclut pas** : un avantage plus petit, un avantage limité à un sous-ensemble,
+  une autre gestion des sorties.
+
+### Q.6 T10b
+
+C2 et C3 sont des contrôles et P3 une mesure descriptive : aucun claim d'edge, pas de DSR. P3 compte **+1** au lineage (`P3-U20-1h-event`).
+Un test de stratégie éventuel sera une hypothèse nouvelle, avec un amendement propre.
 
 ---
 
