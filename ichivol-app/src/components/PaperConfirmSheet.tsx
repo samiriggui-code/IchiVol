@@ -9,6 +9,7 @@ import {
   type OrderIntent,
 } from '../lib/paper'
 import { eur, price as fmtPrice, signedEur } from '../lib/tradeStory'
+import { ModalSheetHost } from './ModalSheetHost'
 import { ScenariosPanel } from './ScenariosPanel'
 
 const AMOUNT_CHIPS = [100, 250, 500, 1000]
@@ -67,14 +68,6 @@ export function PaperConfirmSheet({
     if (!confirming) clickLock.current = false
   }, [confirming])
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !confirming) onCancel()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onCancel, confirming])
-
   // Aperçu recalculé à chaque changement (léger délai), jamais d'ordre placé.
   useEffect(() => {
     if (!valid) {
@@ -124,14 +117,10 @@ export function PaperConfirmSheet({
   }
 
   return (
-    <div
-      className="trade-sheet-backdrop paper-confirm-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Acheter ${symbolLabel} en paper`}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !confirming) onCancel()
-      }}
+    <ModalSheetHost
+      ariaLabel={`Acheter ${symbolLabel} en paper`}
+      confirming={confirming}
+      onCancel={onCancel}
     >
       <aside className="panel trade-sheet paper-confirm-sheet order-ticket">
         <header className="panel-head trade-sheet-head">
@@ -348,6 +337,6 @@ export function PaperConfirmSheet({
           </div>
         </div>
       </aside>
-    </div>
+    </ModalSheetHost>
   )
 }

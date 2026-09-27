@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { ModalSheetHost } from './ModalSheetHost'
 
 /**
  * Dialogue de confirmation générique (suppression, retrait, etc.).
@@ -31,14 +32,6 @@ export function ConfirmDialog({
     if (!confirming) clickLock.current = false
   }, [confirming])
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !confirming) onCancel()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onCancel, confirming])
-
   function handleConfirm() {
     if (confirming || clickLock.current) return
     clickLock.current = true
@@ -46,15 +39,7 @@ export function ConfirmDialog({
   }
 
   return (
-    <div
-      className="trade-sheet-backdrop paper-confirm-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !confirming) onCancel()
-      }}
-    >
+    <ModalSheetHost ariaLabel={title} confirming={confirming} onCancel={onCancel}>
       <aside className="panel trade-sheet paper-confirm-sheet" style={{ maxWidth: '22rem' }}>
         <header className="panel-head trade-sheet-head">
           <div>
@@ -89,6 +74,6 @@ export function ConfirmDialog({
           </div>
         </div>
       </aside>
-    </div>
+    </ModalSheetHost>
   )
 }

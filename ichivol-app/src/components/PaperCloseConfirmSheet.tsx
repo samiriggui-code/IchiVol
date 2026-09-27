@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { PaperOverviewPosition, PaperPosition } from '../lib/paper'
 import { assetName, directionWords, eur, pct, price, signedEur } from '../lib/tradeStory'
+import { ModalSheetHost } from './ModalSheetHost'
 
 type Closable = PaperPosition | PaperOverviewPosition
 
@@ -31,14 +32,6 @@ export function PaperCloseConfirmSheet({
     if (!confirming) clickLock.current = false
   }, [confirming])
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !confirming) onCancel()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onCancel, confirming])
-
   const dir = directionWords(position.direction)
   const label = assetName(position.symbol)
   const current = isOverview(position) ? position.current_price : null
@@ -66,14 +59,10 @@ export function PaperCloseConfirmSheet({
   }
 
   return (
-    <div
-      className="trade-sheet-backdrop paper-confirm-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Confirmer la clôture de la position"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !confirming) onCancel()
-      }}
+    <ModalSheetHost
+      ariaLabel="Confirmer la clôture de la position"
+      confirming={confirming}
+      onCancel={onCancel}
     >
       <aside className="panel trade-sheet paper-confirm-sheet">
         <header className="panel-head trade-sheet-head">
@@ -167,6 +156,6 @@ export function PaperCloseConfirmSheet({
           </div>
         </div>
       </aside>
-    </div>
+    </ModalSheetHost>
   )
 }
