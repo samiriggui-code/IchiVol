@@ -70,7 +70,9 @@ class Rules:
     # exit rule: "decision" = baseline (leave when the effective decision stops supporting the position);
     # "direction" = leave only on stop/target or when the Ichimoku direction no longer matches (experiment E);
     # "levels_only" = VP2 common exit — stop / TP / time-stop only (never pipeline/direction flip);
-    # "hold" = B0 buy&hold — no SL/TP/time-stop/pipeline exits (only force_flat_at_end)
+    # "hold" = B0 buy&hold — no SL/TP/time-stop/pipeline exits (only force_flat_at_end);
+    # "exposure" = VP-S1 BN — no SL/TP/time-stop; leave when decision no longer supports the position
+    #             (close → open t+1), used for HTF régime toggles.
     exit_mode: str = "decision"
     # live-replica mode: decide and fill in the same step at the step's price (old intrabar behaviour)
     immediate_fill: bool = False
@@ -359,8 +361,8 @@ def simulate(
             item = data[sym].get(t)
             if item is None:
                 continue
-            if rules.exit_mode == "hold":
-                # B0: ignore stop / TP / time-stop
+            if rules.exit_mode in ("hold", "exposure"):
+                # B0 hold / BN exposure: ignore stop / TP / time-stop
                 continue
             c = item[0]
             long = p.direction == "LONG"
@@ -434,6 +436,9 @@ def simulate(
                 if rules.exit_mode == "direction":
                     leave = sig.direction.value != p.direction
                     why = "direction_flipped" if leave else ""
+                elif rules.exit_mode == "exposure":
+                    leave = d != want
+                    why = "exposure_off" if leave else ""
                 else:
                     leave = d != want
                     why = "pipeline_flipped" if d in ("BUY", "SELL") else "pipeline_downgraded"

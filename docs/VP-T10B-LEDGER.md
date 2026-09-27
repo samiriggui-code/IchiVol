@@ -283,3 +283,43 @@ Lineage : 36 (gelé VP-J1) + 12 (VP-S1, si validé) + 2 (VP-P) = **50** ; sans V
 ## Hors scope
 
 - B3 / B4 / B8 · autre retuning · val 2025 / holdout · features CI / T-CYCLE · merge sans OK Claude  
+
+---
+
+## VP-S1 étape 1 — BM / BN (+12) → N proposé = 48
+
+**Amendement :** `VP0-2026-09-27` Questions M/N (Bouclier) · figé avant run  
+**Branche :** `cursor/vp-s1-a2fe`  
+**Statut hyps :** **proposées** (code + tests) — **pas encore jouées** (aucun run étape 1)
+
+| B* | Définition | Params figés |
+|----|------------|--------------|
+| **BM** | Paper réel | Entrées = B7 ; `exit_mode=direction` ; stop 1.5 ATR + TP 2R ; **pas** de time-stop ; `full_cash` |
+| **BN** | Bouclier régime | Exposé si HTF close §2.2 ≠ short ; `exit_mode=exposure` ; pas stop/TP/time-stop ; coûts à chaque bascule ; `full_cash` |
+
+| # | hypothesis_id | B* | symbole | TF | coûts | statut | compte |
+|---|----------------|----|---------|----|-------|--------|--------|
+| 37 | `BM-BTCUSDT-1h-base` | BM | BTCUSDT | 1h | base | proposé (VP-S1) | **+1** |
+| 38 | `BM-BTCUSDT-4h-base` | BM | BTCUSDT | 4h | base | proposé | **+1** |
+| 39 | `BM-ETHUSDT-1h-base` | BM | ETHUSDT | 1h | base | proposé | **+1** |
+| 40 | `BM-ETHUSDT-4h-base` | BM | ETHUSDT | 4h | base | proposé | **+1** |
+| 41 | `BM-SOLUSDT-1h-base` | BM | SOLUSDT | 1h | base | proposé | **+1** |
+| 42 | `BM-SOLUSDT-4h-base` | BM | SOLUSDT | 4h | base | proposé | **+1** |
+| 43 | `BN-BTCUSDT-1h-base` | BN | BTCUSDT | 1h | base | proposé | **+1** |
+| 44 | `BN-BTCUSDT-4h-base` | BN | BTCUSDT | 4h | base | proposé | **+1** |
+| 45 | `BN-ETHUSDT-1h-base` | BN | ETHUSDT | 1h | base | proposé | **+1** |
+| 46 | `BN-ETHUSDT-4h-base` | BN | ETHUSDT | 4h | base | proposé | **+1** |
+| 47 | `BN-SOLUSDT-1h-base` | BN | SOLUSDT | 1h | base | proposé | **+1** |
+| 48 | `BN-SOLUSDT-4h-base` | BN | SOLUSDT | 4h | base | proposé | **+1** |
+
+```
+N_proposé = 36 (gelé J1) + 12 (BM/BN × 3 × 2) = 48
+Adverse sur les mêmes hyps = pas +1
+```
+
+**N T10b proposé = 48** — à valider Claude avant étape 2 (run). DSR reporté avec N=48, non bloquant pour M/N.
+
+### Hors scope VP-S1
+
+Validation 2025 · holdout 2026 · variantes de paramètres · paper live.  
+

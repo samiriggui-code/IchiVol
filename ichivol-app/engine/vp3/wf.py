@@ -12,11 +12,13 @@ from research_lab.sim import BASE_COST, CostModel, simulate
 
 from vp2 import BAR_SECONDS, DEFAULT_SEED, INITIAL_CAPITAL, TIME_STOP_BARS
 from vp2.data import bars_to_candles, build_sim_feed, load_vp1_spot
-from vp3 import HTF_MAP, PROTOCOL_VERSION
-from vp3.entries import entry_mask
+from vp3 import HTF_MAP, PROTOCOL_VERSION, SHIELD_STRATEGIES
+from vp3.entries import entry_mask, overlay_ltf_ichimoku_directions
 from vp3.folds import HOLDOUT, VALIDATION, WF_FOLDS, Fold, entry_gate_s, fold_test_window_s
 from vp3.metrics import EquityMetrics, bar_returns_from_equity, equity_metrics, trade_expectancy
 from vp3.rules import strategy_rules
+
+_HTF_STRATEGIES = frozenset({"B5", "B6", "B7"}) | frozenset(SHIELD_STRATEGIES)
 
 # §5.1.8 — force_flat only at end of validation / holdout
 _FORCE_FLAT_FOLDS = frozenset({VALIDATION.id, HOLDOUT.id})
@@ -84,7 +86,7 @@ def run_fold(
     payload, _ = load_vp1_spot(root, symbol, interval)
     candles = bars_to_candles(payload["bars"])
 
-    htf_interval = HTF_MAP.get(interval) if strategy in ("B5", "B6", "B7") else None
+    htf_interval = HTF_MAP.get(interval) if strategy in _HTF_STRATEGIES else None
     htf_candles = None
     if htf_interval:
         htf_payload, _ = load_vp1_spot(root, symbol, htf_interval)
@@ -100,10 +102,11 @@ def run_fold(
     gate = entry_gate_s(fold, interval)
     win = fold_test_window_s(fold)
     # VP3-R3: allow exits after fold end up to time-stop horizon; no new entries at/after win[1]
+    # BM/BN: pas de time-stop — garder un horizon pour fills open t+1 / sorties post-pli.
     horizon = TIME_STOP_BARS.get(interval, 48) * BAR_SECONDS[interval]
     sim_end = win[1] + horizon
-    # §5.1.8 force_flat only VAL/HOLD; B0 hold still needs flat to realize window PnL
-    force_flat = strategy == "B0" or fold.id in _FORCE_FLAT_FOLDS
+    # §5.1.8 force_flat only VAL/HOLD; B0/BN still need flat to realize window PnL
+    force_flat = strategy in ("B0", "BN") or fold.id in _FORCE_FLAT_FOLDS
     rules = replace(rules, force_flat_at_end=force_flat)
 
     gated = list(mask)
@@ -115,9 +118,28 @@ def run_fold(
         return "BUY" if gated[i] else "WATCH"
 
     feed = build_sim_feed(candles, decide=decide)
+    if strategy == "BM":
+        overlay_ltf_ichimoku_directions(feed, candles)
     for t, (c, sig) in list(feed.items()):
         if (t < gate or t >= win[1]) and sig.decision == "BUY":
-            feed[t] = (c, _watch_signal(t, sig.stop_distance))
+            # Preserve BM Ichimoku direction for post-gate exit logic when still in position.
+            if strategy == "BM":
+                feed[t] = (
+                    c,
+                    BarSignal(
+                        t,
+                        "WATCH",
+                        sig.direction,
+                        sig.stop_distance,
+                        sig.rvol,
+                        sig.failed,
+                        sig.fail_codes,
+                        "vp3_gate",
+                        sig.mtf_aligned,
+                    ),
+                )
+            else:
+                feed[t] = (c, _watch_signal(t, sig.stop_distance))
 
     result = simulate({symbol: feed}, rules, cost, (win[0], sim_end), initial=initial, seed=seed)
     # §5.1.7 — trade belongs to fold of its entry bar
@@ -133,7 +155,7 @@ def run_fold(
     # timestamps aligned with returns: time of the *current* equity mark (i≥1)
     bar_times = [eq_fold[i][0] for i in range(1, len(eq_fold))]
     exp = trade_expectancy(nets)
-    if strategy == "B0":
+    if strategy in ("B0", "BN"):
         positive = eq.cagr is not None and eq.cagr > 0
     else:
         positive = len(trades) >= 5 and exp is not None and exp > 0
