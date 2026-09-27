@@ -1,19 +1,18 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
-## 2026-09-27 — VP-J1 étape 2 DONE
+## 2026-09-27 — #155 VP-J1 MERGED
 
-**Branche :** `cursor/vp-j1-a2fe`  
-**PR draft :** [#155](https://github.com/samiriggui-code/IchiVol/pull/155) — **STOP, pas de merge**  
-**N T10b gelé :** **36** · fixes B6/B7 `9a7a019` · tip run+rapport ci-dessous.
+**Squash-merge :** [`e2af12b`](https://github.com/samiriggui-code/IchiVol/commit/e2af12b) · PR [#155](https://github.com/samiriggui-code/IchiVol/pull/155)  
+**N T10b gelé :** **36** · Claude VALIDÉ (vp1/vp2/vp3 verts) · corrections doc pré-merge incluses.
 
 ### Livré
 
 | Item | Contenu |
 |------|---------|
-| Fixes pré-run | B6 live ATR+ADX gate · B7 `WARMUP_BARS` · tests `test_vp3_b6_b7.py` · `9a7a019` |
+| Fixes pré-run | B6 live ATR+ADX gate · B7 `WARMUP_BARS` · tests `test_vp3_b6_b7.py` |
 | Run | `python -m vp3.j1_run` base+adverse · n_boot=10 000 · N=36 · Q A/B/H/J |
 | Artefact | [`docs/vp3-artifacts/j1_results.json`](./vp3-artifacts/j1_results.json) |
-| Rapport | [`docs/VP3-REPORT-FINAL.md`](./VP3-REPORT-FINAL.md) |
+| Rapport | [`docs/VP3-REPORT-FINAL.md`](./VP3-REPORT-FINAL.md) — IC lo/hi réels + notes §9 / B6 ATR |
 | Ledger | 12 hyps B6/B7 marquées **jouées** · N=36 |
 
 ### Résultat court
@@ -22,10 +21,11 @@
 - verdict_final : mix **PAS D'EDGE** / **NON CONCLUANT** (voir FINAL)
 - σ(SR_ann) base ≈ 0.631 · SR*_ann ≈ 0.935 ; adverse σ ≈ 0.858 · SR*_ann ≈ 1.270
 - Bj : BTC 1h=**B6**, BTC 4h=**B5**, ETH/SOL 1h+4h=**B0**
+- Doc : IC Δ / IC trades Bi = bornes lo/hi depuis JSON ; §9 IC∋0 ∧ N≥40 → PAS D'EDGE ; INFO B6 ATR UNKNOWN (lab) vs PENDING (live), barres pré-WF1 seulement
 
 ### STOP
 
-PR #155 reste **draft**. Pas de merge. Pas d’étape suivante autonome.
+Pas de nouveau job VP (B3/B4/B8, val 2025, holdout) **sans décision de Samir**.
 
 ### Hors scope (respecté)
 
