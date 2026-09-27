@@ -4,7 +4,7 @@
 
 **Branche :** `cursor/vp-nt1-a2fe` @ `cb2f390`  
 **Base main :** `b1cd43d` (#153 VP-GRID1 squash-mergé, VALIDÉ Claude)  
-**PR draft :** à ouvrir avec ce push — **aucun merge** / **aucun rerun** avant validation de N.
+**PR draft :** [#154](https://github.com/samiriggui-code/IchiVol/pull/154) — **aucun merge** / **aucun rerun** avant validation de N.
 
 ### Livré (étape 1 seulement)
 
