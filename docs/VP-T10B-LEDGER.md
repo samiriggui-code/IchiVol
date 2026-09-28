@@ -291,7 +291,7 @@ Lineage : 36 (gelé VP-J1) + 12 (VP-S1, si validé) + 2 (VP-P) = **50** ; sans V
 
 | Lineage | Hypothèse | Amendement | Statut | Compte |
 |---------|-----------|------------|--------|--------|
-| `RS-D1-U3-4h` | Cassure Donchian 55 / sortie de tendance (stop 3 ATR suiveur, canal 20), BTC / ETH / SOL 4h, capital commun paper | `VP0-2026-09-28b` | pré-enregistré, **non joué** | **+1** |
+| `RS-D1-U3-4h` | Cassure Donchian 55 / sortie de tendance (stop 3 ATR suiveur, canal 20), BTC / ETH / SOL 4h, capital commun paper | `VP0-2026-09-28b` | **joué 2026-09-28** (`1a4eba5`) — CANDIDAT À VALIDATION SUPPLÉMENTAIRE (D1–D7 vrais, dev seulement) · [rapport](./RS-D1-REPORT.md) | **+1** |
 
 Règles de tenue :
 - les lignes RS ne sont ajoutées **que** par le pilote RS ;
