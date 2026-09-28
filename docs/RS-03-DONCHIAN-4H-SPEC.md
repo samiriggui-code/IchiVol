@@ -139,6 +139,23 @@ Une stratégie qui perd moins que B7 mais détruit du capital est **REJETÉE** (
 4. B0-F et B0-E : tests de valorisation et de rééquilibrage.
 5. Implémentation **isolée** (`ichivol-app/engine/rs/`), réutilisant `research_lab/sim.py` et les options de #159. **Aucun** changement du paper, du pipeline ni des défauts du simulateur.
 
+### 10 bis. Note d'implémentation (2026-09-28, committée **avant** tout run, aucune règle changée)
+
+- **Moteur autonome `rs/donchian.py`, pas `research_lab/sim.py`.** `sim.py` n'a ni stop suiveur ni sortie de canal, et son interface est figée par #159 (options opt-in, défauts inchangés). L'étendre aurait touché un simulateur partagé par VP3 / VP-P. Le point 5 ci-dessus est donc tenu dans son esprit (aucun changement du paper, du pipeline ni de `sim.py`), mais **pas** par réutilisation de code.
+- **Réutilisé tel quel :**
+  - `app/indicators/donchian.py` (fenêtre `t−N..t−1`) ;
+  - `app/indicators/atr.py` (moyenne simple ; valeur ignorée tant que 14 barres ne sont pas disponibles) ;
+  - `vp2/data.load_vp1_spot` (sha du manifeste).
+- **Réimplémenté d'après §5–§6** (taille, plafonds, coûts) dans `rs/donchian.py` et `rs/costs.py`. La fidélité est vérifiée par les tests `tests/rs/`, pas par un rejeu du paper.
+- **Précisions d'implémentation**, choix mécaniques non spécifiés au § concerné :
+  - **Risque ouvert 4 % (§5)** : il compte les positions ouvertes (risque initial `qty × 3 ATR`) **et** les entrées en attente, estimées avec la même formule de taille au dernier close.
+  - **Perte journalière 3 % (§5)** : jour UTC de la **clôture** de la barre. Début de jour = equity marquée à la dernière clôture de la veille. Le verrou compare l'equity au coût à cette référence et bloque les nouvelles entrées jusqu'au jour suivant.
+  - **Ordre aléatoire (§5)** : `random.Random(7)`, mélange des symboles à chaque clôture.
+  - **Pas de limite de nombre de positions** au-delà de « une par actif » (`MAX_OPEN = 10`, jamais atteint avec 3 actifs).
+  - **B0-F / B0-E** : un achat ne dépasse jamais le cash (commission comprise). Pas de levier : le panier B0-F est donc investi à ≈ 99,9 %. B0-E vend d'abord, puis achète, à l'open de la 1ʳᵉ barre du mois où les 3 actifs sont présents.
+  - **Stress §9** : paramètre `exec_delay = 2` (entrées et sorties de canal à `open(t+2)`). Le stop intrabarre reste contrôlé à chaque barre.
+- **Garde-fou 2025** : `rs/data.truncate` coupe à `open_time < 2025-01-01` au chargement, et `simulate` le re-vérifie par assertion.
+
 ## 11. T10b
 
 +1 ligne `RS-D1-U3-4h` (hypothèse de stratégie). Pas de DSR : jugement par D1–D7, avec intervalles bootstrap. Toute variante (55/20/14/3 modifiés, autres actifs, 1h, filtre ajouté) = **nouvelle** ligne et nouvel amendement, **avant** le run.

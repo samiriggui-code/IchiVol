@@ -125,6 +125,7 @@ def simulate(
     rej: dict[str, int] = {}
     day_key: str | None = None
     day_start_eq = initial
+    prev_eq_mark = initial  # equity marquée à la clôture de la barre précédente
     halted = False
     halt_days = 0
 
@@ -239,10 +240,12 @@ def simulate(
         if t >= score_start:
             gross_exp = sum(p.qty * last_close.get(p.symbol, p.entry_fill) for p in positions.values())
             equity.append((t, eq_m, gross_exp))
-        # verrou perte journalière (définition paper : equity au coût contre début de jour marqué)
+        # verrou perte journalière (définition paper : equity au coût contre début de jour marqué).
+        # Début de jour = equity marquée à la dernière clôture de la veille (avant toute barre du jour).
         dk = _day(t)
         if dk != day_key:
-            day_key, day_start_eq, halted = dk, eq_m, False
+            day_key, day_start_eq, halted = dk, prev_eq_mark, False
+        prev_eq_mark = eq_m
         if not halted and equity_cost() <= day_start_eq * (1 - DAILY_LOSS_LIMIT_PCT):
             halted = True
             halt_days += 1

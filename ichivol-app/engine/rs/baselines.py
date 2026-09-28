@@ -48,6 +48,10 @@ def passive(
         if abs(delta) < 1e-9:
             return
         if delta > 0:
+            # jamais de cash négatif : l'achat + sa commission tiennent dans le cash (pas de levier)
+            delta = min(delta, max(cash, 0.0) / (1 + c.commission_bps / 10_000.0))
+            if delta <= 1e-9:
+                return
             fill = c.fill(px, "buy")
             q = delta / fill
             fee = c.fee(delta)
