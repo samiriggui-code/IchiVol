@@ -283,10 +283,47 @@ EXPERIMENTAL_PROFILES: dict[str, dict[str, Any]] = {
     FWD_E_LONG["code"]: FWD_E_LONG,
 }
 
+# --- RS-D1 paper live (docs/RS-09-RS-D1-PAPER-DESIGN.md) -------------------------------------------------
+# Separate account driven only by app/paper/rs_d1_runner.py (rules = rs/book.py, RS-03). Never synced by the
+# Ichimoku loop, no manual orders, no T0-MANAGE keys (the protection monitor only enforces its stop).
+RS_D1_CODE = "RS_D1_PAPER_V1"
+RS_D1_PROFILE: dict[str, Any] = {
+    "code": RS_D1_CODE,
+    "label": "RS-D1 — validé 2025, holdout 2026 non ouvert",
+    "engine": "rs_d1",
+    "rules": "docs/RS-03-DONCHIAN-4H-SPEC.md",
+    "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT"],
+    "timeframe": "4h",
+    "initial_cash_eur": 5000.0,
+    "valuation_mode": "USDT_AS_EUR_PROXY",
+    "allow_short": False,
+    "risk_pct": 0.005,
+    "max_notional_pct": 0.10,
+    "max_open_risk_pct": 0.04,
+    "daily_loss_limit_pct": 0.03,
+    "min_fill_fraction": 0.25,
+    "min_notional": 10.0,
+    "max_open_positions": 10,
+    # RS-03 §6 paper costs: commission 7.5 bps + per-side friction per symbol (== FWD table values).
+    "commission_bps": 7.5,
+    "commission_bps_by_symbol": {},
+    "friction_bps_by_symbol": {"BTCUSDT": 1.0, "ETHUSDT": 1.0, "SOLUSDT": 1.5},
+    "financing_bps_per_day_crypto": 0.0,
+    "auto_timeframes": [],
+    "sync_auto": False,
+    "manual_orders": False,
+}
+
 ALL_PROFILES: dict[str, dict[str, Any]] = {
     BASELINE_CODE: BASELINE_PROFILE,
     **EXPERIMENTAL_PROFILES,
+    RS_D1_CODE: RS_D1_PROFILE,
 }
+
+
+def is_rs_engine(profile: dict[str, Any] | None) -> bool:
+    """True for portfolios driven by the RS runner (no Ichimoku sync, no manual orders, no TP)."""
+    return bool(profile) and profile.get("engine") == "rs_d1"
 
 
 def profile_for(code: str) -> dict[str, Any]:

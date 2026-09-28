@@ -733,12 +733,53 @@ def _report_breach(b: Breach) -> dict[str, Any]:
     }
 
 
+def _rs_engine_position(session: Session, pos: PaperPosition) -> bool:
+    from app.paper.strategy_profiles import is_rs_engine
+
+    pf = session.get(PaperPortfolio, pos.portfolio_id) if pos.portfolio_id else None
+    return pf is not None and is_rs_engine(pf.strategy_profile)
+
+
+def scan_position_through(
+    session: Session,
+    pos: PaperPosition,
+    until: datetime,
+    *,
+    klines_fn: KlinesFn = binance_klines_1m,
+    trades_fn: TradesFn | None = binance_agg_trades,
+) -> dict[str, Any]:
+    """Enforce the **current** stop of one lot on every closed minute before ``until``, then pin the
+    watermark at ``until`` (RS-09 §3, complément A).
+
+    The RS runner calls this at a 4h close before it raises the trailing stop, so a stop raised at the
+    close of bar k is never applied to minutes of bar k. Returns the protection report row."""
+    now_ms = _ms(until)
+    row: dict[str, Any] = {"id": pos.id, "status": "skipped"}
+    _process_position(
+        session, pos, row, klines_fn=klines_fn, trades_fn=trades_fn, now=until, now_ms=now_ms,
+        dry_run=False, enforce_legacy=False,
+    )
+    if pos.status == "OPEN":
+        # Pin at ``until`` even if some minutes had no 1m data: those minutes are covered by the RS book's
+        # own 4h-bar stop check (same rule as the backtest) and must never be re-scanned with a raised stop.
+        pin = now_ms - now_ms % MINUTE_MS
+        through = int(row.get("checked_through_ms") or 0)
+        row["pinned_through_ms"] = pin
+        row["unscanned_ms"] = max(0, pin - through)
+        _write_check(session, pos, pin, False, max(until, datetime.now(timezone.utc)))
+    return row
+
+
 def _process_position(
     session: Session, pos: PaperPosition, row: dict[str, Any], *, klines_fn: KlinesFn, trades_fn: TradesFn | None,
     now: datetime, now_ms: int, dry_run: bool, enforce_legacy: bool,
 ) -> None:
     row.update(symbol=pos.symbol, source=pos.source)
-    if not pos.qty or pos.stop_price is None or pos.take_profit_price is None:
+    # RS-D1 paper (RS-09 §3): no take-profit by design -> unreachable target, stop only. Other lots unchanged.
+    target = pos.take_profit_price
+    if target is None and _rs_engine_position(session, pos):
+        target = float("inf") if pos.direction == "LONG" else float("-inf")
+    if not pos.qty or pos.stop_price is None or target is None:
         row["status"] = "unprotected_legacy_no_levels"
         return
     inst = get_instrument(pos.symbol)
@@ -751,7 +792,7 @@ def _process_position(
         # Legacy lot, first sight: report what history says, never act on it; watermark = now.
         # Trail is never applied to historical reconstruction (gate: no default on history).
         hist = find_first_breach(
-            pos.direction, pos.stop_price, pos.take_profit_price, symbol=inst.provider_symbol,
+            pos.direction, pos.stop_price, target, symbol=inst.provider_symbol,
             since_ms=_ms(pos.entry_time), until_ms=now_ms, klines_fn=klines_fn, trades_fn=trades_fn,
         )
         row["status"] = "legacy_watermark_initialised"
@@ -812,7 +853,7 @@ def _process_position(
         manage = find_breach_manage(
             pos.direction,
             float(pos.stop_price),
-            float(pos.take_profit_price),
+            float(target),
             entry=float(pos.entry_price),
             trail_cfg=trail_cfg,
             partial_cfg=partial_cfg,
@@ -840,7 +881,7 @@ def _process_position(
         scan, new_stop = find_breach_with_trail(
             pos.direction,
             float(pos.stop_price),
-            float(pos.take_profit_price),
+            float(target),
             entry=float(pos.entry_price),
             config=trail_cfg,
             symbol=inst.provider_symbol,
@@ -855,7 +896,7 @@ def _process_position(
         checked_through = scan.checked_through_ms
     else:
         scan = find_first_breach(
-            pos.direction, pos.stop_price, pos.take_profit_price, symbol=inst.provider_symbol,
+            pos.direction, pos.stop_price, target, symbol=inst.provider_symbol,
             since_ms=since_ms, until_ms=now_ms, klines_fn=klines_fn, trades_fn=trades_fn,
         )
         row["checked_through_ms"] = scan.checked_through_ms

@@ -24,6 +24,29 @@ from app.screener.service import scan_symbol
 router_after_shadow = APIRouter(prefix=settings.engine_api_prefix, tags=["engine"])
 
 
+RS_MANUAL_REFUSAL = "manual_orders_disabled: RS-D1 paper portfolio is driven by its runner only (RS-09 §7)"
+
+
+def _refuse_rs_portfolio_code(code: str | None) -> None:
+    """403 for manual previews/proposals on an RS-engine portfolio (profile code)."""
+    from app.paper.strategy_profiles import is_rs_engine, profile_for
+
+    if code and is_rs_engine(profile_for(code)):
+        raise HTTPException(status_code=403, detail=RS_MANUAL_REFUSAL)
+
+
+def _refuse_rs_portfolio_id(session: Session, portfolio_id: str | None) -> None:
+    """403 for a manual action on a position that belongs to an RS-engine portfolio."""
+    from app.db.models import PaperPortfolio
+    from app.paper.strategy_profiles import is_rs_engine
+
+    if portfolio_id is None:
+        return
+    pf = session.get(PaperPortfolio, portfolio_id)
+    if pf is not None and is_rs_engine(pf.strategy_profile):
+        raise HTTPException(status_code=403, detail=RS_MANUAL_REFUSAL)
+
+
 def _load_partials(session: Session, position_id: str) -> list:
     return list(
         session.execute(
@@ -108,6 +131,7 @@ def preview_manual_paper_buy(
     from app.paper.manual import preview_manual_buy
     from app.paper.scenarios import build_scenarios
 
+    _refuse_rs_portfolio_code(portfolio_code)
     try:
         row = scan_symbol(symbol.upper(), timeframe=timeframe)
     except ValueError as exc:
@@ -268,6 +292,7 @@ def propose_paper_trade(
     """
     from app.paper.intent import propose_order_intent
 
+    _refuse_rs_portfolio_code(portfolio_code)
     rvol_params = _rvol_params_override(rvol_low, rvol_significant, rvol_strong, rvol_anomaly)
     atr_params = _atr_params_override(atr_dead_percentile, atr_extreme_percentile, atr_stop_multiplier)
     try:
@@ -431,6 +456,7 @@ def close_paper_position(position_id: str) -> dict:
             raise HTTPException(status_code=404, detail="position_not_found")
         if existing.status != "OPEN":
             raise HTTPException(status_code=409, detail="position_already_closed")
+        _refuse_rs_portfolio_id(session, existing.portfolio_id)
         symbol, timeframe = existing.symbol, existing.timeframe
     finally:
         session.close()
