@@ -335,9 +335,15 @@ describe('FS-0c — timeframes, chiffres non ASCII, unités, bornes Unicode', ()
     assert.equal(ok.rejected, 0, JSON.stringify(ok.verdicts))
   })
   // V8 sémantique : gardé par ichivol-2c (FS-0c ne le traite pas) — phrases littérales de la 2e revue.
-  it.todo('V8 : causalité sans citer pipeline.decision — « NO_TRADE parce que le funding explose. »')
-  it.todo('V8 : « Le cours évolue entre POC 83965,08 et VAL 83684,67. » (sans le mot « prix »)')
-  it.todo('V8 : « Le prix est au-dessus de la VAH 84806,33. » alors que le prix est dessous')
+  it('V8 / N5 : causalité sur une décision nommée sans pipeline.decision cité', () =>
+    rejects('NO_TRADE parce que le funding explose.', ['rvol.rvol']))
+  it('V8 / N6 : « cours » au lieu de « prix »', () =>
+    rejects('Le cours évolue entre POC 83965,08 et VAL 83684,67.', ['location.poc', 'location.val']))
+  it('V8 / N10 : « au-dessus de la VAH » faux', () => {
+    rejects('Le prix est au-dessus de la VAH 84918,5.', ['location.vah'])
+    const ok = validateAnalysis(FS_B, out({ claims: [{ text: 'Le prix reste sous la VAH 84918,5.', kind: 'fact', fact_ids: ['location.vah'] }], risks: [] }))
+    assert.equal(ok.rejected, 0, JSON.stringify(ok.verdicts))
+  })
   it('V2 : résumé avec 30m / 12h / pleine chasse / causalité « dû à »', () => {
     summaryRejected('Volume de 30m, rebond vers 12h.')
     summaryRejected('Le BTC vise ８４ ３００.')

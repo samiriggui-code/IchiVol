@@ -241,17 +241,41 @@ function priceLive(fs: FactSheet): number | null {
 }
 
 /** V8 : « (le prix) entre X et Y » doit encadrer price.live. */
-function betweenError(text: string, fs: FactSheet): string | null {
-  if (!/\bprix\b/i.test(text)) return null
-  const m = /\bentre\b([^.;]*?)\bet\b([^.;]*)/i.exec(text)
-  if (!m) return null
-  const a = extractNumbers(m[1])[0]
-  const b = extractNumbers(m[2])[0]
+/** Désignations du prix courant (N6) : « prix », « cours », « BTC »… */
+const PRICE_SUBJECT_RE = new RegExp(
+  `${WB_START}(?:prix|cours|price|spot|marché|BTC|ETH|SOL|BTCUSDT|ETHUSDT|SOLUSDT|bitcoin|ether|solana)${WB_END}`,
+  'iu',
+)
+const ABOVE_RE = new RegExp(`${WB_START}(?:au[- ]dessus|above|supérieur|plus haut que)${WB_END}([^.;]{0,40})`, 'iu')
+const BELOW_RE = new RegExp(
+  `${WB_START}(?:en[- ]dessous|au[- ]dessous|sous|below|inférieur|plus bas que)${WB_END}([^.;]{0,40})`,
+  'iu',
+)
+const BETWEEN_RE = new RegExp(`${WB_START}entre${WB_END}([^.;]*?)${WB_START}et${WB_END}([^.;]*)`, 'iu')
+/** Décision nommée dans le texte (N5) : la causalité exige alors pipeline.blocking_stages. */
+const DECISION_TOKEN_RE = /\b(?:NO_TRADE|STRONG_BUY|STRONG_SELL|BUY|SELL|WATCH)\b/
+
+/** V8 / N6 / N10 : relations entre le prix courant et un niveau cité, vérifiées contre price.live. */
+function priceRelationErrors(text: string, fs: FactSheet): string[] {
+  if (!PRICE_SUBJECT_RE.test(text)) return []
   const p = priceLive(fs)
-  if (!a || !b || p === null) return null
-  const lo = Math.min(a.value, b.value)
-  const hi = Math.max(a.value, b.value)
-  return p >= lo && p <= hi ? null : `relation fausse : le prix (${p}) n'est pas entre ${a.raw} et ${b.raw}`
+  if (p === null) return []
+  const errors: string[] = []
+  const between = BETWEEN_RE.exec(text)
+  if (between) {
+    const a = extractNumbers(between[1])[0]
+    const b = extractNumbers(between[2])[0]
+    if (a && b && !(p >= Math.min(a.value, b.value) && p <= Math.max(a.value, b.value))) {
+      errors.push(`relation fausse : le prix (${p}) n'est pas entre ${a.raw} et ${b.raw}`)
+    }
+  }
+  const above = ABOVE_RE.exec(text)
+  const aboveLevel = above ? extractNumbers(above[1])[0] : undefined
+  if (aboveLevel && !(p > aboveLevel.value)) errors.push(`relation fausse : le prix (${p}) n'est pas au-dessus de ${aboveLevel.raw}`)
+  const below = BELOW_RE.exec(text)
+  const belowLevel = below ? extractNumbers(below[1])[0] : undefined
+  if (belowLevel && !(p < belowLevel.value)) errors.push(`relation fausse : le prix (${p}) n'est pas en dessous de ${belowLevel.raw}`)
+  return errors
 }
 
 function checkClaim(claim: Claim, fs: FactSheet, byId: Map<string, Fact>): string[] {
@@ -286,11 +310,11 @@ function checkClaim(claim: Claim, fs: FactSheet, byId: Map<string, Fact>): strin
     if (!citedDisplays.includes(dt)) errors.push(`date/heure non sourcée: ${dt}`)
   }
   if (claim.kind !== 'missing' && NUMBER_WORDS_RE.test(claim.text)) errors.push('nombre en toutes lettres interdit')
-  if (CAUSAL_RE.test(claim.text) && ids.includes('pipeline.decision') && !ids.includes('pipeline.blocking_stages')) {
+  const namesDecision = ids.includes('pipeline.decision') || DECISION_TOKEN_RE.test(claim.text)
+  if (CAUSAL_RE.test(claim.text) && namesDecision && !ids.includes('pipeline.blocking_stages')) {
     errors.push('causalité sur la décision sans citer pipeline.blocking_stages')
   }
-  const between = betweenError(claim.text, fs)
-  if (between) errors.push(between)
+  errors.push(...priceRelationErrors(claim.text, fs))
   return errors
 }
 
