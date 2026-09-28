@@ -1,4 +1,4 @@
-"""B0–B7 entry decision series (long-only). Pure functions of closed candles."""
+"""B0–B7 / BM / BN entry decision series (long-only). Pure functions of closed candles."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from app.indicators.location import compute_location
 from app.indicators.rvol import RvolParams, compute_rvol
 from app.indicators.structure import compute_structure
 from app.strategy_lab.adn_ichivol import LiveScreenerSettings
+from research_lab.signals import BarSignal
 
 from vp3 import RVOL_MIN, RVOL_WINDOW, WARMUP_BARS
 
@@ -123,6 +124,28 @@ def entry_mask(
             mask[i] = True
         return mask
 
+    if strategy == "BN":
+        # Bouclier : investi tant que HTF close (§2.2) ≠ short.
+        if not htf_candles:
+            raise ValueError("BN requires htf_candles")
+        htf_ichi = compute_ichimoku(htf_candles, ICHI_PARAMS)
+        htf_dir = align_htf_directions(
+            candles, htf_candles, htf_ichi, ltf_seconds=ltf_seconds, htf_seconds=htf_seconds
+        )
+        for i in range(WARMUP_BARS, n):
+            mask[i] = htf_dir[i] != "short"
+        return mask
+
+    if strategy == "BM":
+        # Paper réel : mêmes entrées que B7.
+        return entry_mask(
+            "B7",
+            candles,
+            htf_candles=htf_candles,
+            ltf_seconds=ltf_seconds,
+            htf_seconds=htf_seconds,
+        )
+
     ichi = compute_ichimoku(candles, ICHI_PARAMS)
     rvol = compute_rvol(candles, RVOL_PARAMS) if strategy in ("B2", "B5", "B6") else None
 
@@ -218,3 +241,30 @@ def entry_mask(
 
 def decisions_from_mask(mask: list[bool]) -> list[str]:
     return ["BUY" if m else "WATCH" for m in mask]
+
+
+def overlay_ltf_ichimoku_directions(
+    feed: dict[int, tuple],
+    candles: list[Candle],
+) -> None:
+    """BM: exit_mode=direction uses Ichimoku LTF direction, not BUY/WATCH proxy."""
+    ichi_out = ichimoku_agent.analyze(candles)
+    for i, c in enumerate(candles):
+        item = feed.get(c.time)
+        if item is None:
+            continue
+        bar, sig = item
+        feed[c.time] = (
+            bar,
+            BarSignal(
+                time=sig.time,
+                decision=sig.decision,
+                direction=ichi_out[i].direction,
+                stop_distance=sig.stop_distance,
+                rvol=sig.rvol,
+                failed=sig.failed,
+                fail_codes=sig.fail_codes,
+                primary=sig.primary,
+                mtf_aligned=sig.mtf_aligned,
+            ),
+        )

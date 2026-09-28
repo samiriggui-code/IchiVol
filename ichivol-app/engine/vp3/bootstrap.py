@@ -99,6 +99,20 @@ def assert_aligned_timestamps(
             )
 
 
+def max_drawdown_from_returns(returns: list[float]) -> float:
+    """Max drawdown fraction (≤ 0) from a simple-return path starting at 1.0."""
+    eq = 1.0
+    peak = 1.0
+    mdd = 0.0
+    for r in returns:
+        eq *= 1.0 + r
+        if eq > peak:
+            peak = eq
+        if peak > 0:
+            mdd = min(mdd, eq / peak - 1.0)
+    return mdd
+
+
 def paired_block_delta_ci(
     returns_a: list[float],
     returns_b: list[float],
@@ -113,7 +127,10 @@ def paired_block_delta_ci(
 ) -> BootstrapCI:
     """Stationary block bootstrap (Politis–Romano), paired indices, Δ = A − B.
 
-    metric: "mean" → Δ mean return ; "sharpe" → Δ of (mean/std) without annualisation.
+    metric:
+      - "mean" → Δ mean return
+      - "sharpe" → Δ of (mean/std) without annualisation
+      - "maxdd" → Δ maxDD (fraction ≤ 0); positive Δ favours A (less severe DD)
     """
     assert_aligned_timestamps(times_a, times_b)
     if times_a is not None:
@@ -135,6 +152,8 @@ def paired_block_delta_ci(
     rng = random.Random(seed)
 
     def _metric(xs: list[float]) -> float:
+        if metric == "maxdd":
+            return max_drawdown_from_returns(xs)
         mu = sum(xs) / len(xs)
         if metric == "mean":
             return mu
