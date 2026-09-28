@@ -39,6 +39,7 @@ export interface ChatEntry {
   citations?: AgentCitation[]
   disclaimer?: string
   toolCalls?: AgentChatResponse['toolCalls']
+  factsheet?: AgentChatResponse['factsheet']
   pendingAction?: AgentChatResponse['pendingAction']
 }
 

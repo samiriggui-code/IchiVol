@@ -1,0 +1,504 @@
+{
+ "question": "Explique-moi le signal BTC 1h actuel.",
+ "model": "anthropic/claude-sonnet-4.5",
+ "attempts": 2,
+ "usage": {
+  "input_tokens": 6753,
+  "output_tokens": 2398
+ },
+ "answer": "Le pipeline produit NO_TRADE avec direction SHORT, tous signaux NON_VALIDE dans le programme VP, aucun edge mesuré. Ichimoku montre le prix sous le kumo avec un score de -58,3333. La structure est BEARISH, la participation RVOL à 1,1454 reste normale, mais location et régime échouent leurs seuils. Aucune position paper ouverte, aucun verrou actif.\n\n**Lecture**\n- Le pipeline décide NO_TRADE avec direction SHORT, tous les signaux sont NON_VALIDE dans le programme VP qui ne mesure aucun edge exploitable.\n- Ichimoku indique une configuration SHORT avec le prix BELOW du kumo et un score de -58,3333, sans croisement Tenkan-Kijun actif.\n- La participation RVOL atteint 1,1454 au percentile 0,83 avec niveau NORMAL, marquant un seuil de vigilance dans le pipeline sans anomalie.\n- La structure affiche un biais BEARISH sans cassure de structure récente, les stages location et régime échouent leurs critères.\n- Le régime de cycle est TRANSITION avec ADX à 25,6131 marqué TRENDING, reflétant une phase de friction entre tendance et congestion.\n- Aucune position paper ouverte, aucun verrou actif : entries_blocked, kill_switch_armed et daily_loss_locked sont tous à non.\n\n**Risques**\n- Le prix évolue dans un HVN entre POC 83965,08 et VAL 83684,67, zone de haute densité où les mouvements directionnels restent incertains.\n- Le biais CVD NEUTRAL et l'Open Interest FLAT signalent une participation institutionnelle faible malgré le RVOL supérieur à un, fragilisant toute extension.\n- Le multi-timeframe affiche NEUTRAL sur la frame supérieure 4h, contredisant la direction SHORT du 1h et limitant la confiance dans toute continuation baissière.\n\n**Invalidation**\n- La décision NO_TRADE du pipeline invalide tout signal directionnel : les critères de location et régime ne sont pas remplis.\n- Tous les faits portent le statut NON_VALIDE, indiquant que le programme VP ne détecte aucun edge mesurable sur cette configuration.\n\n_Données indisponibles : calendar.next_high.title._",
+ "factsheet": {
+  "id": "72814f6d4e88e085515a9d211c8b8d574fa41b663df5e029a800b7cbd03c8366",
+  "schema": "ichivol.factsheet.v1",
+  "symbol": "BTCUSDT",
+  "timeframe": "1h",
+  "as_of": 1790611200,
+  "summary": "Le pipeline produit NO_TRADE avec direction SHORT, tous signaux NON_VALIDE dans le programme VP, aucun edge mesuré. Ichimoku montre le prix sous le kumo avec un score de -58,3333. La structure est BEARISH, la participation RVOL à 1,1454 reste normale, mais location et régime échouent leurs seuils. Aucune position paper ouverte, aucun verrou actif.",
+  "claims": [
+   {
+    "section": "claims",
+    "text": "Le pipeline décide NO_TRADE avec direction SHORT, tous les signaux sont NON_VALIDE dans le programme VP qui ne mesure aucun edge exploitable.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "pipeline.decision",
+      "display": "NO_TRADE",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.direction",
+      "display": "SHORT",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "claims",
+    "text": "Ichimoku indique une configuration SHORT avec le prix BELOW du kumo et un score de -58,3333, sans croisement Tenkan-Kijun actif.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "ichimoku.direction",
+      "display": "SHORT",
+      "engine": "ichimoku",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "ichimoku.price_vs_kumo",
+      "display": "BELOW",
+      "engine": "ichimoku",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "ichimoku.score",
+      "display": "-58,3333",
+      "engine": "ichimoku",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "ichimoku.tk_cross",
+      "display": "NONE",
+      "engine": "ichimoku",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "claims",
+    "text": "La participation RVOL atteint 1,1454 au percentile 0,83 avec niveau NORMAL, marquant un seuil de vigilance dans le pipeline sans anomalie.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "rvol.rvol",
+      "display": "1,1454",
+      "engine": "rvol",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "rvol.percentile",
+      "display": "0,83",
+      "engine": "rvol",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "rvol.anomaly_level",
+      "display": "NORMAL",
+      "engine": "rvol",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.stage.participation.status",
+      "display": "watch",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "claims",
+    "text": "La structure affiche un biais BEARISH sans cassure de structure récente, les stages location et régime échouent leurs critères.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "structure.bias",
+      "display": "BEARISH",
+      "engine": "structure",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "structure.bos",
+      "display": "NONE",
+      "engine": "structure",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.stage.location.status",
+      "display": "fail",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.stage.regime.status",
+      "display": "fail",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "claims",
+    "text": "Le régime de cycle est TRANSITION avec ADX à 25,6131 marqué TRENDING, reflétant une phase de friction entre tendance et congestion.",
+    "kind": "interpretation",
+    "facts": [
+     {
+      "id": "cycle.regime",
+      "display": "TRANSITION",
+      "engine": "cycle",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "adx.adx",
+      "display": "25,6131",
+      "engine": "adx",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "adx.strength",
+      "display": "TRENDING",
+      "engine": "adx",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "claims",
+    "text": "Aucune position paper ouverte, aucun verrou actif : entries_blocked, kill_switch_armed et daily_loss_locked sont tous à non.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "paper.position.open",
+      "display": "non",
+      "engine": "paper",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "N/A",
+      "source": "paper"
+     },
+     {
+      "id": "paper.lock.entries_blocked",
+      "display": "non",
+      "engine": "paper",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "N/A",
+      "source": "paper"
+     },
+     {
+      "id": "paper.lock.kill_switch_armed",
+      "display": "non",
+      "engine": "paper",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "N/A",
+      "source": "paper"
+     },
+     {
+      "id": "paper.lock.daily_loss_locked",
+      "display": "non",
+      "engine": "paper",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "N/A",
+      "source": "paper"
+     }
+    ]
+   },
+   {
+    "section": "risks",
+    "text": "Le prix évolue dans un HVN entre POC 83965,08 et VAL 83684,67, zone de haute densité où les mouvements directionnels restent incertains.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "location.node_type",
+      "display": "HVN",
+      "engine": "location",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "location.poc",
+      "display": "83965,08",
+      "engine": "location",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "location.val",
+      "display": "83684,67",
+      "engine": "location",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "risks",
+    "text": "Le biais CVD NEUTRAL et l'Open Interest FLAT signalent une participation institutionnelle faible malgré le RVOL supérieur à un, fragilisant toute extension.",
+    "kind": "interpretation",
+    "facts": [
+     {
+      "id": "cvd.bias",
+      "display": "NEUTRAL",
+      "engine": "cvd",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "oi_funding.oi_trend",
+      "display": "FLAT",
+      "engine": "oi_funding",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790617353,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "rvol.rvol",
+      "display": "1,1454",
+      "engine": "rvol",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "risks",
+    "text": "Le multi-timeframe affiche NEUTRAL sur la frame supérieure 4h, contredisant la direction SHORT du 1h et limitant la confiance dans toute continuation baissière.",
+    "kind": "interpretation",
+    "facts": [
+     {
+      "id": "mtf_direction.direction",
+      "display": "NEUTRAL",
+      "engine": "mtf_direction",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "mtf_direction.higher_tf",
+      "display": "4h",
+      "engine": "mtf_direction",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "ichimoku.direction",
+      "display": "SHORT",
+      "engine": "ichimoku",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "invalidation",
+    "text": "La décision NO_TRADE du pipeline invalide tout signal directionnel : les critères de location et régime ne sont pas remplis.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "pipeline.decision",
+      "display": "NO_TRADE",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.stage.location.status",
+      "display": "fail",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.stage.regime.status",
+      "display": "fail",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "invalidation",
+    "text": "Tous les faits portent le statut NON_VALIDE, indiquant que le programme VP ne détecte aucun edge mesurable sur cette configuration.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "pipeline.decision",
+      "display": "NO_TRADE",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   }
+  ],
+  "removed": 0,
+  "partial": false,
+  "fallback": false,
+  "missing": [
+   "calendar.next_high.title"
+  ]
+ },
+ "validation": [
+  {
+   "total": 11,
+   "accepted": 10,
+   "rejected": 1,
+   "summaryOk": false,
+   "rejectedClaims": [
+    {
+     "text": "Le pipeline produit NO_TRADE avec direction SHORT, tous signaux NON_VALIDE (VP3 : aucun edge mesuré).",
+     "errors": [
+      "nombre non sourcé: 3"
+     ]
+    }
+   ],
+   "summaryErrors": [
+    "nombre non sourcé: 3"
+   ]
+  },
+  {
+   "total": 11,
+   "accepted": 11,
+   "rejected": 0,
+   "summaryOk": true,
+   "rejectedClaims": [],
+   "summaryErrors": []
+  }
+ ]
+}

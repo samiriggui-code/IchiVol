@@ -78,6 +78,8 @@ export interface AgentChatResponse {
   assumedTimeframe?: string | null
   /** Outils moteur appelés par Claude pour cette réponse (transparence UI). */
   toolCalls?: Array<{ name: string; input: Record<string, unknown>; ok: boolean; ms: number }>
+  /** AG-FS0 — réponse fondée sur le FactSheet moteur (claims validés + puces de faits). */
+  factsheet?: import('./factsheetAgent.js').FactsheetAnswer['factsheet']
   /** Action mute proposée — UI confirmera en E5. */
   pendingAction?: {
     intent: 'save_decision' | 'pin_symbol' | 'open_paper_position'

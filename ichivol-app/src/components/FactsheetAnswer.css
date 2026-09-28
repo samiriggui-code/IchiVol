@@ -1,0 +1,44 @@
+/* AG-FS0 — réponse d'Eve sourcée (Copilot). Tokens du thème existant. */
+.fs-answer { display: flex; flex-direction: column; gap: 10px; }
+.fs-answer .fs-summary { margin: 0; font-weight: 600; }
+.fs-answer .fs-section ul { list-style: none; margin: 4px 0 0; padding: 0; }
+.fs-answer .fs-claim { margin: 6px 0; line-height: 1.6; }
+.fs-answer .fs-claim.fs-missing { color: var(--muted); font-style: italic; }
+.fs-answer .fs-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: middle; }
+.fs-answer .fs-chip {
+  font: 10px 'DM Mono', ui-monospace, monospace;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--line, #e2dfd6);
+  background: var(--soft, #f3f2ef);
+  color: var(--ink, #202b36);
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fs-answer .fs-chip.is-open { border-color: var(--primary, #1a7df5); }
+.fs-answer .fs-chip.is-missing { color: var(--muted); text-decoration: line-through; }
+.fs-answer .fs-detail {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 12px;
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 11px;
+  border-radius: 6px;
+  background: var(--card, #fefdfb);
+  border: 1px solid var(--line, #e2dfd6);
+}
+.fs-answer .fs-detail dt { color: var(--muted); }
+.fs-answer .fs-detail dd { margin: 0; }
+.fs-answer .fs-foot { display: flex; flex-wrap: wrap; gap: 6px; }
+
+html.dark .fs-answer .fs-chip { background: #22262f; border-color: #2e323a; color: #f1eee6; }
+html.dark .fs-answer .fs-detail { background: #1a1e26; border-color: #333944; }
+
+@media (max-width: 640px) {
+  .fs-answer .fs-chips { display: flex; margin: 4px 0 0; }
+  .fs-answer .fs-detail { grid-template-columns: 1fr; }
+}

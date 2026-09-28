@@ -1626,6 +1626,117 @@
         ]
       }
     },
+    "/api/engine/agents/factsheet": {
+      "get": {
+        "description": "AG-FS0 \u2014 faits moteur avec provenance (ids stables, absences explicites). Observe-only.",
+        "operationId": "get_factsheet_api_engine_agents_factsheet_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "maxLength": 32,
+              "minLength": 3,
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "maxLength": 8,
+              "minLength": 2,
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Unix seconds \u2014 barre close (historique : fiches seulement)",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Unix seconds \u2014 barre close (historique : fiches seulement)",
+              "title": "As Of"
+            }
+          },
+          {
+            "description": "Unix seconds (tests closed-bar)",
+            "in": "query",
+            "name": "now",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Unix seconds (tests closed-bar)",
+              "title": "Now"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Twelve-Data-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Twelve-Data-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Factsheet Api Engine Agents Factsheet Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Factsheet",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
     "/api/engine/backtest/coverage": {
       "get": {
         "description": "Which markets the daily backtest covers, and how far the others are from qualifying.",

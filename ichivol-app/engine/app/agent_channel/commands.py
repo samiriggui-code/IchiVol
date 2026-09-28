@@ -1408,3 +1408,18 @@ def cmd_delete_chart_object(args: dict) -> dict:
 
 
 Handler = Callable[[dict], dict]
+
+
+def cmd_get_factsheet(args: dict) -> dict:
+    """AG-FS0 — même payload que GET /agents/factsheet (faits moteur + provenance)."""
+    from app.agents.factsheet import build_factsheet
+
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = args.get("timeframe", "1h")
+    as_of = args.get("as_of")
+    try:
+        return build_factsheet(symbol, timeframe, as_of=int(as_of) if as_of is not None else None)
+    except ProviderNotWiredError as exc:
+        raise CommandError(str(exc)) from exc
+    except ValueError as exc:
+        raise CommandError(str(exc)) from exc

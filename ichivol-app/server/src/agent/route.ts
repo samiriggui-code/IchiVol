@@ -7,6 +7,8 @@ import { SOURCES } from '../sources/registry.js'
 import { formatDecisionContext, formatLiveContext, formatScreenerRows } from './context.js'
 import { intentToMode, planIntent } from './planner.js'
 import { runClaudeAgent, toolTraceMeta } from './claudeAgent.js'
+import { fetchFactsheet, runFactsheetAgent, type LlmProviderName } from './factsheetAgent.js'
+import { config } from '../config.js'
 import { buildAgentSystemPrompt, buildSystemPrompt, TRADE_IDEA_DISCLAIMER } from './systemPrompt.js'
 import {
   appendMessage,
@@ -169,6 +171,81 @@ export async function handleAgentChat(req: Request, res: Response): Promise<void
         'Aucune clé LLM résolue pour ce provider. Vérifie Settings → Agent LLM (OpenRouter déjà possible via .env).',
     })
     return
+  }
+
+  // AG-FS0 (flag) : Eve répond depuis le FactSheet moteur, 1 appel à sortie forcée + validateur.
+  // Tout échec retombe sur le chemin historique ci-dessous.
+  if (
+    config.agentFactsheetV1 &&
+    symbol &&
+    (effectiveMode === 'explain_decision' || effectiveMode === 'explain_signal')
+  ) {
+    try {
+      const factsheet = await fetchFactsheet(symbol, timeframe)
+      const out = await runFactsheetAgent({
+        provider: resolved.provider as LlmProviderName,
+        apiKey: resolved.apiKey,
+        model: resolved.model,
+        mode: effectiveMode,
+        question: userContent || body.question,
+        factsheet,
+      })
+      await appendMessage({
+        threadId: thread.id,
+        role: 'assistant',
+        content: out.answer,
+        mode: effectiveMode,
+        intent: plan.intent,
+        citations: [],
+        meta: {
+          factsheet: {
+            id: factsheet.factsheet_id,
+            schema: factsheet.schema,
+            as_of: factsheet.as_of,
+            facts: factsheet.facts,
+          },
+          promptVersion: out.promptVersion,
+          model: out.model,
+          attempts: out.attempts,
+          usage: out.usage,
+          validation: out.reports.map((r) => ({
+            total: r.total,
+            accepted: r.accepted,
+            rejected: r.rejected,
+            summaryOk: r.summaryOk,
+            errors: r.verdicts.filter((v) => !v.ok).map((v) => ({ text: v.claim.text, errors: v.errors })),
+            summaryErrors: r.summaryErrors,
+          })),
+        },
+      })
+      const agentResponse: AgentChatResponse = {
+        answer: out.answer,
+        citations: [],
+        provider: resolved.provider,
+        model: out.model,
+        intent: plan.intent,
+        threadId: thread.id,
+        assumedSymbol: symbol ?? null,
+        assumedTimeframe: timeframe,
+        factsheet: out.factsheet,
+      }
+      if (body.stream === true) {
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream; charset=utf-8',
+          'Cache-Control': 'no-cache, no-transform',
+          Connection: 'keep-alive',
+          'X-Accel-Buffering': 'no',
+        })
+        res.write('data: ' + JSON.stringify({ type: 'text', delta: out.answer }) + '\n\n')
+        res.write('data: ' + JSON.stringify({ type: 'done', response: agentResponse }) + '\n\n')
+        res.end()
+      } else {
+        res.json(agentResponse)
+      }
+      return
+    } catch (err) {
+      console.warn('[agent] AG-FS0 indisponible, repli chemin historique:', err instanceof Error ? err.message : err)
+    }
   }
 
   // Claude (Anthropic) : agent à outils — il appelle lui-même le moteur en lecture seule.

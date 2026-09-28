@@ -31,6 +31,8 @@ export interface Config {
   }
   /** Comp AI–style bridge secret for agent runtime poke. Unset = poke disabled. */
   agentBridgeSecret: string | undefined
+  /** AG-FS0 — Eve répond depuis le FactSheet moteur + validateur (désactivé par défaut). */
+  agentFactsheetV1: boolean
 }
 
 function readProvider(value: string | undefined): ProviderName {
@@ -74,4 +76,5 @@ export const config: Config = {
     subject: process.env.VAPID_SUBJECT || 'mailto:admin@ichivol.local',
   },
   agentBridgeSecret: process.env.AGENT_BRIDGE_SECRET?.trim() || undefined,
+  agentFactsheetV1: process.env.AGENT_FACTSHEET_V1 === '1',
 }

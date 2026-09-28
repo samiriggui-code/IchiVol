@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from app.agents.analyst_cards import STAGES, build_analyst_cards
 from app.agents.analyst_snapshot import get_analyst_snapshot, take_session_snapshot
+from app.agents.factsheet import build_factsheet
 from app.config import settings
 from app.market_data.resolve import ProviderNotWiredError
 
@@ -89,3 +90,20 @@ def get_analyst_snapshot_route(
     if row is None:
         raise HTTPException(status_code=404, detail="snapshot_not_found")
     return {"snapshot": row, "observe_only": True, "used_by_decision": False}
+
+
+@router.get("/agents/factsheet")
+def get_factsheet(
+    symbol: str = Query(..., min_length=3, max_length=32),
+    timeframe: str = Query("1h", min_length=2, max_length=8),
+    as_of: int | None = Query(default=None, description="Unix seconds — barre close (historique : fiches seulement)"),
+    now: int | None = Query(default=None, description="Unix seconds (tests closed-bar)"),
+    x_twelve_data_key: str | None = Header(default=None, alias="X-Twelve-Data-Key"),
+) -> dict[str, Any]:
+    """AG-FS0 — faits moteur avec provenance (ids stables, absences explicites). Observe-only."""
+    try:
+        return build_factsheet(symbol, timeframe, as_of=as_of, now=now, x_twelve_data_key=x_twelve_data_key)
+    except ProviderNotWiredError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

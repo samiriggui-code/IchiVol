@@ -74,6 +74,41 @@ export interface AgentToolCall {
   outputPreview?: string
 }
 
+/** AG-FS0 — fait moteur cité par une affirmation d'Eve (provenance). */
+export interface FactChip {
+  id: string
+  display: string | null
+  engine: string
+  timeframe: string
+  as_of: number | null
+  known_at: number | null
+  status: string
+  validation_status: string
+  source: string
+}
+
+export interface FactsheetClaim {
+  section: 'claims' | 'risks' | 'invalidation'
+  text: string
+  kind: 'fact' | 'interpretation' | 'scenario' | 'missing'
+  facts: FactChip[]
+}
+
+/** AG-FS0 — réponse fondée sur le FactSheet (seuls les claims validés sont présents). */
+export interface FactsheetView {
+  id: string
+  schema: string
+  symbol: string
+  timeframe: string
+  as_of: number | null
+  summary: string | null
+  claims: FactsheetClaim[]
+  removed: number
+  partial: boolean
+  fallback: boolean
+  missing: string[]
+}
+
 export interface AgentChatResponse {
   answer: string
   disclaimer?: string
@@ -86,6 +121,8 @@ export interface AgentChatResponse {
   assumedTimeframe?: string | null
   /** Outils moteur appelés par Claude pour cette réponse. */
   toolCalls?: AgentToolCall[]
+  /** AG-FS0 — présent quand la réponse vient du FactSheet + validateur. */
+  factsheet?: FactsheetView
   pendingAction?: {
     intent: 'save_decision' | 'pin_symbol' | 'open_paper_position'
     symbol?: string
