@@ -21,6 +21,8 @@ import {
   type PaperOverviewPosition,
 } from '../lib/paper'
 import { labelPaperOrderReason, labelRiskRefusal } from '../lib/paperLabels'
+import { VpValidationBadge } from '../components/VpValidationBadge'
+import { isActionableBuySell } from '../lib/vpValidationCopy'
 import { getRiskLock, type RiskLockState } from '../lib/riskLock'
 import { displaySymbol } from '../lib/markets'
 import './PortfolioPage.css'
@@ -716,7 +718,8 @@ export function PortfolioPage() {
                 : 'Ouverte après votre confirmation.'}{' '}
               Entrée le {new Date(fiche.entry_time).toLocaleString('fr-FR')} à{' '}
               {fmtPx(fiche.entry_price)}.
-              {fiche.entry_decision ? ` Signal : ${fiche.entry_decision}.` : ''}
+              {fiche.entry_decision ? ` Signal : ${fiche.entry_decision}.` : ''}{' '}
+              {isActionableBuySell(fiche.entry_decision) ? <VpValidationBadge /> : null}
             </p>
             <div className="ci-embed">
               <ChartIntelligencePanel
