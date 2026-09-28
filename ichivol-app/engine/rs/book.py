@@ -173,6 +173,50 @@ class Book:
             for s in self.symbols
         }
 
+    # Tail recomputed when bars are appended: Donchian needs the prior ENTRY_PERIOD bars, ATR the prior
+    # ATR_PERIOD true ranges (+1 bar for the previous close). Both indicators are windowed (no running sums),
+    # so values computed on the tail are bit-identical to a full recomputation.
+    _TAIL = ENTRY_PERIOD + 5
+
+    def extend_market(self, new_by_sym: dict[str, Sequence[Candle]]) -> None:
+        """Append closed bars (times strictly after the last one) and their indicators (live runner)."""
+        for s, cs in new_by_sym.items():
+            if not cs:
+                continue
+            bars = self.bars[s]
+            n0 = len(bars)
+            if bars and cs[0].time <= bars[-1].time:
+                raise ValueError(f"extend_market: {s} bars not strictly after {bars[-1].time}")
+            bars.extend(cs)
+            for k, c in enumerate(cs):
+                self.idx_of[s][c.time] = n0 + k
+            lo = max(0, n0 - self._TAIL)
+            tail = bars[lo:]
+            up = compute_donchian(tail, DonchianParams(period=ENTRY_PERIOD))
+            dn = compute_donchian(tail, DonchianParams(period=EXIT_PERIOD))
+            at = compute_atr(tail, AtrParams(period=ATR_PERIOD))
+            for j in range(n0, len(bars)):
+                k = j - lo
+                self.upper[s].append(up[k].upper)
+                self.lower[s].append(dn[k].lower)
+                self.atr[s].append(at[k].atr if j >= ATR_PERIOD - 1 else None)
+
+    def add_open_stub(self, s: str, t: int, open_price: float) -> None:
+        """Bar in progress, open only, so orders decided at the last close can execute at its open.
+        Nothing but ``open`` is read from it; ``drop_stubs`` removes it before closed bars are appended."""
+        if t in self.idx_of[s]:
+            return
+        self.bars[s].append(Candle(time=t, open=open_price, high=open_price, low=open_price, close=open_price))
+        self.idx_of[s][t] = len(self.bars[s]) - 1
+        self._stubs = getattr(self, "_stubs", set()) | {(s, t)}
+
+    def drop_stubs(self) -> None:
+        for s, t in sorted(getattr(self, "_stubs", set())):
+            if self.bars[s] and self.bars[s][-1].time == t:
+                self.bars[s].pop()
+                self.idx_of[s].pop(t, None)
+        self._stubs = set()
+
     def present(self, t: int) -> list[str]:
         return [s for s in self.symbols if t in self.idx_of[s]]
 

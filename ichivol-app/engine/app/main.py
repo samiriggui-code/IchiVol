@@ -22,7 +22,16 @@ async def lifespan(app: FastAPI):
     if settings.enable_protection_monitor:
         protection_monitor.interval_s = settings.protection_interval_s
         protection_monitor.start()
+    if settings.enable_rs_d1_paper:
+        from app.paper.rs_d1_runner import rs_d1_loop
+
+        rs_d1_loop.interval_s = settings.rs_d1_interval_s
+        rs_d1_loop.start()
     yield
+    if settings.enable_rs_d1_paper:
+        from app.paper.rs_d1_runner import rs_d1_loop
+
+        rs_d1_loop.stop()
     protection_monitor.stop()
     screener_cache.stop()
     if settings.enable_signal_tracking:

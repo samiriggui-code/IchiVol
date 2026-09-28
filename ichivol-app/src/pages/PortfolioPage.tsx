@@ -16,7 +16,9 @@ import {
   closePaperPosition,
   getPaperActivity,
   getPaperOverview,
+  listPaperPortfolios,
   type PaperOrderRow,
+  type PaperPortfolioRow,
   type PaperOverview,
   type PaperOverviewPosition,
 } from '../lib/paper'
@@ -25,6 +27,13 @@ import { VpValidationBadge } from '../components/VpValidationBadge'
 import { isActionableBuySell } from '../lib/vpValidationCopy'
 import { getRiskLock, type RiskLockState } from '../lib/riskLock'
 import { displaySymbol } from '../lib/markets'
+import {
+  BASELINE_PORTFOLIO_CODE as BASELINE_CODE,
+  RS_D1_CODE,
+  RS_D1_LABEL,
+  manualActionsAllowed,
+  portfolioFromParam,
+} from '../lib/rsPortfolio'
 import './PortfolioPage.css'
 
 type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
@@ -137,7 +146,10 @@ function fmtPx(n: number | null | undefined): string {
 }
 
 export function PortfolioPage() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const code = portfolioFromParam(searchParams.get('pf'))
+  const isRs = !manualActionsAllowed(code)
+  const [portfolios, setPortfolios] = useState<PaperPortfolioRow[]>([])
   const [overview, setOverview] = useState<PaperOverview | null>(null)
   const [orders, setOrders] = useState<PaperOrderRow[]>([])
   const [lock, setLock] = useState<RiskLockState | null>(null)
@@ -151,20 +163,32 @@ export function PortfolioPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [ov, lk, activity] = await Promise.all([
-        getPaperOverview(),
-        getRiskLock().catch(() => null),
-        getPaperActivity('ICHIVOL_BASELINE_V1', 12).catch(() => [] as PaperOrderRow[]),
+      const [ov, lk, activity, pfs] = await Promise.all([
+        getPaperOverview(code),
+        getRiskLock(code).catch(() => null),
+        getPaperActivity(code, 12).catch(() => [] as PaperOrderRow[]),
+        listPaperPortfolios().catch(() => [] as PaperPortfolioRow[]),
       ])
       setOverview(ov)
       setLock(lk)
       setOrders(activity)
+      setPortfolios(pfs)
     } catch {
       setOverview(null)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [code])
+
+  const hasRs = portfolios.some((p) => p.code === RS_D1_CODE)
+  const selectPortfolio = (next: string) => {
+    const params = new URLSearchParams(searchParams)
+    if (next === BASELINE_CODE) params.delete('pf')
+    else params.set('pf', next)
+    params.delete('symbol')
+    setFiche(null)
+    setSearchParams(params)
+  }
 
   useEffect(() => {
     void load()
@@ -228,10 +252,37 @@ export function PortfolioPage() {
           <div className="eyebrow">04 / ICHIVOL WORKSPACE</div>
           <h1>Portefeuille</h1>
           <p className="subtitle">
-            Compte paper. Les ordres sont simulés ici, aucun n’est envoyé à un courtier.
+            {isRs
+              ? `${RS_D1_LABEL}. Portefeuille séparé, piloté uniquement par la règle RS-D1 (Donchian 4h) : aucun ordre manuel.`
+              : 'Compte paper. Les ordres sont simulés ici, aucun n’est envoyé à un courtier.'}
           </p>
         </div>
-        <div className="actions">{badge('BROKER PAPER', 'gray')}</div>
+        <div className="actions">
+          {hasRs || isRs ? (
+            <div className="pf-switch" role="tablist" aria-label="Portefeuille paper">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!isRs}
+                className={`suggestion${!isRs ? ' active' : ''}`}
+                onClick={() => selectPortfolio(BASELINE_CODE)}
+              >
+                IchiVol
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={isRs}
+                className={`suggestion${isRs ? ' active' : ''}`}
+                onClick={() => selectPortfolio(RS_D1_CODE)}
+                title={RS_D1_LABEL}
+              >
+                RS-D1
+              </button>
+            </div>
+          ) : null}
+          {badge(isRs ? 'RS-D1 · PAPER' : 'BROKER PAPER', 'gray')}
+        </div>
       </div>
 
       <div className="metrics">
@@ -501,7 +552,7 @@ export function PortfolioPage() {
                     pnl == null ? '' : pnl > 0 ? 'up' : pnl < 0 ? 'down' : ''
                   const strat =
                     p.timeframe != null
-                      ? `Ichimoku × RVOL · ${String(p.timeframe).toUpperCase()}`
+                      ? `${isRs ? 'RS-D1 Donchian' : 'Ichimoku × RVOL'} · ${String(p.timeframe).toUpperCase()}`
                       : '—'
                   return (
                     <tr
@@ -545,7 +596,7 @@ export function PortfolioPage() {
                       <td>
                         <div className="pf-pos-state">
                           {badge(p.mark_stale ? 'COURS PÉRIMÉ' : 'OUVERTE', p.mark_stale ? 'amber' : '')}
-                          {p.id ? (
+                          {p.id && !isRs ? (
                             <button
                               type="button"
                               className="suggestion pf-close-btn"
@@ -713,9 +764,11 @@ export function PortfolioPage() {
               </button>
             </div>
             <p>
-              {fiche.source === 'auto_watchlist'
-                ? 'Ouverte par le screener.'
-                : 'Ouverte après votre confirmation.'}{' '}
+              {fiche.source === 'rs_d1'
+                ? 'Ouverte par la règle RS-D1 (cassure Donchian 55, stop suiveur 3 ATR, sortie canal 20).'
+                : fiche.source === 'auto_watchlist'
+                  ? 'Ouverte par le screener.'
+                  : 'Ouverte après votre confirmation.'}{' '}
               Entrée le {new Date(fiche.entry_time).toLocaleString('fr-FR')} à{' '}
               {fmtPx(fiche.entry_price)}.
               {fiche.entry_decision ? ` Signal : ${fiche.entry_decision}.` : ''}{' '}
