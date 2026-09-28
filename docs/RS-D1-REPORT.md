@@ -5,7 +5,40 @@
 **Données :** VP1 spot 4h, sha256 du manifeste BTC `cd8bef9a…`, ETH `67f46cf6…`, SOL `0c75aed2…` (identiques au rapport VP3). 9 498 barres par actif après troncature, dernière barre 2024-12-31 20:00 UTC.
 **Artefacts :** [`rs-artifacts/rsd1_results.json`](./rs-artifacts/rsd1_results.json), journal des trades [`rs-artifacts/rsd1_trades.json`](./rs-artifacts/rsd1_trades.json). Commande : `python -m rs.run` depuis `ichivol-app/engine`.
 
-## Verdict
+## ▶ Validation 2025 (amendement `VP0-2026-09-28c`) : **VALIDÉ 2025**
+
+Run unique le 2026-09-28, décidé par Samir. Critères V1–V5 figés et code poussé **avant** le run (`e1afe70`). Règles RS-03 inchangées. Données tronquées < 2026-01-01 : **le holdout 2026 reste fermé**. Artefacts : [`rsd1_val2025_results.json`](./rs-artifacts/rsd1_val2025_results.json), [`rsd1_val2025_trades.json`](./rs-artifacts/rsd1_val2025_trades.json).
+
+| # | Critère | Mesure | |
+|---|---------|--------|---|
+| V1 | Rendement 2025 > 0 | **+5,0 %** (5 250 €) | ✅ |
+| V2 | maxDD ≤ 15 % | **−4,3 %** (mai → juillet, récupéré en 16 jours) | ✅ |
+| V3 | > 0 en coûts adverses | +3,7 % | ✅ |
+| V4 | Meilleur que B0-E (CAGR B0-E ≤ 0 → règle du rendement) | +5,0 % contre −0,1 % | ✅ |
+| V5 | ≥ 10 trades | 55 | ✅ |
+
+**2025, année baissière :**
+
+| | Rendement | maxDD |
+|---|---|---|
+| **RS-D1** | **+5,0 %** | **−4,3 %** |
+| B0-E (même exposition, 5,8 %) | −0,1 % | −3,8 % |
+| B0-F (100 % investi) | **−17,2 %** | **−51,0 %** |
+| Stress `open(t+2)` | +4,1 % | −3,4 % |
+
+**Limites à garder en tête :**
+- **Gain faible en absolu :** +250 € sur 5 000 €.
+- **Intervalle mensuel :** il **contient 0** (+0,41 %/mois [−0,18 ; +1,11], 12 mois), c'est descriptif.
+- **Dépendance aux gros trades :** sans les 3 meilleurs, le P&L de 2025 est **négatif** (−136 €).
+- **Actifs :** ETH porte l'année (+265 €), SOL est à ≈ 0 et BTC légèrement négatif (−24 €).
+- **Frais :** 15 % du brut.
+- **Contrôle :** re-dérivation indépendante des 55 trades, **0 écart**.
+
+**En clair :** la règle a tenu hors échantillon, avec le même profil qu'en développement : peu exposée, petite chute maximale, positive quand le marché baisse. Mais une seule année et un gain de +5 % ne prouvent pas un avantage solide. C'est un **passage de validation, pas une preuve de rentabilité**. Le holdout 2026 reste la dernière étape indépendante.
+
+---
+
+## Verdict développement (2021-07 → 2024-12)
 
 **CANDIDAT À VALIDATION SUPPLÉMENTAIRE** : les critères D1 à D7 sont tous vrais.
 
