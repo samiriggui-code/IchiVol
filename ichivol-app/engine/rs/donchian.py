@@ -19,6 +19,7 @@ from app.indicators.ichimoku import Candle
 from rs import (
     ATR_PERIOD,
     BAR_SECONDS,
+    DATA_END_EXCL,
     DAILY_LOSS_LIMIT_PCT,
     ENTRY_PERIOD,
     EXIT_PERIOD,
@@ -126,12 +127,13 @@ def simulate(
     score_start: int = SCORE_START,
     exec_delay: int = 1,
     seed: int = SEED,
+    data_end_excl: int = DATA_END_EXCL,
 ) -> RunOutput:
     """``exec_delay`` = barres entre la décision et l'exécution (1 = open t+1 ; 2 = stress §9)."""
     symbols = sorted(candles_by_sym)
     bars = {s: list(candles_by_sym[s]) for s in symbols}
     for s in symbols:
-        assert_no_reserved(bars[s])
+        assert_no_reserved(bars[s], data_end_excl)
     idx_of = {s: {c.time: i for i, c in enumerate(bars[s])} for s in symbols}
     upper = {s: [d.upper for d in compute_donchian(bars[s], DonchianParams(period=ENTRY_PERIOD))] for s in symbols}
     lower = {s: [d.lower for d in compute_donchian(bars[s], DonchianParams(period=EXIT_PERIOD))] for s in symbols}

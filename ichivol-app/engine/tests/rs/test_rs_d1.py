@@ -335,3 +335,32 @@ def test_bootstrap_deterministic_and_brackets_mean():
 
 def test_entry_period_constant_is_55():
     assert ENTRY_PERIOD == 55
+
+
+# --- validation 2025 (VP0-2026-09-28c) --------------------------------------------------------
+
+
+def test_validation_truncation_is_2026_and_default_stays_2025():
+    from rs import VAL_DATA_END_EXCL
+
+    y25 = Candle(time=DATA_END_EXCL, open=1, high=1, low=1, close=1, volume=1)
+    y26 = Candle(time=VAL_DATA_END_EXCL, open=1, high=1, low=1, close=1, volume=1)
+    assert truncate([y25, y26], VAL_DATA_END_EXCL) == [y25]
+    with pytest.raises(AssertionError):
+        simulate({"X": [y25]}, NOFEE)  # défaut : 2025 interdit
+    with pytest.raises(AssertionError):
+        simulate({"X": [y25, y26]}, NOFEE, data_end_excl=VAL_DATA_END_EXCL)
+
+
+def test_validation_verdict_rules():
+    from rs.validate import validation_verdict
+
+    base = {"net_return": 0.05, "max_dd": -0.04, "calmar": 1.2}
+    adv = {"net_return": 0.02}
+    b0e_up = {"cagr": 0.03, "calmar": 0.5, "net_return": 0.03}
+    b0e_down = {"cagr": -0.02, "calmar": -0.3, "net_return": -0.02}
+    assert validation_verdict(base, adv, b0e_up, 40)["verdict"] == "VALIDÉ 2025"
+    assert validation_verdict(base, adv, b0e_down, 40)["v4_rule"].startswith("net_return")
+    assert validation_verdict(base, adv, b0e_up, 5)["verdict"] == "NON CONCLUANT"
+    assert validation_verdict({**base, "net_return": -0.01}, adv, b0e_up, 40)["verdict"] == "ÉCHEC"
+    assert validation_verdict({**base, "max_dd": -0.2}, adv, b0e_up, 40)["verdict"] == "ÉCHEC"

@@ -23,6 +23,8 @@ def assert_no_reserved(candles: list[Candle], end_excl: int = DATA_END_EXCL) -> 
         raise AssertionError(f"{len(bad)} barre(s) >= 2025-01-01 transmises à la stratégie")
 
 
-def load_symbol(symbol: str, root: Path | None = None) -> tuple[list[Candle], str]:
+def load_symbol(
+    symbol: str, root: Path | None = None, end_excl: int = DATA_END_EXCL
+) -> tuple[list[Candle], str]:
     payload, digest = load_vp1_spot(root, symbol, INTERVAL)
-    return truncate(bars_to_candles(payload["bars"])), digest
+    return truncate(bars_to_candles(payload["bars"]), end_excl), digest

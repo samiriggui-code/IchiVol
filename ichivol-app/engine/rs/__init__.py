@@ -54,3 +54,9 @@ FOLDS: tuple[tuple[str, str, str], ...] = (
     ("WF6", "2024-01-01", "2024-06-30"),
     ("WF7", "2024-07-01", "2024-12-31"),
 )
+
+# Validation 2025 (amendement VP0-2026-09-28c) — run unique, règles inchangées. Holdout 2026 fermé.
+VAL_SCORE_START = int(datetime(2025, 1, 1, tzinfo=timezone.utc).timestamp())
+VAL_DATA_END_EXCL = int(datetime(2026, 1, 1, tzinfo=timezone.utc).timestamp())
+VAL_B0E_WEIGHT = 0.05798188750836816  # exposition moyenne RS-D1 en dev (rsd1_results.json), figée
+VAL_MIN_TRADES = 10
