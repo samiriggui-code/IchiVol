@@ -1,5 +1,51 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 ~02h — POINT DE REPRISE (demain) · Cursor + Claude · STOP
+
+**Lire aussi** l’entrée Claude « VP-P v2 + point de reprise » sur `claude/vp-p-paper-fidele` @ `b90de8d` (worktree `C:\laragon\www\IchiVol-vpp`) — elle reste la source pour #159 / #161.
+
+### ▶ Reprendre exactement ici (ordre)
+
+| # | Qui | Action |
+|---|-----|--------|
+| 1 | Samir | Worktrees : Cursor → `C:\laragon\www\IchiVol` (`cursor/ui-vp-badge-a2fe`) · Claude VP-P → `IchiVol-vpp` · Claude paper → `IchiVol-paperfix` · RS → worktree `claude/rs-d1` / PR #160. **Ne pas** mélanger les worktrees. |
+| 2 | Visuel | Hard-refresh https://ichivol.global-it-ss.com — polices : sidebar/header normaux, corps pages densifiés (11px). Inspector Drawing : étagères par calque actif, Break of structure / CHOCH, Why. |
+| 3 | Claude / Samir | Revue **#156** (badge sans lien GitHub + captures B1/B2) → merge si OK (répare aussi `tsc -b` via exclude `*.test.ts`). |
+| 4 | Claude / Samir | Revue **#159** VP-P v2 + **#161** paper auto 1h only → décisions merge / deploy (voir entrée Claude `b90de8d`). |
+| 5 | Cursor | **⚠️ VPS** : déployé `877b3d7` `cursor/ui-vp-badge-a2fe` (web+server+engine). **#142 mobile-tabbar (`9ab99fb`) N’EST PAS ancêtre de ce tip** → clearance mobile peut être absente en prod. Avant prochain deploy : cherry-pick / rebase #142 **ou** redéployer une tip qui l’inclut. Backup : `/opt/ichivol-backup/pre-ui-vp-badge-20260927-235734.tgz`. |
+| 6 | Cursor (si Samir OK) | Smoke Liquidity/Confluence sur Marché (producteurs `from_liquidity.py` / `from_confluence.py` livrés @ `777c2d5`). |
+| 7 | **STOP sauf OK Samir** | **#157 VP-S1** : aucun run val2025/holdout. Programme VP en PAUSE. Pas d’optimisation entrée B7 (P3 négatif — voir Claude). |
+
+### État Cursor à l’arrêt (`cursor/ui-vp-badge-a2fe` @ `877b3d7`, poussé)
+
+| Item | Tip / note |
+|------|------------|
+| Badge VP | span + tooltip, **plus de lien GitHub** (`d97063f`) |
+| Inspector / Why | listes par calques collapsibles, libellés BOS/CHOCH (`9465259`…) |
+| CI Liquidity + Confluence | producteurs moteur + wiring service (`777c2d5`) — job CI-LIQ-CONF |
+| Polices | `html` rem **16px** (chrome) · pages **11px** (`877b3d7`) |
+| VPS | `RELEASE=877b3d7` · health API ok · FQDN 200 |
+| Non commit (local sale) | `.tmp-*.err` · copie orpheline `docs/VP-P-PAPER-REEL.md` + `engine/vpp/` (le vrai paquet est sur #159) — **ne pas** committer les zips `vpp/data/raw` |
+
+### État Claude (déjà sur GitHub)
+
+| Branche / PR | Tip | Contenu |
+|--------------|-----|---------|
+| `claude/vp-p-paper-fidele` **#159** | `b90de8d` | VP-P v2 (fidélité C2/C3, P3, IC) + handoff reprise |
+| `claude/paper-auto-1h-only` **#161** | `92351f8` | screener UI/agent ne pilote plus le paper (auto 1h only) — **non déployé** |
+| `claude/rs-strategie` / `claude/rs-d1` **#160** | `34c1d5c` | RS-D1 Donchian squelette (NON TESTÉ, AUCUN RUN) + docs |
+
+### Décisions Samir encore ouvertes
+
+1. Merge #156 / #159 / #161 (après revues).
+2. Remettre **#142** sur le VPS (ou accepter régression mobile temporaire).
+3. Déployer #161 ou non.
+4. BN / VP-S1 (#157) seulement après OK explicite — **pas** de val2025/holdout.
+
+**STOP.** Prochaine session = ligne 1 du tableau « Reprendre exactement ici ».
+
+---
+
 ## 2026-09-27 nuit — #156 B1/B2 corrigés · push draft · STOP
 
 **Branche :** `cursor/ui-vp-badge-a2fe` · **PR draft [#156](https://github.com/samiriggui-code/IchiVol/pull/156)**  
