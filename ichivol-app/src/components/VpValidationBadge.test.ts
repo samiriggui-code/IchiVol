@@ -12,13 +12,15 @@ import {
   VP_VALIDATION_TOOLTIP,
 } from '../lib/vpValidationCopy.js'
 
-test('VpValidationBadge : label, lien rapport, title tooltip', () => {
+test('VpValidationBadge : label + tooltip, pas de lien GitHub', () => {
   const html = renderToStaticMarkup(createElement(VpValidationBadge))
   assert.match(html, /vp-validation-badge/)
   assert.match(html, new RegExp(VP_VALIDATION_BADGE_LABEL))
-  assert.match(html, new RegExp(VP_VALIDATION_REPORT_HREF.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
-  assert.match(html, /target="_blank"/)
+  assert.match(html, /role="status"/)
   assert.match(html, new RegExp(VP_VALIDATION_TOOLTIP.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+  assert.doesNotMatch(html, /href=/)
+  assert.doesNotMatch(html, new RegExp(VP_VALIDATION_REPORT_HREF.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+  assert.doesNotMatch(html, /target="_blank"/)
 })
 
 test('VpValidationBadge compact : classe is-compact', () => {

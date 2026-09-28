@@ -1,15 +1,11 @@
 /**
  * Badge discret « Signal non validé » (UI-VP-BADGE).
  * Affichage seulement — aucun impact moteur / paper / gates.
- * createElement : rendu stable sous Vite (react-jsx) et sous `tsx --test`.
+ * Pas de lien externe (tooltip = verdict VP3) — createElement pour tests SSR.
  */
 
-import { createElement, type MouseEvent } from 'react'
-import {
-  VP_VALIDATION_BADGE_LABEL,
-  VP_VALIDATION_REPORT_HREF,
-  vpValidationTitle,
-} from '../lib/vpValidationCopy'
+import { createElement } from 'react'
+import { VP_VALIDATION_BADGE_LABEL, vpValidationTitle } from '../lib/vpValidationCopy'
 
 interface Props {
   /** Variante densifiée (cellule matrice). */
@@ -18,14 +14,11 @@ interface Props {
 
 export function VpValidationBadge({ compact = false }: Props) {
   return createElement(
-    'a',
+    'span',
     {
       className: `vp-validation-badge${compact ? ' is-compact' : ''}`,
-      href: VP_VALIDATION_REPORT_HREF,
-      target: '_blank',
-      rel: 'noopener noreferrer',
       title: vpValidationTitle(),
-      onClick: (e: MouseEvent<HTMLAnchorElement>) => e.stopPropagation(),
+      role: 'status',
     },
     VP_VALIDATION_BADGE_LABEL,
   )
