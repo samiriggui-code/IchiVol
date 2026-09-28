@@ -10,9 +10,12 @@ from research_lab.sim import ADVERSE_COST, BASE_COST, CostModel, RunResult, simu
 
 from vp2 import BAR_SECONDS, DEFAULT_SEED, INITIAL_CAPITAL
 from vp2.data import bars_to_candles, build_sim_feed, load_vp1_spot, series_rel_path, window_seconds
-from vp3 import HTF_MAP, PROTOCOL_ID, PROTOCOL_VERSION, STRATEGIES
-from vp3.entries import decisions_from_mask, entry_mask
+from vp3 import HTF_MAP, PROTOCOL_ID, PROTOCOL_VERSION, SHIELD_STRATEGIES, STRATEGIES
+from vp3.entries import decisions_from_mask, entry_mask, overlay_ltf_ichimoku_directions
 from vp3.rules import strategy_rules
+
+_ALL_RUN = frozenset(STRATEGIES) | frozenset(SHIELD_STRATEGIES)
+_HTF_STRATEGIES = frozenset({"B5", "B6", "B7", "BM", "BN"})
 
 COST_PROFILES: dict[str, CostModel] = {"base": BASE_COST, "adverse": ADVERSE_COST}
 
@@ -60,8 +63,8 @@ def run_strategy(
     window: tuple[str, str] | None = None,
     initial: float = INITIAL_CAPITAL,
 ) -> Vp3Run:
-    if strategy not in STRATEGIES:
-        raise ValueError(f"strategy must be one of {STRATEGIES}")
+    if strategy not in _ALL_RUN:
+        raise ValueError(f"strategy must be one of {sorted(_ALL_RUN)}")
     if cost_profile not in COST_PROFILES:
         raise ValueError(f"cost_profile must be one of {sorted(COST_PROFILES)}")
     if interval not in BAR_SECONDS:
@@ -72,7 +75,7 @@ def run_strategy(
     payload, digest = load_vp1_spot(root, symbol, interval)
     candles = bars_to_candles(payload["bars"])
 
-    htf_interval = HTF_MAP.get(interval) if strategy in ("B5", "B6", "B7") else None
+    htf_interval = HTF_MAP.get(interval) if strategy in _HTF_STRATEGIES else None
     htf_candles = None
     htf_digest = None
     if htf_interval:
@@ -94,6 +97,8 @@ def run_strategy(
         return dec_by_i[i] if i < len(dec_by_i) else "WATCH"
 
     feed = build_sim_feed(candles, decide=decide)
+    if strategy == "BM":
+        overlay_ltf_ichimoku_directions(feed, candles)
     if window is None:
         win = window_seconds("2020-09-01", "2026-08-31", interval)
     else:

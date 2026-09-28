@@ -47,8 +47,13 @@ export type RoleSignals = {
   workerStarted: boolean
   killSwitchArmed: boolean | null
   openPaperPositions: number | null
-  /** FX venues currently open (Tokyo/London/NY) — null if calendar unavailable. */
+  /** Sessions crypto (Asie/Europe/US) ouvertes — null si calendrier API indisponible. */
   openSessions: number | null
+  /** Libellés des sessions ouvertes (ex. Asie, Europe). */
+  openSessionLabels: string[] | null
+  /** Prochaine ouverture session (ISO UTC) si connue. */
+  nextSessionOpenAt: string | null
+  nextSessionOpenLabel: string | null
   eveOpenTasks: number
   eveLeasedTasks: number
   eveRecheckOpen: number
@@ -310,16 +315,34 @@ export function deriveRoleCards(signals: RoleSignals): AgentRoleCard[] {
     session = baseCard(
       'session',
       'EN VEILLE',
-      'calendrier sessions FX non exposé côté API — crypto 24/7',
+      'calendrier sessions indisponible (engine) · crypto 24/7',
     )
   } else if (signals.openSessions > 0) {
+    const labels =
+      signals.openSessionLabels && signals.openSessionLabels.length
+        ? signals.openSessionLabels.join(', ')
+        : `${signals.openSessions} session(s)`
+    session = baseCard('session', 'ACTIF', `${labels} · repère horaire crypto 24/7`, {
+      nextTaskDue: signals.nextSessionOpenAt,
+      nextTaskKind: signals.nextSessionOpenLabel
+        ? `open:${signals.nextSessionOpenLabel}`
+        : 'session_open',
+    })
+  } else {
+    const nextHint = signals.nextSessionOpenLabel
+      ? ` · prochaine ${signals.nextSessionOpenLabel}`
+      : ''
     session = baseCard(
       'session',
-      'ACTIF',
-      `${signals.openSessions} session(s) FX ouverte(s) · crypto 24/7`,
+      'EN VEILLE',
+      `aucune session ouverte${nextHint} · crypto 24/7`,
+      {
+        nextTaskDue: signals.nextSessionOpenAt,
+        nextTaskKind: signals.nextSessionOpenLabel
+          ? `open:${signals.nextSessionOpenLabel}`
+          : 'session_open',
+      },
     )
-  } else {
-    session = baseCard('session', 'EN VEILLE', 'sessions FX fermées · crypto 24/7')
   }
 
   return [observer, opportunities, risk, execution, position, session]

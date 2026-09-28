@@ -6,7 +6,8 @@
  * Briefing V0 : période + pack calques + caméra (directeur heuristique).
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { intelligenceLayerOf } from '../../lib/chartIntelligence'
 import {
   cameraForPeriod,
   defaultBriefing,
@@ -127,6 +128,27 @@ export function ChartIntelligencePanel({
     ci.setLayers(packById(id).layers)
   }
 
+  /** Garde : un clic SVG (select) ne doit pas être annulé par subscribeClick LWC. */
+  const pickGuardUntil = useRef(0)
+  const selectKey = useCallback(
+    (key: string | null) => {
+      if (key != null) pickGuardUntil.current = performance.now() + 250
+      ci.select(key)
+    },
+    [ci.select],
+  )
+  const onBackgroundClick = useCallback(() => {
+    if (performance.now() < pickGuardUntil.current) return
+    ci.select(null)
+  }, [ci.select])
+
+  // Calque OFF → désélection si l’objet n’est plus inspectable.
+  useEffect(() => {
+    const sel = ci.selection[0]
+    if (!sel) return
+    if (!ci.layers[intelligenceLayerOf(sel)]) selectKey(null)
+  }, [ci.layers, ci.selection, selectKey])
+
   return (
     <div className={`ci-root${variant === 'brief' ? ' ci-root--brief' : ''}`}>
       <section className="ci-card ci-chart-card" aria-label="Chart Intelligence">
@@ -163,14 +185,14 @@ export function ChartIntelligencePanel({
             showIchimoku={ci.layers.ichimoku}
             resetKey={`${res.symbol}:${res.timeframe}`}
             camera={camera}
-            onBackgroundClick={() => ci.select(null)}
+            onBackgroundClick={onBackgroundClick}
             height={height}
             barSeconds={res.replay?.bar_seconds ?? undefined}
           >
             <DrawingLayer
               objects={ci.visibleObjects}
               selectedKey={ci.selectedKey}
-              onSelect={ci.select}
+              onSelect={selectKey}
               asOf={res.as_of}
               freshKeys={ci.freshKeys}
               dimStale={!ci.replay.isLive}
@@ -200,14 +222,22 @@ export function ChartIntelligencePanel({
         </section>
         <DrawingInspector
           selection={ci.selection}
-          onClose={() => ci.select(null)}
+          candidates={ci.visibleObjects}
+          layers={ci.layers}
+          onSelect={selectKey}
+          onClose={() => selectKey(null)}
           why={
             source === 'api' && res && !res.mock
               ? { symbol: res.symbol, timeframe: res.timeframe, asOf: res.as_of }
               : null
           }
         />
-        <AIAnalysisPanel analysis={res?.analysis ?? null} marketState={res?.market_state} asOf={res?.as_of} />
+        <AIAnalysisPanel
+          analysis={res?.analysis ?? null}
+          marketState={res?.market_state}
+          asOf={res?.as_of}
+          mock={res?.mock}
+        />
       </aside>
     </div>
   )

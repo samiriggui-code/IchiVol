@@ -14,7 +14,7 @@ export function SupportResistanceLayer() {
           o={o}
           asOf={asOf}
           selected={isSelected(o)}
-          onSelect={() => select(o)}
+          onSelect={(e) => select(o, e)}
         />
       ))}
     </g>
@@ -25,7 +25,7 @@ interface ZoneProps {
   o: IntelligenceObject
   asOf: number | null
   selected: boolean
-  onSelect: () => void
+  onSelect: (e?: { stopPropagation?: () => void; preventDefault?: () => void }) => void
 }
 
 export function SupportResistanceZone({ o, asOf, selected, onSelect }: ZoneProps) {

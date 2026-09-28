@@ -1,0 +1,96 @@
+{
+ "protocol": "VP-P",
+ "git_head": "08d707696f3a42fdababfdc1bc98d9d7c8369ddd",
+ "generated_at": "2026-09-27T23:22:52.023568+00:00",
+ "seed": 7,
+ "amendment": "VP0-2026-09-28",
+ "_sim_decision_mismatches": 0,
+ "C2-BUY": {
+  "n": 552,
+  "agree_pct": {
+   "adx_strength": 100.0,
+   "atr_regime": 100.0,
+   "decision": 100.0,
+   "direction": 100.0,
+   "donchian": 100.0,
+   "rvol_level": 100.0,
+   "stage:direction": 100.0,
+   "stage:location": 100.0,
+   "stage:participation": 100.0,
+   "stage:regime": 100.0,
+   "stage:structure": 97.82608695652173
+  },
+  "atr_rel_diff_median": 0.0,
+  "atr_rel_diff_max": 0.0,
+  "stop_distance_rel_diff_max": 0.0,
+  "disagreements": [],
+  "buy_sim_only": 0,
+  "buy_live_only": 0,
+  "symbols": 20,
+  "years": {
+   "2021": 112,
+   "2022": 128,
+   "2023": 152,
+   "2024": 160
+  }
+ },
+ "C2-SEUL": {
+  "n": 150,
+  "agree_pct": {
+   "adx_strength": 100.0,
+   "atr_regime": 100.0,
+   "decision": 100.0,
+   "direction": 100.0,
+   "donchian": 100.0,
+   "rvol_level": 100.0,
+   "stage:direction": 100.0,
+   "stage:location": 100.0,
+   "stage:participation": 100.0,
+   "stage:regime": 100.0,
+   "stage:structure": 98.66666666666667
+  },
+  "atr_rel_diff_median": 0.0,
+  "atr_rel_diff_max": 0.0,
+  "stop_distance_rel_diff_max": 0.0,
+  "disagreements": [],
+  "buy_sim_only": 0,
+  "buy_live_only": 0,
+  "symbols": 20,
+  "years": {
+   "2021": 21,
+   "2022": 30,
+   "2023": 50,
+   "2024": 49
+  }
+ },
+ "C2-SEUIL": {
+  "n": 150,
+  "agree_pct": {
+   "adx_strength": 100.0,
+   "atr_regime": 100.0,
+   "decision": 100.0,
+   "direction": 100.0,
+   "donchian": 100.0,
+   "rvol_level": 100.0,
+   "stage:direction": 100.0,
+   "stage:location": 100.0,
+   "stage:participation": 100.0,
+   "stage:regime": 100.0,
+   "stage:structure": 100.0
+  },
+  "atr_rel_diff_median": 0.0,
+  "atr_rel_diff_max": 0.0,
+  "stop_distance_rel_diff_max": 0.0,
+  "disagreements": [],
+  "buy_sim_only": 0,
+  "buy_live_only": 0,
+  "symbols": 20,
+  "years": {
+   "2023": 49,
+   "2024": 53,
+   "2022": 33,
+   "2021": 15
+  }
+ },
+ "_near_pool_size": 52071
+}

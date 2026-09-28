@@ -14,7 +14,7 @@ export function FVGLayer() {
   return (
     <g className="ci-layer ci-layer-fvg">
       {objects.map((o) => (
-        <FVGDrawing key={o.id} o={o} asOf={asOf} selected={isSelected(o)} onSelect={() => select(o)} />
+        <FVGDrawing key={o.id} o={o} asOf={asOf} selected={isSelected(o)} onSelect={(e) => select(o, e)} />
       ))}
     </g>
   )
@@ -24,7 +24,7 @@ interface Props {
   o: IntelligenceObject
   asOf: number | null
   selected: boolean
-  onSelect: () => void
+  onSelect: (e?: { stopPropagation?: () => void; preventDefault?: () => void }) => void
 }
 
 export function FVGDrawing({ o, asOf, selected, onSelect }: Props) {

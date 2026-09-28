@@ -70,7 +70,9 @@ class Rules:
     # exit rule: "decision" = baseline (leave when the effective decision stops supporting the position);
     # "direction" = leave only on stop/target or when the Ichimoku direction no longer matches (experiment E);
     # "levels_only" = VP2 common exit — stop / TP / time-stop only (never pipeline/direction flip);
-    # "hold" = B0 buy&hold — no SL/TP/time-stop/pipeline exits (only force_flat_at_end)
+    # "hold" = B0 buy&hold — no SL/TP/time-stop/pipeline exits (only force_flat_at_end);
+    # "exposure" = VP-S1 BN — no SL/TP/time-stop; leave when decision no longer supports the position
+    #             (close → open t+1), used for HTF régime toggles.
     exit_mode: str = "decision"
     # live-replica mode: decide and fill in the same step at the step's price (old intrabar behaviour)
     immediate_fill: bool = False
@@ -81,6 +83,17 @@ class Rules:
     full_cash: bool = False
     # VP §5.1.8: force exit open positions at the last bar's close
     force_flat_at_end: bool = False
+    # Exit reason used when force_flat_at_end closes (BM post-horizon → "horizon_end")
+    force_flat_reason: str = "window_end"
+    # VP-P (paper fidèle) — defaults keep every earlier run unchanged.
+    # stop/TP anchor: "raw" = open(t+1) (VP2-R2); "fill" = entry fill incl. friction (app/paper/risk.size_position)
+    levels_anchor: str = "raw"
+    # equity used for sizing + entry gates + daily lock: "mark" = cash + positions at last close;
+    # "cost" = cash + open notionals at cost (app/paper/broker.estimate_equity) with paper gate semantics
+    # (no cash pre-check at decision time: the order is cash-limited at fill, see min_fill_fraction)
+    gate_equity: str = "mark"
+    # cash-limited order below this fraction of the intended risk-based notional is refused (paper: 0.25)
+    min_fill_fraction: float = 0.0
 
 
 @dataclass
@@ -104,6 +117,11 @@ class Trade:
     net: float
     exit_reason: str
     stop_gap: bool = False
+    # VP-P diagnostics: extreme raw prices seen between the entry instant and the exit (see simulate step 3)
+    high_seen: float | None = None
+    low_seen: float | None = None
+    stop_level: float | None = None
+    tp_level: float | None = None
 
 
 @dataclass
@@ -121,6 +139,8 @@ class Position:
     tp: float
     risk_amount: float
     pid: str
+    high_seen: float = 0.0
+    low_seen: float = 0.0
 
 
 def _dec(x: float) -> Decimal:
@@ -157,6 +177,7 @@ class RunResult:
     ledger_diff: dict
     cash_end: float
     ledger: Ledger = field(repr=False, default=None)
+    halt_days: int = 0  # UTC days on which the daily-loss halt tripped
 
 
 def simulate(
@@ -166,9 +187,16 @@ def simulate(
     window: tuple[int, int],
     initial: float = 5000.0,
     seed: int = 7,
+    cost_by_symbol: dict[str, CostModel] | None = None,
 ) -> RunResult:
     """data[symbol][bar_open_time_s] = (closed candle, signal computed at that bar's close).
-    window = [start_s, end_s): bars with open time inside are traded."""
+    window = [start_s, end_s): bars with open time inside are traded.
+    ``cost_by_symbol`` overrides ``cost`` per symbol (paper: per-symbol friction table)."""
+    by_sym = cost_by_symbol or {}
+
+    def cost_of(sym: str) -> CostModel:
+        return by_sym.get(sym, cost)
+
     symbols = sorted(data)
     times = sorted({t for s in symbols for t in data[s] if window[0] <= t < window[1]})
     rng = random.Random(seed)
@@ -189,6 +217,7 @@ def simulate(
     day_key = None
     day_start_equity = initial
     halted_day = False
+    halt_days = 0
     pid_n = 0
 
     def eff(sig: BarSignal) -> str:
@@ -201,16 +230,23 @@ def simulate(
             v += p.qty * px if p.direction == "LONG" else p.notional + p.qty * (p.entry_fill - px)
         return v
 
+    def gate_equity() -> float:
+        if rules.gate_equity == "cost":
+            # app/paper/broker.estimate_equity: cash + open notionals at cost (no mark)
+            return cash + sum(p.notional for p in positions.values())
+        return equity_now()
+
     def open_risk() -> float:
         return sum(p.risk_amount for p in positions.values()) + sum(pending_risk.values())
 
     def close_position(p: Position, raw: float, t: int, reason: str, gap: bool = False) -> None:
         nonlocal cash
-        exit_fill = _fill(raw, p.direction, "out", cost)
+        pc = cost_of(p.symbol)
+        exit_fill = _fill(raw, p.direction, "out", pc)
         out_notional = p.qty * exit_fill
-        fee = _fee(out_notional, cost)
+        fee = _fee(out_notional, pc)
         days = max(0.0, (t - p.entry_time) / 86400.0)
-        fin = p.notional * cost.short_financing_bps_per_day / 10_000.0 * days if p.direction == "SHORT" else 0.0
+        fin = p.notional * pc.short_financing_bps_per_day / 10_000.0 * days if p.direction == "SHORT" else 0.0
         if p.direction == "LONG":
             pnl_exec = out_notional - p.notional
             cash_in = out_notional - fee
@@ -231,24 +267,26 @@ def simulate(
         net = pnl_exec - p.entry_fee - fee - fin
         trades.append(
             Trade(p.symbol, p.direction, p.signal_time, p.entry_time, t, p.entry_raw, raw, p.entry_fill, exit_fill,
-                  p.qty, p.notional, p.risk_amount, gross, p.entry_fee + fee, friction, fin, net, reason, gap)
+                  p.qty, p.notional, p.risk_amount, gross, p.entry_fee + fee, friction, fin, net, reason, gap,
+                  p.high_seen, p.low_seen, p.stop, p.tp)
         )
         del positions[p.symbol]
 
     def fill_entry(sym, sig, direction, raw, c, t):
         nonlocal cash, pid_n
-        eq = equity_now()
-        fill = _fill(raw, direction, "in", cost)
+        pc = cost_of(sym)
+        eq = gate_equity()
+        fill = _fill(raw, direction, "in", pc)
         sd = sig.stop_distance
         if rules.full_cash:
             # §6: 100 % cash after entry commission (stop_distance only for levels)
-            aff = cash / (1 + cost.commission_bps / 10_000.0)
+            aff = cash / (1 + pc.commission_bps / 10_000.0)
             if aff <= 0:
                 rej["insufficient_cash"] += 1
                 return
             qty = aff / fill
             notional = qty * fill
-            fee = _fee(notional, cost)
+            fee = _fee(notional, pc)
         else:
             qty = eq * rules.risk_pct / sd
             notional = qty * fill
@@ -256,15 +294,20 @@ def simulate(
             if notional > cap:
                 qty = cap / fill
                 notional = qty * fill
-            fee = _fee(notional, cost)
+            intended = notional
+            fee = _fee(notional, pc)
             if notional + fee > cash:
-                aff = cash / (1 + cost.commission_bps / 10_000.0)
+                aff = cash / (1 + pc.commission_bps / 10_000.0)
                 if aff <= 0:
                     rej["insufficient_cash"] += 1
                     return
                 qty = aff / fill
                 notional = qty * fill
-                fee = _fee(notional, cost)
+                fee = _fee(notional, pc)
+                # app/paper/risk.size_position: refuse a dust lot far below the risk-based size
+                if notional < intended * rules.min_fill_fraction:
+                    rej["insufficient_cash"] += 1
+                    return
         if notional < rules.min_notional:
             rej["below_min_notional"] += 1
             return
@@ -272,11 +315,12 @@ def simulate(
         if notional > rules.liquidity_cap_pct * sc.volume * sc.close:
             rej["liquidity_cap"] += 1
             return
-        stop = raw - sd if direction == "LONG" else raw + sd
+        anchor = fill if rules.levels_anchor == "fill" else raw
+        stop = anchor - sd if direction == "LONG" else anchor + sd
         tp = (
-            raw + sd * rules.take_profit_r
+            anchor + sd * rules.take_profit_r
             if direction == "LONG"
-            else raw - sd * rules.take_profit_r
+            else anchor - sd * rules.take_profit_r
         )
         if stop <= 0 or tp <= 0:
             rej["invalid_levels"] += 1
@@ -292,8 +336,8 @@ def simulate(
             ref=pid,
         )
         positions[sym] = Position(sym, direction, sig.time, t, raw, fill, qty, notional, fee, stop, tp,
-                                  qty * sd, pid)
-        # stop/TP anchored on raw open(t+1) (VP2-R2); fill still carries costs
+                                  qty * sd, pid, raw, raw)
+        # stop/TP anchored on raw open(t+1) (VP2-R2) unless levels_anchor="fill"; fill still carries costs
 
     for t in times:
         # 1) signal exits decided at the previous close fill at this open
@@ -319,32 +363,46 @@ def simulate(
             item = data[sym].get(t)
             if item is None:
                 continue
-            if rules.exit_mode == "hold":
-                # B0: ignore stop / TP / time-stop
+            if rules.exit_mode in ("hold", "exposure"):
+                # B0 hold / BN exposure: ignore stop / TP / time-stop
                 continue
             c = item[0]
             long = p.direction == "LONG"
+            # Excursions (diagnostic only): on an exit bar only the part of the bar known to precede the exit
+            # is counted (gap -> open; stop -> stop level; target -> target level), never the other extreme.
             if t != p.entry_time:
                 if (c.open <= p.stop) if long else (c.open >= p.stop):
+                    p.high_seen, p.low_seen = max(p.high_seen, c.open), min(p.low_seen, c.open)
                     close_position(p, c.open, t, "stop_hit_gap", gap=True)
                     continue
                 if (c.open >= p.tp) if long else (c.open <= p.tp):
+                    p.high_seen, p.low_seen = max(p.high_seen, c.open), min(p.low_seen, c.open)
                     close_position(p, c.open, t, "take_profit_hit_gap", gap=True)
                     continue
             hit_stop = c.low <= p.stop if long else c.high >= p.stop
             hit_tp = c.high >= p.tp if long else c.low <= p.tp
             if hit_stop:  # includes the ambiguous "both" case -> stop first
+                if long:
+                    p.low_seen = min(p.low_seen, p.stop)
+                else:
+                    p.high_seen = max(p.high_seen, p.stop)
                 close_position(p, p.stop, t, "stop_hit_ambiguous" if hit_tp else "stop_hit")
             elif hit_tp:
+                if long:
+                    p.high_seen = max(p.high_seen, p.tp)
+                else:
+                    p.low_seen = min(p.low_seen, p.tp)
                 close_position(p, p.tp, t, "take_profit_hit")
-            elif (
-                rules.time_stop_bars is not None
-                and t != p.entry_time
-                # VP2-R1: entry bar counts as bar 1 → exit at close of entry+(n-1)
-                and (t - p.entry_time) // rules.bar_seconds >= rules.time_stop_bars - 1
-            ):
-                # §6: time-stop exits at this bar's close (not next open)
-                close_position(p, c.close, t, "time_stop")
+            else:
+                p.high_seen, p.low_seen = max(p.high_seen, c.high), min(p.low_seen, c.low)
+                if (
+                    rules.time_stop_bars is not None
+                    and t != p.entry_time
+                    # VP2-R1: entry bar counts as bar 1 → exit at close of entry+(n-1)
+                    and (t - p.entry_time) // rules.bar_seconds >= rules.time_stop_bars - 1
+                ):
+                    # §6: time-stop exits at this bar's close (not next open)
+                    close_position(p, c.close, t, "time_stop")
         # 4) mark to market at this bar's close
         for sym in symbols:
             item = data[sym].get(t)
@@ -356,8 +414,11 @@ def simulate(
         dk = _ts(t + rules.bar_seconds - 1).date()
         if dk != day_key:
             day_key, day_start_equity, halted_day = dk, eq, False
-        if not halted_day and rules.daily_loss_limit_pct and eq <= day_start_equity * (1 - rules.daily_loss_limit_pct):
+        # paper: current equity for the daily lock is the cost-based estimate, day start is the marked snapshot
+        eq_gate = gate_equity() if rules.gate_equity == "cost" else eq
+        if not halted_day and rules.daily_loss_limit_pct and eq_gate <= day_start_equity * (1 - rules.daily_loss_limit_pct):
             halted_day = True
+            halt_days += 1
         # 5) decisions at this close, executed at the next open
         order = [s for s in symbols if t in data[s]]
         rng.shuffle(order)  # neutral priority when capacity is scarce
@@ -377,6 +438,9 @@ def simulate(
                 if rules.exit_mode == "direction":
                     leave = sig.direction.value != p.direction
                     why = "direction_flipped" if leave else ""
+                elif rules.exit_mode == "exposure":
+                    leave = d != want
+                    why = "exposure_off" if leave else ""
                 else:
                     leave = d != want
                     why = "pipeline_flipped" if d in ("BUY", "SELL") else "pipeline_downgraded"
@@ -407,7 +471,7 @@ def simulate(
             if len(positions) + len(pending_entry) >= rules.max_open:
                 rej["max_positions"] += 1
                 continue
-            eq = equity_now()
+            eq = gate_equity()
             px = last_close[sym]
             if rules.full_cash:
                 if cash < rules.min_notional:
@@ -424,7 +488,8 @@ def simulate(
                 if est_qty * px > eq * rules.max_symbol_notional_pct + 1e-9:
                     rej["symbol_exposure_cap"] += 1
                     continue
-                if est_qty * px > cash:
+                # paper gates never pre-check cash: size_position cash-limits the order (min_fill_fraction) at fill
+                if rules.gate_equity != "cost" and est_qty * px > cash:
                     rej["insufficient_cash"] += 1
                     continue
             entered_runs.add((sym, run_start))
@@ -440,7 +505,7 @@ def simulate(
             item = data[sym].get(t_end)
             if item is None:
                 continue
-            close_position(p, item[0].close, t_end, "window_end")
+            close_position(p, item[0].close, t_end, rules.force_flat_reason)
     open_end = [
         {
             "symbol": p.symbol, "direction": p.direction, "entry_time": p.entry_time, "qty": p.qty,
@@ -454,4 +519,4 @@ def simulate(
     ]
     diff = ledger.reconcile({CCY: _dec(cash)})
     return RunResult(rules, cost, window, symbols, initial, trades, equity_curve, rej, seen, open_end,
-                     {k: str(v) for k, v in diff.items()}, cash, ledger)
+                     {k: str(v) for k, v in diff.items()}, cash, ledger, halt_days)

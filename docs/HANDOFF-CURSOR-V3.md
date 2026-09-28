@@ -1,5 +1,102 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 après-midi — Claude SEUL (Cursor bloqué : limite mensuelle atteinte)
+
+Samir : « tu te démerdes, tu es tout seul ». Claude reprend la file Cursor. **Rien n'est déployé.**
+
+### Mergé sur `main` (revue Claude faite)
+
+| PR | Revue | Vérifs |
+|----|-------|--------|
+| #156 badge « Signal non validé » | OK : badge seul, route `/capture/vp-badge` absente | `tsc -b` 0, tests badge 4/4, `vite build` OK |
+| #142 CSS mobile (en prod depuis hier) | OK : CSS seulement | idem (merge groupé) |
+| #158 sheet paper au-dessus de la fiche | OK : `<dialog showModal>` en portal, Échap / clic fond gérés | idem |
+| #163 inspecteur CI | OK : UI seulement, aucun effet décision | idem |
+| #157 VP-S1 étape 1 (BM/BN + S1–S5) | Corrections S1-R1 / S1-R2 de Cursor **terminées par Claude** + **bloquant ajouté** : l'horizon BM de 90 j lisait janv.–mars 2025 sur WF7 → plafonné à `DEV_END_EXCL_S` (2025-01-01), test `test_bm_horizon_never_reads_validation_2025` | `tests/vp3` 50/50. **Aucun run** |
+| #162 AG-S0/S1 | Section « Analystes » live **retirée de Agents** (décision Samir). Moteur / routes / snapshots inchangés. Correctifs de la 1ʳᵉ revue vérifiés (MTF 13:00 vs 4h 12:00, garde AST `/screener`) | pytest agents + sessions + api 138/138, `npm test` 68/68, `tsc -b` 0 |
+
+Conflits : seulement `docs/HANDOFF-CURSOR-V3.md`, résolus en gardant `main` (+ bloc spec AG-S0/S1 réinséré).
+
+`tsconfig.app.json` exclut désormais `*.test.ts` de `tsc -b` (venu de #156). Les tests front restent lancés par `tsx --test`.
+
+### ⚠️ Avant le prochain déploiement (décision Samir)
+
+- `main` contient maintenant #142, #156, #158, #159, #161, #162, #163, #157 (le code #157 n'est pas utilisé en prod).
+- **Migration alembic** `i5j6k7l8m9n0` (table `analyst_snapshot`) à appliquer sur le VPS.
+- Le VPS tourne sur `e92c43f` : #161 (paper auto en 1h seulement) **pas encore en prod**. La boucle auto peut encore ouvrir en 15m / 4h / 1d.
+- Point 1 : 0 position ouverte, cash 4 858,97 € (voir rapport Cursor plus bas).
+
+### Reste de la file
+
+1. **RS-D1** (Claude) : note d'implémentation → tests → `run.py` → PR draft. Revue par une autre session Claude (Cursor indisponible).
+2. **CI-LIQ-CONF** (spec plus bas).
+3. **AG-S2** (spec plus bas) : bandeau Marché + 5 portes + fiche + lien Copilot.
+4. **#164** typo 11px : **en attente de la validation visuelle de Samir**, non mergé.
+5. Ticket `vpp/replay.py` garde `DATABASE_URL` locale.
+6. Hors périmètre, signalé : en VP3, l'horizon time-stop de WF7 (48 barres) déborde déjà de 2 jours (1h) ou 8 jours (4h) sur 2025 pour les sorties. C'est un débordement préexistant ; VP3 est figé.
+
+Incident local : Postgres a redémarré (récupération) pendant la session, après des pytest bloqués. Il est revenu en 30 s, sans perte constatée.
+
+---
+
+## 2026-09-28 — Cursor : point 3 FAIT — #142 rebasé sur main (STOP revue · pas de deploy)
+
+**PR [#142](https://github.com/samiriggui-code/IchiVol/pull/142)** `cursor/mobile-tabbar-clearance-a2fe` @ `a8436cc`.
+
+- Rebase sur `main` (@ `e170822` / post-#159+#161) : **5/5 commits sans conflit**.
+- Contenu : `--dash-tabbar-clearance` 7.5rem + dialog/fiche z=60 + dark Preuves/Pipeline.
+- Croisement avec tip backup `804f40e`→`e92c43f` (mêmes patches cherry-pickés hier) : **pas de conflit de rebase** ; tip PR = source de vérité pour merge.
+- `npx tsc -b` : **0** (exclude `*.test.ts` comme #156).
+- **Aucun déploiement** (décision Samir ; `main` porte #159/#161 non encore en prod).
+
+**STOP → revue Claude.** Suite file = point 4 (#158 → #157 → CI-LIQ-CONF → #162).
+
+---
+
+## 2026-09-28 — Cursor : point 2 FAIT — séparation #156 / inspector / #158 / typo (STOP)
+
+| Branche / PR | Contenu | `npx tsc -b` | État |
+|--------------|---------|--------------|------|
+| **#156** `cursor/ui-vp-badge-a2fe` @ `0ae1478` | Badge seul. Route `/capture/vp-badge`, `VpBadgeCapturePage`, `capture-ui-vp-badge.mjs` **absents**. PNG légendés. | **0** | STOP revue Claude → merge |
+| **#163** `cursor/ci-inspector-fix` @ `5dc8f16` | Inspector shelves / Why / BOS·CHOCH (extrait du backup local) | **0** (exclude `*.test.ts`) | draft — STOP revue Claude |
+| **#158** `cursor/fix-paper-sheet-stack` @ `08f19c5` | + `PaperConfirmSheet` ot-cards densifié | **0** | draft — STOP revue Claude |
+| **#164** `cursor/ui-typo-scale` @ `cc61384` | rem chrome 16px + corps pages 11px — **sans #142** | **0** | draft — **pas de merge sans OK visuel Samir** |
+
+Source locale : `backup/ui-vp-local-e92c43f`. Producteurs LIQ/CONF (`777c2d5`) **non** portés ici → file **CI-LIQ-CONF** (point 4).
+
+**STOP point 2.** Suite = point 3 (#142 rebase sur main, pas de deploy).
+
+---
+
+## 2026-09-28 — Cursor : point 1 FAIT — 0 position paper ouverte (STOP)
+
+**VPS prod** `ichivol_engine` · portefeuille `ICHIVOL_BASELINE_V1` · lecture seule avant action.
+
+### Avant (inventaire)
+
+| id | symbole | TF | origine | entrée | taille | PnL latent |
+|----|---------|----|---------|--------|--------|------------|
+| — | — | — | — | — | — | — |
+
+**0 ligne OPEN.** Aucune clôture `POST /paper/positions/{id}/close` nécessaire (mécanisme normal non invoqué faute de cible).
+
+Répartition historique (44 CLOSED) : dernières sorties déjà en `stop_hit` / `direction_flipped` / `manual_close` (ex. NEARUSDT 1h auto stop 2026-09-27 22:11 UTC).
+
+### Après
+
+| id | symbole | TF | exit | PnL réalisé | note |
+|----|---------|----|------|-------------|------|
+| — | — | — | — | — | rien à fermer |
+
+- Positions OPEN restantes : **0** (revérifié ~45 s plus tard).
+- Equity / cash portefeuille : cash **4858.97 €** · realized_pnl **−141.03 €** · initial **5000 €** (cash = equity faute d’OPEN).
+- Paramétrage : **non touché**.
+- Réouverture immédiate : **aucune** observée. ⚠️ VPS tourne encore sur tip `e92c43f` (`backup/ui-vp-local-e92c43f`) — **#161 pas déployé** en prod ; la boucle auto peut encore ouvrir hors 1h jusqu’au déploiement de `main`.
+
+**STOP point 1.** Suite = point 2 (séparation #156).
+
+---
+
 ## 2026-09-28 — CHANTIER RS (stratégie alternative) · pilote : Claude local · étapes 1 à 4 livrées
 
 **Mandat Samir :**
@@ -42,6 +139,236 @@
    - puis run, rapport `docs/RS-D1-REPORT.md`, journal JSON → STOP.
 
 **Interdits RS :** validation 2025, holdout 2026, datasets externes, variantes de paramètres, toucher au paper live ou au pipeline, merge sans revue.
+
+---
+
+## 2026-09-28 journée — Claude → Cursor : décisions de Samir (à traiter en premier)
+
+Traiter **dans cet ordre**, avec un **STOP** et un rapport dans ce handoff après chaque point.
+
+### 1. Fermer toutes les positions paper ouvertes (décision de Samir)
+
+- Fermer **toutes** les positions paper ouvertes : auto et manuelles, tous les timeframes (15m, 1h, 4h, 1d).
+- Utiliser le mécanisme de clôture normal du paper, au prix de marché courant. **Aucune écriture directe en base.**
+- **Avant de fermer**, relever la liste : symbole, timeframe, origine auto/manuelle, prix d'entrée, taille, PnL latent.
+- **Après**, relever les prix de sortie, le PnL réalisé, l'equity finale, et vérifier qu'il reste **0 position ouverte**.
+- Mettre les deux listes ici.
+- **Ne pas toucher au paramétrage** : avec #161, le paper ne peut rouvrir qu'en 1h, par la boucle de fond. Si une position rouvre juste après, la signaler, ne pas la fermer en boucle.
+
+### 2. Séparer le travail local de `cursor/ui-vp-badge-a2fe`
+
+- #156 ne garde que le badge. Retirer la route publique `/capture/vp-badge`, `VpBadgeCapturePage.tsx` et `scripts/capture-ui-vp-badge.mjs`. Garder les PNG, légendés « rendu composant, données fictives ».
+- L'inspecteur CI part sur la branche `cursor/ci-inspector-fix`.
+- Le ticket paper redessiné part sur #158.
+- La typo globale 11px part sur `cursor/ui-typo-scale` : PR draft, **pas de merge sans validation visuelle de Samir**.
+- Pour chaque branche, vérifier `npx tsc -b` (pas `-p .`).
+
+### 3. #142 (CSS mobile qui tourne en prod sans être mergé)
+
+- Rebaser #142 sur `main` (@ `2362025` ou plus récent) et vérifier qu'il n'entre pas en conflit avec les correctifs de marge de la barre d'onglets mobile (`804f40e` à `e92c43f`).
+- Ouvrir ou mettre à jour la PR, puis **STOP pour revue Claude**.
+- **Aucun déploiement** : c'est une décision de Samir, et `main` contient maintenant #159 et #161, qui ne sont pas encore en prod.
+
+### 4. Reprise de la file normale
+
+- #158 → #157 (corrections S1-R1 / S1-R2) → CI-LIQ-CONF → #162 (**avec la correction « retirer les fiches live de Agents »**, voir spec AG-S2) → AG-S2 (spec ci-dessous).
+- STOP après chaque PR, pas de merge sans verdict Claude.
+
+### 5. Ticket non bloquant, en fin de file
+
+- `vpp/replay.py` doit refuser de tourner si `DATABASE_URL` ne pointe pas sur `127.0.0.1` ou `localhost`, avec un test.
+
+**Rappel :** `claude/rs-d1` (Donchian 4h) arrivera en PR draft pour **ta revue** (rôles inversés). Ne pas la modifier, ne lancer aucun run.
+
+---
+
+## 2026-09-28 journée — SPEC AG-S2 « Brief d'ouverture » + répartition Agents / Marché / fiche / Copilot
+
+**Ordre :** après la revue et le merge de #162 (AG-S0/S1). Branche `cursor/ag-s2-a2fe`, PR draft → **STOP → revue Claude**. AG-S3 (LLM) reste interdit sans OK de Samir.
+
+### Principe de répartition (validé avec Samir)
+
+| Lieu | Rôle | Interdit |
+|---|---|---|
+| **Agents** (`AgentsPage`) | Atelier : créer et paramétrer un agent (rôle, outils, ce qu'il écrit en base, déclencheur), voir ses tâches et son audit | Aucune analyse live |
+| **Marché** (`MarketPage`) | Cockpit de lecture : **5 portes max** (DIR, PART, STRUCT, LOC, REGIME) + le brief d'ouverture. Chaque porte = **2 à 4 lignes + 1 badge d'état** + lien « Analyse complète » | Aucune configuration d'agent, aucun texte long |
+| **Fiche « Analyse complète »** | Profondeur d'une porte : toutes les fiches AG-S1 de l'étape, historique des snapshots, chiffres | — |
+| **Copilot** (`/app/agent`) | Question sur un point précis via « Demander à Eve sur ce point » | **Jamais de chat vide** : le lien emporte toujours le snapshot |
+
+Règles strictes :
+- **un agent = une porte** sur Marché, pas plusieurs bulles qui votent ;
+- tout est `NON_VALIDE`, `used_by_decision=False` (VP3 : 0 EDGE / 48) ;
+- chaque lien Copilot réutilise `copilotPrompts.ts` / `useCopilotNav` et injecte `{symbol, timeframe, stage, session_id, as_of, snapshot_id, chiffres clés}`. Eve répond **à partir du snapshot**, elle ne recalcule pas.
+
+**Correction demandée sur #162 (décision Samir, 2026-09-28) — à faire AVANT le merge de #162 :**
+- **Retirer** de `AgentsPage` la section « Analystes » live (grille des fiches, sélecteur symbole / TF, valeurs d'indicateurs).
+- **Garder** sur Agents uniquement une carte « Agent analyste » : déclencheur (ouverture de session + 60 s), univers, dernier run (OK / reporté + raison), nombre de snapshots. **Aucune valeur de marché.**
+- **Ne rien toucher côté moteur** : `analyst_cards.py`, `analyst_snapshot`, routes `/agents/analyst-cards` et `/agents/analyst-snapshots`, AgentTask, tests. Tout reste tel quel.
+- Entre le merge de #162 et AG-S2, les fiches ne sont visibles que par l'API : c'est voulu (rien n'est déployé). Elles réapparaissent sur Marché et dans la fiche « Analyse complète » avec AG-S2.
+- Refaire les captures Agents (clair, desktop + mobile 390 px) et `npx tsc -b`, puis **STOP → revue Claude**.
+
+### AG-S2 — calculs (déterministes, sans LLM, barres closes seulement)
+
+Déclencheur : ouverture de chaque session AG-S0 (Asie, Europe, US), juste après la tâche AG-S1 (`kind=session_brief`, même file `AgentTask`). Univers : BTCUSDT / ETHUSDT / SOLUSDT.
+
+Référence « veille » = **dernière bougie 1d close** (clôture 00:00 UTC) connue à l'ouverture de la session.
+
+- `gap_pct` = (prix d'ouverture de session − clôture 1d veille) / clôture veille. Prix d'ouverture de session = open de la première bougie 1h de la session.
+- `gap_atr` = même écart / ATR(14) 1d de la veille.
+- `prev_high`, `prev_low`, `prev_range`, `prev_range_atr`.
+- `pos_in_prev_range` = (prix − low) / (high − low), borné à l'affichage avec un statut `au-dessus` / `dans` / `en-dessous`.
+- `session_prev_ref` : même mesures vs la session précédente (Europe vs Asie, US vs Europe).
+- `oi_delta_24h`, `funding_last` vs veille (même source que la fiche OI/funding AG-S1).
+- `stage_changes` : liste des portes dont l'état a changé depuis le snapshot AG-S1 de la session précédente.
+- Texte court déterministe (2 à 4 lignes), par exemple « Ouverture +1,2 % (0,4 ATR) au-dessus de la clôture d'hier, dans le haut du range d'hier (0,82). Régime inchangé, participation ↑. »
+
+### Stockage et routes
+
+- Table `session_brief` (migration alembic), unique `(session_id, symbol)`. Colonnes : les champs ci-dessus, `known_at`, `as_of`, `feature_status`, `validation_status=NON_VALIDE`, `used_by_decision=False`, `source_snapshot_ids`.
+- `GET /agents/session-briefs?symbol=&session_id=` (dernier par défaut).
+- Idempotence : relancer la tâche ne crée pas de doublon. Données pas fraîches → report + log, comme AG-S1.
+
+### UI
+
+- **Marché** : bandeau « Brief d'ouverture » (session en cours, 2 à 4 lignes, badge NON_VALIDE) + grille des 5 portes (résumé court par étape depuis `analyst-cards?stage=`) + « Analyse complète » + « Demander à Eve sur ce point ».
+- **Fiche Analyse complète** : route authentifiée (pas de route publique), paramètres `symbol`, `tf`, `stage`.
+- **Agents** : carte de l'agent « Brief d'ouverture » (déclencheur, dernier run, reports), sans chiffres de marché.
+
+### Tests exigés
+
+- Anti-lookahead : la clôture veille utilisée est toujours une bougie 1d **close** avant l'ouverture de session ; troncature des données → brief identique.
+- Heure d'été (Londres / New York), week-end = repère horaire, pas fermeture.
+- `pos_in_prev_range` : high = low (range nul) → pas de division par zéro.
+- Idempotence de la tâche ; aucun import paper / screener dans `app/agents` ni `app/sessions`.
+- Front : le lien Copilot contient bien le snapshot (test unitaire du prompt généré).
+- Goldens OpenAPI / `route_order` : ajout documenté. `pytest` Postgres + `npm test` + `npx tsc -b`.
+- **Preuve PR :** JSON brief BTCUSDT d'une vraie ouverture de session + captures **réelles** Marché et fiche (clair, desktop + mobile 390 px).
+
+---
+
+## 2026-09-28 — #159 et #161 MERGED (validés Claude)
+
+| PR | Squash-merge SHA | Contenu |
+|----|------------------|---------|
+| [#159](https://github.com/samiriggui-code/IchiVol/pull/159) `claude/vp-p-paper-fidele` | [`7b3583a`](https://github.com/samiriggui-code/IchiVol/commit/7b3583a) | VP-P v2 (C2/C3/P3), `vpp/`, equity mensuelle, options `sim.py` opt-in (défauts inchangés) |
+| [#161](https://github.com/samiriggui-code/IchiVol/pull/161) `claude/paper-auto-1h-only` | [`48ee61d`](https://github.com/samiriggui-code/IchiVol/commit/48ee61d) | Double verrou : `paper_sync` boucle de fond seulement + `auto_timeframes` par profil (défaut **1h**) |
+
+**Non déployé.** Le déploiement est une décision de Samir. **#142** (CSS mobile, en prod sans être mergé) doit être réglé avant tout déploiement.
+
+**Point ouvert pour Samir :** positions auto déjà ouvertes sur 15m / 4h / 1d — les **garder** avec stop/objectif seulement, ou les **fermer à la main** ?
+
+**Non bloquant (ticket séparé, plus tard) :** `vpp/replay.py` doit refuser de tourner si `DATABASE_URL` n'est pas sur `127.0.0.1` / `localhost`.
+
+**File Cursor reprise :** #156 → #158 → #157 → CI-LIQ-CONF → AG-S0/S1. STOP après chaque PR.
+
+---
+
+## 2026-09-28 nuit — ARRÊT DE SESSION · état exact pour reprise
+
+### Branches et PR ouvertes (rien de mergé cette nuit)
+
+| PR / branche | Qui | État | Prochaine action |
+|--------------|-----|------|------------------|
+| #156 `cursor/ui-vp-badge-a2fe` | Cursor | À corriger : **route publique `/capture/vp-badge` toujours présente**. Travail local **hors périmètre** non poussé : 2 commits (`44d2d37`, `9465259`) + 22 fichiers modifiés (typo globale `html{font-size:11px}`, ticket paper redessiné, inspecteur CI) | Séparer (voir message Cursor ci-dessous) |
+| #158 `cursor/fix-paper-sheet-stack` | Cursor | VALIDÉ sous réserve de `tsc -b` | Merge |
+| #157 `cursor/vp-s1-a2fe` | Cursor | À corriger S1-R1 (BM, horizon 90 j + `force_flat`) / S1-R2 (doc) | Correction → STOP |
+| CI-LIQ-CONF | Cursor | Spec dans le handoff (3bbd6ed) | Après #157 |
+| #159 `claude/vp-p-paper-fidele` | **Autre session Claude** (ichivol-cd) | C2 fait (100 % d'accord sur la décision) ; v2 (R1–R4, C3, P3) **en cours**, journal R4 livré « ce soir » | Revue finale Claude quand v2 est poussé |
+| #161 `claude/paper-auto-1h-only` | Autre session | Les scans UI ne synchronisent plus le paper (R4 produit). Non déployé | **Revue Claude à faire** ; déploiement = décision de Samir |
+| #160 `claude/rs-strategie` | Claude pilote RS | Docs RS-00 à RS-04, amendement `VP0-2026-09-28b`, ledger +1 | Revue par Samir puis merge (docs) |
+| `claude/rs-d1` (pas encore de PR) | Claude pilote RS | **Code WIP `34c1d5c`** : `rs/` = simulateur Donchian + B0-F / B0-E + métriques D1–D7. **Non testé, aucun run** | Voir « Reprise RS-D1 » |
+
+### ⚡ Mise à jour de dernière minute : #159 v2 poussé (`b90de8d`)
+
+L'autre session a livré la v2 :
+- **C2** 100 % d'accord ;
+- **C3** rejeu dans le vrai moteur paper : 26/26, 44/44, 79/81 (écart d'ordre de traitement, equity ±0,0015 %) ;
+- espérance **−0,17 R [−0,24 ; −0,10]** ;
+- **P3 : aucun horizon favorable** → l'optimisation de l'entrée B7 est suspendue ;
+- contrôle momentum post-hoc toujours négatif ;
+- R1 / R2 reformulés.
+
+**`vpp_r4_trades.json` (617 trades) = référence B7-P disponible → D3 est calculable.**
+**Premières actions Claude demain :** (a) revue finale #159, (b) revue #161, puis la reprise RS-D1 ci-dessous.
+
+### Reprise RS-D1 (Claude) — dans cet ordre
+
+1. ~~**Données**~~ **FAIT** : séries VP1 4h construites en local, 13 146 / 13 146 barres, 0 trou : BTC `cd8bef9a07f7…`, ETH `67f46cf63f0b…`, SOL `0c75aed211b7…` (identiques aux sha du rapport VP3 FINAL).
+2. **Note d'implémentation** (à committer **avant le run**, sans changer de règle) : RS-D1 est un moteur autonome `rs/donchian.py`, **pas** `research_lab/sim.py`, qui n'a pas de stop suiveur et dont l'interface est gelée par la session #159. Les règles de taille, coûts et limites sont réimplémentées d'après RS-03 §5–§6. À ajouter dans `RS-03` §10.
+3. **Tests** `tests/rs/` (RS-03 §10) :
+   - troncature stratégie (signaux, `stop_log`, ordres identiques jusqu'à T) ;
+   - stop monotone et appliqué à `k+1` ;
+   - gap → open ;
+   - canal → `open(k+1)` ;
+   - réentrée pas sur la barre de sortie ;
+   - taille 0,5 % / plafond 10 % / refus sous 25 % ;
+   - coûts par symbole ;
+   - assertion < 2025 ;
+   - B0-F / B0-E.
+4. **`rs/run.py`** : RS-D1 base + adverse + stress `exec_delay=2`, B0-F, B0-E (`e` = exposition moyenne de RS-D1), bootstrap mensuel, D1–D7 → `docs/rs-artifacts/rsd1_results.json` + journal des trades, puis `docs/RS-D1-REPORT.md`.
+5. **D3** (Δ vs B7-P) : utiliser R4 v2 de #159 (`vpp_results.json`, section R4, + `vpp_r4_trades.json` sur `claude/vp-p-paper-fidele` @ `b90de8d`). **Equity mensuelle livrée** : `docs/vpp-artifacts/vpp_equity_monthly.json` (R4_P2_U3, 42 mois, fin de mois, coûts paper, sha256), `python -m vpp.equity_export`. Même convention que RS-D1 (cash + positions marquées au close).
+6. PR draft `claude/rs-d1` → **revue par Cursor** (rôles inversés) → run.
+
+### Message pour Cursor (en attente d'envoi par Samir)
+
+Séparer le travail local de `cursor/ui-vp-badge-a2fe` :
+- #156 = badge seul + retrait de la route publique ;
+- inspecteur CI → `cursor/ci-inspector-fix` ;
+- ticket paper → sur #158 ;
+- typo globale 11px → `cursor/ui-typo-scale`, **validation visuelle de Samir obligatoire**.
+
+Puis #158 → #157 → CI-LIQ-CONF.
+
+### Points ouverts pour Samir
+
+- Est-ce toi qui as demandé à Cursor les changements d'UI (typo 11px, ticket paper, inspecteur) ?
+- #161 (paper uniquement en 1h) : déploiement à décider après revue.
+- **#142** (CSS mobile) tourne en prod sans être mergé : à régler avant tout déploiement.
+
+---
+
+## 2026-09-28 — JOB AG-S0 + AG-S1 : Agents de session crypto (observe-only)
+
+**Ordre :** après CI-LIQ-CONF (#156 → #158 → #157 → CI-LIQ-CONF). Branche `cursor/ag-s01-a2fe`, PR draft → **STOP → revue Claude**. Pas de AG-S2/AG-S3 sans OK.
+
+**RÈGLES :** observe-only. Aucun appel LLM. Aucun effet sur pipeline, paper, gates, confidence, screener (`used_by_decision=False` partout). **N'appelle JAMAIS `/screener`** depuis ce code (déclenche sync paper, bug #161). Gel CI respecté : on lit les indicateurs existants, on n'en crée aucun. Liquidity/Confluence inclus seulement si CI-LIQ-CONF est mergé (détection via REGISTRY).
+
+### AG-S0 — Calendrier des sessions
+
+- Engine : `app/sessions/calendar.py` — Asie (`Asia/Tokyo` 09:00–18:00), Europe (`Europe/London` 08:00–17:00), US (`America/New_York` 09:30–16:00) via `zoneinfo` (DST), + clôture bougie 1d à 00:00 UTC.
+- Crypto 24/7 : le week-end reste un **repère horaire**, pas une fermeture.
+- Route `GET /api/engine/sessions` : sessions en cours, prochaine ouverture (UTC + locale), prochaine clôture 1d.
+- Server : carte « session » de `agentRoles.ts` lit cette route (fin du texte « non exposé côté API »).
+
+### AG-S1 — Fiches analystes déterministes
+
+- Engine : `app/agents/analyst_cards.py` — une fiche par indicateur CI : Ichimoku, RVOL, ATR/régime, ADX, Donchian, structure, FVG, impulsion/Fibonacci, location, OI/funding, CVD (+ Liquidity/Confluence si REGISTRY).
+- Réutilise `ichimoku_agent` / `rvol_agent`, passe par `REGISTRY` (T1e). OI/funding hors REGISTRY → fetch Binance Futures direct (pas screener).
+- Contrat fiche : `symbol`, `timeframe`, `as_of`, `value`, `state`, `known_at`, `feature_status`, `decision_role` (RS-01), `used_by_decision=False`, `validation_status=NON_VALIDE`, texte court déterministe.
+- Routes : `GET /agents/analyst-cards`, `POST|GET /agents/analyst-snapshots`.
+- Table `analyst_snapshot` (alembic `i5j6k7l8m9n0`) : `(session_id, symbol, tf)` unique ; AgentTask `kind=analyst_snapshot` à ouverture session **+60 s** ; univers BTCUSDT/ETHUSDT/SOLUSDT × 1h/4h ; fraîcheur → defer + log.
+- Front `AgentsPage` : section « Analystes » (grille, sélecteur symbole/TF, heure session, badge NON_VALIDE).
+
+
+### Complément AG-S1 (28/09) — champ ``stage``
+
+Chaque fiche porte ``stage ∈ {DIR, PART, STRUCT, LOC, REGIME}`` (table figée + test) :
+- **DIR** : Ichimoku + direction MTF 4h/1d
+- **PART** : RVOL, CVD, OI/funding
+- **STRUCT** : swings/BOS/CHOCH, FVG, impulsion/Fibonacci, Liquidity
+- **LOC** : location (VAH/VAL/POC, VWAP/AVWAP), Confluence
+- **REGIME** : ATR/régime, ADX, Donchian, cycle
+
+Route : ``GET /agents/analyst-cards?stage=``. Front : section Analystes **groupée par étape** (5 blocs).
+Raison AG-S3 (PAS à coder) : un agent Claude par étape, puis synthèse des 5 verdicts.
+
+### Tests (Claude — env déjà prêt)
+
+- Troncature / anti-lookahead ; `decision_role` ↔ RS-01 ; idempotence snapshot ; aucun import paper/screener depuis `app/agents/analyst_cards.py` et `app/sessions`.
+- Goldens OpenAPI / `route_order` : **ajout volontaire documenté** (sessions + analyst-cards/snapshots).
+- `pytest` (Postgres) + `npm test` (server) + `npx tsc -b` (front).
+- **Preuve PR :** JSON fiches BTCUSDT 1h + 1 capture **réelle** Agents (clair + mobile 390 px). Pas de page fabriquée, pas de route publique.
+
 
 ---
 
@@ -131,6 +458,82 @@ Constat à retenir de VP-P : un appel UI `GET /screener?timeframe=15m|4h|1d` **d
 1. #156 : retirer la route publique → merge.
 2. #158 : `tsc -b` → merge.
 3. #157 : S1-R1 + doc S1-R2 → STOP → revue Claude → étape 2 (run).
+
+---
+
+## 2026-09-28 — Claude local : VP-P v2 livré (#159) + correctif produit (#161) · POINT DE REPRISE (demain)
+
+### ▶ Reprendre ici, dans cet ordre
+
+1. **Ouvrir les deux worktrees** (ne jamais travailler dans `C:\laragon\www\IchiVol`, qu'un autre agent utilise) :
+   - `C:\laragon\www\IchiVol-vpp` → branche `claude/vp-p-paper-fidele` → **PR draft #159** (diagnostic VP-P) ;
+   - `C:\laragon\www\IchiVol-paperfix` → branche `claude/paper-auto-1h-only` → **PR draft #161** (correctif produit).
+   - Python : `C:\laragon\www\IchiVol\ichivol-app\engine\.venv\Scripts\python.exe`, lancé depuis `ichivol-app\engine` du worktree.
+2. **Attendre / lire la revue finale de #159** par la session RS (« ichivol-e9 », PR #160 `docs/RS-00-REVUE-159.md`). Elle a été prévenue que la v2 est poussée. Corriger ses remarques sur la branche `claude/vp-p-paper-fidele`.
+3. **Lire la revue de #161** (la session RS la fait aussi, en indépendant).
+4. **Décisions de Samir en attente :**
+   - (a) merger #159 après la revue ;
+   - (b) merger #161, puis **déployer** ? ⚠️ #142 (CSS mobile) tourne en prod sans être mergé : déployer `main` sans #142 retire ces correctifs. Déploiement : `git archive` → VPS, voir la mémoire « live state ».
+5. **Ensuite, seulement si Samir le valide :** étape 2 de BN (VP-S1, PR #157, après les corrections S1-R1/S1-R2 par Cursor). Aucun autre test sur l'entrée B7.
+6. **Avant tout merge :** rebaser #159 sur `main` **sans réécrire les blocs des autres sessions**. Conflit attendu : ce handoff + le ledger ; garder les deux côtés.
+
+### État exact à l'arrêt (2026-09-28)
+
+| Élément | État |
+|---------|------|
+| Pré-inscriptions | `e745f73` (P) et `d218df4` (`VP0-2026-09-28` : C2/C3, ε, IC, P3), toutes deux **avant** les runs |
+| Code | `08d7076` puis `fadadad` : `vpp/fidelity.py`, `vpp/replay.py`, `vpp/event_study.py`, tolérance ε, IC bootstrap mensuel. Tests `tests/vpp` + research_lab/vp2/vp3 : **73 verts** |
+| Rapport | [`VP-P-REPORT.md`](./VP-P-REPORT.md) **v2** ; v1 archivée dans `vpp-artifacts/v1/` |
+| Artefacts | `vpp-artifacts/` : `vpp_results.json`, `vpp_r1_trades.json`, `vpp_r4_trades.json` (référence « B7-P » pour RS), `vpp_fidelity_c2.json`, `vpp_fidelity_c3.json`, `vpp_p3_event_study.json`, `vpp_p3_posthoc_momentum.json` |
+| Correctif produit #161 | `92351f8` : la navigation dans le screener (UI ou agent, tout TF) ne pilote plus le paper ; `auto_timeframes=["1h"]` ; marqueur `BEHAVIOR_CHANGE` au 1ᵉʳ cycle. Tests screener 38/38. **Non déployé.** Aucune position ouverte en prod (lecture seule, 2026-09-28) |
+| Equity mensuelle | `f27e907` : `vpp-artifacts/vpp_equity_monthly.json` (R4 et R1, fin de mois), demandée par la session RS pour RS-D1 D3 ; même run, même résultat |
+| Données | `IchiVol-vpp\ichivol-app\engine\vpp\data\` (gitignored ; Vision 2020-09 → 2024-12 + cache des signaux). Rien de 2025/2026 |
+
+### Résultats v2 (pour mémoire)
+- **Fidélité : suffisante** pour le cœur crypto 1h.
+  - C2 : 100 % d'accord sur 552 BUY + 300 cas limites, ATR identique.
+  - C3 (vrai moteur paper) : 100 %, 100 % et 97,5 % des trades identiques, equity à 0,0015 %.
+- **Capital R1 :** 5 000 → 1 876 € (−62,5 %), 7 plis négatifs, espérance −0,17 R [−0,24 ; −0,10]. Le **brut** par trade [−0,25 ; +0,03] % **contient 0** : ce sont les coûts qui rendent la perte certaine.
+- **2R :** 29,9 % des trades = exactement les 857 sorties à l'objectif (l'écart v1 venait d'une comparaison flottante).
+- **P3 :** aucun horizon favorable. Les BUY font **moins bien** que des barres au hasard du même actif et du même mois (−0,29 à −0,98 pt) ; au-dessus de +0,01 pt (24 h) et +0,13 pt (96 h), un avantage est exclu. **Optimisation de l'entrée B7 suspendue.**
+- **Seule piste restante :** BN (déjà pré-enregistré, séparé). Aucun changement de taille ni de filtre.
+
+### Coordination
+- Session RS (« ichivol-e9 ») : pilote RS et les amendements RS. Je n'écris pas dans ses blocs ; elle n'écrit pas dans les miens (P, P1–P3, `VP0-2026-09-27b/28`). Interfaces gelées pour RS-D1 : options de `sim.py`, champs `Trade`, `paper_rules` / `paper_costs`.
+- `stash@{0}` du dépôt principal (« wip-off-156-branch ») contient une ancienne copie de mes fichiers et des `.tmp-*.err` de l'autre agent : **ne pas le supprimer sans accord**.
+
+---
+
+## 2026-09-27 nuit — Claude local : VP-P « paper fidèle » livré (PR draft) · PRIORITÉ recadrée par Samir
+
+**Branche :** `claude/vp-p-paper-fidele` (worktree séparé `IchiVol-vpp`) · **PR draft [#159](https://github.com/samiriggui-code/IchiVol/pull/159)** · **aucun merge sans revue**.
+
+### Recadrage Samir (2026-09-27) — opposable
+1. **Priorité = simuler fidèlement le paper réel** (tailles, capital commun, sorties, coûts) et diagnostiquer entrées / sorties / filtres. Pas de réduction du problème au « manque de trades ».
+2. **BN (bouclier) reste une expérience séparée** (PR #157, rapport et verdict propres). « Bouclier validé » ≠ rentabilité du paper.
+3. **BM à 100 % du cash = variante à allocation normalisée**, elle ne représente pas le paper (précision écrite dans l'amendement P.0, aucune règle M/N changée).
+4. Validation 2025 et holdout 2026 **intacts** ; aucun nouvel indicateur / réglage sans problème observé + test pré-enregistré distinct.
+
+### Livré
+| Commit | Contenu |
+|--------|---------|
+| `e745f73` | Amendement `VP0-2026-09-27b` (Question P, **pré-enregistré avant run**) · audit [`VP-P-PAPER-REEL.md`](./VP-P-PAPER-REEL.md) (code + base prod en lecture seule) · ledger +2 lignes diag. |
+| `da8dab5` | `research_lab/sim.py` options opt-in (`cost_by_symbol`, `levels_anchor`, `gate_equity`, `min_fill_fraction`, MFE/MAE) — **défauts inchangés**, tests research_lab/vp1/vp2/vp3/paper verts · paquet `vpp/` · `tests/vpp` |
+| suivant | Runs R1–R4, C1, contexte → [`VP-P-REPORT.md`](./VP-P-REPORT.md) + `vpp-artifacts/` |
+
+### Résultat court (dev 2021-07 → 2024-12, 20 cryptos, capital commun 5 000 €)
+- **5 000 → 1 876 € (−62,5 %), DD −64 %, 2 867 trades, 7/7 plis négatifs** (continu et réinitialisé), seeds 0–4 identiques, adverse −80,6 %.
+- Brut déjà négatif (−0,04 R/trade) ; coûts ≈ 0,13 R/trade. Rendement après BUY ≈ dérive normale de l'actif (1–24 h) → **problème principal = information du signal d'entrée**.
+- Plafond 10 %/position **toujours** atteint → exposition moyenne 7,9 % : seconde limite (taille), indépendante.
+- MTF 4h **ne bloque jamais** un BUY (WATCH seulement) — écart vs descriptions.
+- Prod : les scans UI 15m/4h/1d **ouvrent des positions paper automatiques** (8/39 la 1ʳᵉ semaine).
+
+### Prochaine étape proposée (NON lancée, à pré-enregistrer si Samir valide)
+**P3 = étude d'événement** BUY vs barres aléatoires même actif / même mois, h = 24/48/96/168, IC bootstrap blocs, dev seulement. Si rien ne passe → on arrête d'optimiser l'entrée B7. Sinon **un** test de sortie à l'horizon trouvé.
+
+### ⚠️ Incident dépôt local (2026-09-27 ~22h)
+Un autre agent travaille dans `C:\laragon\www\IchiVol` : changements de branche, `git stash`, `git reset --hard`. Mes premières modifications ont été mises dans **`stash@{0}` (« wip-off-156-branch »)** — tout a été restauré dans le worktree, **ce stash n'a pas été supprimé** (il contient aussi des `.tmp-*.err` de l'autre agent). Les modifications de `sim.py` avaient été effacées par un `reset --hard` et ont été refaites. **Règle proposée :** un worktree par agent.
+
 
 ---
 

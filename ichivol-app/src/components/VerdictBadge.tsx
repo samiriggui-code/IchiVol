@@ -1,7 +1,9 @@
 import { Fragment } from 'react'
 import { labelDecision, labelPipelineGate } from '../lib/decisionLabels'
 import type { DecisionLabel, DecisionPipelinePayload } from '../lib/decisions'
+import { isActionableBuySell } from '../lib/vpValidationCopy'
 import { asGate, decisionTone, gateTone } from '../lib/verdict'
+import { VpValidationBadge } from './VpValidationBadge'
 
 interface Props {
   decision: DecisionLabel | string
@@ -12,6 +14,7 @@ interface Props {
 
 export function VerdictBadge({ decision, pipeline, hideDiagnostic, variant = 'cell' }: Props) {
   const gate = asGate(pipeline?.decision as string | undefined)
+  const showVp = isActionableBuySell(gate) || (!gate && isActionableBuySell(decision))
 
   if (gate) {
     const diagClass = variant === 'detail' ? 'decision-detail-diag muted' : 'decision-cell-diag muted'
@@ -26,6 +29,7 @@ export function VerdictBadge({ decision, pipeline, hideDiagnostic, variant = 'ce
         <span className={`bias bias-${gateTone(gate)}`} title={`Portes · ${gate}`}>
           {labelPipelineGate(gate)}
         </span>
+        {showVp ? <VpValidationBadge compact={variant === 'cell'} /> : null}
         {!hideDiagnostic && (
           <span
             className={diagClass}
@@ -39,11 +43,14 @@ export function VerdictBadge({ decision, pipeline, hideDiagnostic, variant = 'ce
   }
 
   return (
-    <span
-      className={`bias bias-${decisionTone(decision)}`}
-      title={`Combiner (pas de pipeline) · ${decision}`}
-    >
-      {labelDecision(decision as DecisionLabel)}
+    <span className="decision-cell-stack">
+      <span
+        className={`bias bias-${decisionTone(decision)}`}
+        title={`Combiner (pas de pipeline) · ${decision}`}
+      >
+        {labelDecision(decision as DecisionLabel)}
+      </span>
+      {showVp ? <VpValidationBadge compact={variant === 'cell'} /> : null}
     </span>
   )
 }

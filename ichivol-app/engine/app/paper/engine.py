@@ -368,8 +368,61 @@ def sync_position(
     return position
 
 
+BEHAVIOR_CHANGE_EVENT = "BEHAVIOR_CHANGE"
+AUTO_TIMEFRAMES_CHANGE = "auto_timeframes_only"
+
+
+def auto_timeframes(profile: dict[str, Any] | None) -> tuple[str, ...]:
+    """Timeframes a profile trades automatically. Missing key = the 1h strategy only (2026-09-28)."""
+    return tuple((profile or {}).get("auto_timeframes") or ("1h",))
+
+
+def mark_auto_timeframes_change() -> bool:
+    """Journal once per syncable portfolio the date from which UI scans stopped driving the paper strategy.
+
+    History is left untouched: earlier positions keep their real timeframe/source. Returns False on a DB error
+    (the caller retries on the next cycle)."""
+    from app.db.models import PaperJournalEvent
+    from app.db.session import SessionLocal
+
+    session = SessionLocal()
+    try:
+        for pf in ensure_syncable_portfolios(session):
+            payloads = session.execute(
+                select(PaperJournalEvent.payload).where(
+                    PaperJournalEvent.portfolio_id == pf.id,
+                    PaperJournalEvent.event_type == BEHAVIOR_CHANGE_EVENT,
+                )
+            ).scalars().all()
+            if any((p or {}).get("change") == AUTO_TIMEFRAMES_CHANGE for p in payloads):
+                continue
+            session.add(PaperJournalEvent(
+                portfolio_id=pf.id, position_id=None, event_type=BEHAVIOR_CHANGE_EVENT,
+                payload={
+                    "change": AUTO_TIMEFRAMES_CHANGE,
+                    "auto_timeframes": list(auto_timeframes(pf.strategy_profile)),
+                    "effective_at": datetime.now(timezone.utc).isoformat(),
+                    "before": "a screener scan on any timeframe (UI / agent channel) also synced paper positions",
+                    "after": "only the background loop on the profile's auto_timeframes opens/closes auto positions; "
+                             "stop/target protection and explicit manual actions unchanged",
+                    "doc": "docs/VP-P-PAPER-REEL.md",
+                },
+                created_at=datetime.now(timezone.utc),
+            ))
+        session.commit()
+        return True
+    except Exception:
+        session.rollback()
+        return False
+    finally:
+        session.close()
+
+
 def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]:
-    """Reuse screener rows; size when ATR stop is present; sync all syncable portfolios."""
+    """Reuse screener rows; size when ATR stop is present; sync all syncable portfolios.
+
+    A portfolio only acts on rows of its ``auto_timeframes`` (default 1h): other timeframes never open, close or
+    manage its positions here (their stop/target stays watched by app/paper/protection.py)."""
     try:
         portfolios = ensure_syncable_portfolios(session)
     except Exception:
@@ -436,6 +489,8 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
 
         for portfolio in portfolios:
             profile = portfolio.strategy_profile or {}
+            if row.timeframe not in auto_timeframes(profile):
+                continue
             det_key = (
                 ",".join(profile.get("structure_detectors") or []),
                 str(profile.get("structure_filter")),

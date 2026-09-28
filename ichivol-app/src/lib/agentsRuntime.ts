@@ -136,6 +136,91 @@ export async function createAgentMission(
   return (await res.json()) as CreateMissionResult
 }
 
+/** AG-S1 — fiches analystes déterministes (observe-only, via proxy engine). */
+export type AnalystStage = 'DIR' | 'PART' | 'STRUCT' | 'LOC' | 'REGIME'
+
+export const ANALYST_STAGES: readonly AnalystStage[] = [
+  'DIR',
+  'PART',
+  'STRUCT',
+  'LOC',
+  'REGIME',
+] as const
+
+export const ANALYST_STAGE_LABELS: Record<AnalystStage, string> = {
+  DIR: 'Direction',
+  PART: 'Participation',
+  STRUCT: 'Structure',
+  LOC: 'Location',
+  REGIME: 'Régime',
+}
+
+export type AnalystCard = {
+  feature: string
+  stage: AnalystStage
+  symbol: string
+  timeframe: string
+  as_of: number
+  value: unknown
+  state: string
+  known_at: number
+  feature_status: string
+  decision_role: string
+  used_by_decision: boolean
+  validation_status: string
+  text: string
+  engine_version: string
+}
+
+export type AnalystCardsResponse = {
+  symbol: string
+  timeframe: string
+  as_of: number | null
+  stage?: AnalystStage | null
+  stages?: AnalystStage[]
+  cards: AnalystCard[]
+  count: number
+  observe_only?: boolean
+  used_by_decision?: boolean
+  engine_version?: string
+}
+
+export type SessionsCalendarResponse = {
+  as_of_utc: string
+  crypto_24_7: boolean
+  open_count: number
+  open_sessions: Array<{ key: string; label: string; session_id: string }>
+  next_open: {
+    key: string
+    label: string
+    open_utc: string
+    open_local: string
+    session_id: string
+  } | null
+  next_daily_close_utc: string
+}
+
+export async function fetchAnalystCards(
+  symbol: string,
+  timeframe: string,
+): Promise<AnalystCardsResponse> {
+  const q = new URLSearchParams({
+    symbol: symbol.trim().toUpperCase(),
+    timeframe,
+  })
+  const res = await fetch(`/api/engine/agents/analyst-cards?${q}`, {
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error(await parseError(res))
+  return (await res.json()) as AnalystCardsResponse
+}
+
+export async function fetchSessionsCalendar(): Promise<SessionsCalendarResponse> {
+  const res = await fetch('/api/engine/sessions', { credentials: 'include' })
+  if (!res.ok) throw new Error(await parseError(res))
+  return (await res.json()) as SessionsCalendarResponse
+}
+
 export function statusBadgeTone(
   status: AgentRoleStatus | string,
 ): 'green' | 'amber' | 'red' | 'gray' {

@@ -7,7 +7,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PaperCloseConfirmSheet } from '../components/PaperCloseConfirmSheet'
+import { VpValidationBadge } from '../components/VpValidationBadge'
 import { ChartIntelligencePanel } from '../components/chart-intelligence'
+import { isActionableBuySell } from '../lib/vpValidationCopy'
 import {
   concentrationFromPositions,
   drawdownFromCurve,
@@ -701,7 +703,8 @@ export function PortfolioPage() {
                 : 'Ouverte après votre confirmation.'}{' '}
               Entrée le {new Date(fiche.entry_time).toLocaleString('fr-FR')} à{' '}
               {fmtPx(fiche.entry_price)}.
-              {fiche.entry_decision ? ` Signal : ${fiche.entry_decision}.` : ''}
+              {fiche.entry_decision ? ` Signal : ${fiche.entry_decision}.` : ''}{' '}
+              {isActionableBuySell(fiche.entry_decision) ? <VpValidationBadge /> : null}
             </p>
             <div className="ci-embed">
               <ChartIntelligencePanel

@@ -1,0 +1,52 @@
+/* UI-VP-BADGE — esprit NON_VALIDE AW1 (ci-tag gray / ambre, pas rouge) */
+
+.vp-validation-badge {
+  display: inline-block;
+  font: 600 10px 'DM Mono', ui-monospace, monospace;
+  letter-spacing: 0.4px;
+  padding: 4px 7px;
+  border-radius: 4px;
+  border: 1px solid #e2dfd6;
+  background: #f0efeb;
+  color: #8a7a55;
+  text-decoration: none;
+  white-space: nowrap;
+  vertical-align: middle;
+  line-height: 1.2;
+  max-width: 100%;
+  cursor: help;
+}
+
+.vp-validation-badge:hover,
+.vp-validation-badge:focus-visible {
+  border-color: #d4c9a8;
+  background: #faf0df;
+  color: #a8782a;
+  outline: none;
+}
+
+.vp-validation-badge.is-compact {
+  font-size: 9px;
+  padding: 2px 5px;
+  letter-spacing: 0.3px;
+}
+
+html.dark .vp-validation-badge {
+  border-color: #2e323a;
+  background: #22262f;
+  color: #b8a882;
+}
+
+html.dark .vp-validation-badge:hover,
+html.dark .vp-validation-badge:focus-visible {
+  border-color: #5a4a2e;
+  background: #2a2418;
+  color: #e8b86d;
+}
+
+@media (max-width: 640px) {
+  .vp-validation-badge {
+    font-size: 9px;
+    padding: 3px 6px;
+  }
+}

@@ -8,6 +8,7 @@ import { claimDue, failTask, reconcileStaleTasks } from '../tasks.js'
 import { writeAgentLog } from '../agentLog.js'
 import { TASK_CLAIM_BATCH, TASK_WORKER_INTERVAL_MS } from '../taskConfig.js'
 import { processClaimedTask } from './missionRunner.js'
+import { ensureSessionSnapshotTasks } from '../sessionSnapshots.js'
 
 export type DrainSummary = {
   released: number
@@ -21,6 +22,15 @@ export type DrainSummary = {
 
 export async function drainDueTasks(): Promise<DrainSummary> {
   const { released, retired } = await reconcileStaleTasks()
+  // AG-S1 — planifie snapshots à ouverture session +60 s (idempotent).
+  try {
+    await ensureSessionSnapshotTasks()
+  } catch (err) {
+    console.warn(
+      '[agent-runtime] ensureSessionSnapshotTasks failed:',
+      err instanceof Error ? err.message : err,
+    )
+  }
   const claimed = await claimDue(TASK_CLAIM_BATCH)
   let completed = 0
   let deferred = 0

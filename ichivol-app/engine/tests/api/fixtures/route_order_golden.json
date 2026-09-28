@@ -577,6 +577,34 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/sessions",
+    "endpoint": "get_sessions"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/agents/analyst-cards",
+    "endpoint": "get_analyst_cards"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/agents/analyst-snapshots",
+    "endpoint": "post_analyst_snapshot"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/agents/analyst-snapshots",
+    "endpoint": "get_analyst_snapshot_route"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/health",
     "endpoint": "health"
   }

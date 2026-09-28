@@ -42,30 +42,36 @@ async function fetchEngineJson<T>(path: string): Promise<T | null> {
   }
 }
 
-/** FX session windows — same venues as front marketSessions (server-side copy). */
-function countOpenFxSessions(now = new Date()): number {
-  const defs: Array<{ tz: string; open: number; close: number }> = [
-    { tz: 'Asia/Tokyo', open: 9, close: 18 },
-    { tz: 'Europe/London', open: 8, close: 17 },
-    { tz: 'America/New_York', open: 9.5, close: 16 },
-  ]
-  let open = 0
-  for (const d of defs) {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: d.tz,
-      weekday: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-      hourCycle: 'h23',
-    }).formatToParts(now)
-    const wd = parts.find((p) => p.type === 'weekday')?.value ?? ''
-    if (wd === 'Sat' || wd === 'Sun') continue
-    const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? 0)
-    const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? 0)
-    const h = hour + minute / 60
-    if (h >= d.open && h < d.close) open += 1
+type EngineSessionsPayload = {
+  open_count?: number
+  open_sessions?: Array<{ label?: string; key?: string }>
+  next_open?: { open_utc?: string; label?: string } | null
+}
+
+async function fetchEngineSessions(): Promise<{
+  openSessions: number | null
+  openSessionLabels: string[] | null
+  nextSessionOpenAt: string | null
+  nextSessionOpenLabel: string | null
+}> {
+  const data = await fetchEngineJson<EngineSessionsPayload>('/api/engine/sessions')
+  if (!data) {
+    return {
+      openSessions: null,
+      openSessionLabels: null,
+      nextSessionOpenAt: null,
+      nextSessionOpenLabel: null,
+    }
   }
-  return open
+  const labels = (data.open_sessions ?? [])
+    .map((s) => s.label || s.key || '')
+    .filter(Boolean)
+  return {
+    openSessions: typeof data.open_count === 'number' ? data.open_count : labels.length,
+    openSessionLabels: labels,
+    nextSessionOpenAt: data.next_open?.open_utc ?? null,
+    nextSessionOpenLabel: data.next_open?.label ?? null,
+  }
 }
 
 async function llmKeyPresentForUser(userId: string | undefined): Promise<boolean | null> {
@@ -97,6 +103,7 @@ async function gatherRoleSignals(userId?: string): Promise<RoleSignals> {
     riskLock,
     positions,
     llmKey,
+    sessions,
   ] = await Promise.all([
     db.agentTask.count({
       where: {
@@ -141,6 +148,14 @@ async function gatherRoleSignals(userId?: string): Promise<RoleSignals> {
         )
       : Promise.resolve(null),
     llmKeyPresentForUser(userId),
+    health.engine
+      ? fetchEngineSessions()
+      : Promise.resolve({
+          openSessions: null,
+          openSessionLabels: null,
+          nextSessionOpenAt: null,
+          nextSessionOpenLabel: null,
+        }),
   ])
 
   let openPaper: number | null = null
@@ -158,7 +173,10 @@ async function gatherRoleSignals(userId?: string): Promise<RoleSignals> {
         ? riskLock.kill_switch_armed
         : null,
     openPaperPositions: openPaper,
-    openSessions: countOpenFxSessions(),
+    openSessions: sessions.openSessions,
+    openSessionLabels: sessions.openSessionLabels,
+    nextSessionOpenAt: sessions.nextSessionOpenAt,
+    nextSessionOpenLabel: sessions.nextSessionOpenLabel,
     eveOpenTasks: openTasks,
     eveLeasedTasks: leasedTasks,
     eveRecheckOpen: recheckOpen,

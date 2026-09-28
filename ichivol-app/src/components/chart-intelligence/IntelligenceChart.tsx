@@ -285,6 +285,8 @@ export function IntelligenceChart({
     })
     ro.observe(el)
     chart.timeScale().subscribeVisibleLogicalRangeChange(bump)
+    // Désélection fond uniquement — les hits SVG appellent onSelect à part
+    // (garde anti-course côté ChartIntelligencePanel si les deux partent).
     const onClick = () => onBgRef.current?.()
     chart.subscribeClick(onClick)
     // Le drag de l'échelle de prix n'émet pas d'événement : on suit le pointeur.
