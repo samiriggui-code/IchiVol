@@ -13,18 +13,25 @@ PROTOCOL_VERSION = "VP0-2026-09-26"
 WARMUP_BARS = 52 + 26
 
 STRATEGIES: tuple[str, ...] = ("B0", "B1", "B2", "B5", "B6", "B7")
+# VP-S1 Bouclier (amendement VP0-2026-09-27) — N T10b +12 → 48
+SHIELD_STRATEGIES: tuple[str, ...] = ("BM", "BN")
 
 RVOL_WINDOW = 20
 RVOL_MIN = 1.5
 
 HTF_MAP: dict[str, str] = {"1h": "4h", "4h": "1d"}
 
+# DSR reporté pour M/N (non bloquant) — N après ledger BM/BN
+N_T10B_SHIELD = 48
+
 __all__ = [
     "HTF_MAP",
+    "N_T10B_SHIELD",
     "PROTOCOL_ID",
     "PROTOCOL_VERSION",
     "RVOL_MIN",
     "RVOL_WINDOW",
+    "SHIELD_STRATEGIES",
     "STRATEGIES",
     "WARMUP_BARS",
 ]

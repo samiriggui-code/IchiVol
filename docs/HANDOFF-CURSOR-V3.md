@@ -1,38 +1,164 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
-## 2026-09-28 — Revue Claude #162 CHANGES REQUESTED → corrections poussées (STOP)
+## 2026-09-28 — Cursor : point 3 FAIT — #142 rebasé sur main (STOP revue · pas de deploy)
 
-Branche `cursor/ag-s01-a2fe` / PR [#162](https://github.com/samiriggui-code/IchiVol/pull/162).
+**PR [#142](https://github.com/samiriggui-code/IchiVol/pull/142)** `cursor/mobile-tabbar-clearance-a2fe` @ `a8436cc`.
 
-### BLOQUANT 1 — MTF lookahead (`_mtf_direction_card`)
-- Instant de décision = `as_of + durée TF bas`.
-- Garder HTF seulement si `htf.time + durée TF haut <= décision`.
-- `known_at` = clôture de la dernière HTF gardée (`htf.open + htf_dur`).
-- Tests : `test_truncation_cards_identical_at_as_of_1h_to_4h`, `_4h_to_1d` (troncature mid-HTF) + `test_mtf_excludes_forming_4h_at_1300`.
+- Rebase sur `main` (@ `e170822` / post-#159+#161) : **5/5 commits sans conflit**.
+- Contenu : `--dash-tabbar-clearance` 7.5rem + dialog/fiche z=60 + dark Preuves/Pipeline.
+- Croisement avec tip backup `804f40e`→`e92c43f` (mêmes patches cherry-pickés hier) : **pas de conflit de rebase** ; tip PR = source de vérité pour merge.
+- `npx tsc -b` : **0** (exclude `*.test.ts` comme #156).
+- **Aucun déploiement** (décision Samir ; `main` porte #159/#161 non encore en prod).
 
-### BLOQUANT 2 — screener AST
-- `test_no_screener_string_call_in_analyst_cards` inspecte les appels AST (http/fetch/get + chaînes URL), **pas** les docstrings (qui peuvent mentionner `/screener`).
+**STOP → revue Claude.** Suite file = point 4 (#158 → #157 → CI-LIQ-CONF → #162).
 
-### Non bloquant
-- `oi_funding.known_at` = wall-clock du fetch Binance Futures (pas `as_of`). Sur cet environnement cloud, `fapi.binance.com` renvoie **451** → fiche OI/funding `UNKNOWN` (OHLCV Binance spot OK).
+---
 
-### Suite lancée avant push
-| Suite | Résultat |
-|-------|----------|
-| `pytest` (Postgres) | **1279 passed** |
-| `npm test` (server) | **68 passed** (nécessite `DATABASE_URL` + Prisma) |
-| `npx tsc -b` (front) | **échec préexistant sur main** (`chartIntelligencePacks.test.ts` / types `node:` + cast) — hors #162 |
+## 2026-09-28 — Cursor : point 2 FAIT — séparation #156 / inspector / #158 / typo (STOP)
 
-### Preuve PR (réelle)
-- JSON live : `docs/ag-s01-proof/analyst-cards-btcusdt-1h-live.json` (provider binance, BTCUSDT 1h).
-- Captures page Agents auth (clair) : `docs/ag-s01-proof/agents-analystes-clair-desktop.png` + `…-mobile-390.png` (section Analystes groupée par étape).
+| Branche / PR | Contenu | `npx tsc -b` | État |
+|--------------|---------|--------------|------|
+| **#156** `cursor/ui-vp-badge-a2fe` @ `0ae1478` | Badge seul. Route `/capture/vp-badge`, `VpBadgeCapturePage`, `capture-ui-vp-badge.mjs` **absents**. PNG légendés. | **0** | STOP revue Claude → merge |
+| **#163** `cursor/ci-inspector-fix` @ `5dc8f16` | Inspector shelves / Why / BOS·CHOCH (extrait du backup local) | **0** (exclude `*.test.ts`) | draft — STOP revue Claude |
+| **#158** `cursor/fix-paper-sheet-stack` @ `08f19c5` | + `PaperConfirmSheet` ot-cards densifié | **0** | draft — STOP revue Claude |
+| **#164** `cursor/ui-typo-scale` @ `cc61384` | rem chrome 16px + corps pages 11px — **sans #142** | **0** | draft — **pas de merge sans OK visuel Samir** |
 
-### Hors périmètre #162 (inchangé)
-- 3 tests API déjà en échec sur main (`test_backtest_evidence_route` ×2, `test_chart_objects_non_engine_sources_empty`) — ticket séparé. *Note : sur ce run local Postgres ils sont passés dans la suite 1279 ; ne pas confondre avec un fix #162.*
-- Liquidity/Confluence cards : **après** merge CI-LIQ-CONF, commit séparé sur #162.
+Source locale : `backup/ui-vp-local-e92c43f`. Producteurs LIQ/CONF (`777c2d5`) **non** portés ici → file **CI-LIQ-CONF** (point 4).
 
-### File reprise (STOP ici sur #162)
-**#156 merge** (route publique retirée, vérifié) → **#158 merge** → **#157** corrections S1-R1/S1-R2 puis STOP → **CI-LIQ-CONF**. Quand CI-LIQ-CONF est mergé → fiches Liquidity/Confluence (STRUCT/LOC) en commit séparé sur #162.
+**STOP point 2.** Suite = point 3 (#142 rebase sur main, pas de deploy).
+
+---
+
+## 2026-09-28 — Cursor : point 1 FAIT — 0 position paper ouverte (STOP)
+
+**VPS prod** `ichivol_engine` · portefeuille `ICHIVOL_BASELINE_V1` · lecture seule avant action.
+
+### Avant (inventaire)
+
+| id | symbole | TF | origine | entrée | taille | PnL latent |
+|----|---------|----|---------|--------|--------|------------|
+| — | — | — | — | — | — | — |
+
+**0 ligne OPEN.** Aucune clôture `POST /paper/positions/{id}/close` nécessaire (mécanisme normal non invoqué faute de cible).
+
+Répartition historique (44 CLOSED) : dernières sorties déjà en `stop_hit` / `direction_flipped` / `manual_close` (ex. NEARUSDT 1h auto stop 2026-09-27 22:11 UTC).
+
+### Après
+
+| id | symbole | TF | exit | PnL réalisé | note |
+|----|---------|----|------|-------------|------|
+| — | — | — | — | — | rien à fermer |
+
+- Positions OPEN restantes : **0** (revérifié ~45 s plus tard).
+- Equity / cash portefeuille : cash **4858.97 €** · realized_pnl **−141.03 €** · initial **5000 €** (cash = equity faute d’OPEN).
+- Paramétrage : **non touché**.
+- Réouverture immédiate : **aucune** observée. ⚠️ VPS tourne encore sur tip `e92c43f` (`backup/ui-vp-local-e92c43f`) — **#161 pas déployé** en prod ; la boucle auto peut encore ouvrir hors 1h jusqu’au déploiement de `main`.
+
+**STOP point 1.** Suite = point 2 (séparation #156).
+
+---
+
+## 2026-09-28 journée — Claude → Cursor : décisions de Samir (à traiter en premier)
+
+Traiter **dans cet ordre**, avec un **STOP** et un rapport dans ce handoff après chaque point.
+
+### 1. Fermer toutes les positions paper ouvertes (décision de Samir)
+
+- Fermer **toutes** les positions paper ouvertes : auto et manuelles, tous les timeframes (15m, 1h, 4h, 1d).
+- Utiliser le mécanisme de clôture normal du paper, au prix de marché courant. **Aucune écriture directe en base.**
+- **Avant de fermer**, relever la liste : symbole, timeframe, origine auto/manuelle, prix d'entrée, taille, PnL latent.
+- **Après**, relever les prix de sortie, le PnL réalisé, l'equity finale, et vérifier qu'il reste **0 position ouverte**.
+- Mettre les deux listes ici.
+- **Ne pas toucher au paramétrage** : avec #161, le paper ne peut rouvrir qu'en 1h, par la boucle de fond. Si une position rouvre juste après, la signaler, ne pas la fermer en boucle.
+
+### 2. Séparer le travail local de `cursor/ui-vp-badge-a2fe`
+
+- #156 ne garde que le badge. Retirer la route publique `/capture/vp-badge`, `VpBadgeCapturePage.tsx` et `scripts/capture-ui-vp-badge.mjs`. Garder les PNG, légendés « rendu composant, données fictives ».
+- L'inspecteur CI part sur la branche `cursor/ci-inspector-fix`.
+- Le ticket paper redessiné part sur #158.
+- La typo globale 11px part sur `cursor/ui-typo-scale` : PR draft, **pas de merge sans validation visuelle de Samir**.
+- Pour chaque branche, vérifier `npx tsc -b` (pas `-p .`).
+
+### 3. #142 (CSS mobile qui tourne en prod sans être mergé)
+
+- Rebaser #142 sur `main` (@ `2362025` ou plus récent) et vérifier qu'il n'entre pas en conflit avec les correctifs de marge de la barre d'onglets mobile (`804f40e` à `e92c43f`).
+- Ouvrir ou mettre à jour la PR, puis **STOP pour revue Claude**.
+- **Aucun déploiement** : c'est une décision de Samir, et `main` contient maintenant #159 et #161, qui ne sont pas encore en prod.
+
+### 4. Reprise de la file normale
+
+- #158 → #157 (corrections S1-R1 / S1-R2) → CI-LIQ-CONF → #162 (**avec la correction « retirer les fiches live de Agents »**, voir spec AG-S2) → AG-S2 (spec ci-dessous).
+- STOP après chaque PR, pas de merge sans verdict Claude.
+
+### 5. Ticket non bloquant, en fin de file
+
+- `vpp/replay.py` doit refuser de tourner si `DATABASE_URL` ne pointe pas sur `127.0.0.1` ou `localhost`, avec un test.
+
+**Rappel :** `claude/rs-d1` (Donchian 4h) arrivera en PR draft pour **ta revue** (rôles inversés). Ne pas la modifier, ne lancer aucun run.
+
+---
+
+## 2026-09-28 journée — SPEC AG-S2 « Brief d'ouverture » + répartition Agents / Marché / fiche / Copilot
+
+**Ordre :** après la revue et le merge de #162 (AG-S0/S1). Branche `cursor/ag-s2-a2fe`, PR draft → **STOP → revue Claude**. AG-S3 (LLM) reste interdit sans OK de Samir.
+
+### Principe de répartition (validé avec Samir)
+
+| Lieu | Rôle | Interdit |
+|---|---|---|
+| **Agents** (`AgentsPage`) | Atelier : créer et paramétrer un agent (rôle, outils, ce qu'il écrit en base, déclencheur), voir ses tâches et son audit | Aucune analyse live |
+| **Marché** (`MarketPage`) | Cockpit de lecture : **5 portes max** (DIR, PART, STRUCT, LOC, REGIME) + le brief d'ouverture. Chaque porte = **2 à 4 lignes + 1 badge d'état** + lien « Analyse complète » | Aucune configuration d'agent, aucun texte long |
+| **Fiche « Analyse complète »** | Profondeur d'une porte : toutes les fiches AG-S1 de l'étape, historique des snapshots, chiffres | — |
+| **Copilot** (`/app/agent`) | Question sur un point précis via « Demander à Eve sur ce point » | **Jamais de chat vide** : le lien emporte toujours le snapshot |
+
+Règles strictes :
+- **un agent = une porte** sur Marché, pas plusieurs bulles qui votent ;
+- tout est `NON_VALIDE`, `used_by_decision=False` (VP3 : 0 EDGE / 48) ;
+- chaque lien Copilot réutilise `copilotPrompts.ts` / `useCopilotNav` et injecte `{symbol, timeframe, stage, session_id, as_of, snapshot_id, chiffres clés}`. Eve répond **à partir du snapshot**, elle ne recalcule pas.
+
+**Correction demandée sur #162 (décision Samir, 2026-09-28) — à faire AVANT le merge de #162 :**
+- **Retirer** de `AgentsPage` la section « Analystes » live (grille des fiches, sélecteur symbole / TF, valeurs d'indicateurs).
+- **Garder** sur Agents uniquement une carte « Agent analyste » : déclencheur (ouverture de session + 60 s), univers, dernier run (OK / reporté + raison), nombre de snapshots. **Aucune valeur de marché.**
+- **Ne rien toucher côté moteur** : `analyst_cards.py`, `analyst_snapshot`, routes `/agents/analyst-cards` et `/agents/analyst-snapshots`, AgentTask, tests. Tout reste tel quel.
+- Entre le merge de #162 et AG-S2, les fiches ne sont visibles que par l'API : c'est voulu (rien n'est déployé). Elles réapparaissent sur Marché et dans la fiche « Analyse complète » avec AG-S2.
+- Refaire les captures Agents (clair, desktop + mobile 390 px) et `npx tsc -b`, puis **STOP → revue Claude**.
+
+### AG-S2 — calculs (déterministes, sans LLM, barres closes seulement)
+
+Déclencheur : ouverture de chaque session AG-S0 (Asie, Europe, US), juste après la tâche AG-S1 (`kind=session_brief`, même file `AgentTask`). Univers : BTCUSDT / ETHUSDT / SOLUSDT.
+
+Référence « veille » = **dernière bougie 1d close** (clôture 00:00 UTC) connue à l'ouverture de la session.
+
+- `gap_pct` = (prix d'ouverture de session − clôture 1d veille) / clôture veille. Prix d'ouverture de session = open de la première bougie 1h de la session.
+- `gap_atr` = même écart / ATR(14) 1d de la veille.
+- `prev_high`, `prev_low`, `prev_range`, `prev_range_atr`.
+- `pos_in_prev_range` = (prix − low) / (high − low), borné à l'affichage avec un statut `au-dessus` / `dans` / `en-dessous`.
+- `session_prev_ref` : même mesures vs la session précédente (Europe vs Asie, US vs Europe).
+- `oi_delta_24h`, `funding_last` vs veille (même source que la fiche OI/funding AG-S1).
+- `stage_changes` : liste des portes dont l'état a changé depuis le snapshot AG-S1 de la session précédente.
+- Texte court déterministe (2 à 4 lignes), par exemple « Ouverture +1,2 % (0,4 ATR) au-dessus de la clôture d'hier, dans le haut du range d'hier (0,82). Régime inchangé, participation ↑. »
+
+### Stockage et routes
+
+- Table `session_brief` (migration alembic), unique `(session_id, symbol)`. Colonnes : les champs ci-dessus, `known_at`, `as_of`, `feature_status`, `validation_status=NON_VALIDE`, `used_by_decision=False`, `source_snapshot_ids`.
+- `GET /agents/session-briefs?symbol=&session_id=` (dernier par défaut).
+- Idempotence : relancer la tâche ne crée pas de doublon. Données pas fraîches → report + log, comme AG-S1.
+
+### UI
+
+- **Marché** : bandeau « Brief d'ouverture » (session en cours, 2 à 4 lignes, badge NON_VALIDE) + grille des 5 portes (résumé court par étape depuis `analyst-cards?stage=`) + « Analyse complète » + « Demander à Eve sur ce point ».
+- **Fiche Analyse complète** : route authentifiée (pas de route publique), paramètres `symbol`, `tf`, `stage`.
+- **Agents** : carte de l'agent « Brief d'ouverture » (déclencheur, dernier run, reports), sans chiffres de marché.
+
+### Tests exigés
+
+- Anti-lookahead : la clôture veille utilisée est toujours une bougie 1d **close** avant l'ouverture de session ; troncature des données → brief identique.
+- Heure d'été (Londres / New York), week-end = repère horaire, pas fermeture.
+- `pos_in_prev_range` : high = low (range nul) → pas de division par zéro.
+- Idempotence de la tâche ; aucun import paper / screener dans `app/agents` ni `app/sessions`.
+- Front : le lien Copilot contient bien le snapshot (test unitaire du prompt généré).
+- Goldens OpenAPI / `route_order` : ajout documenté. `pytest` Postgres + `npm test` + `npx tsc -b`.
+- **Preuve PR :** JSON brief BTCUSDT d'une vraie ouverture de session + captures **réelles** Marché et fiche (clair, desktop + mobile 390 px).
 
 ---
 
@@ -45,56 +171,11 @@ Branche `cursor/ag-s01-a2fe` / PR [#162](https://github.com/samiriggui-code/Ichi
 
 **Non déployé.** Le déploiement est une décision de Samir. **#142** (CSS mobile, en prod sans être mergé) doit être réglé avant tout déploiement.
 
-**Décision Samir (#161) :** positions auto déjà ouvertes sur 15m / 4h / 1d **restent ouvertes** et finissent sur leur stop ou leur objectif (`protection.py`). **Aucune fermeture manuelle.**
+**Point ouvert pour Samir :** positions auto déjà ouvertes sur 15m / 4h / 1d — les **garder** avec stop/objectif seulement, ou les **fermer à la main** ?
 
 **Non bloquant (ticket séparé, plus tard) :** `vpp/replay.py` doit refuser de tourner si `DATABASE_URL` n'est pas sur `127.0.0.1` / `localhost`.
 
 **File Cursor reprise :** #156 → #158 → #157 → CI-LIQ-CONF → AG-S0/S1. STOP après chaque PR.
-
----
-
-## 2026-09-28 — JOB AG-S0 + AG-S1 : Agents de session crypto (observe-only)
-
-**Ordre :** après CI-LIQ-CONF (#156 → #158 → #157 → CI-LIQ-CONF). Branche `cursor/ag-s01-a2fe`, PR draft → **STOP → revue Claude**. Pas de AG-S2/AG-S3 sans OK.
-
-**RÈGLES :** observe-only. Aucun appel LLM. Aucun effet sur pipeline, paper, gates, confidence, screener (`used_by_decision=False` partout). **N'appelle JAMAIS `/screener`** depuis ce code (déclenche sync paper, bug #161). Gel CI respecté : on lit les indicateurs existants, on n'en crée aucun. Liquidity/Confluence inclus seulement si CI-LIQ-CONF est mergé (détection via REGISTRY).
-
-### AG-S0 — Calendrier des sessions
-
-- Engine : `app/sessions/calendar.py` — Asie (`Asia/Tokyo` 09:00–18:00), Europe (`Europe/London` 08:00–17:00), US (`America/New_York` 09:30–16:00) via `zoneinfo` (DST), + clôture bougie 1d à 00:00 UTC.
-- Crypto 24/7 : le week-end reste un **repère horaire**, pas une fermeture.
-- Route `GET /api/engine/sessions` : sessions en cours, prochaine ouverture (UTC + locale), prochaine clôture 1d.
-- Server : carte « session » de `agentRoles.ts` lit cette route (fin du texte « non exposé côté API »).
-
-### AG-S1 — Fiches analystes déterministes
-
-- Engine : `app/agents/analyst_cards.py` — une fiche par indicateur CI : Ichimoku, RVOL, ATR/régime, ADX, Donchian, structure, FVG, impulsion/Fibonacci, location, OI/funding, CVD (+ Liquidity/Confluence si REGISTRY).
-- Réutilise `ichimoku_agent` / `rvol_agent`, passe par `REGISTRY` (T1e). OI/funding hors REGISTRY → fetch Binance Futures direct (pas screener).
-- Contrat fiche : `symbol`, `timeframe`, `as_of`, `value`, `state`, `known_at`, `feature_status`, `decision_role` (RS-01), `used_by_decision=False`, `validation_status=NON_VALIDE`, texte court déterministe.
-- Routes : `GET /agents/analyst-cards`, `POST|GET /agents/analyst-snapshots`.
-- Table `analyst_snapshot` (alembic `i5j6k7l8m9n0`) : `(session_id, symbol, tf)` unique ; AgentTask `kind=analyst_snapshot` à ouverture session **+60 s** ; univers BTCUSDT/ETHUSDT/SOLUSDT × 1h/4h ; fraîcheur → defer + log.
-- Front `AgentsPage` : section « Analystes » (grille, sélecteur symbole/TF, heure session, badge NON_VALIDE).
-
-
-### Complément AG-S1 (28/09) — champ ``stage``
-
-Chaque fiche porte ``stage ∈ {DIR, PART, STRUCT, LOC, REGIME}`` (table figée + test) :
-- **DIR** : Ichimoku + direction MTF 4h/1d
-- **PART** : RVOL, CVD, OI/funding
-- **STRUCT** : swings/BOS/CHOCH, FVG, impulsion/Fibonacci, Liquidity
-- **LOC** : location (VAH/VAL/POC, VWAP/AVWAP), Confluence
-- **REGIME** : ATR/régime, ADX, Donchian, cycle
-
-Route : ``GET /agents/analyst-cards?stage=``. Front : section Analystes **groupée par étape** (5 blocs).
-Raison AG-S3 (PAS à coder) : un agent Claude par étape, puis synthèse des 5 verdicts.
-
-### Tests (Claude — env déjà prêt)
-
-- Troncature / anti-lookahead ; `decision_role` ↔ RS-01 ; idempotence snapshot ; aucun import paper/screener depuis `app/agents/analyst_cards.py` et `app/sessions`.
-- Goldens OpenAPI / `route_order` : **ajout volontaire documenté** (sessions + analyst-cards/snapshots).
-- `pytest` (Postgres) + `npm test` (server) + `npx tsc -b` (front).
-- **Preuve PR :** JSON fiches BTCUSDT 1h + 1 capture **réelle** Agents (clair + mobile 390 px). Pas de page fabriquée, pas de route publique.
-
 
 ---
 
@@ -108,7 +189,6 @@ Raison AG-S3 (PAS à coder) : un agent Claude par étape, puis synthèse des 5 v
 | #158 `cursor/fix-paper-sheet-stack` | Cursor | VALIDÉ sous réserve de `tsc -b` | Merge |
 | #157 `cursor/vp-s1-a2fe` | Cursor | À corriger S1-R1 (BM, horizon 90 j + `force_flat`) / S1-R2 (doc) | Correction → STOP |
 | CI-LIQ-CONF | Cursor | Spec dans le handoff (3bbd6ed) | Après #157 |
-| **AG-S0+S1** `cursor/ag-s01-a2fe` | Cursor | PR draft — observe-only sessions + fiches | **STOP → revue Claude** (pas AG-S2/S3 sans OK) |
 | #159 `claude/vp-p-paper-fidele` | **Autre session Claude** (ichivol-cd) | C2 fait (100 % d'accord sur la décision) ; v2 (R1–R4, C3, P3) **en cours**, journal R4 livré « ce soir » | Revue finale Claude quand v2 est poussé |
 | #161 `claude/paper-auto-1h-only` | Autre session | Les scans UI ne synchronisent plus le paper (R4 produit). Non déployé | **Revue Claude à faire** ; déploiement = décision de Samir |
 | #160 `claude/rs-strategie` | Claude pilote RS | Docs RS-00 à RS-04, amendement `VP0-2026-09-28b`, ledger +1 | Revue par Samir puis merge (docs) |
@@ -160,6 +240,51 @@ Puis #158 → #157 → CI-LIQ-CONF.
 - Est-ce toi qui as demandé à Cursor les changements d'UI (typo 11px, ticket paper, inspecteur) ?
 - #161 (paper uniquement en 1h) : déploiement à décider après revue.
 - **#142** (CSS mobile) tourne en prod sans être mergé : à régler avant tout déploiement.
+
+---
+
+## 2026-09-28 — JOB AG-S0 + AG-S1 : Agents de session crypto (observe-only)
+
+**Ordre :** après CI-LIQ-CONF (#156 → #158 → #157 → CI-LIQ-CONF). Branche `cursor/ag-s01-a2fe`, PR draft → **STOP → revue Claude**. Pas de AG-S2/AG-S3 sans OK.
+
+**RÈGLES :** observe-only. Aucun appel LLM. Aucun effet sur pipeline, paper, gates, confidence, screener (`used_by_decision=False` partout). **N'appelle JAMAIS `/screener`** depuis ce code (déclenche sync paper, bug #161). Gel CI respecté : on lit les indicateurs existants, on n'en crée aucun. Liquidity/Confluence inclus seulement si CI-LIQ-CONF est mergé (détection via REGISTRY).
+
+### AG-S0 — Calendrier des sessions
+
+- Engine : `app/sessions/calendar.py` — Asie (`Asia/Tokyo` 09:00–18:00), Europe (`Europe/London` 08:00–17:00), US (`America/New_York` 09:30–16:00) via `zoneinfo` (DST), + clôture bougie 1d à 00:00 UTC.
+- Crypto 24/7 : le week-end reste un **repère horaire**, pas une fermeture.
+- Route `GET /api/engine/sessions` : sessions en cours, prochaine ouverture (UTC + locale), prochaine clôture 1d.
+- Server : carte « session » de `agentRoles.ts` lit cette route (fin du texte « non exposé côté API »).
+
+### AG-S1 — Fiches analystes déterministes
+
+- Engine : `app/agents/analyst_cards.py` — une fiche par indicateur CI : Ichimoku, RVOL, ATR/régime, ADX, Donchian, structure, FVG, impulsion/Fibonacci, location, OI/funding, CVD (+ Liquidity/Confluence si REGISTRY).
+- Réutilise `ichimoku_agent` / `rvol_agent`, passe par `REGISTRY` (T1e). OI/funding hors REGISTRY → fetch Binance Futures direct (pas screener).
+- Contrat fiche : `symbol`, `timeframe`, `as_of`, `value`, `state`, `known_at`, `feature_status`, `decision_role` (RS-01), `used_by_decision=False`, `validation_status=NON_VALIDE`, texte court déterministe.
+- Routes : `GET /agents/analyst-cards`, `POST|GET /agents/analyst-snapshots`.
+- Table `analyst_snapshot` (alembic `i5j6k7l8m9n0`) : `(session_id, symbol, tf)` unique ; AgentTask `kind=analyst_snapshot` à ouverture session **+60 s** ; univers BTCUSDT/ETHUSDT/SOLUSDT × 1h/4h ; fraîcheur → defer + log.
+- Front `AgentsPage` : section « Analystes » (grille, sélecteur symbole/TF, heure session, badge NON_VALIDE).
+
+
+### Complément AG-S1 (28/09) — champ ``stage``
+
+Chaque fiche porte ``stage ∈ {DIR, PART, STRUCT, LOC, REGIME}`` (table figée + test) :
+- **DIR** : Ichimoku + direction MTF 4h/1d
+- **PART** : RVOL, CVD, OI/funding
+- **STRUCT** : swings/BOS/CHOCH, FVG, impulsion/Fibonacci, Liquidity
+- **LOC** : location (VAH/VAL/POC, VWAP/AVWAP), Confluence
+- **REGIME** : ATR/régime, ADX, Donchian, cycle
+
+Route : ``GET /agents/analyst-cards?stage=``. Front : section Analystes **groupée par étape** (5 blocs).
+Raison AG-S3 (PAS à coder) : un agent Claude par étape, puis synthèse des 5 verdicts.
+
+### Tests (Claude — env déjà prêt)
+
+- Troncature / anti-lookahead ; `decision_role` ↔ RS-01 ; idempotence snapshot ; aucun import paper/screener depuis `app/agents/analyst_cards.py` et `app/sessions`.
+- Goldens OpenAPI / `route_order` : **ajout volontaire documenté** (sessions + analyst-cards/snapshots).
+- `pytest` (Postgres) + `npm test` (server) + `npx tsc -b` (front).
+- **Preuve PR :** JSON fiches BTCUSDT 1h + 1 capture **réelle** Agents (clair + mobile 390 px). Pas de page fabriquée, pas de route publique.
+
 
 ---
 

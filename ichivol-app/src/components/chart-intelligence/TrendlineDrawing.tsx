@@ -9,7 +9,7 @@ export function TrendlineLayer() {
   return (
     <g className="ci-layer ci-layer-trend">
       {objects.map((o) => (
-        <TrendlineDrawing key={o.id} o={o} asOf={asOf} selected={isSelected(o)} onSelect={() => select(o)} />
+        <TrendlineDrawing key={o.id} o={o} asOf={asOf} selected={isSelected(o)} onSelect={(e) => select(o, e)} />
       ))}
     </g>
   )
@@ -19,7 +19,7 @@ interface Props {
   o: IntelligenceObject
   asOf: number | null
   selected: boolean
-  onSelect: () => void
+  onSelect: (e?: { stopPropagation?: () => void; preventDefault?: () => void }) => void
 }
 
 export function TrendlineDrawing({ o, asOf, selected, onSelect }: Props) {

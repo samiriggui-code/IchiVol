@@ -29,6 +29,8 @@ import {
   type OrderIntent,
 } from '../lib/paper'
 import { confirmUserDecision } from '../lib/userDecisions'
+import { VpValidationBadge } from '../components/VpValidationBadge'
+import { isActionableBuySell } from '../lib/vpValidationCopy'
 import {
   maquetteGateBadge,
   type MaquetteBadgeTone,
@@ -106,11 +108,33 @@ function participationBadge(row: ScreenerDecisionRow): ReactNode {
 }
 
 function directionCell(row: ScreenerDecisionRow): ReactNode {
+  const gate = row.pipeline?.decision
+  const showVp = isActionableBuySell(gate) || isActionableBuySell(row.decision)
   if (row.direction === 'SHORT' || row.decision === 'SELL' || row.decision === 'STRONG_SELL') {
-    return <span className="down">↓ Vente</span>
+    return (
+      <span className="down">
+        ↓ Vente
+        {showVp ? (
+          <>
+            {' '}
+            <VpValidationBadge compact />
+          </>
+        ) : null}
+      </span>
+    )
   }
   if (row.direction === 'LONG' || row.decision === 'BUY' || row.decision === 'STRONG_BUY') {
-    return <span className="up">↑ Achat</span>
+    return (
+      <span className="up">
+        ↑ Achat
+        {showVp ? (
+          <>
+            {' '}
+            <VpValidationBadge compact />
+          </>
+        ) : null}
+      </span>
+    )
   }
   return <span>—</span>
 }
@@ -610,6 +634,12 @@ export function DecisionsPage() {
                           : '—',
                     )
                   : badge('—', 'gray')}
+                {isActionableBuySell(detailPipeline?.gateDecision) ? (
+                  <>
+                    {' '}
+                    <VpValidationBadge />
+                  </>
+                ) : null}
               </b>
             </div>
             <div className="statline">
