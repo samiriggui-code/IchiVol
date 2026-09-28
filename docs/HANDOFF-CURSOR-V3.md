@@ -29,7 +29,7 @@ Traiter **dans cet ordre**, avec un **STOP** et un rapport dans ce handoff aprè
 
 ### 4. Reprise de la file normale
 
-- #158 → #157 (corrections S1-R1 / S1-R2) → CI-LIQ-CONF → #162 → AG-S2 (spec ci-dessous).
+- #158 → #157 (corrections S1-R1 / S1-R2) → CI-LIQ-CONF → #162 (**avec la correction « retirer les fiches live de Agents »**, voir spec AG-S2) → AG-S2 (spec ci-dessous).
 - STOP après chaque PR, pas de merge sans verdict Claude.
 
 ### 5. Ticket non bloquant, en fin de file
@@ -58,7 +58,12 @@ Règles strictes :
 - tout est `NON_VALIDE`, `used_by_decision=False` (VP3 : 0 EDGE / 48) ;
 - chaque lien Copilot réutilise `copilotPrompts.ts` / `useCopilotNav` et injecte `{symbol, timeframe, stage, session_id, as_of, snapshot_id, chiffres clés}`. Eve répond **à partir du snapshot**, elle ne recalcule pas.
 
-**Impact sur #162 :** la section « Analystes » live de `AgentsPage` sort de la page Agents. Sur Agents il reste uniquement l'agent analyste (config, déclencheur, tâches, dernier run OK / reporté). La lecture passe sur Marché et dans la fiche. Ce déplacement peut être fait dans #162 ou en tête de AG-S2 : **à trancher pendant la revue Claude de #162**.
+**Correction demandée sur #162 (décision Samir, 2026-09-28) — à faire AVANT le merge de #162 :**
+- **Retirer** de `AgentsPage` la section « Analystes » live (grille des fiches, sélecteur symbole / TF, valeurs d'indicateurs).
+- **Garder** sur Agents uniquement une carte « Agent analyste » : déclencheur (ouverture de session + 60 s), univers, dernier run (OK / reporté + raison), nombre de snapshots. **Aucune valeur de marché.**
+- **Ne rien toucher côté moteur** : `analyst_cards.py`, `analyst_snapshot`, routes `/agents/analyst-cards` et `/agents/analyst-snapshots`, AgentTask, tests. Tout reste tel quel.
+- Entre le merge de #162 et AG-S2, les fiches ne sont visibles que par l'API : c'est voulu (rien n'est déployé). Elles réapparaissent sur Marché et dans la fiche « Analyse complète » avec AG-S2.
+- Refaire les captures Agents (clair, desktop + mobile 390 px) et `npx tsc -b`, puis **STOP → revue Claude**.
 
 ### AG-S2 — calculs (déterministes, sans LLM, barres closes seulement)
 
