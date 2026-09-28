@@ -381,6 +381,125 @@ def open_capital_position(
     return position
 
 
+def open_presized_position(
+    session: Session,
+    *,
+    portfolio: PaperPortfolio,
+    symbol: str,
+    timeframe: str,
+    source: str,
+    requested_price: float,
+    entry_fill: float,
+    qty: float,
+    notional: float,
+    fee: float,
+    stop_price: float,
+    risk_amount: float,
+    spread_bps: float,
+    risk_pct: float | None = None,
+    signal: dict[str, Any] | None = None,
+    at: datetime | None = None,
+) -> PaperPosition | None:
+    """Open a LONG lot whose size, fill, fee and stop were computed by an external rule engine.
+
+    RS-D1 paper (docs/RS-09-RS-D1-PAPER-DESIGN.md §2): the rules live in ``rs/book.py``; this function
+    only records the order (position, order, ledger, journal) without re-sizing it, so the paper
+    account holds exactly the numbers of the rule engine. No take-profit. Returns None if cash is short."""
+    _lock_portfolio(session, portfolio)
+    if not all(math.isfinite(x) for x in (entry_fill, qty, notional, fee, stop_price)) or qty <= 0:
+        return None
+    if notional + fee > portfolio.cash + 1e-9:
+        return None
+    profile = _profile(portfolio)
+    now = at or datetime.now(timezone.utc)
+    position = PaperPosition(
+        portfolio_id=portfolio.id,
+        symbol=symbol,
+        timeframe=timeframe,
+        source=source,
+        user_id=None,
+        direction="LONG",
+        status="OPEN",
+        entry_time=now,
+        entry_price=entry_fill,
+        entry_decision="BUY",
+        entry_signal=signal or {},
+        qty=qty,
+        initial_qty=qty,
+        notional=notional,
+        stop_price=stop_price,
+        take_profit_price=None,
+        risk_pct=risk_pct,
+        risk_amount=risk_amount,
+        entry_fee=fee,
+        initial_entry_fee=fee,
+        mfe_pct=0.0,
+        mae_pct=0.0,
+        highest_price_seen=entry_fill,
+        lowest_price_seen=entry_fill,
+        created_at=now,
+        updated_at=now,
+    )
+    session.add(position)
+    session.flush()
+    session.add(
+        PaperOrder(
+            portfolio_id=portfolio.id,
+            position_id=position.id,
+            symbol=symbol,
+            timeframe=timeframe,
+            side="BUY",
+            order_type="MARKET",
+            requested_price=requested_price,
+            filled_price=entry_fill,
+            qty=qty,
+            notional=notional,
+            fee=fee,
+            spread_bps=spread_bps,
+            slippage_bps=0.0,
+            status="FILLED",
+            reason="open",
+            created_at=now,
+        )
+    )
+    ledger_db.guarded(session, portfolio.id, position.id, "opening", lambda: ledger_db.ensure_opening(session, portfolio, now))
+    portfolio.cash -= notional + fee
+    portfolio.updated_at = now
+    ledger_db.guarded(
+        session, portfolio.id, position.id, "open",
+        lambda: ledger_db.post(
+            session,
+            portfolio.id,
+            f"open:{position.id}",
+            now,
+            [
+                Leg(portfolio.currency, -ledger_db.to_decimal(notional), Cause.EXECUTION, f"BUY {symbol}"),
+                Leg(portfolio.currency, -ledger_db.to_decimal(fee), Cause.COMMISSION, "entry commission"),
+            ],
+            ref=position.id,
+        ),
+    )
+    _journal(
+        session,
+        portfolio_id=portfolio.id,
+        position_id=position.id,
+        event_type="OPENED",
+        payload={
+            "symbol": symbol,
+            "direction": "LONG",
+            "entry": entry_fill,
+            "stop": stop_price,
+            "take_profit": None,
+            "qty": qty,
+            "decision": "BUY",
+            "protection_monitored": True,
+            "fee": _fee_meta(profile) | {"amount": fee},
+            "execution": {"model": "presized", "spread_bps": spread_bps, "slippage_bps": 0.0},
+        },
+    )
+    return position
+
+
 def close_capital_position(
     session: Session,
     position: PaperPosition,

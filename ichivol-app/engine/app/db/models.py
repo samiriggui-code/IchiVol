@@ -447,6 +447,24 @@ class PaperJournalEvent(Base):
     )
 
 
+class RsBookState(Base):
+    """RS-D1 paper live (RS-09 §6): état du ``rs.book.Book`` d'un portefeuille RS, persisté à chaque
+    barre 4h traitée. Les positions et le cash de référence restent dans les tables paper."""
+
+    __tablename__ = "rs_book_state"
+
+    portfolio_code: Mapped[str] = mapped_column(String(64), primary_key=True)
+    history_start: Mapped[int] = mapped_column(BigInteger)  # origine fixe des séries (s, UTC)
+    last_bar_time: Mapped[int | None] = mapped_column(BigInteger, nullable=True)  # dernière barre 4h traitée
+    state_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    refs: Mapped[dict] = mapped_column(JSON, default=dict)  # symbole -> paper_positions.id
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
 class ShadowPosition(Base):
     """Counterfactual trade — opened when a filter blocks a raw BUY/SELL.
 

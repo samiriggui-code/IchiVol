@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     # Stops/targets are watched every protection_interval_s independent of signals.
     enable_protection_monitor: bool = True
     protection_interval_s: float = 60.0
+    # RS-D1 paper live (docs/RS-09-RS-D1-PAPER-DESIGN.md): separate portfolio RS_D1_PAPER_V1, rules = rs/book.py.
+    enable_rs_d1_paper: bool = True
+    rs_d1_interval_s: float = 60.0
 
 
 settings = Settings()
