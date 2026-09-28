@@ -5,7 +5,7 @@
 **Données :** VP1 spot 4h, sha256 du manifeste BTC `cd8bef9a…`, ETH `67f46cf6…`, SOL `0c75aed2…` (identiques au rapport VP3). 9 498 barres par actif après troncature, dernière barre 2024-12-31 20:00 UTC.
 **Artefacts :** [`rs-artifacts/rsd1_results.json`](./rs-artifacts/rsd1_results.json), journal des trades [`rs-artifacts/rsd1_trades.json`](./rs-artifacts/rsd1_trades.json). Commande : `python -m rs.run` depuis `ichivol-app/engine`.
 
-## ▶ Validation 2025 (amendement `VP0-2026-09-28c`) : **VALIDÉ 2025**
+## ▶ Validation 2025 (amendement `VP0-2026-09-28d`) : **VALIDÉ 2025**
 
 Run unique le 2026-09-28, décidé par Samir. Critères V1–V5 figés et code poussé **avant** le run (`e1afe70`). Règles RS-03 inchangées. Données tronquées < 2026-01-01 : **le holdout 2026 reste fermé**. Artefacts : [`rsd1_val2025_results.json`](./rs-artifacts/rsd1_val2025_results.json), [`rsd1_val2025_trades.json`](./rs-artifacts/rsd1_val2025_trades.json).
 

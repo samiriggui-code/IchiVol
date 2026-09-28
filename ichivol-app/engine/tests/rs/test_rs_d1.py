@@ -337,7 +337,7 @@ def test_entry_period_constant_is_55():
     assert ENTRY_PERIOD == 55
 
 
-# --- validation 2025 (VP0-2026-09-28c) --------------------------------------------------------
+# --- validation 2025 (VP0-2026-09-28d) --------------------------------------------------------
 
 
 def test_validation_truncation_is_2026_and_default_stays_2025():

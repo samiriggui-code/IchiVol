@@ -293,7 +293,7 @@ Après les runs : Claude peut lire les rapports chiffrés pour revue, **sans** r
 
 | Champ | Valeur |
 |-------|--------|
-| Version courante | `VP0-2026-09-26` + amendements `VP0-2026-09-27` (M/N Bouclier) et `VP0-2026-09-27b` (P paper fidèle, diagnostic), `VP0-2026-09-28` (contrôles C2/C3, ε, intervalles, P3 étude d'événement), `VP0-2026-09-28b` (RS-D Donchian 4h), `VP0-2026-09-28c` (validation 2025 RS-D1) |
+| Version courante | `VP0-2026-09-26` + amendements `VP0-2026-09-27` (M/N Bouclier) et `VP0-2026-09-27b` (P paper fidèle, diagnostic), `VP0-2026-09-28` (contrôles C2/C3, ε, intervalles, P3 étude d'événement), `VP0-2026-09-28b` (RS-D Donchian 4h), `VP0-2026-09-28d` (validation 2025 RS-D1) |
 | Gel | Après APPROUVÉ Claude **et** OK utilisateur |
 | Modification post-gel | Nouveau fichier ou section `VP0-YYYY-MM-DD` + justification + invalidation des runs antérieurs non rejoués |
 
@@ -384,7 +384,9 @@ Résumé :
 
 ---
 
-## Amendement `VP0-2026-09-28c` — Validation 2025 de RS-D1 (pré-enregistrée, run unique)
+## Amendement `VP0-2026-09-28d` — Validation 2025 de RS-D1 (pré-enregistrée, run unique)
+
+> **Renommage (2026-09-28, sans changement de règle) :** cet amendement a été figé et joué sous l'identifiant `VP0-2026-09-28c`. Cet identifiant avait déjà été pris 76 min plus tôt par l'amendement RS-U0 (ouverture US, autre session Claude, branche `claude/rs-strategie`). Il est donc renommé `VP0-2026-09-28d`. L'artefact `rsd1_val2025_results.json` garde le champ `"amendment": "VP0-2026-09-28c"` tel que produit par le run (`e1afe70`).
 
 **Statut :** figé **avant** le run · décision de Samir du 2026-09-28 (« oui ») après le rapport RS-D1 (CANDIDAT À VALIDATION SUPPLÉMENTAIRE, dev ≤ 2024).
 **Objet :** mesurer **une seule fois** RS-D1 sur l'année 2025, jamais vue, avec les règles **inchangées**. Ce run consomme la validation 2025 pour `RS-D1-U3-4h`. Le **holdout 2026 reste fermé**.

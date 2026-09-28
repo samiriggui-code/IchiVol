@@ -1,4 +1,4 @@
-"""RS-D1 — validation 2025, run unique (amendement VP0-2026-09-28c).
+"""RS-D1 — validation 2025, run unique (amendement VP0-2026-09-28d).
 
 Usage (depuis ichivol-app/engine) : ``python -m rs.validate``
 Règles RS-03 inchangées ; seules la fenêtre (2025) et la troncature (< 2026-01-01) changent.
@@ -29,7 +29,7 @@ from rs.donchian import simulate
 from rs.metrics import boot_mean_ci, monthly_returns, summary, trade_stats
 from rs.run import OUT_DIR, _git_head
 
-AMENDMENT = "VP0-2026-09-28c"
+AMENDMENT = "VP0-2026-09-28d"
 
 
 def validation_verdict(base: dict[str, Any], adverse: dict[str, Any], b0e: dict[str, Any], n_closed: int) -> dict[str, Any]:
