@@ -1,5 +1,19 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 ~20h UTC — DÉPLOYÉ : FS-0b + RS-D1 PAPER EN MARCHE (`main` @ `05d2905`)
+
+- **FS-0b** (`0692694`) : validateur strict, 1re série de la revue #171 (V1–V8, E1, E2), phrases littérales en tests. En prod, OK : Sonnet 10 claims gardés / 1 retiré, causalité et position du prix justes.
+  - 2e série de contournements trouvée par `ichivol-ce` ( ASCII, pleine chasse, unités pb/M, timeframe comme heure). **Correction en cours chez `ichivol-ce`** (`claude/ag-fs0-fix-v1-v4`), revue par Claude.
+- **#169 RS-D1 paper** : revu et mergé (`b4b990c`, 175 tests OK), déployé.
+  - Portefeuille séparé **`RS_D1_PAPER_V1`** (5 000 €), boucle active (`ENABLE_RS_D1_PAPER` = true par défaut).
+  - Migration `j6k7l8m9n0o1` appliquée. Book initialisé ; 1re barre traitée = 12:00 UTC, rien d'ouvert.
+  - BASELINE intact (4 858,97 €, 0 position).
+- **Incident (≈ 5 min)** : l'engine plantait au démarrage (`ModuleNotFoundError: rs`, le Dockerfile ne copiait pas `rs/`). Corrigé par `05d2905` (`COPY rs ./rs`).
+  - **Leçon :** toute PR qui importe un nouveau paquet engine doit vérifier le Dockerfile, et le build Docker doit être testé avant le déploiement.
+- **Retour arrière :** `/opt/backups/predeploy_20260928_1945_*`, images `ichivol-*:pre-20260928_1945`. Pour couper la boucle RS seule : `ENABLE_RS_D1_PAPER=false` dans `deploy/vps/.env` (à ajouter aussi dans la compose si besoin), puis redémarrer l'engine.
+
+---
+
 ## 2026-09-28 soir — DÉPLOYÉ : `main` @ `fbd3a35` avec AG-FS0 ACTIF (décision Samir)
 
 - **Contenu en prod :** #166 (libellés FR + badge VP rétabli), #170 (OF-0, docs / recherche), **#171 AG-FS0**.
