@@ -30,7 +30,7 @@ L'autre session a livré la v2 :
 
 ### Reprise RS-D1 (Claude) — dans cet ordre
 
-1. **Données** : relancer `cd ichivol-app/engine && .venv/Scripts/python -m vp1 download-spot` (reprise automatique, sha256), puis `-m vp1 build-spot --symbol ETHUSDT --interval 4h` et `--symbol SOLUSDT --interval 4h`. Aujourd'hui, localement, **seules les séries BTC** sont construites.
+1. ~~**Données**~~ **FAIT** : séries VP1 4h construites en local, 13 146 / 13 146 barres, 0 trou : BTC `cd8bef9a07f7…`, ETH `67f46cf63f0b…`, SOL `0c75aed211b7…` (identiques aux sha du rapport VP3 FINAL).
 2. **Note d'implémentation** (à committer **avant le run**, sans changer de règle) : RS-D1 est un moteur autonome `rs/donchian.py`, **pas** `research_lab/sim.py`, qui n'a pas de stop suiveur et dont l'interface est gelée par la session #159. Les règles de taille, coûts et limites sont réimplémentées d'après RS-03 §5–§6. À ajouter dans `RS-03` §10.
 3. **Tests** `tests/rs/` (RS-03 §10) :
    - troncature stratégie (signaux, `stop_log`, ordres identiques jusqu'à T) ;
@@ -43,7 +43,7 @@ L'autre session a livré la v2 :
    - assertion < 2025 ;
    - B0-F / B0-E.
 4. **`rs/run.py`** : RS-D1 base + adverse + stress `exec_delay=2`, B0-F, B0-E (`e` = exposition moyenne de RS-D1), bootstrap mensuel, D1–D7 → `docs/rs-artifacts/rsd1_results.json` + journal des trades, puis `docs/RS-D1-REPORT.md`.
-5. **D3** (Δ vs B7-P) : utiliser R4 v2 de #159 (`vpp_results.json`, section R4, + `vpp_r4_trades.json` sur `claude/vp-p-paper-fidele` @ `b90de8d`). Il faut la **série d'equity mensuelle** de R4 : la reconstruire depuis l'artefact ou la demander à ichivol-cd.
+5. **D3** (Δ vs B7-P) : utiliser R4 v2 de #159 (`vpp_results.json`, section R4, + `vpp_r4_trades.json` sur `claude/vp-p-paper-fidele` @ `b90de8d`). **Equity mensuelle livrée** : `docs/vpp-artifacts/vpp_equity_monthly.json` (R4_P2_U3, 42 mois, fin de mois, coûts paper, sha256), `python -m vpp.equity_export`. Même convention que RS-D1 (cash + positions marquées au close).
 6. PR draft `claude/rs-d1` → **revue par Cursor** (rôles inversés) → run.
 
 ### Message pour Cursor (en attente d'envoi par Samir)
