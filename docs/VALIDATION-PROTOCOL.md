@@ -293,7 +293,7 @@ Après les runs : Claude peut lire les rapports chiffrés pour revue, **sans** r
 
 | Champ | Valeur |
 |-------|--------|
-| Version courante | `VP0-2026-09-26` + amendements `VP0-2026-09-27` (M/N Bouclier), `VP0-2026-09-28b` (RS-D Donchian 4h), `VP0-2026-09-28c` (RS-U ouverture US) |
+| Version courante | `VP0-2026-09-26` + amendements `VP0-2026-09-27` (M/N Bouclier), `VP0-2026-09-28b` (RS-D Donchian 4h), `VP0-2026-09-28c` (RS-U ouverture US), `VP0-2026-09-28e` (OF-0 order flow) |
 | Gel | Après APPROUVÉ Claude **et** OK utilisateur |
 | Modification post-gel | Nouveau fichier ou section `VP0-YYYY-MM-DD` + justification + invalidation des runs antérieurs non rejoués |
 
@@ -415,6 +415,25 @@ Résumé :
 - **Interdit :**
   - validation 2025, holdout 2026 ;
   - variante de range, fenêtre, horizon ou sens (continuation) après lecture, sauf nouvelle hypothèse marquée post-hoc.
+
+---
+
+## Amendement `VP0-2026-09-28e` — Question OF-0 « Order flow intrabarre : information nouvelle ou redite ? » (pré-enregistré)
+
+**Statut :** figé **avant** tout téléchargement 1 s et tout calcul · ID réservé auprès du pilote RS (ichivol-95) · décision de Samir (2026-09-28).
+**Justification (§12) :** l'audit order flow montre que le delta et le CVD par barre d'IchiVol sont déjà **exacts** (`taker_buy_base` = Σ aggTrades agresseurs). Un footprint n'ajouterait que la répartition intrabarre par prix et dans le temps. Avant tout moteur, on mesure si cette information est nouvelle et liée au rendement.
+
+**Document normatif :** [`RS-07-OF0-ORDER-FLOW-SPEC.md`](./RS-07-OF0-ORDER-FLOW-SPEC.md), figé dans le même commit.
+
+Résumé :
+- **Données :** BTCUSDT spot, klines **1 s** Binance Vision agrégées en 1h ; dev 2021-07 → 2024-12 ; étiquette « footprint approximé 1 s ».
+- **Mesures :** F1 `poc_loc`, F2 / F3 delta dans les 20 % hauts / bas du range, F4 position du delta final dans son range intrabarre, F5 part du volume dans les 36 secondes les plus actives.
+- **Q1, redondance :** R² de chaque mesure sur l'OHLCV + delta existants (16 régresseurs). Réussie si ≥ 2 des 5 ont R² < 0,5.
+- **Q2, valeur :** IC de Spearman du résidu contre le rendement 4h suivant ; bootstrap par jour, Bonferroni ; |IC| ≥ 0,02 ; même signe ≥ 3 / 4 années.
+- **Verdicts :** REDONDANT / NOUVEAU, NON PRÉDICTIF / NOUVEAU ET PRÉDICTIF. Aucune intégration au pipeline dans aucun cas ; OF-1 seulement sous nouvel amendement.
+- **Contrôles :** C1 (1 s agrégé = kline 1h), C2 (qualité de l'approximation ≤ 10 %), troncature.
+- **T10b :** +5.
+- **Interdit :** 2025, 2026, autres actifs ou TF, variantes après lecture.
 
 ---
 
