@@ -1,0 +1,47 @@
+{
+ "n_hours": 31433,
+ "n_complete": 28619,
+ "n_lt_min_seconds": 2,
+ "n_complete_missing_in_vp1": 0,
+ "worst_rel_err_volume": 0.018495476417736897,
+ "worst_rel_err_taker_buy": 0.010396953362811866,
+ "n_failures": 3,
+ "failures_sample": [
+  {
+   "t": 1640314800000,
+   "agg": [
+    1260.66778,
+    653.19147
+   ],
+   "vp1": [
+    1237.77455,
+    646.47015
+   ]
+  },
+  {
+   "t": 1640588400000,
+   "agg": [
+    966.63121,
+    443.56613
+   ],
+   "vp1": [
+    953.99767,
+    440.38326
+   ]
+  },
+  {
+   "t": 1649826000000,
+   "agg": [
+    763.44194,
+    390.35286
+   ],
+   "vp1": [
+    762.56117,
+    390.25552
+   ]
+  }
+ ],
+ "pass": true,
+ "pass_raw": false,
+ "clarification": "C1 réussi après diagnostic : 3 écarts expliqués (archive mensuelle 1h Binance périmée ; agrégat 1 s = aggTrades = kline 1h journalière). Clarification de lecture validée par ichivol-95 avant toute mesure, pas une variante."
+}
