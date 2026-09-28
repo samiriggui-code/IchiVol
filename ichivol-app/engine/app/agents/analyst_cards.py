@@ -173,6 +173,30 @@ def _truncate_at(candles: Sequence[Candle], as_of: int) -> list[Candle]:
     return [c for c in candles if int(c.time) <= int(as_of)]
 
 
+def _htf_closed_as_of(
+    htf_candles: Sequence[Candle],
+    *,
+    as_of: int,
+    base_tf: str,
+    htf_tf: str,
+) -> list[Candle]:
+    """HTF bars fully closed by the base-bar decision instant.
+
+    Decision instant = ``as_of`` (base open) + base TF duration.
+    Keep HTF bar only if ``htf.open + htf_duration <= decision``.
+    """
+    base_dur = TF_SECONDS.get(base_tf)
+    htf_dur = TF_SECONDS.get(htf_tf)
+    if base_dur is None or htf_dur is None:
+        return _truncate_at(htf_candles, as_of)
+    decision = int(as_of) + int(base_dur)
+    return [
+        c
+        for c in htf_candles
+        if int(c.time) + int(htf_dur) <= decision
+    ]
+
+
 def _ichimoku_card(
     candles: list[Candle], *, symbol: str, timeframe: str, as_of: int
 ) -> dict[str, Any]:
@@ -223,8 +247,14 @@ def _mtf_direction_card(
             known_at=as_of,
             text="Direction MTF indisponible",
         )
-    # Anti-lookahead : ne garder que les bougies HTF closes <= as_of.
-    htf_window = _truncate_at(list(htf_candles), as_of)
+    # Anti-lookahead : HTF close (open + durée) <= as_of + durée TF bas.
+    htf_window = _htf_closed_as_of(
+        list(htf_candles),
+        as_of=as_of,
+        base_tf=timeframe,
+        htf_tf=higher_tf,
+    )
+    htf_dur = int(TF_SECONDS[higher_tf])
     if len(htf_window) < 2:
         return _card(
             feature="mtf_direction",
@@ -239,6 +269,8 @@ def _mtf_direction_card(
     out = ichimoku_agent.analyze(htf_window)[-1]
     direction = out.direction.value
     text = f"Direction MTF {higher_tf} {direction}"
+    last_open = int(htf_window[-1].time)
+    known_at = last_open + htf_dur  # clôture de la dernière HTF gardée
     return _card(
         feature="mtf_direction",
         symbol=symbol,
@@ -248,10 +280,10 @@ def _mtf_direction_card(
             "higher_tf": higher_tf,
             "direction": direction,
             "confidence": out.confidence,
-            "htf_as_of": int(htf_window[-1].time),
+            "htf_as_of": last_open,
         },
         state=direction,
-        known_at=int(htf_window[-1].time),
+        known_at=known_at,
         text=text,
     )
 
@@ -529,10 +561,12 @@ def _oi_funding_for_candles(
     provider_id: str,
     provider_symbol: str,
     timeframe: str,
-) -> OiFundingState | None:
+) -> tuple[OiFundingState | None, int | None]:
+    """Return (state, fetched_at). ``fetched_at`` = wall-clock of Binance fetch."""
     if provider_id != "binance" or timeframe not in {"15m", "1h", "4h", "1d"}:
-        return None
+        return None, None
     try:
+        fetched_at = int(time.time())
         oi_points = binance_futures.fetch_open_interest_hist(
             provider_symbol, timeframe, limit=500
         )
@@ -540,9 +574,9 @@ def _oi_funding_for_candles(
             provider_symbol, limit=200
         )
         if not oi_points and not funding_points:
-            return None
+            return None, fetched_at
         series = compute_oi_funding(candles, oi_points, funding_points)
-        return series[-1] if series else None
+        return (series[-1] if series else None), fetched_at
     except Exception:
         logger.warning(
             "analyst_cards: OI/funding fetch failed for %s %s",
@@ -550,7 +584,7 @@ def _oi_funding_for_candles(
             timeframe,
             exc_info=True,
         )
-        return None
+        return None, None
 
 
 def _oi_funding_card(
@@ -563,8 +597,9 @@ def _oi_funding_card(
     provider_symbol: str | None,
 ) -> dict[str, Any]:
     st: OiFundingState | None = None
+    fetched_at: int | None = None
     if provider_id and provider_symbol:
-        st = _oi_funding_for_candles(
+        st, fetched_at = _oi_funding_for_candles(
             candles,
             provider_id=provider_id,
             provider_symbol=provider_symbol,
@@ -578,7 +613,7 @@ def _oi_funding_card(
             as_of=as_of,
             value=None,
             state="UNKNOWN",
-            known_at=as_of,
+            known_at=fetched_at if fetched_at is not None else as_of,
             text="OI/funding indisponible",
         )
     oi_trend = _enum_val(st.oi_trend)
@@ -596,7 +631,8 @@ def _oi_funding_card(
             "funding_bias": funding_bias,
         },
         state=str(oi_trend),
-        known_at=int(st.time),
+        # known_at = heure réelle du fetch Binance Futures, pas as_of.
+        known_at=fetched_at if fetched_at is not None else int(time.time()),
         text=text,
     )
 
