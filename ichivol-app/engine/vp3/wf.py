@@ -23,6 +23,28 @@ _HTF_STRATEGIES = frozenset({"B5", "B6", "B7"}) | frozenset(SHIELD_STRATEGIES)
 # §5.1.8 — force_flat only at end of validation / holdout
 _FORCE_FLAT_FOLDS = frozenset({VALIDATION.id, HOLDOUT.id})
 
+# S1-R1 — BM has no time-stop; allow 90 calendar days after fold end, then force_flat.
+BM_POST_FOLD_HORIZON_S = 90 * 86_400
+# Dev data ends with WF7 (2024-12-31 inclusive). A WF-fold simulation must never read
+# a bar at/after this instant (validation 2025 stays closed).
+DEV_END_EXCL_S = fold_test_window_s(WF_FOLDS[-1])[1]
+_WF_FOLD_IDS = frozenset(f.id for f in WF_FOLDS)
+
+
+def sim_end_s(strategy: str, fold: Fold, interval: str) -> int:
+    """Exclusive simulation end: fold end + post-fold exit horizon.
+
+    BM (S1-R1): 90 days, capped at the end of dev data for WF folds. Other strategies
+    keep the frozen VP3-R3 time-stop horizon (unchanged, earlier runs reproducible).
+    """
+    win = fold_test_window_s(fold)
+    if strategy == "BM":
+        end = win[1] + BM_POST_FOLD_HORIZON_S
+        if fold.id in _WF_FOLD_IDS:
+            end = min(end, DEV_END_EXCL_S)
+        return end
+    return win[1] + TIME_STOP_BARS.get(interval, 48) * BAR_SECONDS[interval]
+
 
 @dataclass
 class FoldResult:
@@ -102,12 +124,18 @@ def run_fold(
     gate = entry_gate_s(fold, interval)
     win = fold_test_window_s(fold)
     # VP3-R3: allow exits after fold end up to time-stop horizon; no new entries at/after win[1]
-    # BM/BN: pas de time-stop — garder un horizon pour fills open t+1 / sorties post-pli.
-    horizon = TIME_STOP_BARS.get(interval, 48) * BAR_SECONDS[interval]
-    sim_end = win[1] + horizon
-    # §5.1.8 force_flat only VAL/HOLD; B0/BN still need flat to realize window PnL
-    force_flat = strategy in ("B0", "BN") or fold.id in _FORCE_FLAT_FOLDS
-    rules = replace(rules, force_flat_at_end=force_flat)
+    # BN: pas de time-stop — horizon court pour fills open t+1 / sorties post-pli.
+    # BM (S1-R1): horizon post-pli 90 j + force_flat (reason horizon_end) pour compter les
+    # positions encore ouvertes (sinon open_at_end disparaît de trades / n_trades faussé).
+    # BM is capped at the end of dev data (never reads 2025 on WF folds).
+    sim_end = sim_end_s(strategy, fold, interval)
+    # §5.1.8 force_flat only VAL/HOLD; B0/BN still need flat to realize window PnL;
+    # BM needs flat at end of 90j horizon (S1-R1).
+    force_flat = strategy in ("B0", "BN", "BM") or fold.id in _FORCE_FLAT_FOLDS
+    if strategy == "BM":
+        rules = replace(rules, force_flat_at_end=True, force_flat_reason="horizon_end")
+    else:
+        rules = replace(rules, force_flat_at_end=force_flat)
 
     gated = list(mask)
     for i, c in enumerate(candles):

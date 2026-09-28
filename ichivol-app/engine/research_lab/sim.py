@@ -83,6 +83,8 @@ class Rules:
     full_cash: bool = False
     # VP §5.1.8: force exit open positions at the last bar's close
     force_flat_at_end: bool = False
+    # Exit reason used when force_flat_at_end closes (BM post-horizon → "horizon_end")
+    force_flat_reason: str = "window_end"
     # VP-P (paper fidèle) — defaults keep every earlier run unchanged.
     # stop/TP anchor: "raw" = open(t+1) (VP2-R2); "fill" = entry fill incl. friction (app/paper/risk.size_position)
     levels_anchor: str = "raw"
@@ -503,7 +505,7 @@ def simulate(
             item = data[sym].get(t_end)
             if item is None:
                 continue
-            close_position(p, item[0].close, t_end, "window_end")
+            close_position(p, item[0].close, t_end, rules.force_flat_reason)
     open_end = [
         {
             "symbol": p.symbol, "direction": p.direction, "entry_time": p.entry_time, "qty": p.qty,

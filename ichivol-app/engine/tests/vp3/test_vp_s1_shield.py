@@ -252,6 +252,42 @@ def test_maxdd_metric_paired_identical_includes_zero():
     assert max_drawdown_from_returns(r) <= 0
 
 
+def test_bm_force_flat_horizon_end_counts_open_position():
+    """S1-R1: position still LONG past the window is force-flatted as horizon_end (in trades)."""
+    from dataclasses import replace
+
+    rows = [
+        (100, 101, 99, 100.5, "BUY", Direction.LONG),
+        (100.5, 102, 100, 101.5, "WATCH", Direction.LONG),
+        (101.5, 103, 101, 102.5, "WATCH", Direction.LONG),
+        (102.5, 104, 102, 103.5, "WATCH", Direction.LONG),
+        (103.5, 105, 103, 104.5, "WATCH", Direction.LONG),
+    ]
+    feed = {}
+    for i, (o, h, l, c, d, direction) in enumerate(rows):
+        t = T0 + i * H
+        feed[t] = (_bar(i, o, h, l, c), _sig(t, d, direction, sd=5.0))
+    rules = replace(strategy_rules("BM", "1h"), force_flat_at_end=True, force_flat_reason="horizon_end")
+    res = simulate({"X": feed}, rules, NOFEE, (T0, T0 + len(rows) * H), initial=10_000.0)
+    assert len(res.open_at_end) == 0
+    assert len(res.trades) == 1
+    assert res.trades[0].exit_reason == "horizon_end"
+
+
+def test_bm_horizon_never_reads_validation_2025():
+    """S1-R1: the 90-day BM horizon is capped at dev end on WF folds (WF7 ends 2024-12-31)."""
+    from vp3.folds import WF_FOLDS, fold_test_window_s
+    from vp3.wf import BM_POST_FOLD_HORIZON_S, DEV_END_EXCL_S, sim_end_s
+
+    assert DEV_END_EXCL_S == 1735689600  # 2025-01-01T00:00:00Z
+    for fold in WF_FOLDS:
+        for tf in ("1h", "4h"):
+            end = sim_end_s("BM", fold, tf)
+            assert end <= DEV_END_EXCL_S
+            assert end == min(fold_test_window_s(fold)[1] + BM_POST_FOLD_HORIZON_S, DEV_END_EXCL_S)
+    assert sim_end_s("BM", WF_FOLDS[-1], "1h") == DEV_END_EXCL_S
+
+
 def test_overlay_preserves_decision_sets_ichi_direction():
     candles = [
         Candle(time=T0 + i * H, open=100 + i * 0.1, high=101 + i * 0.1, low=99, close=100.5 + i * 0.1, volume=1e6)
