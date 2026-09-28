@@ -519,31 +519,6 @@
   margin-top:17px;
   font-size:12px;
 }
-.agents-page .analyst-grid {
-  margin-top: 8px;
-}
-.agents-page .analyst-stage-block {
-  margin-bottom: 18px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--line);
-}
-.agents-page .analyst-stage-block:last-child {
-  border-bottom: 0;
-}
-.agents-page .analyst-stage-block .card-head h3 {
-  font: 15px Newsreader, Georgia, serif;
-  margin: 0;
-  letter-spacing: 0.2px;
-}
-.agents-page .analyst-card h3 {
-  font: 16px Newsreader, Georgia, serif;
-  margin: 0 0 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-.agents-page .analyst-card p {
-  min-height: 36px;
-}
 .agents-page .chat {
   display:flex;
   flex-direction:column;
