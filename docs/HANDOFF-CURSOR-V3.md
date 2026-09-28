@@ -5,7 +5,8 @@
 Pendant ton absence : #142, #156, #157, #158, #162, #163 et #164 ont été mergés par Claude. **`main` @ `d7fa477` est déployé en prod.** Les producteurs LIQ/CONF de `777c2d5` ont été retirés de la prod (non revus, non conformes à la spec).
 
 **Règles inchangées :** une PR draft par job → STOP → verdict Claude. Pas de merge sans verdict. **Aucun déploiement** (décision de Samir). `npx tsc -b`. Les amendements VP0 et le ledger RS sont centralisés par Claude : **prochain ID libre `VP0-2026-09-28f`** (`28e` réservé à OF-0, session `ichivol-e4`), à demander avant usage.
-n**Décisions Samir (soir) :** RS-U0 **reprend** (session `ichivol-e4`, branche `claude/rs-u0`, uniquement `rs/us_open/`). OF-0 « redondance order flow » **pré-inscrit** par `ichivol-e4` (`VP0-2026-09-28e`, branche `claude/of-0`, docs seulement).
+
+**Décisions Samir (soir) :** RS-U0 **reprend** (session `ichivol-e4`, branche `claude/rs-u0`, uniquement `rs/us_open/`). OF-0 « redondance order flow » **pré-inscrit** par `ichivol-e4` (`VP0-2026-09-28e`, branche `claude/of-0`, docs seulement).
 
 ### 0. En cours : `cursor/paper-refusal-labels-a2fe`
 
