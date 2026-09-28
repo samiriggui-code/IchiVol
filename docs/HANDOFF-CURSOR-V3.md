@@ -4,7 +4,8 @@
 
 Pendant ton absence : #142, #156, #157, #158, #162, #163 et #164 ont été mergés par Claude. **`main` @ `d7fa477` est déployé en prod.** Les producteurs LIQ/CONF de `777c2d5` ont été retirés de la prod (non revus, non conformes à la spec).
 
-**Règles inchangées :** une PR draft par job → STOP → verdict Claude. Pas de merge sans verdict. **Aucun déploiement** (décision de Samir). `npx tsc -b`. Les amendements VP0 et le ledger RS sont centralisés par Claude : **prochain ID libre `VP0-2026-09-28e`**, à demander avant usage.
+**Règles inchangées :** une PR draft par job → STOP → verdict Claude. Pas de merge sans verdict. **Aucun déploiement** (décision de Samir). `npx tsc -b`. Les amendements VP0 et le ledger RS sont centralisés par Claude : **prochain ID libre `VP0-2026-09-28f`** (`28e` réservé à OF-0, session `ichivol-e4`), à demander avant usage.
+n**Décisions Samir (soir) :** RS-U0 **reprend** (session `ichivol-e4`, branche `claude/rs-u0`, uniquement `rs/us_open/`). OF-0 « redondance order flow » **pré-inscrit** par `ichivol-e4` (`VP0-2026-09-28e`, branche `claude/of-0`, docs seulement).
 
 ### 0. En cours : `cursor/paper-refusal-labels-a2fe`
 
@@ -68,6 +69,17 @@ Spec dans le bloc « SPEC AG-S2 » plus bas.
 ### 5. Ticket (fin de file)
 
 `vpp/replay.py` refuse de tourner si `DATABASE_URL` n'est pas `127.0.0.1` / `localhost`, avec un test.
+
+### 6. Ticket CVD-LAB-FIX (#66, microstructure Lab, aucun impact sur le pipeline live)
+
+Constat de la session `ichivol-e4`, **à vérifier avant de corriger**.
+
+1. `app/microstructure/trade_cvd.py` : la docstring dit « kline taker approx ». C'est faux : `taker_buy_base` de la kline est exactement la somme des aggTrades acheteurs agresseurs. Vérifié sur BTCUSDT le 2024-03-01 : minute 00:00 = 73,72529 des deux côtés ; journée 24 195,703 = 24 195,703. **Corriger la docstring.**
+2. **Les biais ne sont pas comparables** : le CVD trades divise par Σ|delta| des barres, le CVD kline par le volume. Utiliser le même dénominateur (le volume, sommé depuis les trades) avant `bias_agreement_rate`.
+3. `app/microstructure/binance_trades.py` : `max_pages=20` plafonne à 20 000 aggTrades (≈ 20 min de BTC, pour ≈ 1,5 M par jour). Les barres suivantes restent à `None` **sans signal**. Faire échouer l'appel (ou exposer un flag `truncated`) quand le plafond est atteint avant `end_ms`, et ajouter un test.
+4. Reporter la même remarque dans la PR #68 (trade VP) si elle réutilise ce fetch.
+
+PR draft → STOP.
 
 ---
 
