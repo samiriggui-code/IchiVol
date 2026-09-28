@@ -293,6 +293,7 @@ Lineage : 36 (gelé VP-J1) + 12 (VP-S1, si validé) + 2 (VP-P) = **50** ; sans V
 |---------|-----------|------------|--------|--------|
 | `RS-D1-U3-4h` | Cassure Donchian 55 / sortie de tendance (stop 3 ATR suiveur, canal 20), BTC / ETH / SOL 4h, capital commun paper | `VP0-2026-09-28b` | **joué 2026-09-28** (`1a4eba5`) — CANDIDAT (D1–D7, dev) → **VALIDÉ 2025** (V1–V5, `VP0-2026-09-28d`, +5,0 %, maxDD −4,3 %) · holdout 2026 fermé · [rapport](./RS-D1-REPORT.md) | **+1** |
 | `RS-U0-U3-5m` | Porte descriptive « ouverture US » : balayage du range 6 h puis retour, à 09:30 NY vs 47 demi-heures placebo, rendement 60 min net, BTC / ETH / SOL 5 min | `VP0-2026-09-28c` | **joué 2026-09-28 : ÉCHEC** (G2 faux ×3 après coûts ; BTC brut +14 bps, net −2,9) · [rapport](./RS-06-US-OPEN-U0-RAPPORT.md) | **+1** |
+| `OF-0-BTC-1h-F1…F5` | Order flow intrabarre (footprint approximé 1 s) : redondance vs OHLCV + delta, puis IC du résidu vs rendement 4h, BTC 1h | `VP0-2026-09-28e` | pré-enregistré, **non joué** | **+5** |
 
 Règles de tenue :
 - les lignes RS ne sont ajoutées **que** par le pilote RS ;
