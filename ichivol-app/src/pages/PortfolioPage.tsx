@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { PaperCloseConfirmSheet } from '../components/PaperCloseConfirmSheet'
 import { ChartIntelligencePanel } from '../components/chart-intelligence'
 import {
@@ -269,14 +269,22 @@ export function PortfolioPage() {
         <section className="card">
           <div className="card-head">
             <h2>Risk Kernel</h2>
+            <Link to="/app/settings" className="muted" style={{ fontSize: 11 }}>
+              Paramètres →
+            </Link>
           </div>
           <div className="card-body">
+            <p style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 12px', lineHeight: 1.45 }}>
+              Garde-fou du <b>moteur paper Python</b> (<code style={{ fontSize: 10 }}>risk_kernel_v1</code>
+              ) : avant toute ouverture, il vérifie shorts, cash, plafonds, kill-switch et perte du jour.
+              Ce n’est pas un score de marché — c’est l’autorisation d’entrer.
+            </p>
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 20,
-                padding: '10px 0 22px',
+                padding: '10px 0 14px',
               }}
             >
               <span
@@ -292,16 +300,47 @@ export function PortfolioPage() {
               >
                 {riskPass === true ? 'PASSE' : riskPass === false ? 'BLOQUÉ' : '—'}
               </span>
-              <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                Verdict risk kernel
+              <span style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.4 }}>
+                {riskPass === true
+                  ? 'Les nouvelles entrées paper sont autorisées.'
+                  : riskPass === false
+                    ? 'Entrées bloquées (kill-switch et/ou perte journalière).'
+                    : 'État du verrou indisponible.'}
                 <br />
                 {risk
-                  ? `${risk.open_positions} position${risk.open_positions === 1 ? '' : 's'} sous surveillance`
+                  ? risk.open_positions === 0
+                    ? 'Aucune position ouverte — les jauges à 0 sont normales.'
+                    : `${risk.open_positions} position${risk.open_positions === 1 ? '' : 's'} sous surveillance`
                   : '—'}
               </span>
             </div>
+            {lock && (
+              <ul
+                style={{
+                  margin: '0 0 14px',
+                  padding: '8px 12px',
+                  listStyle: 'none',
+                  fontSize: 11,
+                  lineHeight: 1.5,
+                  background: 'var(--surface-subtle, #f4f2ec)',
+                  borderRadius: 6,
+                }}
+              >
+                <li>
+                  Kill-switch :{' '}
+                  <b>{lock.kill_switch_armed ? 'armé (entrées coupées)' : 'désarmé'}</b>
+                </li>
+                <li>
+                  Perte du jour :{' '}
+                  <b>{lock.daily_loss_locked ? 'plafond atteint' : 'sous le plafond'}</b>
+                </li>
+                <li>
+                  Entrées : <b>{lock.entries_blocked ? 'bloquées' : 'ouvertes'}</b>
+                </li>
+              </ul>
+            )}
             <ProgressRow
-              label="Risque ouvert"
+              label="Risque ouvert (stop → entrée)"
               value={
                 risk?.open_risk_amount != null
                   ? `${fmtEur(risk.open_risk_amount, 2)}${
@@ -316,11 +355,13 @@ export function PortfolioPage() {
               }
             />
             <ProgressRow
-              label="Risque par jour"
+              label="Plafond risque ouvert"
               value={
                 risk?.open_risk_pct != null && risk.max_open_risk_pct != null
                   ? `${fmtPct(risk.open_risk_pct, 1).replace(' %', '')} / ${fmtPct(risk.max_open_risk_pct, 0)}`
-                  : '—'
+                  : risk?.max_open_risk_pct != null
+                    ? `0 / ${fmtPct(risk.max_open_risk_pct, 0)}`
+                    : '—'
               }
               pct={
                 risk?.open_risk_pct != null && risk.max_open_risk_pct
@@ -329,10 +370,10 @@ export function PortfolioPage() {
               }
             />
             <ProgressRow
-              label="Exposition globale"
+              label="Exposition / capital"
               value={
                 investedPct != null
-                  ? `${fmtPctPoints(investedPct, 1).replace(' %', '')} / —`
+                  ? `${fmtPctPoints(investedPct, 1)} engagé`
                   : '—'
               }
               pct={investedPct ?? 0}
@@ -348,6 +389,11 @@ export function PortfolioPage() {
                   : 0
               }
             />
+            <p style={{ fontSize: 11, color: 'var(--muted)', margin: '12px 0 0', lineHeight: 1.45 }}>
+              Les refus récents (ex. vente à découvert interdite) apparaissent plus bas quand le
+              journal en a. Détail des seuils :{' '}
+              <Link to="/app/settings">Paramètres</Link>.
+            </p>
           </div>
         </section>
 
@@ -620,7 +666,11 @@ export function PortfolioPage() {
         </div>
         <div className="card-body">
           {concentration.length === 0 ? (
-            <p style={{ fontSize: 11, color: 'var(--muted)' }}>—</p>
+            <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5, margin: 0 }}>
+              Aucune position ouverte : rien à concentrer. Dès qu’un lot paper est ouvert, tu vois ici
+              la part de chaque symbole dans l’exposition (notional / capital engagé). Le Risk Kernel
+              refuse un nouvel actif si le plafond d’exposition symbole ou le cash ne suit pas.
+            </p>
           ) : (
             <>
               {concentration.map((c) => (
