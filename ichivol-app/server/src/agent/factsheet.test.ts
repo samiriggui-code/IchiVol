@@ -64,7 +64,7 @@ function out(over: Partial<AnalysisOutput> = {}): AnalysisOutput {
       { text: 'Le RVOL est de 1,529, au 93e percentile.', kind: 'fact', fact_ids: ['rvol.rvol', 'rvol.percentile'] },
       { text: "L'ATR 14 vaut 472,1.", kind: 'fact', fact_ids: ['atr.atr'] },
     ],
-    risks: [{ text: 'Le prix (83703,35) reste sous le dernier sommet 83820.', kind: 'fact', fact_ids: ['price.live', 'structure.last_swing_high'] }],
+    risks: [{ text: 'Prix à 83703,35 ; dernier sommet à 83820.', kind: 'fact', fact_ids: ['price.live', 'structure.last_swing_high'] }],
     invalidation: [],
     missing_data: [],
     ...over,
@@ -268,6 +268,12 @@ const FS_B: FactSheet = {
     fact('location.vah', 84918.5, '84918,5'),
     fact('pipeline.blocking_stages', 'location, regime', 'location, regime'),
     fact('location.price_vs_value_area', 'between_poc_vah', 'between_poc_vah'),
+    fact('rel.price_vs_location_poc', 'au-dessus', 'au-dessus'),
+    fact('rel.price_vs_location_vah', 'en dessous', 'en dessous'),
+    fact('rel.price_vs_location_val', 'au-dessus', 'au-dessus'),
+    fact('rsi.rsi', 58.2, '58,2'),
+    fact('mtf_direction.higher_tf', '4h', '4h'),
+    fact('calendar.next_high.minutes_to', 135, '135', { unit: 'min', source: 'calendar' }),
   ],
 }
 
@@ -305,7 +311,7 @@ describe('FS-0b — contournements de la revue #171', () => {
   })
   it('V8 : « le prix entre X et Y » vérifié contre price.live', () => {
     rejects('Le prix évolue dans un HVN entre POC 83965,08 et VAL 83684,67', ['location.poc', 'location.val'])
-    const ok = validateAnalysis(FS_B, out({ claims: [{ text: 'Le prix évolue entre POC 83965,08 et VAH 84918,5.', kind: 'fact', fact_ids: ['location.poc', 'location.vah'] }], risks: [] }))
+    const ok = validateAnalysis(FS_B, out({ claims: [{ text: 'Le prix évolue entre POC 83965,08 et VAH 84918,5.', kind: 'fact', fact_ids: ['location.price_vs_value_area', 'location.poc', 'location.vah'] }], risks: [] }))
     assert.equal(ok.rejected, 0, JSON.stringify(ok.verdicts))
   })
   it('garde les cas légitimes', () => {
@@ -353,7 +359,7 @@ describe('FS-0c — timeframes, chiffres non ASCII, unités, bornes Unicode', ()
   })
   it('V8 / N10 : « au-dessus de la VAH » faux', () => {
     rejects('Le prix est au-dessus de la VAH 84918,5.', ['location.vah'])
-    const ok = validateAnalysis(FS_B, out({ claims: [{ text: 'Le prix reste sous la VAH 84918,5.', kind: 'fact', fact_ids: ['location.vah'] }], risks: [] }))
+    const ok = validateAnalysis(FS_B, out({ claims: [{ text: 'Le prix reste sous la VAH 84918,5.', kind: 'fact', fact_ids: ['rel.price_vs_location_vah', 'location.vah'] }], risks: [] }))
     assert.equal(ok.rejected, 0, JSON.stringify(ok.verdicts))
   })
   it('V2 : résumé avec 30m / 12h / pleine chasse / causalité « dû à »', () => {
@@ -370,7 +376,7 @@ describe('FS-0c — timeframes, chiffres non ASCII, unités, bornes Unicode', ()
     const fs = { ...FS_B, facts: [...FS_B.facts, fact('mtf_direction.higher_tf', '4h', '4h')] }
     for (const [text, ids] of [
       ['En 1h, le RVOL est de 1,529.', ['rvol.rvol']],
-      ['Le 4h est au-dessus : RVOL 1,529 en 1H.', ['mtf_direction.higher_tf', 'rvol.rvol']],
+      ['En 4h la direction est neutre ; RVOL 1,529 en 1H.', ['mtf_direction.higher_tf', 'rvol.rvol']],
       ['Prochain événement le 2026-09-29 04:30 UTC.', ['calendar.next_high.time_utc']],
     ] as const) {
       const r = validateAnalysis(fs, out({ claims: [{ text, kind: 'fact', fact_ids: [...ids] }], risks: [] }))
@@ -379,4 +385,40 @@ describe('FS-0c — timeframes, chiffres non ASCII, unités, bornes Unicode', ()
     const s = validateAnalysis(fs, out({ summary: 'En 1h comme en 4h, le pipeline ne trade pas (NO_TRADE).' }))
     assert.equal(s.summaryOk, true, JSON.stringify(s.summaryErrors))
   })
+})
+
+// --- FS-0f : 3e sonde (ichivol-ce) — relations = faits moteur cités, jamais déduites ---------------
+
+function accepts(text: string, fact_ids: string[], kind: Claim['kind'] = 'fact'): void {
+  const r = validateAnalysis(FS_B, out({ claims: [{ text, kind, fact_ids }], risks: [] }))
+  assert.equal(r.rejected, 0, `devait passer : « ${text} » ${JSON.stringify(r.verdicts.filter((v) => !v.ok).map((v) => v.errors))}`)
+}
+
+describe('FS-0f — sonde 3 : contournements (rejetés)', () => {
+  it('X1 : 2e « au-dessus » non porté (VAH en dessous)', () =>
+    rejects('Le prix est au-dessus du POC 83965,08 et au-dessus de la VAH 84918,5.', ['rel.price_vs_location_poc', 'location.poc', 'location.vah']))
+  it('X2 / X3 : « dépasse », « au-delà » sans relation cohérente', () => {
+    rejects('Le prix dépasse la VAH 84918,5.', ['location.vah'])
+    rejects('Le prix évolue au-delà de la VAH 84918,5.', ['rel.price_vs_location_vah', 'location.vah'])
+  })
+  it('X4 : niveau loin dans la phrase', () =>
+    rejects('Le prix se maintient au-dessus, avec un volume correct et une structure propre, de la VAH 84918,5.', ['location.vah']))
+  it('X5 : sujet hors liste', () => rejects('La paire cote au-dessus de la VAH 84918,5.', ['location.vah']))
+  it('X6 : négation', () => rejects("Le prix n'est pas sous la VAH 84918,5.", ['rel.price_vs_location_vah', 'location.vah']))
+  it('X7 / X8 : causalité hors liste', () => {
+    rejects("Le NO_TRADE s'explique par un funding extrême.", ['pipeline.decision'])
+    rejects('Pas de trade suite au funding extrême.', ['rvol.rvol'], 'interpretation')
+    rejects('Le pipeline bloque vu que le RVOL est faible.', ['rvol.rvol'], 'interpretation')
+  })
+})
+
+describe('FS-0f — sonde 3 : phrases vraies (acceptées)', () => {
+  it('L4 : « En H4 » avec higher_tf 4h cité', () => accepts('En H4, la direction reste neutre.', ['mtf_direction.higher_tf']))
+  it('L5 : « RSI(14) à 58,2 »', () => accepts('Le RSI(14) est à 58,2.', ['rsi.rsi']))
+  it('L6 : « dans 135 min » avec minutes_to cité', () =>
+    accepts('Événement macro dans 135 min.', ['calendar.next_high.minutes_to']))
+  it('L8 : prix entre VAL et VAH avec la relation citée', () =>
+    accepts('Le prix évolue entre VAL 83684,67 et VAH 84918,5.', ['location.price_vs_value_area', 'location.val', 'location.vah']))
+  it('forme positive de la relation', () =>
+    accepts('Le prix est en dessous de la VAH 84918,5.', ['rel.price_vs_location_vah', 'location.vah']))
 })

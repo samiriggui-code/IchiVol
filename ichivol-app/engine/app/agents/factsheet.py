@@ -21,7 +21,7 @@ from typing import Any, Sequence
 logger = logging.getLogger(__name__)
 
 SCHEMA = "ichivol.factsheet.v1"
-MAX_FACTS = 60
+MAX_FACTS = 72
 _VALIDATION_NA = "N/A"
 
 
@@ -229,6 +229,43 @@ def facts_derived(
     ]
 
 
+# Niveaux de prix comparés au prix live (relations pré-calculées, FS-0f) : le LLM cite la relation, ne la déduit jamais.
+RELATION_LEVELS: tuple[tuple[str, str], ...] = (
+    ("location", "poc"), ("location", "vah"), ("location", "val"), ("location", "vwap"),
+    ("structure", "last_swing_high"), ("structure", "last_swing_low"),
+    ("donchian", "upper"), ("donchian", "lower"),
+)
+
+
+def relation_label(price: float, level: float) -> str:
+    if price > level:
+        return "au-dessus"
+    if price < level:
+        return "en dessous"
+    return "égal"
+
+
+def facts_relations(
+    detail: dict[str, Any] | None, cards: Sequence[dict[str, Any]], *, timeframe: str, now: int | None
+) -> list[dict[str, Any]]:
+    """``rel.price_vs_<engine>_<field>`` = au-dessus | en dessous | égal, pour chaque niveau disponible."""
+    price = detail.get("price") if detail else None
+    by_feature = {c.get("feature"): c for c in cards}
+    out: list[dict[str, Any]] = []
+    for engine, field in RELATION_LEVELS:
+        card = by_feature.get(engine) or {}
+        value = card.get("value") if isinstance(card.get("value"), dict) else {}
+        level = value.get(field)
+        ok = isinstance(price, (int, float)) and isinstance(level, (int, float))
+        out.append(
+            _fact(f"rel.price_vs_{engine}_{field}", engine="relation", field=f"price_vs_{engine}_{field}",
+                  value=relation_label(float(price), float(level)) if ok else None, timeframe=timeframe,
+                  as_of=None, known_at=now, source="engine", validation_status="NON_VALIDE",
+                  decision_role="context", reason=None if ok else "price_or_level_missing")
+        )
+    return out
+
+
 def facts_from_paper(
     position: dict[str, Any] | None,
     lock: dict[str, Any] | None,
@@ -432,6 +469,7 @@ def build_factsheet(
         fact_groups=[
             facts_from_pipeline(detail, timeframe=timeframe, as_of=bar_as_of, reason=pipe_reason, now=now_s),
             facts_derived(detail, cards, timeframe=timeframe, now=now_s),
+            facts_relations(detail, cards, timeframe=timeframe, now=now_s),
             facts_from_paper(position, lock, timeframe=timeframe, as_of=bar_as_of, reason=paper_reason),
             facts_from_calendar(events, now=now_s, timeframe=timeframe, reason=cal_reason),
             facts_from_cards(cards),

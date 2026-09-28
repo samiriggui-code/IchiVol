@@ -89,7 +89,7 @@ const PROGRAM_NAME_RE = /\b(?:VP|AG-S|RS-[A-Z]|OF-|B|T)\d{1,2}[a-z]?\b/g
  */
 const PERIOD_NAMES = 'ATR|EMA|SMA|MA|Donchian|Kijun|Tenkan|Senkou|Ichimoku'
 const INDICATOR_PERIODS = new Set([5, 7, 9, 10, 12, 14, 20, 21, 26, 50, 52, 55, 100, 200])
-const PERIOD_PAREN_RE = new RegExp(`\\b(?:${PERIOD_NAMES})\\s?\\((\\d{1,3}(?:\\s?[,/]\\s?\\d{1,3})*)\\)`, 'g')
+const PERIOD_PAREN_RE = new RegExp(`\\b(?:${PERIOD_NAMES}|RSI|ADX)\\s?\\((\\d{1,3}(?:\\s?[,/]\\s?\\d{1,3})*)\\)`, 'g')
 const PERIOD_BARE_RE = new RegExp(
   `\\b(?:${PERIOD_NAMES})\\s(\\d{1,3}(?:/\\d{1,3})*)(?!\\s*(?:[=:]|à\\b|\\d)|[.,]\\d)`,
   'g',
@@ -110,7 +110,7 @@ const NUMBER_WORDS_RE = new RegExp(
 )
 /** Connecteurs causaux (V8). */
 const CAUSAL_RE = new RegExp(
-  `${WB_START}(?:parce que|parce qu|car|dû à|due à|dus à|dues à|dû au|due au|dus aux|dues aux|à cause|en raison|puisque|because|due to)${WB_END}`,
+  `${WB_START}(?:parce que|parce qu|car|dû à|due à|dus à|dues à|dû au|due au|dus aux|dues aux|à cause|en raison|puisque|because|due to|s'explique|s’explique|expliqu\\p{L}* par|suite à|suite au|suite aux|vu que|vu le|vu la|étant donné|compte tenu|du fait|faute de|en l'absence|en l’absence|lié à|liée à|liés à|provoqu\\p{L}*|entraîn\\p{L}*|conduit à|résult\\p{L}*|découl\\p{L}*|since|owing to|as a result|caused by|driven by)${WB_END}`,
   'iu',
 )
 /**
@@ -145,7 +145,11 @@ export function timeframeSet(values: Array<string | null | undefined>): Set<stri
 /** Masque les timeframes autorisés ; renvoie les autres (heure inventée, « 30m », « 850 M »…). */
 export function maskTimeframes(text: string, allowed: Set<string>): { text: string; rejected: string[] } {
   const rejected: string[] = []
-  const masked = text.replace(TF_CANDIDATE_RE, (m, n: string, u: string) => {
+  // Notation trader « H4 / M15 / D1 / W1 » = 4h / 15m / 1d / 1w (M = minutes ici, pas millions).
+  const normalised = text.replace(/(?<![\p{L}\p{N}_])([HMDW])(\d{1,2})(?![\p{L}\p{N}_])/gu, (_m, u: string, n: string) =>
+    `${n}${u === 'M' ? 'min' : u.toLowerCase()}`,
+  )
+  const masked = normalised.replace(TF_CANDIDATE_RE, (m, n: string, u: string) => {
     if (!allowed.has(tfKey(n, u))) rejected.push(m.trim())
     return ' '
   })
@@ -242,46 +246,96 @@ function priceLive(fs: FactSheet): number | null {
   return f && typeof f.value === 'number' ? f.value : null
 }
 
-/** V8 : « (le prix) entre X et Y » doit encadrer price.live. */
-/** Désignations du prix courant (N6) : « prix », « cours », « BTC »… */
-const PRICE_SUBJECT_RE = new RegExp(
-  `${WB_START}(?:prix|cours|price|spot|marché|BTC|ETH|SOL|BTCUSDT|ETHUSDT|SOLUSDT|bitcoin|ether|solana)${WB_END}`,
-  'iu',
-)
-const ABOVE_RE = new RegExp(`${WB_START}(?:au[- ]dessus|above|supérieur|plus haut que)${WB_END}([^.;]{0,40})`, 'iu')
-const BELOW_RE = new RegExp(
-  `${WB_START}(?:en[- ]dessous|au[- ]dessous|sous|below|inférieur|plus bas que)${WB_END}([^.;]{0,40})`,
-  'iu',
-)
-const BETWEEN_RE = new RegExp(`${WB_START}entre${WB_END}([^.;]*?)${WB_START}et${WB_END}([^.;]*)`, 'iu')
-/** Décision nommée dans le texte (N5) : la causalité exige alors pipeline.blocking_stages. */
-const DECISION_TOKEN_RE = /\b(?:NO_TRADE|STRONG_BUY|STRONG_SELL|BUY|SELL|WATCH)\b/
+/**
+ * FS-0f — relations : le moteur les calcule (rel.price_vs_*, location.price_vs_value_area, ichimoku.price_vs_kumo),
+ * le texte ne les déduit jamais. Tout vocabulaire de comparaison exige un fait relationnel cité, de même sens ;
+ * pas de négation dans une phrase comparative (forme positive du fait).
+ */
+const UP_WORDS = String.raw`au[- ]dessus|dépass\p{L}*|au[- ]delà|supérieur\p{L}*|plus haut|franchi\p{L}*|above|over|beyond|exceed\p{L}*|higher than`
+const DOWN_WORDS = String.raw`en[- ]dessous|au[- ]dessous|dessous|sous|inférieur\p{L}*|plus bas|cass\p{L}*|below|under|lower than`
+const BETWEEN_WORDS = `entre|between|dans la value area|dans la zone de valeur`
+const UP_RE = new RegExp(`${WB_START}(?:${UP_WORDS})${WB_END}`, 'iu')
+const DOWN_RE = new RegExp(`${WB_START}(?:${DOWN_WORDS})${WB_END}`, 'iu')
+const BETWEEN_WORD_RE = new RegExp(`${WB_START}(?:${BETWEEN_WORDS})${WB_END}`, 'iu')
+const NEGATION_RE = new RegExp(`${WB_START}(?:ne|n'|n’|pas|jamais|plus aucun|not|never|no longer)${WB_END}`, 'iu')
 
-/** V8 / N6 / N10 : relations entre le prix courant et un niveau cité, vérifiées contre price.live. */
-function priceRelationErrors(text: string, fs: FactSheet): string[] {
-  if (!PRICE_SUBJECT_RE.test(text)) return []
-  const p = priceLive(fs)
-  if (p === null) return []
+type RelClass = 'up' | 'down' | 'between'
+
+/** Sens porté par un fait relationnel cité (null si le fait n'est pas relationnel). */
+function relationClass(f: Fact): RelClass | null {
+  const v = String(f.value ?? '').toLowerCase()
+  if (!(f.id.startsWith('rel.') || f.id === 'location.price_vs_value_area' || f.id === 'ichimoku.price_vs_kumo')) return null
+  if (v === 'au-dessus' || v === 'above' || v === 'above_vah') return 'up'
+  if (v === 'en dessous' || v === 'below' || v === 'below_val') return 'down'
+  if (v.startsWith('between') || v === 'inside' || v === 'in') return 'between'
+  return null
+}
+
+function relationErrors(text: string, cited: Fact[]): string[] {
+  const used: RelClass[] = []
+  if (UP_RE.test(text)) used.push('up')
+  if (DOWN_RE.test(text)) used.push('down')
+  if (BETWEEN_WORD_RE.test(text)) used.push('between')
+  if (used.length === 0) return []
+  const have = new Set(cited.map(relationClass).filter((c): c is RelClass => c !== null))
   const errors: string[] = []
-  // Un niveau n'est comparé au prix que s'il est du même ordre (0,5×–1,5×) : « BELOW du kumo … score de -58,3 »
-  // n'est pas une relation de prix (faux positif observé en prod).
-  const isLevel = (n: { value: number } | undefined) => !!n && n.value >= 0.5 * p && n.value <= 1.5 * p
-  const between = BETWEEN_RE.exec(text)
-  if (between) {
-    const a = extractNumbers(between[1])[0]
-    const b = extractNumbers(between[2])[0]
-    if (isLevel(a) && isLevel(b) && a && b && !(p >= Math.min(a.value, b.value) && p <= Math.max(a.value, b.value))) {
-      errors.push(`relation fausse : le prix (${p}) n'est pas entre ${a.raw} et ${b.raw}`)
-    }
-  }
-  const above = ABOVE_RE.exec(text)
-  const aboveLevel = above ? extractNumbers(above[1])[0] : undefined
-  if (aboveLevel && isLevel(aboveLevel) && !(p > aboveLevel.value)) errors.push(`relation fausse : le prix (${p}) n'est pas au-dessus de ${aboveLevel.raw}`)
-  const below = BELOW_RE.exec(text)
-  const belowLevel = below ? extractNumbers(below[1])[0] : undefined
-  if (belowLevel && isLevel(belowLevel) && !(p < belowLevel.value)) errors.push(`relation fausse : le prix (${p}) n'est pas en dessous de ${belowLevel.raw}`)
+  if (have.size === 0) errors.push('comparaison sans fait relationnel cité (rel.price_vs_*, price_vs_value_area, price_vs_kumo)')
+  else for (const u of used) if (!have.has(u)) errors.push(`comparaison « ${u} » contredite ou non portée par les faits relationnels cités`)
+  if (NEGATION_RE.test(text)) errors.push('négation interdite dans une comparaison (utiliser la forme positive du fait)')
+  errors.push(...levelRelationErrors(text, cited))
   return errors
 }
+
+/** Niveaux nommés → fait relationnel correspondant (X1 : chaque niveau comparé porte sa propre relation). */
+const LEVEL_KEYWORDS: Array<[RegExp, string]> = [
+  [new RegExp(`${WB_START}POC${WB_END}`, 'u'), 'rel.price_vs_location_poc'],
+  [new RegExp(`${WB_START}VAH${WB_END}`, 'u'), 'rel.price_vs_location_vah'],
+  [new RegExp(`${WB_START}VAL${WB_END}`, 'u'), 'rel.price_vs_location_val'],
+  [new RegExp(`${WB_START}A?VWAP${WB_END}`, 'u'), 'rel.price_vs_location_vwap'],
+  [new RegExp(`${WB_START}(?:swing high|dernier sommet|sommet)${WB_END}`, 'iu'), 'rel.price_vs_structure_last_swing_high'],
+  [new RegExp(`${WB_START}(?:swing low|dernier creux|creux)${WB_END}`, 'iu'), 'rel.price_vs_structure_last_swing_low'],
+  [new RegExp(`${WB_START}(?:borne haute|Donchian haut|upper)${WB_END}`, 'iu'), 'rel.price_vs_donchian_upper'],
+  [new RegExp(`${WB_START}(?:borne basse|Donchian bas|lower)${WB_END}`, 'iu'), 'rel.price_vs_donchian_lower'],
+]
+const DIRECTION_SCAN_RE = new RegExp(`${WB_START}(?:(${UP_WORDS})|(${DOWN_WORDS}))${WB_END}`, 'giu')
+
+/**
+ * Pour chaque niveau nommé dans une phrase comparative, le sens le plus proche qui le précède doit être celui
+ * de son fait rel.* cité (dans « entre X et Y », la value area citée suffit pour POC / VAH / VAL).
+ */
+function levelRelationErrors(text: string, cited: Fact[]): string[] {
+  const errors: string[] = []
+  const byId = new Map(cited.map((f) => [f.id, f]))
+  const vaBetween = cited.some((f) => f.id === 'location.price_vs_value_area' && relationClass(f) === 'between')
+  const directions = [...text.matchAll(DIRECTION_SCAN_RE)].map((m) => ({ at: m.index ?? 0, up: !!m[1] }))
+  for (const [re, relId] of LEVEL_KEYWORDS) {
+    const m = re.exec(text)
+    if (!m) continue
+    const before = directions.filter((d) => d.at < (m.index ?? 0))
+    const dir = before.length ? before[before.length - 1] : undefined
+    if (!dir) {
+      if (vaBetween && /location_(poc|vah|val)$/.test(relId)) continue
+      if (BETWEEN_WORD_RE.test(text) && vaBetween) continue
+      continue // niveau nommé sans verbe de comparaison devant lui : simple mention
+    }
+    const rel = byId.get(relId)
+    if (!rel) {
+      errors.push(`comparaison au niveau ${m[0]} sans citer ${relId}`)
+      continue
+    }
+    const cls = relationClass(rel)
+    if ((dir.up && cls !== 'up') || (!dir.up && cls !== 'down')) {
+      errors.push(`relation fausse pour ${m[0]} : le fait ${relId} vaut « ${String(rel.value)} »`)
+    }
+  }
+  return errors
+}
+
+/** Décision nommée (N5) : jeton de verdict, ou mots décrivant la décision du pipeline. */
+const DECISION_TOKEN_RE = new RegExp(
+  `(?:\\b(?:NO_TRADE|STRONG_BUY|STRONG_SELL|BUY|SELL|WATCH)\\b)|${WB_START}(?:pipeline|décision|verdict|pas de trade|aucun trade|ne trade|refuse\\p{L}*|bloqu\\p{L}*)${WB_END}`,
+  'iu',
+)
 
 function checkClaim(claim: Claim, fs: FactSheet, byId: Map<string, Fact>): string[] {
   const errors: string[] = []
@@ -303,7 +357,12 @@ function checkClaim(claim: Claim, fs: FactSheet, byId: Map<string, Fact>): strin
   errors.push(...formErrors(claim.text))
   // Timeframe masqué seulement s'il vaut fs.timeframe ou le display d'un fait cité (ex. mtf_direction.higher_tf).
   const tf = maskTimeframes(claim.text, timeframeSet([fs.timeframe, ...okCited.map((f) => f.display)]))
-  for (const t of tf.rejected) errors.push(`timeframe, heure ou unité non sourcé: ${t}`)
+  for (const t of tf.rejected) {
+    // « 135 min » : durée citée d'un fait d'unité « min » (ex. calendar.next_high.minutes_to).
+    const dur = /^(\d+)\s?min$/.exec(t)
+    if (dur && okCited.some((f) => f.unit === 'min' && f.value === Number(dur[1]))) continue
+    errors.push(`timeframe, heure ou unité non sourcé: ${t}`)
+  }
   const unitText = maskPeriods(tf.text)
   if (UNIT_RE.test(unitText)) errors.push('unité non autorisée (seuls « % » et « x » pour rvol.rvol)')
   if (MULTIPLIER_RE.test(unitText) && !ids.includes('rvol.rvol')) errors.push('multiplicateur « x » sans rvol.rvol cité')
@@ -319,7 +378,7 @@ function checkClaim(claim: Claim, fs: FactSheet, byId: Map<string, Fact>): strin
   if (CAUSAL_RE.test(claim.text) && namesDecision && !ids.includes('pipeline.blocking_stages')) {
     errors.push('causalité sur la décision sans citer pipeline.blocking_stages')
   }
-  errors.push(...priceRelationErrors(claim.text, fs))
+  errors.push(...relationErrors(claim.text, okCited))
   return errors
 }
 

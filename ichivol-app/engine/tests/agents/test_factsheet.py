@@ -229,3 +229,17 @@ def test_truncated_facts_listed_in_missing():
     out = assemble(symbol="X", timeframe="1h", as_of=NOW, fact_groups=[many], engine_version="t")
     cut = [m for m in out["missing"] if m["reason"] == "truncated"]
     assert [m["id"] for m in cut] == [f"x.{i}" for i in range(MAX_FACTS, MAX_FACTS + 3)]  # E2
+
+
+def test_relations_are_precomputed_facts():
+    from app.agents.factsheet import facts_relations
+
+    detail = {"price": 83972.35}
+    cards = [{"feature": "location", "value": {"poc": 83965.08, "vah": 84918.5, "val": 83684.67, "vwap": 83972.35}},
+             {"feature": "structure", "value": {"last_swing_high": 83820.0, "last_swing_low": None}}]
+    by = _by_id(facts_relations(detail, cards, timeframe="1h", now=NOW))
+    assert by["rel.price_vs_location_poc"]["value"] == "au-dessus"
+    assert by["rel.price_vs_location_vah"]["value"] == "en dessous"
+    assert by["rel.price_vs_location_vwap"]["value"] == "égal"
+    assert by["rel.price_vs_structure_last_swing_low"]["status"] == "unavailable"
+    assert by["rel.price_vs_donchian_upper"]["status"] == "unavailable"
