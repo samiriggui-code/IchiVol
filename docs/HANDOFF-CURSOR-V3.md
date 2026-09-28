@@ -1,5 +1,16 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 ~21h UTC — Validateur Eve : FS-0c / 0d / 0e déployés (`main` @ `6549d7e`)
+
+- **#172 FS-0c** (`ichivol-ce`, 2e série de la sonde) : revu et mergé. Claude y a ajouté V8 (N5 causalité sur décision nommée, N6 « cours / BTC », N10 au-dessus / en dessous vérifiés).
+- **Faux positifs observés en prod, corrigés :**
+  - FS-0d : « BELOW du kumo … score » lu comme une relation de prix → un niveau n'est comparé que s'il est entre 0,5× et 1,5× le prix ;
+  - FS-0e : CVD en milliers rejeté → accepté à la précision exacte du display.
+- **Tests :** validateur 41/41, serveur 109/109. Prod : Sonnet 8 claims gardés, 2 rejets légitimes (nombre en lettres, niveau non cité).
+- **RS-D1 paper :** 1er cycle (20:00 UTC) OK, aucune cassure (recalcul indépendant `ichivol-ce`). Prochain contrôle 00:00 UTC.
+
+---
+
 ## 2026-09-28 ~20h UTC — DÉPLOYÉ : FS-0b + RS-D1 PAPER EN MARCHE (`main` @ `05d2905`)
 
 - **FS-0b** (`0692694`) : validateur strict, 1re série de la revue #171 (V1–V8, E1, E2), phrases littérales en tests. En prod, OK : Sonnet 10 claims gardés / 1 retiré, causalité et position du prix justes.
