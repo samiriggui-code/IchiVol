@@ -1,5 +1,76 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 soir — Claude → Cursor : REPRISE (lire d'abord ce bloc, puis les 2 blocs suivants)
+
+Pendant ton absence : #142, #156, #157, #158, #162, #163 et #164 ont été mergés par Claude. **`main` @ `d7fa477` est déployé en prod.** Les producteurs LIQ/CONF de `777c2d5` ont été retirés de la prod (non revus, non conformes à la spec).
+
+**Règles inchangées :** une PR draft par job → STOP → verdict Claude. Pas de merge sans verdict. **Aucun déploiement** (décision de Samir). `npx tsc -b`. Les amendements VP0 et le ledger RS sont centralisés par Claude : **prochain ID libre `VP0-2026-09-28e`**, à demander avant usage.
+
+### 0. En cours : `cursor/paper-refusal-labels-a2fe`
+
+Tu as 2 commits poussés (`a9e56d3`, `02cb69a` : libellés FR des refus paper, Risk Kernel) **et** des modifications locales dans `chart-intelligence/` (`ChartIntelligence.css`, `ChartIntelligencePanel.tsx`) sur cette même branche.
+- Sépare-les : les libellés paper → PR draft ; les modifications CI → autre branche, ou abandon si elles viennent d'un reste de travail.
+- Donne l'origine de la demande dans la PR. STOP.
+
+### 1. REVUE #165 RS-D1 (rôles inversés, **prioritaire**)
+
+Branche `claude/rs-d1`, PR [#165](https://github.com/samiriggui-code/IchiVol/pull/165). Le run a été fait **sans revue préalable** (tu étais indisponible) : c'est ta revue qui décide du merge.
+
+**Spec normative :**
+- `docs/RS-03-DONCHIAN-4H-SPEC.md`, avec la note §10 bis ;
+- amendements `VP0-2026-09-28b` (règles) et `VP0-2026-09-28d` (validation 2025).
+
+**Code :** `ichivol-app/engine/rs/` (`donchian.py`, `baselines.py`, `metrics.py`, `costs.py`, `data.py`, `run.py`, `validate.py`) et `tests/rs/`.
+
+**Points à vérifier :**
+- **Lookahead :** Donchian `t−N..t−1`, ATR connu à la clôture de `t`, décisions indépendantes de la longueur de la série, stop mis à jour à la clôture de `k` et appliqué à `k+1`.
+- **Exécution :** gap → open ; priorité stop / canal ; réentrée impossible sur la barre de sortie.
+- **Taille (§5) :** 0,5 % / 10 % / 25 % / 4 % / 3 % jour. Le verrou journalier est calculé sur l'equity au coût (vérifier que c'est conforme au paper réel `app/paper/risk.py`).
+- **Coûts (§6)** par symbole.
+- **B0-F / B0-E** sans levier ; `e` figé pour 2025.
+- **Métriques D1–D7 et V1–V5**, bootstrap mensuel, D3 contre `vpp_equity_monthly.json` (R4).
+- **Données :** aucune barre ≥ 2025 en dev ; aucune barre ≥ 2026 en validation (**holdout 2026 fermé**).
+- **Reproductibilité :**
+  - `python -m rs.run` puis `python -m rs.validate` (depuis `ichivol-app/engine`, données `vp1/data`) ;
+  - chiffres identiques à `docs/rs-artifacts/*.json`, hors `generated_at` / `git_head` ;
+  - `pytest tests/rs`.
+- **Rapport** `docs/RS-D1-REPORT.md` : les chiffres et les limites sont-ils fidèles aux JSON ?
+
+**Livrable :** verdict écrit dans ce handoff, au format « ID / sévérité / constat / correction ». **Ne modifie pas `rs/`** : les corrections sont faites par Claude. **Aucun nouveau run.**
+
+### 2. REVUE spec RS-U0 (docs, autre session Claude `ichivol-e4`)
+
+Branche `claude/rs-strategie` @ `a22a53a` (PR #160) : `docs/RS-05-US-OPEN-SPEC.md` + amendement `VP0-2026-09-28c` + ligne de ledger `RS-U0-U3-5m`.
+- Revue de la spec seulement : placebo 48 demi-heures, heure d'été NY, jours NYSE, fenêtre de balayage, coûts, critères G1–G4, risques de lookahead, sources de données 5 min.
+- **Pas de code, pas de téléchargement.** RS-U0 est en pause jusqu'à la décision de Samir. L'implémentation, si elle est lancée, sera faite par `ichivol-e4`, qui a déjà du code en cours.
+- Verdict dans ce handoff. STOP.
+
+### 3. CI-LIQ-CONF
+
+Spec dans le bloc « JOB CI-LIQ-CONF » plus bas.
+- `777c2d5` (branche `backup/ui-vp-local-e92c43f`) peut servir de point de départ, mais **la spec fait foi** :
+  - indicateur `liquidity` dans `REGISTRY` ;
+  - pools à 0,1 × ATR ;
+  - statuts `open` / `swept` / `broken` causaux ;
+  - Confluence ≥ 2 familles, `score_is_mock=false` ;
+  - tests de troncature ;
+  - goldens.
+- Branche `cursor/ci-liq-conf-a2fe`, PR draft → STOP.
+
+### 4. AG-S2 « Brief d'ouverture »
+
+Spec dans le bloc « SPEC AG-S2 » plus bas.
+- Bandeau Marché + 5 portes + fiche « Analyse complète » + lien Copilot avec le snapshot.
+- Table `session_brief`, route `GET /agents/session-briefs`.
+- Les fetchers `fetchAnalystCards` / `fetchSessionsCalendar` existent déjà dans `agentsRuntime.ts`.
+- Branche `cursor/ag-s2-a2fe`, PR draft → STOP.
+
+### 5. Ticket (fin de file)
+
+`vpp/replay.py` refuse de tourner si `DATABASE_URL` n'est pas `127.0.0.1` / `localhost`, avec un test.
+
+---
+
 ## 2026-09-28 fin d'après-midi — Samir : « oui » aux 3 décisions → faites
 
 | Décision | État |
