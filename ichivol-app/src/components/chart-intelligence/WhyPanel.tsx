@@ -4,7 +4,7 @@
  * Python, chacun avec le champ source.
  */
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   explainPositionLine,
   fmtExplainValue,
@@ -32,6 +32,7 @@ export function WhyPanel({ target }: { target: WhyTarget }) {
   const [data, setData] = useState<ChartObjectExplanation | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const boxRef = useRef<HTMLDivElement>(null)
 
   async function load() {
     setBusy(true)
@@ -39,21 +40,27 @@ export function WhyPanel({ target }: { target: WhyTarget }) {
     try {
       setData(await getChartObjectExplanation(target))
     } catch (e) {
+      setData(null)
       setError(e instanceof Error ? e.message : 'Échec')
     } finally {
       setBusy(false)
     }
   }
 
+  useEffect(() => {
+    if (!data && !error) return
+    boxRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [data, error])
+
   if (!data) {
     return (
-      <div className="ci-block ci-why-block">
+      <div className="ci-block ci-why-block" ref={boxRef}>
         <button type="button" className="ci-why-btn" onClick={() => void load()} disabled={busy}>
-          {busy ? 'Analyse moteur…' : 'Pourquoi ?'}
+          {busy ? 'Chargement explication…' : 'Pourquoi ? — charger les faits moteur'}
         </button>
         {error && (
           <p className="ci-why-error" role="alert">
-            {error}
+            Échec : {error}
           </p>
         )}
       </div>
@@ -66,8 +73,13 @@ export function WhyPanel({ target }: { target: WhyTarget }) {
   const known = timeline.known_at != null ? fmtTime(timeline.known_at) : '—'
 
   return (
-    <div className="ci-block ci-why-block" aria-label="Pourquoi cet objet ?">
-      <div className="ci-eyebrow">POURQUOI ?</div>
+    <div className="ci-block ci-why-block ci-why-block--open" ref={boxRef} aria-label="Pourquoi cet objet ?">
+      <div className="ci-why-open-head">
+        <div className="ci-eyebrow">POURQUOI ? · EXPLICATION MOTEUR</div>
+        <button type="button" className="ci-why-reload" onClick={() => void load()} disabled={busy}>
+          {busy ? '…' : 'Rafraîchir'}
+        </button>
+      </div>
 
       <div className="ci-why-tags">
         <span className={`ci-tag ${MATURITY_TONE[maturity] ?? 'gray'}`} title={identity.maturity.field ?? undefined}>

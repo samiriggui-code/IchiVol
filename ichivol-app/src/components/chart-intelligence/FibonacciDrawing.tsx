@@ -30,7 +30,7 @@ export function FibonacciLayer() {
           levels={levels}
           asOf={asOf}
           selected={isSelected(levels[0]!)}
-          onSelect={() => select(levels[0]!)}
+          onSelect={(e) => select(levels[0]!, e)}
         />
       ))}
     </g>
@@ -41,7 +41,7 @@ interface Props {
   levels: IntelligenceObject[]
   asOf: number | null
   selected: boolean
-  onSelect: () => void
+  onSelect: (e?: { stopPropagation?: () => void; preventDefault?: () => void }) => void
 }
 
 const KEY_RATIOS = new Set([0.5, 0.618, 0.786])

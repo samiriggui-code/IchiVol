@@ -199,7 +199,7 @@ export const INTELLIGENCE_LAYER_META: {
   { key: 'fvg', label: 'FVG', subtitle: 'Fair value gaps', color: metaColor('fvg') },
   { key: 'liquidity', label: 'Liquidity', subtitle: 'BSL / SSL (sommets / creux égaux)', color: '#a76c17' },
   { key: 'ichimoku', label: 'Ichimoku', subtitle: 'Tenkan / Kijun / Kumo', color: '#baa37e' },
-  { key: 'confluence', label: 'Confluence', subtitle: 'Zones multi-calculs (score mock)', color: '#1a7df5' },
+  { key: 'confluence', label: 'Confluence', subtitle: 'Overlap calques (score prototype)', color: '#1a7df5' },
 ]
 
 /**
@@ -711,8 +711,16 @@ export async function getChartObjectExplanation(q: ChartObjectExplainQuery): Pro
     { credentials: 'include' },
   )
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { detail?: string } | null
-    throw new Error(body?.detail ?? `Erreur ${res.status}`)
+    const body = (await res.json().catch(() => null)) as { detail?: unknown } | null
+    const d = body?.detail
+    let msg = `Erreur ${res.status}`
+    if (typeof d === 'string') msg = d
+    else if (Array.isArray(d)) {
+      msg = d
+        .map((x) => (typeof x === 'object' && x && 'msg' in x ? String((x as { msg: unknown }).msg) : String(x)))
+        .join(' · ')
+    } else if (d != null) msg = String(d)
+    throw new Error(msg)
   }
   return (await res.json()) as ChartObjectExplanation
 }
