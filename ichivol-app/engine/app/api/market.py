@@ -178,6 +178,15 @@ def get_screener(
         }
 
     entry = None if force else screener_cache.get(timeframe)
+    if entry is None and not force:
+        # Cold cache: the background loop is already scanning. A synchronous
+        # scan on this request wedges the thread pool and the Desk stays on « — ».
+        return {
+            "timeframe": timeframe,
+            "computed_at": 0.0,
+            "cache_age_seconds": 0.0,
+            "rows": [],
+        }
     if entry is None:
         entry = screener_cache.refresh(timeframe)
 

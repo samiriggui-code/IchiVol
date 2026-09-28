@@ -156,7 +156,7 @@ def test_screener_endpoint_shape(monkeypatch):
     monkeypatch.setattr(cache_module, "persist_scan", lambda session, row: None)
     cache_module.screener_cache._entry = None  # force a cold recompute
 
-    resp = client.get("/api/engine/screener")
+    resp = client.get("/api/engine/screener", params={"force": "true"})
     assert resp.status_code == 200
     body = resp.json()
     assert "rows" in body

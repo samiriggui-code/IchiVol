@@ -89,6 +89,39 @@ function loadLocal(): Record<string, string> {
   }
 }
 
+/** Onglets qui écrivent un patch compte. Les autres affichent un état, sans enregistrement. */
+function tabWritesAccount(tab: SettingsTab): boolean {
+  switch (tab) {
+    case 'Marché et univers':
+    case 'LLM':
+    case 'Alertes':
+      return true
+    case 'Limites de risque':
+    case 'Connexions':
+      return false
+    default: {
+      const _exhaustive: never = tab
+      return _exhaustive
+    }
+  }
+}
+
+type ProfileCeilings = {
+  code?: string
+  risk_pct?: number
+  daily_loss_limit_pct?: number
+  max_notional_pct?: number
+}
+
+function finiteNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function pctFr(value: number | null): string {
+  if (value == null) return '—'
+  return `${(value * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`
+}
+
 export function SettingsPage() {
   const llmLive = useLlmStatus()
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('Limites de risque')
@@ -118,6 +151,7 @@ export function SettingsPage() {
     directionFlip: true,
   })
   const [paperRisk, setPaperRisk] = useState<PaperOverview['risk'] | null>(null)
+  const [profileCeilings, setProfileCeilings] = useState<ProfileCeilings | null>(null)
 
   useEffect(() => {
     getSettings()
@@ -138,8 +172,25 @@ export function SettingsPage() {
       })
       .catch(() => setEngine(null))
     getPaperOverview()
-      .then((ov) => setPaperRisk(ov.risk ?? null))
-      .catch(() => setPaperRisk(null))
+      .then((ov) => {
+        setPaperRisk(ov.risk ?? null)
+        const raw = (ov.portfolio as { strategy_profile?: unknown }).strategy_profile
+        if (!raw || typeof raw !== 'object') {
+          setProfileCeilings(null)
+          return
+        }
+        const profile = raw as Record<string, unknown>
+        setProfileCeilings({
+          code: typeof profile.code === 'string' ? profile.code : undefined,
+          risk_pct: finiteNumber(profile.risk_pct) ?? undefined,
+          daily_loss_limit_pct: finiteNumber(profile.daily_loss_limit_pct) ?? undefined,
+          max_notional_pct: finiteNumber(profile.max_notional_pct) ?? undefined,
+        })
+      })
+      .catch(() => {
+        setPaperRisk(null)
+        setProfileCeilings(null)
+      })
   }, [])
 
   const onSave = useCallback(
@@ -207,14 +258,7 @@ export function SettingsPage() {
             cooldownMin: engine?.pushAlertPrefs?.cooldownMin ?? 30,
           }
         }
-        if (Object.keys(patch).length === 0) {
-          if (settingsTab === 'Limites de risque' || settingsTab === 'Connexions') {
-            setError(
-              'Ces valeurs viennent du profil paper ou de l’état du moteur. Ce formulaire ne les réécrit pas.',
-            )
-          }
-          return
-        }
+        if (Object.keys(patch).length === 0) return
         const updated = await patchSettings(patch)
         setEngine(updated)
         invalidateEngineThresholdsCache()
@@ -290,7 +334,11 @@ export function SettingsPage() {
             key={t}
             type="button"
             className={settingsTab === t ? 'active' : ''}
-            onClick={() => setSettingsTab(t)}
+            onClick={() => {
+              setSettingsTab(t)
+              setError(null)
+              setSaved(false)
+            }}
           >
             {t}
           </button>
@@ -306,29 +354,41 @@ export function SettingsPage() {
             {settingsTab === 'Limites de risque' && (
               <>
                 <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  Plafonds appliqués par le profil paper ICHIVOL_BASELINE_V1. Ils ne sont pas des
-                  préférences navigateur : les modifier ici ne changerait pas le risk kernel.
+                  Plafonds du profil paper {profileCeilings?.code ?? 'en cours'}. Le moteur les
+                  applique à chaque ordre. Ils font partie du profil, pas des préférences du compte.
                 </p>
                 <div className="statline">
                   <span>Risque par trade</span>
-                  <b>0,5 %</b>
+                  <b>{pctFr(profileCeilings?.risk_pct ?? null)}</b>
                 </div>
                 <div className="statline">
                   <span>Risque ouvert max</span>
-                  <b>
-                    {paperRisk?.max_open_risk_pct != null
-                      ? `${(paperRisk.max_open_risk_pct * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`
-                      : '4 %'}
-                  </b>
+                  <b>{pctFr(paperRisk?.max_open_risk_pct ?? null)}</b>
+                </div>
+                <div className="statline">
+                  <span>Perte journalière max</span>
+                  <b>{pctFr(profileCeilings?.daily_loss_limit_pct ?? null)}</b>
+                </div>
+                <div className="statline">
+                  <span>Taille max d’un ordre</span>
+                  <b>{pctFr(profileCeilings?.max_notional_pct ?? null)}</b>
                 </div>
                 <div className="statline">
                   <span>Positions simultanées max</span>
                   <b>{paperRisk?.max_open_positions ?? '—'}</b>
                 </div>
+                <h3 style={{ marginTop: 22 }}>Utilisation</h3>
                 <div className="statline">
                   <span>Positions ouvertes</span>
-                  <b>{paperRisk?.open_positions ?? '—'}</b>
+                  <b>
+                    {paperRisk
+                      ? `${paperRisk.open_positions} / ${paperRisk.max_open_positions}`
+                      : '—'}
+                  </b>
                 </div>
+                <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 12 }}>
+                  État du portefeuille paper. Rien à enregistrer sur cet onglet.
+                </p>
               </>
             )}
 
@@ -673,13 +733,17 @@ export function SettingsPage() {
               </p>
             )}
 
-            <button type="submit" className="primary" disabled={saving}>
-              {saving ? 'Enregistrement…' : saved ? 'Enregistré' : 'Enregistrer les préférences'}
-            </button>
-            <p style={{ fontSize: 10, color: 'var(--muted)' }}>
-              Marché, alertes et LLM sont écrits sur votre compte. Les plafonds de risque affichés
-              sont ceux du profil paper, en lecture seule.
-            </p>
+            {tabWritesAccount(settingsTab) && (
+              <>
+                <button type="submit" className="primary" disabled={saving}>
+                  {saving ? 'Enregistrement…' : saved ? 'Enregistré' : 'Enregistrer les préférences'}
+                </button>
+                <p style={{ fontSize: 10, color: 'var(--muted)' }}>
+                  Écrit sur votre compte. Les plafonds de risque sont ceux du profil paper, sur
+                  l’onglet Limites de risque.
+                </p>
+              </>
+            )}
           </form>
         </section>
 

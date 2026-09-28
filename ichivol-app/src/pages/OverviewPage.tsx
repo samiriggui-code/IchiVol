@@ -810,83 +810,115 @@ export function OverviewPage() {
   const [sessionId, setSessionId] = useState<SessionId>('crypto')
   const [equityPeriod, setEquityPeriod] = useState<EquityPeriod>('1M')
   const [nowTick, setNowTick] = useState(() => Date.now())
+  const loadGen = useRef(0)
 
-  const load = useCallback(async (force = false) => {
+  const load = useCallback((force = false) => {
+    const gen = ++loadGen.current
     setLoading(true)
-    type ScreenerOk = Awaited<ReturnType<typeof getScreener>>
-    const [screenerRes, ovRes, feedRes, ordersRes, lockRes, healthRes, mktRes, fngRes, tickersRes] =
-      await Promise.all([
-        getScreener('1h', force)
-          .then((r): ScreenerOk | Error => r)
-          .catch((err: unknown): ScreenerOk | Error =>
-            err instanceof Error ? err : new Error('Screener indisponible'),
-          ),
-        getPaperOverview(BASELINE)
-          .then((r) => ({ ok: true as const, data: r }))
-          .catch(() => ({ ok: false as const })),
-        getActivityFeed(100)
-          .then((r) => ({ ok: true as const, items: r.items }))
-          .catch(() => ({ ok: false as const, items: [] as ActivityItem[] })),
-        getPaperActivity(BASELINE, 200)
-          .then((r) => ({ ok: true as const, orders: r }))
-          .catch(() => ({ ok: false as const, orders: [] as PaperOrderRow[] })),
-        getRiskLock(BASELINE).catch(() => null),
-        fetch('/api/engine/health', { credentials: 'include' })
-          .then(async (res) => {
-            if (!res.ok) return { engine: false }
-            const j = (await res.json().catch(() => null)) as {
-              status?: string
-              ok?: boolean
-            } | null
-            const ok = j?.ok === true || j?.status === 'ok' || j?.status === 'healthy'
-            return { engine: Boolean(ok) }
-          })
-          .catch(() => ({ engine: false })),
-        fetchGlobalMarket()
-          .then((m) => ({ ok: true as const, data: m }))
-          .catch(() => ({ ok: false as const })),
-        fetchFearGreed()
-          .then((f) => ({ ok: true as const, data: f }))
-          .catch(() => ({ ok: false as const })),
-        fetchTickers24h()
-          .then((list) => {
-            const map: Record<string, number> = {}
-            for (const t of list) map[t.symbol.toUpperCase()] = t.priceChangePercent
-            return map
-          })
-          .catch(() => ({} as Record<string, number>)),
-      ])
-
-    if (screenerRes instanceof Error) {
-      setRows([])
-    } else {
-      setRows(screenerRes.rows)
+    const fresh = () => gen === loadGen.current
+    let pending = 9
+    const done = () => {
+      pending -= 1
+      if (pending <= 0 && fresh()) setLoading(false)
     }
 
-    if (ovRes.ok) setOverview(ovRes.data)
-    else setOverview(null)
+    // Chaque bloc s’affiche dès qu’il arrive. Le screener (scan live) ne doit
+    // pas garder le capital, le risque et la santé à « — ».
+    void getScreener('1h', force)
+      .then((r) => {
+        if (fresh()) setRows(r.rows)
+      })
+      .catch(() => {
+        if (fresh()) setRows([])
+      })
+      .finally(done)
 
-    if (feedRes.ok) {
-      setEquityActions(feedRes.items)
-      setTape(feedRes.items.slice(0, TAPE_LIMIT))
-    } else {
-      setEquityActions([])
-      setTape([])
-    }
+    void getPaperOverview(BASELINE)
+      .then((r) => {
+        if (fresh()) setOverview(r)
+      })
+      .catch(() => {
+        if (fresh()) setOverview(null)
+      })
+      .finally(done)
 
-    if (ordersRes.ok) setPaperOrders(ordersRes.orders)
-    else setPaperOrders([])
+    void getActivityFeed(100)
+      .then((r) => {
+        if (!fresh()) return
+        setEquityActions(r.items)
+        setTape(r.items.slice(0, TAPE_LIMIT))
+      })
+      .catch(() => {
+        if (!fresh()) return
+        setEquityActions([])
+        setTape([])
+      })
+      .finally(done)
 
-    setLock(lockRes)
-    setEngineOk(healthRes.engine)
+    void getPaperActivity(BASELINE, 200)
+      .then((r) => {
+        if (fresh()) setPaperOrders(r)
+      })
+      .catch(() => {
+        if (fresh()) setPaperOrders([])
+      })
+      .finally(done)
 
-    if (mktRes.ok) setMarket(mktRes.data)
-    else setMarket(null)
-    if (fngRes.ok) setFng(fngRes.data)
-    else setFng(null)
+    void getRiskLock(BASELINE)
+      .then((r) => {
+        if (fresh()) setLock(r)
+      })
+      .catch(() => {
+        if (fresh()) setLock(null)
+      })
+      .finally(done)
 
-    setChangeBySymbol(tickersRes)
-    setLoading(false)
+    void fetch('/api/engine/health', { credentials: 'include' })
+      .then(async (res) => {
+        if (!res.ok) return false
+        const j = (await res.json().catch(() => null)) as {
+          status?: string
+          ok?: boolean
+        } | null
+        return j?.ok === true || j?.status === 'ok' || j?.status === 'healthy'
+      })
+      .then((ok) => {
+        if (fresh()) setEngineOk(ok)
+      })
+      .catch(() => {
+        if (fresh()) setEngineOk(false)
+      })
+      .finally(done)
+
+    void fetchGlobalMarket()
+      .then((m) => {
+        if (fresh()) setMarket(m)
+      })
+      .catch(() => {
+        if (fresh()) setMarket(null)
+      })
+      .finally(done)
+
+    void fetchFearGreed()
+      .then((f) => {
+        if (fresh()) setFng(f)
+      })
+      .catch(() => {
+        if (fresh()) setFng(null)
+      })
+      .finally(done)
+
+    void fetchTickers24h()
+      .then((list) => {
+        if (!fresh()) return
+        const map: Record<string, number> = {}
+        for (const t of list) map[t.symbol.toUpperCase()] = t.priceChangePercent
+        setChangeBySymbol(map)
+      })
+      .catch(() => {
+        if (fresh()) setChangeBySymbol({})
+      })
+      .finally(done)
   }, [])
 
   useEffect(() => {
