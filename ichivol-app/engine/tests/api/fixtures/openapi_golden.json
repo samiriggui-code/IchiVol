@@ -1433,6 +1433,24 @@
             }
           },
           {
+            "description": "Filtre AG-S1 : DIR | PART | STRUCT | LOC | REGIME",
+            "in": "query",
+            "name": "stage",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtre AG-S1 : DIR | PART | STRUCT | LOC | REGIME",
+              "title": "Stage"
+            }
+          },
+          {
             "in": "header",
             "name": "X-Twelve-Data-Key",
             "required": false,

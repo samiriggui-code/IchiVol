@@ -20,9 +20,12 @@ import {
   fetchSessionsCalendar,
   fmtDue,
   statusBadgeTone,
+  ANALYST_STAGE_LABELS,
+  ANALYST_STAGES,
   type AgentRoleCard,
   type AgentsListResponse,
   type AnalystCard,
+  type AnalystStage,
   type AuthorityChain,
   type SessionsCalendarResponse,
 } from '../lib/agentsRuntime'
@@ -30,6 +33,20 @@ import './AgentsPage.css'
 
 const ANALYST_SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'] as const
 const ANALYST_TFS = ['1h', '4h'] as const
+
+function groupCardsByStage(cards: AnalystCard[]): Record<AnalystStage, AnalystCard[]> {
+  const out = Object.fromEntries(ANALYST_STAGES.map((s) => [s, [] as AnalystCard[]])) as Record<
+    AnalystStage,
+    AnalystCard[]
+  >
+  for (const c of cards) {
+    const stage = (ANALYST_STAGES as readonly string[]).includes(c.stage)
+      ? c.stage
+      : null
+    if (stage) out[stage].push(c)
+  }
+  return out
+}
 
 type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
 
@@ -491,30 +508,53 @@ export function AgentsPage() {
           {analystLoading && !analystCards.length ? (
             <p style={{ fontSize: 12, color: 'var(--muted)' }}>Chargement des fiches…</p>
           ) : null}
-          <div className="grid three analyst-grid">
-            {analystCards.map((c) => (
-              <section className="card agent-card analyst-card" key={c.feature}>
-                {badge(
-                  c.used_by_decision ? c.decision_role : 'NON_VALIDE',
-                  c.used_by_decision ? 'green' : 'amber',
+          {ANALYST_STAGES.map((stage) => {
+            const group = groupCardsByStage(analystCards)[stage]
+            return (
+              <div key={stage} className="analyst-stage-block">
+                <div className="card-head" style={{ marginTop: 10, marginBottom: 8 }}>
+                  <h3>
+                    {stage} · {ANALYST_STAGE_LABELS[stage]}
+                  </h3>
+                  <small>{group.length} fiche(s)</small>
+                </div>
+                {group.length === 0 ? (
+                  <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 12px' }}>
+                    Aucune fiche pour cette étape.
+                  </p>
+                ) : (
+                  <div className="grid three analyst-grid">
+                    {group.map((c) => (
+                      <section className="card agent-card analyst-card" key={c.feature}>
+                        {badge(
+                          c.used_by_decision ? c.decision_role : 'NON_VALIDE',
+                          c.used_by_decision ? 'green' : 'amber',
+                        )}
+                        <h3>{c.feature}</h3>
+                        <p>{c.text}</p>
+                        <div className="statline">
+                          <span>Étape</span>
+                          <b>{c.stage}</b>
+                        </div>
+                        <div className="statline">
+                          <span>État</span>
+                          <b>{c.state}</b>
+                        </div>
+                        <div className="statline">
+                          <span>Rôle RS-01</span>
+                          <b>{c.decision_role}</b>
+                        </div>
+                        <div className="statline">
+                          <span>Statut feature</span>
+                          <b>{c.feature_status}</b>
+                        </div>
+                      </section>
+                    ))}
+                  </div>
                 )}
-                <h3>{c.feature}</h3>
-                <p>{c.text}</p>
-                <div className="statline">
-                  <span>État</span>
-                  <b>{c.state}</b>
-                </div>
-                <div className="statline">
-                  <span>Rôle RS-01</span>
-                  <b>{c.decision_role}</b>
-                </div>
-                <div className="statline">
-                  <span>Statut feature</span>
-                  <b>{c.feature_status}</b>
-                </div>
-              </section>
-            ))}
-          </div>
+              </div>
+            )
+          })}
         </div>
       </section>
 

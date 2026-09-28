@@ -11,7 +11,10 @@ from sqlalchemy.orm import sessionmaker
 
 from app.agents.analyst_cards import (
     DECISION_ROLE_BY_FEATURE,
+    STAGE_BY_FEATURE,
+    STAGES,
     build_analyst_cards_from_candles,
+    stage_for_feature,
 )
 from app.agents.analyst_snapshot import upsert_analyst_snapshot
 from app.db.models import AnalystSnapshot, Base
@@ -62,6 +65,7 @@ def test_decision_role_matches_rs01_table():
     """Table RS-01 — rôles paper documentés (observe-only sur les fiches)."""
     expected = {
         "ichimoku": "D+S",
+        "mtf_direction": "W",
         "rvol": "F",
         "atr": "F+T+S",
         "adx": "F",
@@ -74,6 +78,7 @@ def test_decision_role_matches_rs01_table():
         "cvd": "aucun",
         "liquidity": "aucun",
         "confluence": "aucun",
+        "cycle": "aucun",
     }
     assert DECISION_ROLE_BY_FEATURE == expected
 
@@ -92,6 +97,54 @@ def test_decision_role_matches_rs01_table():
         assert by_feat[feat]["decision_role"] == role
         assert by_feat[feat]["used_by_decision"] is False
         assert by_feat[feat]["validation_status"] == "NON_VALIDE"
+        assert by_feat[feat]["stage"] == STAGE_BY_FEATURE[feat]
+
+
+def test_stage_table_frozen():
+    """Table figée feature → stage (AG-S1 / préparation AG-S3, non codé)."""
+    expected = {
+        "ichimoku": "DIR",
+        "mtf_direction": "DIR",
+        "rvol": "PART",
+        "cvd": "PART",
+        "oi_funding": "PART",
+        "structure": "STRUCT",
+        "fvg": "STRUCT",
+        "impulse": "STRUCT",
+        "liquidity": "STRUCT",
+        "location": "LOC",
+        "confluence": "LOC",
+        "atr": "REGIME",
+        "adx": "REGIME",
+        "donchian": "REGIME",
+        "cycle": "REGIME",
+    }
+    assert STAGE_BY_FEATURE == expected
+    assert STAGES == ("DIR", "PART", "STRUCT", "LOC", "REGIME")
+    for feat, stage in expected.items():
+        assert stage_for_feature(feat) == stage
+
+    candles = _make_candles(120, seed=11)
+    cards = build_analyst_cards_from_candles(
+        candles,
+        symbol="BTCUSDT",
+        timeframe="1h",
+        now=candles[-1].time + 3600,
+    )
+    for c in cards:
+        assert c["stage"] in STAGES
+        assert c["stage"] == STAGE_BY_FEATURE[c["feature"]]
+
+    only_dir = build_analyst_cards_from_candles(
+        candles,
+        symbol="BTCUSDT",
+        timeframe="1h",
+        now=candles[-1].time + 3600,
+        stage="DIR",
+    )
+    assert only_dir
+    assert all(c["stage"] == "DIR" for c in only_dir)
+    assert {c["feature"] for c in only_dir} <= {"ichimoku", "mtf_direction"}
 
 
 def test_snapshot_idempotent_two_triggers_one_row(tmp_path, monkeypatch):

@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from app.agents.analyst_cards import build_analyst_cards
+from app.agents.analyst_cards import STAGES, build_analyst_cards
 from app.agents.analyst_snapshot import get_analyst_snapshot, take_session_snapshot
 from app.config import settings
 from app.market_data.resolve import ProviderNotWiredError
@@ -29,9 +29,18 @@ def get_analyst_cards(
     limit: int = Query(500, ge=50, le=1000),
     as_of: int | None = Query(default=None, description="Unix seconds — barre close"),
     now: int | None = Query(default=None, description="Unix seconds (tests closed-bar)"),
+    stage: str | None = Query(
+        default=None,
+        description="Filtre AG-S1 : DIR | PART | STRUCT | LOC | REGIME",
+    ),
     x_twelve_data_key: str | None = Header(default=None, alias="X-Twelve-Data-Key"),
 ) -> dict[str, Any]:
     """Fiches analystes déterministes (observe-only, used_by_decision=False)."""
+    if stage is not None and stage not in STAGES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"invalid_stage:{stage}; expected one of {list(STAGES)}",
+        )
     try:
         return build_analyst_cards(
             symbol,
@@ -39,6 +48,7 @@ def get_analyst_cards(
             limit=limit,
             as_of=as_of,
             now=now,
+            stage=stage,
             x_twelve_data_key=x_twelve_data_key,
         )
     except ProviderNotWiredError as exc:

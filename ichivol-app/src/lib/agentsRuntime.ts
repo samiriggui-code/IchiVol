@@ -137,8 +137,27 @@ export async function createAgentMission(
 }
 
 /** AG-S1 — fiches analystes déterministes (observe-only, via proxy engine). */
+export type AnalystStage = 'DIR' | 'PART' | 'STRUCT' | 'LOC' | 'REGIME'
+
+export const ANALYST_STAGES: readonly AnalystStage[] = [
+  'DIR',
+  'PART',
+  'STRUCT',
+  'LOC',
+  'REGIME',
+] as const
+
+export const ANALYST_STAGE_LABELS: Record<AnalystStage, string> = {
+  DIR: 'Direction',
+  PART: 'Participation',
+  STRUCT: 'Structure',
+  LOC: 'Location',
+  REGIME: 'Régime',
+}
+
 export type AnalystCard = {
   feature: string
+  stage: AnalystStage
   symbol: string
   timeframe: string
   as_of: number
@@ -157,6 +176,8 @@ export type AnalystCardsResponse = {
   symbol: string
   timeframe: string
   as_of: number | null
+  stage?: AnalystStage | null
+  stages?: AnalystStage[]
   cards: AnalystCard[]
   count: number
   observe_only?: boolean

@@ -9,7 +9,7 @@
 
 **Non déployé.** Le déploiement est une décision de Samir. **#142** (CSS mobile, en prod sans être mergé) doit être réglé avant tout déploiement.
 
-**Point ouvert pour Samir :** positions auto déjà ouvertes sur 15m / 4h / 1d — les **garder** avec stop/objectif seulement, ou les **fermer à la main** ?
+**Décision Samir (#161) :** positions auto déjà ouvertes sur 15m / 4h / 1d **restent ouvertes** et finissent sur leur stop ou leur objectif (`protection.py`). **Aucune fermeture manuelle.**
 
 **Non bloquant (ticket séparé, plus tard) :** `vpp/replay.py` doit refuser de tourner si `DATABASE_URL` n'est pas sur `127.0.0.1` / `localhost`.
 
@@ -38,6 +38,19 @@
 - Routes : `GET /agents/analyst-cards`, `POST|GET /agents/analyst-snapshots`.
 - Table `analyst_snapshot` (alembic `i5j6k7l8m9n0`) : `(session_id, symbol, tf)` unique ; AgentTask `kind=analyst_snapshot` à ouverture session **+60 s** ; univers BTCUSDT/ETHUSDT/SOLUSDT × 1h/4h ; fraîcheur → defer + log.
 - Front `AgentsPage` : section « Analystes » (grille, sélecteur symbole/TF, heure session, badge NON_VALIDE).
+
+
+### Complément AG-S1 (28/09) — champ ``stage``
+
+Chaque fiche porte ``stage ∈ {DIR, PART, STRUCT, LOC, REGIME}`` (table figée + test) :
+- **DIR** : Ichimoku + direction MTF 4h/1d
+- **PART** : RVOL, CVD, OI/funding
+- **STRUCT** : swings/BOS/CHOCH, FVG, impulsion/Fibonacci, Liquidity
+- **LOC** : location (VAH/VAL/POC, VWAP/AVWAP), Confluence
+- **REGIME** : ATR/régime, ADX, Donchian, cycle
+
+Route : ``GET /agents/analyst-cards?stage=``. Front : section Analystes **groupée par étape** (5 blocs).
+Raison AG-S3 (PAS à coder) : un agent Claude par étape, puis synthèse des 5 verdicts.
 
 ### Tests (Claude — env déjà prêt)
 

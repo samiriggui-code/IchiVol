@@ -17,6 +17,7 @@ from enum import Enum
 from typing import Any, Sequence
 
 from app.agents import ichimoku_agent, rvol_agent
+from app.cycle.engine import CycleParams, compute_cycle_state
 from app.fibonacci.context import compute_fib_context
 from app.indicators.ichimoku import Candle
 from app.indicators.oi_funding import OiFundingState, compute_oi_funding
@@ -24,7 +25,7 @@ from app.indicators.registry import REGISTRY, FeatureStatus
 from app.market_data import binance_futures, twelve_data
 from app.market_data.quality import closed_candles
 from app.market_data.resolve import resolve_and_fetch
-from app.market_data.timeframes import TF_SECONDS
+from app.market_data.timeframes import HIGHER_TIMEFRAME, TF_SECONDS
 from app.strategy_lab.adn_ichivol import LiveScreenerSettings
 
 logger = logging.getLogger(__name__)
@@ -35,10 +36,39 @@ ENGINE_VERSION = "ag-s1-v1"
 SNAPSHOT_SYMBOLS: tuple[str, ...] = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
 SNAPSHOT_TIMEFRAMES: tuple[str, ...] = ("1h", "4h")
 
+# Étapes AG-S1 (figées) — AG-S3 lira une étape par agent ; PAS à coder maintenant.
+AnalystStage = str  # DIR | PART | STRUCT | LOC | REGIME
+STAGES: tuple[str, ...] = ("DIR", "PART", "STRUCT", "LOC", "REGIME")
+
+# Table figée feature → stage (testée). Une fiche = un stage.
+STAGE_BY_FEATURE: dict[str, str] = {
+    # DIR — direction
+    "ichimoku": "DIR",
+    "mtf_direction": "DIR",
+    # PART — participation
+    "rvol": "PART",
+    "cvd": "PART",
+    "oi_funding": "PART",
+    # STRUCT — structure
+    "structure": "STRUCT",
+    "fvg": "STRUCT",
+    "impulse": "STRUCT",
+    "liquidity": "STRUCT",
+    # LOC — location
+    "location": "LOC",
+    "confluence": "LOC",
+    # REGIME — régime
+    "atr": "REGIME",
+    "adx": "REGIME",
+    "donchian": "REGIME",
+    "cycle": "REGIME",
+}
+
 # RS-01 — usage paper réel (rôle documentaire). Les fiches restent observe-only.
 # Valeurs : F / W / D / I / S / T / A / L / aucun (+ combinaisons documentées).
 DECISION_ROLE_BY_FEATURE: dict[str, str] = {
     "ichimoku": "D+S",
+    "mtf_direction": "W",
     "rvol": "F",
     "atr": "F+T+S",
     "adx": "F",
@@ -51,22 +81,8 @@ DECISION_ROLE_BY_FEATURE: dict[str, str] = {
     "cvd": "aucun",
     "liquidity": "aucun",
     "confluence": "aucun",
+    "cycle": "aucun",
 }
-
-# Ordre d'émission des fiches (Chart Intelligence + RS-01).
-CARD_FEATURES: tuple[str, ...] = (
-    "ichimoku",
-    "rvol",
-    "atr",
-    "adx",
-    "donchian",
-    "structure",
-    "fvg",
-    "impulse",
-    "location",
-    "oi_funding",
-    "cvd",
-)
 
 
 def _enum_val(v: Any) -> Any:
@@ -90,8 +106,10 @@ def _jsonable(v: Any) -> Any:
 
 
 def _feature_status(feature_id: str) -> str:
-    if feature_id == "oi_funding":
+    if feature_id in {"oi_funding", "mtf_direction"}:
         return "HORS_REGISTRE"
+    if feature_id == "cycle":
+        return "EXPERIMENTAL"
     try:
         return REGISTRY.get(feature_id).status.value
     except KeyError:
@@ -100,6 +118,13 @@ def _feature_status(feature_id: str) -> str:
 
 def _decision_role(feature_id: str) -> str:
     return DECISION_ROLE_BY_FEATURE.get(feature_id, "aucun")
+
+
+def stage_for_feature(feature_id: str) -> str:
+    stage = STAGE_BY_FEATURE.get(feature_id)
+    if stage is None:
+        raise KeyError(f"unknown_analyst_feature:{feature_id}")
+    return stage
 
 
 def _card(
@@ -116,6 +141,7 @@ def _card(
     role = _decision_role(feature)
     return {
         "feature": feature,
+        "stage": stage_for_feature(feature),
         "symbol": symbol.upper(),
         "timeframe": timeframe,
         "as_of": as_of,
@@ -173,6 +199,87 @@ def _ichimoku_card(
         },
         state=direction,
         known_at=int(meta.get("time") or as_of),
+        text=text,
+    )
+
+
+def _mtf_direction_card(
+    *,
+    symbol: str,
+    timeframe: str,
+    as_of: int,
+    htf_candles: Sequence[Candle] | None,
+) -> dict[str, Any]:
+    """Direction Ichimoku sur TF supérieur (4h depuis 1h, 1d depuis 4h)."""
+    higher_tf = HIGHER_TIMEFRAME.get(timeframe)
+    if higher_tf is None or not htf_candles:
+        return _card(
+            feature="mtf_direction",
+            symbol=symbol,
+            timeframe=timeframe,
+            as_of=as_of,
+            value={"higher_tf": higher_tf, "direction": None},
+            state="UNKNOWN",
+            known_at=as_of,
+            text="Direction MTF indisponible",
+        )
+    # Anti-lookahead : ne garder que les bougies HTF closes <= as_of.
+    htf_window = _truncate_at(list(htf_candles), as_of)
+    if len(htf_window) < 2:
+        return _card(
+            feature="mtf_direction",
+            symbol=symbol,
+            timeframe=timeframe,
+            as_of=as_of,
+            value={"higher_tf": higher_tf, "direction": None},
+            state="UNKNOWN",
+            known_at=as_of,
+            text=f"Direction MTF {higher_tf} insuffisante",
+        )
+    out = ichimoku_agent.analyze(htf_window)[-1]
+    direction = out.direction.value
+    text = f"Direction MTF {higher_tf} {direction}"
+    return _card(
+        feature="mtf_direction",
+        symbol=symbol,
+        timeframe=timeframe,
+        as_of=as_of,
+        value={
+            "higher_tf": higher_tf,
+            "direction": direction,
+            "confidence": out.confidence,
+            "htf_as_of": int(htf_window[-1].time),
+        },
+        state=direction,
+        known_at=int(htf_window[-1].time),
+        text=text,
+    )
+
+
+def _cycle_card(
+    candles: list[Candle], *, symbol: str, timeframe: str, as_of: int
+) -> dict[str, Any]:
+    """Cycle spectral (observe-only, hors REGISTRY — gel CI respecté)."""
+    state = compute_cycle_state(candles, CycleParams())
+    regime = _enum_val(state.regime)
+    period = state.dominant_period_candles
+    text = f"Cycle {regime}" + (
+        f" · période {period:.1f}" if period is not None else ""
+    )
+    return _card(
+        feature="cycle",
+        symbol=symbol,
+        timeframe=timeframe,
+        as_of=as_of,
+        value={
+            "regime": regime,
+            "dominant_period_candles": period,
+            "cycle_strength": state.cycle_strength,
+            "cycle_stability": state.cycle_stability,
+            "quality": state.quality,
+        },
+        state=str(regime),
+        known_at=int(state.time),
         text=text,
     )
 
@@ -534,8 +641,12 @@ def build_analyst_cards_from_candles(
     provider_id: str | None = None,
     provider_symbol: str | None = None,
     now: int | None = None,
+    htf_candles: Sequence[Candle] | None = None,
+    stage: str | None = None,
 ) -> list[dict[str, Any]]:
     """Construit les fiches à partir d'une série OHLCV (anti-lookahead si as_of)."""
+    if stage is not None and stage not in STAGES:
+        raise ValueError(f"invalid_stage:{stage}")
     window = _closed_window(list(candles), timeframe, now=now)
     if not window:
         return []
@@ -548,14 +659,14 @@ def build_analyst_cards_from_candles(
 
     cards = [
         _ichimoku_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
+        _mtf_direction_card(
+            symbol=sym,
+            timeframe=timeframe,
+            as_of=as_of_bar,
+            htf_candles=htf_candles,
+        ),
         _rvol_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
-        _atr_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
-        _adx_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
-        _donchian_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
-        _structure_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
-        _fvg_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
-        _impulse_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
-        _location_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
+        _cvd_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
         _oi_funding_card(
             window,
             symbol=sym,
@@ -564,13 +675,22 @@ def build_analyst_cards_from_candles(
             provider_id=provider_id,
             provider_symbol=provider_symbol,
         ),
-        _cvd_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
+        _structure_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
+        _fvg_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
+        _impulse_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
+        _location_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
+        _atr_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
+        _adx_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
+        _donchian_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
+        _cycle_card(window, symbol=sym, timeframe=timeframe, as_of=as_of_bar),
     ]
     cards.extend(
         _optional_liq_conf_cards(
             window, symbol=sym, timeframe=timeframe, as_of=as_of_bar
         )
     )
+    if stage is not None:
+        cards = [c for c in cards if c["stage"] == stage]
     return cards
 
 
@@ -581,13 +701,32 @@ def build_analyst_cards(
     limit: int = 500,
     as_of: int | None = None,
     now: int | None = None,
+    stage: str | None = None,
     x_twelve_data_key: str | None = None,
 ) -> dict[str, Any]:
     """Fetch OHLCV (sans screener) + fiches. Observe-only."""
+    if stage is not None and stage not in STAGES:
+        raise ValueError(f"invalid_stage:{stage}")
     twelve_data.set_api_key_override(x_twelve_data_key)
     provider, provider_symbol, candles = resolve_and_fetch(
         symbol.upper(), timeframe, min(limit, 1000)
     )
+    htf_candles: list[Candle] | None = None
+    higher_tf = HIGHER_TIMEFRAME.get(timeframe)
+    if higher_tf is not None:
+        try:
+            _, _, htf_candles = resolve_and_fetch(
+                symbol.upper(), higher_tf, min(limit, 1000)
+            )
+            htf_candles = _closed_window(htf_candles, higher_tf, now=now)
+        except Exception:
+            logger.warning(
+                "analyst_cards: MTF fetch failed for %s %s",
+                symbol,
+                higher_tf,
+                exc_info=True,
+            )
+            htf_candles = None
     cards = build_analyst_cards_from_candles(
         candles,
         symbol=symbol,
@@ -596,12 +735,16 @@ def build_analyst_cards(
         provider_id=provider.id,
         provider_symbol=provider_symbol,
         now=now,
+        htf_candles=htf_candles,
+        stage=stage,
     )
     as_of_bar = cards[0]["as_of"] if cards else as_of
     return {
         "symbol": symbol.upper(),
         "timeframe": timeframe,
         "as_of": as_of_bar,
+        "stage": stage,
+        "stages": list(STAGES),
         "provider": provider.id,
         "provider_symbol": provider_symbol,
         "engine_version": ENGINE_VERSION,
