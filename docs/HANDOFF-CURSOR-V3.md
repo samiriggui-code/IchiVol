@@ -1,5 +1,19 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 — Cursor : point 3 FAIT — #142 rebasé sur main (STOP revue · pas de deploy)
+
+**PR [#142](https://github.com/samiriggui-code/IchiVol/pull/142)** `cursor/mobile-tabbar-clearance-a2fe` @ `a8436cc`.
+
+- Rebase sur `main` (@ `e170822` / post-#159+#161) : **5/5 commits sans conflit**.
+- Contenu : `--dash-tabbar-clearance` 7.5rem + dialog/fiche z=60 + dark Preuves/Pipeline.
+- Croisement avec tip backup `804f40e`→`e92c43f` (mêmes patches cherry-pickés hier) : **pas de conflit de rebase** ; tip PR = source de vérité pour merge.
+- `npx tsc -b` : **0** (exclude `*.test.ts` comme #156).
+- **Aucun déploiement** (décision Samir ; `main` porte #159/#161 non encore en prod).
+
+**STOP → revue Claude.** Suite file = point 4 (#158 → #157 → CI-LIQ-CONF → #162).
+
+---
+
 ## 2026-09-28 — Cursor : point 2 FAIT — séparation #156 / inspector / #158 / typo (STOP)
 
 | Branche / PR | Contenu | `npx tsc -b` | État |
