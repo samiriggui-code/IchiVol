@@ -9,7 +9,6 @@ import {
   type OrderIntent,
 } from '../lib/paper'
 import { eur, price as fmtPrice, signedEur } from '../lib/tradeStory'
-import { ModalSheetHost } from './ModalSheetHost'
 import { ScenariosPanel } from './ScenariosPanel'
 
 const AMOUNT_CHIPS = [100, 250, 500, 1000]
@@ -68,6 +67,14 @@ export function PaperConfirmSheet({
     if (!confirming) clickLock.current = false
   }, [confirming])
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !confirming) onCancel()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onCancel, confirming])
+
   // Aperçu recalculé à chaque changement (léger délai), jamais d'ordre placé.
   useEffect(() => {
     if (!valid) {
@@ -109,6 +116,8 @@ export function PaperConfirmSheet({
 
   const ok = Boolean(preview?.ok) && valid && !loading
   const verdict = preview?.engine_verdict ?? intent?.pipeline_decision
+  const isBuy = verdict === 'BUY'
+  const verdictLabel = verdict ? labelPipelineGate(verdict as PipelineGateLabel) || verdict : '—'
 
   function handleConfirm() {
     if (confirming || clickLock.current || !ok) return
@@ -117,18 +126,22 @@ export function PaperConfirmSheet({
   }
 
   return (
-    <ModalSheetHost
-      ariaLabel={`Acheter ${symbolLabel} en paper`}
-      confirming={confirming}
-      onCancel={onCancel}
+    <div
+      className="trade-sheet-backdrop paper-confirm-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Acheter ${symbolLabel} en paper`}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !confirming) onCancel()
+      }}
     >
       <aside className="panel trade-sheet paper-confirm-sheet order-ticket">
         <header className="panel-head trade-sheet-head">
           <div>
             <h2>Acheter · {symbolLabel}</h2>
             <p className="muted">
-              Ajouter une ligne à votre portefeuille · virtuel, aucun broker réel
-              {preview && ` · prix ${fmtPrice(preview.price)}`}
+              Paper · virtuel, aucun broker réel
+              {preview && ` · px ${fmtPrice(preview.price)}`}
             </p>
           </div>
           <button type="button" className="ghost" onClick={onCancel} disabled={confirming}>
@@ -143,18 +156,20 @@ export function PaperConfirmSheet({
             </div>
           )}
 
-          <p className="order-verdict muted">
-            Avis du moteur :{' '}
-            <strong>
-              {verdict
-                ? labelPipelineGate(verdict as PipelineGateLabel) || verdict
-                : '—'}
-            </strong>
-            {verdict && verdict !== 'BUY' && ' — vous pouvez acheter quand même, c’est votre décision.'}
-          </p>
+          <div className={`ot-engine-card${isBuy ? ' is-buy' : ' is-hold'}`}>
+            <div className="ot-engine-card-top">
+              <span className="ot-engine-kicker">Avis du moteur · Decision Engine</span>
+              <span className={`ot-engine-badge${isBuy ? ' is-buy' : ' is-hold'}`}>{verdictLabel}</span>
+            </div>
+            <p className="ot-engine-copy">
+              {isBuy
+                ? 'Le pipeline recommande un achat ici. Vous restez libre de confirmer ou non.'
+                : 'Pas de trade recommandé — vous pouvez acheter quand même, c’est votre décision.'}
+            </p>
+          </div>
 
-          <fieldset className="order-field">
-            <legend>Combien investir ?</legend>
+          <section className="ot-card">
+            <h3 className="ot-card-title">Combien investir ?</h3>
             <div className="order-input-row">
               <input
                 className="order-input mono"
@@ -166,7 +181,7 @@ export function PaperConfirmSheet({
               <span className="muted">€</span>
               {suggested && (
                 <button type="button" className="ghost order-chip" onClick={() => setAmount(String(suggested))}>
-                  Taille du moteur · {eur(suggested, 0)}
+                  Moteur · {eur(suggested, 0)}
                 </button>
               )}
             </div>
@@ -182,49 +197,50 @@ export function PaperConfirmSheet({
                 </button>
               ))}
             </div>
-          </fieldset>
+          </section>
 
-          <fieldset className="order-field">
-            <legend>Stop (perte maximale) — % sous le prix d’achat</legend>
-            <div className="order-chips">
-              {STOP_CHIPS.map((s) => (
-                <button
-                  type="button"
-                  key={s}
-                  className={`ghost order-chip${Math.abs(stopPct - s) < 1e-6 ? ' is-on' : ''}`}
-                  onClick={() => setStopPct(s)}
-                >
-                  {(s * 100).toFixed(0)} %
-                </button>
-              ))}
-              {suggestedStop && (
-                <button
-                  type="button"
-                  className={`ghost order-chip${Math.abs(stopPct - suggestedStop) < 1e-6 ? ' is-on' : ''}`}
-                  onClick={() => setStopPct(suggestedStop)}
-                  title="Distance calculée par le moteur (volatilité ATR)"
-                >
-                  Moteur · {(suggestedStop * 100).toFixed(1)} %
-                </button>
-              )}
+          <section className="ot-card ot-card--split">
+            <div>
+              <h3 className="ot-card-title">Stop (perte max)</h3>
+              <div className="order-chips">
+                {STOP_CHIPS.map((s) => (
+                  <button
+                    type="button"
+                    key={s}
+                    className={`ghost order-chip${Math.abs(stopPct - s) < 1e-6 ? ' is-on' : ''}`}
+                    onClick={() => setStopPct(s)}
+                  >
+                    {(s * 100).toFixed(0)} %
+                  </button>
+                ))}
+                {suggestedStop && (
+                  <button
+                    type="button"
+                    className={`ghost order-chip${Math.abs(stopPct - suggestedStop) < 1e-6 ? ' is-on' : ''}`}
+                    onClick={() => setStopPct(suggestedStop)}
+                    title="Distance calculée par le moteur (volatilité ATR)"
+                  >
+                    Moteur · {(suggestedStop * 100).toFixed(1)} %
+                  </button>
+                )}
+              </div>
             </div>
-          </fieldset>
-
-          <fieldset className="order-field">
-            <legend>Objectif (gain visé) — multiple de la perte au stop</legend>
-            <div className="order-chips">
-              {TARGET_CHIPS.map((r) => (
-                <button
-                  type="button"
-                  key={r}
-                  className={`ghost order-chip${tpR === r ? ' is-on' : ''}`}
-                  onClick={() => setTpR(r)}
-                >
-                  {r} ×
-                </button>
-              ))}
+            <div>
+              <h3 className="ot-card-title">Objectif (R multiple)</h3>
+              <div className="order-chips">
+                {TARGET_CHIPS.map((r) => (
+                  <button
+                    type="button"
+                    key={r}
+                    className={`ghost order-chip${tpR === r ? ' is-on' : ''}`}
+                    onClick={() => setTpR(r)}
+                  >
+                    {r} ×
+                  </button>
+                ))}
+              </div>
             </div>
-          </fieldset>
+          </section>
 
           {loading && <p className="muted">Calcul en cours…</p>}
           {previewErr && (
@@ -249,12 +265,12 @@ export function PaperConfirmSheet({
 
               <div className="order-outcomes">
                 <div className="order-outcome order-outcome--gain">
-                  <span className="muted">Si l’objectif est atteint</span>
+                  <span className="ot-outcome-label">Si objectif</span>
                   <strong className="mono up">{signedEur(preview.outcomes.net_gain_if_target)}</strong>
-                  <span className="muted mono">@ {fmtPrice(preview.order.take_profit_price)} · net de frais</span>
+                  <span className="muted mono">@ {fmtPrice(preview.order.take_profit_price)} · net frais</span>
                 </div>
                 <div className="order-outcome order-outcome--loss">
-                  <span className="muted">Si le stop est touché</span>
+                  <span className="ot-outcome-label">Si stop</span>
                   <strong className="mono down">{signedEur(preview.outcomes.net_loss_if_stop)}</strong>
                   <span className="muted mono">@ {fmtPrice(preview.order.stop_price)} · frais inclus</span>
                 </div>
@@ -262,69 +278,75 @@ export function PaperConfirmSheet({
 
               <ScenariosPanel scenarios={preview.scenarios} variant="preview" />
 
-              <dl className="propose-stats paper-confirm-stats">
-                <div>
-                  <dt>Vous achetez</dt>
-                  <dd className="mono">
-                    {preview.order.qty.toPrecision(5)} · {eur(preview.order.notional)}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Prix d’exécution</dt>
-                  <dd className="mono">{fmtPrice(preview.order.entry_fill)}</dd>
-                </div>
-                <div>
-                  <dt>Commission d’entrée</dt>
-                  <dd className="mono">
-                    {eur(preview.costs.commission_entry)} ({preview.costs.commission_bps} bps)
-                  </dd>
-                </div>
-                <div>
-                  <dt>Écart + glissement</dt>
-                  <dd className="mono">
-                    {eur(preview.costs.spread_slippage_entry)} ({preview.costs.friction_bps_per_side} bps)
-                  </dd>
-                </div>
-                <div>
-                  <dt>Frais aller-retour</dt>
-                  <dd className="mono">{eur(preview.costs.round_trip_at_target)}</dd>
-                </div>
-                <div>
-                  <dt>Risque jusqu’au stop</dt>
-                  <dd className="mono">
-                    {eur(preview.order.risk_amount)}
-                    {preview.order.risk_pct_of_equity != null &&
-                      ` (${(preview.order.risk_pct_of_equity * 100).toFixed(2)} % du capital)`}
-                  </dd>
-                </div>
-              </dl>
+              <section className="ot-card">
+                <h3 className="ot-card-title">Détail de l’ordre</h3>
+                <dl className="ot-kv">
+                  <div>
+                    <dt>Vous achetez</dt>
+                    <dd className="mono">
+                      {preview.order.qty.toPrecision(5)} · {eur(preview.order.notional)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Prix d’exécution</dt>
+                    <dd className="mono">{fmtPrice(preview.order.entry_fill)}</dd>
+                  </div>
+                  <div>
+                    <dt>Commission entrée</dt>
+                    <dd className="mono">
+                      {eur(preview.costs.commission_entry)} ({preview.costs.commission_bps} bps)
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Écart + glissement</dt>
+                    <dd className="mono">
+                      {eur(preview.costs.spread_slippage_entry)} ({preview.costs.friction_bps_per_side} bps)
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Frais A/R</dt>
+                    <dd className="mono">{eur(preview.costs.round_trip_at_target)}</dd>
+                  </div>
+                  <div>
+                    <dt>Risque jusqu’au stop</dt>
+                    <dd className="mono">
+                      {eur(preview.order.risk_amount)}
+                      {preview.order.risk_pct_of_equity != null &&
+                        ` (${(preview.order.risk_pct_of_equity * 100).toFixed(2)} % cap.)`}
+                    </dd>
+                  </div>
+                </dl>
+              </section>
 
-              <div className="order-portfolio">
-                <p className="subhead">Effet sur votre portefeuille</p>
-                <p>
-                  Liquidités <span className="mono">{eur(preview.portfolio.cash_before)}</span> →{' '}
-                  <strong className="mono">{eur(preview.portfolio.cash_after)}</strong> · Lignes{' '}
+              <section className="ot-card ot-card--portfolio">
+                <h3 className="ot-card-title">Effet portefeuille</h3>
+                <div className="ot-portfolio-row">
+                  <span>Liquidités</span>
+                  <span className="mono">
+                    {eur(preview.portfolio.cash_before)} → <strong>{eur(preview.portfolio.cash_after)}</strong>
+                  </span>
+                </div>
+                <div className="ot-portfolio-row">
+                  <span>Lignes</span>
                   <span className="mono">
                     {preview.portfolio.lines_before} → {preview.portfolio.lines_after} / {preview.portfolio.max_lines}
                   </span>
-                  {preview.portfolio.open_risk_cap != null && (
-                    <>
-                      {' '}
-                      · Risque cumulé{' '}
-                      <span className="mono">
-                        {eur(preview.portfolio.open_risk_after, 0)} / {eur(preview.portfolio.open_risk_cap, 0)}
-                      </span>
-                    </>
-                  )}
-                </p>
-              </div>
+                </div>
+                {preview.portfolio.open_risk_cap != null && (
+                  <div className="ot-portfolio-row">
+                    <span>Risque cumulé</span>
+                    <span className="mono">
+                      {eur(preview.portfolio.open_risk_after, 0)} / {eur(preview.portfolio.open_risk_cap, 0)}
+                    </span>
+                  </div>
+                )}
+              </section>
             </>
           )}
 
           <p className="muted paper-confirm-note">
-            Un seul lot par marché. Pour vendre une ligne, fermez-la depuis la{' '}
-            <Link to="/app/portefeuille">Portefeuille</Link> (le résultat net et les frais y sont affichés) ·{' '}
-            <Link to="/app/journal">Journal</Link>.
+            Un lot par marché. Vente depuis{' '}
+            <Link to="/app/portefeuille">Portefeuille</Link> · <Link to="/app/journal">Journal</Link>.
           </p>
 
           <div className="paper-confirm-actions">
@@ -337,6 +359,6 @@ export function PaperConfirmSheet({
           </div>
         </div>
       </aside>
-    </ModalSheetHost>
+    </div>
   )
 }
