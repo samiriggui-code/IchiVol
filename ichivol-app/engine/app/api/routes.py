@@ -11,6 +11,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api import agent as agent_routes
+from app.api import analyst_agents as analyst_agents_routes
 from app.api import backtest as backtest_routes
 from app.api import backtest_overlay as backtest_overlay_routes
 from app.api import chart_intelligence as chart_intelligence_routes
@@ -22,6 +23,7 @@ from app.api import market as market_routes
 from app.api import paper as paper_routes
 from app.api import paper_orders as paper_orders_routes
 from app.api import rulesets as rulesets_routes
+from app.api import sessions as sessions_routes
 from app.api import strategy_lab as strategy_lab_routes
 from app.api import strategy_lab_research as strategy_lab_research_routes
 from app.api import strategy_lab_wf as strategy_lab_wf_routes
@@ -36,6 +38,7 @@ router = APIRouter()
 # T4a: backtest-overlay after strategy-lab (additions only in route_order golden).
 # T-CYCLE: cycle observe-only after correlations (additive; never touches pipeline).
 # Chart Intelligence: after chart_objects (additive envelope over ChartObject + OHLCV).
+# AG-S0/S1: sessions + analyst-cards after chart_intelligence (ajout volontaire documenté).
 for _sub in (
     market_routes.router_head,
     context_routes.router,
@@ -57,5 +60,7 @@ for _sub in (
     agent_routes.router,
     chart_objects_routes.router,
     chart_intelligence_routes.router,
+    sessions_routes.router,
+    analyst_agents_routes.router,
 ):
     router.include_router(_sub)

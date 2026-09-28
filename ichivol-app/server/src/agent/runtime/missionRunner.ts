@@ -26,6 +26,10 @@ import {
 } from '../tasks.js'
 import { AGENT_LOG_LEVEL } from '../taskConfig.js'
 import { checkSymbolFreshness } from './dataQualityGate.js'
+import {
+  ANALYST_SNAPSHOT_KIND,
+  processAnalystSnapshotTask,
+} from '../sessionSnapshots.js'
 
 /** Hard caps for a single autonomous wake (budget). */
 export const MISSION_MAX_ITERATIONS = 4
@@ -80,6 +84,15 @@ export async function processClaimedTask(
   const timeframe = payloadTimeframe(payload)
   const hasCondition = task.condition != null
   const checkFreshness = deps.checkFreshness ?? checkSymbolFreshness
+
+  // AG-S1 — snapshot session (code only, jamais LLM).
+  if (task.kind === ANALYST_SNAPSHOT_KIND) {
+    const outcome = await processAnalystSnapshotTask(task)
+    if (outcome.action === 'completed') {
+      return { action: 'completed', wakeLlm: false, detail: outcome.detail }
+    }
+    return outcome
+  }
 
   // --- Freshness gate (audit: stale/data_late → no LLM wake) ---
   if (task.symbol) {

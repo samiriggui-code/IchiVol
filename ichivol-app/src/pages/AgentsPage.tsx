@@ -16,13 +16,20 @@ import { Link, useSearchParams } from 'react-router-dom'
 import {
   createAgentMission,
   fetchAgents,
+  fetchAnalystCards,
+  fetchSessionsCalendar,
   fmtDue,
   statusBadgeTone,
   type AgentRoleCard,
   type AgentsListResponse,
+  type AnalystCard,
   type AuthorityChain,
+  type SessionsCalendarResponse,
 } from '../lib/agentsRuntime'
 import './AgentsPage.css'
+
+const ANALYST_SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'] as const
+const ANALYST_TFS = ['1h', '4h'] as const
 
 type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
 
@@ -222,6 +229,13 @@ export function AgentsPage() {
   const [missionSymbol, setMissionSymbol] = useState('BTCUSDT')
   const [missionBusy, setMissionBusy] = useState(false)
   const [missionMsg, setMissionMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [analystSymbol, setAnalystSymbol] = useState<string>('BTCUSDT')
+  const [analystTf, setAnalystTf] = useState<string>('1h')
+  const [analystCards, setAnalystCards] = useState<AnalystCard[]>([])
+  const [analystAsOf, setAnalystAsOf] = useState<number | null>(null)
+  const [analystError, setAnalystError] = useState<string | null>(null)
+  const [analystLoading, setAnalystLoading] = useState(false)
+  const [sessionClock, setSessionClock] = useState<SessionsCalendarResponse | null>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
   const ficheHandled = useRef<string | null>(null)
 
@@ -239,9 +253,33 @@ export function AgentsPage() {
     }
   }, [])
 
+  const loadAnalysts = useCallback(async () => {
+    setAnalystLoading(true)
+    try {
+      const [cardsRes, sessionsRes] = await Promise.all([
+        fetchAnalystCards(analystSymbol, analystTf),
+        fetchSessionsCalendar().catch(() => null),
+      ])
+      setAnalystCards(cardsRes.cards ?? [])
+      setAnalystAsOf(cardsRes.as_of ?? null)
+      setAnalystError(null)
+      if (sessionsRes) setSessionClock(sessionsRes)
+    } catch (err) {
+      setAnalystCards([])
+      setAnalystAsOf(null)
+      setAnalystError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setAnalystLoading(false)
+    }
+  }, [analystSymbol, analystTf])
+
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    void loadAnalysts()
+  }, [loadAnalysts])
 
   const cards = data?.agents?.length ? data.agents : FALLBACK_CARDS
   const chain: AuthorityChain | null = data?.authorityChain ?? null
@@ -383,6 +421,100 @@ export function AgentsPage() {
               ? `Étape courante : ${chain.currentStep} · ${chain.reason}`
               : `Chaque étape dispose d’un périmètre explicite. Étape courante : — (${chain?.reason ?? 'aucune décision récente'}). Le contrôle du risque reste nécessaire avant l’exécution.`}
           </p>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <h2>Analystes</h2>
+          <small>fiches déterministes · observe-only · used_by_decision=false</small>
+        </div>
+        <div className="card-body">
+          <div className="toolbar" style={{ flexWrap: 'wrap', marginBottom: 12 }}>
+            <label className="field" style={{ margin: 0 }}>
+              <span style={{ fontSize: 11, color: 'var(--muted)' }}>Symbole</span>
+              <select
+                value={analystSymbol}
+                onChange={(e) => setAnalystSymbol(e.target.value)}
+                aria-label="Symbole analystes"
+              >
+                {ANALYST_SYMBOLS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field" style={{ margin: 0 }}>
+              <span style={{ fontSize: 11, color: 'var(--muted)' }}>Timeframe</span>
+              <select
+                value={analystTf}
+                onChange={(e) => setAnalystTf(e.target.value)}
+                aria-label="Timeframe analystes"
+              >
+                {ANALYST_TFS.map((tf) => (
+                  <option key={tf} value={tf}>
+                    {tf}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="statline" style={{ border: 0, margin: 0, padding: 0 }}>
+              <span>Session</span>
+              <b>
+                {sessionClock?.open_sessions?.length
+                  ? sessionClock.open_sessions.map((s) => s.label).join(', ')
+                  : '—'}
+                {sessionClock?.next_open
+                  ? ` · prochaine ${sessionClock.next_open.label} ${fmtDue(sessionClock.next_open.open_utc)}`
+                  : ''}
+              </b>
+            </div>
+            <div className="statline" style={{ border: 0, margin: 0, padding: 0 }}>
+              <span>as_of</span>
+              <b>
+                {analystAsOf
+                  ? new Date(analystAsOf * 1000).toLocaleString('fr-FR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false,
+                    })
+                  : '—'}
+              </b>
+            </div>
+          </div>
+          {analystError ? (
+            <p style={{ fontSize: 12, color: 'var(--red)' }}>{analystError}</p>
+          ) : null}
+          {analystLoading && !analystCards.length ? (
+            <p style={{ fontSize: 12, color: 'var(--muted)' }}>Chargement des fiches…</p>
+          ) : null}
+          <div className="grid three analyst-grid">
+            {analystCards.map((c) => (
+              <section className="card agent-card analyst-card" key={c.feature}>
+                {badge(
+                  c.used_by_decision ? c.decision_role : 'NON_VALIDE',
+                  c.used_by_decision ? 'green' : 'amber',
+                )}
+                <h3>{c.feature}</h3>
+                <p>{c.text}</p>
+                <div className="statline">
+                  <span>État</span>
+                  <b>{c.state}</b>
+                </div>
+                <div className="statline">
+                  <span>Rôle RS-01</span>
+                  <b>{c.decision_role}</b>
+                </div>
+                <div className="statline">
+                  <span>Statut feature</span>
+                  <b>{c.feature_status}</b>
+                </div>
+              </section>
+            ))}
+          </div>
         </div>
       </section>
 

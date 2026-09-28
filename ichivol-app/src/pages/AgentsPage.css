@@ -519,6 +519,18 @@
   margin-top:17px;
   font-size:12px;
 }
+.agents-page .analyst-grid {
+  margin-top: 8px;
+}
+.agents-page .analyst-card h3 {
+  font: 16px Newsreader, Georgia, serif;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.agents-page .analyst-card p {
+  min-height: 36px;
+}
 .agents-page .chat {
   display:flex;
   flex-direction:column;

@@ -642,6 +642,36 @@ class SignalEvidenceRecord(Base):
     )
 
 
+class AnalystSnapshot(Base):
+    """AG-S1 — snapshot fiches analystes à l'ouverture de session (+60 s).
+
+    Observe-only. Idempotent sur (session_id, symbol, timeframe).
+    """
+
+    __tablename__ = "analyst_snapshot"
+    __table_args__ = (
+        UniqueConstraint(
+            "session_id",
+            "symbol",
+            "timeframe",
+            name="uq_analyst_snapshot_session_symbol_tf",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    session_id: Mapped[str] = mapped_column(String(64), index=True)
+    as_of: Mapped[int] = mapped_column(Integer)
+    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    timeframe: Mapped[str] = mapped_column(String(8), index=True)
+    cards: Mapped[list] = mapped_column(JSON, default=list)
+    engine_version: Mapped[str] = mapped_column(String(64), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+
+
 class ChartObjectOverlay(Base):
     """Persisted USER / CLAUDE chart overlay (T2b).
 

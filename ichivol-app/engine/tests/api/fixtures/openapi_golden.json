@@ -849,6 +849,42 @@
         "title": "RulesetStudyBody",
         "type": "object"
       },
+      "SnapshotBody": {
+        "properties": {
+          "limit": {
+            "default": 500,
+            "maximum": 1000.0,
+            "minimum": 50.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "session_id": {
+            "maxLength": 64,
+            "minLength": 3,
+            "title": "Session Id",
+            "type": "string"
+          },
+          "symbol": {
+            "maxLength": 32,
+            "minLength": 3,
+            "title": "Symbol",
+            "type": "string"
+          },
+          "timeframe": {
+            "default": "1h",
+            "maxLength": 8,
+            "minLength": 2,
+            "title": "Timeframe",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "symbol"
+        ],
+        "title": "SnapshotBody",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -1317,6 +1353,258 @@
         "summary": "Get Agent Tools",
         "tags": [
           "engine"
+        ]
+      }
+    },
+    "/api/engine/agents/analyst-cards": {
+      "get": {
+        "description": "Fiches analystes d\u00e9terministes (observe-only, used_by_decision=False).",
+        "operationId": "get_analyst_cards_api_engine_agents_analyst_cards_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "maxLength": 32,
+              "minLength": 3,
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "maxLength": 8,
+              "minLength": 2,
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "maximum": 1000,
+              "minimum": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Unix seconds \u2014 barre close",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Unix seconds \u2014 barre close",
+              "title": "As Of"
+            }
+          },
+          {
+            "description": "Unix seconds (tests closed-bar)",
+            "in": "query",
+            "name": "now",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Unix seconds (tests closed-bar)",
+              "title": "Now"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Twelve-Data-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Twelve-Data-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Analyst Cards Api Engine Agents Analyst Cards Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Analyst Cards",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/api/engine/agents/analyst-snapshots": {
+      "get": {
+        "operationId": "get_analyst_snapshot_route_api_engine_agents_analyst_snapshots_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 3,
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "maxLength": 32,
+              "minLength": 3,
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "maxLength": 8,
+              "minLength": 2,
+              "title": "Timeframe",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Analyst Snapshot Route Api Engine Agents Analyst Snapshots Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Analyst Snapshot Route",
+        "tags": [
+          "agents"
+        ]
+      },
+      "post": {
+        "description": "\u00c9crit un snapshot de session (idempotent). Appel\u00e9 par AgentTask +60 s.",
+        "operationId": "post_analyst_snapshot_api_engine_agents_analyst_snapshots_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Twelve-Data-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Twelve-Data-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnapshotBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Analyst Snapshot Api Engine Agents Analyst Snapshots Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Analyst Snapshot",
+        "tags": [
+          "agents"
         ]
       }
     },
@@ -5337,6 +5625,60 @@
         "summary": "Get Screener",
         "tags": [
           "engine"
+        ]
+      }
+    },
+    "/api/engine/sessions": {
+      "get": {
+        "description": "Sessions en cours, prochaine ouverture, prochaine cl\u00f4ture 1d.",
+        "operationId": "get_sessions_api_engine_sessions_get",
+        "parameters": [
+          {
+            "description": "Unix seconds (tests). Default: serveur UTC.",
+            "in": "query",
+            "name": "now",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Unix seconds (tests). Default: serveur UTC.",
+              "title": "Now"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Sessions Api Engine Sessions Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Sessions",
+        "tags": [
+          "sessions"
         ]
       }
     },

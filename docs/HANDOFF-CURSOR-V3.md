@@ -17,6 +17,38 @@
 
 ---
 
+## 2026-09-28 — JOB AG-S0 + AG-S1 : Agents de session crypto (observe-only)
+
+**Ordre :** après CI-LIQ-CONF (#156 → #158 → #157 → CI-LIQ-CONF). Branche `cursor/ag-s01-a2fe`, PR draft → **STOP → revue Claude**. Pas de AG-S2/AG-S3 sans OK.
+
+**RÈGLES :** observe-only. Aucun appel LLM. Aucun effet sur pipeline, paper, gates, confidence, screener (`used_by_decision=False` partout). **N'appelle JAMAIS `/screener`** depuis ce code (déclenche sync paper, bug #161). Gel CI respecté : on lit les indicateurs existants, on n'en crée aucun. Liquidity/Confluence inclus seulement si CI-LIQ-CONF est mergé (détection via REGISTRY).
+
+### AG-S0 — Calendrier des sessions
+
+- Engine : `app/sessions/calendar.py` — Asie (`Asia/Tokyo` 09:00–18:00), Europe (`Europe/London` 08:00–17:00), US (`America/New_York` 09:30–16:00) via `zoneinfo` (DST), + clôture bougie 1d à 00:00 UTC.
+- Crypto 24/7 : le week-end reste un **repère horaire**, pas une fermeture.
+- Route `GET /api/engine/sessions` : sessions en cours, prochaine ouverture (UTC + locale), prochaine clôture 1d.
+- Server : carte « session » de `agentRoles.ts` lit cette route (fin du texte « non exposé côté API »).
+
+### AG-S1 — Fiches analystes déterministes
+
+- Engine : `app/agents/analyst_cards.py` — une fiche par indicateur CI : Ichimoku, RVOL, ATR/régime, ADX, Donchian, structure, FVG, impulsion/Fibonacci, location, OI/funding, CVD (+ Liquidity/Confluence si REGISTRY).
+- Réutilise `ichimoku_agent` / `rvol_agent`, passe par `REGISTRY` (T1e). OI/funding hors REGISTRY → fetch Binance Futures direct (pas screener).
+- Contrat fiche : `symbol`, `timeframe`, `as_of`, `value`, `state`, `known_at`, `feature_status`, `decision_role` (RS-01), `used_by_decision=False`, `validation_status=NON_VALIDE`, texte court déterministe.
+- Routes : `GET /agents/analyst-cards`, `POST|GET /agents/analyst-snapshots`.
+- Table `analyst_snapshot` (alembic `i5j6k7l8m9n0`) : `(session_id, symbol, tf)` unique ; AgentTask `kind=analyst_snapshot` à ouverture session **+60 s** ; univers BTCUSDT/ETHUSDT/SOLUSDT × 1h/4h ; fraîcheur → defer + log.
+- Front `AgentsPage` : section « Analystes » (grille, sélecteur symbole/TF, heure session, badge NON_VALIDE).
+
+### Tests (Claude — env déjà prêt)
+
+- Troncature / anti-lookahead ; `decision_role` ↔ RS-01 ; idempotence snapshot ; aucun import paper/screener depuis `app/agents/analyst_cards.py` et `app/sessions`.
+- Goldens OpenAPI / `route_order` : **ajout volontaire documenté** (sessions + analyst-cards/snapshots).
+- `pytest` (Postgres) + `npm test` (server) + `npx tsc -b` (front).
+- **Preuve PR :** JSON fiches BTCUSDT 1h + 1 capture **réelle** Agents (clair + mobile 390 px). Pas de page fabriquée, pas de route publique.
+
+
+---
+
 ## 2026-09-28 nuit — ARRÊT DE SESSION · état exact pour reprise
 
 ### Branches et PR ouvertes (rien de mergé cette nuit)
@@ -27,6 +59,7 @@
 | #158 `cursor/fix-paper-sheet-stack` | Cursor | VALIDÉ sous réserve de `tsc -b` | Merge |
 | #157 `cursor/vp-s1-a2fe` | Cursor | À corriger S1-R1 (BM, horizon 90 j + `force_flat`) / S1-R2 (doc) | Correction → STOP |
 | CI-LIQ-CONF | Cursor | Spec dans le handoff (3bbd6ed) | Après #157 |
+| **AG-S0+S1** `cursor/ag-s01-a2fe` | Cursor | PR draft — observe-only sessions + fiches | **STOP → revue Claude** (pas AG-S2/S3 sans OK) |
 | #159 `claude/vp-p-paper-fidele` | **Autre session Claude** (ichivol-cd) | C2 fait (100 % d'accord sur la décision) ; v2 (R1–R4, C3, P3) **en cours**, journal R4 livré « ce soir » | Revue finale Claude quand v2 est poussé |
 | #161 `claude/paper-auto-1h-only` | Autre session | Les scans UI ne synchronisent plus le paper (R4 produit). Non déployé | **Revue Claude à faire** ; déploiement = décision de Samir |
 | #160 `claude/rs-strategie` | Claude pilote RS | Docs RS-00 à RS-04, amendement `VP0-2026-09-28b`, ledger +1 | Revue par Samir puis merge (docs) |

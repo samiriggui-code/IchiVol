@@ -1,0 +1,273 @@
+{
+  "note": "Preuve unitaire synthétique (candles _make_candles). Claude : remplacer par JSON live BTCUSDT 1h + captures Agents réelles.",
+  "symbol": "BTCUSDT",
+  "timeframe": "1h",
+  "as_of": 199,
+  "observe_only": true,
+  "used_by_decision": false,
+  "count": 11,
+  "cards": [
+    {
+      "feature": "ichimoku",
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "as_of": 199,
+      "value": {
+        "direction": "LONG",
+        "score": 58.333333333333336,
+        "price_vs_kumo": "ABOVE",
+        "tk_cross": "NONE",
+        "confidence": 1.0
+      },
+      "state": "LONG",
+      "known_at": 199,
+      "feature_status": "PRODUCTION",
+      "decision_role": "D+S",
+      "used_by_decision": false,
+      "validation_status": "NON_VALIDE",
+      "text": "Ichimoku LONG · prix vs nuage ABOVE · score 58.333333333333336",
+      "engine_version": "ag-s1-v1"
+    },
+    {
+      "feature": "rvol",
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "as_of": 199,
+      "value": {
+        "rvol": 1.6411301245172751,
+        "anomaly_level": "SIGNIFICANT",
+        "percentile": 0.91,
+        "confidence": 0.65
+      },
+      "state": "SIGNIFICANT",
+      "known_at": 199,
+      "feature_status": "PRODUCTION",
+      "decision_role": "F",
+      "used_by_decision": false,
+      "validation_status": "NON_VALIDE",
+      "text": "RVOL 1.6411301245172751 · niveau SIGNIFICANT",
+      "engine_version": "ag-s1-v1"
+    },
+    {
+      "feature": "atr",
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "as_of": 199,
+      "value": {
+        "atr": 1.9422861424626265,
+        "regime": "NORMAL",
+        "percentile": 0.86,
+        "suggested_stop_distance": 2.9134292136939397
+      },
+      "state": "NORMAL",
+      "known_at": 199,
+      "feature_status": "PRODUCTION",
+      "decision_role": "F+T+S",
+      "used_by_decision": false,
+      "validation_status": "NON_VALIDE",
+      "text": "ATR 1.9422861424626265 · régime NORMAL",
+      "engine_version": "ag-s1-v1"
+    },
+    {
+      "feature": "adx",
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "as_of": 199,
+      "value": {
+        "adx": 10.503320650393945,
+        "plus_di": 18.614568756907737,
+        "minus_di": 11.751855989034988,
+        "strength": "ABSENT"
+      },
+      "state": "ABSENT",
+      "known_at": 199,
+      "feature_status": "PRODUCTION",
+      "decision_role": "F",
+      "used_by_decision": false,
+      "validation_status": "NON_VALIDE",
+      "text": "ADX 10.503320650393945 · ABSENT",
+      "engine_version": "ag-s1-v1"
+    },
+    {
+      "feature": "donchian",
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "as_of": 199,
+      "value": {
+        "upper": 107.93332419071062,
+        "lower": 103.43179622151526,
+        "breakout": "INSIDE"
+      },
+      "state": "INSIDE",
+      "known_at": 199,
+      "feature_status": "PRODUCTION",
+      "decision_role": "F",
+      "used_by_decision": false,
+      "validation_status": "NON_VALIDE",
+      "text": "Donchian 20 · breakout INSIDE",
+      "engine_version": "ag-s1-v1"
+    },
+    {
+      "feature": "structure",
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "as_of": 199,
+      "value": {
+        "bias": "MIXED",
+        "bos": "NONE",
+        "last_swing_high": 107.11778170488712,
+        "last_swing_low": 103.43179622151526,
+        "event_type": "BOS",
+        "break_quality": "wick"
+      },
+      "state": "MIXED",
+      "known_at": 199,
+      "feature_status": "PRODUCTION",
+      "decision_role": "I",
+      "used_by_decision": false,
+      "validation_status": "NON_VALIDE",
+      "text": "Structure biais MIXED · BOS NONE · événement BOS",
+      "engine_version": "ag-s1-v1"
+    },
+    {
+      "feature": "fvg",
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "as_of": 199,
+      "value": {
+        "active_count": 1,
+        "new_event": null
+      },
+      "state": "active",
+      "known_at": 199,
+      "feature_status": "EXPERIMENTAL",
+      "decision_role": "aucun",
+      "used_by_decision": false,
+      "validation_status": "NON_VALIDE",
+      "text": "FVG actifs 1 · aucun nouveau",
+      "engine_version": "ag-s1-v1"
+    },
+    {
+      "feature": "impulse",
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "as_of": 199,
+      "value": {
+        "impulse": {
+          "direction": "bearish",
+          "start_bar": 192,
+          "end_bar": 193,
+          "start_price": 107.11778170488712,
+          "end_price": 103.43179622151526,
+          "bar": 195,
+          "displacement_atr": 1.981276963347837,
+          "rvol": 1.108901167517951
+        },
+        "fibonacci": {
+          "swing_low": 103.43179622151526,
+          "swing_high": 107.11778170488712,
+          "impulse": "down",
+          "levels": [
+            {
+              "ratio": 0.236,
+              "price": 104.30168879559102
+            },
+            {
+              "ratio": 0.382,
+              "price": 104.83984267616331
+            },
+            {
+              "ratio": 0.5,
+              "price": 105.27478896320119
+            },
+            {
+              "ratio": 0.618,
+              "price": 105.70973525023906
+            },
+            {
+              "ratio": 0.786,
+              "price": 106.32898081144555
+            }
+          ],
+          "close": 106.81412452693607,
+          "atr": 1.9422861424626265,
+          "nearest_ratio": 0.786,
+          "nearest_price": 106.32898081144555,
+          "distance_atr": 0.24977973372935078,
+          "confluence": true,
+          "key_confluence": true,
+          "anchor_source": "impulse_event",
+          "start_bar": 192,
+          "end_bar": 193,
+          "known_bar": 195,
+          "displacement_atr": 1.981276963347837
+        }
+      },
+      "state": "bearish",
+      "known_at": 199,
+      "feature_status": "EXPERIMENTAL",
+      "decision_role": "aucun",
+      "used_by_decision": false,
+      "validation_status": "NON_VALIDE",
+      "text": "Impulsion bearish · disp 1.98×ATR · Fib 0.786 (impulse_event)",
+      "engine_version": "ag-s1-v1"
+    },
+    {
+      "feature": "location",
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "as_of": 199,
+      "value": {
+        "node_type": "NEUTRAL",
+        "poc": 105.11146868862299,
+        "vah": 107.10665250280509,
+        "val": 104.65104165458098,
+        "vwap": 105.75080674863317,
+        "avwap": 106.36448245523312
+      },
+      "state": "NEUTRAL",
+      "known_at": 199,
+      "feature_status": "PRODUCTION",
+      "decision_role": "F",
+      "used_by_decision": false,
+      "validation_status": "NON_VALIDE",
+      "text": "Location NEUTRAL · POC 105.11146868862299",
+      "engine_version": "ag-s1-v1"
+    },
+    {
+      "feature": "oi_funding",
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "as_of": 199,
+      "value": null,
+      "state": "UNKNOWN",
+      "known_at": 199,
+      "feature_status": "HORS_REGISTRE",
+      "decision_role": "aucun",
+      "used_by_decision": false,
+      "validation_status": "NON_VALIDE",
+      "text": "OI/funding indisponible",
+      "engine_version": "ag-s1-v1"
+    },
+    {
+      "feature": "cvd",
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "as_of": 199,
+      "value": {
+        "bias": "UNKNOWN",
+        "delta": null,
+        "rolling_delta": null,
+        "cumulative": null
+      },
+      "state": "UNKNOWN",
+      "known_at": 199,
+      "feature_status": "PRODUCTION",
+      "decision_role": "aucun",
+      "used_by_decision": false,
+      "validation_status": "NON_VALIDE",
+      "text": "CVD UNKNOWN",
+      "engine_version": "ag-s1-v1"
+    }
+  ]
+}
