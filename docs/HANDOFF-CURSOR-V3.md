@@ -1,5 +1,41 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 — Revue Claude #162 CHANGES REQUESTED → corrections poussées (STOP)
+
+Branche `cursor/ag-s01-a2fe` / PR [#162](https://github.com/samiriggui-code/IchiVol/pull/162).
+
+### BLOQUANT 1 — MTF lookahead (`_mtf_direction_card`)
+- Instant de décision = `as_of + durée TF bas`.
+- Garder HTF seulement si `htf.time + durée TF haut <= décision`.
+- `known_at` = clôture de la dernière HTF gardée (`htf.open + htf_dur`).
+- Tests : `test_truncation_cards_identical_at_as_of_1h_to_4h`, `_4h_to_1d` (troncature mid-HTF) + `test_mtf_excludes_forming_4h_at_1300`.
+
+### BLOQUANT 2 — screener AST
+- `test_no_screener_string_call_in_analyst_cards` inspecte les appels AST (http/fetch/get + chaînes URL), **pas** les docstrings (qui peuvent mentionner `/screener`).
+
+### Non bloquant
+- `oi_funding.known_at` = wall-clock du fetch Binance Futures (pas `as_of`). Sur cet environnement cloud, `fapi.binance.com` renvoie **451** → fiche OI/funding `UNKNOWN` (OHLCV Binance spot OK).
+
+### Suite lancée avant push
+| Suite | Résultat |
+|-------|----------|
+| `pytest` (Postgres) | **1279 passed** |
+| `npm test` (server) | **68 passed** (nécessite `DATABASE_URL` + Prisma) |
+| `npx tsc -b` (front) | **échec préexistant sur main** (`chartIntelligencePacks.test.ts` / types `node:` + cast) — hors #162 |
+
+### Preuve PR (réelle)
+- JSON live : `docs/ag-s01-proof/analyst-cards-btcusdt-1h-live.json` (provider binance, BTCUSDT 1h).
+- Captures page Agents auth (clair) : `docs/ag-s01-proof/agents-analystes-clair-desktop.png` + `…-mobile-390.png` (section Analystes groupée par étape).
+
+### Hors périmètre #162 (inchangé)
+- 3 tests API déjà en échec sur main (`test_backtest_evidence_route` ×2, `test_chart_objects_non_engine_sources_empty`) — ticket séparé. *Note : sur ce run local Postgres ils sont passés dans la suite 1279 ; ne pas confondre avec un fix #162.*
+- Liquidity/Confluence cards : **après** merge CI-LIQ-CONF, commit séparé sur #162.
+
+### File reprise (STOP ici sur #162)
+**#156 merge** (route publique retirée, vérifié) → **#158 merge** → **#157** corrections S1-R1/S1-R2 puis STOP → **CI-LIQ-CONF**. Quand CI-LIQ-CONF est mergé → fiches Liquidity/Confluence (STRUCT/LOC) en commit séparé sur #162.
+
+---
+
 ## 2026-09-28 — #159 et #161 MERGED (validés Claude)
 
 | PR | Squash-merge SHA | Contenu |
