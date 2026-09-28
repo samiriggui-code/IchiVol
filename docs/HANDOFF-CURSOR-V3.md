@@ -1,5 +1,31 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## ▶ ARRÊT DU SOIR 2026-09-28 (~21h30 UTC) — POINT DE REPRISE EXACT
+
+**En prod (VPS), `main` @ `6549d7e`, rien d'autre à déployer ce soir :**
+- AG-FS0 actif (`AGENT_FACTSHEET_V1=1`), validateur FS-0e, OpenRouter `anthropic/claude-sonnet-4.5`.
+- RS-D1 paper actif (`RS_D1_PAPER_V1`, 5 000 €), cycles aux clôtures 4h. Le cycle de 20:00 UTC est OK (aucune cassure). Contrôle de 00:00 UTC par `ichivol-ce`.
+- BASELINE inchangé (4 858,97 €, auto 1h seulement).
+
+**En cours, NON déployé — Claude (`ichivol-2c`) :** branche `claude/ag-fs0f` @ `6b21de2`, réponse à la 3e sonde de `ichivol-ce`.
+- **Fait :**
+  - le moteur calcule 8 relations `rel.price_vs_*` (au-dessus / en dessous / égal) ;
+  - validateur : tout mot de comparaison exige le fait relationnel cité, de même sens et **niveau par niveau** ; négation interdite ; connecteurs causaux élargis ;
+  - faux positifs `RSI(14)`, `H4`, « 135 min » corrigés ;
+  - tests validateur 52/52, engine OK.
+- **Reste, dans l'ordre :**
+  1. prompt (règle 6) : « pour toute comparaison prix / niveau, cite le fait rel.* et écris sa valeur » ;
+  2. `npm test` complet + `pytest tests/agents tests/api` (goldens inchangés, aucune route ajoutée) ;
+  3. preuve réelle Sonnet (script `docs/ag-fs0-proof`, cf. FS-0b) : vérifier qu'Eve garde assez de claims ;
+  4. revue par `ichivol-ce` (sonde 4) ;
+  5. merge + déploiement serveur + engine (**les faits `rel.*` viennent de l'engine** : déployer les deux).
+
+**Ensuite (feuille de route) :** FS-1 contradictions déterministes → FS-3 Trade Reviewer (IchiVol et RS-D1) → CI-LIQ-CONF → AG-S2.
+
+**Retour arrière :** images `ichivol-*:pre-2026092*`, sauvegardes `/opt/backups/predeploy_*`. Couper AG-FS0 : `AGENT_FACTSHEET_V1=0`. Couper RS-D1 : `ENABLE_RS_D1_PAPER=false`.
+
+---
+
 ## 2026-09-28 ~21h UTC — Validateur Eve : FS-0c / 0d / 0e déployés (`main` @ `6549d7e`)
 
 - **#172 FS-0c** (`ichivol-ce`, 2e série de la sonde) : revu et mergé. Claude y a ajouté V8 (N5 causalité sur décision nommée, N6 « cours / BTC », N10 au-dessus / en dessous vérifiés).
