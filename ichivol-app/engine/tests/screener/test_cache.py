@@ -100,7 +100,7 @@ def test_refresh_feeds_crypto_and_biquote_rows_to_paper_trading_but_not_jpy_or_e
     )
 
     c = ScreenerCache(refresh_interval_s=999)
-    c.refresh(persist=True)
+    c.refresh(persist=True, paper_sync=True)  # the background loop's call (UI refreshes never sync, 2026-09-28)
 
     assert [r.symbol for r in captured["rows"]] == ["BTCUSDT", "EURUSD"]
 

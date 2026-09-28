@@ -71,14 +71,23 @@ class ScreenerCache:
             self._thread = None
 
     def _loop(self) -> None:
+        marked = False
         while not self._stop.is_set():
+            if not marked:
+                marked = paper_engine.mark_auto_timeframes_change()
             try:
-                self.refresh()
+                # Only this background loop drives the automatic paper strategy (default timeframe).
+                self.refresh(paper_sync=True)
             except Exception:
                 logger.warning("screener cache: background refresh failed", exc_info=True)
             self._stop.wait(self.refresh_interval_s)
 
-    def refresh(self, timeframe: str | None = None, persist: bool = True) -> CacheEntry:
+    def refresh(self, timeframe: str | None = None, persist: bool = True, paper_sync: bool = False) -> CacheEntry:
+        """Scan + cache (+ persistence / evidence when ``persist``).
+
+        ``paper_sync`` feeds the rows to the automatic paper strategy. Since 2026-09-28 only the background loop
+        sets it, and only for the default timeframe: a screener view or refresh from the UI / agent channel
+        (any timeframe) never opens or closes a paper position (docs/VP-P-PAPER-REEL.md §2)."""
         tf = timeframe or self.default_timeframe
         rows = scan_watchlist(DEFAULT_WATCHLIST, timeframe=tf)
 
@@ -108,11 +117,10 @@ class ScreenerCache:
             finally:
                 session.close()
 
-            # Paper trading's auto_watchlist track rides this same cycle, gated
-            # the same way as persistence above -- reuses `rows` as-is (no extra
-            # provider calls), and `persist=False` callers get none of this.
-            # Multi-market since 2026-09-21: crypto (binance) AND forex / metals /
-            # indices / energy (biquote), see `paper_tradable_rows`.
+        if persist and rows and paper_sync and tf == self.default_timeframe:
+            # Paper trading's auto_watchlist track rides the background cycle only -- reuses `rows` as-is (no extra
+            # provider calls). Multi-market since 2026-09-21: crypto (binance) AND forex / metals / indices /
+            # energy (biquote), see `paper_tradable_rows`.
             crypto_rows = paper_tradable_rows(rows)
             paper_session = SessionLocal()
             try:
