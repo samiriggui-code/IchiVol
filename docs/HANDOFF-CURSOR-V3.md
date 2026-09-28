@@ -1,5 +1,47 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 — Claude local : VP-P v2 livré (#159) + correctif produit (#161) · POINT DE REPRISE (demain)
+
+### ▶ Reprendre ici, dans cet ordre
+
+1. **Ouvrir les deux worktrees** (ne jamais travailler dans `C:\laragon\www\IchiVol`, qu'un autre agent utilise) :
+   - `C:\laragon\www\IchiVol-vpp` → branche `claude/vp-p-paper-fidele` → **PR draft #159** (diagnostic VP-P) ;
+   - `C:\laragon\www\IchiVol-paperfix` → branche `claude/paper-auto-1h-only` → **PR draft #161** (correctif produit).
+   - Python : `C:\laragon\www\IchiVol\ichivol-app\engine\.venv\Scripts\python.exe`, lancé depuis `ichivol-app\engine` du worktree.
+2. **Attendre / lire la revue finale de #159** par la session RS (« ichivol-e9 », PR #160 `docs/RS-00-REVUE-159.md`). Elle a été prévenue que la v2 est poussée. Corriger ses remarques sur la branche `claude/vp-p-paper-fidele`.
+3. **Lire la revue de #161** (la session RS la fait aussi, en indépendant).
+4. **Décisions de Samir en attente :**
+   - (a) merger #159 après la revue ;
+   - (b) merger #161, puis **déployer** ? ⚠️ #142 (CSS mobile) tourne en prod sans être mergé : déployer `main` sans #142 retire ces correctifs. Déploiement : `git archive` → VPS, voir la mémoire « live state ».
+5. **Ensuite, seulement si Samir le valide :** étape 2 de BN (VP-S1, PR #157, après les corrections S1-R1/S1-R2 par Cursor). Aucun autre test sur l'entrée B7.
+6. **Avant tout merge :** rebaser #159 sur `main` **sans réécrire les blocs des autres sessions**. Conflit attendu : ce handoff + le ledger ; garder les deux côtés.
+
+### État exact à l'arrêt (2026-09-28)
+
+| Élément | État |
+|---------|------|
+| Pré-inscriptions | `e745f73` (P) et `d218df4` (`VP0-2026-09-28` : C2/C3, ε, IC, P3), toutes deux **avant** les runs |
+| Code | `08d7076` puis `fadadad` : `vpp/fidelity.py`, `vpp/replay.py`, `vpp/event_study.py`, tolérance ε, IC bootstrap mensuel. Tests `tests/vpp` + research_lab/vp2/vp3 : **73 verts** |
+| Rapport | [`VP-P-REPORT.md`](./VP-P-REPORT.md) **v2** ; v1 archivée dans `vpp-artifacts/v1/` |
+| Artefacts | `vpp-artifacts/` : `vpp_results.json`, `vpp_r1_trades.json`, `vpp_r4_trades.json` (référence « B7-P » pour RS), `vpp_fidelity_c2.json`, `vpp_fidelity_c3.json`, `vpp_p3_event_study.json`, `vpp_p3_posthoc_momentum.json` |
+| Correctif produit #161 | `92351f8` : la navigation dans le screener (UI ou agent, tout TF) ne pilote plus le paper ; `auto_timeframes=["1h"]` ; marqueur `BEHAVIOR_CHANGE` au 1ᵉʳ cycle. Tests screener 38/38. **Non déployé.** Aucune position ouverte en prod (lecture seule, 2026-09-28) |
+| Données | `IchiVol-vpp\ichivol-app\engine\vpp\data\` (gitignored ; Vision 2020-09 → 2024-12 + cache des signaux). Rien de 2025/2026 |
+
+### Résultats v2 (pour mémoire)
+- **Fidélité : suffisante** pour le cœur crypto 1h.
+  - C2 : 100 % d'accord sur 552 BUY + 300 cas limites, ATR identique.
+  - C3 (vrai moteur paper) : 100 %, 100 % et 97,5 % des trades identiques, equity à 0,0015 %.
+- **Capital R1 :** 5 000 → 1 876 € (−62,5 %), 7 plis négatifs, espérance −0,17 R [−0,24 ; −0,10]. Le **brut** par trade [−0,25 ; +0,03] % **contient 0** : ce sont les coûts qui rendent la perte certaine.
+- **2R :** 29,9 % des trades = exactement les 857 sorties à l'objectif (l'écart v1 venait d'une comparaison flottante).
+- **P3 :** aucun horizon favorable. Les BUY font **moins bien** que des barres au hasard du même actif et du même mois (−0,29 à −0,98 pt) ; au-dessus de +0,01 pt (24 h) et +0,13 pt (96 h), un avantage est exclu. **Optimisation de l'entrée B7 suspendue.**
+- **Seule piste restante :** BN (déjà pré-enregistré, séparé). Aucun changement de taille ni de filtre.
+
+### Coordination
+- Session RS (« ichivol-e9 ») : pilote RS et les amendements RS. Je n'écris pas dans ses blocs ; elle n'écrit pas dans les miens (P, P1–P3, `VP0-2026-09-27b/28`). Interfaces gelées pour RS-D1 : options de `sim.py`, champs `Trade`, `paper_rules` / `paper_costs`.
+- `stash@{0}` du dépôt principal (« wip-off-156-branch ») contient une ancienne copie de mes fichiers et des `.tmp-*.err` de l'autre agent : **ne pas le supprimer sans accord**.
+
+---
+
 ## 2026-09-27 nuit — Claude local : VP-P « paper fidèle » livré (PR draft) · PRIORITÉ recadrée par Samir
 
 **Branche :** `claude/vp-p-paper-fidele` (worktree séparé `IchiVol-vpp`) · **PR draft [#159](https://github.com/samiriggui-code/IchiVol/pull/159)** · **aucun merge sans revue**.
