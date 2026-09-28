@@ -1,5 +1,55 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 soir — Cursor : revue #165 RS-D1 + revue spec RS-U0 (STOP)
+
+### Revue #165 RS-D1 (`claude/rs-d1` @ `15f937a`) — **APPROUVER merge** (corrections docs mineures optionnelles)
+
+**Reproductibilité (même machine, données `vp1/data` junctionnées, aucun nouveau run de recherche) :**
+- `pytest tests/rs` : **29/29** OK
+- `python -m rs.run` : `net_return=0.32859092617548935`, `max_dd=-0.05030058204317056`, `n_closed=200`, D1–D7 tous `true` → **CANDIDAT**
+- Artefacts `rsd1_results.json` / `rsd1_trades.json` vs `HEAD` : **MATCH** hors `generated_at` / `git_head`
+- `python -m rs.validate` : `net_return=0.0499577364576298`, `max_dd=-0.0427375967526632`, `n_closed=55`, V1–V5 tous `true` → **VALIDÉ 2025**
+- Rapport `RS-D1-REPORT.md` : chiffres fidèles aux JSON (+32,9 % / −5,0 % / 200 ; +5,0 % / −4,3 % / 55 ; limites bootstrap / top3)
+
+**Contrôles code (lecture seule, `rs/` non modifié) :**
+- Lookahead Donchian `t−N..t−1` via `indicators/donchian.py` ; ATR à la clôture ; stop suiveur écrit à `k`, appliqué à `k+1` ; décisions sans dépendre de la longueur de série (commentaire + pending orders)
+- Exécution : gap → open ; priorité stop / canal ; `reentry_same_bar` si sortie même barre
+- Taille §5 : 0,5 % / 10 % / 25 % / 4 % / 3 % ; `equity_cost` pour sizing + verrou ; début de jour = equity **marquée** veille — aligné §10 bis et `research_lab/sim.py` `gate_equity=cost` (#159). *Note INFO :* le paper live `risk_kernel` compare souvent l’equity **marquée** au day_start ; RS suit volontairement la sémantique paper-fidèle documentée, pas un bug de #165
+- Coûts §6 par symbole ; B0-F / B0-E sans levier ; `VAL_B0E_WEIGHT` figé = exposition moyenne dev ; holdout 2026 fermé (`VAL_DATA_END_EXCL`)
+
+| ID | Sévérité | Constat | Correction (Claude) |
+|----|----------|---------|---------------------|
+| RS-D1-R1 | BASSE | Artefact `rsd1_val2025_results.json` encore `"amendment": "VP0-2026-09-28c"` alors que rapport / rename docs = `28d` | Réécrire le champ `amendment` (pas de re-run) |
+| RS-D1-R2 | INFO | Revue faite **après** les runs (écart process déjà signalé) | N/A — process ; chiffres reproductibles |
+
+**Verdict merge :** **OK pour merge #165** côté causal / critères / repro. Pas de finding HAUTE/MOYENNE bloquant. `rs/` non touché.
+
+### Revue spec RS-U0 (#160 / `docs/RS-05-US-OPEN-SPEC.md`, `VP0-2026-09-28c`) — **docs OK**
+
+Revue **docs only** (pas de code, pas de téléchargement).
+
+| Point | Verdict |
+|-------|---------|
+| Placebo 48 demi-heures NY | OK — A* inclus ; 47 = référence |
+| Heure d’été NY (`zoneinfo`, pas 15h30 Paris) | OK — §2 explicite 13:30/14:30 UTC |
+| Jours NYSE + liste fériés §7 | OK — fermetures complètes listées |
+| Fenêtre balayage 3×5m + range 72 barres `[A−6h,A)` | OK — causal, barre A exclue |
+| Entrée `open[c+1]` / horizon 12 / sortie `open[c+13]` | OK — pas de lookahead post-confirmation |
+| Coûts paper 2×(7,5+friction) | OK — 17/17/18 bps |
+| G1–G4 + verdict PASSE/ÉCHEC/NON CONCLUANT | OK — figés avant calcul ; G1 non bloquant |
+| Isolation `rs/us_open/`, VP1 intact | OK |
+| Garde-fou post-hoc §5 | OK |
+
+| ID | Sévérité | Constat | Correction |
+|----|----------|---------|------------|
+| RS-U0-R1 | INFO | Handoff main : RS-U0 **reprend** chez `ichivol-e4` — hors périmètre de cette revue docs | N/A |
+
+**Verdict :** spec **propre à pré-enregistrer / à laisser entre les mains de `ichivol-e4`**. Aucun amendement VP0 demandé.
+
+**STOP** jobs 1–2. Suite file = CI-LIQ-CONF → AG-S2 → ticket `vpp/replay.py`. Aucun deploy. Prochain ID libre d’après `origin/main` : **`VP0-2026-09-28f`** (`28e` = OF-0).
+
+---
+
 ## 2026-09-28 soir — Cursor : job 0 FAIT — paper FR + glossaire (#166) STOP
 
 **PR draft [#166](https://github.com/samiriggui-code/IchiVol/pull/166)** `cursor/paper-refusal-labels-a2fe` @ `011621b` (rebasé sur `origin/main`).
