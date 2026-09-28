@@ -6,7 +6,8 @@
 |----------|------|
 | **#164** typo 11px | Mergé sur `main` (`d7fa477`), `tsc -b` 0, `vite build` OK |
 | **Déploiement VPS** | **FAIT** : `main` @ `d7fa477`. Sauvegarde `/opt/backups/predeploy_20260928_1406_*`, images `ichivol-*:pre-20260928_1406`. Migration `i5j6k7l8m9n0` appliquée. Engine, serveur et web OK. Paper : 1 portefeuille, `auto_timeframes = ('1h',)`, 0 position ouverte, cash 4 858,97 € |
-| **Validation 2025 RS-D1** | **VALIDÉ 2025** (amendement `VP0-2026-09-28c` figé avant le run, `e1afe70`). +5,0 %, maxDD −4,3 %, 55 trades ; B0-F −17,2 % / maxDD −51 %. Limites : intervalle mensuel contient 0, et sans les 3 meilleurs trades le P&L 2025 est négatif. **Holdout 2026 fermé.** PR #165 |
+| **Validation 2025 RS-D1** | **VALIDÉ 2025** (amendement **`VP0-2026-09-28d`** (joué sous `28c`, renommé : `28c` = RS-U0 de l'autre session, antérieur) figé avant le run, `e1afe70`). +5,0 %, maxDD −4,3 %, 55 trades ; B0-F −17,2 % / maxDD −51 %. Limites : intervalle mensuel contient 0, et sans les 3 meilleurs trades le P&L 2025 est négatif. **Holdout 2026 fermé.** PR #165 |
+n**Autre session Claude (`ichivol-e4`, chantier RS) :** RS-U0 « ouverture US 09:30 NY », porte descriptive pré-enregistrée (`VP0-2026-09-28c`, `docs/RS-05-US-OPEN-SPEC.md`), sur `claude/rs-strategie` / `claude/rs-u0` @ `a22a53a`. Docs seulement : aucun téléchargement, aucun calcul. Contactée pour coordination.
 
 **Retirés de la prod par le déploiement :** les producteurs Liquidity / Confluence (`777c2d5`, branche `backup/ui-vp-local-e92c43f`), jamais revus et non conformes à la spec CI-LIQ-CONF. Ils reviendront avec CI-LIQ-CONF.
 
