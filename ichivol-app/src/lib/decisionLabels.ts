@@ -1,65 +1,9 @@
 import type { AgentDirection, DecisionDetail, DecisionLabel, PipelineGateLabel } from './decisions'
+import { labelEngineCode, labelEngineCodes } from './engineTerminology'
 
-/** Libellés FR pour les codes machine du moteur (raisons / risques / invalidation). */
-const REASON_FR: Record<string, string> = {
-  // Ichimoku — bullish
-  price_above_kumo: 'Prix au-dessus du nuage (kumo)',
-  bullish_tk_cross: 'Croisement Tenkan/Kijun haussier',
-  bullish_future_kumo: 'Nuage futur haussier (Senkou A > B)',
-  chikou_confirmation: 'Chikou confirme (espace libre)',
-  kumo_breakout_bullish: 'Cassure haussière du nuage',
-
-  // Ichimoku — bearish
-  price_below_kumo: 'Prix sous le nuage (kumo)',
-  bearish_tk_cross: 'Croisement Tenkan/Kijun baissier',
-  bearish_future_kumo: 'Nuage futur baissier (Senkou A < B)',
-  kumo_breakout_bearish: 'Cassure baissière du nuage',
-
-  // Ichimoku — neutre / data
-  insufficient_confluence: 'Pas assez de confluence Ichimoku',
-  insufficient_history: 'Historique insuffisant',
-
-  // Invalidation
-  close_back_inside_kumo: 'Clôture de retour dans le nuage',
-
-  // RVOL
-  volume_anomaly: 'Volume anormalement élevé (anomalie)',
-  strong_relative_volume: 'Volume relatif très fort',
-  significant_relative_volume: 'Volume relatif significatif',
-  volume_accelerating: 'Volume en accélération',
-  low_participation: 'Faible participation (volume faible)',
-  normal_participation: 'Participation normale',
-  high_relative_volume: 'Volume relatif élevé',
-
-  // Risques combiner
-  low_relative_volume_participation: 'Participation volume faible — signal peu confirmé',
-  incomplete_ichimoku_confluence: 'Confluence Ichimoku incomplète',
-  no_clear_structural_bias: 'Pas de biais structurel clair',
-
-  // Structure / MTF (pipeline V1)
-  structure_aligned: 'Structure prix alignée avec la direction',
-  structure_opposed: 'Structure prix opposée à la direction',
-  bos_confirms_direction: 'BOS confirme la direction',
-  bos_invalidates_direction: 'BOS invalide la direction',
-  mtf_aligned: 'Multi-timeframe aligné',
-  mtf_opposed: 'Multi-timeframe opposé (contre-tendance)',
-
-  // Régime ATR
-  regime_dead: 'Régime de volatilité mort',
-  regime_extreme: 'Volatilité extrême',
-  regime_normal: 'Régime de volatilité normal',
-
-  // Location V1.5 — Volume Profile / VWAP / AVWAP
-  beyond_value_area: 'Prix hors de la value area',
-  wrong_side_value_area: 'Mauvais côté de la value area',
-  inside_value_area: 'Prix dans la value area',
-  avwap_aligned: 'Aligné avec le VWAP ancré (AVWAP)',
-  avwap_opposed: 'Contre le VWAP ancré (AVWAP)',
-  above_vwap: 'Au-dessus du VWAP',
-  below_vwap: 'Sous le VWAP',
-  congestion_hvn: 'Congestion (HVN — zone de volume dense)',
-  thin_liquidity_lvn: 'Liquidité fine (LVN)',
-}
+/** @deprecated Préférer `labelEngineCode` — conservé pour compat. */
+export { labelEngineCode as labelReason } from './engineTerminology'
+export { labelEngineCodes }
 
 const DECISION_FR: Record<DecisionLabel, string> = {
   STRONG_BUY: 'Achat fort',
@@ -81,10 +25,6 @@ const DIRECTION_FR: Record<AgentDirection, string> = {
   LONG: 'Hausse',
   SHORT: 'Baisse',
   NEUTRAL: 'Neutre',
-}
-
-export function labelReason(code: string): string {
-  return REASON_FR[code] ?? code.replace(/_/g, ' ')
 }
 
 export function labelDecision(code: DecisionLabel): string {
@@ -153,13 +93,13 @@ export function buildDecisionSummary(d: DecisionDetail): string {
   const pair = d.symbol.replace(/USDT$/i, '')
   const confPct = Math.round(d.confidence * 100)
   const agreePct = Math.round(d.agreement * 100)
-  const topReasons = d.reasons.slice(0, 3).map(labelReason)
+  const topReasons = d.reasons.slice(0, 3).map(labelEngineCode)
   const reasonsBit =
     topReasons.length > 0 ? ` Principaux points : ${topReasons.join(' ; ')}.` : ''
 
   const riskBit =
     d.risks.length > 0
-      ? ` Attention : ${d.risks.slice(0, 2).map(labelReason).join(' ; ')}.`
+      ? ` Attention : ${d.risks.slice(0, 2).map(labelEngineCode).join(' ; ')}.`
       : ''
 
   return (

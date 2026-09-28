@@ -13,6 +13,7 @@ import {
 } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { displaySymbol } from '../lib/markets'
+import { labelExitReason } from '../lib/engineTerminology'
 import { listPaperPositions, type PaperPosition } from '../lib/paper'
 import {
   deleteUserDecision,
@@ -84,20 +85,7 @@ function fmtPerf(pnlPct: number | null | undefined): string {
 }
 
 function shortExit(reason: string | null | undefined): string {
-  switch (reason) {
-    case 'stop_hit':
-      return 'Stop'
-    case 'take_profit_hit':
-      return 'Objectif atteint'
-    case 'pipeline_flipped':
-      return 'Changement de direction'
-    case 'pipeline_downgraded':
-      return 'Signal affaibli'
-    case 'manual_close':
-      return 'Fermeture manuelle'
-    default:
-      return reason?.trim() ? reason : '—'
-  }
+  return labelExitReason(reason)
 }
 
 function downloadCsv(filename: string, headers: string[], rows: string[][]) {

@@ -1,5 +1,7 @@
 /** Helpers de lecture « humaine » des trades paper (libellés FR, montants €). */
 
+import { labelEngineCode, labelExitReason } from './engineTerminology'
+
 export function eur(v: number | null | undefined, digits = 2): string {
   if (v == null || !Number.isFinite(v)) return '—'
   const s = Math.abs(v).toLocaleString('fr-FR', {
@@ -45,19 +47,32 @@ export function directionWords(direction: string | null | undefined): {
 export function exitReasonLabel(reason: string | null | undefined): string {
   switch (reason) {
     case 'stop_hit':
+    case 'stop_loss':
+    case 'stop':
       return 'Le stop (perte maximale prévue) a été touché'
     case 'take_profit_hit':
+    case 'take_profit':
       return 'L’objectif de gain a été atteint'
     case 'pipeline_flipped':
+    case 'direction_flipped':
       return 'Le signal s’est retourné dans l’autre sens'
     case 'pipeline_downgraded':
       return 'Le signal s’est affaibli (plus assez convaincant)'
     case 'manual_close':
       return 'Fermé manuellement'
+    case 'horizon_end':
+      return 'Fin d’horizon atteinte'
+    case 'time_stop':
+      return 'Sortie sur limite de temps'
+    case 'force_flat':
+      return 'Position aplatie de force'
     default:
-      return reason ?? '—'
+      return reason?.trim() ? labelEngineCode(reason) : '—'
   }
 }
+
+/** Alias court pour listes / CSV — délègue au glossaire. */
+export { labelExitReason }
 
 /** Les règles de sortie du profil baseline, expliquées simplement. */
 export const EXIT_RULES: { title: string; text: string }[] = [

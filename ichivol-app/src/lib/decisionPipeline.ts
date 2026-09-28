@@ -10,7 +10,8 @@ import type {
   DecisionLabel,
   PipelineGateLabel,
 } from './decisions'
-import { labelDecision, labelDirection, labelPipelineGate, labelReason } from './decisionLabels'
+import { labelDecision, labelDirection, labelPipelineGate } from './decisionLabels'
+import { labelEngineCode } from './engineTerminology'
 
 /** Étapes product — ordre fixe du Decision Engine. */
 export type PipelineStageId =
@@ -298,7 +299,7 @@ export function stageStatusLabel(status: PipelineStageStatus): string {
 }
 
 export function formatStageCodes(codes: string[], max = 3): string[] {
-  return codes.slice(0, max).map(labelReason)
+  return codes.slice(0, max).map(labelEngineCode)
 }
 
 export function pipelineHeadline(view: DecisionPipelineView): string {
@@ -341,7 +342,7 @@ export function pipelineReadingBlocks(view: DecisionPipelineView): PipelineReadi
       title: 'Price Action',
       status: structure.status,
       body: structure.summary,
-      facts: paCodes.length ? paCodes.map(labelReason) : [structure.summary],
+      facts: paCodes.length ? paCodes.map(labelEngineCode) : [structure.summary],
     })
     blocks.push({
       id: 'mtf',
@@ -357,8 +358,8 @@ export function pipelineReadingBlocks(view: DecisionPipelineView): PipelineReadi
       body:
         mtfCodes.length === 0
           ? 'Alignement MTF non disponible (souvent skip hors crypto / historique court)'
-          : mtfCodes.map(labelReason).join(' · '),
-      facts: mtfCodes.map(labelReason),
+          : mtfCodes.map(labelEngineCode).join(' · '),
+      facts: mtfCodes.map(labelEngineCode),
     })
   }
 
@@ -368,7 +369,7 @@ export function pipelineReadingBlocks(view: DecisionPipelineView): PipelineReadi
       title: 'Location (VP / VWAP)',
       status: location.status,
       body: location.summary,
-      facts: location.codes.map(labelReason),
+      facts: location.codes.map(labelEngineCode),
     })
   }
 
@@ -378,7 +379,7 @@ export function pipelineReadingBlocks(view: DecisionPipelineView): PipelineReadi
       title: 'Régime ATR / risque',
       status: regime.status,
       body: regime.summary,
-      facts: regime.codes.map(labelReason),
+      facts: regime.codes.map(labelEngineCode),
     })
   }
 

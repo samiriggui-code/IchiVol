@@ -22,6 +22,7 @@ import {
   type AgentsListResponse,
   type AuthorityChain,
 } from '../lib/agentsRuntime'
+import { labelEngineCode } from '../lib/engineTerminology'
 import './AgentsPage.css'
 
 type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
@@ -186,10 +187,10 @@ function badge(text: string, tone: BadgeTone = ''): ReactNode {
 
 function dash(value: string | null | undefined, reason?: string, max = 72): string {
   if (value && value.trim()) {
-    const t = value.trim()
+    const t = labelEngineCode(value.trim())
     return t.length > max ? `${t.slice(0, max - 1)}…` : t
   }
-  return reason ? `— (${reason})` : '—'
+  return reason ? `— (${labelEngineCode(reason)})` : '—'
 }
 
 function runtimeNotice(data: AgentsListResponse | null, loadError: string | null): string {
@@ -380,8 +381,8 @@ export function AgentsPage() {
           </div>
           <p style={{ fontSize: 12, color: 'var(--muted)' }}>
             {chain?.currentStep
-              ? `Étape courante : ${chain.currentStep} · ${chain.reason}`
-              : `Chaque étape dispose d’un périmètre explicite. Étape courante : — (${chain?.reason ?? 'aucune décision récente'}). Le contrôle du risque reste nécessaire avant l’exécution.`}
+              ? `Étape courante : ${chain.currentStep} · ${labelEngineCode(chain.reason)}`
+              : `Chaque étape dispose d’un périmètre explicite. Étape courante : — (${chain?.reason ? labelEngineCode(chain.reason) : 'aucune décision récente'}). Le contrôle du risque reste nécessaire avant l’exécution.`}
           </p>
         </div>
       </section>
@@ -448,7 +449,7 @@ export function AgentsPage() {
               {detail.kind === 'llm'
                 ? 'Eve (LLM) · permissions runtime · paper only.'
                 : 'Rôle code déterministe · permissions runtime · paper only.'}{' '}
-              {detail.statusReason}
+              {labelEngineCode(detail.statusReason)}
             </p>
             <div className="statline">
               <span>Lecture du marché</span>

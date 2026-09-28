@@ -1,4 +1,4 @@
-import { labelReason } from '../lib/decisionLabels'
+import { labelEngineCode } from '../lib/engineTerminology'
 import type { DecisionDetail } from '../lib/decisions'
 import { VerdictBadge } from './VerdictBadge'
 
@@ -16,11 +16,14 @@ function ChipRow({ codes, tone }: { codes: string[]; tone?: 'risk' | 'ok' }) {
   if (!codes.length) return <p className="muted">—</p>
   return (
     <div className="chip-row">
-      {codes.map((code) => (
-        <span key={code} className={`sig-chip${tone === 'risk' ? ' risk-chip' : ''}`} title={code}>
-          {labelReason(code)}
-        </span>
-      ))}
+      {codes.map((code) => {
+        const label = labelEngineCode(code)
+        return (
+          <span key={code} className={`sig-chip${tone === 'risk' ? ' risk-chip' : ''}`} title={label}>
+            {label}
+          </span>
+        )
+      })}
     </div>
   )
 }
@@ -54,7 +57,7 @@ export function SignalEvidenceCard({ detail }: { detail: DecisionDetail }) {
           <h3 className="sec-symbol">{detail.symbol}</h3>
           <span className="muted">
             {detail.timeframe}
-            {volumeType ? ` · volume ${volumeType}` : ''}
+            {volumeType ? ` · volume ${labelEngineCode(volumeType)}` : ''}
           </span>
         </div>
         <VerdictBadge decision={detail.decision} pipeline={detail.pipeline} variant="detail" />
@@ -63,9 +66,11 @@ export function SignalEvidenceCard({ detail }: { detail: DecisionDetail }) {
       <section className="sec-block">
         <span className="subhead">Ichimoku</span>
         <p>
-          {ctx.ichimoku?.direction ?? detail.ichimoku.direction}
-          {ctx.ichimoku?.tk_state ? ` · TK ${ctx.ichimoku.tk_state}` : ''}
-          {ctx.ichimoku?.price_vs_cloud ? ` · prix ${ctx.ichimoku.price_vs_cloud} Kumo` : ''}
+          {labelEngineCode(ctx.ichimoku?.direction ?? detail.ichimoku.direction)}
+          {ctx.ichimoku?.tk_state ? ` · TK ${labelEngineCode(ctx.ichimoku.tk_state)}` : ''}
+          {ctx.ichimoku?.price_vs_cloud
+            ? ` · prix ${labelEngineCode(ctx.ichimoku.price_vs_cloud)} du nuage`
+            : ''}
         </p>
       </section>
 
@@ -73,7 +78,9 @@ export function SignalEvidenceCard({ detail }: { detail: DecisionDetail }) {
         <span className="subhead">RVOL</span>
         <p>
           {detail.rvol != null ? `${detail.rvol.toFixed(2)}×` : '—'}
-          {ctx.volume?.participation_state ? ` · ${ctx.volume.participation_state}` : ''}
+          {ctx.volume?.participation_state
+            ? ` · ${labelEngineCode(ctx.volume.participation_state)}`
+            : ''}
         </p>
       </section>
 
@@ -83,9 +90,9 @@ export function SignalEvidenceCard({ detail }: { detail: DecisionDetail }) {
             <div className="sec-block">
               <span className="subhead">Structure</span>
               <p>
-                {ctx.structure.trend}
+                {labelEngineCode(ctx.structure.trend)}
                 {ctx.structure.breakout_state && ctx.structure.breakout_state !== 'NONE'
-                  ? ` · BOS ${ctx.structure.breakout_state}`
+                  ? ` · BOS ${labelEngineCode(ctx.structure.breakout_state)}`
                   : ''}
               </p>
             </div>
@@ -93,7 +100,7 @@ export function SignalEvidenceCard({ detail }: { detail: DecisionDetail }) {
           {ctx.regime && (
             <div className="sec-block">
               <span className="subhead">Régime</span>
-              <p>{ctx.regime.pipeline_regime}</p>
+              <p>{labelEngineCode(ctx.regime.pipeline_regime)}</p>
             </div>
           )}
         </section>

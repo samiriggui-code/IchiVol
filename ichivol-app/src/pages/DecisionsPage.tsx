@@ -19,6 +19,7 @@ import {
 } from '../lib/decisions'
 import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
 import { buildDecisionSummary } from '../lib/decisionLabels'
+import { labelEngineCode } from '../lib/engineTerminology'
 import { displaySymbol } from '../lib/markets'
 import {
   getPaperOverview,
@@ -660,7 +661,11 @@ export function DecisionsPage() {
             </div>
             <div className="statline">
               <span>Invalidation</span>
-              <b>{detail?.invalidation?.[0] ?? '—'}</b>
+              <b>
+                {detail?.invalidation?.[0]
+                  ? labelEngineCode(detail.invalidation[0])
+                  : '—'}
+              </b>
             </div>
             {detail && detailPipeline && (
               <div className="engine-evidence">
