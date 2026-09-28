@@ -25,6 +25,7 @@
 | Rapport | [`VP-P-REPORT.md`](./VP-P-REPORT.md) **v2** ; v1 archivée dans `vpp-artifacts/v1/` |
 | Artefacts | `vpp-artifacts/` : `vpp_results.json`, `vpp_r1_trades.json`, `vpp_r4_trades.json` (référence « B7-P » pour RS), `vpp_fidelity_c2.json`, `vpp_fidelity_c3.json`, `vpp_p3_event_study.json`, `vpp_p3_posthoc_momentum.json` |
 | Correctif produit #161 | `92351f8` : la navigation dans le screener (UI ou agent, tout TF) ne pilote plus le paper ; `auto_timeframes=["1h"]` ; marqueur `BEHAVIOR_CHANGE` au 1ᵉʳ cycle. Tests screener 38/38. **Non déployé.** Aucune position ouverte en prod (lecture seule, 2026-09-28) |
+| Equity mensuelle | `f27e907` : `vpp-artifacts/vpp_equity_monthly.json` (R4 et R1, fin de mois), demandée par la session RS pour RS-D1 D3 ; même run, même résultat |
 | Données | `IchiVol-vpp\ichivol-app\engine\vpp\data\` (gitignored ; Vision 2020-09 → 2024-12 + cache des signaux). Rien de 2025/2026 |
 
 ### Résultats v2 (pour mémoire)
