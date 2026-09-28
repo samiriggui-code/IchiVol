@@ -1,0 +1,128 @@
+{
+ "protocol": "VP-P",
+ "git_head": "08d707696f3a42fdababfdc1bc98d9d7c8369ddd",
+ "generated_at": "2026-09-27T23:51:24.355758+00:00",
+ "seed": 7,
+ "amendment": "VP0-2026-09-28",
+ "W-a": {
+  "window": [
+   "2021-07-01 00:00",
+   "2021-07-15 00:00"
+  ],
+  "sim_trades": 26,
+  "engine_trades": 26,
+  "matched_same_entry": 26,
+  "matched_ok": 26,
+  "match_rate_pct": 100.0,
+  "max_qty_rel": 0.0,
+  "max_stop_rel": 0.0,
+  "max_realized_abs_eur": 3.552713678800501e-14,
+  "sim_equity_end": 4816.076249250231,
+  "engine_equity_end": 4816.076249250231,
+  "equity_end_rel_diff": 0.0,
+  "sim_open_at_end": 0,
+  "engine_open_at_end": 0,
+  "sim_rejections": {
+   "short_not_allowed": 71
+  },
+  "engine_rejections": {
+   "short_not_allowed": 71
+  },
+  "differences": []
+ },
+ "W-b": {
+  "window": [
+   "2024-01-01 00:00",
+   "2024-01-15 00:00"
+  ],
+  "sim_trades": 44,
+  "engine_trades": 44,
+  "matched_same_entry": 44,
+  "matched_ok": 44,
+  "match_rate_pct": 100.0,
+  "max_qty_rel": 0.0,
+  "max_stop_rel": 0.0,
+  "max_realized_abs_eur": 5.3290705182007514e-14,
+  "sim_equity_end": 4687.56444436737,
+  "engine_equity_end": 4687.56444436737,
+  "equity_end_rel_diff": 0.0,
+  "sim_open_at_end": 0,
+  "engine_open_at_end": 0,
+  "sim_rejections": {
+   "short_not_allowed": 62,
+   "signal_already_processed": 1,
+   "max_positions": 1
+  },
+  "engine_rejections": {
+   "signal_already_processed": 1,
+   "short_not_allowed": 56,
+   "max_positions": 1
+  },
+  "differences": []
+ },
+ "W-c": {
+  "window": [
+   "2024-09-07 00:00",
+   "2024-09-21 00:00"
+  ],
+  "sim_trades": 81,
+  "engine_trades": 81,
+  "matched_same_entry": 80,
+  "matched_ok": 79,
+  "match_rate_pct": 97.53086419753086,
+  "max_qty_rel": 0.011622149758697131,
+  "max_stop_rel": 0.0,
+  "max_realized_abs_eur": 0.15231030838642923,
+  "sim_equity_end": 4911.957663339593,
+  "engine_equity_end": 4911.883210120335,
+  "equity_end_rel_diff": 1.5157544987265403e-05,
+  "sim_open_at_end": 4,
+  "engine_open_at_end": 4,
+  "sim_rejections": {
+   "short_not_allowed": 56,
+   "max_positions": 7,
+   "signal_already_processed": 3
+  },
+  "engine_rejections": {
+   "short_not_allowed": 56,
+   "signal_already_processed": 3,
+   "insufficient_cash_or_size": 1,
+   "max_positions": 7
+  },
+  "differences": [
+   {
+    "key": [
+     "SUIUSDT",
+     "2024-09-14 05:00"
+    ],
+    "qty_rel": 0.011622149758697131,
+    "entry_fill_rel": 0.0,
+    "stop_rel": 0.0,
+    "tp_rel": 0.0,
+    "same_exit_bar": true,
+    "same_reason": true,
+    "exit_fill_rel": 0.0,
+    "fees_abs": 0.008382244578774345,
+    "realized_abs": 0.15231030838642923,
+    "sim_reason": "stop_hit",
+    "engine_reason": "stop_hit",
+    "sim_exit": "2024-09-14 07:00",
+    "engine_exit": "2024-09-14 07:00"
+   },
+   {
+    "key": [
+     "XRPUSDT",
+     "2024-09-14 03:00"
+    ],
+    "only_in": "sim"
+   },
+   {
+    "key": [
+     "XRPUSDT",
+     "2024-09-14 04:00"
+    ],
+    "only_in": "engine"
+   }
+  ]
+ }
+}

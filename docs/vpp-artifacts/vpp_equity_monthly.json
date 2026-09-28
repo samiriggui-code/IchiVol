@@ -1,0 +1,826 @@
+{
+ "generated_at": "2026-09-28T00:13:15.418167+00:00",
+ "git_head": "b90de8de3163c1f8491b36956fb1575fcd5dd1ac",
+ "seed": 7,
+ "initial_capital": 5000.0,
+ "window": "2021-07-01 -> 2024-12-31",
+ "equity_convention": "cash + open positions marked at bar close; value at the month's last 1h bar",
+ "cost_profile": "paper: commission 7.5 bps/side + per-symbol friction (vpp.paper.paper_costs)",
+ "R4_P2_U3": {
+  "symbols": [
+   "BTCUSDT",
+   "ETHUSDT",
+   "SOLUSDT"
+  ],
+  "n_trades": 617,
+  "final_equity": 4368.430849406993,
+  "costs": {
+   "BTCUSDT": {
+    "name": "paper:BTCUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 1.0,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "ETHUSDT": {
+    "name": "paper:ETHUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 1.0,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "SOLUSDT": {
+    "name": "paper:SOLUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 1.5,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   }
+  },
+  "month_end": [
+   {
+    "month": "2021-07",
+    "last_bar_utc": "2021-07-31T23:00:00+00:00",
+    "equity": 4934.545827966398,
+    "gross_exposure": 497.63612966861047,
+    "return_pct": -1.309083440672043
+   },
+   {
+    "month": "2021-08",
+    "last_bar_utc": "2021-08-31T23:00:00+00:00",
+    "equity": 4972.388029884696,
+    "gross_exposure": 0,
+    "return_pct": 0.7668831790724973
+   },
+   {
+    "month": "2021-09",
+    "last_bar_utc": "2021-09-30T23:00:00+00:00",
+    "equity": 4967.0616222394365,
+    "gross_exposure": 0,
+    "return_pct": -0.10711971015229249
+   },
+   {
+    "month": "2021-10",
+    "last_bar_utc": "2021-10-31T23:00:00+00:00",
+    "equity": 5038.890048508048,
+    "gross_exposure": 500.168440552895,
+    "return_pct": 1.446094929585895
+   },
+   {
+    "month": "2021-11",
+    "last_bar_utc": "2021-11-30T23:00:00+00:00",
+    "equity": 5057.887293309166,
+    "gross_exposure": 509.72341653373815,
+    "return_pct": 0.37701248922357156
+   },
+   {
+    "month": "2021-12",
+    "last_bar_utc": "2021-12-31T23:00:00+00:00",
+    "equity": 5028.762347025791,
+    "gross_exposure": 0,
+    "return_pct": -0.5758322515786896
+   },
+   {
+    "month": "2022-01",
+    "last_bar_utc": "2022-01-31T23:00:00+00:00",
+    "equity": 5011.295031142792,
+    "gross_exposure": 0,
+    "return_pct": -0.34734820772212016
+   },
+   {
+    "month": "2022-02",
+    "last_bar_utc": "2022-02-28T23:00:00+00:00",
+    "equity": 5003.65391217556,
+    "gross_exposure": 1009.3610959082225,
+    "return_pct": -0.15247793074935068
+   },
+   {
+    "month": "2022-03",
+    "last_bar_utc": "2022-03-31T23:00:00+00:00",
+    "equity": 4882.253750802907,
+    "gross_exposure": 0,
+    "return_pct": -2.4262301810532128
+   },
+   {
+    "month": "2022-04",
+    "last_bar_utc": "2022-04-30T23:00:00+00:00",
+    "equity": 4831.244498253052,
+    "gross_exposure": 0,
+    "return_pct": -1.0447890493497258
+   },
+   {
+    "month": "2022-05",
+    "last_bar_utc": "2022-05-31T23:00:00+00:00",
+    "equity": 4811.227137272008,
+    "gross_exposure": 476.2335289457785,
+    "return_pct": -0.4143313588927833
+   },
+   {
+    "month": "2022-06",
+    "last_bar_utc": "2022-06-30T23:00:00+00:00",
+    "equity": 4845.965949097228,
+    "gross_exposure": 0,
+    "return_pct": 0.7220364126254264
+   },
+   {
+    "month": "2022-07",
+    "last_bar_utc": "2022-07-31T23:00:00+00:00",
+    "equity": 4822.377185541898,
+    "gross_exposure": 0,
+    "return_pct": -0.4867711371295158
+   },
+   {
+    "month": "2022-08",
+    "last_bar_utc": "2022-08-31T23:00:00+00:00",
+    "equity": 4709.945919777938,
+    "gross_exposure": 0,
+    "return_pct": -2.3314490227152596
+   },
+   {
+    "month": "2022-09",
+    "last_bar_utc": "2022-09-30T23:00:00+00:00",
+    "equity": 4697.156806609286,
+    "gross_exposure": 0,
+    "return_pct": -0.27153418290745135
+   },
+   {
+    "month": "2022-10",
+    "last_bar_utc": "2022-10-31T23:00:00+00:00",
+    "equity": 4679.910598903301,
+    "gross_exposure": 0,
+    "return_pct": -0.3671626989696808
+   },
+   {
+    "month": "2022-11",
+    "last_bar_utc": "2022-11-30T23:00:00+00:00",
+    "equity": 4678.2454531863805,
+    "gross_exposure": 470.1909015164386,
+    "return_pct": -0.035580716377603405
+   },
+   {
+    "month": "2022-12",
+    "last_bar_utc": "2022-12-31T23:00:00+00:00",
+    "equity": 4650.454264357345,
+    "gross_exposure": 0,
+    "return_pct": -0.5940515329332818
+   },
+   {
+    "month": "2023-01",
+    "last_bar_utc": "2023-01-31T23:00:00+00:00",
+    "equity": 4688.463555231206,
+    "gross_exposure": 0,
+    "return_pct": 0.8173242593777719
+   },
+   {
+    "month": "2023-02",
+    "last_bar_utc": "2023-02-28T23:00:00+00:00",
+    "equity": 4685.751975747125,
+    "gross_exposure": 0,
+    "return_pct": -0.05783514049193528
+   },
+   {
+    "month": "2023-03",
+    "last_bar_utc": "2023-03-31T23:00:00+00:00",
+    "equity": 4631.136033670574,
+    "gross_exposure": 0,
+    "return_pct": -1.165574754260068
+   },
+   {
+    "month": "2023-04",
+    "last_bar_utc": "2023-04-30T23:00:00+00:00",
+    "equity": 4627.494477125307,
+    "gross_exposure": 0,
+    "return_pct": -0.07863203582859635
+   },
+   {
+    "month": "2023-05",
+    "last_bar_utc": "2023-05-31T23:00:00+00:00",
+    "equity": 4660.622160939452,
+    "gross_exposure": 0,
+    "return_pct": 0.7158881329389466
+   },
+   {
+    "month": "2023-06",
+    "last_bar_utc": "2023-06-30T23:00:00+00:00",
+    "equity": 4688.508218012195,
+    "gross_exposure": 0,
+    "return_pct": 0.5983333578605698
+   },
+   {
+    "month": "2023-07",
+    "last_bar_utc": "2023-07-31T23:00:00+00:00",
+    "equity": 4607.3025481386985,
+    "gross_exposure": 0,
+    "return_pct": -1.7320150908880283
+   },
+   {
+    "month": "2023-08",
+    "last_bar_utc": "2023-08-31T23:00:00+00:00",
+    "equity": 4596.635116731035,
+    "gross_exposure": 0,
+    "return_pct": -0.23153312152189853
+   },
+   {
+    "month": "2023-09",
+    "last_bar_utc": "2023-09-30T23:00:00+00:00",
+    "equity": 4570.245260652012,
+    "gross_exposure": 0,
+    "return_pct": -0.5741124846513901
+   },
+   {
+    "month": "2023-10",
+    "last_bar_utc": "2023-10-31T23:00:00+00:00",
+    "equity": 4595.000813951991,
+    "gross_exposure": 473.1115273666589,
+    "return_pct": 0.5416679387671985
+   },
+   {
+    "month": "2023-11",
+    "last_bar_utc": "2023-11-30T23:00:00+00:00",
+    "equity": 4501.945317876456,
+    "gross_exposure": 0,
+    "return_pct": -2.025146454664095
+   },
+   {
+    "month": "2023-12",
+    "last_bar_utc": "2023-12-31T23:00:00+00:00",
+    "equity": 4551.869389950231,
+    "gross_exposure": 0,
+    "return_pct": 1.1089444350986577
+   },
+   {
+    "month": "2024-01",
+    "last_bar_utc": "2024-01-31T23:00:00+00:00",
+    "equity": 4525.446431937162,
+    "gross_exposure": 0,
+    "return_pct": -0.5804858564572801
+   },
+   {
+    "month": "2024-02",
+    "last_bar_utc": "2024-02-29T23:00:00+00:00",
+    "equity": 4524.685507574435,
+    "gross_exposure": 0,
+    "return_pct": -0.01681434912932378
+   },
+   {
+    "month": "2024-03",
+    "last_bar_utc": "2024-03-31T23:00:00+00:00",
+    "equity": 4500.917877779733,
+    "gross_exposure": 0,
+    "return_pct": -0.5252879952631906
+   },
+   {
+    "month": "2024-04",
+    "last_bar_utc": "2024-04-30T23:00:00+00:00",
+    "equity": 4489.786924372381,
+    "gross_exposure": 0,
+    "return_pct": -0.24730407684850908
+   },
+   {
+    "month": "2024-05",
+    "last_bar_utc": "2024-05-31T23:00:00+00:00",
+    "equity": 4525.463080955365,
+    "gross_exposure": 0,
+    "return_pct": 0.7946068974747922
+   },
+   {
+    "month": "2024-06",
+    "last_bar_utc": "2024-06-30T23:00:00+00:00",
+    "equity": 4477.15812475833,
+    "gross_exposure": 893.6600169119719,
+    "return_pct": -1.0674036078278437
+   },
+   {
+    "month": "2024-07",
+    "last_bar_utc": "2024-07-31T23:00:00+00:00",
+    "equity": 4478.068910285216,
+    "gross_exposure": 0,
+    "return_pct": 0.020342938567408098
+   },
+   {
+    "month": "2024-08",
+    "last_bar_utc": "2024-08-31T23:00:00+00:00",
+    "equity": 4445.204264979431,
+    "gross_exposure": 0,
+    "return_pct": -0.73390217891246
+   },
+   {
+    "month": "2024-09",
+    "last_bar_utc": "2024-09-30T23:00:00+00:00",
+    "equity": 4405.830897282803,
+    "gross_exposure": 0,
+    "return_pct": -0.8857493458022336
+   },
+   {
+    "month": "2024-10",
+    "last_bar_utc": "2024-10-31T23:00:00+00:00",
+    "equity": 4345.491227343914,
+    "gross_exposure": 0,
+    "return_pct": -1.369541213579073
+   },
+   {
+    "month": "2024-11",
+    "last_bar_utc": "2024-11-30T23:00:00+00:00",
+    "equity": 4396.568527732595,
+    "gross_exposure": 0,
+    "return_pct": 1.1754091244570386
+   },
+   {
+    "month": "2024-12",
+    "last_bar_utc": "2024-12-31T23:00:00+00:00",
+    "equity": 4368.430849406993,
+    "gross_exposure": 0,
+    "return_pct": -0.6399918060668308
+   }
+  ],
+  "sha256_month_end": "5a6b7465c819947c973933dfe2b747a0939e2adcb99f29cc5a0a3430852bb270"
+ },
+ "R1_P1_U20": {
+  "symbols": [
+   "BTCUSDT",
+   "ETHUSDT",
+   "BNBUSDT",
+   "SOLUSDT",
+   "XRPUSDT",
+   "ADAUSDT",
+   "DOGEUSDT",
+   "AVAXUSDT",
+   "LINKUSDT",
+   "DOTUSDT",
+   "LTCUSDT",
+   "ATOMUSDT",
+   "UNIUSDT",
+   "NEARUSDT",
+   "APTUSDT",
+   "ARBUSDT",
+   "OPUSDT",
+   "SUIUSDT",
+   "PEPEUSDT",
+   "TONUSDT"
+  ],
+  "n_trades": 2867,
+  "final_equity": 1876.1450123174136,
+  "costs": {
+   "BTCUSDT": {
+    "name": "paper:BTCUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 1.0,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "ETHUSDT": {
+    "name": "paper:ETHUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 1.0,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "BNBUSDT": {
+    "name": "paper:BNBUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 1.0,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "SOLUSDT": {
+    "name": "paper:SOLUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 1.5,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "XRPUSDT": {
+    "name": "paper:XRPUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 1.4,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "ADAUSDT": {
+    "name": "paper:ADAUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 4.2,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "DOGEUSDT": {
+    "name": "paper:DOGEUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 1.6,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "AVAXUSDT": {
+    "name": "paper:AVAXUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 2.4,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "LINKUSDT": {
+    "name": "paper:LINKUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 2.4,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "DOTUSDT": {
+    "name": "paper:DOTUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 8.5,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "LTCUSDT": {
+    "name": "paper:LTCUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 2.9,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "ATOMUSDT": {
+    "name": "paper:ATOMUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 6.9,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "UNIUSDT": {
+    "name": "paper:UNIUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 2.6,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "NEARUSDT": {
+    "name": "paper:NEARUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 3.3,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "APTUSDT": {
+    "name": "paper:APTUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 10.9,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "ARBUSDT": {
+    "name": "paper:ARBUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 6.5,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "OPUSDT": {
+    "name": "paper:OPUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 8.0,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "SUIUSDT": {
+    "name": "paper:SUIUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 2.6,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "PEPEUSDT": {
+    "name": "paper:PEPEUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 14.6,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   },
+   "TONUSDT": {
+    "name": "paper:TONUSDT",
+    "commission_bps": 7.5,
+    "spread_bps": 7.1,
+    "slippage_bps": 0.0,
+    "short_financing_bps_per_day": 0.0,
+    "min_commission": 0.0
+   }
+  },
+  "month_end": [
+   {
+    "month": "2021-07",
+    "last_bar_utc": "2021-07-31T23:00:00+00:00",
+    "equity": 4719.587895919547,
+    "gross_exposure": 2356.4962964768256,
+    "return_pct": -5.608242081609061
+   },
+   {
+    "month": "2021-08",
+    "last_bar_utc": "2021-08-31T23:00:00+00:00",
+    "equity": 4653.35773630706,
+    "gross_exposure": 0,
+    "return_pct": -1.403303870444883
+   },
+   {
+    "month": "2021-09",
+    "last_bar_utc": "2021-09-30T23:00:00+00:00",
+    "equity": 4419.02188325595,
+    "gross_exposure": 452.4030053501091,
+    "return_pct": -5.0358443586389745
+   },
+   {
+    "month": "2021-10",
+    "last_bar_utc": "2021-10-31T23:00:00+00:00",
+    "equity": 4503.573983866718,
+    "gross_exposure": 447.0320953107828,
+    "return_pct": 1.9133668681556637
+   },
+   {
+    "month": "2021-11",
+    "last_bar_utc": "2021-11-30T23:00:00+00:00",
+    "equity": 4547.632200214626,
+    "gross_exposure": 459.8054938021471,
+    "return_pct": 0.9782944946777672
+   },
+   {
+    "month": "2021-12",
+    "last_bar_utc": "2021-12-31T23:00:00+00:00",
+    "equity": 4372.288824180401,
+    "gross_exposure": 0,
+    "return_pct": -3.8557070650073633
+   },
+   {
+    "month": "2022-01",
+    "last_bar_utc": "2022-01-31T23:00:00+00:00",
+    "equity": 4275.16780871714,
+    "gross_exposure": 437.8088609221103,
+    "return_pct": -2.2212854495372136
+   },
+   {
+    "month": "2022-02",
+    "last_bar_utc": "2022-02-28T23:00:00+00:00",
+    "equity": 4229.381233438784,
+    "gross_exposure": 2121.1833339066407,
+    "return_pct": -1.0709889605969747
+   },
+   {
+    "month": "2022-03",
+    "last_bar_utc": "2022-03-31T23:00:00+00:00",
+    "equity": 4028.118665498678,
+    "gross_exposure": 0,
+    "return_pct": -4.758676431173015
+   },
+   {
+    "month": "2022-04",
+    "last_bar_utc": "2022-04-30T23:00:00+00:00",
+    "equity": 3885.404154482842,
+    "gross_exposure": 0,
+    "return_pct": -3.5429569699175767
+   },
+   {
+    "month": "2022-05",
+    "last_bar_utc": "2022-05-31T23:00:00+00:00",
+    "equity": 3784.606788591406,
+    "gross_exposure": 368.3608504986579,
+    "return_pct": -2.5942569134060234
+   },
+   {
+    "month": "2022-06",
+    "last_bar_utc": "2022-06-30T23:00:00+00:00",
+    "equity": 3709.571089968811,
+    "gross_exposure": 0,
+    "return_pct": -1.9826550765798867
+   },
+   {
+    "month": "2022-07",
+    "last_bar_utc": "2022-07-31T23:00:00+00:00",
+    "equity": 3564.658444795766,
+    "gross_exposure": 0,
+    "return_pct": -3.906452839383734
+   },
+   {
+    "month": "2022-08",
+    "last_bar_utc": "2022-08-31T23:00:00+00:00",
+    "equity": 3480.64143304759,
+    "gross_exposure": 0,
+    "return_pct": -2.3569442360133253
+   },
+   {
+    "month": "2022-09",
+    "last_bar_utc": "2022-09-30T23:00:00+00:00",
+    "equity": 3475.807275482796,
+    "gross_exposure": 0,
+    "return_pct": -0.13888697407596906
+   },
+   {
+    "month": "2022-10",
+    "last_bar_utc": "2022-10-31T23:00:00+00:00",
+    "equity": 3419.1473488948227,
+    "gross_exposure": 349.48271827376806,
+    "return_pct": -1.6301227915492822
+   },
+   {
+    "month": "2022-11",
+    "last_bar_utc": "2022-11-30T23:00:00+00:00",
+    "equity": 3349.9161806939464,
+    "gross_exposure": 336.68607702748517,
+    "return_pct": -2.024807975100984
+   },
+   {
+    "month": "2022-12",
+    "last_bar_utc": "2022-12-31T23:00:00+00:00",
+    "equity": 3305.749518771517,
+    "gross_exposure": 0,
+    "return_pct": -1.3184408068765419
+   },
+   {
+    "month": "2023-01",
+    "last_bar_utc": "2023-01-31T23:00:00+00:00",
+    "equity": 3419.0327405836338,
+    "gross_exposure": 0,
+    "return_pct": 3.4268543689969233
+   },
+   {
+    "month": "2023-02",
+    "last_bar_utc": "2023-02-28T23:00:00+00:00",
+    "equity": 3404.6800067414997,
+    "gross_exposure": 0,
+    "return_pct": -0.41978930683430615
+   },
+   {
+    "month": "2023-03",
+    "last_bar_utc": "2023-03-31T23:00:00+00:00",
+    "equity": 3384.7097386505607,
+    "gross_exposure": 1012.799519126276,
+    "return_pct": -0.5865534514666981
+   },
+   {
+    "month": "2023-04",
+    "last_bar_utc": "2023-04-30T23:00:00+00:00",
+    "equity": 3279.5668355160155,
+    "gross_exposure": 329.8048092786782,
+    "return_pct": -3.1064082669748916
+   },
+   {
+    "month": "2023-05",
+    "last_bar_utc": "2023-05-31T23:00:00+00:00",
+    "equity": 3278.252881665082,
+    "gross_exposure": 0,
+    "return_pct": -0.04006485968525153
+   },
+   {
+    "month": "2023-06",
+    "last_bar_utc": "2023-06-30T23:00:00+00:00",
+    "equity": 3154.4115205959856,
+    "gross_exposure": 0,
+    "return_pct": -3.7776634548764676
+   },
+   {
+    "month": "2023-07",
+    "last_bar_utc": "2023-07-31T23:00:00+00:00",
+    "equity": 3031.4921045792094,
+    "gross_exposure": 0,
+    "return_pct": -3.8967463571003003
+   },
+   {
+    "month": "2023-08",
+    "last_bar_utc": "2023-08-31T23:00:00+00:00",
+    "equity": 2923.560203349164,
+    "gross_exposure": 0,
+    "return_pct": -3.560355676566307
+   },
+   {
+    "month": "2023-09",
+    "last_bar_utc": "2023-09-30T23:00:00+00:00",
+    "equity": 2817.9082107919494,
+    "gross_exposure": 845.2289902962416,
+    "return_pct": -3.613812790178983
+   },
+   {
+    "month": "2023-10",
+    "last_bar_utc": "2023-10-31T23:00:00+00:00",
+    "equity": 2836.366166934763,
+    "gross_exposure": 292.038583613544,
+    "return_pct": 0.6550233280177009
+   },
+   {
+    "month": "2023-11",
+    "last_bar_utc": "2023-11-30T23:00:00+00:00",
+    "equity": 2723.076709286067,
+    "gross_exposure": 272.4946551093174,
+    "return_pct": -3.994176033030561
+   },
+   {
+    "month": "2023-12",
+    "last_bar_utc": "2023-12-31T23:00:00+00:00",
+    "equity": 2695.242263823466,
+    "gross_exposure": 0,
+    "return_pct": -1.022168981420224
+   },
+   {
+    "month": "2024-01",
+    "last_bar_utc": "2024-01-31T23:00:00+00:00",
+    "equity": 2454.4722974026045,
+    "gross_exposure": 0,
+    "return_pct": -8.933147481863312
+   },
+   {
+    "month": "2024-02",
+    "last_bar_utc": "2024-02-29T23:00:00+00:00",
+    "equity": 2396.5683017310666,
+    "gross_exposure": 0,
+    "return_pct": -2.3591219885762627
+   },
+   {
+    "month": "2024-03",
+    "last_bar_utc": "2024-03-31T23:00:00+00:00",
+    "equity": 2304.7895101111862,
+    "gross_exposure": 229.3409873459984,
+    "return_pct": -3.8295921528123222
+   },
+   {
+    "month": "2024-04",
+    "last_bar_utc": "2024-04-30T23:00:00+00:00",
+    "equity": 2220.9234449899777,
+    "gross_exposure": 0,
+    "return_pct": -3.6387732915862947
+   },
+   {
+    "month": "2024-05",
+    "last_bar_utc": "2024-05-31T23:00:00+00:00",
+    "equity": 2212.2631548527042,
+    "gross_exposure": 0,
+    "return_pct": -0.38994095707394205
+   },
+   {
+    "month": "2024-06",
+    "last_bar_utc": "2024-06-30T23:00:00+00:00",
+    "equity": 2103.410002230517,
+    "gross_exposure": 1261.2161843690137,
+    "return_pct": -4.9204432295232525
+   },
+   {
+    "month": "2024-07",
+    "last_bar_utc": "2024-07-31T23:00:00+00:00",
+    "equity": 2055.7862923923894,
+    "gross_exposure": 0,
+    "return_pct": -2.2641192058431736
+   },
+   {
+    "month": "2024-08",
+    "last_bar_utc": "2024-08-31T23:00:00+00:00",
+    "equity": 2021.1159554084627,
+    "gross_exposure": 199.77700773555355,
+    "return_pct": -1.686475734964632
+   },
+   {
+    "month": "2024-09",
+    "last_bar_utc": "2024-09-30T23:00:00+00:00",
+    "equity": 1932.4307518299265,
+    "gross_exposure": 0,
+    "return_pct": -4.3879324855764175
+   },
+   {
+    "month": "2024-10",
+    "last_bar_utc": "2024-10-31T23:00:00+00:00",
+    "equity": 1819.8162070183923,
+    "gross_exposure": 0,
+    "return_pct": -5.82761088359276
+   },
+   {
+    "month": "2024-11",
+    "last_bar_utc": "2024-11-30T23:00:00+00:00",
+    "equity": 1974.4325858319276,
+    "gross_exposure": 0,
+    "return_pct": 8.496263425791795
+   },
+   {
+    "month": "2024-12",
+    "last_bar_utc": "2024-12-31T23:00:00+00:00",
+    "equity": 1876.1450123174136,
+    "gross_exposure": 0,
+    "return_pct": -4.978016176384193
+   }
+  ],
+  "sha256_month_end": "2f1c3bc68fb0c071ed60a28345b3987b57e13ac0329b46912cdc1b91f073b2dd"
+ }
+}
