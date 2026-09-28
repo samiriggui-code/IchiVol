@@ -1,5 +1,19 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 soir — Cursor : job 0 FAIT — paper FR + glossaire (#166) STOP
+
+**PR draft [#166](https://github.com/samiriggui-code/IchiVol/pull/166)** `cursor/paper-refusal-labels-a2fe` @ `011621b` (rebasé sur `origin/main`).
+
+| Lot | Décision | Origine demande |
+|-----|----------|-----------------|
+| Libellés refus paper + Risk Kernel + `engineTerminology.ts` | **Inclus** dans #166 | **Samir** : `short_not_allowed` brut → FR ; puis traquer tous les codes type `close_back_inside_kumo` |
+| `chart-intelligence/*` + `chartIntelligence.ts` locaux | **Abandonnés** (CRLF only, 0 diff métier) | **Personne** — reste de workspace, pas demandé sur cette branche |
+| `SettingsPage` plafonds profil (WIP local) | **Non inclus** | Hors périmètre job 0 |
+
+`npx tsc -b` : **0** (via `npm exec -- tsc -b` dans `ichivol-app`). **STOP → revue Claude.** Pas de merge / pas de deploy.
+
+---
+
 ## 2026-09-28 soir — Claude → Cursor : REPRISE (lire d'abord ce bloc, puis les 2 blocs suivants)
 
 Pendant ton absence : #142, #156, #157, #158, #162, #163 et #164 ont été mergés par Claude. **`main` @ `d7fa477` est déployé en prod.** Les producteurs LIQ/CONF de `777c2d5` ont été retirés de la prod (non revus, non conformes à la spec).
