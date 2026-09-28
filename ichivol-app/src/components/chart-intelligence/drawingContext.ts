@@ -35,7 +35,12 @@ export function useDrawingLayer(layer: IntelligenceLayerKey) {
     objects,
     asOf: ctx?.asOf ?? null,
     isSelected: (o: IntelligenceObject) => ctx?.selectedKey === selectionKeyOf(o),
-    select: (o: IntelligenceObject) => ctx?.onSelect(selectionKeyOf(o)),
+    /** stopPropagation évite que le clic SVG ne tombe aussi sur le canvas LWC (désélection). */
+    select: (o: IntelligenceObject, e?: { stopPropagation?: () => void; preventDefault?: () => void }) => {
+      e?.stopPropagation?.()
+      e?.preventDefault?.()
+      ctx?.onSelect(selectionKeyOf(o))
+    },
     isFresh: (o: IntelligenceObject) => ctx?.freshKeys.has(selectionKeyOf(o)) ?? false,
     dimStale: ctx?.dimStale ?? false,
   }
