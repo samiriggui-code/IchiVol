@@ -1,0 +1,510 @@
+{
+ "question": "Explique-moi le signal BTC 1h actuel.",
+ "model": "anthropic/claude-sonnet-4.5",
+ "attempts": 2,
+ "usage": {
+  "input_tokens": 7408,
+  "output_tokens": 2387
+ },
+ "answer": "**Lecture**\n- La décision du pipeline est NO_TRADE avec direction SHORT, bloquée par les étapes participation, location et regime en échec.\n- Ichimoku affiche une direction SHORT avec le prix BELOW kumo et un score de -41,6667, sans croisement Tenkan-Kijun actif.\n- Le RVOL est extrêmement faible à 0,433287 avec un percentile de 0,47 et un niveau d'anomalie LOW, signalant une participation insuffisante.\n- La structure reste BEARISH avec un dernier swing high à 83820 et swing low à 82563, mais sans cassure BOS récente.\n- La direction multi-timeframe est NEUTRAL sur le 4h, créant une divergence avec le biais Ichimoku baissier en 1h.\n- Le régime ATR est NORMAL avec un percentile élevé de 0,85 mais l'ADX à 22,8785 reste DEVELOPING, insuffisant pour valider une tendance forte.\n\n**Risques**\n- La faible participation mesurée par RVOL à 0,433287 invalide la fiabilité du biais structurel BEARISH malgré le positionnement sous kumo.\n- Le prix coincé dans une zone HVN entre VAL et POC expose à une consolidation prolongée sans direction claire en cas de signal déclenché.\n- L'ADX en phase DEVELOPING à 22,8785 et la direction multi-timeframe NEUTRAL suggèrent une absence de momentum directionnel cohérent sur plusieurs échelles de temps.\n\n**Invalidation**\n- Les étapes location et regime échouent simultanément, empêchant toute validation de trade malgré la direction et la structure passées.\n\n_Réponse partielle : 2 affirmation(s) non vérifiable(s) retirée(s)._",
+ "factsheet": {
+  "id": "2c90b363e176dfa452a746a9513073bcb98db29e0ad52adbefe73dd572f51224",
+  "schema": "ichivol.factsheet.v1",
+  "symbol": "BTCUSDT",
+  "timeframe": "1h",
+  "as_of": 1790618400,
+  "summary": null,
+  "claims": [
+   {
+    "section": "claims",
+    "text": "La décision du pipeline est NO_TRADE avec direction SHORT, bloquée par les étapes participation, location et regime en échec.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "pipeline.decision",
+      "display": "NO_TRADE",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.direction",
+      "display": "SHORT",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.blocking_stages",
+      "display": "participation, location, regime",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.stage.participation.status",
+      "display": "fail",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "claims",
+    "text": "Ichimoku affiche une direction SHORT avec le prix BELOW kumo et un score de -41,6667, sans croisement Tenkan-Kijun actif.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "ichimoku.direction",
+      "display": "SHORT",
+      "engine": "ichimoku",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "ichimoku.price_vs_kumo",
+      "display": "BELOW",
+      "engine": "ichimoku",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "ichimoku.score",
+      "display": "-41,6667",
+      "engine": "ichimoku",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "ichimoku.tk_cross",
+      "display": "NONE",
+      "engine": "ichimoku",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "claims",
+    "text": "Le RVOL est extrêmement faible à 0,433287 avec un percentile de 0,47 et un niveau d'anomalie LOW, signalant une participation insuffisante.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "rvol.rvol",
+      "display": "0,433287",
+      "engine": "rvol",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "rvol.percentile",
+      "display": "0,47",
+      "engine": "rvol",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "rvol.anomaly_level",
+      "display": "LOW",
+      "engine": "rvol",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "claims",
+    "text": "La structure reste BEARISH avec un dernier swing high à 83820 et swing low à 82563, mais sans cassure BOS récente.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "structure.bias",
+      "display": "BEARISH",
+      "engine": "structure",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "structure.last_swing_high",
+      "display": "83820",
+      "engine": "structure",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "structure.last_swing_low",
+      "display": "82563",
+      "engine": "structure",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "structure.bos",
+      "display": "NONE",
+      "engine": "structure",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "claims",
+    "text": "La direction multi-timeframe est NEUTRAL sur le 4h, créant une divergence avec le biais Ichimoku baissier en 1h.",
+    "kind": "interpretation",
+    "facts": [
+     {
+      "id": "mtf_direction.direction",
+      "display": "NEUTRAL",
+      "engine": "mtf_direction",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "mtf_direction.higher_tf",
+      "display": "4h",
+      "engine": "mtf_direction",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "ichimoku.direction",
+      "display": "SHORT",
+      "engine": "ichimoku",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "claims",
+    "text": "Le régime ATR est NORMAL avec un percentile élevé de 0,85 mais l'ADX à 22,8785 reste DEVELOPING, insuffisant pour valider une tendance forte.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "atr.regime",
+      "display": "NORMAL",
+      "engine": "atr",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "atr.percentile",
+      "display": "0,85",
+      "engine": "atr",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "adx.adx",
+      "display": "22,8785",
+      "engine": "adx",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "adx.strength",
+      "display": "DEVELOPING",
+      "engine": "adx",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "risks",
+    "text": "La faible participation mesurée par RVOL à 0,433287 invalide la fiabilité du biais structurel BEARISH malgré le positionnement sous kumo.",
+    "kind": "interpretation",
+    "facts": [
+     {
+      "id": "rvol.rvol",
+      "display": "0,433287",
+      "engine": "rvol",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "structure.bias",
+      "display": "BEARISH",
+      "engine": "structure",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "ichimoku.price_vs_kumo",
+      "display": "BELOW",
+      "engine": "ichimoku",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "risks",
+    "text": "Le prix coincé dans une zone HVN entre VAL et POC expose à une consolidation prolongée sans direction claire en cas de signal déclenché.",
+    "kind": "scenario",
+    "facts": [
+     {
+      "id": "location.node_type",
+      "display": "HVN",
+      "engine": "location",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "location.price_vs_value_area",
+      "display": "between_val_poc",
+      "engine": "location",
+      "timeframe": "1h",
+      "as_of": null,
+      "known_at": 1790622491,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "risks",
+    "text": "L'ADX en phase DEVELOPING à 22,8785 et la direction multi-timeframe NEUTRAL suggèrent une absence de momentum directionnel cohérent sur plusieurs échelles de temps.",
+    "kind": "interpretation",
+    "facts": [
+     {
+      "id": "adx.adx",
+      "display": "22,8785",
+      "engine": "adx",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "adx.strength",
+      "display": "DEVELOPING",
+      "engine": "adx",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "mtf_direction.direction",
+      "display": "NEUTRAL",
+      "engine": "mtf_direction",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "invalidation",
+    "text": "Les étapes location et regime échouent simultanément, empêchant toute validation de trade malgré la direction et la structure passées.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "pipeline.stage.location.status",
+      "display": "fail",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.stage.regime.status",
+      "display": "fail",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.stage.direction.status",
+      "display": "pass",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.stage.structure.status",
+      "display": "pass",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   }
+  ],
+  "removed": 2,
+  "partial": true,
+  "fallback": false,
+  "missing": []
+ },
+ "validation": [
+  {
+   "total": 11,
+   "accepted": 9,
+   "rejected": 2,
+   "summaryOk": false,
+   "rejectedClaims": [
+    {
+     "text": "L'étape location échoue car le prix à 83742,13 se situe between_val_poc, coincé entre VAL à 83684,67 et POC à 83965,08.",
+     "errors": [
+      "nombre non sourcé: 83965,08"
+     ]
+    },
+    {
+     "text": "Les trois étapes bloquantes empêchent toute validation de trade : participation insuffisante, location non favorable et régime de cycle immature.",
+     "errors": [
+      "nombre en toutes lettres interdit"
+     ]
+    }
+   ],
+   "summaryErrors": [
+    "résumé : nombre en toutes lettres interdit"
+   ]
+  },
+  {
+   "total": 11,
+   "accepted": 10,
+   "rejected": 1,
+   "summaryOk": false,
+   "rejectedClaims": [
+    {
+     "text": "Le prix à 83742,13 se situe entre VAL et POC, dans une zone HVN, tandis que VAL est à 83684,67 et POC à 83965,08.",
+     "errors": [
+      "trop de faits cités (5 > 4)"
+     ]
+    }
+   ],
+   "summaryErrors": [
+    "résumé : causalité sur la décision interdite (à mettre dans un claim citant pipeline.blocking_stages)"
+   ]
+  }
+ ]
+}

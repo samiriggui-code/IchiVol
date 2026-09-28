@@ -146,9 +146,20 @@ def facts_from_cards(cards: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def facts_from_pipeline(
-    detail: dict[str, Any] | None, *, timeframe: str, as_of: int | None, reason: str | None = None
+    detail: dict[str, Any] | None,
+    *,
+    timeframe: str,
+    as_of: int | None,
+    reason: str | None = None,
+    now: int | None = None,
 ) -> list[dict[str, Any]]:
-    """Verdict et étapes du pipeline (source de vérité de Décisions). Tous NON_VALIDE (VP3)."""
+    """Verdict et étapes du pipeline (source de vérité de Décisions). Tous NON_VALIDE (VP3).
+
+    ``price.live`` est le dernier prix traité (barre en cours) : horodaté à ``now`` (E1, revue #171),
+    pas à la clôture de barre. ``pipeline.blocking_stages`` = étapes en échec (faits relationnels, V8).
+    """
+    live = dict(engine="provider", timeframe=timeframe, as_of=None, known_at=now, validation_status="NON_VALIDE",
+                decision_role="context")
     common = dict(
         engine="pipeline",
         timeframe=timeframe,
@@ -163,25 +174,59 @@ def facts_from_pipeline(
             _fact("pipeline.decision", field="decision", value=None, source="engine", status="unavailable",
                   reason=why, **common),
             _fact("price.live", field="price", value=None, source="provider", status="unavailable", reason=why,
-                  **{**common, "engine": "provider", "decision_role": "context"}),
+                  **live),
         ]
     pipeline = detail.get("pipeline") or {}
     facts = [
         _fact("pipeline.decision", field="decision", value=pipeline.get("decision"), source="engine", **common),
         _fact("pipeline.direction", field="direction", value=pipeline.get("direction") or detail.get("direction"),
               source="engine", **common),
-        _fact("price.live", field="price", value=detail.get("price"), source="provider",
-              **{**common, "engine": "provider", "decision_role": "context"}),
+        _fact("price.live", field="price", value=detail.get("price"), source="provider", **live),
     ]
-    for stage in pipeline.get("stages") or []:
-        sid = str(stage.get("id") or "")
-        if not sid:
-            continue
+    stages = [s for s in (pipeline.get("stages") or []) if s.get("id")]
+    failing = [str(s["id"]) for s in stages if s.get("status") == "fail"]
+    facts.append(
+        _fact("pipeline.blocking_stages", field="blocking_stages", value=", ".join(failing) if failing else "aucune",
+              source="engine", **common)
+    )
+    for stage in stages:
+        sid = str(stage["id"])
         facts.append(
             _fact(f"pipeline.stage.{sid}.status", field=f"stage.{sid}.status", value=stage.get("status"),
                   source="engine", **common)
         )
     return facts
+
+
+def price_vs_value_area(price: float | None, location: dict[str, Any] | None) -> str | None:
+    """Position du prix live par rapport à la value area (VAL ≤ POC ≤ VAH). Relation pré-calculée (V8)."""
+    if price is None or not isinstance(location, dict):
+        return None
+    poc, vah, val = location.get("poc"), location.get("vah"), location.get("val")
+    if not all(isinstance(x, (int, float)) for x in (poc, vah, val)):
+        return None
+    if price > vah:
+        return "above_vah"
+    if price >= poc:
+        return "between_poc_vah"
+    if price >= val:
+        return "between_val_poc"
+    return "below_val"
+
+
+def facts_derived(
+    detail: dict[str, Any] | None, cards: Sequence[dict[str, Any]], *, timeframe: str, now: int | None
+) -> list[dict[str, Any]]:
+    """Faits relationnels calculés côté moteur, pour que le LLM n'ait pas à comparer lui-même."""
+    loc = next((c for c in cards if c.get("feature") == "location"), None)
+    price = detail.get("price") if detail else None
+    rel = price_vs_value_area(price, (loc or {}).get("value"))
+    return [
+        _fact("location.price_vs_value_area", engine="location", field="price_vs_value_area", value=rel,
+              timeframe=timeframe, as_of=None, known_at=now, source="engine", validation_status="NON_VALIDE",
+              decision_role=str((loc or {}).get("decision_role") or "context"),
+              reason=None if rel is not None else "price_or_value_area_missing")
+    ]
 
 
 def facts_from_paper(
@@ -280,6 +325,7 @@ def assemble(
             seen.add(f["id"])
             facts.append(f)
     truncated = max(0, len(facts) - MAX_FACTS)
+    cut = facts[MAX_FACTS:]
     facts = facts[:MAX_FACTS]
     core = {"schema": SCHEMA, "symbol": symbol.upper(), "timeframe": timeframe, "as_of": as_of, "facts": facts}
     digest = hashlib.sha256(json.dumps(core, sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()
@@ -289,7 +335,8 @@ def assemble(
         "generated_at": generated_at or datetime.now(timezone.utc).isoformat(),
         "engine_version": engine_version,
         "truncated": truncated,
-        "missing": [{"id": f["id"], "reason": f.get("reason")} for f in facts if f["status"] != "ok"],
+        "missing": [{"id": f["id"], "reason": f.get("reason")} for f in facts if f["status"] != "ok"]
+        + [{"id": f["id"], "reason": "truncated"} for f in cut],
         "observe_only": True,
         "used_by_decision": False,
     }
@@ -383,7 +430,8 @@ def build_factsheet(
         timeframe=timeframe,
         as_of=bar_as_of,
         fact_groups=[
-            facts_from_pipeline(detail, timeframe=timeframe, as_of=bar_as_of, reason=pipe_reason),
+            facts_from_pipeline(detail, timeframe=timeframe, as_of=bar_as_of, reason=pipe_reason, now=now_s),
+            facts_derived(detail, cards, timeframe=timeframe, now=now_s),
             facts_from_paper(position, lock, timeframe=timeframe, as_of=bar_as_of, reason=paper_reason),
             facts_from_calendar(events, now=now_s, timeframe=timeframe, reason=cal_reason),
             facts_from_cards(cards),

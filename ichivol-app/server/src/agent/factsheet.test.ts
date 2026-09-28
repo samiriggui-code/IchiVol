@@ -12,6 +12,7 @@ import {
 } from './factsheetAgent.js'
 import {
   type AnalysisOutput,
+  type Claim,
   type Fact,
   type FactSheet,
   extractNumbers,
@@ -73,7 +74,7 @@ function out(over: Partial<AnalysisOutput> = {}): AnalysisOutput {
 describe('extractNumbers', () => {
   it('lit FR/EN, %, et ignore timeframes et périodes', () => {
     assert.deepEqual(extractNumbers('Signaux NON_VALIDE (VP3), étape AG-S1, stratégie B7.'), [])
-    const n = extractNumbers('RVOL 1,529 (93 %) en 1h, ATR 14 = 472.1, prix 83 703,35, Donchian 55/20')
+    const n = extractNumbers('RVOL 1,529 (93 %) en 1h, ATR(14) = 472.1, prix 83 703,35, Donchian 55/20')
     assert.deepEqual(
       n.map((x) => [x.value, x.percent]),
       [
@@ -106,10 +107,13 @@ describe('validateAnalysis', () => {
   })
 
   it('accepte arrondi et variantes de format', () => {
-    for (const text of ['RVOL 1,53', 'RVOL 1.529', 'RVOL environ 1,5']) {
+    for (const text of ['RVOL 1,53', 'RVOL 1.529', 'RVOL 1,529']) {
       const r = validateAnalysis(FS, out({ claims: [{ text, kind: 'fact', fact_ids: ['rvol.rvol'] }], risks: [] }))
       assert.equal(r.rejected, 0, text)
     }
+    // V5 : précision insuffisante
+    const r = validateAnalysis(FS, out({ claims: [{ text: 'RVOL environ 1,5', kind: 'fact', fact_ids: ['rvol.rvol'] }], risks: [] }))
+    assert.equal(r.rejected, 1)
   })
 
   it('refuse un fait indisponible cité comme donnée, mais l’accepte en « missing »', () => {
@@ -247,5 +251,65 @@ describe('helpers', () => {
     const r = renderAnswer(FS, out(), validateAnalysis(FS, out()))
     assert.deepEqual(r.missing, ['cvd.delta'])
     assert.match(r.text, /Données indisponibles : cvd\.delta/)
+  })
+})
+
+
+// --- FS-0b : phrases littérales de la revue #171 (toutes doivent être REJETÉES) -----------------
+
+const FS_B: FactSheet = {
+  ...FS,
+  facts: [
+    ...FS.facts.filter((f) => f.id !== 'price.live'),
+    fact('price.live', 83972.35, '83972,35', { source: 'provider' }),
+    fact('fvg.active_count', 11, '11'),
+    fact('location.poc', 83965.08333, '83965,08'),
+    fact('location.val', 83684.66667, '83684,67'),
+    fact('location.vah', 84918.5, '84918,5'),
+    fact('pipeline.blocking_stages', 'location, regime', 'location, regime'),
+    fact('location.price_vs_value_area', 'between_poc_vah', 'between_poc_vah'),
+  ],
+}
+
+function rejects(text: string, fact_ids: string[], kind: Claim['kind'] = 'fact'): void {
+  const r = validateAnalysis(FS_B, out({ claims: [{ text, kind, fact_ids }], risks: [] }))
+  assert.equal(r.rejected, 1, `devait être rejeté : « ${text} »`)
+}
+
+describe('FS-0b — contournements de la revue #171', () => {
+  it('V1 : jetons de date / pourcentages inventés', () => {
+    rejects('Probabilité de rebond de 28 %', [], 'interpretation')
+    rejects('Risque de baisse : 0 %', [], 'interpretation')
+    rejects('Baisse possible de -28 %', [], 'interpretation')
+  })
+  it('V2 : résumé chiffré', () => {
+    const r = validateAnalysis(FS_B, out({ summary: 'Le BTC vise 84 300 et pourrait prendre 11 % ; RSI 20.' }))
+    assert.equal(r.summaryOk, false)
+  })
+  it('V3 : bande relative supprimée', () => rejects('Objectif à 84 300', ['price.live']))
+  it('V4 : RSI 20 et « 850 M »', () => {
+    rejects('RSI 20, zone de survente', ['rvol.rvol'])
+    rejects('Volume de 850 M', ['rvol.rvol'])
+  })
+  it('V5 : arrondi grossier', () => rejects('Le RVOL est de 1', ['rvol.rvol']))
+  it('V6 : unité / sens et citation massive', () => {
+    rejects('Hausse attendue de 11 %', ['fvg.active_count'])
+    rejects('Stop à 82 600, cible 84 800', FS_B.facts.map((f) => f.id))
+  })
+  it('V7 : nombres en toutes lettres', () =>
+    rejects('Le prix devrait doubler, avec dix pour cent de hausse', [], 'interpretation'))
+  it('V8 : causalité sur la décision sans étapes bloquantes', () => {
+    rejects("NO_TRADE parce que VP3 n'a mesuré aucun edge", ['pipeline.decision'])
+    const ok = validateAnalysis(FS_B, out({ claims: [{ text: 'NO_TRADE car les étapes location, regime échouent.', kind: 'fact', fact_ids: ['pipeline.decision', 'pipeline.blocking_stages'] }], risks: [] }))
+    assert.equal(ok.rejected, 0, JSON.stringify(ok.verdicts))
+  })
+  it('V8 : « le prix entre X et Y » vérifié contre price.live', () => {
+    rejects('Le prix évolue dans un HVN entre POC 83965,08 et VAL 83684,67', ['location.poc', 'location.val'])
+    const ok = validateAnalysis(FS_B, out({ claims: [{ text: 'Le prix évolue entre POC 83965,08 et VAH 84918,5.', kind: 'fact', fact_ids: ['location.poc', 'location.vah'] }], risks: [] }))
+    assert.equal(ok.rejected, 0, JSON.stringify(ok.verdicts))
+  })
+  it('garde les cas légitimes', () => {
+    const r = validateAnalysis(FS_B, out({ risks: [] }))
+    assert.equal(r.rejected, 0, JSON.stringify(r.verdicts.filter((v) => !v.ok)))
   })
 })

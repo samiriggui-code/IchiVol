@@ -1,0 +1,423 @@
+{
+ "question": "Pourquoi IchiVol ne trade pas BTC en 1h ?",
+ "model": "anthropic/claude-sonnet-4.5",
+ "attempts": 2,
+ "usage": {
+  "input_tokens": 7389,
+  "output_tokens": 2088
+ },
+ "answer": "**Lecture**\n- L'étape participation est en échec avec un RVOL de 0,433287, significativement sous la moyenne, accompagné d'un niveau d'anomalie LOW.\n- Le prix se situe entre VAL et POC, une zone à friction élevée où le pipeline refuse d'initier des positions, validant l'échec de l'étape location.\n- Le régime de cycle est en TRANSITION, provoquant l'échec de l'étape regime malgré un ATR en régime NORMAL.\n- Le contexte Ichimoku affiche un score de -41,6667 avec le prix BELOW du kumo, cohérent avec la direction SHORT identifiée, mais l'étape direction a validé pass.\n- La structure de marché est BEARISH sans cassure active, confirmant le biais directionnel mais insuffisant seul pour déclencher un trade.\n\n**Risques**\n- La participation anormalement faible indique un manque de conviction du marché, rendant tout mouvement directionnel peu fiable et augmentant le risque de faux signaux.\n- Le positionnement du prix entre VAL et POC constitue une zone d'indécision où les réactions sont imprévisibles, justifiant l'absence de trade malgré le biais structurel.\n- Le régime de cycle en TRANSITION signale une phase de changement structurel où les comportements de prix deviennent erratiques et les modèles moins fiables.\n\n**Invalidation**\n- L'alignement multi-timeframe est NEUTRAL sur le timeframe supérieur, affaiblissant la conviction du biais SHORT identifié en une heure.\n- Le CVD affiche un biais NEUTRAL malgré un rolling delta négatif, ne confirmant pas l'engagement des acheteurs ou vendeurs derrière le mouvement structurel.\n- L'Open Interest présente une tendance FLAT avec un funding NEUTRAL, indiquant une absence de positionnement directionnel fort des acteurs dérivés.\n\n_Réponse partielle : 2 affirmation(s) non vérifiable(s) retirée(s)._",
+ "factsheet": {
+  "id": "2c90b363e176dfa452a746a9513073bcb98db29e0ad52adbefe73dd572f51224",
+  "schema": "ichivol.factsheet.v1",
+  "symbol": "BTCUSDT",
+  "timeframe": "1h",
+  "as_of": 1790618400,
+  "summary": null,
+  "claims": [
+   {
+    "section": "claims",
+    "text": "L'étape participation est en échec avec un RVOL de 0,433287, significativement sous la moyenne, accompagné d'un niveau d'anomalie LOW.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "pipeline.stage.participation.status",
+      "display": "fail",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "rvol.rvol",
+      "display": "0,433287",
+      "engine": "rvol",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "rvol.anomaly_level",
+      "display": "LOW",
+      "engine": "rvol",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "claims",
+    "text": "Le prix se situe entre VAL et POC, une zone à friction élevée où le pipeline refuse d'initier des positions, validant l'échec de l'étape location.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "location.price_vs_value_area",
+      "display": "between_val_poc",
+      "engine": "location",
+      "timeframe": "1h",
+      "as_of": null,
+      "known_at": 1790622491,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.stage.location.status",
+      "display": "fail",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "claims",
+    "text": "Le régime de cycle est en TRANSITION, provoquant l'échec de l'étape regime malgré un ATR en régime NORMAL.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "cycle.regime",
+      "display": "TRANSITION",
+      "engine": "cycle",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.stage.regime.status",
+      "display": "fail",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "atr.regime",
+      "display": "NORMAL",
+      "engine": "atr",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "claims",
+    "text": "Le contexte Ichimoku affiche un score de -41,6667 avec le prix BELOW du kumo, cohérent avec la direction SHORT identifiée, mais l'étape direction a validé pass.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "ichimoku.score",
+      "display": "-41,6667",
+      "engine": "ichimoku",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "ichimoku.price_vs_kumo",
+      "display": "BELOW",
+      "engine": "ichimoku",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.stage.direction.status",
+      "display": "pass",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "claims",
+    "text": "La structure de marché est BEARISH sans cassure active, confirmant le biais directionnel mais insuffisant seul pour déclencher un trade.",
+    "kind": "interpretation",
+    "facts": [
+     {
+      "id": "structure.bias",
+      "display": "BEARISH",
+      "engine": "structure",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "structure.bos",
+      "display": "NONE",
+      "engine": "structure",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.stage.structure.status",
+      "display": "pass",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "risks",
+    "text": "La participation anormalement faible indique un manque de conviction du marché, rendant tout mouvement directionnel peu fiable et augmentant le risque de faux signaux.",
+    "kind": "interpretation",
+    "facts": [
+     {
+      "id": "rvol.rvol",
+      "display": "0,433287",
+      "engine": "rvol",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "rvol.anomaly_level",
+      "display": "LOW",
+      "engine": "rvol",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "risks",
+    "text": "Le positionnement du prix entre VAL et POC constitue une zone d'indécision où les réactions sont imprévisibles, justifiant l'absence de trade malgré le biais structurel.",
+    "kind": "interpretation",
+    "facts": [
+     {
+      "id": "location.price_vs_value_area",
+      "display": "between_val_poc",
+      "engine": "location",
+      "timeframe": "1h",
+      "as_of": null,
+      "known_at": 1790622491,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "location.val",
+      "display": "83684,67",
+      "engine": "location",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "location.poc",
+      "display": "83965,08",
+      "engine": "location",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "risks",
+    "text": "Le régime de cycle en TRANSITION signale une phase de changement structurel où les comportements de prix deviennent erratiques et les modèles moins fiables.",
+    "kind": "scenario",
+    "facts": [
+     {
+      "id": "cycle.regime",
+      "display": "TRANSITION",
+      "engine": "cycle",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "invalidation",
+    "text": "L'alignement multi-timeframe est NEUTRAL sur le timeframe supérieur, affaiblissant la conviction du biais SHORT identifié en une heure.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "mtf_direction.direction",
+      "display": "NEUTRAL",
+      "engine": "mtf_direction",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "mtf_direction.higher_tf",
+      "display": "4h",
+      "engine": "mtf_direction",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "invalidation",
+    "text": "Le CVD affiche un biais NEUTRAL malgré un rolling delta négatif, ne confirmant pas l'engagement des acheteurs ou vendeurs derrière le mouvement structurel.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "cvd.bias",
+      "display": "NEUTRAL",
+      "engine": "cvd",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "cvd.rolling_delta",
+      "display": "-1632,37",
+      "engine": "cvd",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790618400,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "invalidation",
+    "text": "L'Open Interest présente une tendance FLAT avec un funding NEUTRAL, indiquant une absence de positionnement directionnel fort des acteurs dérivés.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "oi_funding.oi_trend",
+      "display": "FLAT",
+      "engine": "oi_funding",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790622496,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "oi_funding.funding_bias",
+      "display": "NEUTRAL",
+      "engine": "oi_funding",
+      "timeframe": "1h",
+      "as_of": 1790618400,
+      "known_at": 1790622496,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   }
+  ],
+  "removed": 2,
+  "partial": true,
+  "fallback": false,
+  "missing": []
+ },
+ "validation": [
+  {
+   "total": 12,
+   "accepted": 11,
+   "rejected": 1,
+   "summaryOk": false,
+   "rejectedClaims": [
+    {
+     "text": "Le pipeline a rendu un verdict NO_TRADE avec une direction SHORT identifiée, bloqué par trois étapes en échec : participation, location et regime.",
+     "errors": [
+      "nombre en toutes lettres interdit"
+     ]
+    }
+   ],
+   "summaryErrors": [
+    "résumé : nombre en toutes lettres interdit"
+   ]
+  },
+  {
+   "total": 9,
+   "accepted": 8,
+   "rejected": 1,
+   "summaryOk": false,
+   "rejectedClaims": [
+    {
+     "text": "Le CVD rolling_delta de -1632,37 montre une pression vendeuse, mais le bias NEUTRAL et l'OI FLAT ne confirment pas un engagement fort.",
+     "errors": [
+      "nombre non sourcé: -1632,37"
+     ]
+    }
+   ],
+   "summaryErrors": [
+    "résumé : nombre en toutes lettres interdit"
+   ]
+  }
+ ]
+}

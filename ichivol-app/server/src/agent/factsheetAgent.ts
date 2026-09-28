@@ -18,7 +18,7 @@ import {
 import { loadSkills } from './skills/loadSkills.js'
 import type { AgentMode } from './types.js'
 
-export const FACTSHEET_PROMPT_VERSION = 'fs0-v1'
+export const FACTSHEET_PROMPT_VERSION = 'fs0b-v2'
 const MAX_TOKENS = 2000
 const TIMEOUT_MS = 60_000
 const FS_SKILLS = ['ichimoku', 'rvol', 'structure', 'mtf', 'risk']
@@ -40,7 +40,7 @@ export const SUBMIT_ANALYSIS_TOOL = {
   input_schema: {
     type: 'object',
     properties: {
-      summary: { type: 'string', description: '2 à 4 lignes, sans chiffre absent du FACTSHEET.' },
+      summary: { type: 'string', description: '2 à 3 phrases qualitatives, SANS aucun chiffre.' },
       claims: { type: 'array', items: CLAIM_SCHEMA },
       risks: { type: 'array', items: CLAIM_SCHEMA },
       invalidation: { type: 'array', items: CLAIM_SCHEMA },
@@ -64,11 +64,13 @@ export function buildFactsheetSystem(mode: AgentMode): string {
     MODE_FOCUS[mode] ?? MODE_FOCUS.explain_signal,
     'RÈGLES STRICTES :',
     '1. Tu réponds UNIQUEMENT via l’outil submit_analysis.',
-    '2. Chaque chiffre que tu écris doit être la valeur « display » d’un fait que tu cites dans fact_ids, recopiée telle quelle. Aucun calcul, aucune différence, aucun pourcentage dérivé, aucun comptage.',
-    '3. fact_ids = identifiants en début de ligne du FACTSHEET (ex. rvol.rvol, pipeline.decision), jamais autre chose. kind=fact exige au moins un fact_id. kind=interpretation ou scenario : relie des faits cités, sans nouveau chiffre.',
+    '2. Chaque chiffre que tu écris est la valeur « display » d’un fait cité dans fact_ids, RECOPIÉE À L’IDENTIQUE (même décimales). Aucun calcul, arrondi, écart, pourcentage dérivé, objectif, niveau estimé ni comptage. Pas de nombre en toutes lettres (deux, dix, double, moitié…).',
+    '3. fact_ids = identifiants en début de ligne du FACTSHEET (ex. rvol.rvol), 4 au maximum par claim, seulement ceux dont tu cites la valeur ou l’état. kind=fact exige au moins un fact_id. kind=interpretation ou scenario : relie des faits cités, sans nouveau chiffre.',
     '4. Un fait avec status différent de ok est une ABSENCE : dis-le avec kind=missing (et liste son id dans missing_data). Ne le déduis jamais.',
-    '5. Tous les signaux du pipeline sont NON_VALIDE (programme VP3 : aucun edge mesuré). Rappelle-le quand tu cites pipeline.decision.',
-    '6. Français clair et naturel (pas de recopie « id = valeur »), vocabulaire trading juste. 4 à 8 claims au total, chacun de 25 mots au plus ; résumé de 2 à 3 phrases.',
+    '5. Tous les signaux du pipeline sont NON_VALIDE (programme VP3 : aucun edge mesuré). NON_VALIDE décrit le programme de validation, PAS le statut d’une étape : l’état d’une étape est pipeline.stage.<étape>.status (pass / watch / fail).',
+    '6. La raison d’un NO_TRADE est pipeline.blocking_stages (étapes en échec) : pour expliquer la décision, cite pipeline.decision ET pipeline.blocking_stages. Pour situer le prix dans la value area, cite location.price_vs_value_area ; ne compare jamais toi-même deux niveaux.',
+    '7. Le résumé (summary) ne contient AUCUN chiffre : 2 à 3 phrases qualitatives. Les chiffres vont dans les claims, avec leurs faits.',
+    '8. Français clair et naturel (pas de recopie « id = valeur »), vocabulaire trading juste. 4 à 8 claims au total, chacun de 25 mots au plus.',
     skills ? `MÉTHODE (skills, sans chiffres de marché) :\n${skills}` : '',
   ]
     .filter(Boolean)

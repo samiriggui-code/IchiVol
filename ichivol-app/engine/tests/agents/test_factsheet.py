@@ -190,3 +190,42 @@ def test_factsheet_module_has_no_paper_write_or_screener_route():
     names = {a.name for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) for a in n.names}
     assert not names & {"sync_position", "sync_auto_watchlist", "open_user_confirmed", "close_manually"}
     assert "/screener" not in Path(mod.__file__).read_text(encoding="utf-8")
+
+
+# --- FS-0b (revue #171) -----------------------------------------------------------------------
+
+
+def test_price_live_stamped_now_not_bar_close_and_blocking_stages():
+    from app.agents.factsheet import facts_from_pipeline
+
+    detail = {
+        "price": 83972.35,
+        "pipeline": {"decision": "NO_TRADE", "direction": "SHORT",
+                     "stages": [{"id": "direction", "status": "pass"}, {"id": "location", "status": "fail"},
+                                {"id": "regime", "status": "fail"}]},
+    }
+    by = _by_id(facts_from_pipeline(detail, timeframe="1h", as_of=NOW - 3600, now=NOW))
+    assert by["price.live"]["known_at"] == NOW and by["price.live"]["as_of"] is None  # E1
+    assert by["pipeline.blocking_stages"]["value"] == "location, regime"  # V8
+    none_fail = _by_id(facts_from_pipeline({"price": 1.0, "pipeline": {"decision": "BUY", "stages": [
+        {"id": "direction", "status": "pass"}]}}, timeframe="1h", as_of=NOW, now=NOW))
+    assert none_fail["pipeline.blocking_stages"]["value"] == "aucune"
+
+
+@pytest.mark.parametrize(
+    ("price", "expected"),
+    [(85000.0, "above_vah"), (83972.35, "between_poc_vah"), (83800.0, "between_val_poc"), (83000.0, "below_val"),
+     (None, None)],
+)
+def test_price_vs_value_area(price, expected):
+    from app.agents.factsheet import price_vs_value_area
+
+    loc = {"poc": 83965.08, "vah": 84918.5, "val": 83684.67}
+    assert price_vs_value_area(price, loc) == expected
+
+
+def test_truncated_facts_listed_in_missing():
+    many = [{"id": f"x.{i}", "status": "ok", "value": i} for i in range(MAX_FACTS + 3)]
+    out = assemble(symbol="X", timeframe="1h", as_of=NOW, fact_groups=[many], engine_version="t")
+    cut = [m for m in out["missing"] if m["reason"] == "truncated"]
+    assert [m["id"] for m in cut] == [f"x.{i}" for i in range(MAX_FACTS, MAX_FACTS + 3)]  # E2
