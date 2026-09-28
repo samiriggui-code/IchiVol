@@ -14,7 +14,7 @@ Samir reprend exactement là où on s'est arrêté le 2026-09-28 dans la nuit. L
 - Specs pré-enregistrées (#160).
 - **Code RS-D1 Donchian 4h en cours** sur `claude/rs-d1` (`34c1d5c`, non testé).
 
-**Première action demain :** données ETH/SOL 4h (`python -m vp1 download-spot` puis `build-spot`) → note d'implémentation → tests `tests/rs/` → `rs/run.py` → run → rapport RS-D1.
+**Première action demain :** revue finale **#159 v2** (`b90de8d`, P3 : aucun horizon favorable) et revue **#161**. Ensuite : données ETH/SOL 4h (`python -m vp1 download-spot` puis `build-spot`) → note d'implémentation → tests `tests/rs/` → `rs/run.py` → run → rapport RS-D1.
 
 **Idées notées pour après RS-D1 :** variables microstructure testables en historique gratuit, chacune ajoutée **une à la fois** par-dessus RS-D1 et pré-enregistrée :
 - OI et ratios long/short en 5 min (Vision `metrics`, depuis fin 2021) ;
