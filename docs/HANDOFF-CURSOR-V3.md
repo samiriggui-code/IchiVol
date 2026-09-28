@@ -1,5 +1,56 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 nuit — ARRÊT DE SESSION · état exact pour reprise
+
+### Branches et PR ouvertes (rien de mergé cette nuit)
+
+| PR / branche | Qui | État | Prochaine action |
+|--------------|-----|------|------------------|
+| #156 `cursor/ui-vp-badge-a2fe` | Cursor | À corriger : **route publique `/capture/vp-badge` toujours présente**. Travail local **hors périmètre** non poussé : 2 commits (`44d2d37`, `9465259`) + 22 fichiers modifiés (typo globale `html{font-size:11px}`, ticket paper redessiné, inspecteur CI) | Séparer (voir message Cursor ci-dessous) |
+| #158 `cursor/fix-paper-sheet-stack` | Cursor | VALIDÉ sous réserve de `tsc -b` | Merge |
+| #157 `cursor/vp-s1-a2fe` | Cursor | À corriger S1-R1 (BM, horizon 90 j + `force_flat`) / S1-R2 (doc) | Correction → STOP |
+| CI-LIQ-CONF | Cursor | Spec dans le handoff (3bbd6ed) | Après #157 |
+| #159 `claude/vp-p-paper-fidele` | **Autre session Claude** (ichivol-cd) | C2 fait (100 % d'accord sur la décision) ; v2 (R1–R4, C3, P3) **en cours**, journal R4 livré « ce soir » | Revue finale Claude quand v2 est poussé |
+| #161 `claude/paper-auto-1h-only` | Autre session | Les scans UI ne synchronisent plus le paper (R4 produit). Non déployé | **Revue Claude à faire** ; déploiement = décision de Samir |
+| #160 `claude/rs-strategie` | Claude pilote RS | Docs RS-00 à RS-04, amendement `VP0-2026-09-28b`, ledger +1 | Revue par Samir puis merge (docs) |
+| `claude/rs-d1` (pas encore de PR) | Claude pilote RS | **Code WIP `34c1d5c`** : `rs/` = simulateur Donchian + B0-F / B0-E + métriques D1–D7. **Non testé, aucun run** | Voir « Reprise RS-D1 » |
+
+### Reprise RS-D1 (Claude) — dans cet ordre
+
+1. **Données** : relancer `cd ichivol-app/engine && .venv/Scripts/python -m vp1 download-spot` (reprise automatique, sha256), puis `-m vp1 build-spot --symbol ETHUSDT --interval 4h` et `--symbol SOLUSDT --interval 4h`. Aujourd'hui, localement, **seules les séries BTC** sont construites.
+2. **Note d'implémentation** (à committer **avant le run**, sans changer de règle) : RS-D1 est un moteur autonome `rs/donchian.py`, **pas** `research_lab/sim.py`, qui n'a pas de stop suiveur et dont l'interface est gelée par la session #159. Les règles de taille, coûts et limites sont réimplémentées d'après RS-03 §5–§6. À ajouter dans `RS-03` §10.
+3. **Tests** `tests/rs/` (RS-03 §10) :
+   - troncature stratégie (signaux, `stop_log`, ordres identiques jusqu'à T) ;
+   - stop monotone et appliqué à `k+1` ;
+   - gap → open ;
+   - canal → `open(k+1)` ;
+   - réentrée pas sur la barre de sortie ;
+   - taille 0,5 % / plafond 10 % / refus sous 25 % ;
+   - coûts par symbole ;
+   - assertion < 2025 ;
+   - B0-F / B0-E.
+4. **`rs/run.py`** : RS-D1 base + adverse + stress `exec_delay=2`, B0-F, B0-E (`e` = exposition moyenne de RS-D1), bootstrap mensuel, D1–D7 → `docs/rs-artifacts/rsd1_results.json` + journal des trades, puis `docs/RS-D1-REPORT.md`.
+5. **D3** (Δ vs B7-P) : attend `vpp_r4_trades.json` / R4 v2 de #159. En attendant, le verdict est « EN ATTENTE DE B7-P (D3) ».
+6. PR draft `claude/rs-d1` → **revue par Cursor** (rôles inversés) → run.
+
+### Message pour Cursor (en attente d'envoi par Samir)
+
+Séparer le travail local de `cursor/ui-vp-badge-a2fe` :
+- #156 = badge seul + retrait de la route publique ;
+- inspecteur CI → `cursor/ci-inspector-fix` ;
+- ticket paper → sur #158 ;
+- typo globale 11px → `cursor/ui-typo-scale`, **validation visuelle de Samir obligatoire**.
+
+Puis #158 → #157 → CI-LIQ-CONF.
+
+### Points ouverts pour Samir
+
+- Est-ce toi qui as demandé à Cursor les changements d'UI (typo 11px, ticket paper, inspecteur) ?
+- #161 (paper uniquement en 1h) : déploiement à décider après revue.
+- **#142** (CSS mobile) tourne en prod sans être mergé : à régler avant tout déploiement.
+
+---
+
 ## 2026-09-28 — JOB CI-LIQ-CONF : calques Liquidity + Confluence (gel CI levé par Samir pour ces 2 calques)
 
 **Constat vérifié :** `ChartObjectLayer.LIQUIDITY` / `CONFLUENCE` existent ([`types.py`](../ichivol-app/engine/app/chart_objects/types.py)) et l'UI est prête (`LiquidityDrawing`, `ConfluenceZone`, infobulles, statut `swept`), mais **aucun producteur moteur** : seuls `from_structure / from_breaks / from_fvg / from_fibonacci` sont branchés dans `chart_intelligence/service.py`. D'où un compteur à 0. Le bloc « CONFLUENCE » de l'AI Analyst est le texte des étapes du pipeline, c'est autre chose.

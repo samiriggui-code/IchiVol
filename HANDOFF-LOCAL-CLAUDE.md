@@ -2,7 +2,29 @@
 
 **LIS CE FICHIER EN PREMIER, avant tout autre fichier du repo.**
 
-**Sync local :** 2026-09-27 soir · `main` @ **`99ae3e4`** (+ ce commit handoff).
+**Sync local :** 2026-09-28 nuit (voir REPRISE DEMAIN) · ancien : 2026-09-27 soir · `main` @ **`99ae3e4`** (+ ce commit handoff).
+
+## ▶ REPRISE DEMAIN — commencer ici
+
+Samir reprend exactement là où on s'est arrêté le 2026-09-28 dans la nuit. Lire **en premier** le bloc « 2026-09-28 nuit — ARRÊT DE SESSION » en haut de `docs/HANDOFF-CURSOR-V3.md`.
+
+**Où on en est :**
+- VP3 clos (0 EDGE / 48). Le paper fidèle (#159) perd −62,5 % en développement.
+- Samir a lancé le **chantier RS** (stratégie alternative), piloté par Claude local.
+- Specs pré-enregistrées (#160).
+- **Code RS-D1 Donchian 4h en cours** sur `claude/rs-d1` (`34c1d5c`, non testé).
+
+**Première action demain :** données ETH/SOL 4h (`python -m vp1 download-spot` puis `build-spot`) → note d'implémentation → tests `tests/rs/` → `rs/run.py` → run → rapport RS-D1.
+
+**Idées notées pour après RS-D1 :** variables microstructure testables en historique gratuit, chacune ajoutée **une à la fois** par-dessus RS-D1 et pré-enregistrée :
+- OI et ratios long/short en 5 min (Vision `metrics`, depuis fin 2021) ;
+- funding ;
+- CVD (déjà calculé, jamais utilisé dans les décisions) ;
+- offre de stablecoins (DefiLlama).
+
+Les liquidations n'ont pas d'historique gratuit. L'IA sert au contexte des actualités, **pas** de signal testable.
+
+**Autre session Claude :** `ichivol-cd`, responsable de #159 et #161 ; elle doit prévenir quand v2 sera poussé. Pour lui écrire : `ListAgents` puis `SendMessage`.
 
 ## Contexte
 
