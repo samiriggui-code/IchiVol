@@ -1,5 +1,26 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 fin d'après-midi — Samir : « oui » aux 3 décisions → faites
+
+| Décision | État |
+|----------|------|
+| **#164** typo 11px | Mergé sur `main` (`d7fa477`), `tsc -b` 0, `vite build` OK |
+| **Déploiement VPS** | **FAIT** : `main` @ `d7fa477`. Sauvegarde `/opt/backups/predeploy_20260928_1406_*`, images `ichivol-*:pre-20260928_1406`. Migration `i5j6k7l8m9n0` appliquée. Engine, serveur et web OK. Paper : 1 portefeuille, `auto_timeframes = ('1h',)`, 0 position ouverte, cash 4 858,97 € |
+| **Validation 2025 RS-D1** | **VALIDÉ 2025** (amendement `VP0-2026-09-28c` figé avant le run, `e1afe70`). +5,0 %, maxDD −4,3 %, 55 trades ; B0-F −17,2 % / maxDD −51 %. Limites : intervalle mensuel contient 0, et sans les 3 meilleurs trades le P&L 2025 est négatif. **Holdout 2026 fermé.** PR #165 |
+
+**Retirés de la prod par le déploiement :** les producteurs Liquidity / Confluence (`777c2d5`, branche `backup/ui-vp-local-e92c43f`), jamais revus et non conformes à la spec CI-LIQ-CONF. Ils reviendront avec CI-LIQ-CONF.
+
+**Recette de déploiement (vérifiée) :**
+1. `git archive origin/main ichivol-app | ssh hostinger 'tar -x -C /opt/ichivol'`.
+2. Supprimer les fichiers retirés de git.
+3. `sed` CRLF sur les `*.sh`.
+4. Depuis **`/opt/ichivol`** (projet compose `ichivol`, pas `deploy/vps`) : `docker compose --env-file deploy/vps/.env build engine web server && … up -d --no-deps engine web server`.
+5. Pour `pg_dump`, utiliser `-U ichivol`.
+
+**Suite :** revue indépendante de #165 → merge ; CI-LIQ-CONF ; AG-S2 ; holdout 2026 RS-D1 = décision de Samir.
+
+---
+
 ## 2026-09-28 après-midi — Claude SEUL (Cursor bloqué : limite mensuelle atteinte)
 
 Samir : « tu te démerdes, tu es tout seul ». Claude reprend la file Cursor. **Rien n'est déployé.**
