@@ -276,6 +276,51 @@ Répartition historique (44 CLOSED) : dernières sorties déjà en `stop_hit` / 
 
 ---
 
+## 2026-09-28 — CHANTIER RS (stratégie alternative) · pilote : Claude local · étapes 1 à 4 livrées
+
+**Mandat Samir :**
+- construire une alternative concrète, entièrement spécifiée et testée : un test reproductible et une conclusion exploitable ;
+- **répartition** :
+  - Claude local **pilote RS** : recherche externe, carte des moteurs, spécifications, revue, et **centralisation des amendements et des lignes de ledger RS** ;
+  - **l'autre session Claude reste responsable de #159** (VP-P) et de ses corrections ;
+  - **Cursor** termine ses travaux engagés, puis implémente RS-D1 à partir de la spec revue.
+
+**Livrables (branche `claude/rs-strategie`, docs seulement) :**
+
+| Doc | Contenu |
+|-----|---------|
+| [`RS-00-REVUE-159.md`](./RS-00-REVUE-159.md) | Revue indépendante de #159 : solide, merge après **R1–R3** + exécution de **C2 / C3** ; R4 = recommandation produit (scans UI) |
+| [`RS-01-CARTE-MOTEURS.md`](./RS-01-CARTE-MOTEURS.md) | Carte vérifiée : **FVG, Fib, CHOCH, zones, trendlines n'ont aucun rôle dans les décisions paper** ; BOS = invalidation seulement ; MTF jamais bloquant ; B7 contient déjà une cassure Donchian 20 |
+| [`RS-02-DEPOTS-EXTERNES.md`](./RS-02-DEPOTS-EXTERNES.md) | 6 dépôts épinglés : NFI écarté (pas de stop, renforcements, risque de contamination 2025–26 non établi) ; pysystemtrade = référence de méthode ; smc = 4 fuites de lookahead (swings centrés, BOS réécrits, FVG décalé, tolérance globale) ; Freqtrade = contrôle de troncature ; Turtle crypto = test t invalide (fenêtres qui se recouvrent) |
+| [`RS-03-DONCHIAN-4H-SPEC.md`](./RS-03-DONCHIAN-4H-SPEC.md) | **RS-D1 pré-enregistré** : règles complètes (réentrée, gaps, priorités, trous, arrondis), références B7-P / B0-F / B0-E, critères D1–D7 |
+| [`RS-04-STRUCTUREL-SPEC.md`](./RS-04-STRUCTUREL-SPEC.md) | Configuration **unique** « BOS confirmé → retour sur niveau / FVG → reprise ». Spécification seulement, pré-enregistrée **après** le rapport RS-D1 |
+| `VALIDATION-PROTOCOL.md` | Amendement `VP0-2026-09-28b` (RS-D) |
+| `VP-T10B-LEDGER.md` | +1 `RS-D1-U3-4h` (section RS) |
+
+### Consigne de coordination — à transmettre à l'autre session Claude (#159)
+
+> Le pilote RS (Claude local) a fait une revue indépendante de #159 : `docs/RS-00-REVUE-159.md`.
+> 1. Merci d'appliquer **R1** (reformuler « aucune sortie ne peut transformer un signal sans information en gain » : c'est vrai pour les sorties 1,5 ATR / 2R mesurées, pas en général) et **R2** (« ne prédit pas mieux que le hasard » → écart mesuré sous les coûts, intervalle attendu de P3).
+> 2. **R3** : ajouter au rapport P3 une ligne descriptive « rendement après les barres témoins en hausse > 2 R sur 12 barres », sans changer P3.
+> 3. Exécuter **C2 / C3** avant de demander le merge.
+> 4. **Le run R4 v2 (P2 : BTC / ETH / SOL, capital commun) sert de référence B7-P au chantier RS** : merci de le livrer dans `vpp-artifacts/` avec son journal de trades.
+> 5. Les **nouveaux** amendements et lignes de ledger du chantier RS sont centralisés par le pilote RS. Ne pas en ajouter de votre côté ; en cas de conflit, rebaser sans réécrire les blocs de l'autre.
+
+### File Cursor (inchangée en tête, RS ajouté en fin)
+
+1. #156 : retirer la route publique → merge.
+2. #158 : `tsc -b` → merge.
+3. #157 VP-S1 : S1-R1 / S1-R2 → STOP → revue → run (**expérience séparée**, ne valide ni le paper ni Donchian).
+4. CI-LIQ-CONF.
+5. **RS-D1** (après merge de `claude/rs-strategie` et revue) :
+   - code isolé `ichivol-app/engine/rs/`, réutilisant `research_lab/sim.py` + options de #159 (**dépend du merge de #159**, sinon rebaser dessus) ;
+   - contrôles RS-03 §10 (troncature stratégie, tests unitaires, assertion < 2025) → PR draft → **STOP**, aucun run avant revue ;
+   - puis run, rapport `docs/RS-D1-REPORT.md`, journal JSON → STOP.
+
+**Interdits RS :** validation 2025, holdout 2026, datasets externes, variantes de paramètres, toucher au paper live ou au pipeline, merge sans revue.
+
+---
+
 ## 2026-09-28 journée — Claude → Cursor : décisions de Samir (à traiter en premier)
 
 Traiter **dans cet ordre**, avec un **STOP** et un rapport dans ce handoff après chaque point.
