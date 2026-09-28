@@ -7,9 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PaperCloseConfirmSheet } from '../components/PaperCloseConfirmSheet'
-import { VpValidationBadge } from '../components/VpValidationBadge'
 import { ChartIntelligencePanel } from '../components/chart-intelligence'
-import { isActionableBuySell } from '../lib/vpValidationCopy'
 import {
   concentrationFromPositions,
   drawdownFromCurve,
@@ -22,6 +20,7 @@ import {
   type PaperOverview,
   type PaperOverviewPosition,
 } from '../lib/paper'
+import { labelPaperOrderReason, labelRiskRefusal } from '../lib/paperLabels'
 import { getRiskLock, type RiskLockState } from '../lib/riskLock'
 import { displaySymbol } from '../lib/markets'
 import './PortfolioPage.css'
@@ -94,24 +93,7 @@ function ProgressRow({
 }
 
 function orderReasonFr(reason: string | null | undefined): string {
-  switch (reason) {
-    case 'open':
-      return 'Ouverture'
-    case 'manual_close':
-      return 'Clôture manuelle'
-    case 'partial_tp':
-      return 'Prise partielle'
-    case 'reinforce':
-      return 'Renfort'
-    case 'direction_flipped':
-      return 'Sens inversé'
-    case 'stop':
-    case 'stop_hit':
-    case 'stop_loss':
-      return 'Stop touché'
-    default:
-      return reason && reason.length < 40 ? reason : ''
-  }
+  return labelPaperOrderReason(reason)
 }
 
 function rMultiple(p: PaperOverviewPosition): number | null {
@@ -145,25 +127,6 @@ function EquitySpark({ points }: { points: { t: string; equity: number }[] }) {
       <path d={d} fill="none" stroke="currentColor" strokeWidth="1.6" />
     </svg>
   )
-}
-
-function refusalLabel(reason: string | undefined): string {
-  switch (reason) {
-    case 'max_positions':
-      return 'Plafond de positions'
-    case 'open_risk_cap':
-      return 'Risque ouvert au plafond'
-    case 'daily_loss_halt':
-      return 'Perte du jour au plafond'
-    case 'insufficient_cash_or_size':
-      return 'Cash insuffisant'
-    case 'position_already_open':
-      return 'Déjà ouvert'
-    case 'kill_switch':
-      return 'Arrêt d’urgence'
-    default:
-      return reason && reason.length < 48 ? reason : 'Refusé'
-  }
 }
 
 function fmtPx(n: number | null | undefined): string {
@@ -641,7 +604,7 @@ export function PortfolioPage() {
                       ? ` · ${new Date(r.at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`
                       : ''}
                   </span>
-                  <b>{refusalLabel(r.reason)}</b>
+                  <b>{labelRiskRefusal(r.reason)}</b>
                 </div>
               ))}
             </div>
@@ -703,8 +666,7 @@ export function PortfolioPage() {
                 : 'Ouverte après votre confirmation.'}{' '}
               Entrée le {new Date(fiche.entry_time).toLocaleString('fr-FR')} à{' '}
               {fmtPx(fiche.entry_price)}.
-              {fiche.entry_decision ? ` Signal : ${fiche.entry_decision}.` : ''}{' '}
-              {isActionableBuySell(fiche.entry_decision) ? <VpValidationBadge /> : null}
+              {fiche.entry_decision ? ` Signal : ${fiche.entry_decision}.` : ''}
             </p>
             <div className="ci-embed">
               <ChartIntelligencePanel
