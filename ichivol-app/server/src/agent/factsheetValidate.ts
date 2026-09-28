@@ -97,11 +97,66 @@ const PERIOD_BARE_RE = new RegExp(
 /** Dates et heures (V1) : acceptées seulement si elles figurent dans un fait cité. */
 const DATETIME_RE = /\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}[:h]\d{2}\b|\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g
 const NUMBER_RE = /[-+−]?\d[\d   ]*(?:[.,]\d+)?/g
+/**
+ * Bornes de mot Unicode : `\b` est ASCII en JS, il ne voit ni « moitié » ni « dû à » ni « à cause »
+ * (FS-0c, revue de 0692694).
+ */
+const WB_START = '(?<![\\p{L}\\p{N}_])'
+const WB_END = '(?![\\p{L}\\p{N}_])'
 /** Nombres en toutes lettres (V7). « un / une / one » exclus (articles). */
-const NUMBER_WORDS_RE =
-  /\b(?:deux|trois|quatre|cinq|six|sept|huit|neuf|dix|onze|douze|treize|quatorze|quinze|seize|vingt|trente|quarante|cinquante|soixante|cent|cents|mille|millions?|milliards?|moitié|doubler?|doublement|tripler?|quadrupler?|pour\s?cent|two|three|four|five|ten|twenty|hundred|thousand|million|billion|half|twice|double|triple|percent)\b/i
+const NUMBER_WORDS_RE = new RegExp(
+  `${WB_START}(?:deux|trois|quatre|cinq|six|sept|huit|neuf|dix|onze|douze|treize|quatorze|quinze|seize|vingt|trente|quarante|cinquante|soixante|cent|cents|mille|millions?|milliards?|moitié|doubler?|doublement|tripler?|quadrupler?|pour\\s?cent|two|three|four|five|ten|twenty|hundred|thousand|million|billion|half|twice|double|triple|percent)${WB_END}`,
+  'iu',
+)
 /** Connecteurs causaux (V8). */
-const CAUSAL_RE = /\b(?:parce que|car|dû à|due à|dus à|à cause|en raison|puisque|because)\b/i
+const CAUSAL_RE = new RegExp(
+  `${WB_START}(?:parce que|parce qu|car|dû à|due à|dus à|dues à|dû au|due au|dus aux|dues aux|à cause|en raison|puisque|because|due to)${WB_END}`,
+  'iu',
+)
+/**
+ * Timeframes (V1/V4, FS-0c) : « 12h » peut être une heure inventée, « 30m » trente millions.
+ * Un tel jeton n'est masqué que s'il est le timeframe du FactSheet ou celui / le display d'un fait cité ;
+ * sinon il est rejeté (jamais ignoré).
+ */
+const TF_CANDIDATE_RE = /(?<![\p{L}\p{N}_,.])(\d{1,3})\s?(min|m|h|d|j|w|M|H|D|W)(?![\p{L}\p{N}_])/gu
+/** Chiffres hors ASCII (pleine chasse, exposants, autres écritures) : jamais contrôlables, donc interdits. */
+const NON_ASCII_DIGIT_RE = /(?![0-9])[\p{Nd}\p{No}]/u
+/** Unités autres que « % » (points de base, points, milliers, milliards, devises) : interdites. */
+const UNIT_RE = new RegExp(`\\d\\s?(?:pbs?|bps?|pts?|points?|pips?|‰|k|K|Mds?|Md|bn|\\$|€|USD|USDT|EUR)${WB_END}|[$€]\\s?\\d`, 'u')
+/** Multiplicateur « 1,5x » : permis seulement pour un ratio de volume cité (rvol.rvol). */
+const MULTIPLIER_RE = new RegExp(`\\d\\s?[xX×]${WB_END}`, 'u')
+
+function tfKey(n: string, unit: string): string {
+  // « M » reste distinct de « m » (millions ≠ minutes) ; H / D / W = h / d / w.
+  const u = unit === 'min' ? 'm' : unit === 'j' ? 'd' : unit === 'M' ? 'M' : unit.toLowerCase()
+  return `${Number(n)}${u}`
+}
+
+/** Jetons de timeframe autorisés, lus dans des chaînes (timeframe du FactSheet, timeframes / displays cités). */
+export function timeframeSet(values: Array<string | null | undefined>): Set<string> {
+  const out = new Set<string>()
+  for (const v of values) {
+    if (!v) continue
+    for (const m of v.matchAll(TF_CANDIDATE_RE)) out.add(tfKey(m[1], m[2]))
+  }
+  return out
+}
+
+/** Masque les timeframes autorisés ; renvoie les autres (heure inventée, « 30m », « 850 M »…). */
+export function maskTimeframes(text: string, allowed: Set<string>): { text: string; rejected: string[] } {
+  const rejected: string[] = []
+  const masked = text.replace(TF_CANDIDATE_RE, (m, n: string, u: string) => {
+    if (!allowed.has(tfKey(n, u))) rejected.push(m.trim())
+    return ' '
+  })
+  return { text: masked, rejected }
+}
+
+function formErrors(text: string): string[] {
+  const errors: string[] = []
+  if (NON_ASCII_DIGIT_RE.test(text)) errors.push('chiffres non ASCII interdits')
+  return errors
+}
 const PRICE_FIELD_RE = /price|poc|vah|val|vwap|avwap|swing|upper|lower|entry|stop|take_profit|level/
 const RATIO_FIELD_RE = /percentile|share|ratio/
 
@@ -216,7 +271,14 @@ function checkClaim(claim: Claim, fs: FactSheet, byId: Map<string, Fact>): strin
     errors.push('claim « missing » citant un fait disponible')
   }
   const okCited = cited.filter((f) => f.status === 'ok')
-  for (const n of extractNumbers(claim.text)) {
+  errors.push(...formErrors(claim.text))
+  // Timeframe masqué seulement s'il vaut fs.timeframe ou le display d'un fait cité (ex. mtf_direction.higher_tf).
+  const tf = maskTimeframes(claim.text, timeframeSet([fs.timeframe, ...okCited.map((f) => f.display)]))
+  for (const t of tf.rejected) errors.push(`timeframe, heure ou unité non sourcé: ${t}`)
+  const unitText = maskPeriods(tf.text)
+  if (UNIT_RE.test(unitText)) errors.push('unité non autorisée (seuls « % » et « x » pour rvol.rvol)')
+  if (MULTIPLIER_RE.test(unitText) && !ids.includes('rvol.rvol')) errors.push('multiplicateur « x » sans rvol.rvol cité')
+  for (const n of extractNumbers(tf.text)) {
     if (!okCited.some((f) => numberMatchesFact(n, f))) errors.push(`nombre non sourcé: ${n.raw}${n.percent ? ' %' : ''}`)
   }
   const citedDisplays = okCited.map((f) => f.display ?? '').join(' | ')
@@ -243,8 +305,12 @@ export function validateAnalysis(fs: FactSheet, out: AnalysisOutput): Validation
     }
   }
   const summary = out.summary ?? ''
-  const summaryErrors: string[] = []
-  if (/\d/.test(maskPeriods(summary).replace(TIMEFRAME_RE, ' ').replace(PROGRAM_NAME_RE, ' '))) {
+  const summaryErrors: string[] = formErrors(summary).map((e) => `résumé : ${e}`)
+  const okFacts = fs.facts.filter((f) => f.status === 'ok')
+  // Le résumé ne cite pas : seuls fs.timeframe et les displays-timeframes du FactSheet (ex. « 4h ») sont masqués.
+  const summaryTf = maskTimeframes(summary, timeframeSet([fs.timeframe, ...okFacts.map((f) => f.display)]))
+  for (const t of summaryTf.rejected) summaryErrors.push(`résumé : timeframe, heure ou unité non sourcé: ${t}`)
+  if (/\d/.test(maskPeriods(summaryTf.text).replace(PROGRAM_NAME_RE, ' '))) {
     summaryErrors.push('résumé : aucun chiffre autorisé (les chiffres vont dans les claims, avec leurs faits)')
   }
   if (NUMBER_WORDS_RE.test(summary)) summaryErrors.push('résumé : nombre en toutes lettres interdit')

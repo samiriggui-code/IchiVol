@@ -313,3 +313,52 @@ describe('FS-0b — contournements de la revue #171', () => {
     assert.equal(r.rejected, 0, JSON.stringify(r.verdicts.filter((v) => !v.ok)))
   })
 })
+
+
+// --- FS-0c : contournements de 2e génération trouvés sur 0692694 (tous doivent être REJETÉS) ------
+
+function summaryRejected(summary: string): void {
+  const r = validateAnalysis(FS_B, out({ summary }))
+  assert.equal(r.summaryOk, false, `résumé devait être rejeté : « ${summary} »`)
+}
+
+describe('FS-0c — timeframes, chiffres non ASCII, unités, bornes Unicode', () => {
+  it('V1 : heure inventée masquée comme timeframe', () => rejects('Rebond attendu vers 12h.', [], 'scenario'))
+  it('V4 : « 30m » (millions) masqué comme timeframe', () => rejects('Volume de 30m sur la séance.', [], 'interpretation'))
+  it('V3 : chiffres pleine chasse', () => rejects('Objectif ８４ ３００.', [], 'scenario'))
+  it('V3 : unité autre que % (points de base)', () => rejects('Hausse de 11 pb attendue.', ['fvg.active_count']))
+  it('V3 : suffixes k / $ / x hors rvol', () => {
+    rejects('Support vers 11k.', ['fvg.active_count'])
+    rejects('Objectif 83972,35 $.', ['price.live'])
+    rejects('Volume 11x la moyenne.', ['fvg.active_count'])
+    const ok = validateAnalysis(FS_B, out({ claims: [{ text: 'Volume à 1,529x la moyenne.', kind: 'fact', fact_ids: ['rvol.rvol'] }], risks: [] }))
+    assert.equal(ok.rejected, 0, JSON.stringify(ok.verdicts))
+  })
+  // V8 sémantique : gardé par ichivol-2c (FS-0c ne le traite pas) — phrases littérales de la 2e revue.
+  it.todo('V8 : causalité sans citer pipeline.decision — « NO_TRADE parce que le funding explose. »')
+  it.todo('V8 : « Le cours évolue entre POC 83965,08 et VAL 83684,67. » (sans le mot « prix »)')
+  it.todo('V8 : « Le prix est au-dessus de la VAH 84806,33. » alors que le prix est dessous')
+  it('V2 : résumé avec 30m / 12h / pleine chasse / causalité « dû à »', () => {
+    summaryRejected('Volume de 30m, rebond vers 12h.')
+    summaryRejected('Le BTC vise ８４ ３００.')
+    summaryRejected('NO_TRADE dû au funding.')
+  })
+  it('V7/V8 : bornes Unicode (« moitié », « dû à », « à cause »)', () => {
+    rejects('La moitié du volume est vendeuse.', [], 'interpretation')
+    rejects('NO_TRADE dû à un funding extrême.', ['pipeline.decision'], 'interpretation')
+    rejects('NO_TRADE à cause du funding.', ['pipeline.decision'], 'interpretation')
+  })
+  it('garde les timeframes légitimes (FactSheet, fait cité, casse)', () => {
+    const fs = { ...FS_B, facts: [...FS_B.facts, fact('mtf_direction.higher_tf', '4h', '4h')] }
+    for (const [text, ids] of [
+      ['En 1h, le RVOL est de 1,529.', ['rvol.rvol']],
+      ['Le 4h est au-dessus : RVOL 1,529 en 1H.', ['mtf_direction.higher_tf', 'rvol.rvol']],
+      ['Prochain événement le 2026-09-29 04:30 UTC.', ['calendar.next_high.time_utc']],
+    ] as const) {
+      const r = validateAnalysis(fs, out({ claims: [{ text, kind: 'fact', fact_ids: [...ids] }], risks: [] }))
+      assert.equal(r.rejected, 0, JSON.stringify(r.verdicts))
+    }
+    const s = validateAnalysis(fs, out({ summary: 'En 1h comme en 4h, le pipeline ne trade pas (NO_TRADE).' }))
+    assert.equal(s.summaryOk, true, JSON.stringify(s.summaryErrors))
+  })
+})
