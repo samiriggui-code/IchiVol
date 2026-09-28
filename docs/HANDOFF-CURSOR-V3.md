@@ -1,5 +1,21 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 soir — DÉPLOYÉ : `main` @ `fbd3a35` avec AG-FS0 ACTIF (décision Samir)
+
+- **Contenu en prod :** #166 (libellés FR + badge VP rétabli), #170 (OF-0, docs / recherche), **#171 AG-FS0**.
+  - Samir a demandé le merge et le déploiement **avant** la revue de `ichivol-e4` : la revue reste à faire, et ses points seront corrigés après coup.
+- **Flag :** `AGENT_FACTSHEET_V1=1` dans `deploy/vps/.env`. Il passe au serveur via `docker-compose.yml` (défaut 0 dans le dépôt).
+- **Modèle en prod :** OpenRouter `anthropic/claude-sonnet-4.5`.
+- **Retour arrière :**
+  - sauvegardes `/opt/backups/predeploy_20260928_1835_*` (bases), `docker-compose_20260928_1835.yml`, `vps-env_20260928_1835` ;
+  - images `ichivol-*:pre-20260928_1835` ;
+  - pour couper AG-FS0 seul : `AGENT_FACTSHEET_V1=0`, puis `up -d --no-deps server`.
+- **Test en prod** (dans le conteneur serveur) : FactSheet BTCUSDT 1h = 51 faits ; Eve (Sonnet 4.5) = 12 claims, 0 retiré, 1 essai.
+- **Limite observée en prod :** le validateur contrôle les chiffres, pas le sens. Exemple : « NO_TRADE parce que VP3 n'a mesuré aucun edge ». C'est une causalité fausse : NO_TRADE vient des étapes en échec. À corriger dans le prompt et/ou avec un contrôle des valeurs catégorielles (ticket FS-0b).
+- **Note :** Cursor avait redéployé `02cb69a` à 15h28 (RELEASE). C'est remplacé : `main` contient ce contenu (#166).
+
+---
+
 ## 2026-09-28 nuit — Claude : audit « agents / skills » → job AG-FS0 (spec prête)
 
 **Décision Samir (« vas-y ») :**
