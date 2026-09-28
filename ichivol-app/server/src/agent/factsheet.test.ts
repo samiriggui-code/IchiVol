@@ -339,6 +339,11 @@ describe('FS-0c — timeframes, chiffres non ASCII, unités, bornes Unicode', ()
     rejects('NO_TRADE parce que le funding explose.', ['rvol.rvol']))
   it('V8 / N6 : « cours » au lieu de « prix »', () =>
     rejects('Le cours évolue entre POC 83965,08 et VAL 83684,67.', ['location.poc', 'location.val']))
+  it('V8 : pas de faux positif « BELOW du kumo … score » (prod)', () => {
+    const fsK: FactSheet = { ...FS_B, facts: [...FS_B.facts, fact('ichimoku.price_vs_kumo', 'BELOW', 'BELOW'), fact('ichimoku.score', -58.3333, '-58,3333')] }
+    const r = validateAnalysis(fsK, out({ claims: [{ text: 'Ichimoku place le prix BELOW du kumo avec un score de -58,3333.', kind: 'fact', fact_ids: ['ichimoku.price_vs_kumo', 'ichimoku.score'] }], risks: [] }))
+    assert.equal(r.rejected, 0, JSON.stringify(r.verdicts))
+  })
   it('V8 / N10 : « au-dessus de la VAH » faux', () => {
     rejects('Le prix est au-dessus de la VAH 84918,5.', ['location.vah'])
     const ok = validateAnalysis(FS_B, out({ claims: [{ text: 'Le prix reste sous la VAH 84918,5.', kind: 'fact', fact_ids: ['location.vah'] }], risks: [] }))

@@ -261,20 +261,23 @@ function priceRelationErrors(text: string, fs: FactSheet): string[] {
   const p = priceLive(fs)
   if (p === null) return []
   const errors: string[] = []
+  // Un niveau n'est comparé au prix que s'il est du même ordre (0,5×–1,5×) : « BELOW du kumo … score de -58,3 »
+  // n'est pas une relation de prix (faux positif observé en prod).
+  const isLevel = (n: { value: number } | undefined) => !!n && n.value >= 0.5 * p && n.value <= 1.5 * p
   const between = BETWEEN_RE.exec(text)
   if (between) {
     const a = extractNumbers(between[1])[0]
     const b = extractNumbers(between[2])[0]
-    if (a && b && !(p >= Math.min(a.value, b.value) && p <= Math.max(a.value, b.value))) {
+    if (isLevel(a) && isLevel(b) && a && b && !(p >= Math.min(a.value, b.value) && p <= Math.max(a.value, b.value))) {
       errors.push(`relation fausse : le prix (${p}) n'est pas entre ${a.raw} et ${b.raw}`)
     }
   }
   const above = ABOVE_RE.exec(text)
   const aboveLevel = above ? extractNumbers(above[1])[0] : undefined
-  if (aboveLevel && !(p > aboveLevel.value)) errors.push(`relation fausse : le prix (${p}) n'est pas au-dessus de ${aboveLevel.raw}`)
+  if (aboveLevel && isLevel(aboveLevel) && !(p > aboveLevel.value)) errors.push(`relation fausse : le prix (${p}) n'est pas au-dessus de ${aboveLevel.raw}`)
   const below = BELOW_RE.exec(text)
   const belowLevel = below ? extractNumbers(below[1])[0] : undefined
-  if (belowLevel && !(p < belowLevel.value)) errors.push(`relation fausse : le prix (${p}) n'est pas en dessous de ${belowLevel.raw}`)
+  if (belowLevel && isLevel(belowLevel) && !(p < belowLevel.value)) errors.push(`relation fausse : le prix (${p}) n'est pas en dessous de ${belowLevel.raw}`)
   return errors
 }
 
