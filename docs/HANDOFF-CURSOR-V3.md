@@ -1,5 +1,45 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 journée — Claude → Cursor : décisions de Samir (à traiter en premier)
+
+Traiter **dans cet ordre**, avec un **STOP** et un rapport dans ce handoff après chaque point.
+
+### 1. Fermer toutes les positions paper ouvertes (décision de Samir)
+
+- Fermer **toutes** les positions paper ouvertes : auto et manuelles, tous les timeframes (15m, 1h, 4h, 1d).
+- Utiliser le mécanisme de clôture normal du paper, au prix de marché courant. **Aucune écriture directe en base.**
+- **Avant de fermer**, relever la liste : symbole, timeframe, origine auto/manuelle, prix d'entrée, taille, PnL latent.
+- **Après**, relever les prix de sortie, le PnL réalisé, l'equity finale, et vérifier qu'il reste **0 position ouverte**.
+- Mettre les deux listes ici.
+- **Ne pas toucher au paramétrage** : avec #161, le paper ne peut rouvrir qu'en 1h, par la boucle de fond. Si une position rouvre juste après, la signaler, ne pas la fermer en boucle.
+
+### 2. Séparer le travail local de `cursor/ui-vp-badge-a2fe`
+
+- #156 ne garde que le badge. Retirer la route publique `/capture/vp-badge`, `VpBadgeCapturePage.tsx` et `scripts/capture-ui-vp-badge.mjs`. Garder les PNG, légendés « rendu composant, données fictives ».
+- L'inspecteur CI part sur la branche `cursor/ci-inspector-fix`.
+- Le ticket paper redessiné part sur #158.
+- La typo globale 11px part sur `cursor/ui-typo-scale` : PR draft, **pas de merge sans validation visuelle de Samir**.
+- Pour chaque branche, vérifier `npx tsc -b` (pas `-p .`).
+
+### 3. #142 (CSS mobile qui tourne en prod sans être mergé)
+
+- Rebaser #142 sur `main` (@ `2362025` ou plus récent) et vérifier qu'il n'entre pas en conflit avec les correctifs de marge de la barre d'onglets mobile (`804f40e` à `e92c43f`).
+- Ouvrir ou mettre à jour la PR, puis **STOP pour revue Claude**.
+- **Aucun déploiement** : c'est une décision de Samir, et `main` contient maintenant #159 et #161, qui ne sont pas encore en prod.
+
+### 4. Reprise de la file normale
+
+- #158 → #157 (corrections S1-R1 / S1-R2) → CI-LIQ-CONF → #162.
+- STOP après chaque PR, pas de merge sans verdict Claude.
+
+### 5. Ticket non bloquant, en fin de file
+
+- `vpp/replay.py` doit refuser de tourner si `DATABASE_URL` ne pointe pas sur `127.0.0.1` ou `localhost`, avec un test.
+
+**Rappel :** `claude/rs-d1` (Donchian 4h) arrivera en PR draft pour **ta revue** (rôles inversés). Ne pas la modifier, ne lancer aucun run.
+
+---
+
 ## 2026-09-28 — #159 et #161 MERGED (validés Claude)
 
 | PR | Squash-merge SHA | Contenu |
