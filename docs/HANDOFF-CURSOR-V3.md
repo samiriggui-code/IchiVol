@@ -1,5 +1,44 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 après-midi — Claude SEUL (Cursor bloqué : limite mensuelle atteinte)
+
+Samir : « tu te démerdes, tu es tout seul ». Claude reprend la file Cursor. **Rien n'est déployé.**
+
+### Mergé sur `main` (revue Claude faite)
+
+| PR | Revue | Vérifs |
+|----|-------|--------|
+| #156 badge « Signal non validé » | OK : badge seul, route `/capture/vp-badge` absente | `tsc -b` 0, tests badge 4/4, `vite build` OK |
+| #142 CSS mobile (en prod depuis hier) | OK : CSS seulement | idem (merge groupé) |
+| #158 sheet paper au-dessus de la fiche | OK : `<dialog showModal>` en portal, Échap / clic fond gérés | idem |
+| #163 inspecteur CI | OK : UI seulement, aucun effet décision | idem |
+| #157 VP-S1 étape 1 (BM/BN + S1–S5) | Corrections S1-R1 / S1-R2 de Cursor **terminées par Claude** + **bloquant ajouté** : l'horizon BM de 90 j lisait janv.–mars 2025 sur WF7 → plafonné à `DEV_END_EXCL_S` (2025-01-01), test `test_bm_horizon_never_reads_validation_2025` | `tests/vp3` 50/50. **Aucun run** |
+| #162 AG-S0/S1 | Section « Analystes » live **retirée de Agents** (décision Samir). Moteur / routes / snapshots inchangés. Correctifs de la 1ʳᵉ revue vérifiés (MTF 13:00 vs 4h 12:00, garde AST `/screener`) | pytest agents + sessions + api 138/138, `npm test` 68/68, `tsc -b` 0 |
+
+Conflits : seulement `docs/HANDOFF-CURSOR-V3.md`, résolus en gardant `main` (+ bloc spec AG-S0/S1 réinséré).
+
+`tsconfig.app.json` exclut désormais `*.test.ts` de `tsc -b` (venu de #156). Les tests front restent lancés par `tsx --test`.
+
+### ⚠️ Avant le prochain déploiement (décision Samir)
+
+- `main` contient maintenant #142, #156, #158, #159, #161, #162, #163, #157 (le code #157 n'est pas utilisé en prod).
+- **Migration alembic** `i5j6k7l8m9n0` (table `analyst_snapshot`) à appliquer sur le VPS.
+- Le VPS tourne sur `e92c43f` : #161 (paper auto en 1h seulement) **pas encore en prod**. La boucle auto peut encore ouvrir en 15m / 4h / 1d.
+- Point 1 : 0 position ouverte, cash 4 858,97 € (voir rapport Cursor plus bas).
+
+### Reste de la file
+
+1. **RS-D1** (Claude) : note d'implémentation → tests → `run.py` → PR draft. Revue par une autre session Claude (Cursor indisponible).
+2. **CI-LIQ-CONF** (spec plus bas).
+3. **AG-S2** (spec plus bas) : bandeau Marché + 5 portes + fiche + lien Copilot.
+4. **#164** typo 11px : **en attente de la validation visuelle de Samir**, non mergé.
+5. Ticket `vpp/replay.py` garde `DATABASE_URL` locale.
+6. Hors périmètre, signalé : en VP3, l'horizon time-stop de WF7 (48 barres) déborde déjà de 2 jours (1h) ou 8 jours (4h) sur 2025 pour les sorties. C'est un débordement préexistant ; VP3 est figé.
+
+Incident local : Postgres a redémarré (récupération) pendant la session, après des pytest bloqués. Il est revenu en 30 s, sans perte constatée.
+
+---
+
 ## 2026-09-28 — Cursor : point 3 FAIT — #142 rebasé sur main (STOP revue · pas de deploy)
 
 **PR [#142](https://github.com/samiriggui-code/IchiVol/pull/142)** `cursor/mobile-tabbar-clearance-a2fe` @ `a8436cc`.
