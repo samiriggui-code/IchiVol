@@ -123,8 +123,10 @@ def replay_window(feeds: dict[str, dict[int, tuple[Candle, BarSignal]]], window:
                 trades.append(_trade(pos, opened.pop(pos.id), t))
             prev_t = t
         session.refresh(pf)
-        last_close = {s: feeds[s][max(x for x in feeds[s] if x < window[1])][0].close for s in symbols}
         opens = paper_gates.open_positions(session, pf.id)
+        # only symbols holding a position need a mark (a symbol may not be listed yet in this window)
+        last_close = {p.symbol: feeds[p.symbol][max(x for x in feeds[p.symbol] if x < window[1])][0].close
+                      for p in opens}
         equity_end = float(pf.cash) + sum(float(p.qty) * last_close[p.symbol] for p in opens)
         rej = {}
         for ev in session.execute(select(PaperJournalEvent).where(

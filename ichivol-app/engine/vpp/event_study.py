@@ -115,6 +115,44 @@ def study(
     return out
 
 
+def momentum_matched(sigs, candles, window, costs) -> dict[str, Any]:
+    """POST-HOC, NOT pre-registered, never used for a decision (RS review R3, 2026-09-28).
+
+    Same primary events, but controls restricted to bars that also rose > 2R over the prior 12 bars
+    (R = the bar's own 1.5 ATR stop distance). Separates "B7 filter" from "plain momentum"."""
+    def momentum(s: str, i: int) -> bool:
+        sd = sigs[s][i].stop_distance
+        return bool(sd) and i >= 12 and (candles[s][i].close - candles[s][i - 12].close) / sd > 2.0
+
+    rng = random.Random(SEED)
+    ev = events(sigs, candles, window, "series_start")
+    pool: dict[tuple[str, str], list[int]] = defaultdict(list)
+    for s, c in candles.items():
+        for i in range(LIVE_WINDOW_BARS - 1, len(c)):
+            if window[0] <= c[i].time < window[1] and momentum(s, i):
+                pool[(s, _month(c[i].time))].append(i)
+    out: dict[str, Any] = {"label": "post-hoc descriptive, not pre-registered, no decision",
+                           "n_events_with_momentum": sum(1 for s, i in ev if momentum(s, i))}
+    for h in HORIZONS:
+        g = []
+        for s, i in ev:
+            c = candles[s]
+            r = _ret(c, i, h)
+            feasible = [j for j in pool[(s, _month(c[i].time))] if j != i and j + h < len(c)]
+            if r is None or len(feasible) < 5:
+                continue
+            ctrl = [_ret(c, j, h) for j in rng.sample(feasible, min(N_CONTROLS, len(feasible)))]
+            g.append({"month": _month(c[i].time), "r": r, "ctrl": sum(ctrl) / len(ctrl)})
+        if not g:
+            out[str(h)] = {"n": 0}
+            continue
+        ci = month_cluster_ci([(x["month"], x["r"] - x["ctrl"]) for x in g], level=LEVEL_INFO)
+        out[str(h)] = {"n": len(g), "r_mean_pct": 100 * sum(x["r"] for x in g) / len(g),
+                       "ctrl_momentum_mean_pct": 100 * sum(x["ctrl"] for x in g) / len(g),
+                       "d_mean_pct": 100 * ci["mean"], "d_ci95_pct": [100 * ci["lo"], 100 * ci["hi"]]}
+    return out
+
+
 def run(sigs, candles, window, costs, costs_adv, r1_trades: list | None = None) -> dict[str, Any]:
     """``r1_trades``: research_lab.sim.Trade objects of R1 (secondary 'executed entries' event set)."""
     primary = events(sigs, candles, window, "series_start")

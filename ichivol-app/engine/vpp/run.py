@@ -65,7 +65,10 @@ def _short(res, window) -> dict[str, Any]:
                               "exposure_mean_pct", "daily_halt_days")} | {"n_trades": len(res.trades)}
 
 
-def run_all(root: Path | None = None, workers: int = 4, c1_n: int = 300, v2: bool = False) -> dict[str, Any]:
+def run_all(
+    root: Path | None = None, workers: int = 4, c1_n: int = 300, v2: bool = False, skip_done: bool = False,
+) -> dict[str, Any]:
+    """``skip_done``: keep an existing C2 artifact (deterministic, seed 7) instead of recomputing it."""
     root = data_root(root)
     man = load_manifest(root)
     candles = {s: load_candles(s, "1h", root)[0] for s in U20}
@@ -111,7 +114,8 @@ def run_all(root: Path | None = None, workers: int = 4, c1_n: int = 300, v2: boo
         out["R3"][name] = {"portfolio": rep["portfolio"], "trades": rep["trades"]}
     r4 = sim(U3, CONTINUOUS, cp)
     rep4 = _full_report(r4, CONTINUOUS, series, sigmap)
-    out["R4"] = {k: v for k, v in rep4.items() if k != "_rows"}
+    r4_rows = rep4.pop("_rows")
+    out["R4"] = rep4
     out["filters"] = dg.filter_funnel(sigs, candles, CONTINUOUS)
     out["context_hold"] = dg.hold_benchmarks(candles, CONTINUOUS, cp, INITIAL_CAPITAL)
     print("C1…", flush=True)
@@ -122,6 +126,8 @@ def run_all(root: Path | None = None, workers: int = 4, c1_n: int = 300, v2: boo
     rows = out["R1"].pop("_rows")
     (ART / "vpp_results.json").write_text(json.dumps(out, indent=1, default=str), encoding="utf-8")
     (ART / "vpp_r1_trades.json").write_text(json.dumps(rows, default=str), encoding="utf-8")
+    # P2 / R4 (BTC, ETH, SOL, shared capital) trade journal: reference "B7-P" for the RS track
+    (ART / "vpp_r4_trades.json").write_text(json.dumps(r4_rows, default=str), encoding="utf-8")
     print("written", ART, flush=True)
     if not v2:
         return out
@@ -131,13 +137,14 @@ def run_all(root: Path | None = None, workers: int = 4, c1_n: int = 300, v2: boo
 
     meta = {k: out[k] for k in ("protocol", "git_head", "generated_at", "seed")} | {
         "amendment": "VP0-2026-09-28"}
-    print("C2…", flush=True)
-    samples = fidelity.draw_samples(sigs, candles, CONTINUOUS)
-    near, n_near_pool = fidelity.draw_near(samples.pop("_long_pool"), str(root), workers)
-    samples["C2-SEUIL"] = near
-    c2 = fidelity.compare(samples, root, workers, sigs=sigs)
-    c2["_near_pool_size"] = n_near_pool
-    (ART / "vpp_fidelity_c2.json").write_text(json.dumps(meta | c2, indent=1, default=str), encoding="utf-8")
+    if not (skip_done and (ART / "vpp_fidelity_c2.json").exists()):
+        print("C2…", flush=True)
+        samples = fidelity.draw_samples(sigs, candles, CONTINUOUS)
+        near, n_near_pool = fidelity.draw_near(samples.pop("_long_pool"), str(root), workers)
+        samples["C2-SEUIL"] = near
+        c2 = fidelity.compare(samples, root, workers, sigs=sigs)
+        c2["_near_pool_size"] = n_near_pool
+        (ART / "vpp_fidelity_c2.json").write_text(json.dumps(meta | c2, indent=1, default=str), encoding="utf-8")
 
     print("C3…", flush=True)
     wc = _window_most_full_hours(ART / "v1" / "vpp_r1_trades.json")
