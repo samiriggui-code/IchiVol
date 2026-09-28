@@ -29,7 +29,7 @@ Traiter **dans cet ordre**, avec un **STOP** et un rapport dans ce handoff aprè
 
 ### 4. Reprise de la file normale
 
-- #158 → #157 (corrections S1-R1 / S1-R2) → CI-LIQ-CONF → #162.
+- #158 → #157 (corrections S1-R1 / S1-R2) → CI-LIQ-CONF → #162 → AG-S2 (spec ci-dessous).
 - STOP après chaque PR, pas de merge sans verdict Claude.
 
 ### 5. Ticket non bloquant, en fin de file
@@ -37,6 +37,65 @@ Traiter **dans cet ordre**, avec un **STOP** et un rapport dans ce handoff aprè
 - `vpp/replay.py` doit refuser de tourner si `DATABASE_URL` ne pointe pas sur `127.0.0.1` ou `localhost`, avec un test.
 
 **Rappel :** `claude/rs-d1` (Donchian 4h) arrivera en PR draft pour **ta revue** (rôles inversés). Ne pas la modifier, ne lancer aucun run.
+
+---
+
+## 2026-09-28 journée — SPEC AG-S2 « Brief d'ouverture » + répartition Agents / Marché / fiche / Copilot
+
+**Ordre :** après la revue et le merge de #162 (AG-S0/S1). Branche `cursor/ag-s2-a2fe`, PR draft → **STOP → revue Claude**. AG-S3 (LLM) reste interdit sans OK de Samir.
+
+### Principe de répartition (validé avec Samir)
+
+| Lieu | Rôle | Interdit |
+|---|---|---|
+| **Agents** (`AgentsPage`) | Atelier : créer et paramétrer un agent (rôle, outils, ce qu'il écrit en base, déclencheur), voir ses tâches et son audit | Aucune analyse live |
+| **Marché** (`MarketPage`) | Cockpit de lecture : **5 portes max** (DIR, PART, STRUCT, LOC, REGIME) + le brief d'ouverture. Chaque porte = **2 à 4 lignes + 1 badge d'état** + lien « Analyse complète » | Aucune configuration d'agent, aucun texte long |
+| **Fiche « Analyse complète »** | Profondeur d'une porte : toutes les fiches AG-S1 de l'étape, historique des snapshots, chiffres | — |
+| **Copilot** (`/app/agent`) | Question sur un point précis via « Demander à Eve sur ce point » | **Jamais de chat vide** : le lien emporte toujours le snapshot |
+
+Règles strictes :
+- **un agent = une porte** sur Marché, pas plusieurs bulles qui votent ;
+- tout est `NON_VALIDE`, `used_by_decision=False` (VP3 : 0 EDGE / 48) ;
+- chaque lien Copilot réutilise `copilotPrompts.ts` / `useCopilotNav` et injecte `{symbol, timeframe, stage, session_id, as_of, snapshot_id, chiffres clés}`. Eve répond **à partir du snapshot**, elle ne recalcule pas.
+
+**Impact sur #162 :** la section « Analystes » live de `AgentsPage` sort de la page Agents. Sur Agents il reste uniquement l'agent analyste (config, déclencheur, tâches, dernier run OK / reporté). La lecture passe sur Marché et dans la fiche. Ce déplacement peut être fait dans #162 ou en tête de AG-S2 : **à trancher pendant la revue Claude de #162**.
+
+### AG-S2 — calculs (déterministes, sans LLM, barres closes seulement)
+
+Déclencheur : ouverture de chaque session AG-S0 (Asie, Europe, US), juste après la tâche AG-S1 (`kind=session_brief`, même file `AgentTask`). Univers : BTCUSDT / ETHUSDT / SOLUSDT.
+
+Référence « veille » = **dernière bougie 1d close** (clôture 00:00 UTC) connue à l'ouverture de la session.
+
+- `gap_pct` = (prix d'ouverture de session − clôture 1d veille) / clôture veille. Prix d'ouverture de session = open de la première bougie 1h de la session.
+- `gap_atr` = même écart / ATR(14) 1d de la veille.
+- `prev_high`, `prev_low`, `prev_range`, `prev_range_atr`.
+- `pos_in_prev_range` = (prix − low) / (high − low), borné à l'affichage avec un statut `au-dessus` / `dans` / `en-dessous`.
+- `session_prev_ref` : même mesures vs la session précédente (Europe vs Asie, US vs Europe).
+- `oi_delta_24h`, `funding_last` vs veille (même source que la fiche OI/funding AG-S1).
+- `stage_changes` : liste des portes dont l'état a changé depuis le snapshot AG-S1 de la session précédente.
+- Texte court déterministe (2 à 4 lignes), par exemple « Ouverture +1,2 % (0,4 ATR) au-dessus de la clôture d'hier, dans le haut du range d'hier (0,82). Régime inchangé, participation ↑. »
+
+### Stockage et routes
+
+- Table `session_brief` (migration alembic), unique `(session_id, symbol)`. Colonnes : les champs ci-dessus, `known_at`, `as_of`, `feature_status`, `validation_status=NON_VALIDE`, `used_by_decision=False`, `source_snapshot_ids`.
+- `GET /agents/session-briefs?symbol=&session_id=` (dernier par défaut).
+- Idempotence : relancer la tâche ne crée pas de doublon. Données pas fraîches → report + log, comme AG-S1.
+
+### UI
+
+- **Marché** : bandeau « Brief d'ouverture » (session en cours, 2 à 4 lignes, badge NON_VALIDE) + grille des 5 portes (résumé court par étape depuis `analyst-cards?stage=`) + « Analyse complète » + « Demander à Eve sur ce point ».
+- **Fiche Analyse complète** : route authentifiée (pas de route publique), paramètres `symbol`, `tf`, `stage`.
+- **Agents** : carte de l'agent « Brief d'ouverture » (déclencheur, dernier run, reports), sans chiffres de marché.
+
+### Tests exigés
+
+- Anti-lookahead : la clôture veille utilisée est toujours une bougie 1d **close** avant l'ouverture de session ; troncature des données → brief identique.
+- Heure d'été (Londres / New York), week-end = repère horaire, pas fermeture.
+- `pos_in_prev_range` : high = low (range nul) → pas de division par zéro.
+- Idempotence de la tâche ; aucun import paper / screener dans `app/agents` ni `app/sessions`.
+- Front : le lien Copilot contient bien le snapshot (test unitaire du prompt généré).
+- Goldens OpenAPI / `route_order` : ajout documenté. `pytest` Postgres + `npm test` + `npx tsc -b`.
+- **Preuve PR :** JSON brief BTCUSDT d'une vraie ouverture de session + captures **réelles** Marché et fiche (clair, desktop + mobile 390 px).
 
 ---
 
