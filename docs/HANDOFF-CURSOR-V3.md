@@ -1,5 +1,21 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 nuit — Claude : audit « agents / skills » → job AG-FS0 (spec prête)
+
+**Décision Samir (« vas-y ») :**
+- pas d'armée d'agents LLM ;
+- **Eve reste l'orchestrateur unique** ;
+- les spécialistes sont les moteurs Python et les fiches AG-S1, déterministes ;
+- **1 seul appel LLM, contrôlé.**
+
+**Job AG-FS0 :** FactSheet (faits moteur avec provenance) + validateur (aucun chiffre sans fait cité).
+- Spec : [`AG-FS0-FACTSHEET-SPEC.md`](./AG-FS0-FACTSHEET-SPEC.md).
+- Branche `cursor/ag-fs0-a2fe` (ou `claude/ag-fs0` si c'est une session Claude qui le prend), PR draft → STOP → revue Claude. Aucun déploiement.
+
+**Qui :** le premier disponible. Cursor est à l'arrêt. La session `ichivol-e4` fait OF-0 puis RS-D1 en paper (**priorité**). FS-1 / FS-2 / FS-3 ne commencent qu'après FS-0.
+
+---
+
 ## 2026-09-28 soir — Claude : verdicts #165 · #166 (MERGED) · suite
 
 | PR | Verdict | Détail |
