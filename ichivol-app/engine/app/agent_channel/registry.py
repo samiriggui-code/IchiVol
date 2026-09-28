@@ -65,6 +65,7 @@ from app.agent_channel.commands import (
     cmd_run_walk_forward_opt,
     cmd_run_optimize,
     cmd_scan_market,
+    cmd_get_factsheet,
 )
 
 Handler = Callable[[dict], dict]
@@ -86,6 +87,14 @@ TOOLS: dict[str, ToolSpec] = {
             "scan_market", "Screener multi-actifs (payload identique à GET /screener).", True,
             {"timeframe": "str, défaut '1h'", "force": "bool, défaut false -- ignore le cache"},
             cmd_scan_market,
+        ),
+        ToolSpec(
+            "get_factsheet",
+            "AG-FS0 — faits moteur d'un symbole/TF avec provenance (id, valeur, display, as_of, statut). "
+            "Seuls ces faits peuvent être cités ; une donnée absente a status != ok.",
+            True,
+            {"symbol": "str, requis", "timeframe": "str, défaut '1h'", "as_of": "int unix, optionnel (historique)"},
+            cmd_get_factsheet,
         ),
         ToolSpec(
             "get_symbol_context",

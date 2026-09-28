@@ -605,6 +605,13 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/agents/factsheet",
+    "endpoint": "get_factsheet"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/health",
     "endpoint": "health"
   }

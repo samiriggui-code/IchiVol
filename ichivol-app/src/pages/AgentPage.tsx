@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { askAgentStream } from '../lib/agent'
+import { FactsheetAnswer } from '../components/FactsheetAnswer'
 import { useAgentSession } from '../lib/agentSession'
 import { getSettings } from '../lib/settings'
 import './AgentPage.css'
@@ -108,9 +109,10 @@ export function AgentPage() {
               ...last,
               content: finalText,
               toolCalls: res.toolCalls,
+              factsheet: res.factsheet,
             }
           } else {
-            copy.push({ role: 'assistant', content: finalText, toolCalls: res.toolCalls })
+            copy.push({ role: 'assistant', content: finalText, toolCalls: res.toolCalls, factsheet: res.factsheet })
           }
           return copy
         })
@@ -164,7 +166,11 @@ export function AgentPage() {
             {history.map((m, i) => (
               <div className="bubble" key={`${m.role}-${i}`}>
                 <span className="eyebrow">{m.role === 'user' ? 'VOUS' : 'COPILOT'}</span>
-                <p>{m.content || '—'}</p>
+                {m.role === 'assistant' && m.factsheet && !m.factsheet.fallback ? (
+                  <FactsheetAnswer view={m.factsheet} />
+                ) : (
+                  <p>{m.content || '—'}</p>
+                )}
                 {m.role === 'assistant' && m.toolCalls && m.toolCalls.length > 0 && (
                   <ul className="tool-activity done">
                     {m.toolCalls.map((t, j) => (
