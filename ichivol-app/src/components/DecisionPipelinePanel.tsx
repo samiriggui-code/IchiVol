@@ -9,7 +9,6 @@ import {
   type PipelineStage,
   type PipelineStageStatus,
 } from '../lib/decisionPipeline'
-
 function statusTone(status: PipelineStageStatus): string {
   switch (status) {
     case 'pass':
