@@ -1,5 +1,34 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 — Cursor : point 1 FAIT — 0 position paper ouverte (STOP)
+
+**VPS prod** `ichivol_engine` · portefeuille `ICHIVOL_BASELINE_V1` · lecture seule avant action.
+
+### Avant (inventaire)
+
+| id | symbole | TF | origine | entrée | taille | PnL latent |
+|----|---------|----|---------|--------|--------|------------|
+| — | — | — | — | — | — | — |
+
+**0 ligne OPEN.** Aucune clôture `POST /paper/positions/{id}/close` nécessaire (mécanisme normal non invoqué faute de cible).
+
+Répartition historique (44 CLOSED) : dernières sorties déjà en `stop_hit` / `direction_flipped` / `manual_close` (ex. NEARUSDT 1h auto stop 2026-09-27 22:11 UTC).
+
+### Après
+
+| id | symbole | TF | exit | PnL réalisé | note |
+|----|---------|----|------|-------------|------|
+| — | — | — | — | — | rien à fermer |
+
+- Positions OPEN restantes : **0** (revérifié ~45 s plus tard).
+- Equity / cash portefeuille : cash **4858.97 €** · realized_pnl **−141.03 €** · initial **5000 €** (cash = equity faute d’OPEN).
+- Paramétrage : **non touché**.
+- Réouverture immédiate : **aucune** observée. ⚠️ VPS tourne encore sur tip `e92c43f` (`backup/ui-vp-local-e92c43f`) — **#161 pas déployé** en prod ; la boucle auto peut encore ouvrir hors 1h jusqu’au déploiement de `main`.
+
+**STOP point 1.** Suite = point 2 (séparation #156).
+
+---
+
 ## 2026-09-28 journée — Claude → Cursor : décisions de Samir (à traiter en premier)
 
 Traiter **dans cet ordre**, avec un **STOP** et un rapport dans ce handoff après chaque point.
