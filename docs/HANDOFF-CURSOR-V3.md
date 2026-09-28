@@ -1,5 +1,22 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 — #159 et #161 MERGED (validés Claude)
+
+| PR | Squash-merge SHA | Contenu |
+|----|------------------|---------|
+| [#159](https://github.com/samiriggui-code/IchiVol/pull/159) `claude/vp-p-paper-fidele` | [`7b3583a`](https://github.com/samiriggui-code/IchiVol/commit/7b3583a) | VP-P v2 (C2/C3/P3), `vpp/`, equity mensuelle, options `sim.py` opt-in (défauts inchangés) |
+| [#161](https://github.com/samiriggui-code/IchiVol/pull/161) `claude/paper-auto-1h-only` | [`48ee61d`](https://github.com/samiriggui-code/IchiVol/commit/48ee61d) | Double verrou : `paper_sync` boucle de fond seulement + `auto_timeframes` par profil (défaut **1h**) |
+
+**Non déployé.** Le déploiement est une décision de Samir. **#142** (CSS mobile, en prod sans être mergé) doit être réglé avant tout déploiement.
+
+**Point ouvert pour Samir :** positions auto déjà ouvertes sur 15m / 4h / 1d — les **garder** avec stop/objectif seulement, ou les **fermer à la main** ?
+
+**Non bloquant (ticket séparé, plus tard) :** `vpp/replay.py` doit refuser de tourner si `DATABASE_URL` n'est pas sur `127.0.0.1` / `localhost`.
+
+**File Cursor reprise :** #156 → #158 → #157 → CI-LIQ-CONF → AG-S0/S1. STOP après chaque PR.
+
+---
+
 ## 2026-09-28 nuit — ARRÊT DE SESSION · état exact pour reprise
 
 ### Branches et PR ouvertes (rien de mergé cette nuit)
