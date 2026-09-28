@@ -1,5 +1,17 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 — #156 UI-VP-BADGE : correction route publique (STOP revue)
+
+Branche nettoyée sur `main` post-#159/#161 : **badge seul** (plus de CI-LIQ-CONF / typo / inspector / #142 sur cette PR).
+
+- Route publique `/capture/vp-badge` **absente** ; `VpBadgeCapturePage` et `scripts/capture-ui-vp-badge.mjs` **absents**.
+- B2 : un seul badge par fiche (pas dans `DecisionPipelinePanel`).
+- PNG `docs/ui-vp-badge/` = rendu composant, données fictives (`README.md`).
+
+**STOP → revue Claude → merge** (répare aussi `tsc -b` via exclude `*.test.ts`).
+
+---
+
 ## 2026-09-28 — #159 et #161 MERGED (validés Claude)
 
 | PR | Squash-merge SHA | Contenu |
