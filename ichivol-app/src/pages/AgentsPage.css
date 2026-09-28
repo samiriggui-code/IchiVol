@@ -11,7 +11,7 @@
   --red: #c8412f;
   --amber: #a76c17;
   color: var(--ink);
-  font: 14px Manrope, Arial, sans-serif;
+  font: 11px Manrope, Arial, sans-serif;
   padding: 0;
   max-width: 1800px;
   margin: 0 auto;
@@ -1214,14 +1214,14 @@
 .dash-shell.is-mobile .agents-page .page-head .subtitle,
 .dash-shell.is-mobile .agents-page .page-head p,
 .agents-page .subtitle {
-  font-size: 12px !important;
+  font-size: 11px !important;
   line-height: 1.7;
   color: var(--muted);
   margin: 0;
 }
-.agents-page table { font-size: 14px; }
-.agents-page tr.clickable { font-size: 14px; }
-.agents-page td { font-size: 14px; }
+.agents-page table { font-size: 11px; }
+.agents-page tr.clickable { font-size: 11px; }
+.agents-page td { font-size: 11px; }
 .agents-page .table-wrap { overflow: auto; padding: 0; }
 @media (max-width: 800px) {
   .dash-shell .agents-page .page-head h1,

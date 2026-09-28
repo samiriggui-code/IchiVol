@@ -11,7 +11,7 @@
   --red: #c8412f;
   --amber: #a76c17;
   color: var(--ink);
-  font: 14px Manrope, Arial, sans-serif;
+  font: 11px Manrope, Arial, sans-serif;
   padding: 0;
   max-width: 1800px;
   margin: 0 auto;
@@ -1211,14 +1211,14 @@
 .dash-shell.is-mobile .lab-page .page-head .subtitle,
 .dash-shell.is-mobile .lab-page .page-head p,
 .lab-page .subtitle {
-  font-size: 12px !important;
+  font-size: 11px !important;
   line-height: 1.7;
   color: var(--muted);
   margin: 0;
 }
-.lab-page table { font-size: 14px; }
-.lab-page tr.clickable { font-size: 14px; }
-.lab-page td { font-size: 14px; }
+.lab-page table { font-size: 11px; }
+.lab-page tr.clickable { font-size: 11px; }
+.lab-page td { font-size: 11px; }
 .lab-page .table-wrap { overflow: auto; padding: 0; }
 @media (max-width: 800px) {
   .dash-shell .lab-page .page-head h1,

@@ -1,4 +1,13 @@
-/* Trading cockpit — dense dashboard shell + GSMS tokens */
+/* Trading cockpit — chrome (sidebar/header) à taille normale ;
+   le corps des pages (.opps-page, .pf-page…) force 11–12px en dur. */
+* { box-sizing: border-box; }
+html {
+  /* rem = chrome (nav, header). Ne pas descendre : ça écrase la sidebar. */
+  font-size: 16px;
+  height: 100%;
+  margin: 0;
+}
+html, body, #root { height: 100%; margin: 0; }
 .dash-shell {
   font-family: var(--font-sans);
   font-size: 12px;
@@ -10,14 +19,27 @@
   flex-direction: row;
   align-items: stretch;
 }
-* { box-sizing: border-box; }
-html, body, #root { height: 100%; margin: 0; }
 body {
   min-height: 100%;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 12px;
+}
+/* Corps des pages Desk — densifié, indépendant du rem chrome */
+.dash-main .opps-page,
+.dash-main .pf-page,
+.dash-main .journal-page,
+.dash-main .ops-page,
+.dash-main .ctx-page,
+.dash-main .copilot-page,
+.dash-main .agents-page,
+.dash-main .lab-page,
+.dash-main .params-page,
+.dash-main .market-page,
+.dash-main .overview-page,
+.dash-main .desk-page {
+  font-size: 11px;
 }
 button, select { font: inherit; color: inherit; }
 .mono { font-family: var(--font-mono); }
@@ -1103,7 +1125,7 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 }
 .trade-sheet { width: min(560px, 100%); height: 100%; overflow: hidden; display: flex; flex-direction: column; border-radius: 0; }
 .trade-sheet-head { align-items: flex-start; }
-.trade-sheet-head h2 { font-size: 0.95rem; margin: 0 0 0.25rem; }
+.trade-sheet-head h2 { font-size: 0.88rem; margin: 0 0 0.2rem; }
 .trade-sheet-scroll { overflow-y: auto; padding: 0.65rem 0.8rem 1rem; }
 .trade-sheet-brief {
   margin: 0 0 0.9rem;
@@ -1415,31 +1437,126 @@ tbody tr.is-active { background: color-mix(in srgb, var(--primary) 8%, transpare
 }
 /* --- Ticket d'ordre (achat / ajout d'une ligne) --- */
 .order-ticket { max-width: 620px; }
-.order-verdict { margin: 0 0 0.75rem; font-size: 0.85rem; }
-.order-field { border: 0; padding: 0; margin: 0 0 1rem; }
-.order-field legend { font-size: 0.8rem; color: var(--muted, #888); padding: 0; margin-bottom: 0.4rem; }
-.order-input-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+.order-verdict { margin: 0 0 0.75rem; font-size: 0.78rem; }
+.order-field { border: 0; padding: 0; margin: 0 0 0.75rem; }
+.order-field legend { font-size: 0.72rem; color: var(--muted, #888); padding: 0; margin-bottom: 0.35rem; }
+.order-input-row { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.35rem; }
 .order-input {
-  width: 8.5rem; font-size: 1.2rem; padding: 0.4rem 0.6rem; text-align: right;
+  width: 7.5rem; font-size: 1rem; padding: 0.35rem 0.5rem; text-align: right;
   border: 1px solid var(--border, rgba(128, 128, 128, 0.4)); border-radius: 6px;
   background: var(--surface, transparent); color: inherit;
 }
-.order-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-.order-chip { font-size: 0.8rem; padding: 0.3rem 0.65rem; }
+.order-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.order-chip { font-size: 0.72rem; padding: 0.25rem 0.5rem; }
 .order-chip.is-on { border-color: var(--accent, currentColor); font-weight: 700; }
-.order-outcomes { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0.75rem 0; }
+.order-outcomes { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin: 0.6rem 0; }
 .order-outcome {
-  display: flex; flex-direction: column; gap: 0.15rem; padding: 0.7rem 0.8rem; border-radius: 8px;
+  display: flex; flex-direction: column; gap: 0.12rem; padding: 0.65rem 0.75rem; border-radius: 8px;
   border: 1px solid var(--border, rgba(128, 128, 128, 0.3));
 }
-.order-outcome strong { font-size: 1.3rem; }
+.order-outcome--gain {
+  background: color-mix(in srgb, var(--bull) 10%, var(--card));
+  border-color: color-mix(in srgb, var(--bull) 35%, var(--border));
+}
+.order-outcome--loss {
+  background: color-mix(in srgb, var(--bear) 10%, var(--card));
+  border-color: color-mix(in srgb, var(--bear) 35%, var(--border));
+}
+.order-outcome strong { font-size: 1.1rem; }
 .order-outcome .up { color: var(--bull); }
 .order-outcome .down { color: var(--bear); }
-.order-portfolio { margin: 0.75rem 0; font-size: 0.85rem; }
+.ot-outcome-label {
+  font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--muted-foreground); font-weight: 600;
+}
+.order-portfolio { margin: 0.75rem 0; font-size: 0.78rem; }
 .order-confirm { font-weight: 700; }
-.banner.warn { border-left: 3px solid #d9a400; background: rgba(217, 164, 0, 0.1); padding: 0.5rem 0.75rem; border-radius: 6px; margin-bottom: 0.5rem; font-size: 0.85rem; }
+.banner.warn { border-left: 3px solid #d9a400; background: rgba(217, 164, 0, 0.1); padding: 0.45rem 0.65rem; border-radius: 6px; margin-bottom: 0.45rem; font-size: 0.78rem; }
+
+/* Cards ticket paper (SRP) */
+.ot-engine-card {
+  margin: 0 0 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-subtle, color-mix(in srgb, var(--muted-foreground) 6%, var(--card)));
+}
+.ot-engine-card.is-buy {
+  border-color: color-mix(in srgb, var(--bull) 40%, var(--border));
+  background: color-mix(in srgb, var(--bull) 9%, var(--card));
+}
+.ot-engine-card.is-hold {
+  border-color: color-mix(in srgb, #d9a400 45%, var(--border));
+  background: color-mix(in srgb, #d9a400 10%, var(--card));
+}
+.ot-engine-card-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;
+}
+.ot-engine-kicker {
+  font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--muted-foreground); font-weight: 650;
+}
+.ot-engine-badge {
+  font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px;
+  border: 1px solid var(--border);
+}
+.ot-engine-badge.is-buy {
+  color: var(--bull);
+  background: color-mix(in srgb, var(--bull) 14%, transparent);
+  border-color: color-mix(in srgb, var(--bull) 40%, var(--border));
+}
+.ot-engine-badge.is-hold {
+  color: #9a6b00;
+  background: color-mix(in srgb, #d9a400 16%, transparent);
+  border-color: color-mix(in srgb, #d9a400 45%, var(--border));
+}
+html.dark .ot-engine-badge.is-hold { color: #e8b86d; }
+.ot-engine-copy { margin: 0.35rem 0 0; font-size: 0.72rem; line-height: 1.4; color: var(--foreground); }
+.ot-card {
+  margin: 0 0 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+.ot-card--split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+.ot-card-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ot-kv {
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+.ot-kv > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  font-size: 0.72rem;
+}
+.ot-kv > div:last-child { border-bottom: 0; }
+.ot-kv dt { margin: 0; color: var(--muted-foreground); }
+.ot-kv dd { margin: 0; font-weight: 600; text-align: right; }
+.ot-card--portfolio .ot-portfolio-row {
+  display: flex; justify-content: space-between; gap: 0.5rem;
+  font-size: 0.72rem; padding: 0.2rem 0;
+}
+.ot-card--portfolio .ot-portfolio-row span:first-child { color: var(--muted-foreground); }
 @media (max-width: 520px) {
 .order-outcomes { grid-template-columns: 1fr; }
+.ot-card--split { grid-template-columns: 1fr; }
 }
 /* T0-CALC — scénarios historiques */
 .scenarios-panel {

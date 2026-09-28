@@ -15,7 +15,7 @@
 
 .dash-shell .iv-page-header h1 {
   font-family: var(--font-serif);
-  font-size: clamp(1.25rem, 1.8vw, 1.65rem);
+  font-size: clamp(1.1rem, 1.5vw, 1.4rem);
   font-weight: 400;
   letter-spacing: -0.03em;
   line-height: 1.15;
@@ -26,7 +26,7 @@
 .dash-shell .iv-page-header .iv-page-question {
   margin: 0;
   max-width: 36rem;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   line-height: 1.45;
   color: var(--muted-foreground);
   font-weight: 500;

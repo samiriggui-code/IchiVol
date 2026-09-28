@@ -11,7 +11,7 @@
   --red: #c8412f;
   --amber: #a76c17;
   color: var(--ink);
-  font: 14px Manrope, Arial, sans-serif;
+  font: 11px Manrope, Arial, sans-serif;
   padding: 0;
   max-width: 1800px;
   margin: 0 auto;
@@ -631,25 +631,25 @@
   backdrop-filter:blur(3px);
 }
 .copilot-page .dialog-body {
-  padding:28px;
+  padding:18px;
 }
 .copilot-page .dialog-head {
   display:flex;
   justify-content:space-between;
   align-items:center;
-  margin-bottom:20px;
+  margin-bottom:14px;
 }
 .copilot-page .dialog-head button {
   border:0;
-  font-size:22px;
+  font-size:18px;
   background:none;
 }
 .copilot-page .dialog-body h2 {
-  font-size:29px;
+  font-size:20px;
 }
 .copilot-page .dialog-body p {
   color:var(--muted);
-  font-size:13px;
+  font-size:12px;
 }
 .copilot-page .dialog-actions {
   display:flex;
@@ -1236,14 +1236,14 @@
 .dash-shell.is-mobile .copilot-page .page-head .subtitle,
 .dash-shell.is-mobile .copilot-page .page-head p,
 .copilot-page .subtitle {
-  font-size: 12px !important;
+  font-size: 11px !important;
   line-height: 1.7;
   color: var(--muted);
   margin: 0;
 }
-.copilot-page table { font-size: 14px; }
-.copilot-page tr.clickable { font-size: 14px; }
-.copilot-page td { font-size: 14px; }
+.copilot-page table { font-size: 11px; }
+.copilot-page tr.clickable { font-size: 11px; }
+.copilot-page td { font-size: 11px; }
 .copilot-page .table-wrap { overflow: auto; padding: 0; }
 @media (max-width: 800px) {
   .dash-shell .copilot-page .page-head h1,
