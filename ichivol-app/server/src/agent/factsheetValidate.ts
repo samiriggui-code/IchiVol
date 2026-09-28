@@ -228,7 +228,9 @@ function numberMatchesFact(n: ParsedNumber, f: Fact): boolean {
   const ratio = RATIO_FIELD_RE.test(f.field) || RATIO_FIELD_RE.test(f.id) || f.unit === '%'
   // V6 : « % » seulement pour un ratio / percentile ; un nombre ≥ 1000 seulement pour un champ de prix.
   if (n.percent && !ratio) return false
-  if (Math.abs(n.value) >= 1000 && !PRICE_FIELD_RE.test(f.field) && !PRICE_FIELD_RE.test(f.id)) return false
+  // Nombre ≥ 1000 sur un fait qui n'est pas un prix (CVD, OI…) : accepté seulement à la précision exacte du display.
+  const priceField = PRICE_FIELD_RE.test(f.field) || PRICE_FIELD_RE.test(f.id)
+  if (Math.abs(n.value) >= 1000 && !priceField && n.decimals < dispDec) return false
   const candidates: Array<[number, number]> = []
   if (!n.percent) candidates.push([n.value, n.decimals])
   if (ratio && Math.abs(v) <= 1) candidates.push([n.value / 100, n.decimals + 2])
