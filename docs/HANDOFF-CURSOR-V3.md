@@ -26,9 +26,18 @@ Conflits : seulement `docs/HANDOFF-CURSOR-V3.md`, résolus en gardant `main` (+ 
 - Le VPS tourne sur `e92c43f` : #161 (paper auto en 1h seulement) **pas encore en prod**. La boucle auto peut encore ouvrir en 15m / 4h / 1d.
 - Point 1 : 0 position ouverte, cash 4 858,97 € (voir rapport Cursor plus bas).
 
+### RS-D1 joué — PR draft [#165](https://github.com/samiriggui-code/IchiVol/pull/165) `claude/rs-d1`
+
+- **CANDIDAT À VALIDATION SUPPLÉMENTAIRE** (D1–D7 vrais, dev ≤ 2024) : **+32,9 %**, maxDD **−5,0 %**, 200 trades, exposition moyenne 5,8 %.
+- Références : B7-P −12,6 % ; B0-E (même exposition) +16,0 % / maxDD −8,7 % ; B0-F +215 % / maxDD −88,8 %.
+- **Limite** : Δ vs B0-E = +0,34 %/mois [−0,10 ; +0,81]. Le timing n'est pas établi sur le rendement, l'avantage porte sur le drawdown.
+- Contrôles : `tests/rs` 27/27 ; re-dérivation indépendante des 200 trades, 0 écart ; code figé avant le run (`1a4eba5`).
+- **Écart** : pas de revue indépendante avant le run. **Revue à faire avant merge** (Cursor ou autre session Claude). #165 contient aussi les docs de #160.
+- **Décision Samir** : ouvrir ou non la validation 2025 (une fois, règles inchangées). Rapport : `docs/RS-D1-REPORT.md` sur la branche.
+
 ### Reste de la file
 
-1. **RS-D1** (Claude) : note d'implémentation → tests → `run.py` → PR draft. Revue par une autre session Claude (Cursor indisponible).
+1. **Revue indépendante de #165** (Cursor quand il sera disponible, ou une autre session Claude).
 2. **CI-LIQ-CONF** (spec plus bas).
 3. **AG-S2** (spec plus bas) : bandeau Marché + 5 portes + fiche + lien Copilot.
 4. **#164** typo 11px : **en attente de la validation visuelle de Samir**, non mergé.
