@@ -1,5 +1,20 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## 2026-09-28 — Cursor : point 2 FAIT — séparation #156 / inspector / #158 / typo (STOP)
+
+| Branche / PR | Contenu | `npx tsc -b` | État |
+|--------------|---------|--------------|------|
+| **#156** `cursor/ui-vp-badge-a2fe` @ `0ae1478` | Badge seul. Route `/capture/vp-badge`, `VpBadgeCapturePage`, `capture-ui-vp-badge.mjs` **absents**. PNG légendés. | **0** | STOP revue Claude → merge |
+| **#163** `cursor/ci-inspector-fix` @ `5dc8f16` | Inspector shelves / Why / BOS·CHOCH (extrait du backup local) | **0** (exclude `*.test.ts`) | draft — STOP revue Claude |
+| **#158** `cursor/fix-paper-sheet-stack` @ `08f19c5` | + `PaperConfirmSheet` ot-cards densifié | **0** | draft — STOP revue Claude |
+| **#164** `cursor/ui-typo-scale` @ `cc61384` | rem chrome 16px + corps pages 11px — **sans #142** | **0** | draft — **pas de merge sans OK visuel Samir** |
+
+Source locale : `backup/ui-vp-local-e92c43f`. Producteurs LIQ/CONF (`777c2d5`) **non** portés ici → file **CI-LIQ-CONF** (point 4).
+
+**STOP point 2.** Suite = point 3 (#142 rebase sur main, pas de deploy).
+
+---
+
 ## 2026-09-28 — Cursor : point 1 FAIT — 0 position paper ouverte (STOP)
 
 **VPS prod** `ichivol_engine` · portefeuille `ICHIVOL_BASELINE_V1` · lecture seule avant action.
