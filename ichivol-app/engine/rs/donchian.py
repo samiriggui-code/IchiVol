@@ -86,6 +86,34 @@ class RunOutput:
     halt_days: int = 0
 
 
+def size_entry(
+    eq_cost: float, cash: float, fill: float, dist: float, c: SymbolCost
+) -> tuple[float, float, float] | str:
+    """Taille RS-03 §5 → (qty, notionnel, commission) ou motif de refus.
+
+    qty = 0,5 % × equity_coût / (fill − S₀), plafonnée à 10 % d'equity_coût ; limitée au cash
+    (commission comprise), refusée sous 25 % de la taille visée ; notionnel minimum 10.
+    """
+    if dist <= 0 or fill - dist <= 0:
+        return "invalid_stop"
+    qty = eq_cost * RISK_PCT / dist
+    if qty * fill > eq_cost * MAX_NOTIONAL_PCT:
+        qty = eq_cost * MAX_NOTIONAL_PCT / fill
+    intended = qty * fill
+    notional = intended
+    fee = c.fee(notional)
+    if notional + fee > cash:
+        aff = cash / (1 + c.commission_bps / 10_000.0)
+        if aff <= 0 or aff < intended * MIN_FILL_FRACTION:
+            return "insufficient_cash"
+        notional = aff
+        qty = notional / fill
+        fee = c.fee(notional)
+    if notional < MIN_NOTIONAL:
+        return "below_min_notional"
+    return qty, notional, fee
+
+
 def _day(t: int) -> str:
     return datetime.fromtimestamp(t + BAR_SECONDS - 1, tz=timezone.utc).date().isoformat()
 
@@ -184,27 +212,11 @@ def simulate(
             fill = c.fill(raw, "buy")
             dist = STOP_ATR_MULT * atr_sig
             stop0 = fill - dist
-            if stop0 <= 0:
-                reject("invalid_stop")
+            sized = size_entry(equity_cost(), cash, fill, dist, c)
+            if isinstance(sized, str):
+                reject(sized)
                 continue
-            eq = equity_cost()
-            qty = eq * RISK_PCT / dist
-            if qty * fill > eq * MAX_NOTIONAL_PCT:
-                qty = eq * MAX_NOTIONAL_PCT / fill
-            intended = qty * fill
-            notional = intended
-            fee = c.fee(notional)
-            if notional + fee > cash:
-                aff = cash / (1 + c.commission_bps / 10_000.0)
-                if aff <= 0 or aff < intended * MIN_FILL_FRACTION:
-                    reject("insufficient_cash")
-                    continue
-                notional = aff
-                qty = notional / fill
-                fee = c.fee(notional)
-            if notional < MIN_NOTIONAL:
-                reject("below_min_notional")
-                continue
+            qty, notional, fee = sized
             cash -= notional + fee
             positions[s] = _Pos(s, sig_t, t, i, raw, fill, qty, notional, fee, stop0, stop0, qty * dist, float("-inf"))
         # 3) protections pendant la barre (§4 exécution du stop), barre d'entrée comprise
@@ -232,10 +244,11 @@ def simulate(
                 p.stop = max(p.stop, p.highest_close - STOP_ATR_MULT * a)
             stop_log[s].append((t, p.stop))
             lo = lower[s][i]
+            # La décision ne dépend que des barres <= t (jamais de la longueur de la série) :
+            # s'il n'existe pas de barre d'exécution, l'ordre reste simplement non exécuté.
             if lo is not None and bars[s][i].close < lo and s not in pending_exit:
-                if i + exec_delay < len(bars[s]):
-                    pending_exit[s] = i + exec_delay
-                    orders.append((t, s, "exit"))
+                pending_exit[s] = i + exec_delay
+                orders.append((t, s, "exit"))
         eq_m = equity_mark()
         if t >= score_start:
             gross_exp = sum(p.qty * last_close.get(p.symbol, p.entry_fill) for p in positions.values())
@@ -269,8 +282,6 @@ def simulate(
                 continue
             if len(positions) + len(pending_entry) >= MAX_OPEN:
                 reject("max_positions")
-                continue
-            if i + exec_delay >= len(bars[s]):
                 continue
             eq = equity_cost()
             dist = STOP_ATR_MULT * a
