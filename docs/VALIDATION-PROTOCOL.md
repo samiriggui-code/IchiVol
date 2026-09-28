@@ -293,7 +293,7 @@ Après les runs : Claude peut lire les rapports chiffrés pour revue, **sans** r
 
 | Champ | Valeur |
 |-------|--------|
-| Version courante | `VP0-2026-09-26` + amendements `VP0-2026-09-27` (M/N Bouclier), `VP0-2026-09-28b` (RS-D Donchian 4h) |
+| Version courante | `VP0-2026-09-26` + amendements `VP0-2026-09-27` (M/N Bouclier), `VP0-2026-09-28b` (RS-D Donchian 4h), `VP0-2026-09-28c` (RS-U ouverture US) |
 | Gel | Après APPROUVÉ Claude **et** OK utilisateur |
 | Modification post-gel | Nouveau fichier ou section `VP0-YYYY-MM-DD` + justification + invalidation des runs antérieurs non rejoués |
 
@@ -381,6 +381,40 @@ Résumé :
 - **Verdicts :** CANDIDAT À VALIDATION SUPPLÉMENTAIRE / REJETÉ / NON CONCLUANT.
 - **T10b :** +1 (`RS-D1-U3-4h`).
 - **Interdit :** validation 2025, holdout 2026, datasets externes, variantes de paramètres.
+
+---
+
+## Amendement `VP0-2026-09-28c` — Question RS-U « Ouverture US 09:30 New York » (porte descriptive RS-U0, pré-enregistrée)
+
+**Statut :** figé **avant** tout téléchargement 5 min et tout calcul · chantier RS, Claude local, sur demande de Samir (2026-09-28).
+**Justification (§12) :** concept vidéo « trader uniquement l'ouverture US (15h30 Paris) ». Avant toute stratégie intraday, on mesure si **09:30 NY** se distingue des 47 autres demi-heures pour un balayage du range pré-session suivi d'un retournement. RS-D1 n'est pas modifié et reste prioritaire.
+
+**Document normatif :** [`RS-05-US-OPEN-SPEC.md`](./RS-05-US-OPEN-SPEC.md), figé dans le même commit.
+
+Résumé :
+- **Données :**
+  - BTC / ETH / SOL spot **5 min**, `data.binance.vision`, checksums vérifiés ;
+  - 2021-07-01 → 2024-12-31, jours NYSE ;
+  - extension propre à RS-U0, VP1 inchangé.
+- **Mesure :**
+  - range `[A−6h, A)` ;
+  - balayage puis retour dans le range sur les 3 barres suivant `A` ;
+  - entrée théorique à `open[c+1]`, rendement signé à 60 min, coûts paper aller-retour ;
+  - 48 ancrages demi-heure NY : `A*` = 09:30, les autres sont des placebos.
+- **Porte :**
+  - G2 : `mean_net > 0` et IC95 brut > 0 ;
+  - G3 : rang ≤ 5 sur 48 ;
+  - G4 : ≥ 100 événements ;
+  - verdict sur ≥ 2 des 3 actifs ;
+  - G1 (volatilité spéciale) : contrôle non bloquant.
+- **Verdicts :**
+  - PASSE : autorise seulement la **rédaction** de RS-U1 sous un nouvel amendement ;
+  - ÉCHEC : piste close ;
+  - NON CONCLUANT.
+- **T10b :** +1 (`RS-U0-U3-5m`).
+- **Interdit :**
+  - validation 2025, holdout 2026 ;
+  - variante de range, fenêtre, horizon ou sens (continuation) après lecture, sauf nouvelle hypothèse marquée post-hoc.
 
 ---
 

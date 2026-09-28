@@ -273,6 +273,7 @@ Commit corrections : `9a7a019` sur `cursor/vp-j1-a2fe`
 | Lineage | Hypothèse | Amendement | Statut | Compte |
 |---------|-----------|------------|--------|--------|
 | `RS-D1-U3-4h` | Cassure Donchian 55 / sortie de tendance (stop 3 ATR suiveur, canal 20), BTC / ETH / SOL 4h, capital commun paper | `VP0-2026-09-28b` | pré-enregistré, **non joué** | **+1** |
+| `RS-U0-U3-5m` | Porte descriptive « ouverture US » : balayage du range 6 h puis retour, à 09:30 NY vs 47 demi-heures placebo, rendement 60 min net, BTC / ETH / SOL 5 min | `VP0-2026-09-28c` | pré-enregistré, **non joué** | **+1** |
 
 Règles de tenue :
 - les lignes RS ne sont ajoutées **que** par le pilote RS ;
