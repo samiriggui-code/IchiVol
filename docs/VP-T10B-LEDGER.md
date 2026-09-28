@@ -284,6 +284,20 @@ Lineage : 36 (gelé VP-J1) + 12 (VP-S1, si validé) + 2 (VP-P) = **50** ; sans V
 
 - B3 / B4 / B8 · autre retuning · val 2025 / holdout · features CI / T-CYCLE · merge sans OK Claude  
 
+
+---
+
+## Chantier RS (stratégie alternative) — centralisé par le pilote RS (Claude local)
+
+| Lineage | Hypothèse | Amendement | Statut | Compte |
+|---------|-----------|------------|--------|--------|
+| `RS-D1-U3-4h` | Cassure Donchian 55 / sortie de tendance (stop 3 ATR suiveur, canal 20), BTC / ETH / SOL 4h, capital commun paper | `VP0-2026-09-28b` | **joué 2026-09-28** (`1a4eba5`) — CANDIDAT (D1–D7, dev) → **VALIDÉ 2025** (V1–V5, `VP0-2026-09-28d`, +5,0 %, maxDD −4,3 %) · holdout 2026 fermé · [rapport](./RS-D1-REPORT.md) | **+1** |
+
+Règles de tenue :
+- les lignes RS ne sont ajoutées **que** par le pilote RS ;
+- VP-S1 (+12, #157) et P1 / P2 / P3 (#159) restent tenues par leurs chantiers ;
+- le total N se lit après merge de chaque PR.
+
 ---
 
 ## VP-S1 étape 1 — BM / BN (+12) → N proposé = 48

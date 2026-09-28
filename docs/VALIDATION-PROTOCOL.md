@@ -293,7 +293,7 @@ Après les runs : Claude peut lire les rapports chiffrés pour revue, **sans** r
 
 | Champ | Valeur |
 |-------|--------|
-| Version courante | `VP0-2026-09-26` + amendements `VP0-2026-09-27` (M/N Bouclier) et `VP0-2026-09-27b` (P paper fidèle, diagnostic), `VP0-2026-09-28` (contrôles C2/C3, ε, intervalles, P3 étude d'événement) |
+| Version courante | `VP0-2026-09-26` + amendements `VP0-2026-09-27` (M/N Bouclier) et `VP0-2026-09-27b` (P paper fidèle, diagnostic), `VP0-2026-09-28` (contrôles C2/C3, ε, intervalles, P3 étude d'événement), `VP0-2026-09-28b` (RS-D Donchian 4h), `VP0-2026-09-28d` (validation 2025 RS-D1) |
 | Gel | Après APPROUVÉ Claude **et** OK utilisateur |
 | Modification post-gel | Nouveau fichier ou section `VP0-YYYY-MM-DD` + justification + invalidation des runs antérieurs non rejoués |
 
@@ -348,6 +348,75 @@ Comparaison de Bi ∈ {BM, BN} à **B0** (même symbole × TF), sur l'agrégat d
 
 Profil paper **séparé** (le baseline actuel n'est pas touché), **8 semaines minimum** (56 jours) en argent virtuel. Toute décision au-delà (argent réel) = **décision explicite de Samir**, jamais automatique. Pas de somme réelle prévue par ce protocole.
 
+---
+
+## Amendement `VP0-2026-09-28b` — Question RS-D « Cassure Donchian 4h + sortie de tendance » (pré-enregistré)
+
+**Statut :** figé **avant** tout code et tout run RS-D1 · chantier RS piloté par Claude local sur mandat de Samir (2026-09-28).
+**Justification (§12) :**
+- VP3 (0 EDGE / 48) et VP-P (paper fidèle : −62,5 % sur la période de développement) mesurent des stratégies qui **coupent la queue droite** : objectif 2R ou time-stop.
+- L'hypothèse RS-D est distincte : une entrée simple sur cassure, **sans objectif fixe**, avec un stop suiveur large et une sortie de canal.
+- Ce n'est **pas** une correction de B7.
+
+**Règles, références, critères :** le document normatif est [`RS-03-DONCHIAN-4H-SPEC.md`](./RS-03-DONCHIAN-4H-SPEC.md), figé dans le même commit que cet amendement. Toute divergence d'implémentation est un défaut, pas une variante.
+
+Résumé :
+- **Univers et données :** BTC / ETH / SOL spot 4h, VP1 tronquée < 2025-01-01, capital commun 5 000, parcours continu 2021-07-01 → 2024-12-31.
+- **Règles :**
+  - entrée `close > max(high[t−55..t−1])` à `open(t+1)` ;
+  - stop `fill − 3 ATR(14)`, puis stop suiveur `max close − 3 ATR` (montée seule, appliqué à `k+1`) ;
+  - sortie de canal `close < min(low[t−20..t−1])` à `open(k+1)` ;
+  - pas de 2R, de time-stop, de renforcement ni de levier ;
+  - taille et limites du paper (0,5 % / plafond 10 % / 4 % / 3 % jour) ;
+  - coûts paper et adverse.
+- **Références :** B7-P (R4 de #159), B0-F (passif investi), B0-E (passif à exposition égale), cash.
+- **Critères D1–D7 :**
+  - rendement net et moyenne mensuelle > 0 avec intervalle ;
+  - maxDD ≤ 15 % ;
+  - Δ mensuel vs B7-P > 0 avec intervalle ;
+  - Calmar > B0-E ;
+  - ≥ 2/3 actifs et ≥ 4/7 plis positifs ;
+  - > 0 en adverse ;
+  - ≥ 30 trades.
+- **Verdicts :** CANDIDAT À VALIDATION SUPPLÉMENTAIRE / REJETÉ / NON CONCLUANT.
+- **T10b :** +1 (`RS-D1-U3-4h`).
+- **Interdit :** validation 2025, holdout 2026, datasets externes, variantes de paramètres.
+
+---
+
+## Amendement `VP0-2026-09-28d` — Validation 2025 de RS-D1 (pré-enregistrée, run unique)
+
+> **Renommage (2026-09-28, sans changement de règle) :** cet amendement a été figé et joué sous l'identifiant `VP0-2026-09-28c`. Cet identifiant avait déjà été pris 76 min plus tôt par l'amendement RS-U0 (ouverture US, autre session Claude, branche `claude/rs-strategie`). Il est donc renommé `VP0-2026-09-28d`. L'artefact `rsd1_val2025_results.json` garde le champ `"amendment": "VP0-2026-09-28c"` tel que produit par le run (`e1afe70`).
+
+**Statut :** figé **avant** le run · décision de Samir du 2026-09-28 (« oui ») après le rapport RS-D1 (CANDIDAT À VALIDATION SUPPLÉMENTAIRE, dev ≤ 2024).
+**Objet :** mesurer **une seule fois** RS-D1 sur l'année 2025, jamais vue, avec les règles **inchangées**. Ce run consomme la validation 2025 pour `RS-D1-U3-4h`. Le **holdout 2026 reste fermé**.
+
+- **Règles :** strictement RS-03 (55 / 20 / ATR 14 / 3 ATR, taille et limites paper, coûts paper et adverse). Code `rs/donchian.py` inchangé. Seules la fenêtre et la troncature changent.
+- **Données :** VP1 spot 4h BTC / ETH / SOL (mêmes sha), **tronquées à `open_time < 2026-01-01`**. Garde-fou : assertion, aucune barre ≥ 2026 transmise.
+- **Fenêtre de score :** 2025-01-01 → 2025-12-31. Nouveau capital 5 000, aucune position au départ. Les indicateurs utilisent l'historique antérieur (causal).
+- **Fin de fenêtre :** positions valorisées au dernier close, sans vente forcée (comme RS-03 §4).
+- **Références :**
+  - B0-F (1/3 par actif au 2025-01-01, jamais revendu) ;
+  - B0-E avec **`e` = 0,05798 figé**, l'exposition moyenne de RS-D1 en développement, **non recalculée sur 2025** ;
+  - cash.
+  - B7-P n'existe pas sur 2025 : pas de critère D3.
+- **Critères, tous requis pour « VALIDÉ 2025 » :**
+
+| # | Critère |
+|---|---------|
+| V1 | Rendement net 2025 > 0 (coûts paper) |
+| V2 | maxDD 2025 ≤ 15 % |
+| V3 | Rendement net 2025 > 0 en coûts adverses |
+| V4 | Calmar RS-D1 > Calmar B0-E sur 2025 (si CAGR B0-E ≤ 0, V4 = rendement RS-D1 > rendement B0-E) |
+| V5 | ≥ 10 trades clôturés en 2025 (sinon NON CONCLUANT) |
+
+- **Verdict :**
+  - **VALIDÉ 2025** : V1 à V5 vrais ;
+  - **ÉCHEC** : V1 ou V2 faux ;
+  - **NON CONCLUANT** : tous les autres cas.
+- **Descriptif, non bloquant :** intervalle bootstrap de la moyenne mensuelle (12 mois, seed 7), Δ mensuel vs B0-E, motifs de sortie, concentration, stress `exec_delay = 2`.
+- **Après le run :** aucune modification de règle possible pour cette hypothèse. Toute variante = nouvelle hypothèse, jugée sur le holdout 2026 seulement après une décision de Samir.
+- **T10b :** pas de +1 (même hypothèse, étape de validation).
 ---
 
 ## Amendement `VP0-2026-09-27b` — Question P « Paper fidèle » (diagnostic, pré-enregistré)
