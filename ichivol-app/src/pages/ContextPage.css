@@ -11,7 +11,7 @@
   --red: #c8412f;
   --amber: #a76c17;
   color: var(--ink);
-  font: 14px Manrope, Arial, sans-serif;
+  font: 11px Manrope, Arial, sans-serif;
   padding: 0;
   max-width: 1800px;
   margin: 0 auto;
@@ -606,25 +606,25 @@
   backdrop-filter:blur(3px);
 }
 .ctx-page .dialog-body {
-  padding:28px;
+  padding:18px;
 }
 .ctx-page .dialog-head {
   display:flex;
   justify-content:space-between;
   align-items:center;
-  margin-bottom:20px;
+  margin-bottom:14px;
 }
 .ctx-page .dialog-head button {
   border:0;
-  font-size:22px;
+  font-size:18px;
   background:none;
 }
 .ctx-page .dialog-body h2 {
-  font-size:29px;
+  font-size:20px;
 }
 .ctx-page .dialog-body p {
   color:var(--muted);
-  font-size:13px;
+  font-size:12px;
 }
 .ctx-page .dialog-actions {
   display:flex;
@@ -1244,14 +1244,14 @@
 .dash-shell.is-mobile .ctx-page .page-head .subtitle,
 .dash-shell.is-mobile .ctx-page .page-head p,
 .ctx-page .subtitle {
-  font-size: 12px !important;
+  font-size: 11px !important;
   line-height: 1.7;
   color: var(--muted);
   margin: 0;
 }
-.ctx-page table { font-size: 14px; }
-.ctx-page tr.clickable { font-size: 14px; }
-.ctx-page td { font-size: 14px; }
+.ctx-page table { font-size: 11px; }
+.ctx-page tr.clickable { font-size: 11px; }
+.ctx-page td { font-size: 11px; }
 .ctx-page .table-wrap { overflow: auto; padding: 0; }
 @media (max-width: 800px) {
   .dash-shell .ctx-page .page-head h1,
