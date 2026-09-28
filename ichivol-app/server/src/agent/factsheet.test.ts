@@ -72,6 +72,7 @@ function out(over: Partial<AnalysisOutput> = {}): AnalysisOutput {
 
 describe('extractNumbers', () => {
   it('lit FR/EN, %, et ignore timeframes et périodes', () => {
+    assert.deepEqual(extractNumbers('Signaux NON_VALIDE (VP3), étape AG-S1, stratégie B7.'), [])
     const n = extractNumbers('RVOL 1,529 (93 %) en 1h, ATR 14 = 472.1, prix 83 703,35, Donchian 55/20')
     assert.deepEqual(
       n.map((x) => [x.value, x.percent]),

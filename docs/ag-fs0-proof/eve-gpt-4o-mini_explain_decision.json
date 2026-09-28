@@ -1,0 +1,130 @@
+{
+ "question": "Pourquoi IchiVol ne trade pas BTC en 1h en ce moment ?",
+ "model": "openai/gpt-4o-mini",
+ "attempts": 1,
+ "usage": {
+  "input_tokens": 1977,
+  "output_tokens": 708
+ },
+ "answer": "Le verdict du pipeline indique aucune action de trade sur BTCUSDT en 1h, principalement dû à des signaux non valides dans toutes les étapes d'analyse.\n\n**Lecture**\n- Le pipeline ne donne aucune instruction valide pour trader BTCUSDT, signalant un verdict de NO_TRADE.\n- Toutes les signaux du pipeline sont déclarés NON_VALIDE, n'apportant aucune direction claire sur le marché.\n- Les différentes étapes, comme la direction, la participation, et la structure sont marquées comme NON_VALIDE, indiquant une incertitude globale.\n- La structure de marché est indiquée comme BEARISH, mais cela ne suffit pas pour déclencher un trade.\n\n_Données indisponibles : calendar.next_high.title._",
+ "factsheet": {
+  "id": "72814f6d4e88e085515a9d211c8b8d574fa41b663df5e029a800b7cbd03c8366",
+  "schema": "ichivol.factsheet.v1",
+  "symbol": "BTCUSDT",
+  "timeframe": "1h",
+  "as_of": 1790611200,
+  "summary": "Le verdict du pipeline indique aucune action de trade sur BTCUSDT en 1h, principalement dû à des signaux non valides dans toutes les étapes d'analyse.",
+  "claims": [
+   {
+    "section": "claims",
+    "text": "Le pipeline ne donne aucune instruction valide pour trader BTCUSDT, signalant un verdict de NO_TRADE.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "pipeline.decision",
+      "display": "NO_TRADE",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "claims",
+    "text": "Toutes les signaux du pipeline sont déclarés NON_VALIDE, n'apportant aucune direction claire sur le marché.",
+    "kind": "fact",
+    "facts": [
+     {
+      "id": "pipeline.direction",
+      "display": "SHORT",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "claims",
+    "text": "Les différentes étapes, comme la direction, la participation, et la structure sont marquées comme NON_VALIDE, indiquant une incertitude globale.",
+    "kind": "interpretation",
+    "facts": [
+     {
+      "id": "pipeline.stage.direction.status",
+      "display": "pass",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.stage.participation.status",
+      "display": "watch",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     },
+     {
+      "id": "pipeline.stage.structure.status",
+      "display": "pass",
+      "engine": "pipeline",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   },
+   {
+    "section": "claims",
+    "text": "La structure de marché est indiquée comme BEARISH, mais cela ne suffit pas pour déclencher un trade.",
+    "kind": "interpretation",
+    "facts": [
+     {
+      "id": "structure.bias",
+      "display": "BEARISH",
+      "engine": "structure",
+      "timeframe": "1h",
+      "as_of": 1790611200,
+      "known_at": 1790611200,
+      "status": "ok",
+      "validation_status": "NON_VALIDE",
+      "source": "engine"
+     }
+    ]
+   }
+  ],
+  "removed": 0,
+  "partial": false,
+  "fallback": false,
+  "missing": [
+   "calendar.next_high.title"
+  ]
+ },
+ "validation": [
+  {
+   "total": 4,
+   "accepted": 4,
+   "rejected": 0,
+   "summaryOk": true,
+   "rejectedClaims": [],
+   "summaryErrors": []
+  }
+ ]
+}

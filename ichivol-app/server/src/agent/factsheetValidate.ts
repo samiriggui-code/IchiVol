@@ -73,6 +73,8 @@ export const REL_TOLERANCE = 0.005
 
 /** Nombres qui ne sont pas des valeurs de marché : timeframes et périodes d'indicateurs. */
 const TIMEFRAME_RE = /\b\d+\s?(?:m|min|h|d|j|w)\b/gi
+/** Noms de programmes et d'étapes du protocole (VP3, AG-S1, RS-D1, B7…) : pas des valeurs de marché. */
+const PROGRAM_NAME_RE = /\b(?:VP|AG-S|RS-[A-Z]|OF-|B|T)\d{1,2}[a-z]?\b/g
 /** Périodes usuelles : seul un entier de cette liste juste après le nom d'un indicateur est ignoré. */
 const INDICATOR_PERIODS = new Set([5, 7, 9, 10, 12, 14, 20, 21, 26, 50, 52, 55, 100, 200])
 const INDICATOR_PERIOD_RE =
@@ -108,6 +110,7 @@ export function extractNumbers(text: string): ParsedNumber[] {
       nums.split(/\s?[,/]\s?/).every((x) => INDICATOR_PERIODS.has(Number(x))) ? ' ' : m,
     )
     .replace(TIMEFRAME_RE, ' ')
+    .replace(PROGRAM_NAME_RE, ' ')
   const out: ParsedNumber[] = []
   for (const m of masked.matchAll(NUMBER_RE)) {
     const raw = m[0].trim()

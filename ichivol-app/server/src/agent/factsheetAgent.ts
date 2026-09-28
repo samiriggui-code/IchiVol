@@ -19,7 +19,7 @@ import { loadSkills } from './skills/loadSkills.js'
 import type { AgentMode } from './types.js'
 
 export const FACTSHEET_PROMPT_VERSION = 'fs0-v1'
-const MAX_TOKENS = 1200
+const MAX_TOKENS = 2000
 const TIMEOUT_MS = 60_000
 const FS_SKILLS = ['ichimoku', 'rvol', 'structure', 'mtf', 'risk']
 
@@ -65,10 +65,10 @@ export function buildFactsheetSystem(mode: AgentMode): string {
     'RÈGLES STRICTES :',
     '1. Tu réponds UNIQUEMENT via l’outil submit_analysis.',
     '2. Chaque chiffre que tu écris doit être la valeur « display » d’un fait que tu cites dans fact_ids, recopiée telle quelle. Aucun calcul, aucune différence, aucun pourcentage dérivé, aucun comptage.',
-    '3. kind=fact exige au moins un fact_id. kind=interpretation ou scenario : relie des faits cités, sans nouveau chiffre.',
+    '3. fact_ids = identifiants en début de ligne du FACTSHEET (ex. rvol.rvol, pipeline.decision), jamais autre chose. kind=fact exige au moins un fact_id. kind=interpretation ou scenario : relie des faits cités, sans nouveau chiffre.',
     '4. Un fait avec status différent de ok est une ABSENCE : dis-le avec kind=missing (et liste son id dans missing_data). Ne le déduis jamais.',
     '5. Tous les signaux du pipeline sont NON_VALIDE (programme VP3 : aucun edge mesuré). Rappelle-le quand tu cites pipeline.decision.',
-    '6. Français clair, vocabulaire trading juste, 4 à 8 claims au total.',
+    '6. Français clair et naturel (pas de recopie « id = valeur »), vocabulaire trading juste. 4 à 8 claims au total, chacun de 25 mots au plus ; résumé de 2 à 3 phrases.',
     skills ? `MÉTHODE (skills, sans chiffres de marché) :\n${skills}` : '',
   ]
     .filter(Boolean)
@@ -83,7 +83,7 @@ export function compactFacts(fs: FactSheet): string {
     return `${f.id} = ${val}${f.unit ? ` ${f.unit}` : ''} · ${f.timeframe} · ${f.validation_status}${st}`
   })
   const asOf = fs.as_of ? new Date(fs.as_of * 1000).toISOString().slice(0, 16).replace('T', ' ') + ' UTC' : '—'
-  return [`FACTSHEET ${fs.symbol} ${fs.timeframe} · barre close ${asOf} · id ${fs.factsheet_id.slice(0, 12)}`, ...lines].join(
+  return [`FACTSHEET ${fs.symbol} ${fs.timeframe} · barre close ${asOf}`, 'FAITS (identifiant = valeur · timeframe · statut) :', ...lines].join(
     '\n',
   )
 }
