@@ -12,6 +12,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY alembic.ini .
 COPY alembic ./alembic
 COPY app ./app
+# RS-D1 paper runner (app/paper/rs_d1_runner.py) imports rs.book / rs.costs
+COPY rs ./rs
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
