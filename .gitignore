@@ -36,3 +36,7 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Fichiers temporaires de session (journaux, scripts et requêtes jetables)
+.tmp-*
+ichivol-app/engine/.tmp-*
