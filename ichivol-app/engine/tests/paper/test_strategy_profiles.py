@@ -28,9 +28,10 @@ def test_parallel_accounts_differ_from_the_baseline_by_one_key_each():
     def diff(code):
         return {k for k, v in PARALLEL_PROFILES[code].items() if BASELINE_PROFILE.get(k) != v} - {"code", "label"}
 
-    assert diff(SHORTS_CODE) == {"allow_short"} and PARALLEL_PROFILES[SHORTS_CODE]["allow_short"] is True
+    # Shorts allowed everywhere since 2026-10-01: the SHORTS account no longer differs from the baseline.
+    assert diff(SHORTS_CODE) == set() and PARALLEL_PROFILES[SHORTS_CODE]["allow_short"] is True
     assert diff(H4_CODE) == {"auto_timeframes"} and PARALLEL_PROFILES[H4_CODE]["auto_timeframes"] == ["4h"]
-    assert diff(WIDE_CODE) == {"universe"} and BASELINE_PROFILE["allow_short"] is False
+    assert diff(WIDE_CODE) == {"universe"} and BASELINE_PROFILE["allow_short"] is True
 
 
 def test_wide_symbols_only_reach_the_wide_account():

@@ -80,7 +80,9 @@ BASELINE_PROFILE: dict[str, Any] = {
     "spread_bps": 2.0,
     # 2026-09-21 (user decision, from the research study): no short selling (shorts made most of the losses)
     # and lots are held until stop/target/Ichimoku direction change instead of the first gate downgrade.
-    "allow_short": False,
+    # 2026-10-01 (user decision): shorts allowed again on every Ichimoku paper account (bearish market, nothing
+    # traded); applied to the existing accounts' stored profiles the same day. RS-D1 is unaffected.
+    "allow_short": True,
     "exit_mode": "direction",
     "require_atr_stop": True,
     "valuation_mode": "USDT_AS_EUR_PROXY",
