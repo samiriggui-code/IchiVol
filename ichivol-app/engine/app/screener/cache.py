@@ -25,6 +25,12 @@ from app.paper import engine as paper_engine
 from app.config import settings
 from app.evidence.recorder import record_signal_evidence
 from app.screener.persistence import persist_scan
+from app.paper.strategy_profiles import (
+    WIDE_EXTRA_SYMBOLS,
+    profile_for,
+    syncable_profile_codes,
+    wants_wide_universe,
+)
 from app.screener.service import DEFAULT_WATCHLIST, ScreenerRow, scan_watchlist
 
 logger = logging.getLogger(__name__)
@@ -46,6 +52,30 @@ PAPER_EXCLUDED_SYMBOLS = frozenset({"USDJPY"})
 
 def paper_tradable_rows(rows):
     return [r for r in rows if r.exchange in PAPER_EXCHANGES and r.symbol not in PAPER_EXCLUDED_SYMBOLS]
+
+
+def _synced_profiles() -> list[dict]:
+    return [profile_for(code) for code in syncable_profile_codes()]
+
+
+def paper_timeframes() -> set[str]:
+    """Every timeframe some synced paper account trades automatically."""
+    return {tf for profile in _synced_profiles() for tf in paper_engine.auto_timeframes(profile)}
+
+
+def wide_universe_wanted() -> bool:
+    return any(wants_wide_universe(profile) for profile in _synced_profiles())
+
+
+def _paper_sync(rows) -> None:
+    paper_session = SessionLocal()
+    try:
+        paper_engine.sync_auto_watchlist(paper_session, rows)
+    except Exception:
+        logger.warning("screener cache: paper trading sync failed", exc_info=True)
+        paper_session.rollback()
+    finally:
+        paper_session.close()
 
 
 class ScreenerCache:
@@ -80,7 +110,19 @@ class ScreenerCache:
                 self.refresh(paper_sync=True)
             except Exception:
                 logger.warning("screener cache: background refresh failed", exc_info=True)
+            try:
+                self._sync_other_paper_timeframes()
+            except Exception:
+                logger.warning("screener cache: paper sync on other timeframes failed", exc_info=True)
             self._stop.wait(self.refresh_interval_s)
+
+    def _sync_other_paper_timeframes(self) -> None:
+        """Parallel paper accounts on another timeframe (e.g. ICHIVOL_4H_V1): scanned here for paper only --
+        never cached for the UI, never persisted -- and each account keeps only its own auto_timeframes rows."""
+        for tf in sorted(paper_timeframes() - {self.default_timeframe}):
+            rows = scan_watchlist(DEFAULT_WATCHLIST, timeframe=tf)
+            if rows:
+                _paper_sync(paper_tradable_rows(rows))
 
     def refresh(self, timeframe: str | None = None, persist: bool = True, paper_sync: bool = False) -> CacheEntry:
         """Scan + cache (+ persistence / evidence when ``persist``).
@@ -122,14 +164,13 @@ class ScreenerCache:
             # provider calls). Multi-market since 2026-09-21: crypto (binance) AND forex / metals / indices /
             # energy (biquote), see `paper_tradable_rows`.
             crypto_rows = paper_tradable_rows(rows)
-            paper_session = SessionLocal()
-            try:
-                paper_engine.sync_auto_watchlist(paper_session, crypto_rows)
-            except Exception:
-                logger.warning("screener cache: paper trading sync failed", exc_info=True)
-                paper_session.rollback()
-            finally:
-                paper_session.close()
+            if wide_universe_wanted():
+                # Extra liquid pairs for the wide-universe account only (filtered per account in the paper engine).
+                try:
+                    crypto_rows += paper_tradable_rows(scan_watchlist(WIDE_EXTRA_SYMBOLS, timeframe=tf))
+                except Exception:
+                    logger.warning("screener cache: wide universe scan failed", exc_info=True)
+            _paper_sync(crypto_rows)
 
         entry = CacheEntry(rows=rows, computed_at=time.time(), timeframe=tf)
         with self._lock:

@@ -314,11 +314,50 @@ RS_D1_PROFILE: dict[str, Any] = {
     "manual_orders": False,
 }
 
+# --- Parallel paper accounts (2026-10-01, user decision: "faut que ça bouge") ------------------------------
+# Same rules as the baseline, ONE difference each, run side by side so the baseline stays the untouched
+# reference: they only add measurement (paper only, virtual cash), they never change the baseline's trades.
+# - SHORTS: shorts allowed (the 2026-09-21 ban came from the research study; this measures it live).
+# - 4H: the automatic loop on 4h candles instead of 1h (longs only).
+# - WIDE: 1h, longs only, on the baseline universe + WIDE_EXTRA_SYMBOLS (liquid Binance spot pairs).
+WIDE_EXTRA_SYMBOLS: tuple[str, ...] = (
+    # Binance spot, 24h quote volume >= 7 M USDT checked on 2026-10-01 (RENDERUSDT left out: ~5 M).
+    "TRXUSDT", "BCHUSDT", "ETCUSDT", "FILUSDT", "INJUSDT", "AAVEUSDT",
+    "HBARUSDT", "ICPUSDT", "SEIUSDT", "XLMUSDT", "TIAUSDT",
+)
+
+SHORTS_CODE = "ICHIVOL_SHORTS_V1"
+H4_CODE = "ICHIVOL_4H_V1"
+WIDE_CODE = "ICHIVOL_WIDE_V1"
+
+PARALLEL_PROFILES: dict[str, dict[str, Any]] = {
+    SHORTS_CODE: _with(
+        code=SHORTS_CODE,
+        label="Baseline + shorts (paper parallèle)",
+        allow_short=True,
+    ),
+    H4_CODE: _with(
+        code=H4_CODE,
+        label="Baseline en 4h (paper parallèle)",
+        auto_timeframes=["4h"],
+    ),
+    WIDE_CODE: _with(
+        code=WIDE_CODE,
+        label="Baseline univers élargi (paper parallèle)",
+        universe="wide",
+    ),
+}
+
 ALL_PROFILES: dict[str, dict[str, Any]] = {
     BASELINE_CODE: BASELINE_PROFILE,
     **EXPERIMENTAL_PROFILES,
+    **PARALLEL_PROFILES,
     RS_D1_CODE: RS_D1_PROFILE,
 }
+
+
+def wants_wide_universe(profile: dict[str, Any] | None) -> bool:
+    return (profile or {}).get("universe") == "wide"
 
 
 def is_rs_engine(profile: dict[str, Any] | None) -> bool:
@@ -334,13 +373,14 @@ def profile_for(code: str) -> dict[str, Any]:
 
 # 2026-09-20: everything was reset to a single virtual portfolio (one account, one lot per symbol).
 # The experimental profiles above stay registered as definitions but are no longer seeded or synced.
+# 2026-10-01: the PARALLEL_PROFILES are synced next to the baseline (each its own account and cash).
 SINGLE_PORTFOLIO_MODE = True
 
 
 def syncable_profile_codes() -> list[str]:
-    """Codes that receive auto_watchlist sync."""
+    """Codes that receive auto_watchlist sync (baseline first: it stays the funnel/reference account)."""
     if SINGLE_PORTFOLIO_MODE:
-        return [BASELINE_CODE]
+        return [BASELINE_CODE, *PARALLEL_PROFILES]
     return [
         code
         for code, profile in ALL_PROFILES.items()

@@ -30,6 +30,7 @@ from app.paper.risk_kernel import (
     open_lots_from_positions,
 )
 from app.paper.portfolio import ensure_baseline_portfolio, ensure_syncable_portfolios
+from app.paper.strategy_profiles import WIDE_EXTRA_SYMBOLS, wants_wide_universe
 from app.shadow import broker as shadow_broker
 from app.structure.gate import apply_structure_gate
 
@@ -372,6 +373,14 @@ BEHAVIOR_CHANGE_EVENT = "BEHAVIOR_CHANGE"
 AUTO_TIMEFRAMES_CHANGE = "auto_timeframes_only"
 
 
+def _portfolio_takes_row(profile: dict[str, Any], row: Any) -> bool:
+    """A portfolio acts on a row of one of its auto_timeframes, and on a WIDE_EXTRA symbol only when its
+    profile asks for the wide universe (the baseline never sees those symbols)."""
+    if row.timeframe not in auto_timeframes(profile):
+        return False
+    return row.symbol not in WIDE_EXTRA_SYMBOLS or wants_wide_universe(profile)
+
+
 def auto_timeframes(profile: dict[str, Any] | None) -> tuple[str, ...]:
     """Timeframes a profile trades automatically. Missing key = the 1h strategy only (2026-09-28)."""
     return tuple((profile or {}).get("auto_timeframes") or ("1h",))
@@ -443,7 +452,12 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
 
     for row in rows:
         bars_by_key[f"{row.symbol}:{row.timeframe}"] = getattr(row, "candles", None) or []
-        if funnel_portfolio is not None and getattr(row, "candles", None):
+        # The funnel journal stays the reference account's: only rows that account itself acts on.
+        if (
+            funnel_portfolio is not None
+            and getattr(row, "candles", None)
+            and _portfolio_takes_row(funnel_portfolio.strategy_profile or {}, row)
+        ):
             tf_s = TF_SECONDS.get(row.timeframe, 3600)
             last_open = row.candles[-1].time
             funnels.setdefault(row.timeframe, paper_counters.FunnelAccumulator()).add(
@@ -489,7 +503,7 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
 
         for portfolio in portfolios:
             profile = portfolio.strategy_profile or {}
-            if row.timeframe not in auto_timeframes(profile):
+            if not _portfolio_takes_row(profile, row):
                 continue
             det_key = (
                 ",".join(profile.get("structure_detectors") or []),

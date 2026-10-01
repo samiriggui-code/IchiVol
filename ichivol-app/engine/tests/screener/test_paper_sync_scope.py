@@ -53,7 +53,11 @@ def test_direct_refresh_without_paper_sync_flag_never_syncs(paper_calls, tf):
     assert paper_calls == []
 
 
-def test_background_loop_flag_syncs_default_timeframe_only(paper_calls):
+def test_background_loop_flag_syncs_default_timeframe_only(paper_calls, monkeypatch):
+    from app.screener import cache as cache_mod
+
+    # Baseline scope only: the wide-universe extra scan (parallel account) is covered elsewhere.
+    monkeypatch.setattr(cache_mod, "wide_universe_wanted", lambda: False)
     c = ScreenerCache(refresh_interval_s=999, default_timeframe="1h")
     c.refresh(timeframe="15m", paper_sync=True)
     c.refresh(timeframe="4h", paper_sync=True)

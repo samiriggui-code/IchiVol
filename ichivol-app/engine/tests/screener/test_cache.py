@@ -70,6 +70,10 @@ def test_background_thread_refreshes_at_least_once(monkeypatch):
 def test_refresh_feeds_crypto_and_biquote_rows_to_paper_trading_but_not_jpy_or_equities(monkeypatch):
     # Multi-market paper since 2026-09-21; USDJPY (JPY quote) and twelve_data equities stay out.
     from app.paper import engine as paper_engine
+    from app.screener import cache as cache_mod
+
+    # Baseline scope only: the wide-universe extra scan (parallel account) is covered elsewhere.
+    monkeypatch.setattr(cache_mod, "wide_universe_wanted", lambda: False)
 
     def _mixed_watchlist(symbols, timeframe="1h", limit=300):
         return [

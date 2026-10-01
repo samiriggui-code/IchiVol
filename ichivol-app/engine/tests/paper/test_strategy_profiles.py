@@ -16,8 +16,43 @@ def test_baseline_has_no_structure_filter():
     assert BASELINE_PROFILE["structure_detectors"] == []
 
 
-def test_single_portfolio_mode_syncs_only_the_baseline():
-    assert syncable_profile_codes() == [BASELINE_CODE]
+def test_single_portfolio_mode_syncs_the_baseline_then_the_parallel_accounts():
+    from app.paper.strategy_profiles import H4_CODE, SHORTS_CODE, WIDE_CODE
+
+    assert syncable_profile_codes() == [BASELINE_CODE, SHORTS_CODE, H4_CODE, WIDE_CODE]
+
+
+def test_parallel_accounts_differ_from_the_baseline_by_one_key_each():
+    from app.paper.strategy_profiles import H4_CODE, PARALLEL_PROFILES, SHORTS_CODE, WIDE_CODE
+
+    def diff(code):
+        return {k for k, v in PARALLEL_PROFILES[code].items() if BASELINE_PROFILE.get(k) != v} - {"code", "label"}
+
+    assert diff(SHORTS_CODE) == {"allow_short"} and PARALLEL_PROFILES[SHORTS_CODE]["allow_short"] is True
+    assert diff(H4_CODE) == {"auto_timeframes"} and PARALLEL_PROFILES[H4_CODE]["auto_timeframes"] == ["4h"]
+    assert diff(WIDE_CODE) == {"universe"} and BASELINE_PROFILE["allow_short"] is False
+
+
+def test_wide_symbols_only_reach_the_wide_account():
+    from types import SimpleNamespace
+
+    from app.paper.engine import _portfolio_takes_row
+    from app.paper.strategy_profiles import H4_CODE, PARALLEL_PROFILES, WIDE_CODE, WIDE_EXTRA_SYMBOLS
+
+    extra = SimpleNamespace(symbol=WIDE_EXTRA_SYMBOLS[0], timeframe="1h")
+    core = SimpleNamespace(symbol="BTCUSDT", timeframe="1h")
+    core_4h = SimpleNamespace(symbol="BTCUSDT", timeframe="4h")
+    assert not _portfolio_takes_row(BASELINE_PROFILE, extra) and _portfolio_takes_row(BASELINE_PROFILE, core)
+    assert _portfolio_takes_row(PARALLEL_PROFILES[WIDE_CODE], extra)
+    assert not _portfolio_takes_row(BASELINE_PROFILE, core_4h)
+    assert _portfolio_takes_row(PARALLEL_PROFILES[H4_CODE], core_4h)
+    assert not _portfolio_takes_row(PARALLEL_PROFILES[H4_CODE], core)
+
+
+def test_background_loop_scans_4h_and_wide_for_paper():
+    from app.screener.cache import paper_timeframes, wide_universe_wanted
+
+    assert paper_timeframes() == {"1h", "4h"} and wide_universe_wanted()
 
 
 def test_experimental_codes_registered():
