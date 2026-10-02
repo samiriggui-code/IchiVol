@@ -138,6 +138,7 @@ def detail_dict(row: ScreenerRow) -> dict:
         "strategy_version": row.decision.strategy_version,
         "timestamp": row.candles[-1].time,
         "signal_timing": getattr(row, "signal_timing", None),
+        "mtf_matrix": row.mtf_matrix.to_dict() if getattr(row, "mtf_matrix", None) is not None else None,
         "volume_type": (
             row.candles[-1].volume_type.value if row.candles else "NONE"
         ),

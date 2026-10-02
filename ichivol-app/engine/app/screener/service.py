@@ -25,6 +25,7 @@ from app.evidence.engine import EvidenceEngine, EvidenceReport
 from app.confluence.observe import FamilyWeightsObservation
 from app.events.types import EventContextBundle, MarketAnomalyObservation
 from app.strategy_lab.lab_context import LabContextObservation
+from app.mtf.matrix import MtfMatrix
 from app.market_data.observe_quality import (
     DataProvenanceObservation,
     DataQualityObservation,
@@ -151,6 +152,8 @@ class ScreenerRow:
     """T11a: candle quality gate observation. Never alters decision/confidence."""
     data_provenance: DataProvenanceObservation | None = None
     """T11a: series provenance stamp (provider / fingerprint). Audit only."""
+    mtf_matrix: MtfMatrix | None = None
+    """MTF-1: per-horizon trend matrix (1h/4h/1d/1w). Never alters decision/confidence."""
 
 
 def scan_symbol(
@@ -172,6 +175,7 @@ def scan_symbol(
         raise ValueError(f"not enough candles returned for {symbol} {timeframe}")
     # Live price = last traded (forming bar close); every signal uses closed bars only.
     live_price = candles[-1].close
+    raw_candles = candles
     candles = _closed_only(candles, timeframe)
 
     ichimoku_output = ichimoku_agent.analyze(candles, ichi_params)[-1]
@@ -340,12 +344,19 @@ def scan_symbol(
     except Exception:
         logger.exception("data_quality/provenance observe failed for %s — leaving unset", symbol)
 
+    # MTF-1 multi-horizon matrix — observation only (never mutates pipeline/decision; mtf_aligned above
+    # keeps its own HIGHER_TIMEFRAME rule). Higher horizons are cached until their next close.
+    from app.mtf.service import matrix_for_scan
+
+    mtf_matrix = matrix_for_scan(provider, symbol, provider_symbol, timeframe, raw_candles, now=now_ts)
+
     return ScreenerRow(
         symbol=symbol,
         exchange=provider.id,
         timeframe=timeframe,
         price=live_price,
         signal_timing=signal_timing_dict,
+        mtf_matrix=mtf_matrix,
         candles=candles,
         ichimoku=ichimoku_output,
         rvol=rvol_output,

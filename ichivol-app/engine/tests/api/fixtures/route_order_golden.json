@@ -612,6 +612,13 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/mtf/{symbol}",
+    "endpoint": "get_mtf"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/health",
     "endpoint": "health"
   }

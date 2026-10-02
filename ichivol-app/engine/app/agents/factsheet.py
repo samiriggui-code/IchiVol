@@ -21,7 +21,8 @@ from typing import Any, Sequence
 logger = logging.getLogger(__name__)
 
 SCHEMA = "ichivol.factsheet.v1"
-MAX_FACTS = 60
+# 60 → 72 (MTF-1) : + 10 faits multi-horizons (direction / état par horizon, accords, oppositions).
+MAX_FACTS = 72
 _VALIDATION_NA = "N/A"
 
 
@@ -229,6 +230,35 @@ def facts_derived(
     ]
 
 
+def facts_from_mtf(
+    detail: dict[str, Any] | None, *, timeframe: str, reason: str | None = None
+) -> list[dict[str, Any]]:
+    """MTF-1 : direction Ichimoku et état des données par horizon (1h / 4h / 1d / 1w), plus les horizons
+    alignés / opposés à l'horizon de décision. ``timeframe`` du fait = l'horizon lu (le validateur n'admet
+    « 1w » que si un fait 1w est cité). Observe-only, NON_VALIDE (le filtre MTF B5 n'a pas d'edge, VP3)."""
+    matrix = (detail or {}).get("mtf_matrix")
+    common = dict(engine="mtf", source="engine", validation_status="NON_VALIDE", decision_role="context")
+    if not isinstance(matrix, dict):
+        why = reason or "mtf_unavailable"
+        return [_fact("mtf.summary.opposed", field="summary.opposed", value=None, timeframe=timeframe, as_of=None,
+                      known_at=None, status="unavailable", reason=why, **common)]
+    facts: list[dict[str, Any]] = []
+    for h in matrix.get("horizons") or []:
+        tf = str(h.get("timeframe"))
+        at = dict(timeframe=tf, as_of=h.get("bar_open"), known_at=h.get("bar_close"))
+        unavailable = h.get("state") == "UNAVAILABLE"
+        facts.append(_fact(f"mtf.{tf}.direction", field=f"{tf}.direction", value=None if unavailable else h.get("direction"),
+                           reason=h.get("unavailable_reason") if unavailable else None, **at, **common))
+        facts.append(_fact(f"mtf.{tf}.state", field=f"{tf}.state", value=h.get("state"), **at, **common))
+    summary = matrix.get("summary") or {}
+    at = dict(timeframe=timeframe, as_of=None, known_at=matrix.get("computed_at"))
+    for key in ("aligned", "opposed"):
+        tfs = summary.get(key) or []
+        facts.append(_fact(f"mtf.summary.{key}", field=f"summary.{key}", value=", ".join(tfs) if tfs else "aucun",
+                           **at, **common))
+    return facts
+
+
 def facts_from_paper(
     position: dict[str, Any] | None,
     lock: dict[str, Any] | None,
@@ -434,6 +464,7 @@ def build_factsheet(
             facts_derived(detail, cards, timeframe=timeframe, now=now_s),
             facts_from_paper(position, lock, timeframe=timeframe, as_of=bar_as_of, reason=paper_reason),
             facts_from_calendar(events, now=now_s, timeframe=timeframe, reason=cal_reason),
+            facts_from_mtf(detail, timeframe=timeframe, reason=pipe_reason),
             facts_from_cards(cards),
         ],
         engine_version=f"fs0-v1+{ENGINE_VERSION}",

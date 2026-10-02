@@ -64,3 +64,18 @@ def test_stale_after_two_missing_closes_and_intent_refuses():
     intent = propose_order_intent(None, row)  # refuses before touching the DB
     assert intent.actionable is False and intent.reason == "stale_data"
     assert intent.signal_timing["stale"] is True
+
+
+def test_weekly_boundary_is_anchored_on_monday_bar_opens():
+    # Binance 1w bars open Monday 00:00 UTC; unix multiples of 604800 fall on Thursdays.
+    W = 7 * 24 * H
+    monday = int(datetime(2026, 9, 21, tzinfo=timezone.utc).timestamp())  # Monday
+    bars = [Candle(time=monday - k * W, open=1, high=2, low=1, close=1.5) for k in range(5, 0, -1)]
+    # Wednesday 2026-09-23: last closed weekly bar opened 2026-09-14 and closed Monday 2026-09-21.
+    now = int(datetime(2026, 9, 23, 12, tzinfo=timezone.utc).timestamp())
+    t = compute_signal_timing(bars, W, now, 1.6, "1w", True)
+    assert t.signal_bar_close == monday and t.expected_bar_close == monday
+    assert t.lag_bars == 0 and not t.data_late and not t.stale
+    # Two weeks without a new bar: stale.
+    t2 = compute_signal_timing(bars, W, now + 2 * W, 1.6, "1w", True)
+    assert t2.lag_bars == 2 and t2.stale

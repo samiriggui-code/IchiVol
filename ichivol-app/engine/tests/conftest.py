@@ -32,3 +32,13 @@ def _clear_paper_entry_locks():
     finally:
         session.close()
     yield
+
+
+@pytest.fixture(autouse=True)
+def _clear_mtf_cache():
+    """MTF-1 caches higher-horizon candles until their next close: never leak a fake series across tests."""
+    from app.mtf.service import clear_cache
+
+    clear_cache()
+    yield
+    clear_cache()

@@ -8,6 +8,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Link, useSearchParams } from 'react-router-dom'
 import { PaperCloseConfirmSheet } from '../components/PaperCloseConfirmSheet'
 import { ChartIntelligencePanel } from '../components/chart-intelligence'
+import { MtfPanel } from '../components/MtfPanel'
+import { fmtUtc, storedMatrix } from '../lib/mtf'
 import {
   concentrationFromPositions,
   drawdownFromCurve,
@@ -774,6 +776,16 @@ export function PortfolioPage() {
               {fiche.entry_decision ? ` Signal : ${fiche.entry_decision}.` : ''}{' '}
               {isActionableBuySell(fiche.entry_decision) ? <VpValidationBadge /> : null}
             </p>
+            {fiche.source !== 'rs_d1' ? (
+              <MtfPanel
+                stored={storedMatrix(fiche.entry_signal)}
+                storedLabel={
+                  storedMatrix(fiche.entry_signal)
+                    ? `Ce que le moteur savait à l'entrée · ${fmtUtc(storedMatrix(fiche.entry_signal)?.computed_at ?? null)}`
+                    : undefined
+                }
+              />
+            ) : null}
             <div className="ci-embed">
               <ChartIntelligencePanel
                 symbol={fiche.symbol}

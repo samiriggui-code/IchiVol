@@ -45,7 +45,10 @@ def compute_signal_timing(
 ) -> SignalTiming:
     last = used[-1]
     bar_close = last.time + tf_seconds
-    expected = now - now % tf_seconds  # most recent boundary already passed
+    # Most recent boundary already passed, anchored on the series' own bar opens: identical to
+    # ``now - now % tf`` for 15m..1d (bars open on multiples of tf), and correct for 1w, whose
+    # Binance bars open on Monday 00:00 UTC while unix multiples of 604800 fall on a Thursday.
+    expected = now - (now - last.time) % tf_seconds
     lag = max(0, (expected - bar_close) // tf_seconds)
     # right after a boundary the new close is normally still arriving: grace, not "late"
     within_grace = lag == 1 and (now - expected) <= DELIVERY_GRACE_S

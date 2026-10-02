@@ -552,3 +552,33 @@ def test_open_user_confirmed_locks_symbol_already_open_on_portfolio(_session):
         assert len(open_same) == 1
     finally:
         _drop_portfolio(_session, pf)
+
+
+def test_auto_sync_passes_the_mtf_matrix_to_the_entry_signal(monkeypatch):
+    """MTF-1: the scan's multi-horizon matrix reaches sync_position's signal_extra (→ entry_signal /
+    exit_signal through _signal_payload). Observe-only: nothing else in the call changes."""
+    from tests.mtf.test_matrix import _matrix
+
+    matrix = _matrix({"1h": 0.5, "4h": -0.5, "1d": 0.5, "1w": None})
+    seen: list[dict] = []
+    monkeypatch.setattr(paper, "sync_position", lambda session, **kw: seen.append(kw["signal_extra"]))
+    monkeypatch.setattr(paper, "ensure_syncable_portfolios",
+                        lambda session: [SimpleNamespace(id="pf", code="X", strategy_profile={"auto_timeframes": ["1h"]})])
+    monkeypatch.setattr(paper.shadow_broker, "mark_shadows", lambda *a, **k: None)
+    monkeypatch.setattr(paper.paper_broker, "snapshot_equity", lambda *a, **k: None)
+
+    class _Row:
+        symbol = "PAPERTEST_MTF"
+        timeframe = TIMEFRAME
+        price = 100.0
+        pipeline = _pipeline("BUY")
+        atr = SimpleNamespace(suggested_stop_distance=STOP)
+        candles: list = []
+        rvol = None
+        signal_timing = None
+        mtf_matrix = matrix
+
+    paper.sync_auto_watchlist(SimpleNamespace(commit=lambda: None), [_Row()])
+    assert seen and seen[0]["mtf_matrix"]["summary"]["opposed"] == ["4h"]
+    assert seen[0]["mtf_matrix"]["used_by_decision"] is False
+    assert paper._signal_payload(_pipeline("BUY"), seen[0])["mtf_matrix"]["decision_tf"] == "1h"
