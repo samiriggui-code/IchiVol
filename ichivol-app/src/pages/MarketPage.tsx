@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
+import { MtfPanel } from '../components/MtfPanel'
 import { MarketLayersMenu } from '../components/MarketLayersMenu'
 import { PriceChart } from '../components/PriceChart'
 import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
@@ -633,6 +634,7 @@ export function MarketPage() {
                 <p className="argumentaire">{buildDecisionSummary(detail)}</p>
                 <DecisionPipelinePanel view={pipeline} />
                 <SignalEvidenceCard detail={detail} />
+                <MtfPanel symbol={symbol} timeframe={interval} />
               </div>
             ) : (
               <p className="lecture-synthesis">—</p>

@@ -3999,6 +3999,80 @@
         ]
       }
     },
+    "/api/engine/mtf/{symbol}": {
+      "get": {
+        "operationId": "get_mtf_api_engine_mtf__symbol__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Horizon de d\u00e9cision (15m, 1h, 4h, 1d)",
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "description": "Horizon de d\u00e9cision (15m, 1h, 4h, 1d)",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Unix seconds \u2014 matrice relue \u00e0 cet instant",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Unix seconds \u2014 matrice relue \u00e0 cet instant",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Mtf Api Engine Mtf  Symbol  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Mtf",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
     "/api/engine/ohlcv/{symbol}": {
       "get": {
         "description": "Neutral OHLCV for chart / front \u2014 resolves via catalog (binance, twelve_data, or biquote).\n`x_twelve_data_key`, when present, overrides the operator's\nTWELVE_DATA_API_KEY for this request only -- see app/market_data/twelve_data.py.",
@@ -4075,6 +4149,177 @@
           }
         },
         "summary": "Get Ohlcv",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/orderbook/status": {
+      "get": {
+        "operationId": "get_orderbook_status_api_engine_orderbook_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Orderbook Status Api Engine Orderbook Status Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Orderbook Status",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/orderbook/{symbol}/minutes": {
+      "get": {
+        "operationId": "get_orderbook_minutes_api_engine_orderbook__symbol__minutes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Unix seconds (d\u00e9faut : maintenant \u2212 2 h)",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Unix seconds (d\u00e9faut : maintenant \u2212 2 h)",
+              "title": "From"
+            }
+          },
+          {
+            "description": "Unix seconds, exclu (d\u00e9faut : maintenant)",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Unix seconds, exclu (d\u00e9faut : maintenant)",
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 240,
+              "maximum": 4320,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Orderbook Minutes Api Engine Orderbook  Symbol  Minutes Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Orderbook Minutes",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/orderbook/{symbol}/quality": {
+      "get": {
+        "operationId": "get_orderbook_quality_api_engine_orderbook__symbol__quality_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hours",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "maximum": 168,
+              "minimum": 1,
+              "title": "Hours",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Orderbook Quality Api Engine Orderbook  Symbol  Quality Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Orderbook Quality",
         "tags": [
           "engine"
         ]

@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
+import { MtfPanel } from '../components/MtfPanel'
 import { ChartIntelligencePanel } from '../components/chart-intelligence'
 import { PaperConfirmSheet } from '../components/PaperConfirmSheet'
 import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
@@ -674,6 +675,7 @@ export function DecisionsPage() {
                 <SignalEvidenceCard detail={detail} />
               </div>
             )}
+            {detailSym && <MtfPanel symbol={detailSym} timeframe={detail?.timeframe || '1h'} />}
             {detailSym && (
               <div className="ci-embed">
                 <ChartIntelligencePanel

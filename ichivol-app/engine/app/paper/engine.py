@@ -554,6 +554,11 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
                 extra["fibonacci"] = fib_gate.fibonacci_payload
             if ctx_gate.context_payload is not None:
                 extra["context"] = ctx_gate.context_payload
+            mtf = getattr(row, "mtf_matrix", None)
+            if mtf is not None:
+                # MTF-1: what the engine knew about every horizon at this decision (observe-only, never read
+                # back by the strategy). Persisted so a historical marker shows it without a recompute.
+                extra["mtf_matrix"] = mtf.to_dict()
             if blocked:
                 extra["structure_blocked"] = struct_gate.blocked
                 extra["fibonacci_blocked"] = fib_gate.blocked

@@ -1,0 +1,136 @@
+/* MTF-1 — panneau tendances multi-horizons. Tons repris de .market-page .tag (green / amber / red / gray). */
+
+.mtf-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.mtf-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mtf-panel-head h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mtf-panel .mtf-muted {
+  color: var(--muted-foreground, #7d8288);
+  font-size: 11px;
+}
+
+.mtf-panel .mtf-sentence {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.mtf-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mtf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.mtf-table th,
+.mtf-table td {
+  text-align: left;
+  padding: 6px 8px 6px 0;
+  border-bottom: 1px solid var(--border, #e7e5df);
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.mtf-table th {
+  font: 10px 'DM Mono', ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted-foreground, #7d8288);
+  font-weight: 500;
+}
+
+.mtf-table tr.is-decision td {
+  font-weight: 600;
+}
+
+.mtf-table .mtf-provisional {
+  display: block;
+  font-size: 10px;
+  color: var(--muted-foreground, #7d8288);
+  font-weight: 400;
+}
+
+.mtf-tag {
+  display: inline-block;
+  font: 10px 'DM Mono', ui-monospace, monospace;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #edf3fa;
+  color: #3978bb;
+  white-space: nowrap;
+}
+
+.mtf-tag.green { background: #e7f3ee; color: #168579; }
+.mtf-tag.amber { background: #faf0df; color: #a8782a; }
+.mtf-tag.red { background: #f9eae6; color: #b35346; }
+.mtf-tag.gray { background: #f0efeb; color: #888b89; }
+
+html.dark .mtf-tag { background: #1f2a38; color: #8db6e4; }
+html.dark .mtf-tag.green { background: #16302b; color: #5cc3b2; }
+html.dark .mtf-tag.amber { background: #33291a; color: #d6aa5f; }
+html.dark .mtf-tag.red { background: #3a2320; color: #e08a7d; }
+html.dark .mtf-tag.gray { background: #262a31; color: #9aa0a6; }
+
+.mtf-lines {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 10px;
+  margin: 0;
+}
+
+.mtf-lines dt {
+  font: 10px 'DM Mono', ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted-foreground, #7d8288);
+  padding-top: 2px;
+}
+
+.mtf-lines dd {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.mtf-panel .mtf-error {
+  color: var(--bear, #b35346);
+  font-size: 12px;
+}
+
+.mtf-table td.mtf-trend {
+  white-space: normal;
+  min-width: 90px;
+}
+
+@media (max-width: 600px) {
+  .mtf-table .mtf-col-opt {
+    display: none;
+  }
+  .mtf-lines {
+    grid-template-columns: 1fr;
+  }
+  .mtf-lines dt {
+    padding-top: 6px;
+  }
+}

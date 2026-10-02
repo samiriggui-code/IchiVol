@@ -413,6 +413,7 @@ def open_paper_position(
             signal_extra={
                 "evidence_id": evidence_id,
                 "context": row.context.to_dict() if row.context else None,
+                "mtf_matrix": row.mtf_matrix.to_dict() if getattr(row, "mtf_matrix", None) is not None else None,
                 **extra_signal,
             },
             manual_notional=manual_notional,

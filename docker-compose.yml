@@ -62,6 +62,32 @@ services:
       TWELVE_DATA_API_KEY: ${TWELVE_DATA_API_KEY:-}
       ENABLE_BACKTEST_EVIDENCE: ${ENABLE_BACKTEST_EVIDENCE:-true}
       BACKTEST_EVIDENCE_INTERVAL_S: ${BACKTEST_EVIDENCE_INTERVAL_S:-86400}
+      OB_DATA_DIR: /data/orderbook
+    volumes:
+      # OB-1: files written by orderbook-collector, read-only for the engine (API /orderbook, FactSheet ob.*)
+      - ichivol_orderbook:/data/orderbook:ro
+    networks:
+      - ichivol
+
+  # OB-1 — collecte du carnet d'ordres + aggTrades Binance spot (docs/ETUDE-ORDERFLOW-MTF-2026-10-02.md §3.3).
+  # Service séparé : son arrêt ou son plantage n'affecte ni l'engine ni le paper. Même image que l'engine,
+  # sans migrations (entrypoint remplacé). Observe-only : aucune donnée n'entre dans les décisions.
+  orderbook-collector:
+    image: ichivol-engine:latest
+    container_name: ichivol-orderbook-collector
+    restart: unless-stopped
+    depends_on:
+      - engine
+    entrypoint: ['python', '-m', 'app.microstructure.book.collector']
+    environment:
+      OB_SYMBOLS: ${OB_SYMBOLS:-BTCUSDT}
+      OB_DATA_DIR: /data/orderbook
+      OB_RAW: ${OB_RAW:-1}
+      OB_RAW_RETENTION_DAYS: ${OB_RAW_RETENTION_DAYS:-7}
+      OB_AGG_RETENTION_DAYS: ${OB_AGG_RETENTION_DAYS:-365}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - ichivol_orderbook:/data/orderbook
     networks:
       - ichivol
 
@@ -126,6 +152,7 @@ services:
 
 volumes:
   ichivol_pg:
+  ichivol_orderbook:
 
 networks:
   ichivol:

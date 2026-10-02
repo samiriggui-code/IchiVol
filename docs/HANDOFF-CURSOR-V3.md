@@ -1,5 +1,14 @@
 # Handoff Cursor ↔ Claude — IchiVol V3
 
+## ▶ 2026-10-02 — Claude : MTF-1 + OB-1 livrés sur `claude/vigilant-einstein-grz6sq` (NON déployés)
+
+Décision Samir après l'étude [`ETUDE-ORDERFLOW-MTF-2026-10-02.md`](./ETUDE-ORDERFLOW-MTF-2026-10-02.md) : « oui, fais tout ça ».
+- **MTF-1** (`921c90b`) : matrice 1h / 4h / 1d / 1w, route `/mtf/{symbol}`, panneau React, faits agents `mtf.*`, matrice copiée dans `entry_signal` / `exit_signal`. Observe-only ; pipeline, `mtf_aligned` et paper inchangés.
+- **OB-1** : service `orderbook-collector` (BTCUSDT spot), routes `/orderbook/*`, faits `ob.*`, carte qualité. Observe-only.
+- Goldens API régénérés (+4 routes, ajouts seulement). Engine : suite complète verte (Python 3.12) ; front : `npm run build` OK.
+- **Non testé contre Binance réel** (hôte bloqué dans la session cloud). Déploiement et retour arrière : §11 de l'étude.
+- Pas de PR ouverte (non demandée).
+
 ## ▶ ARRÊT DU SOIR 2026-09-28 (~21h30 UTC) — POINT DE REPRISE EXACT
 
 **En prod (VPS), `main` @ `6549d7e`, rien d'autre à déployer ce soir :**

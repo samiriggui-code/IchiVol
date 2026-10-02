@@ -26,6 +26,7 @@ import {
   type EngineAssetClass,
   type EngineInstrument,
 } from '../lib/universe'
+import { OrderbookQualityCard } from '../components/OrderbookQualityCard'
 import './ContextPage.css'
 
 type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
@@ -616,6 +617,8 @@ export function ContextPage() {
           </div>
         </section>
       </div>
+
+      <OrderbookQualityCard />
 
       <section className="card" style={{ marginTop: 16 }}>
         <div className="card-head">
