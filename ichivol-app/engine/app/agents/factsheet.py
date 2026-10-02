@@ -21,7 +21,7 @@ from typing import Any, Sequence
 logger = logging.getLogger(__name__)
 
 SCHEMA = "ichivol.factsheet.v1"
-# 60 → 72 (MTF-1) : + 10 faits multi-horizons (direction / état par horizon, accords, oppositions).
+# 60 → 72 : + 10 faits multi-horizons (MTF-1) et ≤ 5 faits carnet (OB-1).
 MAX_FACTS = 72
 _VALIDATION_NA = "N/A"
 
@@ -259,6 +259,48 @@ def facts_from_mtf(
     return facts
 
 
+def facts_from_orderbook(
+    status: dict[str, Any] | None,
+    minute: dict[str, Any] | None,
+    *,
+    reason: str | None = None,
+) -> list[dict[str, Any]]:
+    """OB-1 : carnet collecté (Binance spot seulement) — état, et dernière minute agrégée si elle est SYNCED.
+
+    Données d'une plateforme : pas tout le marché. Le spread est publié en % (le validateur refuse « pb »)."""
+    common = dict(engine="orderbook", timeframe="1m", source="binance-spot", validation_status="NON_VALIDE",
+                  decision_role="context")
+    state = (status or {}).get("state")
+    if status is None or state in (None, "UNAVAILABLE"):
+        return [_fact("ob.state", field="state", value=None, as_of=None, known_at=None, status="unavailable",
+                      reason=reason or (status or {}).get("reason") or "not_collected", **common)]
+    facts = [_fact("ob.state", field="state", value=state, as_of=None,
+                   known_at=int(status["written_at_ms"]) // 1000 if status.get("written_at_ms") else None, **common)]
+    if not minute:
+        return facts
+    t = minute.get("t")
+    at = dict(as_of=t, known_at=(t + 60) if isinstance(t, int) else None)
+    if minute.get("book_state") != "SYNCED":
+        facts.append(_fact("ob.minute.book_state", field="minute.book_state", value=minute.get("book_state"),
+                           **at, **common))
+        return facts
+    spread = minute.get("spread_bps_mean")
+    depth = minute.get("depth_10bp") or {}
+    trades = minute.get("trades") or {}
+    facts += [
+        _fact("ob.minute.spread_pct", field="minute.spread_pct",
+              value=round(spread / 100, 6) if isinstance(spread, (int, float)) else None, unit="%", **at, **common),
+        _fact("ob.minute.depth_10bp_bid", field="minute.depth_10bp_bid",
+              value=depth.get("bid") if depth.get("covered") else None,
+              reason=None if depth.get("covered") else "outside_snapshot_depth", **at, **common),
+        _fact("ob.minute.depth_10bp_ask", field="minute.depth_10bp_ask",
+              value=depth.get("ask") if depth.get("covered") else None,
+              reason=None if depth.get("covered") else "outside_snapshot_depth", **at, **common),
+        _fact("ob.minute.aggressor_delta", field="minute.aggressor_delta", value=trades.get("delta"), **at, **common),
+    ]
+    return facts
+
+
 def facts_from_paper(
     position: dict[str, Any] | None,
     lock: dict[str, Any] | None,
@@ -455,6 +497,22 @@ def build_factsheet(
         except Exception:
             cal_reason = "calendar_error"
 
+    ob_status = ob_minute = None
+    ob_reason = "historical_as_of_not_supported" if historical else None
+    if not historical:
+        try:
+            from app.config import settings
+            from app.microstructure.book import read as ob_read
+            from app.microstructure.book.storage import read_status
+
+            raw_status = read_status(settings.ob_data_dir, sym)
+            ob_status = ob_read.effective_status(raw_status, now_s) if raw_status is not None else None
+            if ob_status is not None and ob_status.get("collector_alive"):
+                ob_minute = ob_read.latest(settings.ob_data_dir, sym, now_s)
+        except Exception:
+            logger.warning("factsheet: order book unavailable", exc_info=True)
+            ob_reason = "orderbook_error"
+
     return assemble(
         symbol=sym,
         timeframe=timeframe,
@@ -465,6 +523,7 @@ def build_factsheet(
             facts_from_paper(position, lock, timeframe=timeframe, as_of=bar_as_of, reason=paper_reason),
             facts_from_calendar(events, now=now_s, timeframe=timeframe, reason=cal_reason),
             facts_from_mtf(detail, timeframe=timeframe, reason=pipe_reason),
+            facts_from_orderbook(ob_status, ob_minute, reason=ob_reason),
             facts_from_cards(cards),
         ],
         engine_version=f"fs0-v1+{ENGINE_VERSION}",

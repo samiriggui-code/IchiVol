@@ -38,7 +38,8 @@ _CAPABILITIES: dict[str, ProviderCapabilities] = {
         streaming=False,  # REST poll only today; WS unused
         quotes=True,  # bookTicker implemented (BinanceQuoteProvider); not default paper path
         trades=True,  # fetch_trades + aggTrades (protection); not Lab default
-        depth=False,  # unused
+        depth=False,  # no depth in the provider fetch path; OB-1 collects BTCUSDT spot depth in a separate
+        # service (app/microstructure/book/collector.py), read via /orderbook — never by the screener/pipeline
         open_interest=True,  # futures hist via binance_futures
         funding=True,
         real_volume=True,  # EXCHANGE_VOLUME

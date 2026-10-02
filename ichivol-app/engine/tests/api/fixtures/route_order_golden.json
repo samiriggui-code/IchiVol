@@ -619,6 +619,27 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/orderbook/status",
+    "endpoint": "get_orderbook_status"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/orderbook/{symbol}/minutes",
+    "endpoint": "get_orderbook_minutes"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/orderbook/{symbol}/quality",
+    "endpoint": "get_orderbook_quality"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/health",
     "endpoint": "health"
   }

@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     # RS-D1 paper live (docs/RS-09-RS-D1-PAPER-DESIGN.md): separate portfolio RS_D1_PAPER_V1, rules = rs/book.py.
     enable_rs_d1_paper: bool = True
     rs_d1_interval_s: float = 60.0
+    # OB-1 order book collector output (separate service, shared volume mounted read-only here).
+    ob_data_dir: str = "/data/orderbook"
 
 
 settings = Settings()

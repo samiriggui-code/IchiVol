@@ -500,3 +500,60 @@ Le test V1 recoupe largement B5 (§6.3). S'il est rejoué, il doit se démarquer
    - la frontière 1w de `compute_signal_timing`, avant d'utiliser cet horizon.
 
 **Décision demandée à Samir :** lancer P1 + P2 (MTF), et dire si P3 (collecte carnet BTCUSDT, service séparé sur le VPS) est autorisée.
+
+---
+
+## 11. Livraison (2026-10-02, décision Samir : « oui, fais tout ça »)
+
+Branche `claude/vigilant-einstein-grz6sq`. **Non déployé.** Tout est observe-only : aucune décision, gate, confidence ou ordre paper ne lit ces données.
+
+### P1 + P2 — Matrice multi-horizons (MTF-1), commit `921c90b`
+
+| Élément | Fichier |
+|---|---|
+| Calcul pur (direction, état, provisoire, contexte, relations, phrase, lecture portefeuille) | `engine/app/mtf/matrix.py` |
+| Collecte + cache jusqu'à la prochaine clôture | `engine/app/mtf/service.py` |
+| Branchement scan (pipeline et `mtf_aligned` inchangés) | `engine/app/screener/service.py` |
+| Route `GET /api/engine/mtf/{symbol}?timeframe&as_of` | `engine/app/api/mtf.py` |
+| Persistance dans `entry_signal` / `exit_signal` (auto + manuel) | `engine/app/paper/engine.py`, `engine/app/api/paper_orders.py` |
+| Faits agents `mtf.<tf>.direction / .state`, `mtf.summary.aligned / .opposed` | `engine/app/agents/factsheet.py` |
+| Correction frontière 1w (lundi) | `engine/app/screener/timing.py` |
+| Panneau (Marché, fiche Décision, fiche Position « ce que le moteur savait ») | `src/components/MtfPanel.tsx`, `src/lib/mtf.ts` |
+
+Écarts par rapport au §4 :
+- un Ichimoku **sans nuage** (< 78 bougies closes) est publié `UNAVAILABLE / insufficient_history`, pas `NEUTRAL` ;
+- la lecture « Portefeuille » suit la règle réelle `exit_mode=direction` : un lot long auto se ferme quand la direction n'est plus LONG, **y compris NEUTRAL**, pas seulement sur un SELL.
+
+### P3 — Collecte du carnet (OB-1)
+
+| Élément | Fichier |
+|---|---|
+| Carnet synchronisé snapshot + deltas, états, couverture | `engine/app/microstructure/book/sync.py` |
+| aggTrades : doublons, trous, comblement REST | `engine/app/microstructure/book/trades.py` |
+| Agrégat 1 min (grille bucket × minute, carnet échantillonné 1 s si SYNCED) | `engine/app/microstructure/book/aggregate.py` |
+| Fichiers brut / agrégat / statut, rétention, lecture tolérante | `engine/app/microstructure/book/storage.py` |
+| Service (WS `depth@100ms` + `aggTrade`, reconnexion, resync) | `engine/app/microstructure/book/collector.py` |
+| Routes `GET /api/engine/orderbook/status`, `/{symbol}/minutes`, `/{symbol}/quality` | `engine/app/api/orderbook.py` |
+| Faits agents `ob.state`, `ob.minute.*` | `engine/app/agents/factsheet.py` |
+| Service compose `orderbook-collector` + volume `ichivol_orderbook` (ro côté engine) | `docker-compose.yml` |
+| Carte qualité (page Contexte) | `src/components/OrderbookQualityCard.tsx` |
+
+Paramètres figés avant collecte : BTCUSDT, bucket 10 USDT, plage ±1 %, profondeur proche ±0,1 %, minute SYNCED si ≥ 55 s synchronisées, snapshot 1 000 niveaux, brut 7 jours, agrégat 365 jours. `bookTicker` n'est pas abonné (best bid / ask lu dans le carnet).
+
+**Vérifié ici :** tests unitaires, boucle réelle contre un faux Binance local (coupure, reconnexion, resync), imports dans l'image Python de base avec les seuls dossiers copiés par le Dockerfile, comportement sans réseau (reconnexion espacée, statut écrit, pas de crash).
+**Non vérifié :** Binance réel (hôte bloqué par la politique réseau de la session) et volume disque réel. À mesurer sur le VPS après 24 h (`du -sh` du volume).
+
+### Déploiement (à faire par Samir ou une session avec accès VPS)
+
+1. Vérifier depuis le VPS : `curl -sI https://data-api.binance.vision/api/v3/depth?symbol=BTCUSDT&limit=5` et l'accès WS à `data-stream.binance.vision`.
+2. `docker compose --env-file deploy/vps/.env up -d --build engine server web orderbook-collector`.
+3. Après 5 min : `GET /api/engine/orderbook/status`, puis `state = SYNCED` et `collector_alive = true`.
+4. Après 24 h : carte qualité (≥ 95 % de minutes synchronisées attendu), `du -sh` du volume ; ajuster `OB_RAW_RETENTION_DAYS` si besoin.
+
+**Retour arrière :** `docker compose stop orderbook-collector` (l'engine n'en dépend pas). La matrice MTF n'a pas de flag : elle ne change aucune décision. Pour la retirer, revenir au commit précédent.
+
+### Suite (non commencée)
+
+- **P4 :** mesure d'exécution en shadow (écart réel contre l'hypothèse 2 + 3 pb du paper), aux décisions BASELINE et RS-D1. Elle demande 2 à 4 semaines de collecte propre.
+- **P5 :** heatmap, bulles et profondeur dans le graphique. Seulement si P4 montre un écart exploitable.
+- **P6 :** détections D1–D11 en observation.
