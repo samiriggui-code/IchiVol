@@ -23,7 +23,8 @@ dev.stderr.log
 ichivol-app/tmp-*.json
 ichivol-app/server/tmp-*
 .firecrawl/
-.claude/
+.claude/*
+!.claude/skills/
 
 # research / scratch (heavy, not product)
 _research/
