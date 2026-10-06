@@ -30,6 +30,15 @@ import {
   regimeLabel,
   type Verdict,
 } from '../lib/labFormat'
+import {
+  explainAblationStep,
+  explainFold,
+  explainRegime,
+  explainVariant,
+  foldVerdict,
+  type Explanation,
+} from '../lib/labExplain'
+import { LabExplainSheet } from '../components/LabExplainSheet'
 import './BacktestsPage.css'
 
 type LabTab = 'Backtests' | 'Ablations' | 'Régimes' | 'Walk-forward'
@@ -94,7 +103,7 @@ export function BacktestsPage() {
   const [coverage, setCoverage] = useState<BacktestCoverage | null>(null)
   const [runs, setRuns] = useState<BacktestRuns | null>(null)
   const [loading, setLoading] = useState(true)
-  const [open, setOpen] = useState<string | null>(null)
+  const [sheet, setSheet] = useState<Explanation | null>(null)
 
   const [symbol, setSymbol] = useState('BTCUSDT')
   const [timeframe, setTimeframe] = useState('1h')
@@ -127,7 +136,6 @@ export function BacktestsPage() {
     if (labTab === 'Backtests' || busy) return
     setBusy(true)
     setError(null)
-    setOpen(null)
     try {
       if (labTab === 'Ablations') setAblation(await getAblation(symbol, timeframe, depth))
       else if (labTab === 'Régimes') setRegimes(await getRegimeSlices(symbol, timeframe, depth))
@@ -142,7 +150,11 @@ export function BacktestsPage() {
   const latest = runs?.runs?.[0] ?? null
   const variants = latest ? Object.entries(latest.experiments) : []
   const hint = LAB_TABS.find((t) => t.id === labTab)?.hint
-  const toggle = (key: string) => setOpen((cur) => (cur === key ? null : key))
+  const examineBtn = (build: () => Explanation) => (
+    <button type="button" className="subtle lab-examine" onClick={() => setSheet(build())}>
+      Examiner ↗
+    </button>
+  )
 
   return (
     <div className="lab-page">
@@ -164,7 +176,6 @@ export function BacktestsPage() {
             onClick={() => {
               setLabTab(t.id)
               setError(null)
-              setOpen(null)
             }}
           >
             {t.id}
@@ -290,43 +301,17 @@ export function BacktestsPage() {
                       <td>{num(e.profit_factor_median)}</td>
                       <td>{e.small_sample ? badge('ÉCHANTILLON FAIBLE', 'amber') : badge('OK', 'green')}</td>
                       <td>
-                        <button type="button" className="subtle" onClick={() => toggle(key)}>
-                          {open === key ? 'Fermer' : 'Examiner ↗'}
-                        </button>
+                        {examineBtn(() =>
+                          explainVariant(
+                            key,
+                            e,
+                            runs?.runs ?? [],
+                            latest?.experiments.ICHIMOKU_ONLY ?? null,
+                            runs?.min_trades_per_pair ?? 30,
+                          ),
+                        )}
                       </td>
                     </tr>
-                    {open === key && (
-                      <tr className="lab-detail">
-                        <td colSpan={9}>
-                          <p>Évolution sur les {runs?.runs.length ?? 0} derniers runs :</p>
-                          <table>
-                            <thead>
-                              <tr>
-                                <th>RUN</th>
-                                <th>TRADES</th>
-                                <th>RÉUSSITE</th>
-                                <th>ESPÉRANCE</th>
-                                <th>PROFIT FACTOR</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {(runs?.runs ?? []).map((r) => {
-                                const x = r.experiments[key]
-                                return (
-                                  <tr key={r.started_at}>
-                                    <td>{fmtDate(r.ended_at)}</td>
-                                    <td>{x?.trades_total ?? '—'}</td>
-                                    <td>{pct(x?.win_rate_mean)}</td>
-                                    <td>{pct(x?.expectancy_mean, 2, true)}</td>
-                                    <td>{num(x?.profit_factor_median)}</td>
-                                  </tr>
-                                )
-                              })}
-                            </tbody>
-                          </table>
-                        </td>
-                      </tr>
-                    )}
                   </Fragment>
                 ))}
               </tbody>
@@ -379,30 +364,15 @@ export function BacktestsPage() {
                             : badge('RÉFÉRENCE')}
                         </td>
                         <td>
-                          {delta && (
-                            <button type="button" className="subtle" onClick={() => toggle(key)}>
-                              {open === key ? 'Fermer' : 'Examiner ↗'}
-                            </button>
+                          {examineBtn(() =>
+                            explainAblationStep(s, i > 0 ? ablation.steps[i - 1] : null, delta, {
+                              symbol: ablation.symbol,
+                              timeframe: ablation.timeframe,
+                              nBars: ablation.n_bars,
+                            }),
                           )}
                         </td>
                       </tr>
-                      {open === key && delta && (
-                        <tr className="lab-detail">
-                          <td colSpan={9}>
-                            <p>
-                              Conditions ajoutées : <b>{delta.added_conditions.join(', ') || '—'}</b>
-                            </p>
-                            <p>
-                              Par rapport à l’étape précédente : signaux {delta.n_signals_delta >= 0 ? '+' : ''}
-                              {delta.n_signals_delta}, trades {delta.n_trades_delta >= 0 ? '+' : ''}
-                              {delta.n_trades_delta}, réussite {pct(delta.win_rate_delta, 1, true)}, espérance{' '}
-                              {pct(delta.expectancy_delta, 2, true)}, profit factor{' '}
-                              {delta.profit_factor_delta != null ? `${delta.profit_factor_delta > 0 ? '+' : ''}${num(delta.profit_factor_delta)}` : '—'}.
-                            </p>
-                            {delta.note && <p className="muted">{delta.note}</p>}
-                          </td>
-                        </tr>
-                      )}
                     </Fragment>
                   )
                 })}
@@ -431,12 +401,13 @@ export function BacktestsPage() {
                   <th>ESPÉRANCE / TRADE</th>
                   <th>PROFIT FACTOR</th>
                   <th>DRAWDOWN MAX</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
                 {!regimes && (
                   <tr>
-                    <td colSpan={8}>{busy ? 'Calcul en cours…' : 'Choisissez un marché puis « Lancer le calcul ».'}</td>
+                    <td colSpan={9}>{busy ? 'Calcul en cours…' : 'Choisissez un marché puis « Lancer le calcul ».'}</td>
                   </tr>
                 )}
                 {regimes?.slices.map((s) => (
@@ -447,6 +418,15 @@ export function BacktestsPage() {
                     <td>{s.n_bars_in_regime}</td>
                     <td>{s.n_signals}</td>
                     <MetricCells m={metricsOf(s.study)} />
+                    <td>
+                      {examineBtn(() =>
+                        explainRegime(s, regimes.slices.find((x) => x.regime === 'GLOBAL') ?? null, {
+                          symbol: regimes.symbol,
+                          timeframe: regimes.timeframe,
+                          nBars: regimes.n_bars,
+                        }),
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -503,24 +483,20 @@ export function BacktestsPage() {
                   <th>ESPÉRANCE TESTÉE</th>
                   <th>PF TESTÉ</th>
                   <th>VERDICT</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
                 {!walk && (
                   <tr>
-                    <td colSpan={6}>{busy ? 'Calcul en cours…' : 'Choisissez un marché puis « Lancer le calcul ».'}</td>
+                    <td colSpan={7}>{busy ? 'Calcul en cours…' : 'Choisissez un marché puis « Lancer le calcul ».'}</td>
                   </tr>
                 )}
                 {walk?.folds.map((f) => {
                   const is = metricsOf(f.is)
                   const oos = metricsOf(f.oos)
                   const pf = oos?.profit_factor
-                  const v: Verdict =
-                    !oos || oos.num_trades === 0
-                      ? { text: 'AUCUN TRADE', tone: 'gray' }
-                      : pf != null && pf > 1
-                        ? { text: 'TIENT', tone: 'green' }
-                        : { text: 'NE TIENT PAS', tone: 'red' }
+                  const v = foldVerdict(oos)
                   return (
                     <tr key={f.fold_index}>
                       <td>
@@ -535,6 +511,15 @@ export function BacktestsPage() {
                       </td>
                       <td>{num(pf)}</td>
                       <td>{verdictBadge(v)}</td>
+                      <td>
+                        {examineBtn(() =>
+                          explainFold(
+                            f,
+                            { symbol: walk.symbol, timeframe: walk.timeframe, nBars: walk.n_bars },
+                            walk.folds.length,
+                          ),
+                        )}
+                      </td>
                     </tr>
                   )
                 })}
@@ -543,6 +528,8 @@ export function BacktestsPage() {
           </div>
         </section>
       )}
+
+      {sheet && <LabExplainSheet explanation={sheet} onClose={() => setSheet(null)} />}
 
       <div style={{ height: 20 }} />
 

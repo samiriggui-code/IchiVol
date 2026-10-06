@@ -182,7 +182,7 @@
 .lab-page .card-body {
   padding:10px 23px 22px;
 }
-.lab-page .tag {
+.lab-page .tag, .lab-sheet .tag {
   font:9px 'DM Mono';
   padding:5px 7px;
   background:#edf3fa;
@@ -190,19 +190,19 @@
   color:#3978bb;
   white-space:nowrap;
 }
-.lab-page .tag.green {
+.lab-page .tag.green, .lab-sheet .tag.green {
   background:#e7f3ee;
   color:#168579;
 }
-.lab-page .tag.amber {
+.lab-page .tag.amber, .lab-sheet .tag.amber {
   background:#faf0df;
   color:#a8782a;
 }
-.lab-page .tag.red {
+.lab-page .tag.red, .lab-sheet .tag.red {
   background:#f9eae6;
   color:#b35346;
 }
-.lab-page .tag.gray {
+.lab-page .tag.gray, .lab-sheet .tag.gray {
   background:#f0efeb;
   color:#888b89;
 }
@@ -1299,3 +1299,49 @@
 .lab-detail td:first-child { max-width: none; }
 .lab-detail p { margin: 4px 0; }
 .lab-page th { white-space: normal; }
+
+/* Fiche « Examiner » (portail body, hors .lab-page) */
+.lab-sheet { width: min(620px, 100%); }
+.lab-sheet .trade-sheet-scroll { font-size: 13px; line-height: 1.6; }
+.lab-sheet-block { margin: 0 0 16px; }
+.lab-sheet-block p { margin: 0 0 6px; }
+.lab-sheet .subhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground, var(--muted));
+}
+.lab-sheet-takeaway {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border));
+  background: color-mix(in srgb, var(--primary) 7%, transparent);
+}
+.lab-sheet-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 8px;
+  margin: 0 0 16px;
+}
+.lab-sheet-stats > div {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+}
+.lab-sheet-stats dt { font-size: 11px; color: var(--muted-foreground, var(--muted)); }
+.lab-sheet-stats dd { margin: 2px 0; font-size: 18px; }
+.lab-sheet-stats dd.up { color: var(--bull); }
+.lab-sheet-stats dd.down { color: var(--bear); }
+.lab-sheet-stats small { font-size: 11px; line-height: 1.4; display: block; }
+.lab-sheet ol { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.lab-sheet table { width: 100%; font-size: 12px; }
+.lab-sheet td, .lab-sheet th { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+.lab-sheet .lab-up { color: var(--bull); }
+.lab-sheet .lab-down { color: var(--bear); }
+.lab-examine { white-space: nowrap; }

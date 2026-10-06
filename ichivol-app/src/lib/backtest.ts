@@ -195,6 +195,19 @@ export interface StoredExperimentSummary {
   } | null
 }
 
+/** Un trade simulé par le backtest d'une règle (pnl_pct en fraction, net de frais). */
+export interface RulesetTrade {
+  entry_time: number
+  exit_time: number
+  direction: string
+  entry_price: number
+  exit_price: number
+  pnl_pct: number
+  exit_reason: string
+  stop_price?: number
+  target_price?: number
+}
+
 export interface RulesetStudyResult {
   ruleset: RulesetSummary
   symbol: string
@@ -208,6 +221,8 @@ export interface RulesetStudyResult {
     n_signals: number
     n_skipped_in_position: number
     exit_reasons: Record<string, number>
+    trades?: RulesetTrade[]
+    backtest?: { commission_bps?: number; slippage_bps?: number }
   }
   experiment?: StoredExperimentSummary & Record<string, unknown>
   note: string
