@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { KeenIcon } from './KeenIcon'
 import { IconBell } from './NavIcons'
+import { BASELINE_PORTFOLIO_CODE } from '../lib/rsPortfolio'
 import {
   listNotifications,
   markAllNotificationsRead,
@@ -139,6 +140,9 @@ export function NotificationBell({ onOpen }: { onOpen?: () => void }) {
       const q = new URLSearchParams()
       if (symbol) q.set('symbol', symbol)
       if (positionId) q.set('position', positionId)
+      const pf =
+        typeof n.payload?.portfolioCode === 'string' ? n.payload.portfolioCode : null
+      if (pf && pf !== BASELINE_PORTFOLIO_CODE) q.set('pf', pf)
       const interval = payloadInterval(n)
       if (interval) q.set('interval', interval)
       navigate(`/app/portefeuille?tab=positions&${q.toString()}`)
@@ -222,7 +226,7 @@ export function NotificationBell({ onOpen }: { onOpen?: () => void }) {
               </span>
               <p>Aucune notification</p>
               <span className="muted">
-                Les confirms journal et les changements de portes apparaîtront ici.
+                Les décisions enregistrées et les changements de portes apparaîtront ici.
               </span>
             </div>
           ) : (

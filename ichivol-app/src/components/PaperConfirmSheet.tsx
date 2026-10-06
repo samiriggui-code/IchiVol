@@ -369,8 +369,17 @@ export function PaperConfirmSheet({
           )}
 
           <p className="muted paper-confirm-note">
-            Un lot par marché et par portefeuille. RS-D1 n’accepte pas d’ordre manuel. Vente depuis{' '}
-            <Link to="/app/portefeuille">Portefeuille</Link> · <Link to="/app/journal">Journal</Link>.
+            Un lot par marché et par portefeuille. RS-D1 n’accepte pas d’ordre manuel. Fermeture depuis la page{' '}
+            <Link
+              to={
+                portfolioCode === BASELINE_PORTFOLIO_CODE
+                  ? '/app/portefeuille'
+                  : `/app/portefeuille?pf=${encodeURIComponent(portfolioCode)}`
+              }
+            >
+              Portefeuille
+            </Link>
+            .
           </p>
 
           <div className="paper-confirm-actions">

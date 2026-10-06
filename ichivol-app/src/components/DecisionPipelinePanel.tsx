@@ -119,7 +119,7 @@ export function DecisionPipelinePanel({ view }: { view: DecisionPipelineView }) 
         <span className="pipeline-headline muted">{pipelineHeadline(view)}</span>
       </div>
       <p className="pipeline-legend muted">
-        Direction → Participation → Structure → Location → Régime
+        Direction → Participation → Structure → Emplacement → Régime
         {view.native ? ' · moteur natif' : ' · vue adaptée'}
       </p>
       {view.native && view.gateDecision && (
@@ -132,7 +132,7 @@ export function DecisionPipelinePanel({ view }: { view: DecisionPipelineView }) 
       )}
       {readings.length > 0 && (
         <div className="pipeline-readings">
-          <span className="subhead">Lecture PA · MTF · Location · ATR</span>
+          <span className="subhead">Prix · multi-unités de temps · emplacement · volatilité</span>
           <div className="pipeline-readings-grid">
             {readings.map((b) => (
               <ReadingCard key={b.id} block={b} />

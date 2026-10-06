@@ -1225,3 +1225,47 @@
 @media (max-width: 800px) {
   .desk-page .desk-workspace { min-height: 4419px; }
 }
+/* Trajectoire : une couleur par portefeuille paper. */
+.desk-page .desk-pf-legend{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  padding: 10px 23px 0;
+  font-size: 11px;
+  color: var(--ink);
+}
+.desk-page .desk-pf-legend > span{
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.desk-page .desk-pf-legend i{
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.desk-page .desk-pf-legend b{
+  font-weight: 600;
+}
+.desk-page .desk-pf-legend .mono{
+  font: 11px 'DM Mono', ui-monospace, monospace;
+}
+.desk-page .desk-pf-legend small{
+  font-size: 10px;
+  color: var(--muted);
+}
+.desk-page .desk-pf-dot{
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: 1px;
+}
+.desk-page .desk-eq-empty{
+  margin: -140px 0 120px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+}

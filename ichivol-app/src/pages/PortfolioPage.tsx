@@ -25,6 +25,8 @@ import {
   type PaperOverviewPosition,
 } from '../lib/paper'
 import { labelPaperOrderReason, labelRiskRefusal } from '../lib/paperLabels'
+import { labelDecision } from '../lib/decisionLabels'
+import type { DecisionLabel } from '../lib/decisions'
 import { VpValidationBadge } from '../components/VpValidationBadge'
 import { isActionableBuySell } from '../lib/vpValidationCopy'
 import { getRiskLock, type RiskLockState } from '../lib/riskLock'
@@ -40,6 +42,20 @@ import {
   portfolioFromParam,
 } from '../lib/rsPortfolio'
 import './PortfolioPage.css'
+
+function orderStatusFr(status: string): string {
+  switch (status) {
+    case 'FILLED':
+      return 'EXÉCUTÉ'
+    case 'REJECTED':
+      return 'REFUSÉ'
+    case 'CANCELLED':
+    case 'CANCELED':
+      return 'ANNULÉ'
+    default:
+      return status
+  }
+}
 
 type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
 
@@ -288,7 +304,7 @@ export function PortfolioPage() {
               ))}
             </div>
           ) : null}
-          {badge(isRs ? 'RS-D1 · PAPER' : isSessions ? 'SESSIONS · PAPER' : 'BROKER PAPER', 'gray')}
+          {badge(isRs ? 'RS-D1 · PAPER' : isSessions ? 'SESSIONS · PAPER' : 'ICHIVOL · PAPER', 'gray')}
         </div>
       </div>
 
@@ -328,7 +344,7 @@ export function PortfolioPage() {
       <div className="grid">
         <section className="card">
           <div className="card-head">
-            <h2>Risk Kernel</h2>
+            <h2>Contrôle du risque</h2>
             <Link to="/app/settings" className="muted" style={{ fontSize: 11 }}>
               Paramètres →
             </Link>
@@ -685,7 +701,7 @@ export function PortfolioPage() {
                     <td>
                       <span className="mono">{fmtEur(o.fee, 2)}</span>
                     </td>
-                    <td>{badge(o.status === 'FILLED' ? 'EXÉCUTÉ' : o.status, 'gray')}</td>
+                    <td>{badge(orderStatusFr(o.status), 'gray')}</td>
                   </tr>
                 ))
               )}
@@ -763,7 +779,8 @@ export function PortfolioPage() {
           <div className="pf-fiche-body">
             <div className="dialog-head">
               <h2>
-                {displaySymbol(fiche.symbol)} · {String(fiche.direction)} ·{' '}
+                {displaySymbol(fiche.symbol)} ·{' '}
+                {fiche.direction === 'LONG' ? 'Achat' : fiche.direction === 'SHORT' ? 'Vente' : String(fiche.direction)} ·{' '}
                 {String(fiche.timeframe).toUpperCase()}
               </h2>
               <button type="button" onClick={() => setFiche(null)} aria-label="Fermer">
@@ -778,7 +795,7 @@ export function PortfolioPage() {
                   : 'Ouverte après votre confirmation.'}{' '}
               Entrée le {new Date(fiche.entry_time).toLocaleString('fr-FR')} à{' '}
               {fmtPx(fiche.entry_price)}.
-              {fiche.entry_decision ? ` Signal : ${fiche.entry_decision}.` : ''}{' '}
+              {fiche.entry_decision ? ` Signal : ${labelDecision(fiche.entry_decision as DecisionLabel)}.` : ''}{' '}
               {isActionableBuySell(fiche.entry_decision) ? <VpValidationBadge /> : null}
             </p>
             {fiche.source !== 'rs_d1' ? (

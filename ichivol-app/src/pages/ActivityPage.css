@@ -1250,3 +1250,19 @@
     gap: 18px;
   }
 }
+
+/* Fiche : lecture actuelle du moteur, distincte de l'événement journalisé */
+.ops-page .ops-dossier-now {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.ops-page .ops-dossier-now h3 {
+  font-size: 12px;
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+.ops-page .ops-dossier-note {
+  font-size: 11px;
+  color: var(--muted);
+}

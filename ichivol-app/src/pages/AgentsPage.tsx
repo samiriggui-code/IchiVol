@@ -35,7 +35,7 @@ const FALLBACK_CARDS: AgentRoleCard[] = [
     kind: 'code',
     runtimeAgentId: null,
     status: 'EN VEILLE',
-    statusReason: 'API agents injoignable',
+    statusReason: 'service des agents injoignable',
     mode: 'Règles',
     permission: 'market_read',
     blurb: 'Observe les régimes et la structure du marché.',
@@ -58,10 +58,10 @@ const FALLBACK_CARDS: AgentRoleCard[] = [
     kind: 'llm',
     runtimeAgentId: 'eve',
     status: 'EN VEILLE',
-    statusReason: 'API agents injoignable',
-    mode: 'LLM / règles',
+    statusReason: 'service des agents injoignable',
+    mode: 'IA / règles',
     permission: 'signals_read',
-    blurb: 'Repère les setups et rassemble les preuves.',
+    blurb: 'Repère les configurations et rassemble les preuves.',
     icon: '◇',
     lastAction: null,
     lastActionAt: null,
@@ -81,10 +81,10 @@ const FALLBACK_CARDS: AgentRoleCard[] = [
     kind: 'code',
     runtimeAgentId: null,
     status: 'EN VEILLE',
-    statusReason: 'API agents injoignable',
+    statusReason: 'service des agents injoignable',
     mode: 'Règles',
     permission: 'risk_read',
-    blurb: 'Applique les limites du Risk Kernel.',
+    blurb: 'Applique les limites du contrôle du risque.',
     icon: '◈',
     lastAction: null,
     lastActionAt: null,
@@ -104,7 +104,7 @@ const FALLBACK_CARDS: AgentRoleCard[] = [
     kind: 'code',
     runtimeAgentId: null,
     status: 'EN VEILLE',
-    statusReason: 'API agents injoignable',
+    statusReason: 'service des agents injoignable',
     mode: 'Règles',
     permission: 'orders_execute',
     blurb: 'Transmet uniquement les décisions validées.',
@@ -127,7 +127,7 @@ const FALLBACK_CARDS: AgentRoleCard[] = [
     kind: 'code',
     runtimeAgentId: null,
     status: 'EN VEILLE',
-    statusReason: 'API agents injoignable',
+    statusReason: 'service des agents injoignable',
     mode: 'Règles',
     permission: 'paper_orders',
     blurb: 'Surveille le stop et les conditions de sortie.',
@@ -150,7 +150,7 @@ const FALLBACK_CARDS: AgentRoleCard[] = [
     kind: 'code',
     runtimeAgentId: null,
     status: 'EN VEILLE',
-    statusReason: 'API agents injoignable',
+    statusReason: 'service des agents injoignable',
     mode: 'Règles',
     permission: 'market_read',
     blurb: 'Suit les horaires et contraintes de session.',
@@ -169,7 +169,29 @@ const FALLBACK_CARDS: AgentRoleCard[] = [
   },
 ]
 
-const CHAIN_DEFAULT = ['Observation', 'Opportunité', 'Risk Kernel', 'Position', 'Exécution']
+const CHAIN_DEFAULT = ['Observation', 'Opportunité', 'Contrôle du risque', 'Position', 'Exécution']
+
+const PERMISSION_LABELS: Record<string, string> = {
+  market_read: 'Lecture du marché',
+  signals_read: 'Lecture des signaux',
+  risk_read: 'Lecture du risque',
+  paper_orders: 'Ordres paper',
+  orders_execute: 'Exécution des ordres paper',
+}
+
+function permissionLabel(key: string): string {
+  return PERMISSION_LABELS[key] ?? labelEngineCode(key)
+}
+
+function modeLabel(mode: string): string {
+  return mode.replace(/\bLLM\b/g, 'IA')
+}
+
+function taskLabel(kind: string | null | undefined): string {
+  if (kind === 'recheck') return 'contrôle'
+  if (kind === 'mission') return 'mission'
+  return kind ? labelEngineCode(kind) : 'tâche'
+}
 
 function badge(text: string, tone: BadgeTone = ''): ReactNode {
   let inferred = tone
@@ -196,20 +218,20 @@ function dash(value: string | null | undefined, reason?: string, max = 72): stri
 function runtimeNotice(data: AgentsListResponse | null, loadError: string | null): string {
   // Keep length close to maquette notice (~62px height at 390).
   if (loadError) {
-    return 'Supervision des agents · runtime inaccessible · —'
+    return 'Supervision des agents · service injoignable · —'
   }
   if (!data) {
-    return 'Supervision des agents · chargement du runtime Eve…'
+    return 'Supervision des agents · chargement…'
   }
   const r = data.runtime
   const eve = data.agents.find((a) => a.id === 'opportunities')
-  const worker = r.workerStarted ? 'worker minute démarré' : 'worker non détecté'
+  const worker = r.workerStarted ? 'surveillance minute active' : 'surveillance minute non détectée'
   const run =
     eve?.status === 'ACTIF'
       ? 'Eve en exécution'
       : (data.eve?.openTasks ?? 0) > 0
         ? `${data.eve.openTasks} tâche(s) ouverte(s)`
-        : 'aucun agent LLM en exécution'
+        : 'aucun agent IA en cours'
   return `Supervision des agents · ${worker} · ${run}.`
 }
 
@@ -219,7 +241,6 @@ export function AgentsPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [detail, setDetail] = useState<AgentRoleCard | null>(null)
-  const [ficheStub, setFicheStub] = useState<string | null>(null)
   const [missionSymbol, setMissionSymbol] = useState('BTCUSDT')
   const [missionBusy, setMissionBusy] = useState(false)
   const [missionMsg, setMissionMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -256,10 +277,9 @@ export function AgentsPage() {
   const closeDetail = useCallback(() => {
     dialogRef.current?.close()
     setDetail(null)
-    setFicheStub(null)
   }, [])
 
-  // Deep-link stub: ?fiche=agent:<id> — FicheHost not on main tip.
+  // Deep-link ?fiche=agent:<id> opens the permissions dialog.
   useEffect(() => {
     const raw = searchParams.get('fiche')
     if (!raw || !raw.startsWith('agent:')) return
@@ -267,9 +287,6 @@ export function AgentsPage() {
     ficheHandled.current = raw
     const id = raw.slice('agent:'.length).trim()
     const card = cards.find((c) => c.id === id || c.runtimeAgentId === id) ?? null
-    setFicheStub(
-      `FicheAgent non branchée (FicheHost absent sur main) · deep-link ${raw} · dialog permissions ci-dessous.`,
-    )
     if (card) openDetail(card)
     const next = new URLSearchParams(searchParams)
     next.delete('fiche')
@@ -290,7 +307,7 @@ export function AgentsPage() {
       })
       setMissionMsg({
         ok: true,
-        text: `Mission ${res.mission.symbol} · prochain recheck ${fmtDue(res.mission.dueAt)} · thread Copilot ${res.mission.threadId.slice(0, 8)}…`,
+        text: `Mission ${res.mission.symbol} créée · prochain contrôle ${fmtDue(res.mission.dueAt)} · réponse dans Copilot.`,
       })
       void load()
     } catch (err) {
@@ -313,18 +330,12 @@ export function AgentsPage() {
           <h1>Agents</h1>
           <p className="subtitle">Une chaîne de décision sous contrôle.</p>
         </div>
-        <div className="actions">{badge('DONNÉES LIVE', 'gray')}</div>
+        <div className="actions">{badge(data ? 'SERVICE JOIGNABLE' : loadError ? 'SERVICE INJOIGNABLE' : '—', 'gray')}</div>
       </div>
 
       <div className="notice blue">
         ⬡ <span>{runtimeNotice(data, loadError)}</span>
       </div>
-
-      {ficheStub ? (
-        <div className="notice">
-          ⬡ <span>{ficheStub}</span>
-        </div>
-      ) : null}
 
       <div className="grid three">
         {cards.map((a) => (
@@ -338,11 +349,11 @@ export function AgentsPage() {
             <p>{a.blurb}</p>
             <div className="statline">
               <span>Mode</span>
-              <b>{a.mode}</b>
+              <b>{modeLabel(a.mode)}</b>
             </div>
             <div className="statline">
               <span>Permission</span>
-              <b>{a.permission}</b>
+              <b>{permissionLabel(a.permission)}</b>
             </div>
             <div className="statline">
               <span>Dernière action</span>
@@ -352,7 +363,7 @@ export function AgentsPage() {
               <span>Prochaine tâche</span>
               <b>
                 {a.nextTaskDue
-                  ? `${a.nextTaskKind ?? 'task'}${a.nextTaskSymbol ? ` · ${a.nextTaskSymbol}` : ''} · ${fmtDue(a.nextTaskDue)}`
+                  ? `${taskLabel(a.nextTaskKind)}${a.nextTaskSymbol ? ` · ${a.nextTaskSymbol}` : ''} · ${fmtDue(a.nextTaskDue)}`
                   : dash(null, a.statusReason)}
               </b>
             </div>
@@ -390,7 +401,7 @@ export function AgentsPage() {
       <section className="card">
         <div className="card-head">
           <h2>Surveiller avec Eve</h2>
-          <small>mission 1 symbole · paper · confirm humaine</small>
+          <small>un symbole par mission · paper · confirmation humaine</small>
         </div>
         <div className="card-body">
           <form className="toolbar" onSubmit={onMission} style={{ flexWrap: 'wrap' }}>
@@ -410,7 +421,7 @@ export function AgentsPage() {
             </Link>
           </form>
           <div className="statline">
-            <span>Prochain recheck Eve</span>
+            <span>Prochain contrôle d’Eve</span>
             <b>
               {eveCard?.nextTaskDue
                 ? `${eveCard.nextTaskKind === 'recheck' ? 'Contrôle' : 'Tâche'}${eveCard.nextTaskSymbol ? ` · ${eveCard.nextTaskSymbol}` : ''} · ${fmtDue(eveCard.nextTaskDue)}`
@@ -447,8 +458,8 @@ export function AgentsPage() {
             {badge(detail.status, statusBadgeTone(detail.status))}
             <p>
               {detail.kind === 'llm'
-                ? 'Eve (LLM) · permissions runtime · paper only.'
-                : 'Rôle code déterministe · permissions runtime · paper only.'}{' '}
+                ? 'Eve (IA) · permissions vérifiées par le moteur · paper uniquement.'
+                : 'Rôle programmé, sans IA · permissions vérifiées par le moteur · paper uniquement.'}{' '}
               {labelEngineCode(detail.statusReason)}
             </p>
             <div className="statline">
@@ -466,17 +477,18 @@ export function AgentsPage() {
             </div>
             <div className="statline">
               <span>Modification du risque</span>
-              <b>{badge(detail.id === 'risk' ? 'CODE ONLY' : 'BLOQUÉE', 'gray')}</b>
+              <b>{badge(detail.id === 'risk' ? 'CODE SEUL' : 'BLOQUÉE', 'gray')}</b>
             </div>
             <div className="statline">
               <span>Ordres réels</span>
               <b>{badge('BLOQUÉS')}</b>
             </div>
             <div className="statline">
-              <span>Paper / confirm humaine</span>
+              <span>Paper / confirmation humaine</span>
               <b>
-                {badge('OUI', 'green')} · humanConfirmDefault=
-                {String(detail.humanConfirmDefault)}
+                {detail.paperOnly && detail.humanConfirmDefault
+                  ? badge('OUI', 'green')
+                  : badge('NON', 'amber')}
               </b>
             </div>
             <div className="statline">
@@ -487,15 +499,10 @@ export function AgentsPage() {
               <span>Prochaine tâche</span>
               <b>
                 {detail.nextTaskDue
-                  ? `${detail.nextTaskKind ?? 'task'}${detail.nextTaskSymbol ? ` · ${detail.nextTaskSymbol}` : ''} · ${fmtDue(detail.nextTaskDue)}`
+                  ? `${taskLabel(detail.nextTaskKind)}${detail.nextTaskSymbol ? ` · ${detail.nextTaskSymbol}` : ''} · ${fmtDue(detail.nextTaskDue)}`
                   : dash(null, detail.statusReason)}
               </b>
             </div>
-            <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-              FicheAgent (?fiche=agent:{detail.id}) : shell fiches non mergé — dialog maquette
-              réutilisé. Activation et permissions effectives vérifiées via le runtime server /
-              engine Python.
-            </p>
             <div className="dialog-actions">
               {detail.kind === 'llm' ? (
                 <Link to="/app/agent" className="link" onClick={closeDetail}>

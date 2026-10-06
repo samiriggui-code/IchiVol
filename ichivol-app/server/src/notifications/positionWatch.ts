@@ -16,6 +16,7 @@ import { fetchEngineDecisionsBatch, type EngineDecisionBody } from './watch.js'
 export { shouldEmitAlert } from './positionWatchDedup.js'
 
 
+const BASELINE_PORTFOLIO_CODE = 'ICHIVOL_BASELINE_V1'
 const POSITION_WATCH_INTERVAL_MS = 60_000
 const FETCH_TIMEOUT_MS = 45_000
 
@@ -32,6 +33,7 @@ type EnginePosition = {
   direction: string
   status: string
   user_id: string | null
+  portfolio_id?: string | null
   entry_price: number
   stop_price: number | null
   take_profit_price: number | null
@@ -119,14 +121,19 @@ async function emit(
 
   const symbol = typeof payload.symbol === 'string' ? payload.symbol : ''
   const interval = typeof payload.interval === 'string' ? payload.interval : '1h'
-  const url = `${config.appUrl}/app/paper?symbol=${encodeURIComponent(symbol)}&position=${encodeURIComponent(positionId)}&interval=${encodeURIComponent(interval)}`
+  const portfolioCode = typeof payload.portfolioCode === 'string' ? payload.portfolioCode : null
+  const pfQuery =
+    portfolioCode && portfolioCode !== BASELINE_PORTFOLIO_CODE
+      ? `&pf=${encodeURIComponent(portfolioCode)}`
+      : ''
+  const url = `${config.appUrl}/app/portefeuille?tab=positions&symbol=${encodeURIComponent(symbol)}&position=${encodeURIComponent(positionId)}&interval=${encodeURIComponent(interval)}${pfQuery}`
   // Push is best-effort — in-app row already exists.
   await sendPushToUser(userId, {
     title,
     body,
     url,
     tag: `${kind}:${positionId}`,
-    data: { kind, positionId, symbol, interval },
+    data: { kind, positionId, symbol, interval, portfolioCode },
   }).catch(() => false)
   return true
 }
@@ -143,6 +150,23 @@ async function fetchOpenPositions(): Promise<EnginePosition[]> {
   } catch {
     return []
   }
+}
+
+/** portfolio_id → code (ex. ICHIVOL_SESSIONS_V1), pour ouvrir le bon portefeuille depuis l’alerte. */
+async function fetchPortfolioCodes(): Promise<Map<string, string>> {
+  const out = new Map<string, string>()
+  const url = `${config.engineUrl}/api/engine/paper/portfolios`
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+    if (!res.ok) return out
+    const body = (await res.json()) as { portfolios?: Array<{ id?: unknown; code?: unknown }> }
+    for (const pf of body.portfolios ?? []) {
+      if (typeof pf.id === 'string' && typeof pf.code === 'string') out.set(pf.id, pf.code)
+    }
+  } catch {
+    /* best-effort: sans code, le front ouvre le portefeuille par défaut */
+  }
+  return out
 }
 
 async function fetchProximity(
@@ -236,6 +260,7 @@ export async function runPositionWatchTick(): Promise<{ checked: number; emitted
     timeframe: p.timeframe || '1h',
   }))
   const decisions = await fetchEngineDecisionsBatch(items)
+  const portfolioCodes = await fetchPortfolioCodes()
 
   let emitted = 0
   for (let i = 0; i < positions.length; i++) {
@@ -246,6 +271,7 @@ export async function runPositionWatchTick(): Promise<{ checked: number; emitted
 
     const detail = decisions[i] ?? null
     const interval = pos.timeframe || '1h'
+    const portfolioCode = pos.portfolio_id ? (portfolioCodes.get(pos.portfolio_id) ?? null) : null
 
     // --- target / stop proximity (engine geometry) ---
     if (p.targetStop) {
@@ -264,6 +290,7 @@ export async function runPositionWatchTick(): Promise<{ checked: number; emitted
             positionId: pos.id,
             symbol: pos.symbol,
             interval,
+            portfolioCode,
             band: prox.target.band,
             remainingFrac: rem,
             level: prox.target.level,
@@ -290,6 +317,7 @@ export async function runPositionWatchTick(): Promise<{ checked: number; emitted
             positionId: pos.id,
             symbol: pos.symbol,
             interval,
+            portfolioCode,
             band: prox.stop.band,
             remainingFrac: rem,
             level: prox.stop.level,
@@ -333,6 +361,7 @@ export async function runPositionWatchTick(): Promise<{ checked: number; emitted
             positionId: pos.id,
             symbol: pos.symbol,
             interval,
+            portfolioCode,
             rvol,
             rvolMin,
             bos: true,
@@ -362,6 +391,7 @@ export async function runPositionWatchTick(): Promise<{ checked: number; emitted
             positionId: pos.id,
             symbol: pos.symbol,
             interval,
+            portfolioCode,
             positionDirection: pos.direction,
             ichimokuDirection: ichi,
             stateKey,

@@ -1263,3 +1263,15 @@
     flex: 1 0 100%;
   }
 }
+
+/* Rappel unique au-dessus de la matrice (remplace le badge répété sur chaque ligne). */
+.opps-page .matrix-proof-note {
+  margin: 0 24px 14px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: #faf0df;
+  color: #7a5a1f;
+  font-size: 12px;
+  line-height: 1.6;
+}
+

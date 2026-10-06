@@ -344,25 +344,6 @@ export function ContextPage() {
         })
       }
 
-      if (nextVigilance.length === 0) {
-        nextVigilance.push(
-          {
-            id: 'fallback-corr',
-            title: 'Exposition corrélée',
-            body: 'Plusieurs positions crypto peuvent réagir au même mouvement de BTC.',
-          },
-          {
-            id: 'fallback-vol',
-            title: 'Volume inhabituel',
-            body: 'Un pic de volume peut accompagner un événement. Vérifier le contexte.',
-          },
-          {
-            id: 'fallback-gap',
-            title: 'Gap et volatilité',
-            body: 'Relire le plan de risque si les conditions de marché changent.',
-          },
-        )
-      }
       setVigilance(nextVigilance)
     } finally {
       setLoading(false)
@@ -509,7 +490,7 @@ export function ContextPage() {
         <section className="card">
           <div className="card-head">
             <h2>Agenda économique</h2>
-            {badge(events.length ? `${events.length} events` : loading ? '…' : 'Vide', 'gray')}
+            {badge(events.length ? `${events.length} événements` : loading ? '…' : 'Vide', 'gray')}
           </div>
           <div className="card-body">
             <div className="eyebrow">ÉVÉNEMENTS</div>
@@ -570,7 +551,7 @@ export function ContextPage() {
             ))}
             {wiredCount > 0 ? (
               <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>
-                {wiredCount} instruments câblés · flagships uniquement
+                {wiredCount} instruments suivis (principaux marchés)
               </p>
             ) : null}
           </div>
@@ -581,7 +562,7 @@ export function ContextPage() {
         <section className="card">
           <div className="card-head">
             <h2>Corrélations · crypto</h2>
-            {badge(corr ? `LIVE · n=${corr.sample_size}` : loading ? '…' : '—', corr ? 'green' : 'gray')}
+            {badge(corr ? `${corr.sample_size} mesures` : loading ? '…' : '—', corr ? 'green' : 'gray')}
           </div>
           <div className="card-body">
             <div className="chart-labels">
@@ -597,7 +578,7 @@ export function ContextPage() {
               ))}
             </div>
             <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 10 }}>
-              Pearson sur log-returns 1h — lecture seule, hors pipeline.
+              Corrélation des variations horaires — à titre indicatif, n’influence pas les décisions.
             </p>
           </div>
         </section>
@@ -608,6 +589,11 @@ export function ContextPage() {
             {badge(`${vigilance.length}`, 'gray')}
           </div>
           <div className="card-body">
+            {vigilance.length === 0 && !loading ? (
+              <p style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Rien de particulier à signaler pour l’instant.
+              </p>
+            ) : null}
             {vigilance.map((item) => (
               <div className="step" key={item.id}>
                 <b>{item.title}</b>

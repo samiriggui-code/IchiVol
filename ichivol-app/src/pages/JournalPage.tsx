@@ -14,7 +14,14 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { displaySymbol } from '../lib/markets'
 import { labelExitReason } from '../lib/engineTerminology'
-import { listPaperPositions, type PaperPosition } from '../lib/paper'
+import {
+  listPaperPortfolios,
+  listPaperPositions,
+  type PaperPortfolioRow,
+  type PaperPosition,
+} from '../lib/paper'
+import { portfolioLabel } from '../lib/portfolioLabels'
+import { BASELINE_PORTFOLIO_CODE, RS_D1_CODE, SESSIONS_CODE } from '../lib/rsPortfolio'
 import {
   deleteUserDecision,
   listUserDecisions,
@@ -26,8 +33,9 @@ import './JournalPage.css'
 
 type JournalTab = 'Trades' | 'Décisions sauvegardées'
 type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
+type PortfolioFilter = 'Tous' | typeof BASELINE_PORTFOLIO_CODE | typeof SESSIONS_CODE | typeof RS_D1_CODE
 
-const NOTE_KEY = 'ichivol-note'
+const PORTFOLIO_FILTERS: PortfolioFilter[] = ['Tous', BASELINE_PORTFOLIO_CODE, SESSIONS_CODE, RS_D1_CODE]
 
 function badge(text: string, tone: BadgeTone = ''): ReactNode {
   let inferred = tone
@@ -105,6 +113,8 @@ export function JournalPage() {
   const [journalTab, setJournalTab] = useState<JournalTab>('Trades')
   const [query, setQuery] = useState('')
   const [trades, setTrades] = useState<PaperPosition[]>([])
+  const [portfolioCodeById, setPortfolioCodeById] = useState<Record<string, string>>({})
+  const [portfolioFilter, setPortfolioFilter] = useState<PortfolioFilter>('Tous')
   const [decisions, setDecisions] = useState<UserDecisionRow[]>([])
   const [showArchived, setShowArchived] = useState(false)
   const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(null)
@@ -115,10 +125,12 @@ export function JournalPage() {
 
   const load = useCallback(async () => {
     try {
-      const [closed, rows] = await Promise.all([
+      const [closed, rows, portfolios] = await Promise.all([
         listPaperPositions({ status: 'CLOSED' }).catch(() => [] as PaperPosition[]),
         listUserDecisions(80).catch(() => [] as UserDecisionRow[]),
+        listPaperPortfolios().catch(() => [] as PaperPortfolioRow[]),
       ])
+      setPortfolioCodeById(Object.fromEntries(portfolios.map((p) => [p.id, p.code])))
       setTrades(
         [...closed].sort(
           (a, b) =>
@@ -138,13 +150,20 @@ export function JournalPage() {
 
   const q = query.trim().toLowerCase()
 
+  const tradePortfolioCode = useCallback(
+    (p: PaperPosition): string | null =>
+      p.portfolio_id ? (portfolioCodeById[p.portfolio_id] ?? null) : null,
+    [portfolioCodeById],
+  )
+
   const visibleTrades = useMemo(() => {
-    if (!q) return trades
     return trades.filter((p) => {
+      if (portfolioFilter !== 'Tous' && tradePortfolioCode(p) !== portfolioFilter) return false
+      if (!q) return true
       const base = displaySymbol(p.symbol).toLowerCase()
       return base.includes(q) || p.symbol.toLowerCase().includes(q)
     })
-  }, [trades, q])
+  }, [trades, q, portfolioFilter, tradePortfolioCode])
 
   const filteredDecisions = useMemo(() => {
     const byStatus = decisions.filter((r) =>
@@ -169,15 +188,18 @@ export function JournalPage() {
 
   const replay = useMemo(() => {
     if (journalTab === 'Trades') {
-      const t = visibleTrades[0] ?? trades[0]
+      const t = visibleTrades[0]
       if (!t) return null
+      const r = fmtR(t)
+      const perf = fmtPerf(t.pnl_pct)
+      const result = [r, perf].filter((x) => x !== '—').join(' · ')
       return {
         eyebrow: `${displaySymbol(t.symbol)} · ${fmtDate(t.exit_time ?? t.entry_time).toUpperCase()}`,
         title:
           t.realized_pnl != null && t.realized_pnl > 0
             ? 'Un plan suivi jusqu’à son objectif.'
             : 'Une sortie à relire.',
-        body: '—',
+        body: `${portfolioLabel(tradePortfolioCode(t))} · ${fmtSens(t.direction)} · sortie : ${shortExit(t.exit_reason)}${result ? ` · ${result}` : ''}`,
         symbol: t.symbol,
       }
     }
@@ -189,16 +211,17 @@ export function JournalPage() {
       body: d.note?.trim() || '—',
       symbol: d.symbol,
     }
-  }, [journalTab, visibleTrades, trades, selectedDecision])
+  }, [journalTab, visibleTrades, selectedDecision, tradePortfolioCode])
 
   const onExport = () => {
     if (journalTab === 'Trades') {
       downloadCsv(
         'journal-trades.csv',
-        ['date', 'actif', 'sens', 'resultat', 'performance', 'sortie'],
+        ['date', 'actif', 'portefeuille', 'sens', 'resultat', 'performance', 'sortie'],
         visibleTrades.map((t) => [
           fmtDate(t.exit_time ?? t.entry_time),
           displaySymbol(t.symbol),
+          portfolioLabel(tradePortfolioCode(t)),
           fmtSens(t.direction),
           fmtR(t),
           fmtPerf(t.pnl_pct),
@@ -209,13 +232,11 @@ export function JournalPage() {
     }
     downloadCsv(
       'journal-decisions.csv',
-      ['date', 'actif', 'sens', 'resultat', 'performance', 'sortie'],
+      ['date', 'actif', 'sens', 'statut'],
       filteredDecisions.map((d) => [
         fmtDate(d.createdAt),
         displaySymbol(d.symbol),
         fmtSens(d.bias),
-        '—',
-        '—',
         d.status === 'archived' ? 'ARCHIVÉE' : 'SAUVEGARDÉE',
       ]),
     )
@@ -223,16 +244,7 @@ export function JournalPage() {
 
   const onSaveNote = async (e: FormEvent) => {
     e.preventDefault()
-    if (!selectedDecision) {
-      try {
-        localStorage.setItem(NOTE_KEY, note)
-        setNoteSaved(true)
-        window.setTimeout(() => setNoteSaved(false), 1500)
-      } catch {
-        /* ignore */
-      }
-      return
-    }
+    if (!selectedDecision) return
     setBusyId(selectedDecision.id)
     setActionMsg(null)
     try {
@@ -323,6 +335,7 @@ export function JournalPage() {
               <td>
                 <b>{displaySymbol(t.symbol)}</b>
               </td>
+              <td>{portfolioLabel(tradePortfolioCode(t))}</td>
               <td>{fmtSens(t.direction)}</td>
               <td>
                 <span className={`mono${up ? ' up' : down ? ' down' : ''}`.trim()}>{r}</span>
@@ -350,10 +363,6 @@ export function JournalPage() {
               <b>{displaySymbol(d.symbol)}</b>
             </td>
             <td>{fmtSens(d.bias)}</td>
-            <td>
-              <span className="mono">—</span>
-            </td>
-            <td>—</td>
             <td>
               <div className="journal-decision-actions">
                 {badge(d.status === 'archived' ? 'ARCHIVÉE' : 'SAUVEGARDÉE', 'gray')}
@@ -400,8 +409,10 @@ export function JournalPage() {
 
   const emptyRow = (
     <tr>
-      <td colSpan={6}>
-        <b>—</b>
+      <td colSpan={journalTab === 'Trades' ? 7 : 4} className="muted">
+        {journalTab === 'Trades'
+          ? 'Aucun trade clôturé pour l’instant.'
+          : 'Aucune décision sauvegardée pour l’instant.'}
       </td>
     </tr>
   )
@@ -438,6 +449,20 @@ export function JournalPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
+        {journalTab === 'Trades' && (
+          <div className="segmented" role="group" aria-label="Portefeuille">
+            {PORTFOLIO_FILTERS.map((f) => (
+              <button
+                key={f}
+                type="button"
+                className={portfolioFilter === f ? 'active' : ''}
+                onClick={() => setPortfolioFilter(f)}
+              >
+                {f === 'Tous' ? 'Tous' : portfolioLabel(f)}
+              </button>
+            ))}
+          </div>
+        )}
         {journalTab === 'Décisions sauvegardées' && (
           <label className="checkrow" style={{ margin: 0 }}>
             Archivées
@@ -467,14 +492,24 @@ export function JournalPage() {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr>
-                <th>DATE</th>
-                <th>ACTIF</th>
-                <th>SENS</th>
-                <th>RÉSULTAT</th>
-                <th>PERFORMANCE</th>
-                <th>SORTIE</th>
-              </tr>
+              {journalTab === 'Trades' ? (
+                <tr>
+                  <th>DATE</th>
+                  <th>ACTIF</th>
+                  <th>PORTEFEUILLE</th>
+                  <th>SENS</th>
+                  <th>RÉSULTAT</th>
+                  <th>PERFORMANCE</th>
+                  <th>SORTIE</th>
+                </tr>
+              ) : (
+                <tr>
+                  <th>DATE</th>
+                  <th>ACTIF</th>
+                  <th>SENS</th>
+                  <th>STATUT</th>
+                </tr>
+              )}
             </thead>
             <tbody>{tableRows.length ? tableRows : emptyRow}</tbody>
           </table>
@@ -483,15 +518,25 @@ export function JournalPage() {
 
       <div style={{ height: 20 }} />
 
-      <div className="grid">
+      <div className={journalTab === 'Trades' ? '' : 'grid'}>
         <section className="card">
           <div className="card-head">
             <h2>Rejouer une décision</h2>
           </div>
           <div className="card-body">
-            <div className="eyebrow">{replay?.eyebrow ?? '—'}</div>
-            <h3>{replay?.title ?? '—'}</h3>
-            <p style={{ fontSize: 12, color: 'var(--muted)' }}>{replay?.body ?? '—'}</p>
+            {replay ? (
+              <>
+                <div className="eyebrow">{replay.eyebrow}</div>
+                <h3>{replay.title}</h3>
+                <p style={{ fontSize: 12, color: 'var(--muted)' }}>{replay.body}</p>
+              </>
+            ) : (
+              <p style={{ fontSize: 12, color: 'var(--muted)' }}>
+                {journalTab === 'Trades'
+                  ? 'Aucun trade clôturé à rejouer pour ce filtre.'
+                  : 'Sélectionnez une décision sauvegardée pour la rejouer.'}
+              </p>
+            )}
             <button
               type="button"
               className="primary"
@@ -503,6 +548,7 @@ export function JournalPage() {
           </div>
         </section>
 
+        {journalTab === 'Décisions sauvegardées' && (
         <section className="card">
           <div className="card-head">
             <h2>Note personnelle</h2>
@@ -514,19 +560,24 @@ export function JournalPage() {
               placeholder={
                 selectedDecision
                   ? `Note pour ${displaySymbol(selectedDecision.symbol)}…`
-                  : 'Ce que je retiens de cette session…'
+                  : 'Sélectionnez une décision pour lui ajouter une note.'
               }
+              disabled={!selectedDecision}
               style={{ width: '100%' }}
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 500))}
             />
             <div style={{ marginTop: 10 }}>
-              <button type="submit" disabled={busyId != null && busyId === selectedDecision?.id}>
+              <button
+                type="submit"
+                disabled={!selectedDecision || (busyId != null && busyId === selectedDecision.id)}
+              >
                 {noteSaved ? 'Enregistrée' : 'Enregistrer la note'}
               </button>
             </div>
           </form>
         </section>
+        )}
       </div>
     </div>
   )
