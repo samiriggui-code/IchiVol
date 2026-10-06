@@ -45,11 +45,20 @@ import {
   getPaperOverview,
   type PaperOrderRow,
   type PaperOverview,
-  type PaperOverviewPosition,
 } from '../lib/paper'
 import { getRiskLock, type RiskLockState } from '../lib/riskLock'
 import { verdictBucket } from '../lib/deskSummarize'
-import { concentrationFromPositions } from '../components/desk/deskMetrics'
+import {
+  DESK_PORTFOLIOS,
+  type DeskPosition,
+  concentrationBySymbol,
+  deskPortfolio,
+  drawdownOf,
+  mergePositions,
+  sumAccounts,
+  sumCurves,
+  sumRisk,
+} from '../lib/deskPortfolios'
 import {
   BASELINE,
   PRIMARY_SYMBOLS,
@@ -200,7 +209,10 @@ type EquityMarker = {
   title: string
   detail: string
   source: 'transaction' | 'action'
+  portfolio: string
 }
+
+type DeskOrder = PaperOrderRow & { portfolio_code: string }
 
 const MAX_EQUITY_MARKERS = 80
 
@@ -223,13 +235,13 @@ function equityAtTime(
   return null
 }
 
-function nearKey(symbol: string, ms: number): string {
-  return `${symbol.toUpperCase()}@${Math.round(ms / 120_000)}`
+function nearKey(portfolio: string, symbol: string, ms: number): string {
+  return `${portfolio}|${symbol.toUpperCase()}@${Math.round(ms / 120_000)}`
 }
 
 function buildEquityMarkers(
   actions: ActivityItem[],
-  orders: PaperOrderRow[],
+  orders: DeskOrder[],
   period: EquityPeriod,
   now = Date.now(),
 ): EquityMarker[] {
@@ -240,7 +252,7 @@ function buildEquityMarkers(
   for (const o of orders) {
     const ms = Date.parse(o.time)
     if (Number.isNaN(ms) || ms < cutoff) continue
-    covered.add(nearKey(o.symbol, ms))
+    covered.add(nearKey(o.portfolio_code, o.symbol, ms))
     const side = String(o.side).toUpperCase()
     const isBuy = side === 'BUY'
     const notional =
@@ -250,7 +262,7 @@ function buildEquityMarkers(
         ? fmtPrice(o.filled_price)
         : '—'
     fromOrders.push({
-      id: `tx-${o.id}`,
+      id: `tx-${o.portfolio_code}-${o.id}`,
       ms,
       kind: isBuy ? 'tx_buy' : 'tx_sell',
       tone: isBuy ? 'good' : 'neutral',
@@ -265,6 +277,7 @@ function buildEquityMarkers(
         .filter(Boolean)
         .join(' · '),
       source: 'transaction',
+      portfolio: o.portfolio_code,
     })
   }
 
@@ -272,9 +285,10 @@ function buildEquityMarkers(
   for (const it of actions) {
     const ms = Date.parse(it.time)
     if (Number.isNaN(ms) || ms < cutoff) continue
-    if (covered.has(nearKey(it.symbol, ms))) continue
+    const portfolio = it.portfolio || BASELINE
+    if (covered.has(nearKey(portfolio, it.symbol, ms))) continue
     fromActions.push({
-      id: `act-${it.kind}-${it.symbol}-${it.time}`,
+      id: `act-${portfolio}-${it.kind}-${it.symbol}-${it.time}`,
       ms,
       kind: it.kind,
       tone: it.tone,
@@ -282,6 +296,7 @@ function buildEquityMarkers(
       title: it.title,
       detail: it.detail || '—',
       source: 'action',
+      portfolio,
     })
   }
 
@@ -355,48 +370,6 @@ function cleanEquitySeries(
     out.push(p)
   }
   return out.length >= 2 ? out : raw.filter((p) => p.equity >= lo && p.equity <= hi)
-}
-
-/** Compresse les longs plateaux plats : la session active garde la place visuelle. */
-function densifyEquityPath(
-  series: { ms: number; equity: number }[],
-): { ms: number; equity: number; i: number }[] {
-  if (series.length < 2) return series.map((p, i) => ({ ...p, i }))
-  const flatEps = 0.75
-  const kept: { ms: number; equity: number }[] = []
-  for (let i = 0; i < series.length; i++) {
-    const p = series[i]!
-    const prev = kept[kept.length - 1]
-    const next = series[i + 1]
-    if (!prev) {
-      kept.push(p)
-      continue
-    }
-    const flatWithPrev = Math.abs(p.equity - prev.equity) <= flatEps
-    const flatWithNext =
-      next != null && Math.abs(next.equity - p.equity) <= flatEps
-    // Keep first of plateau, skip middle flats, keep last before a move.
-    if (flatWithPrev && flatWithNext) continue
-    kept.push(p)
-  }
-  if (kept.length < 2) return series.map((p, i) => ({ ...p, i }))
-  return kept.map((p, i) => ({ ...p, i }))
-}
-
-function drawdownRatio(
-  curve: { equity: number; t?: string }[],
-  equity: number | null | undefined,
-): number | null {
-  const band = cleanEquitySeries(
-    curve.map((p, i) => ({ t: p.t ?? `i${i}`, equity: p.equity })),
-  ).map((p) => p.equity)
-  if (equity == null || !Number.isFinite(equity) || band.length === 0) return null
-  let peak = equity
-  for (const v of band) {
-    if (v > peak) peak = v
-  }
-  if (peak <= 0) return null
-  return (equity - peak) / peak
 }
 
 /** Graduations type 4985 / 5010 / 5035 / 5060. */
@@ -524,22 +497,28 @@ function decisionBadgeText(r: ScreenerDecisionRow): string {
   return d
 }
 
+type EquitySeriesInput = {
+  code: string
+  label: string
+  color: string
+  points: { t: string; equity: number }[]
+}
+
 function EquityViz({
-  points,
+  series: inputs,
   period,
   actions,
   orders,
 }: {
-  points: { t: string; equity: number }[]
+  series: EquitySeriesInput[]
   period: EquityPeriod
   actions: ActivityItem[]
-  orders: PaperOrderRow[]
+  orders: DeskOrder[]
 }) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [tipPos, setTipPos] = useState<{ left: number; top: number } | null>(null)
 
-  const filtered = useMemo(() => filterEquityCurve(points, period), [points, period])
   const markers = useMemo(
     () => buildEquityMarkers(actions, orders, period),
     [actions, orders, period],
@@ -554,56 +533,45 @@ function EquityViz({
   const innerW = w - padL - padR
   const innerH = h - padT - padB
 
-  const series = useMemo(() => densifyEquityPath(cleanEquitySeries(filtered)), [filtered])
+  const lines = useMemo(
+    () =>
+      inputs
+        .map((s) => ({ ...s, pts: cleanEquitySeries(filterEquityCurve(s.points, period)) }))
+        .filter((s) => s.pts.length >= 2),
+    [inputs, period],
+  )
 
   const geometry = useMemo(() => {
-    if (series.length < 2) return null
-    const vals = series.map((p) => p.equity)
-    const axis = niceAxis(Math.min(...vals), Math.max(...vals))
-    const { min, max, ticks: yTicks } = axis
+    if (lines.length === 0) return null
+    const vals = lines.flatMap((s) => s.pts.map((p) => p.equity))
+    const { min, max, ticks: yTicks } = niceAxis(Math.min(...vals), Math.max(...vals))
     const span = Math.max(1e-6, max - min)
-    const n = series.length - 1
-    // Index X : les plateaux ne mangent plus toute la largeur — comme ta capture.
-    const xAtIndex = (i: number) => padL + (i / n) * innerW
+    const t0 = Math.min(...lines.map((s) => s.pts[0]!.ms))
+    const t1 = Math.max(...lines.map((s) => s.pts[s.pts.length - 1]!.ms))
+    const tSpan = Math.max(1, t1 - t0)
+    const xAt = (ms: number) => padL + ((ms - t0) / tSpan) * innerW
     const yAt = (equity: number) => padT + (1 - (equity - min) / span) * innerH
-    const xAtMs = (ms: number) => {
-      if (ms <= series[0]!.ms) return xAtIndex(0)
-      if (ms >= series[series.length - 1]!.ms) return xAtIndex(n)
-      for (let i = 1; i < series.length; i++) {
-        const b = series[i]!
-        if (ms <= b.ms) {
-          const a = series[i - 1]!
-          const r = (ms - a.ms) / Math.max(1, b.ms - a.ms)
-          return xAtIndex(i - 1) + r * (xAtIndex(i) - xAtIndex(i - 1))
-        }
-      }
-      return xAtIndex(n)
-    }
 
-    const coords = series.map((p, i) => [xAtIndex(i), yAt(p.equity)] as const)
-    const d = coords.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(' ')
-    const last = coords[coords.length - 1]!
-    const area = `${d} L${last[0]},${h - padB} L${padL},${h - padB} Z`
+    const paths = lines.map((s) => {
+      const coords = s.pts.map((p) => [xAt(p.ms), yAt(p.equity)] as const)
+      const d = coords.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(' ')
+      return { code: s.code, label: s.label, color: s.color, d, last: coords[coords.length - 1]! }
+    })
 
-    const t0 = series[0]!.ms
-    const t1 = series[series.length - 1]!.ms
     const placed = markers
       .map((m) => {
-        if (m.ms < t0 - 60_000 || m.ms > t1 + 60_000) return null
-        const eq = equityAtTime(series, m.ms)
+        const line = lines.find((s) => s.code === m.portfolio) ?? lines[0]!
+        if (m.ms < line.pts[0]!.ms - 60_000 || m.ms > line.pts[line.pts.length - 1]!.ms + 60_000) return null
+        const eq = equityAtTime(line.pts, m.ms)
         if (eq == null) return null
-        return { ...m, x: xAtMs(m.ms), y: yAt(eq), equity: eq }
+        return { ...m, x: xAt(m.ms), y: yAt(eq), equity: eq, color: line.color, line: line.label }
       })
-      .filter((m): m is EquityMarker & { x: number; y: number; equity: number } => m != null)
+      .filter((m): m is NonNullable<typeof m> => m != null)
       .sort((a, b) => a.ms - b.ms)
 
-    const xTicks = [
-      { ms: series[0]!.ms, x: xAtIndex(0) },
-      { ms: series[Math.floor(n / 2)]!.ms, x: xAtIndex(Math.floor(n / 2)) },
-      { ms: series[n]!.ms, x: xAtIndex(n) },
-    ]
-    return { min, max, span, d, area, last, placed, yTicks, xTicks }
-  }, [series, markers, innerW, innerH])
+    const xTicks = [t0, t0 + tSpan / 2, t1].map((ms) => ({ ms, x: xAt(ms) }))
+    return { max, span, paths, placed, yTicks, xTicks }
+  }, [lines, markers, innerW, innerH])
 
   const active = geometry?.placed.find((m) => m.id === activeId) ?? null
 
@@ -634,11 +602,12 @@ function EquityViz({
           role="img"
           aria-label="Courbe de performance indisponible"
         />
+        <p className="desk-eq-empty">Pas encore assez de points sur cette période.</p>
       </div>
     )
   }
 
-  const { max, span, d, area, last, placed, yTicks, xTicks } = geometry
+  const { max, span, paths, placed, yTicks, xTicks } = geometry
 
   return (
     <div id="equity" className="desk-equity-wrap" ref={wrapRef}>
@@ -646,27 +615,14 @@ function EquityViz({
         className="chart"
         viewBox={`0 0 ${w} ${h}`}
         role="img"
-        aria-label={`Courbe equity ${period}${placed.length ? ` · ${placed.length} événements` : ''}`}
+        aria-label={`Courbes des portefeuilles ${period} : ${paths.map((p) => p.label).join(', ')}`}
         onPointerLeave={hideTip}
       >
-        <defs>
-          <linearGradient id="desk-eq-fade" x1="0" y1="0" x2="0" y2="1">
-            <stop stopColor="#b5d6cc" stopOpacity=".28" />
-            <stop offset="1" stopColor="#b5d6cc" stopOpacity="0" />
-          </linearGradient>
-        </defs>
         {yTicks.map((v, i) => {
           const y = padT + ((max - v) / span) * innerH
           return (
             <g key={`y-${i}-${v}`}>
-              <line
-                x1={padL}
-                y1={y}
-                x2={w - padR}
-                y2={y}
-                stroke="#eeeae5"
-                strokeDasharray="3 5"
-              />
+              <line x1={padL} y1={y} x2={w - padR} y2={y} stroke="#eeeae5" strokeDasharray="3 5" />
               <text
                 x={w - padR + 6}
                 y={y + 3}
@@ -679,53 +635,32 @@ function EquityViz({
             </g>
           )
         })}
-        <path d={area} fill="url(#desk-eq-fade)" />
-        <path
-          d={d}
-          fill="none"
-          stroke="#478f83"
-          strokeWidth="2"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
+        {paths.map((p) => (
+          <path
+            key={p.code}
+            d={p.d}
+            fill="none"
+            stroke={p.color}
+            strokeWidth="2"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        ))}
         {placed.map((m) => {
           const hot = activeId === m.id
-          if (m.source === 'transaction') {
-            return (
-              <g key={m.id} className="desk-eq-marker is-tx">
-                <circle
-                  cx={m.x}
-                  cy={m.y}
-                  r={hot ? 6 : 4.5}
-                  fill="#fefdfb"
-                  stroke="#478f83"
-                  strokeWidth="1.7"
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`${m.title} · ${fmtMarkerWhen(m.ms)}`}
-                  onPointerEnter={(e) => showTip(m.id, e.clientX, e.clientY)}
-                  onBlur={hideTip}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    if (activeId === m.id) hideTip()
-                    else showTip(m.id, e.clientX, e.clientY)
-                  }}
-                />
-              </g>
-            )
-          }
+          const isTx = m.source === 'transaction'
           return (
-            <g key={m.id} className={`desk-eq-marker ${markerToneClass(m.tone)}`}>
+            <g key={m.id} className={`desk-eq-marker ${isTx ? 'is-tx' : markerToneClass(m.tone)}`}>
               <circle
                 cx={m.x}
                 cy={m.y}
-                r={hot ? 5 : 3.5}
-                fill="#6b7c86"
-                stroke="#fefdfb"
-                strokeWidth="1.2"
+                r={isTx ? (hot ? 6 : 4.5) : hot ? 5 : 3.5}
+                fill={isTx ? '#fefdfb' : m.color}
+                stroke={isTx ? m.color : '#fefdfb'}
+                strokeWidth={isTx ? 1.7 : 1.2}
                 role="button"
                 tabIndex={0}
-                aria-label={`${m.title} · ${fmtMarkerWhen(m.ms)}`}
+                aria-label={`${m.title} · ${m.line} · ${fmtMarkerWhen(m.ms)}`}
                 onPointerEnter={(e) => showTip(m.id, e.clientX, e.clientY)}
                 onBlur={hideTip}
                 onClick={(e) => {
@@ -737,7 +672,9 @@ function EquityViz({
             </g>
           )
         })}
-        <circle cx={last[0]} cy={last[1]} r="4" fill="#478f83" pointerEvents="none" />
+        {paths.map((p) => (
+          <circle key={`last-${p.code}`} cx={p.last[0]} cy={p.last[1]} r="4" fill={p.color} pointerEvents="none" />
+        ))}
         {xTicks.map((tick, i) => (
           <text
             key={`x-${tick.ms}-${i}`}
@@ -753,11 +690,7 @@ function EquityViz({
         ))}
       </svg>
       {active && tipPos ? (
-        <div
-          className="desk-eq-tip"
-          role="tooltip"
-          style={{ left: tipPos.left, top: tipPos.top }}
-        >
+        <div className="desk-eq-tip" role="tooltip" style={{ left: tipPos.left, top: tipPos.top }}>
           <header>
             <strong>{active.title}</strong>
             <span className={`desk-eq-tip-kind ${active.source}`}>
@@ -767,6 +700,10 @@ function EquityViz({
           <p>{active.detail}</p>
           <dl>
             <div>
+              <dt>Portefeuille</dt>
+              <dd>{active.line}</dd>
+            </div>
+            <div>
               <dt>Quand</dt>
               <dd>{fmtMarkerWhen(active.ms)}</dd>
             </div>
@@ -775,7 +712,7 @@ function EquityViz({
               <dd>{active.symbol || '—'}</dd>
             </div>
             <div>
-              <dt>Equity</dt>
+              <dt>Valeur du portefeuille</dt>
               <dd>{fmtEur(active.equity, 2)}</dd>
             </div>
           </dl>
@@ -784,10 +721,10 @@ function EquityViz({
       {placed.length > 0 ? (
         <div className="desk-eq-legend" aria-hidden="true">
           <span>
-            <i className="desk-eq-legend-dot is-tx" /> transactions paper
+            <i className="desk-eq-legend-dot is-tx" /> achat ou vente paper
           </span>
           <span>
-            <i className="desk-eq-legend-dot is-action" /> actions circuit
+            <i className="desk-eq-legend-dot is-action" /> autre action du circuit
           </span>
         </div>
       ) : null}
@@ -799,11 +736,11 @@ export function OverviewPage() {
   const navigate = useNavigate()
   const [rows, setRows] = useState<ScreenerDecisionRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [overview, setOverview] = useState<PaperOverview | null>(null)
+  const [overviews, setOverviews] = useState<Record<string, PaperOverview | null>>({})
   const [tape, setTape] = useState<ActivityItem[]>([])
   const [equityActions, setEquityActions] = useState<ActivityItem[]>([])
-  const [paperOrders, setPaperOrders] = useState<PaperOrderRow[]>([])
-  const [lock, setLock] = useState<RiskLockState | null>(null)
+  const [paperOrders, setPaperOrders] = useState<DeskOrder[]>([])
+  const [locks, setLocks] = useState<Array<{ code: string; lock: RiskLockState | null }>>([])
   const [engineOk, setEngineOk] = useState<boolean | null>(null)
   const [market, setMarket] = useState<GlobalMarketData | null>(null)
   const [fng, setFng] = useState<FearGreed | null>(null)
@@ -822,16 +759,30 @@ export function OverviewPage() {
           .catch((err: unknown): ScreenerOk | Error =>
             err instanceof Error ? err : new Error('Screener indisponible'),
           ),
-        getPaperOverview(BASELINE)
-          .then((r) => ({ ok: true as const, data: r }))
-          .catch(() => ({ ok: false as const })),
+        Promise.all(
+          DESK_PORTFOLIOS.map((pf) =>
+            getPaperOverview(pf.code)
+              .then((r) => [pf.code, r] as const)
+              .catch(() => [pf.code, null] as const),
+          ),
+        ),
         getActivityFeed(100)
           .then((r) => ({ ok: true as const, items: r.items }))
           .catch(() => ({ ok: false as const, items: [] as ActivityItem[] })),
-        getPaperActivity(BASELINE, 200)
-          .then((r) => ({ ok: true as const, orders: r }))
-          .catch(() => ({ ok: false as const, orders: [] as PaperOrderRow[] })),
-        getRiskLock(BASELINE).catch(() => null),
+        Promise.all(
+          DESK_PORTFOLIOS.map((pf) =>
+            getPaperActivity(pf.code, 200)
+              .then((r): DeskOrder[] => r.map((o) => ({ ...o, portfolio_code: pf.code })))
+              .catch((): DeskOrder[] => []),
+          ),
+        ).then((lists) => lists.flat()),
+        Promise.all(
+          DESK_PORTFOLIOS.map((pf) =>
+            getRiskLock(pf.code)
+              .then((lock) => ({ code: pf.code, lock }))
+              .catch(() => ({ code: pf.code, lock: null })),
+          ),
+        ),
         fetch('/api/engine/health', { credentials: 'include' })
           .then(async (res) => {
             if (!res.ok) return { engine: false }
@@ -864,8 +815,7 @@ export function OverviewPage() {
       setRows(screenerRes.rows)
     }
 
-    if (ovRes.ok) setOverview(ovRes.data)
-    else setOverview(null)
+    setOverviews(Object.fromEntries(ovRes))
 
     if (feedRes.ok) {
       setEquityActions(feedRes.items)
@@ -875,10 +825,8 @@ export function OverviewPage() {
       setTape([])
     }
 
-    if (ordersRes.ok) setPaperOrders(ordersRes.orders)
-    else setPaperOrders([])
-
-    setLock(lockRes)
+    setPaperOrders(ordersRes)
+    setLocks(lockRes)
     setEngineOk(healthRes.engine)
 
     if (mktRes.ok) setMarket(mktRes.data)
@@ -901,8 +849,20 @@ export function OverviewPage() {
   }, [load])
 
   const now = useMemo(() => new Date(nowTick), [nowTick])
-  const acct = overview?.account
-  const risk = overview?.risk
+  const overviewList = useMemo(
+    () => DESK_PORTFOLIOS.map((pf) => ({ ...pf, overview: overviews[pf.code] ?? null })),
+    [overviews],
+  )
+  const acct = useMemo(() => sumAccounts(overviewList.map((o) => o.overview)), [overviewList])
+  const risk = useMemo(() => sumRisk(overviewList.map((o) => o.overview)), [overviewList])
+  const positions = useMemo(() => mergePositions(overviewList), [overviewList])
+  const equitySeries = useMemo(
+    () =>
+      overviewList
+        .filter((o) => o.overview != null)
+        .map((o) => ({ code: o.code, label: o.label, color: o.color, points: o.overview!.equity_curve ?? [] })),
+    [overviewList],
+  )
   const dayUp = (acct?.day_change ?? 0) > 0
   const dayPct =
     acct?.day_change != null && acct.equity
@@ -922,7 +882,7 @@ export function OverviewPage() {
   const primaryMarkets = useMemo(() => pickPrimaryMarkets(rows), [rows])
 
   const freshnessNotice = useMemo(() => {
-    const stalePositions = (overview?.positions ?? []).filter((p) => p.mark_stale)
+    const stalePositions = positions.filter((p) => p.mark_stale)
     if (stalePositions.length > 0) {
       const oldest = [...stalePositions].sort(
         (a, b) => (b.mark_age_s ?? 0) - (a.mark_age_s ?? 0),
@@ -946,7 +906,7 @@ export function OverviewPage() {
       text: `La lecture de ${first.symbol.replace(/USDT$/i, '')} repose sur une bougie trop ancienne.`,
       href: `/app/opportunites?symbol=${encodeURIComponent(first.symbol)}`,
     }
-  }, [rows, overview?.positions])
+  }, [rows, positions])
 
   const btcRow = rows.find((r) => r.symbol.toUpperCase() === 'BTCUSDT')
   const nextClose = nextHourlyClose(now)
@@ -957,12 +917,12 @@ export function OverviewPage() {
   const investedPct =
     acct && acct.equity > 0 ? Math.min(100, Math.max(0, (acct.invested / acct.equity) * 100)) : null
 
-  const concentration = useMemo(
-    () => concentrationFromPositions(overview?.positions ?? []),
-    [overview?.positions],
-  )
+  const concentration = useMemo(() => concentrationBySymbol(positions), [positions])
 
-  const dd = drawdownRatio(overview?.equity_curve ?? [], acct?.equity)
+  const dd = useMemo(
+    () => drawdownOf(sumCurves(equitySeries.map((s) => cleanEquitySeries(s.points)))),
+    [equitySeries],
+  )
   const dateLabel = now.toLocaleDateString('fr-FR', {
     day: 'numeric',
     month: 'long',
@@ -983,10 +943,11 @@ export function OverviewPage() {
   const nextOpen = nextSessionOpen(selectedSession, now)
   const marketsStale = rows.some((r) => r.data_quality?.stale || r.data_quality?.data_late)
 
-  const riskPass =
-    lock == null
-      ? null
-      : !lock.entries_blocked && !lock.daily_loss_locked && !lock.kill_switch_armed
+  const knownLocks = locks.filter((l): l is { code: string; lock: RiskLockState } => l.lock != null)
+  const blockedPortfolios = knownLocks
+    .filter((l) => l.lock.entries_blocked || l.lock.daily_loss_locked || l.lock.kill_switch_armed)
+    .map((l) => deskPortfolio(l.code)?.label ?? l.code)
+  const riskPass = knownLocks.length === 0 ? null : blockedPortfolios.length === 0
 
   const dailyRiskPct =
     risk?.open_risk_pct != null && risk.max_open_risk_pct
@@ -1007,8 +968,9 @@ export function OverviewPage() {
     navigate(`/app/opportunites?symbol=${encodeURIComponent(full)}`)
   }
 
-  const openPosition = (symbol: string) => {
-    navigate(`/app/portefeuille?tab=positions&symbol=${encodeURIComponent(symbol)}`)
+  const openPosition = (symbol: string, portfolio?: string) => {
+    const pf = portfolio && portfolio !== BASELINE ? `&pf=${encodeURIComponent(portfolio)}` : ''
+    navigate(`/app/portefeuille?tab=positions${pf}&symbol=${encodeURIComponent(symbol)}`)
   }
 
   return (
@@ -1034,7 +996,11 @@ export function OverviewPage() {
               Capital total<span>↗</span>
             </div>
             <div className="metric-value">{acct ? fmtEur(acct.equity, 2) : '—'}</div>
-            <small>Portefeuille paper · EUR</small>
+            <small>
+              {acct
+                ? `${acct.portfolios} portefeuille${acct.portfolios > 1 ? 's' : ''} paper additionnés · EUR`
+                : 'Portefeuilles paper · EUR'}
+            </small>
           </div>
           <div className="metric">
             <div className="metric-label">
@@ -1236,7 +1202,7 @@ export function OverviewPage() {
 
         <div className="grid">
           <DeskCard
-            title="Trajectoire du portefeuille"
+            title="Trajectoire des portefeuilles"
             extra={
               <div className="segmented">
                 {EQUITY_PERIODS.map((p) => (
@@ -1254,17 +1220,41 @@ export function OverviewPage() {
           >
             <div className="chart-summary">
               <span>
-                CAPITAL <b>{acct ? fmtEur(acct.equity, 2) : '—'}</b>
+                CAPITAL TOTAL <b>{acct ? fmtEur(acct.equity, 2) : '—'}</b>
               </span>
               <span>
-                DRAWDOWN{' '}
+                RÉSULTAT DEPUIS LE DÉPART{' '}
+                <b className={acct && acct.equity < acct.initial_cash ? 'down' : undefined}>
+                  {acct ? fmtEur(acct.equity - acct.initial_cash, 2) : '—'}
+                </b>
+              </span>
+              <span title="Baisse de la somme des trois portefeuilles depuis son plus haut.">
+                DRAWDOWN DU TOTAL{' '}
                 <b className={dd != null && dd < 0 ? 'down' : undefined}>
                   {dd != null ? fmtPct(dd, 1, true) : '—'}
                 </b>
               </span>
             </div>
+            <div className="desk-pf-legend">
+              {overviewList.map((o) => {
+                const a = o.overview?.account
+                const ret = a && a.initial_cash > 0 ? a.equity / a.initial_cash - 1 : null
+                return (
+                  <span key={o.code} title={o.hint}>
+                    <i style={{ background: o.color }} />
+                    <b>{o.label}</b>
+                    <span className="mono">{a ? fmtEur(a.equity, 2) : 'indisponible'}</span>
+                    {ret != null ? (
+                      <small className={ret > 0 ? 'up' : ret < 0 ? 'down' : undefined}>
+                        {fmtPct(ret, 2, true)} depuis le départ
+                      </small>
+                    ) : null}
+                  </span>
+                )
+              })}
+            </div>
             <EquityViz
-              points={overview?.equity_curve ?? []}
+              series={equitySeries}
               period={equityPeriod}
               actions={equityActions}
               orders={paperOrders}
@@ -1358,7 +1348,15 @@ export function OverviewPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(overview?.positions ?? []).slice(0, 3).map((p: PaperOverviewPosition) => {
+                  {positions.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="muted">
+                        Aucune position ouverte dans les trois portefeuilles.
+                      </td>
+                    </tr>
+                  ) : null}
+                  {positions.slice(0, 6).map((p: DeskPosition) => {
+                    const pf = deskPortfolio(p.portfolio_code)
                     const base = p.symbol.replace(/USDT$/i, '')
                     const engaged =
                       p.market_value ??
@@ -1371,25 +1369,29 @@ export function OverviewPage() {
                       perf == null ? '' : perf > 0 ? 'up' : perf < 0 ? 'down' : ''
                     const pnlCls =
                       pnl == null ? '' : pnl > 0 ? 'up' : pnl < 0 ? 'down' : ''
-                    const strat =
-                      p.timeframe != null
-                        ? `Ichimoku × RVOL · ${String(p.timeframe).toUpperCase()}`
-                        : '—'
+                    const rule = p.portfolio_code === 'RS_D1_PAPER_V1' ? 'Donchian' : 'Ichimoku × RVOL'
+                    const strat = [
+                      pf?.label ?? p.portfolio_code,
+                      p.timeframe != null ? `${rule} · ${String(p.timeframe).toUpperCase()}` : rule,
+                    ].join(' · ')
                     return (
                       <tr
-                        key={p.id ?? p.symbol}
+                        key={`${p.portfolio_code}-${p.id ?? p.symbol}`}
                         className="clickable"
                         tabIndex={0}
-                        onClick={() => openPosition(p.symbol)}
+                        onClick={() => openPosition(p.symbol, p.portfolio_code)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault()
-                            openPosition(p.symbol)
+                            openPosition(p.symbol, p.portfolio_code)
                           }
                         }}
                       >
                         <td>
-                          <b>{base}</b>
+                          <b>
+                            <i className="desk-pf-dot" style={{ background: pf?.color }} />
+                            {base}
+                          </b>
                           <small>{strat}</small>
                         </td>
                         <td>
@@ -1425,6 +1427,11 @@ export function OverviewPage() {
             }
           >
             <div className="card-body">
+              <p className="desk-note" style={{ marginTop: 0 }}>
+                {riskPass === false
+                  ? `Nouvelles entrées bloquées sur : ${blockedPortfolios.join(', ')}.`
+                  : 'Additionné sur les trois portefeuilles paper.'}
+              </p>
               <ProgressRow
                 label="Exposition du capital"
                 value={investedPct != null ? fmtPctPoints(investedPct, 1, false) : '—'}
@@ -1450,7 +1457,7 @@ export function OverviewPage() {
               />
               <div style={{ marginTop: 20, fontSize: 10, color: 'var(--muted)' }}>
                 {acct
-                  ? `${fmtEur(acct.invested, 2)} engagés sur ${acct.open_positions} positions.`
+                  ? `${fmtEur(acct.invested, 2)} engagés sur ${acct.open_positions} position${acct.open_positions > 1 ? 's' : ''}.`
                   : '—'}
               </div>
             </div>
@@ -1548,9 +1555,7 @@ export function OverviewPage() {
                 label="Risk Kernel"
                 value={
                   riskPass == null
-                    ? risk?.kernel
-                      ? badge(String(risk.kernel).toUpperCase(), 'gray')
-                      : '—'
+                    ? '—'
                     : riskPass
                       ? badge('PASSE')
                       : badge('BLOQUÉ', 'red')
@@ -1657,7 +1662,7 @@ export function OverviewPage() {
                     stroke="#eeeae3"
                     strokeWidth="19"
                   />
-                  {concentration.slice(0, 3).map((c, i) => {
+                  {concentration.slice(0, RING_COLORS.length).map((c, i) => {
                     const o = concentration
                       .slice(0, i)
                       .reduce((s, x) => s + x.pct, 0)
@@ -1680,17 +1685,21 @@ export function OverviewPage() {
                   })}
                 </svg>
                 <div>
-                  <b>{concentration.length ? String(Math.min(3, concentration.length)) : '—'}</b>
-                  <small>Positions ouvertes</small>
+                  <b>{concentration.length ? String(concentration.length) : '—'}</b>
+                  <small>{concentration.length > 1 ? 'Actifs exposés' : 'Actif exposé'}</small>
                 </div>
               </div>
               <div className="allocation-legend">
-                {concentration.slice(0, 3).map((c, i) => (
+                {concentration.slice(0, RING_COLORS.length).map((c, i) => (
                   <button
                     key={c.symbol}
                     type="button"
                     className="concentration-row"
-                    onClick={() => openPosition(toEngineSymbol(c.symbol))}
+                    onClick={() => {
+                      const full = toEngineSymbol(c.symbol)
+                      const at = positions.find((p) => p.symbol.toUpperCase() === full.toUpperCase())
+                      openPosition(full, at?.portfolio_code)
+                    }}
                   >
                     <span>
                       <i style={{ background: RING_COLORS[i % RING_COLORS.length] }} />
