@@ -80,7 +80,7 @@ export function FactsheetAnswer({ view }: { view: FactsheetView }) {
           <dd>{hhmm(open.known_at)} UTC</dd>
           <dt>Statut</dt>
           <dd>
-            {open.status} · {open.validation_status === 'NON_VALIDE' ? 'Signal non validé (VP3)' : open.validation_status}
+            {open.status} · {open.validation_status === 'NON_VALIDE' ? 'Rentabilité non prouvée (VP3)' : open.validation_status}
           </dd>
         </dl>
       )}

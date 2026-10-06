@@ -1,12 +1,12 @@
 /**
- * Copy unique — badge « Signal non validé » (UI-VP-BADGE).
+ * Copy unique — badge « Rentabilité non prouvée » (UI-VP-BADGE).
  * Mettre à jour ici quand un futur programme VP changera le verdict mesuré.
  */
 
-export const VP_VALIDATION_BADGE_LABEL = 'Signal non validé'
+export const VP_VALIDATION_BADGE_LABEL = 'Rentabilité non prouvée'
 
 export const VP_VALIDATION_TOOLTIP =
-  'Programme de validation VP3 : aucun edge mesuré (0/48 cas, 2021–2024, après coûts).'
+  'Étude de validation VP3 (BTC, ETH, SOL, 2021–2024, frais compris) : aucun avantage statistique mesuré (0/48 cas). Signal à suivre en paper uniquement.'
 
 /** Chemin repo (docs internes — pas un lien UI). */
 export const VP_VALIDATION_REPORT_PATH = 'docs/VP3-REPORT-FINAL.md'

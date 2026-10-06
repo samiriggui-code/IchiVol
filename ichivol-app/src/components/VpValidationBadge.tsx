@@ -1,5 +1,5 @@
 /**
- * Badge discret « Signal non validé » (UI-VP-BADGE).
+ * Badge discret « Rentabilité non prouvée » (UI-VP-BADGE).
  * Affichage seulement — aucun impact moteur / paper / gates.
  * Pas de lien externe (tooltip = verdict VP3) — createElement pour tests SSR.
  */

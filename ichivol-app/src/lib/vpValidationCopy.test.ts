@@ -13,7 +13,7 @@ import {
 } from './vpValidationCopy.js'
 
 test('copy VP : label + tooltip + chemin rapport stables', () => {
-  assert.equal(VP_VALIDATION_BADGE_LABEL, 'Signal non validé')
+  assert.equal(VP_VALIDATION_BADGE_LABEL, 'Rentabilité non prouvée')
   assert.match(VP_VALIDATION_TOOLTIP, /VP3/)
   assert.match(VP_VALIDATION_TOOLTIP, /0\/48/)
   assert.equal(VP_VALIDATION_REPORT_PATH, 'docs/VP3-REPORT-FINAL.md')

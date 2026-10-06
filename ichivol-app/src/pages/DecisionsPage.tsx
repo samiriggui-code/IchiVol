@@ -115,33 +115,11 @@ function participationBadge(row: ScreenerDecisionRow): ReactNode {
 }
 
 function directionCell(row: ScreenerDecisionRow): ReactNode {
-  const gate = row.pipeline?.decision
-  const showVp = isActionableBuySell(gate) || isActionableBuySell(row.decision)
   if (row.direction === 'SHORT' || row.decision === 'SELL' || row.decision === 'STRONG_SELL') {
-    return (
-      <span className="down">
-        ↓ Vente
-        {showVp ? (
-          <>
-            {' '}
-            <VpValidationBadge compact />
-          </>
-        ) : null}
-      </span>
-    )
+    return <span className="down">↓ Vente</span>
   }
   if (row.direction === 'LONG' || row.decision === 'BUY' || row.decision === 'STRONG_BUY') {
-    return (
-      <span className="up">
-        ↑ Achat
-        {showVp ? (
-          <>
-            {' '}
-            <VpValidationBadge compact />
-          </>
-        ) : null}
-      </span>
-    )
+    return <span className="up">↑ Achat</span>
   }
   return <span>—</span>
 }
@@ -504,6 +482,11 @@ export function DecisionsPage() {
           <h2>Matrice de décision</h2>
           {badge('5 PORTES', 'gray')}
         </div>
+        <p className="matrix-proof-note" role="note">
+          <b>À savoir :</b> une direction « Achat » ou « Vente » dit ce que les 5 portes voient maintenant, pas
+          que c’est rentable. L’étude de validation (BTC, ETH, SOL, 2021–2024, frais compris) n’a encore trouvé
+          d’avantage statistique dans aucun des 48 cas testés. À suivre en paper uniquement.
+        </p>
         <div className="table-wrap">
           <table>
             <thead>
