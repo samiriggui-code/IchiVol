@@ -10,6 +10,8 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
+from app.sessions.decision_windows import DEFAULT_DECISION_WINDOWS
+
 BASELINE_CODE = "ICHIVOL_BASELINE_V1"
 
 # 2026-09-21 (user decision): realistic costs by asset class. Per-side friction (bps) = half quoted spread +
@@ -266,7 +268,17 @@ FWD_E_LONG = _with(
     **_FWD_COMMON,
 )
 
+# Baseline rules, but the signal only opens / closes at the 1h candles tied to the Tokyo / London / New York
+# opens and closes (app/sessions/decision_windows.py). Stop / target stay watched every minute.
+SESSIONS_CODE = "ICHIVOL_SESSIONS_V1"
+ICHIVOL_SESSIONS_V1 = _with(
+    code=SESSIONS_CODE,
+    label="Baseline - decisions only at Tokyo / London / New York opens and closes",
+    decision_windows=list(DEFAULT_DECISION_WINDOWS),
+)
+
 EXPERIMENTAL_PROFILES: dict[str, dict[str, Any]] = {
+    ICHIVOL_SESSIONS_V1["code"]: ICHIVOL_SESSIONS_V1,
     STRUCTURE_MVPP["code"]: STRUCTURE_MVPP,
     STRUCTURE_TRENDLN["code"]: STRUCTURE_TRENDLN,
     STRUCTURE_PYTRENDLINE["code"]: STRUCTURE_PYTRENDLINE,
@@ -335,12 +347,15 @@ def profile_for(code: str) -> dict[str, Any]:
 # 2026-09-20: everything was reset to a single virtual portfolio (one account, one lot per symbol).
 # The experimental profiles above stay registered as definitions but are no longer seeded or synced.
 SINGLE_PORTFOLIO_MODE = True
+# 2026-10-06 (user decision): the market-session schedule runs as a separate account next to the baseline, so
+# the hourly baseline stays the reference it is compared against.
+PARALLEL_SYNCED_CODES: tuple[str, ...] = (SESSIONS_CODE,)
 
 
 def syncable_profile_codes() -> list[str]:
     """Codes that receive auto_watchlist sync."""
     if SINGLE_PORTFOLIO_MODE:
-        return [BASELINE_CODE]
+        return [BASELINE_CODE, *PARALLEL_SYNCED_CODES]
     return [
         code
         for code, profile in ALL_PROFILES.items()

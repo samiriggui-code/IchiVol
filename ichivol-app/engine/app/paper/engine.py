@@ -30,6 +30,7 @@ from app.paper.risk_kernel import (
     open_lots_from_positions,
 )
 from app.paper.portfolio import ensure_baseline_portfolio, ensure_syncable_portfolios
+from app.sessions.decision_windows import decision_event_for_bar
 from app.shadow import broker as shadow_broker
 from app.structure.gate import apply_structure_gate
 
@@ -179,8 +180,12 @@ def sync_position(
     run_id: int | None = None,
     manual_notional: float | None = None,
     take_profit_r: float | None = None,
+    signal_actions: bool = True,
 ) -> PaperPosition | None:
-    """One symbol open/hold/close for one portfolio. Capital sizing when stop set."""
+    """One symbol open/hold/close for one portfolio. Capital sizing when stop set.
+
+    ``signal_actions=False`` (outside a profile's ``decision_windows``): stop/target still close a lot, but the
+    signal neither opens nor closes anything."""
     if portfolio is None:
         try:
             portfolio = ensure_baseline_portfolio(session)
@@ -215,6 +220,9 @@ def sync_position(
                 _close_legacy(existing, price=price, reason=stop_reason)
             session.flush()
             return existing
+
+        if not signal_actions:
+            return None
 
         _prof = (portfolio.strategy_profile or {}) if portfolio is not None else {}
         if _prof.get("exit_mode") == "direction" and existing.source == source:
@@ -262,7 +270,7 @@ def sync_position(
         session.flush()
         return existing
 
-    if direction is None:
+    if direction is None or not signal_actions:
         return None
 
     profile = (portfolio.strategy_profile or {}) if portfolio is not None else {}
@@ -567,6 +575,19 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
                 extra["block_reason"] = block_reason
                 extra["raw_decision"] = raw_decision
 
+            signal_actions = True
+            windows = profile.get("decision_windows")
+            if windows:
+                # Market-session schedule: the signal acts only on the candle tied to a market open/close.
+                bar_close = (getattr(row, "signal_timing", None) or {}).get("signal_bar_close")
+                event = (
+                    decision_event_for_bar(int(bar_close), windows, TF_SECONDS.get(row.timeframe, 3600))
+                    if bar_close is not None
+                    else None
+                )
+                signal_actions = event is not None
+                extra["decision_event"] = event
+
             run_id = None
             if paper_gates.has_gates(profile):
                 run_id = paper_gates.observe_decision(
@@ -584,6 +605,7 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
                 signal_extra=extra,
                 portfolio=portfolio,
                 run_id=run_id,
+                signal_actions=signal_actions,
             )
             if result is not None:
                 touched.append(result)

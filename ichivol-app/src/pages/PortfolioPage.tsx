@@ -33,6 +33,9 @@ import {
   BASELINE_PORTFOLIO_CODE as BASELINE_CODE,
   RS_D1_CODE,
   RS_D1_LABEL,
+  SESSIONS_CODE,
+  SESSIONS_LABEL,
+  isRsPortfolio,
   manualActionsAllowed,
   portfolioFromParam,
 } from '../lib/rsPortfolio'
@@ -150,7 +153,9 @@ function fmtPx(n: number | null | undefined): string {
 export function PortfolioPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const code = portfolioFromParam(searchParams.get('pf'))
-  const isRs = !manualActionsAllowed(code)
+  const isRs = isRsPortfolio(code)
+  const isSessions = code === SESSIONS_CODE
+  const manualAllowed = manualActionsAllowed(code)
   const [portfolios, setPortfolios] = useState<PaperPortfolioRow[]>([])
   const [overview, setOverview] = useState<PaperOverview | null>(null)
   const [orders, setOrders] = useState<PaperOrderRow[]>([])
@@ -182,7 +187,11 @@ export function PortfolioPage() {
     }
   }, [code])
 
-  const hasRs = portfolios.some((p) => p.code === RS_D1_CODE)
+  const tabs = [
+    { code: BASELINE_CODE, label: 'IchiVol', title: undefined as string | undefined },
+    { code: SESSIONS_CODE, label: 'Sessions', title: SESSIONS_LABEL },
+    { code: RS_D1_CODE, label: 'RS-D1', title: RS_D1_LABEL },
+  ].filter((t) => t.code === BASELINE_CODE || t.code === code || portfolios.some((p) => p.code === t.code))
   const selectPortfolio = (next: string) => {
     const params = new URLSearchParams(searchParams)
     if (next === BASELINE_CODE) params.delete('pf')
@@ -256,34 +265,30 @@ export function PortfolioPage() {
           <p className="subtitle">
             {isRs
               ? `${RS_D1_LABEL}. Portefeuille séparé, piloté uniquement par la règle RS-D1 (Donchian 4h) : aucun ordre manuel.`
-              : 'Compte paper. Les ordres sont simulés ici, aucun n’est envoyé à un courtier.'}
+              : isSessions
+                ? 'Mêmes règles qu’IchiVol, mais le signal n’ouvre et ne ferme qu’aux ouvertures et clôtures de Tokyo, Londres et New York. Stop et objectif restent surveillés en continu. Aucun ordre manuel.'
+                : 'Compte paper. Les ordres sont simulés ici, aucun n’est envoyé à un courtier.'}
           </p>
         </div>
         <div className="actions">
-          {hasRs || isRs ? (
+          {tabs.length > 1 ? (
             <div className="pf-switch" role="tablist" aria-label="Portefeuille paper">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={!isRs}
-                className={`suggestion${!isRs ? ' active' : ''}`}
-                onClick={() => selectPortfolio(BASELINE_CODE)}
-              >
-                IchiVol
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={isRs}
-                className={`suggestion${isRs ? ' active' : ''}`}
-                onClick={() => selectPortfolio(RS_D1_CODE)}
-                title={RS_D1_LABEL}
-              >
-                RS-D1
-              </button>
+              {tabs.map((t) => (
+                <button
+                  key={t.code}
+                  type="button"
+                  role="tab"
+                  aria-selected={code === t.code}
+                  className={`suggestion${code === t.code ? ' active' : ''}`}
+                  onClick={() => selectPortfolio(t.code)}
+                  title={t.title}
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
           ) : null}
-          {badge(isRs ? 'RS-D1 · PAPER' : 'BROKER PAPER', 'gray')}
+          {badge(isRs ? 'RS-D1 · PAPER' : isSessions ? 'SESSIONS · PAPER' : 'BROKER PAPER', 'gray')}
         </div>
       </div>
 
@@ -598,7 +603,7 @@ export function PortfolioPage() {
                       <td>
                         <div className="pf-pos-state">
                           {badge(p.mark_stale ? 'COURS PÉRIMÉ' : 'OUVERTE', p.mark_stale ? 'amber' : '')}
-                          {p.id && !isRs ? (
+                          {p.id && manualAllowed ? (
                             <button
                               type="button"
                               className="suggestion pf-close-btn"
