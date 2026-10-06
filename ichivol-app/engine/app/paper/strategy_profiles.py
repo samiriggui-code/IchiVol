@@ -10,6 +10,8 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
+from app.sessions.decision_windows import DEFAULT_DECISION_WINDOWS
+
 BASELINE_CODE = "ICHIVOL_BASELINE_V1"
 
 # 2026-09-21 (user decision): realistic costs by asset class. Per-side friction (bps) = half quoted spread +
@@ -266,7 +268,16 @@ FWD_E_LONG = _with(
     **_FWD_COMMON,
 )
 
+# Baseline rules, but the signal only opens / closes at the 1h candles tied to the Tokyo / London / New York
+# opens and closes (app/sessions/decision_windows.py). Stop / target stay watched every minute.
+ICHIVOL_SESSIONS_V1 = _with(
+    code="ICHIVOL_SESSIONS_V1",
+    label="Baseline - decisions only at Tokyo / London / New York opens and closes",
+    decision_windows=list(DEFAULT_DECISION_WINDOWS),
+)
+
 EXPERIMENTAL_PROFILES: dict[str, dict[str, Any]] = {
+    ICHIVOL_SESSIONS_V1["code"]: ICHIVOL_SESSIONS_V1,
     STRUCTURE_MVPP["code"]: STRUCTURE_MVPP,
     STRUCTURE_TRENDLN["code"]: STRUCTURE_TRENDLN,
     STRUCTURE_PYTRENDLINE["code"]: STRUCTURE_PYTRENDLINE,

@@ -582,3 +582,52 @@ def test_auto_sync_passes_the_mtf_matrix_to_the_entry_signal(monkeypatch):
     assert seen and seen[0]["mtf_matrix"]["summary"]["opposed"] == ["4h"]
     assert seen[0]["mtf_matrix"]["used_by_decision"] is False
     assert paper._signal_payload(_pipeline("BUY"), seen[0])["mtf_matrix"]["decision_tf"] == "1h"
+
+
+def test_outside_decision_window_signal_neither_opens_nor_closes(_session):
+    """decision_windows: off-window the signal is ignored, the stop/target still closes a lot."""
+    pf = _disposable(_session)
+    try:
+        kw = dict(symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist", user_id=None,
+                  stop_distance=STOP, portfolio=pf)
+        assert paper.sync_position(_session, price=100.0, pipeline=_pipeline("BUY"),
+                                   signal_actions=False, **kw) is None
+        opened = paper.sync_position(_session, price=100.0, pipeline=_pipeline("BUY"), **kw)
+        assert opened is not None and opened.status == "OPEN"
+        _session.commit()
+        assert paper.sync_position(_session, price=99.0, pipeline=_pipeline("SELL", Direction.SHORT),
+                                   signal_actions=False, **kw) is None
+        assert opened.status == "OPEN"
+        stopped = paper.sync_position(_session, price=opened.stop_price - 0.5,
+                                      pipeline=_pipeline("BUY"), signal_actions=False, **kw)
+        assert stopped is not None and stopped.status == "CLOSED"
+    finally:
+        _drop_portfolio(_session, pf)
+
+
+def test_auto_sync_gates_signal_actions_on_decision_windows(monkeypatch):
+    seen: list[dict] = []
+    monkeypatch.setattr(paper, "sync_position", lambda session, **kw: seen.append(kw))
+    monkeypatch.setattr(paper, "ensure_syncable_portfolios", lambda session: [
+        SimpleNamespace(id="a", code="BASE", strategy_profile={"auto_timeframes": ["1h"]}),
+        SimpleNamespace(id="b", code="SESS", strategy_profile={"auto_timeframes": ["1h"],
+                                                               "decision_windows": ["ny_open"]}),
+    ])
+    monkeypatch.setattr(paper.shadow_broker, "mark_shadows", lambda *a, **k: None)
+    monkeypatch.setattr(paper.paper_broker, "snapshot_equity", lambda *a, **k: None)
+
+    def _row(bar_close_utc: datetime):
+        return SimpleNamespace(
+            symbol="PAPERTEST_WIN", timeframe=TIMEFRAME, price=100.0, pipeline=_pipeline("BUY"),
+            atr=SimpleNamespace(suggested_stop_distance=STOP), candles=[], rvol=None, mtf_matrix=None,
+            signal_timing={"signal_bar_close": int(bar_close_utc.timestamp())},
+        )
+
+    # 2026-07-07 (EDT): NY 09:30 open -> decision candle closes 14:00 UTC.
+    paper.sync_auto_watchlist(SimpleNamespace(commit=lambda: None), [
+        _row(datetime(2026, 7, 7, 13, tzinfo=timezone.utc)),
+        _row(datetime(2026, 7, 7, 14, tzinfo=timezone.utc)),
+    ])
+    by = [(kw["signal_extra"]["portfolio_code"], kw["signal_actions"], kw["signal_extra"].get("decision_event"))
+          for kw in seen]
+    assert by == [("BASE", True, None), ("SESS", False, None), ("BASE", True, None), ("SESS", True, "ny_open")]
