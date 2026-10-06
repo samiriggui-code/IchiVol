@@ -6,50 +6,56 @@ import { ThemeToggle } from '../components/ThemeToggle'
 const FEATURES = [
   {
     icon: 'element-11',
-    title: 'Desk workspace V3',
-    body: '11 pages alignées maquette : Desk, Marché, Opportunités, Portefeuille, Lab, Journal, Contexte, Copilot, Agents, Opérations, Paramètres.',
+    title: 'Espace de travail',
+    body: '11 pages : Desk, Marché, Opportunités, Portefeuille, Lab, Journal, Contexte, Copilot, Agents, Opérations, Paramètres.',
   },
   {
     icon: 'abstract-39',
     title: 'Eve — agent de surveillance',
-    body: 'File AgentTask type Comp AI : mission 1 symbole, réveil à la bougie fermée, réponse dans Copilot. Paper only · confirm humaine.',
+    body: 'Une mission par symbole, réveil à chaque bougie clôturée, compte rendu dans Copilot. Paper uniquement, confirmation humaine.',
   },
   {
     icon: 'shield-tick',
-    title: 'Risk Kernel + kill-switch',
-    body: 'Toute ouverture paper passe le risk_kernel. Kill-switch et pertes journalières bloquent les entrées — le LLM ne bypass jamais.',
+    title: 'Contrôle du risque et arrêt d’urgence',
+    body: 'Toute ouverture paper passe par le contrôle du risque. L’arrêt d’urgence et la limite de perte journalière bloquent les entrées — l’IA ne peut pas les contourner.',
   },
   {
     icon: 'kanban',
-    title: 'Decision Engine · 5 portes',
-    body: 'Direction → Participation → Structure → Location → Régime. Portes = action ; badge combiner = diagnostic. Le LLM ne décide pas.',
+    title: 'Moteur de décision · 5 portes',
+    body: 'Direction → Participation → Structure → Emplacement → Régime. Les portes décident ; l’IA ne décide pas.',
   },
   {
     icon: 'chart-simple',
     title: 'Strategy Lab',
-    body: 'Event study, rulesets, ablation, walk-forward, Monte Carlo — recherche hors capital, sans promotion auto vers le live.',
+    body: 'Backtests, ablations, régimes, walk-forward — recherche sans capital engagé.',
   },
   {
     icon: 'message-text-2',
-    title: 'Copilot + preuves moteur',
-    body: 'Tools allowlistés, DECISION_DATA, evidence et qualité. Explication ancrée — pas d’invention de BUY.',
+    title: 'Copilot appuyé sur le moteur',
+    body: 'Copilot n’utilise que les données du moteur pour expliquer une décision — il n’invente jamais de signal d’achat.',
+  },
+  {
+    icon: 'wallet',
+    title: 'Trois portefeuilles paper',
+    body: 'IchiVol (décision chaque heure), Sessions (ouvertures et clôtures de Tokyo, Londres, New York) et RS-D1 (cassures Donchian 4h) tournent en parallèle, sans argent réel.',
   },
 ]
 
 const ENGINE_STACK = [
-  { code: 'CORE', label: 'Ichimoku × RVOL + Decision Engine' },
-  { code: 'MS', label: 'Market Structure · swings · FVG · Fib' },
-  { code: 'RISK', label: 'Risk Kernel · kill-switch · paper gateway' },
-  { code: 'EVE', label: 'AgentTask · schedule_recheck · Copilot thread' },
-  { code: 'LAB', label: 'Strategy Lab — recherche hors capital' },
-  { code: 'CYCLE', label: 'CycleState V0 — observation seule (FFT / Hilbert)' },
+  { code: 'CORE', label: 'Ichimoku × volume relatif + moteur de décision' },
+  { code: 'MS', label: 'Structure de marché · sommets et creux · zones · Fibonacci' },
+  { code: 'RISK', label: 'Contrôle du risque · arrêt d’urgence · ordres paper' },
+  { code: 'EVE', label: 'Missions de surveillance · contrôles planifiés · fil Copilot' },
+  { code: 'LAB', label: 'Strategy Lab — recherche sans capital engagé' },
+  { code: 'CYCLE', label: 'Cycles de marché — observation seule' },
 ]
 
 const TRUST = [
-  'Moteur Python = vérité · Eve explique, ne décide pas',
-  'Paper only · confirm humaine par défaut · pas d’auto-open',
-  'Risk Kernel obligatoire avant toute entrée paper',
-  'Lab et expériences hors capital — pas de promo live auto',
+  'Le moteur décide · Eve explique, sans décider',
+  'Paper uniquement · confirmation humaine par défaut · aucune ouverture automatique',
+  'Contrôle du risque obligatoire avant toute entrée paper',
+  'Trois portefeuilles paper suivis en parallèle : IchiVol, Sessions, RS-D1',
+  'Recherche sans capital engagé — rentabilité non prouvée à ce jour',
 ]
 
 const STEPS = [
@@ -57,19 +63,19 @@ const STEPS = [
     n: '01',
     icon: 'filter-search',
     title: 'Lire',
-    body: 'Desk et Marché : régime, sessions, screener, preuves pipeline.',
+    body: 'Desk et Marché : régime, sessions, filtre des marchés, détail des signaux.',
   },
   {
     n: '02',
     icon: 'verify',
     title: 'Qualifier',
-    body: 'Portes Decision Engine + Risk Kernel. Shadow journal si blocage.',
+    body: 'Portes du moteur de décision et contrôle du risque. Chaque blocage est consigné au journal.',
   },
   {
     n: '03',
     icon: 'abstract-39',
     title: 'Surveiller',
-    body: 'Mission Eve sur un symbole · réveil à la bougie · rapport dans Copilot.',
+    body: 'Mission Eve sur un symbole · réveil à la bougie · compte rendu dans Copilot.',
   },
 ]
 
@@ -80,17 +86,17 @@ const COMPARE = {
     'Aucune surveillance durable entre deux sessions',
   ],
   with: [
-    'Signal + participation + structure mesurés hors échantillon',
-    'Eve dort / se réveille (file Postgres) — reply dans Copilot',
-    'Risk Kernel + kill-switch avant paper · toi confirmes',
+    'Signal mesuré hors échantillon — rentabilité non prouvée à ce jour (aucun avantage sur 48 cas testés).',
+    'Eve se met en veille puis se réveille à la bougie — réponse dans Copilot',
+    'Contrôle du risque et arrêt d’urgence avant tout ordre paper · vous confirmez',
   ],
 }
 
 const STATS = [
   { value: '11', label: 'Pages workspace' },
-  { value: '5', label: 'Portes Decision Engine' },
-  { value: '1', label: 'Agent LLM (Eve)' },
-  { value: '0', label: 'Votes LONG/SHORT par le LLM' },
+  { value: '5', label: 'Portes du moteur de décision' },
+  { value: '1', label: 'Agent IA (Eve)' },
+  { value: '0', label: 'Décision achat/vente prise par l’IA' },
 ]
 
 const FAQ = [
@@ -100,19 +106,19 @@ const FAQ = [
   },
   {
     q: 'Que fait Eve quand je « Surveille BTC » ?',
-    a: 'Une mission AgentTask est planifiée à la prochaine bougie fermée. Eve se réveille, lit le moteur via tools, écrit dans le thread Copilot, et peut se reprogrammer. Paper only, confirm humaine.',
+    a: 'Une mission est planifiée à la prochaine bougie clôturée. Eve se réveille, lit les données du moteur, écrit dans le fil Copilot et peut programmer un nouveau contrôle. Paper uniquement, confirmation humaine.',
   },
   {
-    q: 'Les 6 cartes Agents sont-elles 6 LLM ?',
-    a: 'Non. Un seul LLM (Eve / Opportunités). Les cinq autres sont des rôles code (observateur, risque, exécution, position, session) déjà dans le moteur — la page affiche leur état.',
+    q: 'Les 6 cartes Agents sont-elles 6 IA ?',
+    a: 'Non. Une seule IA (Eve / Opportunités). Les cinq autres sont des rôles programmés (observateur, risque, exécution, position, session) déjà dans le moteur — la page affiche leur état.',
   },
   {
     q: 'Qu’est-ce que le Strategy Lab ?',
-    a: 'Un banc de recherche : event study, ablation, walk-forward, Monte Carlo. Aucune promotion automatique vers le trading live.',
+    a: 'Un banc de recherche : backtests, ablations, régimes, walk-forward — recherche sans capital engagé. Aucun passage automatique vers le trading réel.',
   },
   {
-    q: 'Le Risk Kernel peut-il être contourné par l’agent ?',
-    a: 'Non. Toute ouverture paper passe le risk_kernel et le paper gateway. Kill-switch armé = entrées bloquées.',
+    q: 'L’agent peut-il contourner le contrôle du risque ?',
+    a: 'Non. Toute ouverture paper passe par le contrôle du risque. Arrêt d’urgence activé = entrées bloquées.',
   },
 ]
 
@@ -246,8 +252,8 @@ export function LandingPage() {
                 Observer. Qualifier. <em>Surveiller.</em>
               </h1>
               <p className="camap-hero-lede">
-                Workspace V3 : le moteur tranche, le Risk Kernel borne, Eve
-                surveille — Claude explique, sans jamais inventer le BUY.
+                Le moteur tranche, le contrôle du risque fixe les limites, Eve
+                surveille — Claude explique, sans jamais inventer de signal d’achat.
               </p>
               <div className="camap-hero-cta">
                 <Link to="/login" className="camap-btn camap-btn-primary camap-btn-lg">
@@ -265,12 +271,12 @@ export function LandingPage() {
                 <MockChart />
                 <div className="camap-hero-visual-footer">
                   <span>BTCUSDT · 1h</span>
-                  <span className="camap-chip camap-chip-bull">recheck due</span>
+                  <span className="camap-chip camap-chip-bull">contrôle prévu</span>
                 </div>
                 <div className="camap-hero-gates" aria-hidden>
                   <span className="is-pass">Direction</span>
                   <span className="is-pass">Participation</span>
-                  <span className="is-pass">Risk</span>
+                  <span className="is-pass">Risque</span>
                   <span className="is-watch">Eve veille</span>
                 </div>
               </div>
@@ -290,10 +296,10 @@ export function LandingPage() {
         </section>
 
         <section id="moteur" className="camap-section">
-          <h2 className="camap-section-title">Stack moteur V3</h2>
+          <h2 className="camap-section-title">Le moteur</h2>
           <p className="camap-section-lede">
-            Core Ichimoku×RVOL, structure, risk, agent Eve, Lab — Cycle en
-            observation seule.
+            Ichimoku et volume relatif, structure, risque, agent Eve, Lab — les
+            cycles restent en observation seule.
           </p>
           <ol className="camap-engine-stack">
             {ENGINE_STACK.map((row) => (
@@ -308,7 +314,7 @@ export function LandingPage() {
         <section id="methode" className="camap-section">
           <h2 className="camap-section-title">Ce que l’app traite</h2>
           <p className="camap-section-lede">
-            Live → portes → risk → Lab / Paper → Eve / Copilot.
+            Marché en direct → portes → risque → Lab / paper → Eve / Copilot.
           </p>
           <ol className="camap-steps camap-steps-numbered">
             {STEPS.map((step) => (
@@ -326,17 +332,17 @@ export function LandingPage() {
           </ol>
           <blockquote className="camap-inline-quote">
             <p>
-              « Ne demande pas à Claude s’il faut acheter — demande au moteur
-              ce qu’il a mesuré, puis laisse Eve te le rappeler à la bougie. »
+              « Ne demandez pas à Claude s’il faut acheter — demandez au moteur
+              ce qu’il a mesuré, puis laissez Eve vous le rappeler à la bougie. »
             </p>
-            <cite>Principe IchiVol V3</cite>
+            <cite>Principe IchiVol</cite>
           </blockquote>
         </section>
 
         <section id="capacites" className="camap-section">
           <h2 className="camap-section-title">Capacités</h2>
           <p className="camap-section-lede">
-            Livré dans le workspace — Desk, Eve, Risk Kernel, Lab, preuves.
+            Ce que contient l’espace de travail : Desk, Eve, contrôle du risque, Lab, trois portefeuilles paper.
           </p>
           <div className="camap-bento">
             {FEATURES.map((f) => (
@@ -354,7 +360,7 @@ export function LandingPage() {
         <section id="comparatif" className="camap-section">
           <h2 className="camap-section-title">Ce que ça change</h2>
           <p className="camap-section-lede">
-            Même Ichimoku. La différence : risk borné + Eve qui survit au restart.
+            Même Ichimoku. La différence : un risque borné et une Eve qui reprend après un redémarrage.
           </p>
           <div className="camap-compare">
             <div className="camap-compare-col">
@@ -366,7 +372,7 @@ export function LandingPage() {
               </ul>
             </div>
             <div className="camap-compare-col camap-compare-col-highlight">
-              <span className="camap-compare-label">Avec IchiVol V3</span>
+              <span className="camap-compare-label">Avec IchiVol</span>
               <ul>
                 {COMPARE.with.map((item) => (
                   <li key={item}>
@@ -402,7 +408,7 @@ export function LandingPage() {
 
         <section className="camap-closing">
           <h2>Prêt à entrer dans le Desk</h2>
-          <p>Workspace V3 · Eve · Risk Kernel · Lab · Copilot — session sécurisée.</p>
+          <p>Desk · Eve · contrôle du risque · Lab · Copilot — connexion sécurisée.</p>
           <Link to="/login" className="camap-btn camap-btn-primary camap-btn-lg">
             Se connecter
           </Link>
@@ -417,8 +423,8 @@ export function LandingPage() {
               <span className="camap-word">IchiVol</span>
             </Link>
             <p>
-              Cockpit Ichimoku × RVOL V3 : Desk, Eve, Risk Kernel, Lab —
-              le moteur tranche, toi confirmes.
+              Poste de pilotage Ichimoku × volume relatif : Desk, Eve, contrôle du risque, Lab —
+              le moteur tranche, vous confirmez.
             </p>
           </div>
 
@@ -432,7 +438,7 @@ export function LandingPage() {
               <a href="#faq">FAQ</a>
             </div>
             <div className="camap-footer-col">
-              <h3>Workspace</h3>
+              <h3>Espace de travail</h3>
               <Link to="/login">Desk</Link>
               <Link to="/login">Agents / Eve</Link>
               <Link to="/login">Portefeuille</Link>
@@ -452,7 +458,7 @@ export function LandingPage() {
             © {new Date().getFullYear()} IchiVol — lecture structurée, pas un conseil financier.
           </span>
           <span className="camap-footer-muted">
-            Eve surveille · Risk borne · toi confirmes
+            Eve surveille · le risque est borné · vous confirmez
           </span>
         </div>
       </footer>

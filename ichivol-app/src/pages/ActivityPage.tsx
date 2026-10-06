@@ -21,6 +21,8 @@ import {
 } from '../lib/decisions'
 import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
 import { displaySymbol } from '../lib/markets'
+import { portfolioLabel, replacePortfolioCodes } from '../lib/portfolioLabels'
+import { isRsPortfolio } from '../lib/rsPortfolio'
 import '../components/engineEvidence.css'
 import './ActivityPage.css'
 
@@ -33,7 +35,9 @@ type AuditRow = {
   time: string
   level: AuditLevel
   source: string
+  portfolio: string
   event: string
+  detail: string
   item: ActivityItem
 }
 
@@ -51,15 +55,19 @@ function badge(text: string, tone: BadgeTone = ''): ReactNode {
   return <span className={`tag ${inferred}`.trim()}>{text}</span>
 }
 
-function fmtClock(iso: string): string {
+/** Jour/mois + heure (« 06/10 14:32 ») : le journal couvre plusieurs jours. */
+function fmtClock(iso: string, withSeconds = false): string {
   const d = new Date(iso)
   if (Number.isNaN(+d)) return '—'
-  return d.toLocaleTimeString('fr-FR', {
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const time = d.toLocaleTimeString('fr-FR', {
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit',
+    ...(withSeconds ? { second: '2-digit' as const } : {}),
     hour12: false,
   })
+  return `${dd}/${mm} ${time}`
 }
 
 function levelFromTone(tone: FeedTone): AuditLevel {
@@ -147,7 +155,9 @@ export function ActivityPage() {
       time: fmtClock(item.time),
       level: levelFromTone(item.tone),
       source: sourceFromItem(item),
-      event: item.title || item.detail || '—',
+      portfolio: portfolioLabel(item.portfolio),
+      event: replacePortfolioCodes(item.title || item.detail || '—'),
+      detail: replacePortfolioCodes(item.detail || ''),
       item,
     }))
   }, [feed])
@@ -157,6 +167,8 @@ export function ActivityPage() {
     setDossier(null)
     setDossierError(null)
     if (!item.symbol || item.symbol === '?') return
+    // RS-D1 suit sa propre règle : la décision 1h du moteur IchiVol ne l'explique pas.
+    if (isRsPortfolio(item.portfolio)) return
     setDossierLoading(true)
     void getDecisionDetail(item.symbol, '1h', false)
       .then((d) => setDossier(d))
@@ -174,6 +186,7 @@ export function ActivityPage() {
       return (
         r.event.toLowerCase().includes(q) ||
         r.source.toLowerCase().includes(q) ||
+        r.portfolio.toLowerCase().includes(q) ||
         r.level.toLowerCase().includes(q)
       )
     })
@@ -246,6 +259,7 @@ export function ActivityPage() {
                 <tr>
                   <th>HEURE</th>
                   <th>NIVEAU</th>
+                  <th>PORTEFEUILLE</th>
                   <th>SOURCE</th>
                   <th>ÉVÉNEMENT</th>
                 </tr>
@@ -257,6 +271,7 @@ export function ActivityPage() {
                       <span className="mono">—</span>
                     </td>
                     <td>{badge('—', 'gray')}</td>
+                    <td>—</td>
                     <td>—</td>
                     <td>{loading ? 'Chargement…' : '—'}</td>
                   </tr>
@@ -278,10 +293,11 @@ export function ActivityPage() {
                         <span className="mono">{r.time}</span>
                       </td>
                       <td>{badge(r.level)}</td>
+                      <td>{r.portfolio}</td>
                       <td>{r.source}</td>
                       <td>
                         <b>{r.event}</b>
-                        {r.item.detail ? <small>{r.item.detail}</small> : null}
+                        {r.detail ? <small>{r.detail}</small> : null}
                       </td>
                     </tr>
                   ))
@@ -395,28 +411,43 @@ export function ActivityPage() {
           <div className="dialog-body">
             <div className="dialog-head">
               <h2>
-                {displaySymbol(selected.symbol)} · {selected.title}
+                {displaySymbol(selected.symbol)} · {replacePortfolioCodes(selected.title)}
               </h2>
               <button type="button" onClick={() => setSelected(null)} aria-label="Fermer">
                 ×
               </button>
             </div>
-            <p>{selected.detail || 'Le journal n’a pas de détail pour cette ligne.'}</p>
+            <p>
+              {selected.detail
+                ? replacePortfolioCodes(selected.detail)
+                : 'Le journal n’a pas de détail pour cette ligne.'}
+            </p>
             <div className="statline">
               <span>Heure</span>
-              <b>{fmtClock(selected.time)}</b>
+              <b>{fmtClock(selected.time, true)}</b>
             </div>
             <div className="statline">
               <span>Portefeuille</span>
-              <b>{selected.portfolio || '—'}</b>
+              <b>{portfolioLabel(selected.portfolio)}</b>
             </div>
-            {dossierLoading ? <p>Lecture de la décision moteur…</p> : null}
-            {dossierError ? <p>{dossierError}</p> : null}
-            {dossier ? (
-              <>
-                <DecisionPipelinePanel view={pipelineFromDecisionDetail(dossier)} />
-                <SignalEvidenceCard detail={dossier} />
-              </>
+            {isRsPortfolio(selected.portfolio) ? (
+              <p className="ops-dossier-note">
+                RS-D1 suit sa propre règle : la lecture du moteur IchiVol ne s’applique pas à cet
+                événement.
+              </p>
+            ) : null}
+            {dossierLoading || dossierError || dossier ? (
+              <div className="ops-dossier-now">
+                <h3>Lecture actuelle du moteur (pas celle au moment de l’événement)</h3>
+                {dossierLoading ? <p>Lecture de la décision moteur…</p> : null}
+                {dossierError ? <p>{dossierError}</p> : null}
+                {dossier ? (
+                  <>
+                    <DecisionPipelinePanel view={pipelineFromDecisionDetail(dossier)} />
+                    <SignalEvidenceCard detail={dossier} />
+                  </>
+                ) : null}
+              </div>
             ) : null}
             <div className="dialog-actions">
               <button type="button" className="primary" onClick={() => setSelected(null)}>

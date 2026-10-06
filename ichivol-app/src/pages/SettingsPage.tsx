@@ -281,7 +281,7 @@ export function SettingsPage() {
           <h1>Paramètres</h1>
           <p className="subtitle">Votre environnement de travail.</p>
         </div>
-        <div className="actions">{badge('DONNÉES LIVE', 'gray')}</div>
+        <div className="actions">{badge(engine ? 'MOTEUR JOIGNABLE' : 'MOTEUR INJOIGNABLE', 'gray')}</div>
       </div>
 
       <div className="tabs">
@@ -306,19 +306,20 @@ export function SettingsPage() {
             {settingsTab === 'Limites de risque' && (
               <>
                 <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  Plafonds appliqués par le profil paper ICHIVOL_BASELINE_V1. Ils ne sont pas des
-                  préférences navigateur : les modifier ici ne changerait pas le risk kernel.
+                  Plafonds appliqués par le portefeuille paper IchiVol (horaire). Sessions et RS-D1
+                  appliquent les mêmes plafonds. Ils sont fixés par le moteur et ne se modifient pas
+                  depuis cette page.
                 </p>
                 <div className="statline">
                   <span>Risque par trade</span>
-                  <b>0,5 %</b>
+                  <b>{paperRisk ? '0,5 %' : '—'}</b>
                 </div>
                 <div className="statline">
                   <span>Risque ouvert max</span>
                   <b>
                     {paperRisk?.max_open_risk_pct != null
                       ? `${(paperRisk.max_open_risk_pct * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`
-                      : '4 %'}
+                      : '—'}
                   </b>
                 </div>
                 <div className="statline">
@@ -652,13 +653,13 @@ export function SettingsPage() {
                   />
                   <small>
                     {engine
-                      ? 'Contrat API settings OK.'
+                      ? 'Le moteur répond.'
                       : 'La connexion nécessite le contrat API de votre moteur.'}
                   </small>
                 </div>
                 <div className="statline">
-                  <span>Données de marché</span>
-                  <b>{badge(engine ? 'LIVE' : '—', 'gray')}</b>
+                  <span>Moteur</span>
+                  <b>{badge(engine ? 'JOIGNABLE' : '—', 'gray')}</b>
                 </div>
                 <div className="statline">
                   <span>Broker</span>
@@ -703,11 +704,6 @@ export function SettingsPage() {
             <p style={{ fontSize: 12, color: 'var(--muted)' }}>
               Le moteur ignore la bougie en cours. Une décision ne sort qu’une fois la bougie
               fermée.
-            </p>
-            <h3 style={{ marginTop: 28 }}>Identité IchiVol</h3>
-            <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-              Fond crème, surfaces sobres, couleurs réservées aux décisions. Une lecture
-              cohérente sur les onze espaces.
             </p>
           </div>
         </section>

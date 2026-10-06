@@ -25,6 +25,7 @@ import {
   type PipelineStageId,
 } from '../lib/decisionPipeline'
 import { buildDecisionSummary } from '../lib/decisionLabels'
+import { DEFAULT_ENGINE_THRESHOLDS, loadEngineThresholds } from '../lib/engineThresholds'
 import {
   OBJECT_LAYER_META,
   countObjectsByLayer,
@@ -98,6 +99,17 @@ export function MarketPage() {
   const [candles, setCandles] = useState<Candle[]>([])
   const [provider, setProvider] = useState<string | null>(null)
   const [detail, setDetail] = useState<DecisionDetail | null>(null)
+  const [rvolThreshold, setRvolThreshold] = useState(DEFAULT_ENGINE_THRESHOLDS.rvolSignificant)
+
+  useEffect(() => {
+    let alive = true
+    void loadEngineThresholds().then((t) => {
+      if (alive) setRvolThreshold(t.rvolSignificant)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
   const [error, setError] = useState<string | null>(null)
   const [chartLoading, setChartLoading] = useState(false)
   const [layerPrefs, setLayerPrefs] = useState<LayerPrefs>(() => loadLayerPrefs())
@@ -642,7 +654,7 @@ export function MarketPage() {
             <div className="analysis-foot">
               <div className="step">
                 <b>{setupName}</b>
-                <p>RVOL attendu ≥ 1,5</p>
+                <p>RVOL attendu ≥ {rvolThreshold.toLocaleString('fr-FR', { maximumFractionDigits: 2 })}</p>
                 <span className={`tag ${setupState.tone}`.trim()}>{setupState.text}</span>
               </div>
               {watchMsg && <p className="watch-msg">{watchMsg}</p>}

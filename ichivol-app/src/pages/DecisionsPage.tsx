@@ -22,6 +22,7 @@ import {
 import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
 import { buildDecisionSummary } from '../lib/decisionLabels'
 import { labelEngineCode } from '../lib/engineTerminology'
+import { DEFAULT_ENGINE_THRESHOLDS, loadEngineThresholds } from '../lib/engineThresholds'
 import { displaySymbol } from '../lib/markets'
 import { toEngineSymbol } from '../lib/engineSymbol'
 import {
@@ -106,12 +107,15 @@ function stageBadge(row: ScreenerDecisionRow, stageId: string): ReactNode {
   return badge(b.text, b.tone)
 }
 
-function participationBadge(row: ScreenerDecisionRow): ReactNode {
+function participationBadge(
+  row: ScreenerDecisionRow,
+  rvolThreshold: number = DEFAULT_ENGINE_THRESHOLDS.rvolSignificant,
+): ReactNode {
   if (row.pipeline?.stages?.some((s) => s.id === 'participation')) {
     return stageBadge(row, 'participation')
   }
   if (row.rvol == null || !Number.isFinite(row.rvol)) return badge('—', 'gray')
-  return row.rvol >= 1.5 ? badge('PASSE') : badge('PRUDENCE', 'amber')
+  return row.rvol >= rvolThreshold ? badge('PASSE') : badge('PRUDENCE', 'amber')
 }
 
 function directionCell(row: ScreenerDecisionRow): ReactNode {
@@ -162,6 +166,17 @@ export function DecisionsPage() {
   const [paperBusy, setPaperBusy] = useState(false)
   const [saveBusy, setSaveBusy] = useState(false)
   const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [rvolThreshold, setRvolThreshold] = useState(DEFAULT_ENGINE_THRESHOLDS.rvolSignificant)
+
+  useEffect(() => {
+    let alive = true
+    void loadEngineThresholds().then((t) => {
+      if (alive) setRvolThreshold(t.rvolSignificant)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
   const dialogRef = useRef<HTMLDialogElement>(null)
   const paperConfirmLock = useRef(false)
   const deepLinkHandled = useRef<string | null>(null)
@@ -426,6 +441,14 @@ export function DecisionsPage() {
     detail?.rvol != null && Number.isFinite(detail.rvol)
       ? `${detail.rvol.toLocaleString('fr-FR', { maximumFractionDigits: 2, minimumFractionDigits: 1 })}×`
       : '—'
+  const detailIntent = detail?.order_intent
+  const detailTriggerPrice = detailIntent?.entry_fill ?? detailIntent?.price
+  const detailTrigger =
+    detailIntent?.actionable && detailTriggerPrice != null && Number.isFinite(detailTriggerPrice)
+      ? `Entrée vers ${detailTriggerPrice.toLocaleString('fr-FR', { maximumFractionDigits: 5 })}`
+      : detailIntent && !detailIntent.actionable
+        ? 'Pas d’entrée possible'
+        : '—'
   const detailConf =
     detail?.confidence != null && Number.isFinite(detail.confidence)
       ? `${Math.round(detail.confidence * 100)} / 100`
@@ -440,7 +463,7 @@ export function DecisionsPage() {
           <h1>Opportunités</h1>
           <p className="subtitle">Chaque décision commence par une preuve.</p>
         </div>
-        <div className="actions">{badge('CLOTURE 1H', 'gray')}</div>
+        <div className="actions">{badge('CLÔTURE 1H', 'gray')}</div>
       </div>
 
       {paperToast && (
@@ -531,7 +554,7 @@ export function DecisionsPage() {
                         <small>{r.symbol}</small>
                       </td>
                       <td>{directionCell(r)}</td>
-                      <td>{participationBadge(r)}</td>
+                      <td>{participationBadge(r, rvolThreshold)}</td>
                       <td>{stageBadge(r, 'structure')}</td>
                       <td>{stageBadge(r, 'location')}</td>
                       <td>{stageBadge(r, 'regime')}</td>
@@ -635,7 +658,7 @@ export function DecisionsPage() {
                       detailPipeline.direction === 'SHORT'
                         ? 'VENTE'
                         : detailPipeline.direction === 'LONG'
-                          ? 'PASSE'
+                          ? 'ACHAT'
                           : '—',
                     )
                   : badge('—', 'gray')}
@@ -649,7 +672,7 @@ export function DecisionsPage() {
             </div>
             <div className="statline">
               <span>Participation</span>
-              <b>{detail ? participationBadge(detail) : badge('—', 'gray')}</b>
+              <b>{detail ? participationBadge(detail, rvolThreshold) : badge('—', 'gray')}</b>
             </div>
             <div className="statline">
               <span>RVOL</span>
@@ -661,7 +684,7 @@ export function DecisionsPage() {
             </div>
             <div className="statline">
               <span>Déclenchement</span>
-              <b>—</b>
+              <b>{detailTrigger}</b>
             </div>
             <div className="statline">
               <span>Invalidation</span>
