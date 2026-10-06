@@ -9,6 +9,12 @@ export const SESSIONS_LABEL = 'Sessions — décisions aux ouvertures et clôtur
 
 const SELECTABLE = new Set([RS_D1_CODE, SESSIONS_CODE])
 
+/** Portefeuilles qui acceptent un achat manuel (RS-D1 reste piloté par sa seule règle, RS-09 §7). */
+export const MANUAL_PORTFOLIOS: ReadonlyArray<{ code: string; label: string }> = [
+  { code: BASELINE_PORTFOLIO_CODE, label: 'IchiVol' },
+  { code: SESSIONS_CODE, label: 'Sessions' },
+]
+
 export function isRsPortfolio(code: string | null | undefined): boolean {
   return code === RS_D1_CODE
 }
@@ -18,7 +24,7 @@ export function portfolioFromParam(param: string | null | undefined): string {
   return param && SELECTABLE.has(param) ? param : BASELINE_PORTFOLIO_CODE
 }
 
-/** Actions manuelles (achat, fermeture) sur le baseline seulement : RS-D1 et Sessions sont des comptes comparés. */
+/** Actions manuelles (achat, fermeture) partout sauf sur RS-D1. */
 export function manualActionsAllowed(code: string | null | undefined): boolean {
-  return code === BASELINE_PORTFOLIO_CODE
+  return MANUAL_PORTFOLIOS.some((p) => p.code === code)
 }

@@ -186,6 +186,8 @@ export interface ManualOrderInput {
   stopPct: number
   /** Objectif en multiples du risque (2 = gain visé 2× la perte au stop). */
   takeProfitR: number
+  /** Portefeuille visé (défaut côté moteur : baseline IchiVol). */
+  portfolioCode?: string
 }
 
 export interface ManualPreview {
@@ -353,6 +355,7 @@ export async function previewPaperBuy(
     stop_pct: String(order.stopPct),
     take_profit_r: String(order.takeProfitR),
   })
+  if (order.portfolioCode) params.set('portfolio_code', order.portfolioCode)
   const res = await fetch(`/api/engine/paper/preview?${params}`, { credentials: 'include', signal })
   if (!res.ok) throw new Error(await parseError(res))
   return res.json() as Promise<ManualPreview>
@@ -385,6 +388,7 @@ export async function openPaperPosition(
     params.set('notional', String(order.notional))
     params.set('stop_pct', String(order.stopPct))
     params.set('take_profit_r', String(order.takeProfitR))
+    if (order.portfolioCode) params.set('portfolio_code', order.portfolioCode)
   }
   const res = await fetch(`/api/engine/paper/positions?${params}`, {
     method: 'POST',

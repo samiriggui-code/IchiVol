@@ -63,6 +63,7 @@ import {
   fmtPrice,
   type EquityPeriod,
 } from './desk/deskFormat'
+import { toEngineSymbol } from '../lib/engineSymbol'
 import './OverviewPage.css'
 
 const RING_COLORS = ['#548f87', '#8c9eb4', '#c2b596', '#a9bdb2', '#7d8288'] as const
@@ -997,12 +998,12 @@ export function OverviewPage() {
       : null
 
   const openMarket = (symbol: string) => {
-    const full = /USDT$/i.test(symbol) ? symbol.toUpperCase() : `${symbol.toUpperCase()}USDT`
+    const full = toEngineSymbol(symbol)
     navigate(`/app/market?symbol=${encodeURIComponent(full)}`)
   }
 
   const openOpp = (symbol: string) => {
-    const full = /USDT$/i.test(symbol) ? symbol.toUpperCase() : `${symbol.toUpperCase()}USDT`
+    const full = toEngineSymbol(symbol)
     navigate(`/app/opportunites?symbol=${encodeURIComponent(full)}`)
   }
 
@@ -1689,7 +1690,7 @@ export function OverviewPage() {
                     key={c.symbol}
                     type="button"
                     className="concentration-row"
-                    onClick={() => openPosition(`${c.symbol}USDT`)}
+                    onClick={() => openPosition(toEngineSymbol(c.symbol))}
                   >
                     <span>
                       <i style={{ background: RING_COLORS[i % RING_COLORS.length] }} />

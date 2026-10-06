@@ -266,7 +266,7 @@ export function PortfolioPage() {
             {isRs
               ? `${RS_D1_LABEL}. Portefeuille séparé, piloté uniquement par la règle RS-D1 (Donchian 4h) : aucun ordre manuel.`
               : isSessions
-                ? 'Mêmes règles qu’IchiVol, mais le signal n’ouvre et ne ferme qu’aux ouvertures et clôtures de Tokyo, Londres et New York. Stop et objectif restent surveillés en continu. Aucun ordre manuel.'
+                ? 'Mêmes règles qu’IchiVol, mais le signal n’ouvre et ne ferme qu’aux ouvertures et clôtures de Tokyo, Londres et New York. Stop et objectif restent surveillés en continu.'
                 : 'Compte paper. Les ordres sont simulés ici, aucun n’est envoyé à un courtier.'}
           </p>
         </div>

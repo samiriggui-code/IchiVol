@@ -10,6 +10,7 @@ import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
 import { MtfPanel } from '../components/MtfPanel'
 import { ChartIntelligencePanel } from '../components/chart-intelligence'
 import { PaperConfirmSheet } from '../components/PaperConfirmSheet'
+import { BASELINE_PORTFOLIO_CODE, SESSIONS_CODE } from '../lib/rsPortfolio'
 import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
 import '../components/engineEvidence.css'
 import {
@@ -22,6 +23,7 @@ import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
 import { buildDecisionSummary } from '../lib/decisionLabels'
 import { labelEngineCode } from '../lib/engineTerminology'
 import { displaySymbol } from '../lib/markets'
+import { toEngineSymbol } from '../lib/engineSymbol'
 import {
   getPaperOverview,
   listPaperPositions,
@@ -63,6 +65,9 @@ type PaperConfirmState = {
   symbol: string
   timeframe: string
   intent: OrderIntent | null
+  defaultPortfolio: string
+  /** Fiche au moment de l'ouverture du ticket : la fiche se ferme pour laisser le ticket au premier plan. */
+  detail: DecisionDetail | null
 }
 
 function badge(text: string, tone: MaquetteBadgeTone | string = ''): ReactNode {
@@ -150,8 +155,8 @@ function normalizeSymbolParam(raw: string | null): string | null {
   if (!raw) return null
   const s = raw.trim().toUpperCase()
   if (!s) return null
-  if (s.endsWith('USDT') || s.length >= 6) return s
-  return `${s}USDT`
+  if (s.length >= 6) return s
+  return toEngineSymbol(s)
 }
 
 function pairTitle(symbol: string): string {
@@ -172,6 +177,7 @@ export function DecisionsPage() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [openPaperSymbols, setOpenPaperSymbols] = useState<ReadonlySet<string>>(() => new Set())
   const [paperConfirm, setPaperConfirm] = useState<PaperConfirmState | null>(null)
+  const [paperToast, setPaperToast] = useState<string | null>(null)
   const [paperConfirming, setPaperConfirming] = useState(false)
   const [paperConfirmError, setPaperConfirmError] = useState<string | null>(null)
   const [paperMsg, setPaperMsg] = useState<string | null>(null)
@@ -321,10 +327,6 @@ export function DecisionsPage() {
 
   async function startPaperOpen() {
     if (!detailSym || paperBusy || paperConfirming) return
-    if (openPaperSymbols.has(detailSym)) {
-      setPaperMsg(`${displaySymbol(detailSym)} · déjà ouvert — pas de 2ᵉ achat`)
-      return
-    }
     setPaperBusy(true)
     setPaperConfirmError(null)
     setPaperMsg(null)
@@ -336,7 +338,12 @@ export function DecisionsPage() {
         symbol: detailSym,
         timeframe: tf,
         intent: intent ?? detail?.order_intent ?? null,
+        // Déjà en lot sur IchiVol (un lot par marché) : on propose directement Sessions.
+        defaultPortfolio: openPaperSymbols.has(detailSym) ? SESSIONS_CODE : BASELINE_PORTFOLIO_CODE,
+        detail,
       })
+      // La fiche est un <dialog> modal (top layer) : tant qu'elle est ouverte, le ticket reste derrière.
+      dialogRef.current?.close()
     } finally {
       setPaperBusy(false)
     }
@@ -389,7 +396,7 @@ export function DecisionsPage() {
     setPaperConfirming(true)
     setPaperConfirmError(null)
     try {
-      const sameDetail = detail?.symbol === paperConfirm.symbol ? detail : null
+      const sameDetail = paperConfirm.detail?.symbol === paperConfirm.symbol ? paperConfirm.detail : null
       const gate =
         paperConfirm.intent?.pipeline_decision ?? sameDetail?.pipeline?.decision ?? 'WATCH'
       const pos = await openPaperPosition(paperConfirm.symbol, paperConfirm.timeframe, order)
@@ -410,13 +417,17 @@ export function DecisionsPage() {
         journalWarn = ' · journal non enregistré (réessayer depuis le Journal)'
       }
       const already = pos.already_open === true || pos.created === false
-      setPaperMsg(
+      const pfLabel = order.portfolioCode === SESSIONS_CODE ? 'Sessions' : 'IchiVol'
+      // La fiche est fermée pendant le ticket : le résultat s'affiche en tête de page.
+      setPaperToast(
         (already
-          ? `${displaySymbol(pos.symbol)} · déjà en portefeuille — achat verrouillé`
-          : `${displaySymbol(pos.symbol)} · paper ${pos.direction} @ ${pos.entry_price}`) +
+          ? `${displaySymbol(pos.symbol)} · déjà dans ${pfLabel} — achat verrouillé`
+          : `${displaySymbol(pos.symbol)} · achat paper ouvert sur ${pfLabel} @ ${pos.entry_price}`) +
           journalWarn,
       )
-      setOpenPaperSymbols((prev) => new Set([...prev, pos.symbol]))
+      if ((order.portfolioCode ?? BASELINE_PORTFOLIO_CODE) === BASELINE_PORTFOLIO_CODE) {
+        setOpenPaperSymbols((prev) => new Set([...prev, pos.symbol]))
+      }
       setPaperConfirm(null)
       void refreshOpenPaperSymbols()
     } catch (err: unknown) {
@@ -453,6 +464,15 @@ export function DecisionsPage() {
         </div>
         <div className="actions">{badge('CLOTURE 1H', 'gray')}</div>
       </div>
+
+      {paperToast && (
+        <div className="notice blue" role="status" style={{ marginBottom: 16, display: 'flex', gap: 12, justifyContent: 'space-between' }}>
+          <span>{paperToast}</span>
+          <button type="button" className="ghost" onClick={() => setPaperToast(null)} aria-label="Masquer">
+            ×
+          </button>
+        </div>
+      )}
 
       <div className="toolbar">
         <input
@@ -689,7 +709,7 @@ export function DecisionsPage() {
             )}
             <div className="notice blue" style={{ marginTop: 20 }}>
               {alreadyOpen
-                ? 'Position paper déjà ouverte sur ce symbole.'
+                ? 'Position paper déjà ouverte sur ce symbole dans IchiVol. Vous pouvez l’ouvrir sur Sessions.'
                 : 'Lecture moteur + Chart Intelligence. Enregistrement journal ou ouverture paper au choix.'}
             </div>
             {saveMsg && (
@@ -715,11 +735,11 @@ export function DecisionsPage() {
               type="button"
               className="suggestion"
               style={{ width: '100%', marginTop: 16 }}
-              disabled={alreadyOpen || paperBusy || paperConfirming || detailLoading}
+              disabled={paperBusy || paperConfirming || detailLoading}
               onClick={() => void startPaperOpen()}
             >
               {alreadyOpen
-                ? 'Déjà ouvert en paper'
+                ? 'Déjà dans IchiVol · ouvrir sur Sessions →'
                 : paperBusy
                   ? 'Préparation paper…'
                   : 'Ouvrir une position paper →'}
@@ -753,6 +773,7 @@ export function DecisionsPage() {
           timeframe={paperConfirm.timeframe}
           symbolLabel={displaySymbol(paperConfirm.symbol)}
           intent={paperConfirm.intent}
+          defaultPortfolio={paperConfirm.defaultPortfolio}
           confirming={paperConfirming}
           error={paperConfirmError}
           onConfirm={(order) => void executePaperConfirm(order)}
