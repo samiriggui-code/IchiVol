@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -18,11 +20,13 @@ from app.decision.pipeline import PipelineResult
 from app.paper import broker as paper_broker
 from app.paper import engine as paper_engine
 from app.paper import gates as paper_gates
-from app.paper.portfolio import ensure_baseline_portfolio
+from app.paper.portfolio import ensure_baseline_portfolio, get_portfolio_by_code
 from app.screener.service import scan_symbol
 
 router_after_shadow = APIRouter(prefix=settings.engine_api_prefix, tags=["engine"])
 
+
+logger = logging.getLogger(__name__)
 
 RS_MANUAL_REFUSAL = "manual_orders_disabled: RS-D1 paper portfolio is driven by its runner only (RS-09 §7)"
 
@@ -47,6 +51,21 @@ def _refuse_rs_portfolio_id(session: Session, portfolio_id: str | None) -> None:
         raise HTTPException(status_code=403, detail=RS_MANUAL_REFUSAL)
 
 
+def _scan_or_http(symbol: str, timeframe: str, **kwargs):
+    """Live scan for a manual order. Unknown symbol -> 404; a provider/data failure -> 503 with its reason
+    (previously a bare 500 the UI could only show as "Erreur 500")."""
+    try:
+        return scan_symbol(symbol.upper(), timeframe=timeframe, **kwargs)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("paper order: live scan failed for %s %s", symbol, timeframe, exc_info=True)
+        raise HTTPException(
+            status_code=503,
+            detail=f"market_data_unavailable: prix de {symbol.upper()} indisponible pour le moment ({type(exc).__name__}).",
+        ) from exc
+
+
 def _load_partials(session: Session, position_id: str) -> list:
     return list(
         session.execute(
@@ -65,6 +84,7 @@ def _open_refusal_detail(
     symbol: str,
     timeframe: str,
     price: float,
+    portfolio=None,
 ) -> str:
     """Honest 422 detail when open_user_confirmed returns None.
 
@@ -85,7 +105,8 @@ def _open_refusal_detail(
         open_lots_from_positions,
     )
 
-    portfolio = ensure_baseline_portfolio(session)
+    if portfolio is None:
+        portfolio = ensure_baseline_portfolio(session)
     profile = portfolio.strategy_profile or {}
     equity = paper_broker.estimate_equity(session, portfolio)
     opens = paper_gates.open_positions(session, portfolio.id)
@@ -132,10 +153,7 @@ def preview_manual_paper_buy(
     from app.paper.scenarios import build_scenarios
 
     _refuse_rs_portfolio_code(portfolio_code)
-    try:
-        row = scan_symbol(symbol.upper(), timeframe=timeframe)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    row = _scan_or_http(symbol, timeframe)
     session = SessionLocal()
     try:
         preview = preview_manual_buy(
@@ -332,6 +350,7 @@ def open_paper_position(
     notional: float | None = None,
     stop_pct: float | None = None,
     take_profit_r: float | None = None,
+    portfolio_code: str = "ICHIVOL_BASELINE_V1",
 ) -> dict:
     """Called by the server when a user hits "Confirmer" in the Journal --
     opens a virtual `user_confirmed` position at the current live
@@ -343,14 +362,10 @@ def open_paper_position(
     concept): lets a caller open a position under a deliberately-labeled
     demo/calibration threshold set instead of the engine defaults, using the
     exact same real market data and pipeline logic either way."""
+    _refuse_rs_portfolio_code(portfolio_code)
     rvol_params = _rvol_params_override(rvol_low, rvol_significant, rvol_strong, rvol_anomaly)
     atr_params = _atr_params_override(atr_dead_percentile, atr_extreme_percentile, atr_stop_multiplier)
-    try:
-        row = scan_symbol(
-            symbol.upper(), timeframe=timeframe, rvol_params=rvol_params, atr_params=atr_params
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    row = _scan_or_http(symbol, timeframe, rvol_params=rvol_params, atr_params=atr_params)
 
     if (getattr(row, "signal_timing", None) or {}).get("stale"):
         raise HTTPException(
@@ -373,7 +388,9 @@ def open_paper_position(
             raise HTTPException(status_code=422, detail="bad_request: notional is required for a discretionary buy")
         _s = SessionLocal()
         try:
-            prev = preview_manual_buy(_s, row, notional=notional, stop_pct=stop_pct, take_profit_r=take_profit_r)
+            prev = preview_manual_buy(
+                _s, row, notional=notional, stop_pct=stop_pct, take_profit_r=take_profit_r, portfolio_code=portfolio_code
+            )
         finally:
             _s.close()
         if not prev["ok"]:
@@ -385,6 +402,17 @@ def open_paper_position(
         extra_signal = {"discretionary": True, "engine_verdict": row.pipeline.decision}
     session = SessionLocal()
     try:
+        from app.paper.portfolio import ensure_portfolio
+        from app.paper.strategy_profiles import BASELINE_CODE, syncable_profile_codes
+
+        if portfolio_code == BASELINE_CODE:
+            portfolio = ensure_baseline_portfolio(session)
+        elif portfolio_code in syncable_profile_codes():
+            portfolio = ensure_portfolio(session, portfolio_code)
+        else:
+            portfolio = get_portfolio_by_code(session, portfolio_code)
+        if portfolio is None:
+            raise HTTPException(status_code=404, detail=f"unknown_portfolio: {portfolio_code}")
         evidence_id = None
         if row.evidence is not None:
             from app.evidence.persistence import persist_evidence
@@ -418,6 +446,7 @@ def open_paper_position(
             },
             manual_notional=manual_notional,
             take_profit_r=take_profit_r if discretionary else None,
+            portfolio=portfolio,
         )
         if position is None:
             raise HTTPException(
@@ -429,6 +458,7 @@ def open_paper_position(
                     symbol=row.symbol,
                     timeframe=timeframe,
                     price=row.price,
+                    portfolio=portfolio,
                 ),
             )
         if evidence_id and position.evidence_id is None:

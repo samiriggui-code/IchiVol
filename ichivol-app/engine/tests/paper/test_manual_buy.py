@@ -123,3 +123,57 @@ def test_manual_buy_opens_exactly_the_chosen_amount_and_is_journaled(s):
     assert position.portfolio_id == base.id
     assert cash_before - base.cash == pytest.approx(800.0 + position.entry_fee)
     assert s.query(LedgerTransaction).filter_by(ref=position.id).count() == 1
+
+
+def _api_row(**kw):
+    r = row(**kw)
+    r.evidence, r.context, r.candles, r.mtf_matrix = None, None, [], None
+    return r
+
+
+def test_api_manual_buy_targets_the_chosen_portfolio(s, monkeypatch):
+    from app.api import paper_orders
+
+    pf = portfolio(s)
+    s.commit()
+    monkeypatch.setattr(paper_orders, "scan_symbol", lambda *a, **k: _api_row())
+    out = paper_orders.open_paper_position(
+        "BTCUSDT", "u1", discretionary=True, notional=300.0, stop_pct=0.02, take_profit_r=2.0, portfolio_code=CODE,
+    )
+    assert out["created"] is True
+    pos = s.query(PaperPosition).filter_by(id=out["id"]).one()
+    assert pos.portfolio_id == pf.id and pos.notional == pytest.approx(300.0, rel=1e-6)
+
+
+def test_api_manual_buy_refuses_rs_and_unknown_portfolios(monkeypatch):
+    from fastapi import HTTPException
+
+    from app.api import paper_orders
+    from app.paper.strategy_profiles import RS_D1_CODE
+
+    monkeypatch.setattr(paper_orders, "scan_symbol", lambda *a, **k: _api_row())
+    with pytest.raises(HTTPException) as rs:
+        paper_orders.open_paper_position("BTCUSDT", "u1", discretionary=True, notional=300.0, portfolio_code=RS_D1_CODE)
+    assert rs.value.status_code == 403
+    with pytest.raises(HTTPException) as unknown:
+        paper_orders.open_paper_position("BTCUSDT", "u1", discretionary=True, notional=300.0, stop_pct=0.02,
+                                         portfolio_code="NOPE_PF")
+    assert unknown.value.status_code in (404, 422)
+
+
+def test_provider_failure_is_an_explained_503_not_a_bare_500(monkeypatch):
+    from fastapi import HTTPException
+
+    from app.api import paper_orders
+
+    def boom(*a, **k):
+        raise RuntimeError("provider down")
+
+    monkeypatch.setattr(paper_orders, "scan_symbol", boom)
+    for call in (
+        lambda: paper_orders.preview_manual_paper_buy("NDX", 250.0, stop_pct=0.02),
+        lambda: paper_orders.open_paper_position("NDX", "u1", discretionary=True, notional=250.0),
+    ):
+        with pytest.raises(HTTPException) as exc:
+            call()
+        assert exc.value.status_code == 503 and "market_data_unavailable" in exc.value.detail

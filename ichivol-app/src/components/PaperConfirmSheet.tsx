@@ -10,6 +10,7 @@ import {
 } from '../lib/paper'
 import { eur, price as fmtPrice, signedEur } from '../lib/tradeStory'
 import { ScenariosPanel } from './ScenariosPanel'
+import { BASELINE_PORTFOLIO_CODE, MANUAL_PORTFOLIOS } from '../lib/rsPortfolio'
 
 const AMOUNT_CHIPS = [100, 250, 500, 1000]
 const STOP_CHIPS = [0.01, 0.02, 0.03, 0.05]
@@ -32,6 +33,7 @@ export function PaperConfirmSheet({
   timeframe,
   symbolLabel,
   intent,
+  defaultPortfolio = BASELINE_PORTFOLIO_CODE,
   confirming,
   error,
   onConfirm,
@@ -42,6 +44,8 @@ export function PaperConfirmSheet({
   symbolLabel: string
   /** Proposition du moteur (taille suggérée). Peut être absente ou non actionnable. */
   intent: OrderIntent | null
+  /** Portefeuille présélectionné (IchiVol ou Sessions). */
+  defaultPortfolio?: string
   confirming?: boolean
   error?: string | null
   onConfirm: (order: ManualOrderInput) => void
@@ -56,6 +60,7 @@ export function PaperConfirmSheet({
   const [amount, setAmount] = useState<string>(String(suggested ?? 250))
   const [stopPct, setStopPct] = useState<number>(suggestedStop ?? 0.02)
   const [tpR, setTpR] = useState<number>(2)
+  const [portfolioCode, setPortfolioCode] = useState<string>(defaultPortfolio)
   const [preview, setPreview] = useState<ManualPreview | null>(null)
   const [previewErr, setPreviewErr] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -84,7 +89,7 @@ export function PaperConfirmSheet({
     const ctrl = new AbortController()
     setLoading(true)
     const t = window.setTimeout(() => {
-      previewPaperBuy(symbol, timeframe, { notional, stopPct, takeProfitR: tpR }, ctrl.signal)
+      previewPaperBuy(symbol, timeframe, { notional, stopPct, takeProfitR: tpR, portfolioCode }, ctrl.signal)
         .then((p) => {
           setPreview(p)
           setPreviewErr(null)
@@ -102,7 +107,7 @@ export function PaperConfirmSheet({
       window.clearTimeout(t)
       ctrl.abort()
     }
-  }, [symbol, timeframe, notional, stopPct, tpR, valid])
+  }, [symbol, timeframe, notional, stopPct, tpR, portfolioCode, valid])
 
   const cash = preview?.portfolio.cash_before ?? intent?.cash ?? null
   const chips = useMemo(() => {
@@ -122,7 +127,7 @@ export function PaperConfirmSheet({
   function handleConfirm() {
     if (confirming || clickLock.current || !ok) return
     clickLock.current = true
-    onConfirm({ notional, stopPct, takeProfitR: tpR })
+    onConfirm({ notional, stopPct, takeProfitR: tpR, portfolioCode })
   }
 
   return (
@@ -167,6 +172,25 @@ export function PaperConfirmSheet({
                 : 'Pas de trade recommandé — vous pouvez acheter quand même, c’est votre décision.'}
             </p>
           </div>
+
+          <section className="ot-card">
+            <h3 className="ot-card-title">Sur quel portefeuille ?</h3>
+            <div className="order-chips" role="radiogroup" aria-label="Portefeuille">
+              {MANUAL_PORTFOLIOS.map((p) => (
+                <button
+                  type="button"
+                  key={p.code}
+                  role="radio"
+                  aria-checked={portfolioCode === p.code}
+                  className={`ghost order-chip${portfolioCode === p.code ? ' is-on' : ''}`}
+                  onClick={() => setPortfolioCode(p.code)}
+                  disabled={confirming}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </section>
 
           <section className="ot-card">
             <h3 className="ot-card-title">Combien investir ?</h3>
@@ -345,7 +369,7 @@ export function PaperConfirmSheet({
           )}
 
           <p className="muted paper-confirm-note">
-            Un lot par marché. Vente depuis{' '}
+            Un lot par marché et par portefeuille. RS-D1 n’accepte pas d’ordre manuel. Vente depuis{' '}
             <Link to="/app/portefeuille">Portefeuille</Link> · <Link to="/app/journal">Journal</Link>.
           </p>
 

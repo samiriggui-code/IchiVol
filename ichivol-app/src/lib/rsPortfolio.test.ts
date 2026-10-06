@@ -26,11 +26,11 @@ test('aucune action manuelle sur RS-D1, baseline inchangé', () => {
   assert.equal(manualActionsAllowed(BASELINE_PORTFOLIO_CODE), true)
 })
 
-test('Sessions : sélectionnable par son code exact, sans action manuelle', () => {
+test('Sessions : sélectionnable par son code exact, actions manuelles permises', () => {
   assert.equal(portfolioFromParam(SESSIONS_CODE), SESSIONS_CODE)
   assert.equal(portfolioFromParam('ichivol_sessions_v1'), BASELINE_PORTFOLIO_CODE)
   assert.equal(isRsPortfolio(SESSIONS_CODE), false)
-  assert.equal(manualActionsAllowed(SESSIONS_CODE), false)
+  assert.equal(manualActionsAllowed(SESSIONS_CODE), true)
 })
 
 test('libellé exact demandé', () => {

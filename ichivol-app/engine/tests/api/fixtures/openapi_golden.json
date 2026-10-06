@@ -5096,6 +5096,16 @@
               ],
               "title": "Take Profit R"
             }
+          },
+          {
+            "in": "query",
+            "name": "portfolio_code",
+            "required": false,
+            "schema": {
+              "default": "ICHIVOL_BASELINE_V1",
+              "title": "Portfolio Code",
+              "type": "string"
+            }
           }
         ],
         "responses": {
