@@ -56,7 +56,7 @@ def test_subset_and_unknown_keys():
     assert decision_event_for_bar(_bar(2026, 7, 7, 14), ["nope", "ny_open"]) == "ny_open"
 
 
-def test_sessions_profile_registered_not_synced():
+def test_sessions_profile_synced_next_to_baseline():
     assert ALL_PROFILES["ICHIVOL_SESSIONS_V1"]["decision_windows"] == list(ALL)
     assert "decision_windows" not in ALL_PROFILES["ICHIVOL_BASELINE_V1"]
-    assert "ICHIVOL_SESSIONS_V1" not in syncable_profile_codes()
+    assert syncable_profile_codes() == ["ICHIVOL_BASELINE_V1", "ICHIVOL_SESSIONS_V1"]

@@ -16,8 +16,8 @@ def test_baseline_has_no_structure_filter():
     assert BASELINE_PROFILE["structure_detectors"] == []
 
 
-def test_single_portfolio_mode_syncs_only_the_baseline():
-    assert syncable_profile_codes() == [BASELINE_CODE]
+def test_single_portfolio_mode_syncs_the_baseline_and_the_sessions_account():
+    assert syncable_profile_codes() == [BASELINE_CODE, "ICHIVOL_SESSIONS_V1"]
 
 
 def test_experimental_codes_registered():
