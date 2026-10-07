@@ -9,6 +9,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { PaperCloseConfirmSheet } from '../components/PaperCloseConfirmSheet'
 import { ChartIntelligencePanel } from '../components/chart-intelligence'
 import { MtfPanel } from '../components/MtfPanel'
+import { FuturesCryptoPanel } from '../components/FuturesCryptoPanel'
+import { FUTURES_CRYPTO_LABEL } from '../lib/futuresCrypto'
 import { fmtUtc, storedMatrix } from '../lib/mtf'
 import {
   concentrationFromPositions,
@@ -31,6 +33,7 @@ import { getRiskLock, type RiskLockState } from '../lib/riskLock'
 import { displaySymbol } from '../lib/markets'
 import {
   BASELINE_PORTFOLIO_CODE as BASELINE_CODE,
+  FUTURES_CRYPTO_CODE,
   RS_D1_CODE,
   RS_D1_LABEL,
   SESSIONS_CODE,
@@ -155,6 +158,7 @@ export function PortfolioPage() {
   const code = portfolioFromParam(searchParams.get('pf'))
   const isRs = isRsPortfolio(code)
   const isSessions = code === SESSIONS_CODE
+  const isFutures = code === FUTURES_CRYPTO_CODE
   const manualAllowed = manualActionsAllowed(code)
   const [portfolios, setPortfolios] = useState<PaperPortfolioRow[]>([])
   const [overview, setOverview] = useState<PaperOverview | null>(null)
@@ -190,6 +194,7 @@ export function PortfolioPage() {
   const tabs = [
     { code: BASELINE_CODE, label: 'IchiVol', title: undefined as string | undefined },
     { code: SESSIONS_CODE, label: 'Sessions', title: SESSIONS_LABEL },
+    { code: FUTURES_CRYPTO_CODE, label: 'Futures & Crypto', title: FUTURES_CRYPTO_LABEL },
     { code: RS_D1_CODE, label: 'RS-D1', title: RS_D1_LABEL },
   ].filter((t) => t.code === BASELINE_CODE || t.code === code || portfolios.some((p) => p.code === t.code))
   const selectPortfolio = (next: string) => {
@@ -267,7 +272,9 @@ export function PortfolioPage() {
               ? `${RS_D1_LABEL}. Portefeuille séparé, piloté uniquement par la règle RS-D1 (Donchian 4h) : aucun ordre manuel.`
               : isSessions
                 ? 'Mêmes règles qu’IchiVol, mais le signal n’ouvre et ne ferme qu’aux ouvertures et clôtures de Tokyo, Londres et New York. Stop et objectif restent surveillés en continu.'
-                : 'Compte paper. Les ordres sont simulés ici, aucun n’est envoyé à un courtier.'}
+                : isFutures
+                  ? 'Compte paper dédié à trois marchés : Dow Jones (YM), or (MGC) et bitcoin. Mêmes règles qu’IchiVol, avec un plafond de risque commun aux trois. Aucun ordre n’est envoyé à un courtier.'
+                  : 'Compte paper. Les ordres sont simulés ici, aucun n’est envoyé à un courtier.'}
           </p>
         </div>
         <div className="actions">
@@ -288,7 +295,10 @@ export function PortfolioPage() {
               ))}
             </div>
           ) : null}
-          {badge(isRs ? 'RS-D1 · PAPER' : isSessions ? 'SESSIONS · PAPER' : 'BROKER PAPER', 'gray')}
+          {badge(
+            isRs ? 'RS-D1 · PAPER' : isSessions ? 'SESSIONS · PAPER' : isFutures ? 'FUTURES & CRYPTO · PAPER' : 'BROKER PAPER',
+            'gray',
+          )}
         </div>
       </div>
 
@@ -324,6 +334,8 @@ export function PortfolioPage() {
           <small>Depuis le plus haut</small>
         </div>
       </div>
+
+      {isFutures ? <FuturesCryptoPanel overview={overview} onChanged={() => void load()} /> : null}
 
       <div className="grid">
         <section className="card">

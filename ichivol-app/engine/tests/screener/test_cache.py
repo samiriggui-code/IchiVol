@@ -94,6 +94,7 @@ def test_refresh_feeds_crypto_and_biquote_rows_to_paper_trading_but_not_jpy_or_e
     captured = {}
     monkeypatch.setattr(cache_module, "scan_watchlist", _mixed_watchlist)
     monkeypatch.setattr(cache_module, "persist_scan", lambda session, row: None)
+    monkeypatch.setattr(cache_module, "dedicated_extra_symbols", lambda: [])
     monkeypatch.setattr(
         paper_engine, "sync_auto_watchlist",
         lambda session, rows: captured.setdefault("rows", rows) and []

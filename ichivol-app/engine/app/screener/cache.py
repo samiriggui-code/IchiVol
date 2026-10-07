@@ -38,7 +38,7 @@ class CacheEntry:
 
 
 # Providers whose rows the paper broker may trade. Equities (twelve_data) stay out: free-tier quota.
-PAPER_EXCHANGES = ("binance", "biquote")
+PAPER_EXCHANGES = ("binance", "biquote", "binance_usdm")
 # USDJPY is quoted in JPY: sizing and cash are in EUR/USD-proxy units, so it needs a quote-currency
 # conversion that does not exist yet. Excluded rather than mis-sized.
 PAPER_EXCLUDED_SYMBOLS = frozenset({"USDJPY"})
@@ -46,6 +46,29 @@ PAPER_EXCLUDED_SYMBOLS = frozenset({"USDJPY"})
 
 def paper_tradable_rows(rows):
     return [r for r in rows if r.exchange in PAPER_EXCHANGES and r.symbol not in PAPER_EXCLUDED_SYMBOLS]
+
+
+def dedicated_extra_symbols() -> list[str]:
+    """Markets of dedicated accounts (Futures & Crypto) that the shared watchlist does not scan: YM, MGC and
+    the BTC instrument of the configured mode when it is not spot. Read from the stored profile, so a BTC mode
+    change takes effect on the next cycle. Empty on a DB error (the shared scan still runs)."""
+    from app.paper import futures_crypto
+    from app.paper.portfolio import ensure_syncable_portfolios
+
+    session = SessionLocal()
+    try:
+        wanted: list[str] = []
+        for pf in ensure_syncable_portfolios(session):
+            if futures_crypto.is_dedicated(pf.strategy_profile):
+                wanted += [s for s in futures_crypto.traded_symbols(pf.strategy_profile) if s not in wanted]
+        session.commit()
+        return [s for s in wanted if s not in DEFAULT_WATCHLIST]
+    except Exception:
+        logger.warning("screener cache: dedicated markets lookup failed", exc_info=True)
+        session.rollback()
+        return []
+    finally:
+        session.close()
 
 
 class ScreenerCache:
@@ -90,11 +113,18 @@ class ScreenerCache:
         (any timeframe) never opens or closes a paper position (docs/VP-P-PAPER-REEL.md §2)."""
         tf = timeframe or self.default_timeframe
         rows = scan_watchlist(DEFAULT_WATCHLIST, timeframe=tf)
+        # Dedicated-account markets ride the background paper cycle only. They are persisted (decision history,
+        # last signal on the Futures & Crypto view) but never shown in the shared screener cache.
+        extra_rows = []
+        if paper_sync and tf == self.default_timeframe:
+            extra = dedicated_extra_symbols()
+            if extra:
+                extra_rows = scan_watchlist(extra, timeframe=tf)
 
-        if persist and rows:
+        if persist and (rows or extra_rows):
             session = SessionLocal()
             try:
-                for row in rows:
+                for row in [*rows, *extra_rows]:
                     try:
                         persist_scan(session, row)
                     except Exception:
@@ -117,11 +147,11 @@ class ScreenerCache:
             finally:
                 session.close()
 
-        if persist and rows and paper_sync and tf == self.default_timeframe:
+        if persist and (rows or extra_rows) and paper_sync and tf == self.default_timeframe:
             # Paper trading's auto_watchlist track rides the background cycle only -- reuses `rows` as-is (no extra
             # provider calls). Multi-market since 2026-09-21: crypto (binance) AND forex / metals / indices /
             # energy (biquote), see `paper_tradable_rows`.
-            crypto_rows = paper_tradable_rows(rows)
+            crypto_rows = paper_tradable_rows([*rows, *extra_rows])
             paper_session = SessionLocal()
             try:
                 paper_engine.sync_auto_watchlist(paper_session, crypto_rows)

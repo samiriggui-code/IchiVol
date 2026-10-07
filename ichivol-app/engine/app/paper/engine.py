@@ -21,6 +21,7 @@ from app.fibonacci.gate import apply_fibonacci_gate
 from app.market_data.timeframes import TF_SECONDS
 from app.paper import broker as paper_broker
 from app.paper import counters as paper_counters
+from app.paper import futures_crypto
 from app.paper import gates as paper_gates
 from app.paper.risk_kernel import (
     OpenPlan,
@@ -426,6 +427,16 @@ def mark_auto_timeframes_change() -> bool:
         session.close()
 
 
+def trades_symbol(profile: dict[str, Any] | None, symbol: str) -> bool:
+    """Which rows a portfolio acts on. A dedicated account (Futures & Crypto) trades only its own markets; every
+    other account trades the shared watchlist and never an instrument reserved to a dedicated account."""
+    from app.universe.catalog import dedicated_only_ids
+
+    if futures_crypto.is_dedicated(profile):
+        return symbol in futures_crypto.traded_symbols(profile)
+    return symbol not in dedicated_only_ids()
+
+
 def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]:
     """Reuse screener rows; size when ATR stop is present; sync all syncable portfolios.
 
@@ -498,6 +509,8 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
         for portfolio in portfolios:
             profile = portfolio.strategy_profile or {}
             if row.timeframe not in auto_timeframes(profile):
+                continue
+            if not trades_symbol(profile, row.symbol):
                 continue
             det_key = (
                 ",".join(profile.get("structure_detectors") or []),
@@ -609,6 +622,11 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
             )
             if result is not None:
                 touched.append(result)
+            if futures_crypto.is_dedicated(profile):
+                action = None
+                if result is not None:
+                    action = "opened" if result.status == "OPEN" else "closed"
+                futures_crypto.remember_signal(row, final_pipeline, action=action)
 
         marks[f"{row.symbol}:{row.timeframe}"] = row.price
 

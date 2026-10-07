@@ -27,7 +27,7 @@ credits on every refresh.
 
 from __future__ import annotations
 
-from app.universe.types import AssetClass, Instrument
+from app.universe.types import AssetClass, Instrument, ProductType
 
 _CRYPTO_SYMBOLS = (
     "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT",
@@ -110,6 +110,29 @@ UNIVERSE: list[Instrument] = [
     # energy — biquote ("WTI" itself returns empty bars live; "USOIL" is the
     # ticker that actually carries WTI crude data, confirmed live 2026-09-15)
     _biquote("WTI", AssetClass.ENERGY, "Pétrole WTI", "USOIL"),
+    # Futures & Crypto portfolio only (app/paper/futures_crypto.py) -- never in the shared watchlist, so the
+    # baseline and the other accounts never trade them. No free futures feed: YM is priced from the Dow Jones
+    # CFD ("US30" confirmed live on biquote 2026-10-07), MGC from spot gold, BTCCME from Binance spot BTCUSDT.
+    # BTCPERP has its own candles (Binance USD-M perpetual).
+    Instrument(
+        id="YM", asset_class=AssetClass.INDEX, label="E-mini Dow (YM)", provider="biquote",
+        provider_symbol="US30", product_type=ProductType.FUTURE, exchange_timezone="America/Chicago",
+        in_default_watchlist=False,
+    ),
+    Instrument(
+        id="MGC", asset_class=AssetClass.METAL, label="Micro Gold (MGC)", provider="biquote",
+        provider_symbol="XAUUSD", product_type=ProductType.FUTURE, exchange_timezone="America/Chicago",
+        in_default_watchlist=False,
+    ),
+    Instrument(
+        id="BTCPERP", asset_class=AssetClass.CRYPTO, label="BTC perpétuel", provider="binance_usdm",
+        provider_symbol="BTCUSDT", quote="USDT", product_type=ProductType.FUTURE, in_default_watchlist=False,
+    ),
+    Instrument(
+        id="BTCCME", asset_class=AssetClass.CRYPTO, label="BTC CME (MBT)", provider="binance",
+        provider_symbol="BTCUSDT", quote="USD", product_type=ProductType.FUTURE,
+        exchange_timezone="America/Chicago", in_default_watchlist=False,
+    ),
 ]
 
 _BY_ID: dict[str, Instrument] = {instrument.id: instrument for instrument in UNIVERSE}
@@ -120,11 +143,18 @@ def get_instrument(instrument_id: str) -> Instrument | None:
 
 
 def by_class(asset_class: AssetClass) -> list[Instrument]:
-    return [i for i in UNIVERSE if i.asset_class == asset_class]
+    """Shared-watchlist instruments of one class (dedicated-portfolio instruments excluded)."""
+    return [i for i in UNIVERSE if i.asset_class == asset_class and i.in_default_watchlist]
+
+
+def dedicated_only_ids() -> frozenset[str]:
+    """Instruments only a dedicated portfolio trades (never the baseline / shared accounts)."""
+    return frozenset(i.id for i in UNIVERSE if not i.in_default_watchlist)
 
 
 def wired_instruments() -> list[Instrument]:
-    return [i for i in UNIVERSE if i.is_wired]
+    """Wired shared-watchlist instruments (dedicated-portfolio instruments excluded)."""
+    return [i for i in UNIVERSE if i.is_wired and i.in_default_watchlist]
 
 
 def default_watchlist() -> list[str]:
@@ -135,5 +165,5 @@ def default_watchlist() -> list[str]:
     return [
         i.id
         for i in UNIVERSE
-        if i.is_wired and i.enabled and i.provider in ("binance", "biquote")
+        if i.is_wired and i.enabled and i.in_default_watchlist and i.provider in ("binance", "biquote")
     ]

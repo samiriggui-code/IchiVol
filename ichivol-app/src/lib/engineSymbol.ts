@@ -1,6 +1,8 @@
 /** Instruments non crypto du catalogue moteur (engine/app/universe/catalog.py) : jamais suffixés USDT. */
 export const NON_CRYPTO_ENGINE_SYMBOLS: ReadonlySet<string> = new Set([
   'EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'XAGUSD', 'SPX', 'NDX', 'AAPL', 'TSLA', 'WTI',
+  // Portefeuille Futures & Crypto seulement
+  'YM', 'MGC', 'BTCPERP', 'BTCCME',
 ])
 
 /** Symbole attendu par le moteur : « BTC » → « BTCUSDT », mais « NDX » reste « NDX » (sinon NDXUSDT chez Binance). */

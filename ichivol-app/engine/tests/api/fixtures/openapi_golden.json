@@ -441,6 +441,19 @@
         "title": "BatchDecisionsRequest",
         "type": "object"
       },
+      "BtcModeBody": {
+        "properties": {
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "BtcModeBody",
+        "type": "object"
+      },
       "ConfirmBody": {
         "properties": {
           "confirm": {
@@ -4320,6 +4333,72 @@
           }
         },
         "summary": "Get Orderbook Quality",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/paper/futures-crypto": {
+      "get": {
+        "operationId": "get_futures_crypto_view_api_engine_paper_futures_crypto_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Futures Crypto View Api Engine Paper Futures Crypto Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Futures Crypto View",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/paper/futures-crypto/btc-mode": {
+      "post": {
+        "operationId": "post_futures_crypto_btc_mode_api_engine_paper_futures_crypto_btc_mode_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BtcModeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Futures Crypto Btc Mode Api Engine Paper Futures Crypto Btc Mode Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Futures Crypto Btc Mode",
         "tags": [
           "engine"
         ]

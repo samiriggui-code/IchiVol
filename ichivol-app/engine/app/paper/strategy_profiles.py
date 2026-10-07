@@ -277,8 +277,34 @@ ICHIVOL_SESSIONS_V1 = _with(
     decision_windows=list(DEFAULT_DECISION_WINDOWS),
 )
 
+# 2026-10-07 (user decision): a dedicated account for three markets -- YM (E-mini Dow), MGC (Micro Gold) and
+# BTC (spot / perpetual / CME, configurable) -- next to the existing universe, never replacing it. Baseline entry
+# and exit rules on the 1h loop; only its own markets (app/paper/futures_crypto.py). The global open-risk cap is
+# what stops YM + gold + BTC from all carrying a full-size position at once: 1 % of capital in total for 0.5 %
+# per trade, so at most two full-risk positions, the third is refused ("open_risk_cap") until one closes.
+from app.paper import futures_crypto as _fc
+
+FUTURES_CRYPTO_CODE = _fc.FUTURES_CRYPTO_CODE
+FUTURES_CRYPTO_V1 = _with(
+    code=FUTURES_CRYPTO_CODE,
+    label=_fc.FUTURES_CRYPTO_LABEL,
+    dedicated_markets=True,
+    btc_mode=_fc.DEFAULT_BTC_MODE,
+    max_open_positions=3,
+    # No leverage in the paper broker (notional comes out of cash): 30 % of capital per market at most.
+    max_notional_pct=0.30,
+    max_open_risk_pct=0.01,
+    commission_bps_by_symbol=dict(_fc.COMMISSION_BPS),
+    friction_bps_by_symbol=dict(_fc.FRICTION_BPS),
+    financing_bps_per_day_by_symbol=dict(_fc.FINANCING_BPS_LONG),
+    financing_bps_per_day_short_by_symbol=dict(_fc.FINANCING_BPS_SHORT),
+    financing_bps_per_day_default=0.0,
+    financing_bps_per_day_short_default=0.0,
+)
+
 EXPERIMENTAL_PROFILES: dict[str, dict[str, Any]] = {
     ICHIVOL_SESSIONS_V1["code"]: ICHIVOL_SESSIONS_V1,
+    FUTURES_CRYPTO_V1["code"]: FUTURES_CRYPTO_V1,
     STRUCTURE_MVPP["code"]: STRUCTURE_MVPP,
     STRUCTURE_TRENDLN["code"]: STRUCTURE_TRENDLN,
     STRUCTURE_PYTRENDLINE["code"]: STRUCTURE_PYTRENDLINE,
@@ -349,7 +375,8 @@ def profile_for(code: str) -> dict[str, Any]:
 SINGLE_PORTFOLIO_MODE = True
 # 2026-10-06 (user decision): the market-session schedule runs as a separate account next to the baseline, so
 # the hourly baseline stays the reference it is compared against.
-PARALLEL_SYNCED_CODES: tuple[str, ...] = (SESSIONS_CODE,)
+# 2026-10-07: the Futures & Crypto account joins the same loop, on its own three markets only.
+PARALLEL_SYNCED_CODES: tuple[str, ...] = (SESSIONS_CODE, FUTURES_CRYPTO_CODE)
 
 
 def syncable_profile_codes() -> list[str]:

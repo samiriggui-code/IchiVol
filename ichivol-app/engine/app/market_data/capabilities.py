@@ -66,6 +66,15 @@ _CAPABILITIES: dict[str, ProviderCapabilities] = {
             "TICK_VOLUME; accumulate for depth."
         ),
     ),
+    "binance_usdm": ProviderCapabilities(
+        provider_id="binance_usdm",
+        ohlcv=True,
+        historical=True,
+        open_interest=True,
+        funding=True,
+        real_volume=True,
+        notes="USD-M perpetual klines (BTCPERP, Futures & Crypto portfolio only); OI/funding via binance_futures.",
+    ),
     "twelve_data": ProviderCapabilities(
         provider_id="twelve_data",
         ohlcv=True,
