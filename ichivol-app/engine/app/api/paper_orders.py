@@ -39,6 +39,28 @@ def _refuse_rs_portfolio_code(code: str | None) -> None:
         raise HTTPException(status_code=403, detail=RS_MANUAL_REFUSAL)
 
 
+def _refuse_outside_markets(code: str | None, symbol: str) -> None:
+    """403 for a manual order on a dedicated account (Futures & Crypto) outside its own markets."""
+    from app.paper import futures_crypto
+    from app.paper.portfolio import get_portfolio_by_code
+    from app.paper.strategy_profiles import profile_for
+
+    if not code or not futures_crypto.is_dedicated(profile_for(code)):
+        return
+    session = SessionLocal()
+    try:
+        pf = get_portfolio_by_code(session, code)
+        profile = pf.strategy_profile if pf is not None else profile_for(code)
+    finally:
+        session.close()
+    allowed = futures_crypto.traded_symbols(profile)
+    if symbol.upper() not in allowed:
+        raise HTTPException(
+            status_code=403,
+            detail=f"symbol_outside_portfolio: {code} only trades {', '.join(allowed)}",
+        )
+
+
 def _refuse_rs_portfolio_id(session: Session, portfolio_id: str | None) -> None:
     """403 for a manual action on a position that belongs to an RS-engine portfolio."""
     from app.db.models import PaperPortfolio
@@ -153,6 +175,7 @@ def preview_manual_paper_buy(
     from app.paper.scenarios import build_scenarios
 
     _refuse_rs_portfolio_code(portfolio_code)
+    _refuse_outside_markets(portfolio_code, symbol)
     row = _scan_or_http(symbol, timeframe)
     session = SessionLocal()
     try:
@@ -311,6 +334,7 @@ def propose_paper_trade(
     from app.paper.intent import propose_order_intent
 
     _refuse_rs_portfolio_code(portfolio_code)
+    _refuse_outside_markets(portfolio_code, symbol)
     rvol_params = _rvol_params_override(rvol_low, rvol_significant, rvol_strong, rvol_anomaly)
     atr_params = _atr_params_override(atr_dead_percentile, atr_extreme_percentile, atr_stop_multiplier)
     try:
@@ -363,6 +387,7 @@ def open_paper_position(
     demo/calibration threshold set instead of the engine defaults, using the
     exact same real market data and pipeline logic either way."""
     _refuse_rs_portfolio_code(portfolio_code)
+    _refuse_outside_markets(portfolio_code, symbol)
     rvol_params = _rvol_params_override(rvol_low, rvol_significant, rvol_strong, rvol_anomaly)
     atr_params = _atr_params_override(atr_dead_percentile, atr_extreme_percentile, atr_stop_multiplier)
     row = _scan_or_http(symbol, timeframe, rvol_params=rvol_params, atr_params=atr_params)

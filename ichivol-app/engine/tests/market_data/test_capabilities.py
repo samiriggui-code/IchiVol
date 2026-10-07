@@ -41,7 +41,7 @@ def test_biquote_tick_volume_no_exchange():
 def test_list_capabilities_sorted():
     rows = list_capabilities()
     assert [c.provider_id for c in rows] == sorted(c.provider_id for c in rows)
-    assert len(rows) == 3
+    assert len(rows) == 4
 
 
 def test_unknown_provider_none():

@@ -21,6 +21,9 @@ from dataclasses import dataclass
 
 import httpx
 
+from app.indicators.ichimoku import Candle
+from app.market_data.volume_semantics import VolumeType
+
 BASE_URL = "https://fapi.binance.com"
 
 _FUTURES_SYMBOL: dict[str, str] = {
@@ -70,3 +73,37 @@ def fetch_funding_rate_hist(symbol: str, limit: int = 1000) -> list[FundingPoint
         FundingPoint(time=int(row["fundingTime"]) // 1000, rate=float(row["fundingRate"]))
         for row in rows
     ]
+
+
+def fetch_perp_klines(symbol: str, interval: str, limit: int = 300) -> list[Candle]:
+    """USD-M perpetual candles (the BTC "perpetual" mode of the Futures & Crypto portfolio). Same row layout
+    as spot klines; volume is the contract's own traded volume (base asset)."""
+    response = httpx.get(
+        f"{BASE_URL}/fapi/v1/klines",
+        params={"symbol": _futures_symbol(symbol), "interval": interval, "limit": min(max(limit, 1), 1500)},
+        timeout=10.0,
+    )
+    response.raise_for_status()
+    return [
+        Candle(
+            time=int(row[0]) // 1000,
+            open=float(row[1]),
+            high=float(row[2]),
+            low=float(row[3]),
+            close=float(row[4]),
+            volume=float(row[5]),
+            taker_buy_volume=float(row[9]) if len(row) > 9 else None,
+            volume_type=VolumeType.EXCHANGE_VOLUME,
+        )
+        for row in response.json()
+    ]
+
+
+class BinanceUsdmProvider:
+    """Binance USD-M perpetual candles, data only (never an order)."""
+
+    id = "binance_usdm"
+    volume_type = VolumeType.EXCHANGE_VOLUME
+
+    def fetch_ohlcv(self, provider_symbol: str, timeframe: str, limit: int = 300) -> list[Candle]:
+        return fetch_perp_klines(provider_symbol, timeframe, limit)

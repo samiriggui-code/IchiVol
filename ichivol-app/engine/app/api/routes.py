@@ -19,6 +19,7 @@ from app.api import chart_objects as chart_objects_routes
 from app.api import context as context_routes
 from app.api import cycle as cycle_routes
 from app.api import decisions as decisions_routes
+from app.api import futures_crypto as futures_crypto_routes
 from app.api import market as market_routes
 from app.api import mtf as mtf_routes
 from app.api import orderbook as orderbook_routes
@@ -68,5 +69,7 @@ for _sub in (
     mtf_routes.router,
     # OB-1: collected order book (read-only files of the orderbook-collector service, observe-only).
     orderbook_routes.router,
+    # Futures & Crypto portfolio view (YM, MGC, BTC) + BTC instrument setting.
+    futures_crypto_routes.router,
 ):
     router.include_router(_sub)

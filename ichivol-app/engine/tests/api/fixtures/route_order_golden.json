@@ -640,6 +640,20 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/paper/futures-crypto",
+    "endpoint": "get_futures_crypto_view"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/paper/futures-crypto/btc-mode",
+    "endpoint": "post_futures_crypto_btc_mode"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/health",
     "endpoint": "health"
   }

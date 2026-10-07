@@ -5,6 +5,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   BASELINE_PORTFOLIO_CODE,
+  FUTURES_CRYPTO_CODE,
   RS_D1_CODE,
   RS_D1_LABEL,
   SESSIONS_CODE,
@@ -35,4 +36,12 @@ test('Sessions : sélectionnable par son code exact, actions manuelles permises'
 
 test('libellé exact demandé', () => {
   assert.equal(RS_D1_LABEL, 'RS-D1 — validé 2025, holdout 2026 non ouvert')
+})
+
+test('Futures & Crypto : sélectionnable, fermeture permise, absent du ticket d’achat', async () => {
+  const { MANUAL_PORTFOLIOS } = await import('./rsPortfolio.ts')
+  assert.equal(portfolioFromParam(FUTURES_CRYPTO_CODE), FUTURES_CRYPTO_CODE)
+  assert.equal(isRsPortfolio(FUTURES_CRYPTO_CODE), false)
+  assert.equal(manualActionsAllowed(FUTURES_CRYPTO_CODE), true)
+  assert.equal(MANUAL_PORTFOLIOS.some((p) => p.code === FUTURES_CRYPTO_CODE), false)
 })

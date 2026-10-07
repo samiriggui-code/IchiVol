@@ -28,6 +28,7 @@ def paper_calls(monkeypatch):
     monkeypatch.setattr(cache_module, "scan_watchlist", _rows)
     monkeypatch.setattr(cache_module, "persist_scan", lambda session, row: None)
     monkeypatch.setattr(cache_module, "record_signal_evidence", lambda session, row: None)
+    monkeypatch.setattr(cache_module, "dedicated_extra_symbols", lambda: [])
     from app.agent_channel import commands
     from app.api import market
 

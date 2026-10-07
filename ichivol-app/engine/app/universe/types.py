@@ -72,6 +72,9 @@ class Instrument:
     """FeeSchedule id applicable to the traded product; None = simulation unavailable."""
 
     exchange_timezone: str | None = None
+    in_default_watchlist: bool = True
+    """False = only a dedicated portfolio trades it (Futures & Crypto): never added to the shared screener
+    watchlist, so the baseline and the other accounts never see it."""
     quantity_step: str | None = None
     """Decimal string (e.g. '0.00001'); None = unknown."""
 

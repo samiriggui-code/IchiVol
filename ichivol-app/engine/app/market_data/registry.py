@@ -8,6 +8,7 @@ resolving instead of raising ProviderNotWiredError.
 from __future__ import annotations
 
 from app.market_data.binance import BinanceSpotProvider
+from app.market_data.binance_futures import BinanceUsdmProvider
 from app.market_data.biquote import BiquoteProvider
 from app.market_data.capabilities import (
     ProviderCapabilities,
@@ -22,6 +23,7 @@ _PROVIDERS: dict[str, MarketDataProvider] = {
     "binance": BinanceSpotProvider(),
     "twelve_data": TwelveDataProvider(),
     "biquote": BiquoteProvider(),
+    "binance_usdm": BinanceUsdmProvider(),
 }
 
 
