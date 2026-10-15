@@ -58,6 +58,9 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ichivol}:${POSTGRES_PASSWORD}@postgres:5432/ichivol_engine
       ENGINE_API_PREFIX: /api/engine
+      JEV_URL: ${JEV_URL:-http://jevos-v4:8017}
+      JEV_SHADOW_ENABLED: ${JEV_SHADOW_ENABLED:-false}
+      JEV_API_KEY: ${JEV_API_KEY:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       TWELVE_DATA_API_KEY: ${TWELVE_DATA_API_KEY:-}
       ENABLE_BACKTEST_EVIDENCE: ${ENABLE_BACKTEST_EVIDENCE:-true}
@@ -66,6 +69,7 @@ services:
     volumes:
       # OB-1: files written by orderbook-collector, read-only for the engine (API /orderbook, FactSheet ob.*)
       - ichivol_orderbook:/data/orderbook:ro
+      - ./jev-shadow-data:/data/jev-shadow
     networks:
       - ichivol
 

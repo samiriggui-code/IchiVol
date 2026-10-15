@@ -1,3 +1,4 @@
+import { ModalSheetHost } from "../components/ModalSheetHost"
 /**
  * Agents — port littéral de design-reference/ichivol-workspace `agents()` + page-head.
  * Classes HTML = maquette. Données = GET /api/agents (Eve runtime + 5 rôles code).
@@ -23,6 +24,7 @@ import {
   type AuthorityChain,
 } from '../lib/agentsRuntime'
 import { labelEngineCode } from '../lib/engineTerminology'
+import { EveShadowPanel } from './EveShadowPanel'
 import './AgentsPage.css'
 
 type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
@@ -221,6 +223,7 @@ export function AgentsPage() {
   const [detail, setDetail] = useState<AgentRoleCard | null>(null)
   const [ficheStub, setFicheStub] = useState<string | null>(null)
   const [missionSymbol, setMissionSymbol] = useState('BTCUSDT')
+  const [shadowOpen, setShadowOpen] = useState(false)
   const [missionBusy, setMissionBusy] = useState(false)
   const [missionMsg, setMissionMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -327,6 +330,7 @@ export function AgentsPage() {
       ) : null}
 
       <div className="grid three">
+        <section className="card agent-card"><span className="tag green">IA DECISIONNELLE</span><div className="agent-icon">◉</div><h2>Ève Shadow</h2><p>Analyse des décisions et contrôle des risques avec jevos-v4.</p><div className="statline"><span>Moteur</span><b>jevos-v4</b></div><div className="statline"><span>Mode</span><b>Observation</b></div><div className="statline"><span>Permission</span><b>market_read</b></div><button type="button" onClick={() => setShadowOpen(v => !v)}>{shadowOpen ? "Fermer la fiche" : "Ouvrir la fiche"}</button></section>
         {cards.map((a) => (
           <section className="card agent-card" key={a.id}>
             {badge(
@@ -363,6 +367,7 @@ export function AgentsPage() {
         ))}
       </div>
 
+      {shadowOpen ? <ModalSheetHost ariaLabel="Fiche agent Ève Shadow" onCancel={() => setShadowOpen(false)}><aside className="panel trade-sheet"><header className="panel-head trade-sheet-head"><h2>Ève Shadow</h2><button type="button" className="ghost" onClick={() => setShadowOpen(false)}>Fermer</button></header><div className="trade-sheet-scroll"><EveShadowPanel /></div></aside></ModalSheetHost> : null}
       <section className="card">
         <div className="card-head">
           <h2>Chaîne d’autorité</h2>

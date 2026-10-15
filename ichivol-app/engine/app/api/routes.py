@@ -19,6 +19,7 @@ from app.api import chart_objects as chart_objects_routes
 from app.api import context as context_routes
 from app.api import cycle as cycle_routes
 from app.api import decisions as decisions_routes
+from app.api import jev_shadow as jev_shadow_routes
 from app.api import futures_crypto as futures_crypto_routes
 from app.api import market as market_routes
 from app.api import mtf as mtf_routes
@@ -47,6 +48,7 @@ for _sub in (
     context_routes.router,
     market_routes.router_screener,
     decisions_routes.router,
+    jev_shadow_routes.router,
     backtest_routes.router_evidence,
     rulesets_routes.router,
     strategy_lab_routes.router,
