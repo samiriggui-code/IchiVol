@@ -1539,3 +1539,60 @@ def cmd_submit_eve_paper(args: dict) -> dict:
         return out
     finally:
         session.close()
+
+
+def cmd_list_eve_followup(args: dict) -> dict:
+    """Phase J — positions / dossiers en surveillance (lecture seule)."""
+    from app.db.session import SessionLocal
+    from app.eve.followup import list_tracked
+    from app.paper.strategy_profiles import BASELINE_CODE
+
+    limit = int(args.get("limit") or 30)
+    portfolio_code = str(args.get("portfolio_code") or BASELINE_CODE)
+    session = SessionLocal()
+    try:
+        return list_tracked(session, portfolio_code=portfolio_code, limit=limit)
+    finally:
+        session.close()
+
+
+def cmd_run_eve_followup(args: dict) -> dict:
+    """Phase J — proposer HOLD/CLOSE/ABSTAIN (apply forcé dry-run côté channel)."""
+    from app.db.session import SessionLocal
+    from app.eve.followup import run_followup
+
+    dossier_id = _require_str(args, "dossier_id")
+    use_jev = args.get("use_jev")
+    if use_jev is not None and not isinstance(use_jev, bool):
+        raise CommandError("use_jev must be bool")
+    # Channel: propose + optional CLOSE dry-run via apply=True (autonomy still gates open/close).
+    apply = bool(args.get("apply") or False)
+    session = SessionLocal()
+    try:
+        out = run_followup(
+            session,
+            dossier_id,
+            apply=apply,
+            use_jev=bool(use_jev) if use_jev is not None else False,
+        )
+        if out.get("error") == "dossier_not_found":
+            raise CommandError("dossier_not_found")
+        session.commit()
+        return out
+    finally:
+        session.close()
+
+
+def cmd_sync_eve_outcomes(args: dict) -> dict:
+    """Phase J — enregistrer outcomes des positions CLOSED (jamais decision_time)."""
+    from app.db.session import SessionLocal
+    from app.eve.followup import sync_outcomes
+
+    limit = int(args.get("limit") or 50)
+    session = SessionLocal()
+    try:
+        out = sync_outcomes(session, limit=limit)
+        session.commit()
+        return out
+    finally:
+        session.close()

@@ -61,6 +61,8 @@ export function EveIntelligencePanel() {
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [lastSubmit, setLastSubmit] = useState<string>("")
+  const [followupInfo, setFollowupInfo] = useState<string>("")
+  const [trackedOpen, setTrackedOpen] = useState(0)
 
   const reloadDossiers = useCallback(async (signal?: AbortSignal) => {
     const r = await fetch("/api/engine/eve/dossiers?limit=20", {
@@ -72,11 +74,22 @@ export function EveIntelligencePanel() {
     setItems(Array.isArray(data?.results) ? data.results : [])
   }, [])
 
+  const reloadFollowup = useCallback(async (signal?: AbortSignal) => {
+    const r = await fetch("/api/engine/eve/followup?limit=30", {
+      credentials: "include",
+      signal,
+    })
+    if (!r.ok) return
+    const data = await r.json()
+    setTrackedOpen(Array.isArray(data?.open_eve_positions) ? data.open_eve_positions.length : 0)
+  }, [])
+
   useEffect(() => {
     const controller = new AbortController()
     const { signal } = controller
     Promise.all([
       reloadDossiers(signal),
+      reloadFollowup(signal),
       fetch("/api/engine/jev-shadow/health", { credentials: "include", signal }).then(async (r) => {
         if (!r.ok) return null
         return r.json()
@@ -90,7 +103,7 @@ export function EveIntelligencePanel() {
         return r.json()
       }),
     ])
-      .then(([, h, cal, auto]) => {
+      .then(([, , h, cal, auto]) => {
         if (controller.signal.aborted) return
         setHealth(h)
         setCalibration(cal)
@@ -103,7 +116,7 @@ export function EveIntelligencePanel() {
         if (!controller.signal.aborted) setLoading(false)
       })
     return () => controller.abort()
-  }, [reloadDossiers])
+  }, [reloadDossiers, reloadFollowup])
 
   async function runDrySubmit(dossierId: string) {
     setBusyId(dossierId)
@@ -121,6 +134,46 @@ export function EveIntelligencePanel() {
       await reloadDossiers()
     } catch (e) {
       setLastSubmit(String(e))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function runFollowup(dossierId: string) {
+    setBusyId(`fu-${dossierId}`)
+    setFollowupInfo("")
+    try {
+      const r = await fetch(
+        `/api/engine/eve/dossiers/${dossierId}/followup?apply=true`,
+        { method: "POST", credentials: "include" },
+      )
+      const data = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(data?.detail || `followup ${r.status}`)
+      setFollowupInfo(
+        `${data.symbol ?? dossierId}: ${data.proposed_action ?? "?"} — ${data.rationale ?? data.status}`,
+      )
+      await Promise.all([reloadDossiers(), reloadFollowup()])
+    } catch (e) {
+      setFollowupInfo(String(e))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function syncOutcomes() {
+    setBusyId("sync")
+    setFollowupInfo("")
+    try {
+      const r = await fetch("/api/engine/eve/outcomes/sync", {
+        method: "POST",
+        credentials: "include",
+      })
+      const data = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(data?.detail || `sync ${r.status}`)
+      setFollowupInfo(`Outcomes sync: ${data.updated_count ?? 0} mis à jour`)
+      await reloadDossiers()
+    } catch (e) {
+      setFollowupInfo(String(e))
     } finally {
       setBusyId(null)
     }
@@ -157,6 +210,10 @@ export function EveIntelligencePanel() {
           <span>Paper autonomy (V2)</span>
           <b>{paperAutonomy?.autonomy_enabled ? "oui" : "non (dry-run Risk Kernel)"}</b>
         </div>
+        <div className="statline">
+          <span>Positions Eve ouvertes (J)</span>
+          <b>{trackedOpen}</b>
+        </div>
 
         <h3 style={{ marginTop: 16 }}>Modes</h3>
         <ul>
@@ -184,6 +241,20 @@ export function EveIntelligencePanel() {
           primitives sur chaque mode.
         </p>
 
+        <h3 style={{ marginTop: 16 }}>Suivi (Phase J)</h3>
+        <p style={{ fontSize: 12, color: "var(--muted)" }}>
+          HOLD / CLOSE / ABSTAIN proposés sur positions liées. Outcomes (PnL net frais)
+          séparés de <code>decision_time</code>. Autonomie off → dry-run seulement.
+        </p>
+        <button type="button" className="ghost" disabled={busyId === "sync"} onClick={() => syncOutcomes()}>
+          {busyId === "sync" ? "Sync…" : "Sync outcomes"}
+        </button>
+        {followupInfo ? (
+          <p style={{ fontSize: 12 }} role="status">
+            Suivi : {followupInfo}
+          </p>
+        ) : null}
+
         <h3 style={{ marginTop: 16 }}>Dossiers récents</h3>
         {lastSubmit ? (
           <p style={{ fontSize: 12 }} role="status">
@@ -210,7 +281,8 @@ export function EveIntelligencePanel() {
                   <th>Ève</th>
                   <th>Cohérence</th>
                   <th>Exécution</th>
-                  <th>RK dry-run</th>
+                  <th>RK</th>
+                  <th>Suivi</th>
                 </tr>
               </thead>
               <tbody>
@@ -242,6 +314,16 @@ export function EveIntelligencePanel() {
                           onClick={() => runDrySubmit(d.id)}
                         >
                           {busyId === d.id ? "…" : "Dry-run"}
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="ghost"
+                          disabled={busyId === `fu-${d.id}`}
+                          onClick={() => runFollowup(d.id)}
+                        >
+                          {busyId === `fu-${d.id}` ? "…" : "Follow-up"}
                         </button>
                       </td>
                     </tr>

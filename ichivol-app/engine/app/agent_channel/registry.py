@@ -72,6 +72,9 @@ from app.agent_channel.commands import (
     cmd_get_eve_dossier,
     cmd_get_eve_paper_autonomy,
     cmd_submit_eve_paper,
+    cmd_list_eve_followup,
+    cmd_run_eve_followup,
+    cmd_sync_eve_outcomes,
 )
 
 Handler = Callable[[dict], dict]
@@ -153,6 +156,33 @@ TOOLS: dict[str, ToolSpec] = {
                 "stop_distance": "float optionnel",
             },
             cmd_submit_eve_paper,
+        ),
+        ToolSpec(
+            "list_eve_followup",
+            "Ève Phase J — liste des positions Eve trackées et dossiers en surveillance.",
+            True,
+            {"limit": "int, défaut 30", "portfolio_code": "str, défaut baseline"},
+            cmd_list_eve_followup,
+        ),
+        ToolSpec(
+            "run_eve_followup",
+            "Ève Phase J — propose HOLD/CLOSE/ABSTAIN pour un dossier. "
+            "apply=true → dry-run CLOSE via paper_submit (autonomie reste le hard-gate).",
+            True,
+            {
+                "dossier_id": "str, requis",
+                "apply": "bool, défaut false",
+                "use_jev": "bool optionnel",
+            },
+            cmd_run_eve_followup,
+        ),
+        ToolSpec(
+            "sync_eve_outcomes",
+            "Ève Phase J — écrit outcome_json (PnL/frais) pour dossiers liés à des "
+            "positions CLOSED. Ne modifie jamais decision_time.",
+            True,
+            {"limit": "int, défaut 50"},
+            cmd_sync_eve_outcomes,
         ),
         ToolSpec(
             "get_symbol_context",

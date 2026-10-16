@@ -19,6 +19,7 @@ from app.eve.dossier import (
     verdict_to_dict,
 )
 from app.eve.orchestrator import evaluate_opportunity
+from app.eve.followup import followup_summary, list_tracked, run_followup, sync_outcomes
 from app.eve.paper_submit import autonomy_enabled, submit_paper_from_dossier
 from app.eve.primitive_study import run_primitive_routing_study
 from app.paper.strategy_profiles import BASELINE_CODE
@@ -169,6 +170,65 @@ def eve_paper_submit(
             raise HTTPException(status_code=404, detail="dossier_not_found")
         if out.get("error") == "unknown_portfolio":
             raise HTTPException(status_code=404, detail=f"unknown_portfolio: {portfolio_code}")
+        session.commit()
+        return out
+    finally:
+        session.close()
+
+
+@router.get("/followup")
+def eve_followup_list(
+    portfolio_code: str = BASELINE_CODE,
+    limit: int = Query(default=30, ge=1, le=100),
+) -> dict:
+    """Phase J — positions Eve trackées + dossiers en surveillance."""
+    session = SessionLocal()
+    try:
+        return list_tracked(session, portfolio_code=portfolio_code, limit=limit)
+    finally:
+        session.close()
+
+
+@router.get("/dossiers/{dossier_id}/followup")
+def eve_followup_get(dossier_id: str) -> dict:
+    """Phase J — résumé suivi / outcome (decision_time immuable)."""
+    session = SessionLocal()
+    try:
+        out = followup_summary(session, dossier_id)
+        if out.get("error") == "dossier_not_found":
+            raise HTTPException(status_code=404, detail="dossier_not_found")
+        return out
+    finally:
+        session.close()
+
+
+@router.post("/dossiers/{dossier_id}/followup")
+def eve_followup_run(
+    dossier_id: str,
+    apply: bool = False,
+    use_jev: bool = False,
+) -> dict:
+    """Phase J — proposer HOLD/CLOSE/ABSTAIN.
+
+    ``apply=true`` attempts CLOSE via paper_submit; autonomy off → dry-run only.
+    """
+    session = SessionLocal()
+    try:
+        out = run_followup(session, dossier_id, apply=bool(apply), use_jev=use_jev)
+        if out.get("error") == "dossier_not_found":
+            raise HTTPException(status_code=404, detail="dossier_not_found")
+        session.commit()
+        return out
+    finally:
+        session.close()
+
+
+@router.post("/outcomes/sync")
+def eve_outcomes_sync(limit: int = Query(default=50, ge=1, le=200)) -> dict:
+    """Phase J — enregistre les outcomes des positions CLOSED liées aux dossiers."""
+    session = SessionLocal()
+    try:
+        out = sync_outcomes(session, limit=limit)
         session.commit()
         return out
     finally:

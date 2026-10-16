@@ -230,12 +230,15 @@ def submit_paper_from_dossier(
     stop_distance: float | None = None,
     execute: bool | None = None,
     allow_screener: bool = True,
+    action_override: str | None = None,
 ) -> dict[str, Any]:
     """Submit (or dry-run) an Eve potential verdict via Risk Kernel / close path.
 
     ``execute`` defaults to ``autonomy_enabled()``. HOLD/ABSTAIN never open.
     CLOSE closes an existing open lot when autonomy is on; otherwise dry-runs.
     LONG/SHORT go through Risk Kernel then ``open_user_confirmed``.
+    ``action_override`` lets Phase J follow-up submit CLOSE without mutating
+    the original strategic verdict permanently.
     """
     dossier = get_dossier(session, dossier_id)
     if dossier is None:
@@ -243,7 +246,8 @@ def submit_paper_from_dossier(
 
     verdict = get_verdict(session, dossier.verdict_id) if dossier.verdict_id else None
     action = normalize_action(
-        (verdict.action if verdict else None) or dossier.eve_action
+        action_override
+        or ((verdict.action if verdict else None) or dossier.eve_action)
     ) or "ABSTAIN"
 
     auto = autonomy_enabled()
