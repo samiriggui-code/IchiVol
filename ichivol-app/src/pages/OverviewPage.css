@@ -154,7 +154,23 @@
   display: grid;
   grid-template-columns: repeat(4,1fr);
   gap: 16px;
+  margin-bottom: 16px;
+}
+.desk-page .desk-books{
   margin-bottom: 22px;
+}
+.desk-page .desk-books .table-wrap{
+  padding: 0 0 8px;
+}
+.desk-page .desk-books td small{
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 3px;
+}
+.desk-page .desk-books .mono{
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-size: 12px;
 }
 .desk-page .metric{
   padding: 21px 23px;
@@ -395,6 +411,13 @@
 .desk-page .desk-eq-legend-dot.is-action{
   background: #6b7c86;
   box-shadow: none;
+}
+.desk-page .desk-eq-legend-line{
+  width: 14px;
+  height: 2.5px;
+  border-radius: 2px;
+  display: inline-block;
+  flex: none;
 }
 .desk-page .desk-eq-marker.is-tx circle{
   cursor: pointer;
