@@ -43,6 +43,18 @@ type Calibration = {
       cells?: Array<{ mode: string; primitive: string; verdict: string }>
     }
   }
+  observed?: {
+    n?: number
+    abstain_rate?: number | null
+    mean_coherence?: number | null
+    closed_n?: number
+    win_rate?: number | null
+    mean_realized_pnl?: number | null
+  }
+  proposal?: {
+    changes?: Array<{ path?: string; reason?: string }>
+    applied?: boolean
+  }
 }
 
 const MODES = [
@@ -207,11 +219,24 @@ export function EveIntelligencePanel() {
           <b>{calibration?.policy?.version ?? "—"}</b>
         </div>
         <div className="statline">
+          <span>Obs. dossiers / win-rate</span>
+          <b>
+            {calibration?.observed?.n ?? 0} ·{" "}
+            {typeof calibration?.observed?.win_rate === "number"
+              ? `${(calibration.observed.win_rate * 100).toFixed(0)}%`
+              : "—"}
+          </b>
+        </div>
+        <div className="statline">
+          <span>Propositions calib.</span>
+          <b>{calibration?.proposal?.changes?.length ?? 0} (jamais auto)</b>
+        </div>
+        <div className="statline">
           <span>Paper autonomy (V2)</span>
           <b>{paperAutonomy?.autonomy_enabled ? "oui" : "non (dry-run Risk Kernel)"}</b>
         </div>
         <div className="statline">
-          <span>Positions Eve ouvertes (J)</span>
+          <span>Positions Eve ouvertes (J/K)</span>
           <b>{trackedOpen}</b>
         </div>
 
@@ -243,7 +268,7 @@ export function EveIntelligencePanel() {
 
         <h3 style={{ marginTop: 16 }}>Suivi (Phase J)</h3>
         <p style={{ fontSize: 12, color: "var(--muted)" }}>
-          HOLD / CLOSE / ABSTAIN proposés sur positions liées. Outcomes (PnL net frais)
+          HOLD / CLOSE / ABSTAIN + audit Shadow (Phase K). Outcomes (PnL net frais)
           séparés de <code>decision_time</code>. Autonomie off → dry-run seulement.
         </p>
         <button type="button" className="ghost" disabled={busyId === "sync"} onClick={() => syncOutcomes()}>

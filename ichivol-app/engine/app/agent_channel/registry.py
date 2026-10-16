@@ -75,6 +75,7 @@ from app.agent_channel.commands import (
     cmd_list_eve_followup,
     cmd_run_eve_followup,
     cmd_sync_eve_outcomes,
+    cmd_eve_calibration_report,
 )
 
 Handler = Callable[[dict], dict]
@@ -173,6 +174,7 @@ TOOLS: dict[str, ToolSpec] = {
                 "dossier_id": "str, requis",
                 "apply": "bool, défaut false",
                 "use_jev": "bool optionnel",
+                "use_shadow": "bool, défaut true (Phase K)",
             },
             cmd_run_eve_followup,
         ),
@@ -183,6 +185,14 @@ TOOLS: dict[str, ToolSpec] = {
             True,
             {"limit": "int, défaut 50"},
             cmd_sync_eve_outcomes,
+        ),
+        ToolSpec(
+            "eve_calibration_report",
+            "Ève — observe dossiers/outcomes (abstain, cohérence, win-rate paper) et "
+            "propose des ajustements de seuils. Jamais auto-appliqué, jamais fine-tune LLM.",
+            True,
+            {"limit": "int, défaut 100"},
+            cmd_eve_calibration_report,
         ),
         ToolSpec(
             "get_symbol_context",

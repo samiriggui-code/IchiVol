@@ -9,7 +9,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query
 
 from app.db.session import SessionLocal
-from app.eve.calibration import active_policy, propose_adjustment
+from app.eve.calibration import active_policy, calibration_report
 from app.eve.context import build_engine_context
 from app.eve.dossier import (
     dossier_to_dict,
@@ -109,16 +109,20 @@ def eve_verdict_detail(verdict_id: str) -> dict:
 
 
 @router.get("/calibration")
-def eve_calibration() -> dict:
-    policy = active_policy()
-    return {
-        "policy": policy,
-        "note": "Calibration adjusts thresholds/weights — not LLM fine-tuning",
-        "proposal_example": propose_adjustment(
-            policy=policy,
-            observed={"abstain_rate": 0.0, "mean_coherence": 0.5, "n": 0},
-        ),
-    }
+def eve_calibration(limit: int = Query(default=100, ge=1, le=500)) -> dict:
+    """Active policy + observation-backed proposal (never auto-applied)."""
+    session = SessionLocal()
+    try:
+        report = calibration_report(session, limit=limit)
+        return {
+            "policy": active_policy(),
+            "observed": report["observed"],
+            "proposal": report["proposal"],
+            "note": "Calibration adjusts thresholds/weights — not LLM fine-tuning",
+            "applied": False,
+        }
+    finally:
+        session.close()
 
 
 @router.get("/primitive-study")
@@ -207,14 +211,22 @@ def eve_followup_run(
     dossier_id: str,
     apply: bool = False,
     use_jev: bool = False,
+    use_shadow: bool = True,
 ) -> dict:
-    """Phase J — proposer HOLD/CLOSE/ABSTAIN.
+    """Phase J/K — proposer HOLD/CLOSE/ABSTAIN (+ Shadow audit).
 
     ``apply=true`` attempts CLOSE via paper_submit; autonomy off → dry-run only.
+    ``use_shadow`` (default true) runs Ève Shadow independent review (≠ ShadowBroker).
     """
     session = SessionLocal()
     try:
-        out = run_followup(session, dossier_id, apply=bool(apply), use_jev=use_jev)
+        out = run_followup(
+            session,
+            dossier_id,
+            apply=bool(apply),
+            use_jev=use_jev,
+            use_shadow=use_shadow,
+        )
         if out.get("error") == "dossier_not_found":
             raise HTTPException(status_code=404, detail="dossier_not_found")
         session.commit()

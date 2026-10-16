@@ -1567,6 +1567,9 @@ def cmd_run_eve_followup(args: dict) -> dict:
         raise CommandError("use_jev must be bool")
     # Channel: propose + optional CLOSE dry-run via apply=True (autonomy still gates open/close).
     apply = bool(args.get("apply") or False)
+    use_shadow = args.get("use_shadow")
+    if use_shadow is not None and not isinstance(use_shadow, bool):
+        raise CommandError("use_shadow must be bool")
     session = SessionLocal()
     try:
         out = run_followup(
@@ -1574,6 +1577,7 @@ def cmd_run_eve_followup(args: dict) -> dict:
             dossier_id,
             apply=apply,
             use_jev=bool(use_jev) if use_jev is not None else False,
+            use_shadow=True if use_shadow is None else bool(use_shadow),
         )
         if out.get("error") == "dossier_not_found":
             raise CommandError("dossier_not_found")
@@ -1594,5 +1598,18 @@ def cmd_sync_eve_outcomes(args: dict) -> dict:
         out = sync_outcomes(session, limit=limit)
         session.commit()
         return out
+    finally:
+        session.close()
+
+
+def cmd_eve_calibration_report(args: dict) -> dict:
+    """Calibration — observe dossiers/outcomes → proposal (jamais auto-appliqué)."""
+    from app.db.session import SessionLocal
+    from app.eve.calibration import calibration_report
+
+    limit = int(args.get("limit") or 100)
+    session = SessionLocal()
+    try:
+        return calibration_report(session, limit=limit)
     finally:
         session.close()

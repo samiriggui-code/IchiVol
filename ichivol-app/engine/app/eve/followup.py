@@ -1,8 +1,11 @@
-"""Phase J — Eve position follow-up (HOLD / CLOSE / ABSTAIN) + outcome recording.
+"""Phase J/K — Eve position follow-up + Shadow audit + outcome recording.
 
 Surveillance only by default. Applying CLOSE goes through ``paper_submit`` and
 still respects ``EVE_PAPER_AUTONOMY``. Never mutates ``decision_time_json``.
 Never creates an Eve portfolio. Never live trading.
+
+Phase K: Ève Shadow runs an independent counter-evaluation during follow-up;
+results are stored on the dossier outcome log (≠ ShadowBroker).
 """
 
 from __future__ import annotations
@@ -14,9 +17,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import EveDossier, PaperPosition
-from app.eve.actions import EveAction
+from app.eve.actions import EveAction, normalize_action
 from app.eve.dossier import get_dossier, get_verdict
-from app.eve.modes import run_guardian
+from app.eve.modes import _shadow_answers, run_guardian, run_shadow_mode
 from app.eve.paper_submit import autonomy_enabled, submit_paper_from_dossier
 from app.paper.portfolio import ensure_baseline_portfolio, get_portfolio_by_code
 from app.paper.strategy_profiles import BASELINE_CODE
@@ -164,8 +167,12 @@ def propose_followup_action(
     position: PaperPosition | None,
     guardian: dict[str, Any],
     last_eve_action: str | None,
+    shadow: dict[str, Any] | None = None,
 ) -> tuple[EveAction, str, list[str]]:
-    """Deterministic follow-up: HOLD / CLOSE / ABSTAIN (never LONG/SHORT here)."""
+    """Deterministic follow-up: HOLD / CLOSE / ABSTAIN (never LONG/SHORT here).
+
+    Phase K Shadow signals can escalate HOLD → CLOSE / ABSTAIN, never open risk.
+    """
     rejected: list[str] = []
     warnings = guardian.get("warnings") or []
     critical = [w for w in warnings if w.get("severity") == "critical"]
@@ -185,6 +192,25 @@ def propose_followup_action(
     if isinstance(mae, (int, float)) and mae <= -0.03:
         rejected.append("mae_deep")
         return "CLOSE", f"MAE {mae:.2%} deep → propose CLOSE", rejected
+
+    # Phase K — independent Shadow audit on an open book.
+    if shadow:
+        answers = _shadow_answers(shadow)
+        noul = (answers.get("review") or {}).get("noul")
+        choice = normalize_action((answers.get("independent_action") or {}).get("choice"))
+        score = (answers.get("audit_confidence") or {}).get("score")
+        if choice == "CLOSE":
+            rejected.append("shadow_choice_close")
+            return "CLOSE", "Shadow CHOICE CLOSE → propose CLOSE", rejected
+        if isinstance(score, (int, float)) and score <= 1:
+            rejected.append("shadow_low_audit_confidence")
+            return "CLOSE", "Shadow SCORE weak on open book → propose CLOSE", rejected
+        if isinstance(noul, (int, float)) and noul < 0.35:
+            rejected.append("shadow_noul_low")
+            return "CLOSE", "Shadow NOUL low coherence → propose CLOSE", rejected
+        if choice == "ABSTAIN":
+            rejected.append("shadow_choice_abstain")
+            return "ABSTAIN", "Shadow CHOICE ABSTAIN → no intervention", rejected
 
     # Near take-profit: HOLD (let protection / TP work) unless guardian warned
     if (
@@ -207,9 +233,11 @@ def run_followup(
     *,
     apply: bool = False,
     use_jev: bool = False,
+    use_shadow: bool = True,
 ) -> dict[str, Any]:
     """Review one dossier/position and propose HOLD/CLOSE/ABSTAIN.
 
+    Phase K runs Ève Shadow (independent) when ``use_shadow`` is true.
     ``apply=True`` only submits CLOSE via paper_submit when autonomy is on;
     otherwise records a dry-run proposal.
     """
@@ -218,18 +246,23 @@ def run_followup(
         return {"ok": False, "error": "dossier_not_found", "dossier_id": dossier_id}
 
     position = find_linked_position(session, dossier)
-    # Lightweight context for Guardian (avoid full evaluate cost).
+    # Lightweight context for Guardian (+ Shadow) — avoid full evaluate cost.
     from app.eve.context import build_engine_context
 
     context = build_engine_context(dossier.symbol, dossier.timeframe)
     guardian = run_guardian(context, use_jev=use_jev)
+    shadow: dict[str, Any] | None = None
+    if use_shadow:
+        shadow = run_shadow_mode(context, use_jev=use_jev)
 
     action, rationale, rejected = propose_followup_action(
         position=position,
         guardian=guardian,
         last_eve_action=dossier.eve_action,
+        shadow=shadow,
     )
 
+    shadow_answers = _shadow_answers(shadow) if shadow else {}
     report: dict[str, Any] = {
         "schema": FOLLOWUP_SCHEMA,
         "dossier_id": dossier_id,
@@ -240,6 +273,15 @@ def run_followup(
         "rejected_scenarios": rejected,
         "position": _position_snapshot(position) if position else None,
         "guardian_warning_count": len(guardian.get("warnings") or []),
+        "shadow": {
+            "used": bool(shadow),
+            "skipped": bool(shadow and shadow.get("skipped")),
+            "primitives_used": (shadow or {}).get("primitives_used") or [],
+            "noul": (shadow_answers.get("review") or {}).get("noul"),
+            "choice": (shadow_answers.get("independent_action") or {}).get("choice"),
+            "score": (shadow_answers.get("audit_confidence") or {}).get("score"),
+            "not": "shadow_broker",
+        },
         "autonomy_enabled": autonomy_enabled(),
         "apply_requested": bool(apply),
         "applied": False,
@@ -247,7 +289,7 @@ def run_followup(
         "reviewed_at": _now_iso(),
         "status": "potential",
         "executed": False,
-        "note": "Phase J potential — Risk Kernel / close still gated",
+        "note": "Phase J/K potential — Shadow audit recorded; Risk Kernel / close gated",
     }
 
     oc = _outcome_bucket(dossier)
@@ -261,11 +303,14 @@ def run_followup(
             "rationale": rationale,
             "rejected": rejected,
             "position_status": position.status if position else None,
+            "shadow": report["shadow"],
+            "phase": "J+K",
         }
     )
     oc["followups"] = followups[-20:]  # keep last 20
     oc["lifecycle"] = "monitoring" if (position and position.status == "OPEN") else oc.get("lifecycle") or "monitoring"
     oc["last_followup"] = report["reviewed_at"]
+    oc["last_shadow"] = report["shadow"]
     dossier.outcome_json = oc
     dossier.updated_at = datetime.now(timezone.utc)
 

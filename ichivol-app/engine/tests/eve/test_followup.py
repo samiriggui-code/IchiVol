@@ -56,6 +56,32 @@ def test_propose_hold_default() -> None:
     assert action == "HOLD"
 
 
+def test_shadow_choice_close_escalates() -> None:
+    action, _, rejected = propose_followup_action(
+        position=SimpleNamespace(
+            status="OPEN",
+            mae_pct=-0.005,
+            mfe_pct=0.01,
+            take_profit_price=110,
+            entry_price=100,
+        ),
+        guardian={"warnings": []},
+        last_eve_action="LONG",
+        shadow={
+            "jev": {
+                "ok": True,
+                "answers": {
+                    "review": {"noul": 0.8},
+                    "independent_action": {"choice": "CLOSE"},
+                    "audit_confidence": {"score": 3},
+                },
+            }
+        },
+    )
+    assert action == "CLOSE"
+    assert "shadow_choice_close" in rejected
+
+
 def test_propose_abstain_no_position() -> None:
     action, _, rejected = propose_followup_action(
         position=None,
@@ -129,12 +155,18 @@ def test_run_followup_records_log(monkeypatch: Any) -> None:
         patch("app.eve.followup.find_linked_position", return_value=None),
         patch("app.eve.context.build_engine_context", return_value=ctx),
         patch("app.eve.followup.run_guardian", return_value={"warnings": []}),
+        patch(
+            "app.eve.followup.run_shadow_mode",
+            return_value={"skipped": True, "primitives_used": [], "jev": {}},
+        ),
     ):
-        out = run_followup(session, "d1", apply=False, use_jev=False)
+        out = run_followup(session, "d1", apply=False, use_jev=False, use_shadow=True)
     assert out["ok"] is True
     assert out["proposed_action"] == "ABSTAIN"
+    assert out["shadow"]["used"] is True
     assert dossier.outcome_json["schema"] == "ichivol.eve.outcome.v1"
     assert len(dossier.outcome_json["followups"]) == 1
+    assert dossier.outcome_json["followups"][0]["phase"] == "J+K"
     assert dossier.decision_time_json == {"captured_at": "t0"}
 
 
