@@ -664,6 +664,16 @@ export function SettingsPage() {
                   <span>Broker</span>
                   <b>{badge('NON CONNECTÉ', 'gray')}</b>
                 </div>
+                <h3 style={{ marginTop: 18 }}>JEV / jevos (System One)</h3>
+                <p style={{ fontSize: 12, color: 'var(--muted)' }}>
+                  Distinct du LLM conversationnel (OpenRouter / Sonnet). Config VPS :{' '}
+                  <code>JEV_PROVIDER=jevos|typesafe</code>, <code>JEV_API_KEY</code>,{' '}
+                  <code>TYPESAFE_API_KEY</code>. Les règles Risk Kernel ne dépendent pas de cette UI.
+                </p>
+                <div className="statline">
+                  <span>Endpoint health</span>
+                  <b>/api/engine/jev-shadow/health</b>
+                </div>
               </>
             )}
 

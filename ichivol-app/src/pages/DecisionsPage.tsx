@@ -460,7 +460,11 @@ export function DecisionsPage() {
         <div>
           <div className="eyebrow">03 / ICHIVOL WORKSPACE</div>
           <h1>Opportunités</h1>
-          <p className="subtitle">Chaque décision commence par une preuve.</p>
+          <p className="subtitle">
+            Chaque décision commence par une preuve. Ève peut produire un Verdict potentiel
+            (Analyst → Challenger → Guardian → Shadow) sans exécution — voir Agents / Ève
+            Intelligence.
+          </p>
         </div>
         <div className="actions">{badge('CLOTURE 1H', 'gray')}</div>
       </div>

@@ -1423,3 +1423,72 @@ def cmd_get_factsheet(args: dict) -> dict:
         raise CommandError(str(exc)) from exc
     except ValueError as exc:
         raise CommandError(str(exc)) from exc
+
+
+def cmd_get_eve_context(args: dict) -> dict:
+    """Ève V1-B — contexte moteurs consolidé (lecture seule)."""
+    from app.eve.context import build_engine_context
+
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = args.get("timeframe", "1h")
+    return build_engine_context(symbol, str(timeframe or "1h"))
+
+
+def cmd_evaluate_eve(args: dict) -> dict:
+    """Ève V1 — cycle modes → verdict potentiel. Jamais d'exécution paper/réel."""
+    from app.eve.orchestrator import evaluate_opportunity
+
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = str(args.get("timeframe") or "1h")
+    use_jev = args.get("use_jev")
+    if use_jev is not None and not isinstance(use_jev, bool):
+        raise CommandError("use_jev must be bool")
+    # Channel: no persist by default (API /eve/evaluate persists).
+    return evaluate_opportunity(
+        symbol,
+        timeframe,
+        session=None,
+        persist=False,
+        use_jev=use_jev,
+    )
+
+
+def cmd_list_eve_dossiers(args: dict) -> dict:
+    """Liste des Dossiers IchiVol (potentiels, non exécutés)."""
+    from app.db.session import SessionLocal
+    from app.eve.dossier import dossier_to_dict, get_verdict, list_dossiers
+
+    limit = int(args.get("limit") or 20)
+    symbol = args.get("symbol")
+    session = SessionLocal()
+    try:
+        rows = list_dossiers(
+            session,
+            limit=limit,
+            symbol=str(symbol).upper() if symbol else None,
+        )
+        return {
+            "results": [
+                dossier_to_dict(d, get_verdict(session, d.verdict_id) if d.verdict_id else None)
+                for d in rows
+            ]
+        }
+    finally:
+        session.close()
+
+
+def cmd_get_eve_dossier(args: dict) -> dict:
+    """Détail d'un Dossier IchiVol par id."""
+    from app.db.session import SessionLocal
+    from app.eve.dossier import dossier_to_dict, get_dossier, get_verdict
+
+    dossier_id = _require_str(args, "dossier_id")
+    session = SessionLocal()
+    try:
+        d = get_dossier(session, dossier_id)
+        if d is None:
+            raise CommandError("dossier_not_found")
+        v = get_verdict(session, d.verdict_id) if d.verdict_id else None
+        return dossier_to_dict(d, v)
+    finally:
+        session.close()

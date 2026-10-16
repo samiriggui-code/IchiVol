@@ -1024,7 +1024,18 @@ export function OverviewPage() {
           <Link className="link" to="/app/market" style={{ marginLeft: 14 }}>
             Ouvrir le marché ↗
           </Link>
+          <Link className="link" to="/app/agents" style={{ marginLeft: 14 }}>
+            Ève Intelligence ↗
+          </Link>
         </div>
+      </div>
+
+      <div className="notice">
+        ⬡{' '}
+        <span>
+          Ève V1 : dossiers et verdicts potentiels uniquement — Risk Kernel et portefeuilles paper
+          existants inchangés. Aucune exécution autonome.
+        </span>
       </div>
 
       <div className="desk-workspace">

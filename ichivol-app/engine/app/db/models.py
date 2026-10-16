@@ -756,3 +756,57 @@ class LedgerLeg(Base):
     memo: Mapped[str] = mapped_column(String(255), default="")
 
     transaction: Mapped[LedgerTransaction] = relationship(back_populates="legs")
+
+
+class EveDossier(Base):
+    """Dossier IchiVol — reconstructible Eve evaluation (V1, no auto-execution).
+
+    ``decision_time_json`` holds only information available at decision time.
+    ``outcome_json`` is filled later and must never be back-dated into decision_time.
+    """
+
+    __tablename__ = "eve_dossiers"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    timeframe: Mapped[str] = mapped_column(String(8), index=True)
+    status: Mapped[str] = mapped_column(String(32), default="open", index=True)
+
+    context_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    modes_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    jev_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    coherence_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    policy_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    decision_time_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    outcome_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    baseline_decision: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    eve_action: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
+    execution_status: Mapped[str] = mapped_column(String(32), default="not_executed")
+    verdict_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+
+class EveVerdict(Base):
+    """Verdict IchiVol — structured Eve conclusion (potential until Risk Kernel / exec)."""
+
+    __tablename__ = "eve_verdicts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    dossier_id: Mapped[str] = mapped_column(String(36), ForeignKey("eve_dossiers.id"), index=True)
+    action: Mapped[str] = mapped_column(String(16), index=True)
+    status: Mapped[str] = mapped_column(String(32), default="potential", index=True)
+    scenario_retained: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    scenarios_rejected: Mapped[list] = mapped_column(JSON, default=list)
+    reasoning: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    coherence_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    body_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+    )

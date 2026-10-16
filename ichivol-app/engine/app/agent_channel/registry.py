@@ -66,6 +66,10 @@ from app.agent_channel.commands import (
     cmd_run_optimize,
     cmd_scan_market,
     cmd_get_factsheet,
+    cmd_get_eve_context,
+    cmd_evaluate_eve,
+    cmd_list_eve_dossiers,
+    cmd_get_eve_dossier,
 )
 
 Handler = Callable[[dict], dict]
@@ -95,6 +99,38 @@ TOOLS: dict[str, ToolSpec] = {
             True,
             {"symbol": "str, requis", "timeframe": "str, défaut '1h'", "as_of": "int unix, optionnel (historique)"},
             cmd_get_factsheet,
+        ),
+        ToolSpec(
+            "get_eve_context",
+            "Ève V1-B — contexte consolidé des moteurs Python (valeurs, unités, fraîcheur, indisponibilités).",
+            True,
+            {"symbol": "str, requis", "timeframe": "str, défaut '1h'"},
+            cmd_get_eve_context,
+        ),
+        ToolSpec(
+            "evaluate_eve",
+            "Ève V1 — Analyst/Challenger/Guardian/Shadow → verdict potentiel. Aucune exécution.",
+            True,
+            {
+                "symbol": "str, requis",
+                "timeframe": "str, défaut '1h'",
+                "use_jev": "bool optionnel",
+            },
+            cmd_evaluate_eve,
+        ),
+        ToolSpec(
+            "list_eve_dossiers",
+            "Liste des Dossiers IchiVol (évaluations Eve potentielles).",
+            True,
+            {"limit": "int, défaut 20", "symbol": "str optionnel"},
+            cmd_list_eve_dossiers,
+        ),
+        ToolSpec(
+            "get_eve_dossier",
+            "Détail d'un Dossier IchiVol (contexte, modes, verdict, cohérence).",
+            True,
+            {"dossier_id": "str, requis"},
+            cmd_get_eve_dossier,
         ),
         ToolSpec(
             "get_symbol_context",

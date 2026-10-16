@@ -3,6 +3,7 @@ import { engineAgentBatch } from '../engineAgentChannel.js'
 import { mapEngineToDecisionPayload } from './getDecisionDetail.js'
 import { getJournalContextTool } from './getJournalContext.js'
 import { getLiveSnapshotTool } from './getLiveSnapshot.js'
+import { getEveContextTool, listEveDossiersTool } from './getEveDossier.js'
 import { searchKbTool } from './searchKb.js'
 import type { ToolResult, ToolRunContext } from './types.js'
 
@@ -184,6 +185,16 @@ export async function runReadOnlyToolsForMode(
     results.push(kb)
   }
 
+  // Eve dossiers — lecture seule, pour expliquer décisions / absences d'ordre
+  if (mode === 'explain_decision' || mode === 'research') {
+    if (symbol) {
+      const eveCtx = await getEveContextTool(symbol, timeframe)
+      results.push(eveCtx)
+    }
+    const dossiers = await listEveDossiersTool({ symbol, limit: 5 })
+    results.push(dossiers)
+  }
+
   return {
     results,
     decisionFromTool,
@@ -196,3 +207,4 @@ export { getDecisionDetailTool } from './getDecisionDetail.js'
 export { getLiveSnapshotTool } from './getLiveSnapshot.js'
 export { getJournalContextTool } from './getJournalContext.js'
 export { searchKbTool } from './searchKb.js'
+export { getEveDossierTool, listEveDossiersTool, getEveContextTool } from './getEveDossier.js'

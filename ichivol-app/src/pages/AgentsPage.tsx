@@ -24,6 +24,7 @@ import {
   type AuthorityChain,
 } from '../lib/agentsRuntime'
 import { labelEngineCode } from '../lib/engineTerminology'
+import { EveIntelligencePanel } from './EveIntelligencePanel'
 import { EveShadowPanel } from './EveShadowPanel'
 import './AgentsPage.css'
 
@@ -224,6 +225,7 @@ export function AgentsPage() {
   const [ficheStub, setFicheStub] = useState<string | null>(null)
   const [missionSymbol, setMissionSymbol] = useState('BTCUSDT')
   const [shadowOpen, setShadowOpen] = useState(false)
+  const [eveOpen, setEveOpen] = useState(false)
   const [missionBusy, setMissionBusy] = useState(false)
   const [missionMsg, setMissionMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -330,7 +332,19 @@ export function AgentsPage() {
       ) : null}
 
       <div className="grid three">
-        <section className="card agent-card"><span className="tag green">IA DECISIONNELLE</span><div className="agent-icon">◉</div><h2>Ève Shadow</h2><p>Analyse des décisions et contrôle des risques avec jevos-v4.</p><div className="statline"><span>Moteur</span><b>jevos-v4</b></div><div className="statline"><span>Mode</span><b>Observation</b></div><div className="statline"><span>Permission</span><b>market_read</b></div><button type="button" onClick={() => setShadowOpen(v => !v)}>{shadowOpen ? "Fermer la fiche" : "Ouvrir la fiche"}</button></section>
+        <section className="card agent-card">
+          <span className="tag green">IA CENTRALE</span>
+          <div className="agent-icon">◆</div>
+          <h2>Ève Intelligence</h2>
+          <p>Modes Analyst, Challenger, Guardian, Shadow — dossiers et verdicts potentiels.</p>
+          <div className="statline"><span>Exécution</span><b>jamais auto (V1)</b></div>
+          <div className="statline"><span>Portefeuille</span><b>existants seulement</b></div>
+          <div className="statline"><span>Permission</span><b>market_read</b></div>
+          <button type="button" onClick={() => setEveOpen((v) => !v)}>
+            {eveOpen ? 'Fermer la fiche' : 'Ouvrir la fiche'}
+          </button>
+        </section>
+        <section className="card agent-card"><span className="tag green">IA DECISIONNELLE</span><div className="agent-icon">◉</div><h2>Ève Shadow</h2><p>Mode de contre-évaluation via jevos-v4 / TypeSafe. Distinct du ShadowBroker Python.</p><div className="statline"><span>Moteur</span><b>jevos-v4</b></div><div className="statline"><span>Mode</span><b>Observation</b></div><div className="statline"><span>Permission</span><b>market_read</b></div><button type="button" onClick={() => setShadowOpen(v => !v)}>{shadowOpen ? "Fermer la fiche" : "Ouvrir la fiche"}</button></section>
         {cards.map((a) => (
           <section className="card agent-card" key={a.id}>
             {badge(
@@ -367,6 +381,21 @@ export function AgentsPage() {
         ))}
       </div>
 
+      {eveOpen ? (
+        <ModalSheetHost ariaLabel="Fiche Ève Intelligence" onCancel={() => setEveOpen(false)}>
+          <aside className="panel trade-sheet">
+            <header className="panel-head trade-sheet-head">
+              <h2>Ève Intelligence</h2>
+              <button type="button" className="ghost" onClick={() => setEveOpen(false)}>
+                Fermer
+              </button>
+            </header>
+            <div className="trade-sheet-scroll">
+              <EveIntelligencePanel />
+            </div>
+          </aside>
+        </ModalSheetHost>
+      ) : null}
       {shadowOpen ? <ModalSheetHost ariaLabel="Fiche agent Ève Shadow" onCancel={() => setShadowOpen(false)}><aside className="panel trade-sheet"><header className="panel-head trade-sheet-head"><h2>Ève Shadow</h2><button type="button" className="ghost" onClick={() => setShadowOpen(false)}>Fermer</button></header><div className="trade-sheet-scroll"><EveShadowPanel /></div></aside></ModalSheetHost> : null}
       <section className="card">
         <div className="card-head">
