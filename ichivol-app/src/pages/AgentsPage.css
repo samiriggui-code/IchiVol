@@ -489,6 +489,20 @@
 .agents-page .statline:last-child {
   border:0;
 }
+.agents-page .agents-section-head {
+  margin: 28px 0 14px;
+}
+.agents-page .agents-section-head h2 {
+  margin: 0 0 4px;
+}
+.agents-page .agents-section-head p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.agents-page .agent-sheet-body .statline:last-of-type {
+  border-bottom: 1px solid var(--line);
+}
 .agents-page .agent-card {
   padding:23px;
   /* compare-maquette: maquette agent-card = 342px ; live rows scroll inside */

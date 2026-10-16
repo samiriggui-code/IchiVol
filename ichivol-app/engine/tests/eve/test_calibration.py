@@ -3,6 +3,8 @@ from unittest.mock import MagicMock
 
 from app.eve.calibration import (
     active_policy,
+    brier_score,
+    expected_calibration_error,
     observe_from_dossiers,
     propose_adjustment,
 )
@@ -38,6 +40,7 @@ def test_observe_from_dossiers_aggregates() -> None:
         SimpleNamespace(
             eve_action="ABSTAIN",
             coherence_json={"score": 0.5},
+            decision_time_json={},
             outcome_json={
                 "closed": {"realized_pnl": 10.0, "pnl_pct": 0.02},
                 "followups": [{"proposed_action": "CLOSE"}],
@@ -46,6 +49,7 @@ def test_observe_from_dossiers_aggregates() -> None:
         SimpleNamespace(
             eve_action="LONG",
             coherence_json={"score": 0.7},
+            decision_time_json={"degradation": {"mean_confidence": 0.8}},
             outcome_json={
                 "closed": {"realized_pnl": -5.0, "pnl_pct": -0.01},
                 "followups": [{"proposed_action": "HOLD"}],
@@ -60,4 +64,19 @@ def test_observe_from_dossiers_aggregates() -> None:
     assert obs["closed_n"] == 2
     assert obs["win_rate"] == 0.5
     assert obs["followup_close_rate"] == 0.5
+    assert obs["calibration_pairs_n"] == 1
+    assert obs["brier"] == brier_score([(0.8, 0.0)])
+    assert obs["ece"] is not None
+    assert obs["ece"]["applied"] is False
     assert "jev_score" in obs["not"]
+    assert "auto_platt" in obs["not"]
+
+
+def test_brier_and_ece_perfect_and_bad() -> None:
+    perfect = [(0.9, 1.0), (0.1, 0.0)]
+    assert brier_score(perfect) is not None
+    assert brier_score(perfect) < 0.05
+    ece = expected_calibration_error(perfect, n_bins=5)
+    assert ece is not None
+    assert ece["applied"] is False
+    assert ece["ece"] >= 0.0

@@ -256,6 +256,27 @@ def submit_paper_from_dossier(
     if do_execute and not auto:
         do_execute = False
 
+    # Degradation ladder from decision_time — never open on late / low conf / jev_down.
+    raw_dt = getattr(dossier, "decision_time_json", None)
+    dt = raw_dt if isinstance(raw_dt, dict) else {}
+    deg = dt.get("degradation") if isinstance(dt.get("degradation"), dict) else {}
+    deg_level = str(deg.get("level") or "healthy")
+    if do_execute and action in ("LONG", "SHORT", "CLOSE") and deg_level in (
+        "late",
+        "low_confidence",
+        "jev_down",
+    ):
+        do_execute = False
+
+    gate = dt.get("entry_gate") if isinstance(dt.get("entry_gate"), dict) else {}
+    gate_reject = (
+        action in ("LONG", "SHORT")
+        and gate.get("decision") == "reject"
+        and not gate.get("allowed", False)
+    )
+    if do_execute and gate_reject:
+        do_execute = False
+
     now = datetime.now(timezone.utc).isoformat()
     result: dict[str, Any] = {
         "schema": "ichivol.eve.paper_submit.v1",
@@ -266,6 +287,8 @@ def submit_paper_from_dossier(
         "portfolio_code": portfolio_code,
         "autonomy_enabled": auto,
         "execute_requested": do_execute,
+        "degradation": deg or None,
+        "entry_gate": gate or None,
         "risk_authorization": "not_submitted",
         "order_submitted": False,
         "executed": False,
@@ -273,6 +296,29 @@ def submit_paper_from_dossier(
         "evaluated_at": now,
         "note": "V2 — Risk Kernel authority; no live trading",
     }
+    if gate_reject:
+        result["status"] = "gate_rejected"
+        result["risk_authorization"] = "gate_rejected"
+        result["ok"] = True
+        result["note"] = (
+            f"V2 — entry gate reject ({gate.get('reason')}); "
+            "Risk Kernel not authorized to open"
+        )
+        dossier.execution_status = "gate_rejected"
+        _patch_verdict(
+            verdict,
+            risk_authorization="gate_rejected",
+            paper_submit_at=now,
+            status="gate_rejected",
+            entry_gate=gate,
+        )
+        session.flush()
+        return result
+    if deg_level in ("late", "low_confidence", "jev_down"):
+        result["note"] = (
+            f"V2 — degradation={deg_level}; execute forced off "
+            f"(autonomy={'on' if auto else 'off'})"
+        )
 
     if action == "ABSTAIN":
         result["ok"] = True

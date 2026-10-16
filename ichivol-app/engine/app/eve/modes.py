@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any, Iterable, Sequence
 
 from app.eve.actions import EveAction, normalize_action, VALID_ACTIONS
+from app.eve.context import jev_state_for
 from app.jev.adapter import evaluate as jev_evaluate
 from app.jev.history import save_evaluation
 from app.jev.questions import choice_question, noul_question, score_question
@@ -184,13 +185,7 @@ def run_analyst(
         questions = _analyst_questions(prims)
         if questions:
             jev = jev_evaluate(
-                {
-                    "symbol": context.get("symbol"),
-                    "timeframe": context.get("timeframe"),
-                    "baseline": baseline,
-                    "data_quality": context.get("data_quality"),
-                    "engines": engines_used,
-                },
+                jev_state_for(context, engines=engines_used, mode="analyst"),
                 questions,
             )
             # If CHOICE returned a scenario, prefer it as primary hypothesis.
@@ -271,12 +266,12 @@ def run_challenger(
         questions = _challenger_questions(prims, alternatives)
         if questions:
             jev = jev_evaluate(
-                {
-                    "symbol": context.get("symbol"),
-                    "contradictions": contradictions,
-                    "baseline": context.get("baseline"),
-                    "data_quality": context.get("data_quality"),
-                },
+                jev_state_for(
+                    context,
+                    mode="challenger",
+                    contradictions_n=len(contradictions),
+                    alternatives=alternatives[:4],
+                ),
                 questions,
             )
 
@@ -346,11 +341,12 @@ def run_guardian(
         questions = _guardian_questions(prims)
         if questions:
             jev = jev_evaluate(
-                {
-                    "symbol": context.get("symbol"),
-                    "warnings": warnings,
-                    "data_quality": context.get("data_quality"),
-                },
+                jev_state_for(
+                    context,
+                    mode="guardian",
+                    warnings_n=len(warnings),
+                    warn_codes=[w.get("code") for w in warnings[:6]],
+                ),
                 questions,
             )
 
@@ -387,13 +383,14 @@ def run_shadow_mode(
 
     baseline = context.get("baseline") or {}
     original = baseline.get("decision")
-    state = {
-        "symbol": context.get("symbol"),
-        "timeframe": context.get("timeframe"),
-        "decision": original,
-        "pipeline": baseline.get("pipeline") or {"decision": original},
-        "data_quality": context.get("data_quality"),
-    }
+    state = jev_state_for(
+        context,
+        mode="shadow",
+        decision=original,
+        pipeline_decision=(baseline.get("pipeline") or {}).get("decision")
+        if isinstance(baseline.get("pipeline"), dict)
+        else original,
+    )
     questions = _shadow_questions(prims)
     envelope = jev_evaluate(state, questions)
 

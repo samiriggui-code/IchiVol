@@ -7,7 +7,12 @@ from unittest.mock import patch
 
 from app.eve.actions import normalize_action
 from app.eve.coherence import compute_coherence
-from app.eve.context import build_engine_context
+from app.eve.context import (
+    JEV_STATE_TOKEN_BUDGET,
+    build_engine_context,
+    dense_jev_state,
+    estimate_tokens,
+)
 
 
 def test_normalize_action_maps_baseline() -> None:
@@ -56,12 +61,47 @@ def test_build_engine_context_from_factsheet() -> None:
         ],
     }
     with patch("app.eve.context.build_factsheet", return_value=fs):
-        ctx = build_engine_context("btcusdt", "1h")
+        ctx = build_engine_context("btcusdt", "1h", include_event_radar=False)
     assert ctx["symbol"] == "BTCUSDT"
     assert ctx["baseline"]["action_mapped"] == "LONG"
     assert ctx["data_quality"] == 0.5
     assert "structure.bias" in ctx["unavailable"]
     assert ctx["error"] is None
+    assert "jev_state" in ctx
+    assert ctx["jev_state"]["tok"] <= JEV_STATE_TOKEN_BUDGET
+    assert estimate_tokens(ctx["jev_state"]) <= JEV_STATE_TOKEN_BUDGET
+
+
+def test_dense_jev_state_trims_under_budget() -> None:
+    facts = [
+        {
+            "id": f"x.{i}",
+            "engine": "structure",
+            "field": f"metric_{i}_" + ("longname" * 5),
+            "value": float(i) + 0.123456789,
+            "status": "ok",
+            "decision_role": "context",
+        }
+        for i in range(80)
+    ]
+    ctx = {
+        "symbol": "ETHUSDT",
+        "timeframe": "1h",
+        "as_of": 1,
+        "known_at": 1,
+        "data_quality": 0.9,
+        "baseline": {"action_mapped": "LONG", "confidence": 0.7},
+        "facts": facts,
+        "unavailable": [],
+        "fact_ok_count": 80,
+        "fact_count": 80,
+        "event_radar": {"enabled": False},
+    }
+    dense = dense_jev_state(ctx, token_budget=120)
+    assert dense["tok"] <= 120
+    assert estimate_tokens(dense) <= 120
+    assert dense["sym"] == "ETHUSDT"
+    assert dense["base"] == "LONG"
 
 
 def test_coherence_documents_non_equivalence() -> None:

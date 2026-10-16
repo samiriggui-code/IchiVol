@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import EveDossier, PaperPosition
 from app.eve.actions import EveAction, normalize_action
-from app.eve.dossier import get_dossier, get_verdict
+from app.eve.dossier import build_dossier_timeline, get_dossier, get_verdict
 from app.eve.modes import _shadow_answers, run_guardian, run_shadow_mode
 from app.eve.paper_submit import autonomy_enabled, submit_paper_from_dossier
 from app.paper.portfolio import ensure_baseline_portfolio, get_portfolio_by_code
@@ -427,5 +427,6 @@ def followup_summary(session: Session, dossier_id: str) -> dict[str, Any]:
         "outcome": oc,
         "position": _position_snapshot(pos) if pos else None,
         "decision_time": dossier.decision_time_json,
+        "timeline": build_dossier_timeline(dossier),
         "note": "decision_time is immutable; outcome is separate",
     }

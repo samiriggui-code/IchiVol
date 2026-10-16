@@ -57,6 +57,56 @@ def persist_dossier(
     return dossier
 
 
+def build_dossier_timeline(dossier: EveDossier) -> list[dict[str, Any]]:
+    """Timeline decision_time → followups → closed outcome (handoff §7.B.3).
+
+    Inspired by jarrodwatts event stream + buberlo (state, decision, outcome)
+    triples — display only; never mutates ``decision_time_json``.
+    """
+    events: list[dict[str, Any]] = []
+    created = dossier.created_at.isoformat() if dossier.created_at else None
+    dt = dossier.decision_time_json if isinstance(dossier.decision_time_json, dict) else {}
+    events.append(
+        {
+            "kind": "decision",
+            "at": dt.get("at") or created,
+            "action": dossier.eve_action,
+            "baseline": dossier.baseline_decision,
+            "execution_status": dossier.execution_status,
+            "detail": dt.get("rationale") or dt.get("reasoning"),
+        }
+    )
+    oc = dossier.outcome_json if isinstance(dossier.outcome_json, dict) else {}
+    for fu in oc.get("followups") or []:
+        if not isinstance(fu, dict):
+            continue
+        events.append(
+            {
+                "kind": "followup",
+                "at": fu.get("at"),
+                "action": fu.get("proposed_action"),
+                "detail": fu.get("rationale"),
+                "phase": fu.get("phase"),
+                "shadow": fu.get("shadow"),
+                "rejected": fu.get("rejected") or [],
+            }
+        )
+    closed = oc.get("closed") if isinstance(oc.get("closed"), dict) else None
+    if closed:
+        events.append(
+            {
+                "kind": "outcome",
+                "at": closed.get("closed_at") or closed.get("at") or oc.get("last_followup"),
+                "action": "CLOSED",
+                "detail": closed.get("reason") or closed.get("close_reason"),
+                "realized_pnl": closed.get("realized_pnl"),
+                "realized_pnl_pct": closed.get("realized_pnl_pct") or closed.get("pnl_pct"),
+                "fees": closed.get("fees"),
+            }
+        )
+    return events
+
+
 def dossier_to_dict(dossier: EveDossier, verdict: EveVerdict | None = None) -> dict[str, Any]:
     v = verdict
     if v is None and dossier.verdict_id:
@@ -77,6 +127,7 @@ def dossier_to_dict(dossier: EveDossier, verdict: EveVerdict | None = None) -> d
         "policy": dossier.policy_json,
         "decision_time": dossier.decision_time_json,
         "outcome": dossier.outcome_json,
+        "timeline": build_dossier_timeline(dossier),
         "created_at": dossier.created_at.isoformat() if dossier.created_at else None,
         "updated_at": dossier.updated_at.isoformat() if dossier.updated_at else None,
         "verdict_id": dossier.verdict_id,

@@ -67,6 +67,8 @@ services:
       JEV_API_KEY: ${JEV_API_KEY:-}
       TYPESAFE_API_URL: ${TYPESAFE_API_URL:-https://api.typesafe.ai}
       TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
+      # Paper-only: Eve open/close on existing portfolios when true (never live).
+      EVE_PAPER_AUTONOMY: ${EVE_PAPER_AUTONOMY:-false}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       TWELVE_DATA_API_KEY: ${TWELVE_DATA_API_KEY:-}
       ENABLE_BACKTEST_EVIDENCE: ${ENABLE_BACKTEST_EVIDENCE:-true}

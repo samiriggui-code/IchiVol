@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.db.models import EveDossier
 from app.eve.coherence import COHERENCE_POLICY_V1
 from app.eve.primitive_study import routing_from_study, run_primitive_routing_study
+from app.eve.settings_schema import policy_threshold_overrides
 
 # Study-backed defaults (recomputed at import for determinism of fixtures).
 _STUDY = run_primitive_routing_study()
@@ -52,6 +53,12 @@ DEFAULT_POLICY: dict[str, Any] = {
         "min_data_quality_to_act": 0.35,
         "max_contradictions_before_abstain": 4,
         "guardian_critical_forces_abstain": True,
+        # Fallback ladder (buberlo / jarrodwatts) — never auto-tunes itself.
+        "min_jev_confidence": 0.45,
+        "low_confidence_blocks_paper_execute": True,
+        "late_forces_hold": True,
+        "entry_gate_min_confidence": 0.55,
+        "entry_gate_blocks_paper_execute": True,
     },
     "coherence": deepcopy(COHERENCE_POLICY_V1),
 }
@@ -59,6 +66,9 @@ DEFAULT_POLICY: dict[str, Any] = {
 
 def active_policy(override: dict[str, Any] | None = None) -> dict[str, Any]:
     pol = deepcopy(DEFAULT_POLICY)
+    # Operator knobs (Settings schema) feed thresholds — never auto-tune.
+    knobs = policy_threshold_overrides()
+    pol["thresholds"] = {**pol.get("thresholds", {}), **knobs}
     if override:
         for key, value in override.items():
             if key in ("routing", "thresholds", "coherence", "primitive_study") and isinstance(
@@ -69,6 +79,84 @@ def active_policy(override: dict[str, Any] | None = None) -> dict[str, Any]:
                 pol[key] = value
     pol["loaded_at"] = datetime.now(timezone.utc).isoformat()
     return pol
+
+
+def _predicted_confidence(decision_time: dict[str, Any] | None) -> float | None:
+    """Point forecast in [0,1] from decision_time (immutable) for Brier/ECE."""
+    dt = decision_time if isinstance(decision_time, dict) else {}
+    deg = dt.get("degradation") if isinstance(dt.get("degradation"), dict) else {}
+    mean_c = deg.get("mean_confidence")
+    if isinstance(mean_c, (int, float)) and 0.0 <= float(mean_c) <= 1.0:
+        return float(mean_c)
+    gate = dt.get("entry_gate") if isinstance(dt.get("entry_gate"), dict) else {}
+    gate_c = gate.get("confidence")
+    if isinstance(gate_c, (int, float)) and 0.0 <= float(gate_c) <= 1.0:
+        return float(gate_c)
+    # Fall back to max CHOICE confidence in persisted JEV probs.
+    best: float | None = None
+    probs = dt.get("jev_probabilities")
+    if isinstance(probs, dict):
+        for mode_pack in probs.values():
+            if not isinstance(mode_pack, dict):
+                continue
+            answers = mode_pack.get("answers")
+            if not isinstance(answers, dict):
+                continue
+            for ans in answers.values():
+                if not isinstance(ans, dict):
+                    continue
+                conf = ans.get("confidence")
+                if isinstance(conf, (int, float)) and 0.0 <= float(conf) <= 1.0:
+                    best = float(conf) if best is None else max(best, float(conf))
+    return best
+
+
+def brier_score(pairs: list[tuple[float, float]]) -> float | None:
+    """Mean squared error of probability vs binary outcome. Observe-only."""
+    if not pairs:
+        return None
+    return round(sum((p - y) ** 2 for p, y in pairs) / len(pairs), 6)
+
+
+def expected_calibration_error(
+    pairs: list[tuple[float, float]],
+    *,
+    n_bins: int = 10,
+) -> dict[str, Any] | None:
+    """Equal-width ECE in [0,1]. Observe-only — never auto-applies Platt."""
+    if not pairs or n_bins < 2:
+        return None
+    bins: list[list[tuple[float, float]]] = [[] for _ in range(n_bins)]
+    for p, y in pairs:
+        idx = min(n_bins - 1, max(0, int(p * n_bins)))
+        bins[idx].append((p, y))
+    ece = 0.0
+    reliability: list[dict[str, Any]] = []
+    n = len(pairs)
+    for i, bucket in enumerate(bins):
+        if not bucket:
+            continue
+        conf = sum(p for p, _ in bucket) / len(bucket)
+        acc = sum(y for _, y in bucket) / len(bucket)
+        weight = len(bucket) / n
+        ece += weight * abs(acc - conf)
+        reliability.append(
+            {
+                "bin": i,
+                "n": len(bucket),
+                "mean_confidence": round(conf, 4),
+                "empirical_rate": round(acc, 4),
+                "gap": round(abs(acc - conf), 4),
+            }
+        )
+    return {
+        "ece": round(ece, 6),
+        "n_bins": n_bins,
+        "n": n,
+        "reliability": reliability,
+        "applied": False,
+        "not": "auto_platt",
+    }
 
 
 def observe_from_dossiers(session: Session, *, limit: int = 100) -> dict[str, Any]:
@@ -95,6 +183,8 @@ def observe_from_dossiers(session: Session, *, limit: int = 100) -> dict[str, An
             "mean_realized_pnl": None,
             "mean_pnl_pct": None,
             "followup_close_rate": None,
+            "brier": None,
+            "ece": None,
             "note": "no_dossiers",
         }
 
@@ -104,6 +194,7 @@ def observe_from_dossiers(session: Session, *, limit: int = 100) -> dict[str, An
     closed_pcts: list[float] = []
     followup_close = 0
     followup_n = 0
+    calib_pairs: list[tuple[float, float]] = []
 
     for d in rows:
         action = (d.eve_action or "").upper()
@@ -124,6 +215,13 @@ def observe_from_dossiers(session: Session, *, limit: int = 100) -> dict[str, An
             pp = closed.get("pnl_pct")
             if isinstance(pp, (int, float)):
                 closed_pcts.append(float(pp))
+            # Directional dossiers only — Brier on win/loss vs decision_time conf.
+            if action in ("LONG", "SHORT") and isinstance(rp, (int, float)):
+                pred = _predicted_confidence(
+                    d.decision_time_json if isinstance(d.decision_time_json, dict) else None
+                )
+                if pred is not None:
+                    calib_pairs.append((pred, 1.0 if float(rp) > 0 else 0.0))
         for fu in oc.get("followups") or []:
             if not isinstance(fu, dict):
                 continue
@@ -146,7 +244,10 @@ def observe_from_dossiers(session: Session, *, limit: int = 100) -> dict[str, An
         "mean_pnl_pct": round(sum(closed_pcts) / len(closed_pcts), 6) if closed_pcts else None,
         "followup_close_rate": round(followup_close / followup_n, 4) if followup_n else None,
         "followup_n": followup_n,
-        "not": ["jev_score", "llm_confidence", "finetune_labels"],
+        "brier": brier_score(calib_pairs),
+        "ece": expected_calibration_error(calib_pairs),
+        "calibration_pairs_n": len(calib_pairs),
+        "not": ["jev_score", "llm_confidence", "finetune_labels", "auto_platt"],
     }
 
 

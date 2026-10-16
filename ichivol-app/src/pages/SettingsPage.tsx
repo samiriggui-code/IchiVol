@@ -16,6 +16,14 @@ import {
   type LlmProvider,
   type LlmTestResult,
 } from '../lib/settings'
+import {
+  getEveSettingsSchema,
+  getEveSettingsValues,
+  patchEveSettingsValues,
+  sortedSchemaGroups,
+  type EveSettingItem,
+  type EveSettingGroup,
+} from '../lib/eveSettings'
 import { invalidateEngineThresholdsCache } from '../lib/engineThresholds'
 import { llmStatusLabel, useLlmStatus } from '../lib/llmStatus'
 import type { LlmConnection } from '../lib/settings'
@@ -24,6 +32,7 @@ import './SettingsPage.css'
 type SettingsTab =
   | 'Marché et univers'
   | 'LLM'
+  | 'Ève / JEV'
   | 'Alertes'
   | 'Limites de risque'
   | 'Connexions'
@@ -33,6 +42,7 @@ type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
 const TABS: SettingsTab[] = [
   'Marché et univers',
   'LLM',
+  'Ève / JEV',
   'Alertes',
   'Limites de risque',
   'Connexions',
@@ -118,6 +128,11 @@ export function SettingsPage() {
     directionFlip: true,
   })
   const [paperRisk, setPaperRisk] = useState<PaperOverview['risk'] | null>(null)
+  const [eveSchema, setEveSchema] = useState<Record<string, EveSettingGroup> | null>(null)
+  const [eveValues, setEveValues] = useState<Record<string, string | number | boolean>>({})
+  const [eveDraft, setEveDraft] = useState<Record<string, string | number | boolean>>({})
+  const [eveAdvanced, setEveAdvanced] = useState(false)
+  const [eveLoaded, setEveLoaded] = useState(false)
 
   useEffect(() => {
     getSettings()
@@ -140,6 +155,17 @@ export function SettingsPage() {
     getPaperOverview()
       .then((ov) => setPaperRisk(ov.risk ?? null))
       .catch(() => setPaperRisk(null))
+    Promise.all([getEveSettingsSchema(), getEveSettingsValues()])
+      .then(([schemaRes, valuesRes]) => {
+        setEveSchema(schemaRes.schema)
+        setEveValues(valuesRes.values)
+        setEveDraft(valuesRes.values)
+        setEveLoaded(true)
+      })
+      .catch(() => {
+        setEveSchema(null)
+        setEveLoaded(false)
+      })
   }, [])
 
   const onSave = useCallback(
@@ -207,6 +233,32 @@ export function SettingsPage() {
             cooldownMin: engine?.pushAlertPrefs?.cooldownMin ?? 30,
           }
         }
+        if (settingsTab === 'Ève / JEV') {
+          if (!eveSchema) {
+            throw new Error('Schéma Ève / JEV indisponible (moteur ?)')
+          }
+          const writablePatch: Record<string, string | number | boolean> = {}
+          for (const [, group] of sortedSchemaGroups(eveSchema)) {
+            for (const item of group.items) {
+              if (!item.writable) continue
+              const next = eveDraft[item.key]
+              const prev = eveValues[item.key]
+              if (next !== undefined && next !== prev) {
+                writablePatch[item.key] = next
+              }
+            }
+          }
+          if (Object.keys(writablePatch).length === 0) {
+            setError('Aucun knob Ève / JEV modifié (ou champs en lecture seule).')
+            return
+          }
+          const saved = await patchEveSettingsValues(writablePatch)
+          setEveValues(saved.values)
+          setEveDraft(saved.values)
+          setSaved(true)
+          window.setTimeout(() => setSaved(false), 1500)
+          return
+        }
         if (Object.keys(patch).length === 0) {
           if (settingsTab === 'Limites de risque' || settingsTab === 'Connexions') {
             setError(
@@ -229,8 +281,96 @@ export function SettingsPage() {
         setSaving(false)
       }
     },
-    [local, settingsTab, engine, llmProvider, llmModel, llmApiKey, clearKey, llmLive, rvol, tenkan, kijun, senkouB, sources, alertPrefs],
+    [
+      local,
+      settingsTab,
+      engine,
+      llmProvider,
+      llmModel,
+      llmApiKey,
+      clearKey,
+      llmLive,
+      rvol,
+      tenkan,
+      kijun,
+      senkouB,
+      sources,
+      alertPrefs,
+      eveSchema,
+      eveDraft,
+      eveValues,
+    ],
   )
+
+  function renderEveField(item: EveSettingItem): ReactNode {
+    const value = eveDraft[item.key]
+    const disabled = !item.writable || Boolean(item.read_only)
+    if (item.type === 'boolean') {
+      return (
+        <label key={item.key} className="field" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            type="checkbox"
+            checked={Boolean(value)}
+            disabled={disabled}
+            onChange={(e) =>
+              setEveDraft((prev) => ({ ...prev, [item.key]: e.target.checked }))
+            }
+          />
+          <span>
+            {item.label}
+            {item.is_advanced ? ' · avancé' : ''}
+            {item.description ? (
+              <small style={{ display: 'block', color: 'var(--muted)' }}>{item.description}</small>
+            ) : null}
+          </span>
+        </label>
+      )
+    }
+    if (item.type === 'number') {
+      return (
+        <div className="field" key={item.key}>
+          <label htmlFor={`eve-${item.key}`}>
+            {item.label}
+            {item.is_advanced ? ' · avancé' : ''}
+          </label>
+          <input
+            id={`eve-${item.key}`}
+            type="number"
+            step="any"
+            disabled={disabled}
+            value={value === undefined || value === null ? '' : String(value)}
+            onChange={(e) => {
+              const n = Number(e.target.value)
+              setEveDraft((prev) => ({
+                ...prev,
+                [item.key]: Number.isFinite(n) ? n : e.target.value,
+              }))
+            }}
+          />
+          {item.description ? <small>{item.description}</small> : null}
+        </div>
+      )
+    }
+    return (
+      <div className="field" key={item.key}>
+        <label htmlFor={`eve-${item.key}`}>
+          {item.label}
+          {item.is_advanced ? ' · avancé' : ''}
+        </label>
+        <input
+          id={`eve-${item.key}`}
+          type={item.type === 'password' ? 'password' : 'text'}
+          disabled={disabled}
+          value={value === undefined || value === null ? '' : String(value)}
+          onChange={(e) =>
+            setEveDraft((prev) => ({ ...prev, [item.key]: e.target.value }))
+          }
+          readOnly={disabled}
+        />
+        {item.description ? <small>{item.description}</small> : null}
+      </div>
+    )
+  }
 
   const llmRows: LlmConnection[] =
     engine?.llmConnections && engine.llmConnections.length > 0
@@ -578,6 +718,43 @@ export function SettingsPage() {
               </>
             )}
 
+            {settingsTab === 'Ève / JEV' && (
+              <>
+                <p style={{ fontSize: 12, color: 'var(--muted)' }}>
+                  Schéma moteur (Basic / Advanced). Les secrets restent en{' '}
+                  <code>.env</code> — jamais écrits depuis l’UI. Pas de broker live.
+                </p>
+                <div className="field" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    id="eve-advanced"
+                    type="checkbox"
+                    checked={eveAdvanced}
+                    onChange={(e) => setEveAdvanced(e.target.checked)}
+                  />
+                  <label htmlFor="eve-advanced">Afficher les knobs avancés</label>
+                </div>
+                {!eveLoaded || !eveSchema ? (
+                  <p style={{ fontSize: 12, color: 'var(--muted)' }}>
+                    Schéma indisponible — démarre le moteur Python pour charger{' '}
+                    <code>/api/engine/eve/settings/schema</code>.
+                  </p>
+                ) : (
+                  sortedSchemaGroups(eveSchema).map(([groupKey, group]) => {
+                    const items = group.items.filter(
+                      (item) => eveAdvanced || !item.is_advanced,
+                    )
+                    if (items.length === 0) return null
+                    return (
+                      <div key={groupKey} style={{ marginTop: 16 }}>
+                        <h3 style={{ marginTop: 0 }}>{group.title}</h3>
+                        {items.map((item) => renderEveField(item))}
+                      </div>
+                    )
+                  })
+                )}
+              </>
+            )}
+
             {settingsTab === 'Alertes' && (
               <>
                 {(
@@ -666,13 +843,18 @@ export function SettingsPage() {
                 </div>
                 <h3 style={{ marginTop: 18 }}>JEV / jevos (System One)</h3>
                 <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  Distinct du LLM conversationnel (OpenRouter / Sonnet). Config VPS :{' '}
-                  <code>JEV_PROVIDER=jevos|typesafe</code>, <code>JEV_API_KEY</code>,{' '}
-                  <code>TYPESAFE_API_KEY</code>. Les règles Risk Kernel ne dépendent pas de cette UI.
+                  Knobs opérationnels (timeout, confiance, Event Radar) : onglet{' '}
+                  <b>Ève / JEV</b>. Secrets provider :{' '}
+                  <code>JEV_PROVIDER</code>, <code>JEV_API_KEY</code>,{' '}
+                  <code>TYPESAFE_API_KEY</code> en <code>.env</code>. Risk Kernel inchangé.
                 </p>
                 <div className="statline">
                   <span>Endpoint health</span>
                   <b>/api/engine/jev-shadow/health</b>
+                </div>
+                <div className="statline">
+                  <span>Schéma knobs</span>
+                  <b>/api/engine/eve/settings/schema</b>
                 </div>
               </>
             )}

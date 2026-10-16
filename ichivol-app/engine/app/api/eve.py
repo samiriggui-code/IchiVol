@@ -6,7 +6,7 @@ V1 routes never execute. V2 ``paper-submit`` evaluates Risk Kernel; opens only w
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Body, HTTPException, Query
 
 from app.db.session import SessionLocal
 from app.eve.calibration import active_policy, calibration_report
@@ -18,10 +18,12 @@ from app.eve.dossier import (
     list_dossiers,
     verdict_to_dict,
 )
-from app.eve.orchestrator import evaluate_opportunity
 from app.eve.followup import followup_summary, list_tracked, run_followup, sync_outcomes
+from app.eve.orchestrator import evaluate_opportunity
 from app.eve.paper_submit import autonomy_enabled, submit_paper_from_dossier
 from app.eve.primitive_study import run_primitive_routing_study
+from app.eve.event_radar import analyze_symbol as event_radar_analyze
+from app.eve.settings_schema import apply_patch, settings_bundle
 from app.paper.strategy_profiles import BASELINE_CODE
 
 router = APIRouter(prefix="/api/engine/eve", tags=["eve"])
@@ -42,11 +44,11 @@ def eve_evaluate(
     use_jev: bool | None = None,
     paper_dry_run: bool = True,
 ) -> dict:
-    """Run Analyst→Challenger→Guardian→Shadow synthesis. Potential only.
+    """Run Analyst→Challenger→Guardian→Shadow synthesis.
 
-    When persist=true, optionally dry-runs Risk Kernel (``paper_dry_run``, default
-    true). Never opens unless ``EVE_PAPER_AUTONOMY`` is enabled *and* a separate
-    paper-submit with execute is used.
+    When persist=true and ``paper_dry_run`` (default true), runs Risk Kernel on an
+    existing paper portfolio. Opens/closes only when ``EVE_PAPER_AUTONOMY`` is on
+    (local paper test). Never live brokers.
     """
     if not symbol.replace("-", "").replace("_", "").isalnum():
         raise HTTPException(status_code=422, detail="Invalid symbol")
@@ -106,6 +108,50 @@ def eve_verdict_detail(verdict_id: str) -> dict:
         return verdict_to_dict(v)
     finally:
         session.close()
+
+
+@router.get("/settings/schema")
+def eve_settings_schema() -> dict:
+    """QuantDinger-style schema with ``is_advanced`` for Settings Basic/Advanced."""
+    bundle = settings_bundle()
+    return {
+        "schema_version": bundle["schema_version"],
+        "schema": bundle["schema"],
+        "advanced_keys": bundle["advanced_keys"],
+        "writable_keys": bundle["writable_keys"],
+        "note": bundle["note"],
+    }
+
+
+@router.get("/settings/values")
+def eve_settings_values() -> dict:
+    """Effective JEV / Radar knobs (secrets masked)."""
+    bundle = settings_bundle()
+    return {
+        "schema_version": bundle["schema_version"],
+        "values": bundle["values"],
+        "writable_keys": bundle["writable_keys"],
+    }
+
+
+@router.patch("/settings/values")
+def eve_settings_patch(body: dict = Body(default_factory=dict)) -> dict:
+    """Persist writable knobs (timeouts, confidences, radar flags). Secrets rejected."""
+    try:
+        return apply_patch(body if isinstance(body, dict) else {})
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/event-radar/{symbol}")
+def eve_event_radar(
+    symbol: str,
+    use_jev: bool = True,
+) -> dict:
+    """Instrument-scoped Event Radar (reference-only). Respects EVENT_RADAR_ENABLED."""
+    if not symbol.replace("-", "").replace("_", "").isalnum():
+        raise HTTPException(status_code=422, detail="Invalid symbol")
+    return event_radar_analyze(symbol, use_jev=use_jev)
 
 
 @router.get("/calibration")

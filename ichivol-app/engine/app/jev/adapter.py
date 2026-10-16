@@ -22,6 +22,15 @@ from app.jev.providers import (
 DEFAULT_TIMEOUT_S = 5.0
 
 
+def _configured_timeout_s() -> float:
+    try:
+        from app.eve.settings_schema import jev_timeout_seconds
+
+        return float(jev_timeout_seconds())
+    except Exception:
+        return DEFAULT_TIMEOUT_S
+
+
 def _state_to_payload(state: Any) -> Any:
     """System One accepts a string or JSON-serializable object/array."""
     if isinstance(state, (dict, list)):
@@ -75,10 +84,12 @@ def evaluate(
     questions: dict[str, Any],
     *,
     provider: str | None = None,
-    timeout_s: float = DEFAULT_TIMEOUT_S,
+    timeout_s: float | None = None,
 ) -> dict[str, Any]:
     """Call System One and return a traced, validated envelope."""
     started = time.monotonic()
+    if timeout_s is None:
+        timeout_s = _configured_timeout_s()
     try:
         cfg = resolve_provider(provider)
     except ValueError as exc:
@@ -127,13 +138,15 @@ def evaluate(
                 )
             body = response.json()
     except httpx.TimeoutException:
-        return _failure(
+        fail = _failure(
             provider=cfg.name,
             error="timeout",
             latency_ms=round((time.monotonic() - started) * 1000, 2),
             request_model=cfg.model,
             score_maturity=cfg.score_maturity,
         )
+        fail["late"] = True
+        return fail
     except (httpx.HTTPError, ValueError, json.JSONDecodeError) as exc:
         return _failure(
             provider=cfg.name,
@@ -171,13 +184,26 @@ def evaluate(
     if response_model is not None and not isinstance(response_model, str):
         response_model = str(response_model)
 
+    model_mismatch = False
+    if (
+        isinstance(response_model, str)
+        and response_model
+        and response_model not in (cfg.model, "jev-latest")
+        and cfg.model not in ("jev-latest",)
+        and response_model != cfg.model
+    ):
+        # Pin guard: silent upgrades must surface on the dossier.
+        model_mismatch = True
+
     return {
         "ok": True,
         "provider": cfg.name,
         "request_model": cfg.model,
         "response_model": response_model,
+        "model_mismatch": model_mismatch,
         "score_maturity": cfg.score_maturity,
         "latency_ms": latency_ms,
+        "late": False,
         "answers": normalized,
         "usage": usage,
         "cost_usd": estimate_cost_usd(cfg.name, input_tokens),
@@ -223,6 +249,12 @@ def health(
             )
             latency_ms = round((time.monotonic() - started) * 1000, 2)
             if response.status_code == 200:
+                body = _safe_json(response)
+                fingerprint = None
+                model_files = None
+                if isinstance(body, dict):
+                    fingerprint = body.get("fingerprint") or body.get("sha256")
+                    model_files = body.get("model_files") or body.get("files")
                 return {
                     "ok": True,
                     "provider": cfg.name,
@@ -230,6 +262,9 @@ def health(
                     "probe": "health",
                     "latency_ms": latency_ms,
                     "score_maturity": cfg.score_maturity,
+                    "fingerprint": fingerprint,
+                    "model_files": model_files,
+                    "raw": body if isinstance(body, dict) else None,
                 }
             if cfg.name == "typesafe" and response.status_code in (404, 405):
                 return {

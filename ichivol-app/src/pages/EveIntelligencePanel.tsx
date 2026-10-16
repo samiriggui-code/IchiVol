@@ -1,4 +1,15 @@
-import { useCallback, useEffect, useState } from "react"
+import { Fragment, useCallback, useEffect, useState } from "react"
+
+type TimelineEvent = {
+  kind?: string
+  at?: string | null
+  action?: string | null
+  baseline?: string | null
+  detail?: string | null
+  phase?: string | null
+  realized_pnl?: number | null
+  realized_pnl_pct?: number | null
+}
 
 type DossierRow = {
   id: string
@@ -9,6 +20,20 @@ type DossierRow = {
   execution_status: string
   created_at: string | null
   coherence?: { score?: number }
+  timeline?: TimelineEvent[]
+  decision_time?: {
+    event_radar?: {
+      enabled?: boolean
+      direction?: string | null
+      impact?: string | null
+      relevance?: string | null
+      provider?: string | null
+      event_count?: number | null
+    } | null
+    degradation?: { level?: string; source?: string; mean_confidence?: number | null }
+    heuristic?: { label?: string; stand_in?: boolean }
+    entry_gate?: { decision?: string; reason?: string; allowed?: boolean }
+  }
   verdict?: {
     action?: string
     status?: string
@@ -50,6 +75,9 @@ type Calibration = {
     closed_n?: number
     win_rate?: number | null
     mean_realized_pnl?: number | null
+    brier?: number | null
+    ece?: { ece?: number; n?: number; applied?: boolean } | null
+    calibration_pairs_n?: number
   }
   proposal?: {
     changes?: Array<{ path?: string; reason?: string }>
@@ -75,6 +103,7 @@ export function EveIntelligencePanel() {
   const [lastSubmit, setLastSubmit] = useState<string>("")
   const [followupInfo, setFollowupInfo] = useState<string>("")
   const [trackedOpen, setTrackedOpen] = useState(0)
+  const [openTimelineId, setOpenTimelineId] = useState<string | null>(null)
 
   const reloadDossiers = useCallback(async (signal?: AbortSignal) => {
     const r = await fetch("/api/engine/eve/dossiers?limit=20", {
@@ -198,8 +227,9 @@ export function EveIntelligencePanel() {
       </div>
       <div className="card-body">
         <p>
-          Une seule intelligence Ève. Modes Analyst / Challenger / Guardian / Shadow. Verdicts
-          potentiels — Risk Kernel en dry-run tant que l’autonomie paper est off.
+          Une seule intelligence Ève. Modes Analyst / Challenger / Guardian / Shadow. Sur
+          portefeuilles paper existants : Risk Kernel décide ; autonomie on = Ève peut ouvrir
+          / fermer (jamais live).
         </p>
 
         <div className="statline">
@@ -225,6 +255,21 @@ export function EveIntelligencePanel() {
             {typeof calibration?.observed?.win_rate === "number"
               ? `${(calibration.observed.win_rate * 100).toFixed(0)}%`
               : "—"}
+          </b>
+        </div>
+        <div className="statline">
+          <span>Brier / ECE (observe)</span>
+          <b>
+            {typeof calibration?.observed?.brier === "number"
+              ? calibration.observed.brier.toFixed(3)
+              : "—"}{" "}
+            /{" "}
+            {typeof calibration?.observed?.ece?.ece === "number"
+              ? calibration.observed.ece.ece.toFixed(3)
+              : "—"}{" "}
+            <span style={{ color: "var(--muted)", fontWeight: 400 }}>
+              (n={calibration?.observed?.calibration_pairs_n ?? 0}, jamais Platt)
+            </span>
           </b>
         </div>
         <div className="statline">
@@ -306,6 +351,7 @@ export function EveIntelligencePanel() {
                   <th>Ève</th>
                   <th>Cohérence</th>
                   <th>Exécution</th>
+                  <th>Timeline</th>
                   <th>RK</th>
                   <th>Suivi</th>
                 </tr>
@@ -314,44 +360,105 @@ export function EveIntelligencePanel() {
                 {items.map((d) => {
                   const coh =
                     d.verdict?.coherence_score ?? d.coherence?.score ?? null
+                  const timelineOpen = openTimelineId === d.id
+                  const timeline = Array.isArray(d.timeline) ? d.timeline : []
                   return (
-                    <tr key={d.id}>
-                      <td>
-                        {d.created_at
-                          ? new Date(d.created_at).toLocaleString("fr-FR")
-                          : "—"}
-                      </td>
-                      <td>
-                        {d.symbol} · {d.timeframe}
-                      </td>
-                      <td>{d.baseline_decision ?? "—"}</td>
+                    <Fragment key={d.id}>
+                      <tr>
+                        <td>
+                          {d.created_at
+                            ? new Date(d.created_at).toLocaleString("fr-FR")
+                            : "—"}
+                        </td>
+                        <td>
+                          {d.symbol} · {d.timeframe}
+                        </td>
+                        <td>{d.baseline_decision ?? "—"}</td>
                       <td>
                         {d.eve_action ?? d.verdict?.action ?? "—"}
                         {d.verdict?.status ? ` (${d.verdict.status})` : ""}
+                        {d.decision_time?.degradation?.level &&
+                        d.decision_time.degradation.level !== "healthy" ? (
+                          <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.8 }}>
+                            [{d.decision_time.heuristic?.stand_in
+                              ? d.decision_time.heuristic.label ?? "heuristic"
+                              : d.decision_time.degradation.level}]
+                          </span>
+                        ) : null}
+                        {d.decision_time?.entry_gate?.decision === "reject" ? (
+                          <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.8 }}>
+                            [gate:{d.decision_time.entry_gate.reason ?? "reject"}]
+                          </span>
+                        ) : null}
+                        {d.decision_time?.event_radar?.enabled ? (
+                          <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.8 }}>
+                            [radar:{d.decision_time.event_radar.direction ?? "?"}·
+                            {d.decision_time.event_radar.impact ?? "?"}·n=
+                            {d.decision_time.event_radar.event_count ?? 0}]
+                          </span>
+                        ) : null}
                       </td>
-                      <td>{typeof coh === "number" ? coh.toFixed(2) : "—"}</td>
-                      <td>{d.execution_status}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="ghost"
-                          disabled={busyId === d.id}
-                          onClick={() => runDrySubmit(d.id)}
-                        >
-                          {busyId === d.id ? "…" : "Dry-run"}
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="ghost"
-                          disabled={busyId === `fu-${d.id}`}
-                          onClick={() => runFollowup(d.id)}
-                        >
-                          {busyId === `fu-${d.id}` ? "…" : "Follow-up"}
-                        </button>
-                      </td>
-                    </tr>
+                        <td>{typeof coh === "number" ? coh.toFixed(2) : "—"}</td>
+                        <td>{d.execution_status}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="ghost"
+                            onClick={() =>
+                              setOpenTimelineId(timelineOpen ? null : d.id)
+                            }
+                          >
+                            {timelineOpen ? "Masquer" : `Voir (${timeline.length})`}
+                          </button>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="ghost"
+                            disabled={busyId === d.id}
+                            onClick={() => runDrySubmit(d.id)}
+                          >
+                            {busyId === d.id ? "…" : "Dry-run"}
+                          </button>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="ghost"
+                            disabled={busyId === `fu-${d.id}`}
+                            onClick={() => runFollowup(d.id)}
+                          >
+                            {busyId === `fu-${d.id}` ? "…" : "Follow-up"}
+                          </button>
+                        </td>
+                      </tr>
+                      {timelineOpen ? (
+                        <tr>
+                          <td colSpan={9}>
+                            <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12 }}>
+                              {timeline.length === 0 ? (
+                                <li>Aucun événement</li>
+                              ) : (
+                                timeline.map((ev, i) => (
+                                  <li key={`${d.id}-ev-${i}`}>
+                                    <b>{ev.kind ?? "?"}</b>
+                                    {ev.at
+                                      ? ` · ${new Date(ev.at).toLocaleString("fr-FR")}`
+                                      : ""}
+                                    {ev.action ? ` · ${ev.action}` : ""}
+                                    {ev.baseline ? ` (baseline ${ev.baseline})` : ""}
+                                    {typeof ev.realized_pnl === "number"
+                                      ? ` · PnL ${ev.realized_pnl}`
+                                      : ""}
+                                    {ev.detail ? ` — ${ev.detail}` : ""}
+                                  </li>
+                                ))
+                              )}
+                            </ol>
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
                   )
                 })}
               </tbody>

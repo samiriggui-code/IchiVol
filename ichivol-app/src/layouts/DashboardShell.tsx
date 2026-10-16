@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { FicheHost } from '../components/fiches/FicheHost'
 import { NotificationBell } from '../components/NotificationBell'
 import {
   IconChevronLeft,
@@ -11,7 +12,12 @@ import { KillLockBanner, KillSwitchButton, KillSwitchProvider } from '../compone
 import { ThemeToggle } from '../components/ThemeToggle'
 import { getMe, logout } from '../lib/auth'
 import { AgentSessionProvider } from '../lib/agentSession'
-import { llmStatusLabel, LlmStatusProvider, useLlmStatus } from '../lib/llmStatus'
+import {
+  jevStatusLabel,
+  llmStatusLabel,
+  LlmStatusProvider,
+  useLlmStatus,
+} from '../lib/llmStatus'
 import { MarketSnapshotProvider } from '../lib/marketSnapshot'
 import {
   MOBILE_MORE_ITEMS,
@@ -23,23 +29,31 @@ const SIDEBAR_KEY = 'ichivol_sidebar_collapsed'
 const MOBILE_MQ = '(max-width: 768px)'
 
 function LlmHeaderBadge() {
-  const { state, provider, model, message, refresh } = useLlmStatus()
-  const label = llmStatusLabel(state)
-  const detail =
-    state === 'ok' && provider && model
-      ? `${provider} · ${model}`
-      : message || label
+  const { state, jevos, typesafe, refresh } = useLlmStatus()
+  const chatLabel = llmStatusLabel(state)
+  // Libellés produit uniquement — pas de marque, provider, modèle ni URL.
+  const detail = [chatLabel, jevStatusLabel(jevos), jevStatusLabel(typesafe)].join(' · ')
 
   return (
     <button
       type="button"
-      className={`llm-status-badge is-${state}`}
+      className="llm-status-badge ai-status-badge"
       title={detail}
       onClick={() => void refresh()}
       aria-label={detail}
     >
-      <span className="llm-status-dot" aria-hidden />
-      <span className="llm-status-text">{label}</span>
+      <span className={`ai-status-chip is-${state}`} title={chatLabel}>
+        <span className="llm-status-dot" aria-hidden />
+        <span className="llm-status-text">Copilot</span>
+      </span>
+      <span className={`ai-status-chip is-${jevos.state}`} title={jevStatusLabel(jevos)}>
+        <span className="llm-status-dot" aria-hidden />
+        <span className="llm-status-text">Local</span>
+      </span>
+      <span className={`ai-status-chip is-${typesafe.state}`} title={jevStatusLabel(typesafe)}>
+        <span className="llm-status-dot" aria-hidden />
+        <span className="llm-status-text">Cloud</span>
+      </span>
     </button>
   )
 }
@@ -191,7 +205,10 @@ function DashboardShellInner() {
                   <p className="dash-user-email mono">{email ?? '…'}</p>
                   <p className="dash-user-llm muted">
                     {llmStatusLabel(llm.state)}
-                    {llm.provider && llm.model ? ` · ${llm.provider}/${llm.model}` : ''}
+                    {' · '}
+                    {jevStatusLabel(llm.jevos)}
+                    {' · '}
+                    {jevStatusLabel(llm.typesafe)}
                   </p>
                   <Link
                     to="/app/settings"
@@ -213,6 +230,7 @@ function DashboardShellInner() {
         <div className="dash-content">
           <Outlet />
         </div>
+        <FicheHost />
       </div>
 
       {isMobile && (

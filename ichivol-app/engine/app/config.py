@@ -1,4 +1,10 @@
+from pathlib import Path
+
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Push .env into os.environ so adapters that use os.getenv (JEV / TypeSafe) see keys.
+load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
 
 
 class Settings(BaseSettings):
@@ -38,7 +44,21 @@ class Settings(BaseSettings):
     ob_data_dir: str = "/data/orderbook"
     # Eve V2 paper path — Risk Kernel submission. Default OFF (observation / dry-run only).
     # When true, LONG/SHORT potential verdicts may open on *existing* paper portfolios.
+    # Never live brokers — paper portfolios only (QuantDinger AGENT_LIVE analogue).
     eve_paper_autonomy: bool = False
+
+    # --- Ève / JEV / Event Radar (QuantDinger Settings schema knobs) ---
+    # Secrets (JEV_API_KEY / TYPESAFE_API_KEY) stay env-only via jev/providers.
+    jev_timeout_seconds: float = 5.0
+    jev_min_confidence: float = 0.45
+    eve_entry_gate_min_confidence: float = 0.55
+    event_radar_enabled: bool = False
+    event_radar_jev_min_confidence: float = 0.65
+    event_radar_news_lookback_days: int = 2
+    event_radar_max_events: int = 8
+    event_radar_crypto_rss_enabled: bool = True
+    event_radar_yahoo_finance_rss_enabled: bool = True
+    event_radar_sec_edgar_enabled: bool = False
 
 
 settings = Settings()

@@ -90,6 +90,7 @@ app.post('/api/agents/missions', requireAuth, handleCreateAgentMission)
 
 app.get('/api/engine/*', requireAuth, proxyToEngine)
 app.post('/api/engine/*', requireAuth, proxyToEngine)
+app.patch('/api/engine/*', requireAuth, proxyToEngine)
 app.delete('/api/engine/*', requireAuth, proxyToEngine)
 
 app.listen(config.port, () => {

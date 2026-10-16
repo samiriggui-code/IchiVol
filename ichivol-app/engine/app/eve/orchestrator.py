@@ -15,7 +15,15 @@ from app.eve.actions import normalize_action
 from app.eve.calibration import active_policy
 from app.eve.coherence import compute_coherence
 from app.eve.context import build_engine_context
+from app.eve.degradation import (
+    apply_degradation,
+    assess_degradation,
+    extract_probabilities,
+)
 from app.eve.dossier import persist_dossier
+from app.eve.entry_gate import run_entry_gate
+from app.eve.heuristic import heuristic_badge
+from app.eve.signal_rules import apply_signal_rules
 from app.eve.modes import (
     run_analyst,
     run_challenger,
@@ -24,6 +32,7 @@ from app.eve.modes import (
     synthesize_action,
 )
 from app.eve.paper_submit import autonomy_enabled, submit_paper_from_dossier
+from app.jev.adapter import health as jev_health
 
 
 def evaluate_opportunity(
@@ -92,6 +101,73 @@ def evaluate_opportunity(
         synthesis["action"] = "ABSTAIN"
         synthesis["rationale"] = "Policy: too many Challenger contradictions"
 
+    # Build provisional jev pack for degradation (full pack assembled below).
+    jev_pack_preview = {
+        "analyst": analyst.get("jev"),
+        "challenger": challenger.get("jev"),
+        "guardian": guardian.get("jev"),
+        # Prefer adapter envelope (ok/error/late); panel payload is secondary.
+        "shadow": shadow.get("jev") or (shadow.get("result") or {}).get("jev"),
+    }
+    degradation = assess_degradation(
+        jev_pack_preview,
+        jev_requested=jev_on,
+        min_confidence=float(thresholds.get("min_jev_confidence") or 0.45),
+    )
+    synthesis = apply_degradation(synthesis, degradation)
+    badge = heuristic_badge(degradation)
+
+    # QuantDinger-style pre-trade gate (fail-closed). Advisory vs Risk Kernel.
+    gate_min_conf = float(thresholds.get("entry_gate_min_confidence") or 0.55)
+    entry_gate = run_entry_gate(
+        context,
+        eve_action=str(synthesis.get("action") or ""),
+        use_jev=jev_on,
+        min_confidence=gate_min_conf,
+    )
+    if (
+        synthesis.get("action") in ("LONG", "SHORT")
+        and entry_gate.get("decision") == "reject"
+        and not entry_gate.get("allowed", False)
+    ):
+        rejected = list(synthesis.get("rejected_scenarios") or [])
+        rejected.append(f"entry_gate:{entry_gate.get('reason')}")
+        synthesis["rejected_scenarios"] = rejected
+        synthesis["action"] = "ABSTAIN"
+        synthesis["rationale"] = (
+            f"Entry gate reject ({entry_gate.get('reason')}) → ABSTAIN"
+        )
+    synthesis["entry_gate"] = {
+        "decision": entry_gate.get("decision"),
+        "allowed": entry_gate.get("allowed"),
+        "reason": entry_gate.get("reason"),
+        "confidence": entry_gate.get("confidence"),
+    }
+
+    # Gamma-style AND gates in code (portable signals when present).
+    signal_rules = apply_signal_rules(
+        str(synthesis.get("action") or ""),
+        jev_pack_preview,
+    )
+    if (
+        synthesis.get("action") in ("LONG", "SHORT")
+        and signal_rules.get("decision") == "reject"
+        and not signal_rules.get("allowed", False)
+    ):
+        rejected = list(synthesis.get("rejected_scenarios") or [])
+        rejected.append(f"signal_rules:{signal_rules.get('reason')}")
+        synthesis["rejected_scenarios"] = rejected
+        synthesis["action"] = "ABSTAIN"
+        synthesis["rationale"] = (
+            f"Signal rules reject ({signal_rules.get('reason')}) → ABSTAIN"
+        )
+    synthesis["signal_rules"] = {
+        "decision": signal_rules.get("decision"),
+        "allowed": signal_rules.get("allowed"),
+        "reason": signal_rules.get("reason"),
+        "rule": signal_rules.get("rule"),
+    }
+
     analyst_agrees = None
     primary = (analyst.get("hypotheses") or {}).get("primary_action")
     if baseline_action and primary:
@@ -131,13 +207,6 @@ def evaluate_opportunity(
         ),
     }
 
-    decision_time = {
-        "captured_at": now,
-        "context_as_of": context.get("as_of"),
-        "known_at": context.get("known_at"),
-        "includes_future_outcome": False,
-    }
-
     modes_pack = {
         "analyst": analyst,
         "challenger": challenger,
@@ -149,8 +218,70 @@ def evaluate_opportunity(
         "analyst": analyst.get("jev"),
         "challenger": challenger.get("jev"),
         "guardian": guardian.get("jev"),
-        "shadow": (shadow.get("result") or {}).get("jev"),
+        "shadow": shadow.get("jev") or (shadow.get("result") or {}).get("jev"),
     }
+
+    # Fingerprint / model pin — best-effort, never blocks evaluation.
+    provider_health: dict[str, Any] | None = None
+    if jev_on:
+        try:
+            provider_health = jev_health(timeout_s=1.5)
+        except Exception:  # noqa: BLE001
+            provider_health = None
+
+    event_radar = context.get("event_radar") if isinstance(context.get("event_radar"), dict) else None
+
+    decision_time = {
+        "captured_at": now,
+        "context_as_of": context.get("as_of"),
+        "known_at": context.get("known_at"),
+        "includes_future_outcome": False,
+        "degradation": degradation,
+        "heuristic": badge,
+        "entry_gate": {
+            "decision": entry_gate.get("decision"),
+            "allowed": entry_gate.get("allowed"),
+            "reason": entry_gate.get("reason"),
+            "confidence": entry_gate.get("confidence"),
+            "checks": entry_gate.get("checks") or [],
+        },
+        "signal_rules": {
+            "decision": signal_rules.get("decision"),
+            "allowed": signal_rules.get("allowed"),
+            "reason": signal_rules.get("reason"),
+            "rule": signal_rules.get("rule"),
+        },
+        "event_radar": {
+            "enabled": bool((event_radar or {}).get("enabled")),
+            "direction": (event_radar or {}).get("direction"),
+            "impact": (event_radar or {}).get("impact"),
+            "relevance": (event_radar or {}).get("relevance"),
+            "freshness": (event_radar or {}).get("freshness"),
+            "confidence": (event_radar or {}).get("confidence"),
+            "provider": (event_radar or {}).get("provider"),
+            "event_count": (event_radar or {}).get("event_count"),
+            "reference_only": True,
+        }
+        if event_radar
+        else None,
+        "jev_probabilities": extract_probabilities(jev_pack),
+        "jev_fingerprint": (provider_health or {}).get("fingerprint"),
+        "jev_provider": (provider_health or {}).get("provider"),
+        "model_mismatch": any(
+            bool((env or {}).get("model_mismatch"))
+            for env in jev_pack.values()
+            if isinstance(env, dict)
+        ),
+    }
+
+    verdict["degradation"] = degradation
+    verdict["heuristic"] = badge
+    verdict["entry_gate"] = synthesis.get("entry_gate")
+    if degradation.get("level") != "healthy":
+        verdict["note"] = (
+            f"Potential ({degradation.get('level')}) — "
+            f"source={badge.get('label')}; Risk Kernel dry-run still gated"
+        )
 
     result: dict[str, Any] = {
         "schema": "ichivol.eve.evaluation.v1",
@@ -162,6 +293,9 @@ def evaluate_opportunity(
         "modes": modes_pack,
         "jev": jev_pack,
         "coherence": coherence,
+        "degradation": degradation,
+        "heuristic": badge,
+        "entry_gate": entry_gate,
         "policy": {
             "version": policy.get("version"),
             "routing": routing,
@@ -197,13 +331,17 @@ def evaluate_opportunity(
         result["dossier_id"] = dossier.id
         result["verdict_id"] = dossier.verdict_id
 
-        # V2 Phase H dry-run: record Risk Kernel stance without opening.
+        # Paper path on existing portfolios: execute follows EVE_PAPER_AUTONOMY.
+        # When autonomy off → Risk Kernel dry-run only. When on → Eve can open/close paper.
         if paper_dry_run:
             try:
+                auto = autonomy_enabled()
                 paper = submit_paper_from_dossier(
                     session,
                     dossier.id,
-                    execute=False,  # always dry-run from evaluate path
+                    # None → submit_paper_from_dossier uses autonomy_enabled()
+                    # (was hard-coded False — blocked paper tests even with flag on).
+                    execute=None,
                     allow_screener=True,
                 )
                 result["paper_submit"] = paper
@@ -211,14 +349,15 @@ def evaluate_opportunity(
                 verdict["risk_authorization"] = paper.get("risk_authorization")
                 verdict["paper_submit_status"] = paper.get("status")
                 verdict["note"] = (
-                    "Potential + Risk Kernel dry-run; "
-                    f"autonomy={'on' if autonomy_enabled() else 'off'}"
+                    "Potential + Risk Kernel"
+                    + (" execute" if auto and paper.get("executed") else " dry-run")
+                    + f"; autonomy={'on' if auto else 'off'}"
                 )
-            except Exception as exc:  # noqa: BLE001 — evaluation must not fail on RK dry-run
+            except Exception as exc:  # noqa: BLE001 — evaluation must not fail on RK path
                 result["paper_submit"] = {
                     "ok": False,
                     "error": type(exc).__name__,
-                    "status": "dry_run_error",
+                    "status": "paper_submit_error",
                 }
 
         session.commit()
