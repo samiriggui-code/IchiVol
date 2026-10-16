@@ -45,16 +45,24 @@ def evaluate_opportunity(
         jev_on = False
 
     analyst = run_analyst(
-        context, use_jev=jev_on and bool(routing.get("use_jev_analyst", True))
+        context,
+        use_jev=jev_on and bool(routing.get("use_jev_analyst", True)),
+        primitives=routing.get("analyst_primitives"),
     )
     challenger = run_challenger(
-        context, use_jev=jev_on and bool(routing.get("use_jev_challenger", True))
+        context,
+        use_jev=jev_on and bool(routing.get("use_jev_challenger", True)),
+        primitives=routing.get("challenger_primitives"),
     )
     guardian = run_guardian(
-        context, use_jev=jev_on and bool(routing.get("use_jev_guardian", True))
+        context,
+        use_jev=jev_on and bool(routing.get("use_jev_guardian", True)),
+        primitives=routing.get("guardian_primitives"),
     )
     shadow = run_shadow_mode(
-        context, use_jev=jev_on and bool(routing.get("use_jev_shadow", True))
+        context,
+        use_jev=jev_on and bool(routing.get("use_jev_shadow", True)),
+        primitives=routing.get("shadow_primitives"),
     )
 
     baseline_action = normalize_action((context.get("baseline") or {}).get("decision"))

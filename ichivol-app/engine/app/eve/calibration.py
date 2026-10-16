@@ -7,18 +7,38 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.eve.coherence import COHERENCE_POLICY_V1
+from app.eve.primitive_study import routing_from_study, run_primitive_routing_study
+
+# Study-backed defaults (recomputed at import for determinism of fixtures).
+_STUDY = run_primitive_routing_study()
+_STUDY_ROUTING = routing_from_study(_STUDY)
 
 DEFAULT_POLICY: dict[str, Any] = {
-    "version": "eve.policy.v1",
+    "version": "eve.policy.v1.1",
     "created_at": "2026-10-16T00:00:00+00:00",
     "kind": "calibration_policy",
     "not": "llm_finetune",
     "routing": {
-        "use_jev_analyst": True,
-        "use_jev_challenger": True,
-        "use_jev_guardian": True,
-        "use_jev_shadow": True,
-        "skip_jev_if_data_quality_below": 0.15,
+        **_STUDY_ROUTING,
+        # Keep feature flags aligned with non-empty primitive lists.
+        "use_jev_analyst": bool(_STUDY_ROUTING.get("analyst_primitives")),
+        "use_jev_challenger": bool(_STUDY_ROUTING.get("challenger_primitives")),
+        "use_jev_guardian": bool(_STUDY_ROUTING.get("guardian_primitives")),
+        "use_jev_shadow": bool(_STUDY_ROUTING.get("shadow_primitives")),
+    },
+    "primitive_study": {
+        "version": _STUDY.get("thresholds", {}).get("version"),
+        "recommended_routing": _STUDY.get("recommended_routing"),
+        "cells": [
+            {
+                "mode": c["mode"],
+                "primitive": c["primitive"],
+                "verdict": c["verdict"],
+                "reason": c["reason"],
+                "metrics": c["metrics"],
+            }
+            for c in _STUDY.get("cells", [])
+        ],
     },
     "thresholds": {
         "min_data_quality_to_act": 0.35,
@@ -33,7 +53,9 @@ def active_policy(override: dict[str, Any] | None = None) -> dict[str, Any]:
     pol = deepcopy(DEFAULT_POLICY)
     if override:
         for key, value in override.items():
-            if key in ("routing", "thresholds", "coherence") and isinstance(value, dict):
+            if key in ("routing", "thresholds", "coherence", "primitive_study") and isinstance(
+                value, dict
+            ):
                 pol[key] = {**pol.get(key, {}), **value}
             else:
                 pol[key] = value

@@ -18,6 +18,7 @@ from app.eve.dossier import (
     verdict_to_dict,
 )
 from app.eve.orchestrator import evaluate_opportunity
+from app.eve.primitive_study import run_primitive_routing_study
 
 router = APIRouter(prefix="/api/engine/eve", tags=["eve"])
 
@@ -107,3 +108,10 @@ def eve_calibration() -> dict:
             observed={"abstain_rate": 0.0, "mean_coherence": 0.5, "n": 0},
         ),
     }
+
+
+@router.get("/primitive-study")
+def eve_primitive_study() -> dict:
+    """Matrice Mode × NOUL/CHOICE/SCORE — base du routage JEV (étude déterministe)."""
+    return run_primitive_routing_study()
+

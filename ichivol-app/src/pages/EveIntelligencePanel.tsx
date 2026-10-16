@@ -19,6 +19,21 @@ type Health = {
   probe?: { ok?: boolean; error?: string }
 }
 
+type Calibration = {
+  policy?: {
+    version?: string
+    routing?: {
+      analyst_primitives?: string[]
+      challenger_primitives?: string[]
+      guardian_primitives?: string[]
+      shadow_primitives?: string[]
+    }
+    primitive_study?: {
+      cells?: Array<{ mode: string; primitive: string; verdict: string }>
+    }
+  }
+}
+
 const MODES = [
   { id: "analyst", name: "Ève Analyst", mission: "Interprète calculs et scénarios" },
   { id: "challenger", name: "Ève Challenger", mission: "Cherche contradictions et alternatives" },
@@ -29,7 +44,7 @@ const MODES = [
 export function EveIntelligencePanel() {
   const [items, setItems] = useState<DossierRow[]>([])
   const [health, setHealth] = useState<Health | null>(null)
-  const [calibration, setCalibration] = useState<{ policy?: { version?: string } } | null>(null)
+  const [calibration, setCalibration] = useState<Calibration | null>(null)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
 
