@@ -453,6 +453,19 @@ def run_shadow_mode(
     }
 
 
+def _shadow_answers(shadow: dict[str, Any]) -> dict[str, Any]:
+    """Extract JEV answers from either run_shadow_mode or legacy compare_decision shapes."""
+    try:
+        answers = ((shadow.get("result") or {}).get("jev") or {}).get("result", {}).get(
+            "answers", {}
+        )
+        if not answers:
+            answers = (shadow.get("jev") or {}).get("answers") or {}
+        return answers if isinstance(answers, dict) else {}
+    except Exception:
+        return {}
+
+
 def synthesize_action(
     *,
     analyst: dict[str, Any],
@@ -505,16 +518,30 @@ def synthesize_action(
         if baseline_action and action != baseline_action:
             rejected.append(f"baseline:{baseline_action}")
 
-    shadow_noul = None
-    try:
-        answers = ((shadow.get("result") or {}).get("jev") or {}).get("result", {}).get(
-            "answers", {}
-        )
-        if not answers:
-            answers = (shadow.get("jev") or {}).get("answers") or {}
-        shadow_noul = (answers.get("review") or {}).get("noul")
-    except Exception:
-        shadow_noul = None
+    # Shadow counter-signals (NOUL + CHOICE + SCORE) — independent audit, never execution.
+    s_answers = _shadow_answers(shadow)
+    shadow_noul = (s_answers.get("review") or {}).get("noul")
+    shadow_choice = normalize_action(
+        (s_answers.get("independent_action") or {}).get("choice")
+    )
+    shadow_score = (s_answers.get("audit_confidence") or {}).get("score")
+
+    if not critical and action in ("LONG", "SHORT"):
+        # SCORE levels: 0 Reject … 4 Strong — weak audit blocks directional potential.
+        if isinstance(shadow_score, (int, float)) and shadow_score <= 1:
+            rejected.append("shadow_low_audit_confidence")
+            action = "ABSTAIN"
+            rationale = "Shadow SCORE audit_confidence weak → abstain"
+        elif shadow_choice is not None and shadow_choice != action:
+            rejected.append(f"shadow_choice:{shadow_choice}")
+            action = "ABSTAIN"
+            rationale = (
+                f"Shadow CHOICE {shadow_choice} disagrees with {action} → abstain"
+            )
+        elif isinstance(shadow_noul, (int, float)) and shadow_noul < 0.35:
+            rejected.append("shadow_noul_low")
+            action = "ABSTAIN"
+            rationale = "Shadow NOUL low coherence → abstain"
 
     return {
         "action": action,
@@ -526,4 +553,6 @@ def synthesize_action(
         "baseline_action": baseline_action,
         "disagrees_with_baseline": bool(baseline_action and action != baseline_action),
         "shadow_noul": shadow_noul if isinstance(shadow_noul, (int, float)) else None,
+        "shadow_choice": shadow_choice,
+        "shadow_score": shadow_score if isinstance(shadow_score, (int, float)) else None,
     }

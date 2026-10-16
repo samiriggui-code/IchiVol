@@ -1,6 +1,7 @@
-"""V1 cycle A→G (partial) — observation to potential verdict, no execution.
+"""Eve cycle A→G — observation to potential verdict.
 
-Phases H–I (Risk Kernel / execution) are NOT invoked in V1.
+Phases H–I (Risk Kernel / paper open) live in ``eve.paper_submit`` and are
+gated by ``EVE_PAPER_AUTONOMY`` (default off). This module never opens lots.
 """
 
 from __future__ import annotations
@@ -118,7 +119,10 @@ def evaluate_opportunity(
             "guardian": {"warning_count": len(guardian.get("warnings") or [])},
             "shadow": {"provider": (shadow.get("result") or {}).get("provider")},
         },
-        "note": "V1 potential decision — Risk Kernel not invoked; no paper execution",
+        "note": (
+            "Potential decision — Risk Kernel not invoked here; "
+            "use POST /eve/dossiers/{id}/paper-submit (autonomy default off)"
+        ),
     }
 
     decision_time = {

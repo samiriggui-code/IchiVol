@@ -1,6 +1,7 @@
-"""Ève Intelligence V1 API — evaluate / dossiers / verdicts / calibration.
+"""Ève Intelligence API — evaluate / dossiers / verdicts / calibration / V2 paper dry-run.
 
-No paper execution. No Risk Kernel submission from these routes.
+V1 routes never execute. V2 ``paper-submit`` evaluates Risk Kernel; opens only when
+``EVE_PAPER_AUTONOMY`` is enabled (default off).
 """
 
 from __future__ import annotations
@@ -18,7 +19,9 @@ from app.eve.dossier import (
     verdict_to_dict,
 )
 from app.eve.orchestrator import evaluate_opportunity
+from app.eve.paper_submit import autonomy_enabled, submit_paper_from_dossier
 from app.eve.primitive_study import run_primitive_routing_study
+from app.paper.strategy_profiles import BASELINE_CODE
 
 router = APIRouter(prefix="/api/engine/eve", tags=["eve"])
 
@@ -114,4 +117,53 @@ def eve_calibration() -> dict:
 def eve_primitive_study() -> dict:
     """Matrice Mode × NOUL/CHOICE/SCORE — base du routage JEV (étude déterministe)."""
     return run_primitive_routing_study()
+
+
+@router.get("/paper-autonomy")
+def eve_paper_autonomy() -> dict:
+    """V2 flag — when false, paper-submit is Risk Kernel dry-run only."""
+    return {
+        "autonomy_enabled": autonomy_enabled(),
+        "env": "EVE_PAPER_AUTONOMY",
+        "default": False,
+        "note": "No Eve portfolio; existing paper books only; never live trading",
+    }
+
+
+@router.post("/dossiers/{dossier_id}/paper-submit")
+def eve_paper_submit(
+    dossier_id: str,
+    portfolio_code: str = BASELINE_CODE,
+    price: float | None = None,
+    stop_distance: float | None = None,
+    execute: bool | None = None,
+) -> dict:
+    """V2: submit potential LONG/SHORT via Risk Kernel (default dry-run).
+
+    ``execute`` defaults to the autonomy flag. Passing ``execute=true`` while
+    autonomy is off is ignored unless autonomy is on — callers must enable
+    ``EVE_PAPER_AUTONOMY`` to open paper lots.
+    """
+    session = SessionLocal()
+    try:
+        # Hard gate: never honor execute=true when autonomy is off.
+        do_exec = None if execute is None else (bool(execute) and autonomy_enabled())
+        if execute is True and not autonomy_enabled():
+            do_exec = False
+        out = submit_paper_from_dossier(
+            session,
+            dossier_id,
+            portfolio_code=portfolio_code,
+            price=price,
+            stop_distance=stop_distance,
+            execute=do_exec if execute is not None else None,
+        )
+        if out.get("error") == "dossier_not_found":
+            raise HTTPException(status_code=404, detail="dossier_not_found")
+        if out.get("error") == "unknown_portfolio":
+            raise HTTPException(status_code=404, detail=f"unknown_portfolio: {portfolio_code}")
+        session.commit()
+        return out
+    finally:
+        session.close()
 

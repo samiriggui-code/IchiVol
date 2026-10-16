@@ -15,7 +15,11 @@ def test_compare_decision_noul_no_execution(monkeypatch: Any, tmp_path: Any) -> 
 
     body = {
         "model": "jevos-v4",
-        "answers": {"review": {"type": "noul", "noul": 0.77}},
+        "answers": {
+            "review": {"type": "noul", "noul": 0.77},
+            "independent_action": {"type": "choice", "choice": "LONG"},
+            "audit_confidence": {"type": "score", "score": 3},
+        },
         "usage": {"input_tokens": 12, "output_tokens": 0},
     }
     resp = MagicMock()
@@ -40,5 +44,11 @@ def test_compare_decision_noul_no_execution(monkeypatch: Any, tmp_path: Any) -> 
     assert out["original_decision"] == "BUY"
     assert out["provider"] == "jevos"
     assert out["response_model"] == "jevos-v4"
+    assert out["primitives_used"] == ["noul", "choice", "score"]
     assert out["jev"]["ok"] is True
     assert out["jev"]["result"]["answers"]["review"]["noul"] == 0.77
+    # Request must ask all three Shadow primitives (study-aligned).
+    posted = client.post.call_args
+    body = posted.kwargs.get("json") or posted[1].get("json") or {}
+    qnames = set((body.get("questions") or {}).keys())
+    assert {"review", "independent_action", "audit_confidence"} <= qnames

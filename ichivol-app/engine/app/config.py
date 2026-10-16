@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     rs_d1_interval_s: float = 60.0
     # OB-1 order book collector output (separate service, shared volume mounted read-only here).
     ob_data_dir: str = "/data/orderbook"
+    # Eve V2 paper path — Risk Kernel submission. Default OFF (observation / dry-run only).
+    # When true, LONG/SHORT potential verdicts may open on *existing* paper portfolios.
+    eve_paper_autonomy: bool = False
 
 
 settings = Settings()

@@ -483,13 +483,14 @@ def evaluate_cell(
     else:
         relevance = 0.3 if new_action == expected else 0.1
 
-    # Shadow special: noul doesn't change synthesis action today — relevance via audit signal
+    # Shadow: CHOICE/SCORE now feed synthesize_action (abstain on disagreement / low score).
+    # NOUL also soft-blocks directional when very low; otherwise audit signal still valuable.
     if mode == "shadow":
         info_gain = 1.0 if jev.get("ok") else 0.0
-        relevance = 0.7 if jev.get("ok") else 0.0  # audit value even if synthesis unchanged
-        if primitive != "noul" and jev.get("ok"):
-            # choice/score add independent counter-signal beyond legacy NOUL-only panel
-            relevance = 0.85
+        if primitive == "noul":
+            relevance = 0.75 if jev.get("ok") else 0.0
+        elif jev.get("ok"):
+            relevance = 0.9 if new_action != base_action or new_action == expected else 0.8
 
     return {
         "scenario_id": scenario["id"],

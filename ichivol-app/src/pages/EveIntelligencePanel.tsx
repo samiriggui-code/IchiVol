@@ -19,6 +19,12 @@ type Health = {
   probe?: { ok?: boolean; error?: string }
 }
 
+type PaperAutonomy = {
+  autonomy_enabled?: boolean
+  env?: string
+  default?: boolean
+}
+
 type Calibration = {
   policy?: {
     version?: string
@@ -45,6 +51,7 @@ export function EveIntelligencePanel() {
   const [items, setItems] = useState<DossierRow[]>([])
   const [health, setHealth] = useState<Health | null>(null)
   const [calibration, setCalibration] = useState<Calibration | null>(null)
+  const [paperAutonomy, setPaperAutonomy] = useState<PaperAutonomy | null>(null)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
 
@@ -64,12 +71,17 @@ export function EveIntelligencePanel() {
         if (!r.ok) return null
         return r.json()
       }),
+      fetch("/api/engine/eve/paper-autonomy", { credentials: "include", signal }).then(async (r) => {
+        if (!r.ok) return null
+        return r.json()
+      }),
     ])
-      .then(([dossiers, h, cal]) => {
+      .then(([dossiers, h, cal, auto]) => {
         if (controller.signal.aborted) return
         setItems(Array.isArray(dossiers?.results) ? dossiers.results : [])
         setHealth(h)
         setCalibration(cal)
+        setPaperAutonomy(auto)
       })
       .catch((e) => {
         if (!controller.signal.aborted) setError(String(e))
@@ -107,15 +119,36 @@ export function EveIntelligencePanel() {
           <span>Politique calibration</span>
           <b>{calibration?.policy?.version ?? "—"}</b>
         </div>
+        <div className="statline">
+          <span>Paper autonomy (V2)</span>
+          <b>{paperAutonomy?.autonomy_enabled ? "oui" : "non (dry-run Risk Kernel)"}</b>
+        </div>
 
         <h3 style={{ marginTop: 16 }}>Modes</h3>
         <ul>
-          {MODES.map((m) => (
-            <li key={m.id}>
-              <b>{m.name}</b> — {m.mission}
-            </li>
-          ))}
+          {MODES.map((m) => {
+            const key = `${m.id}_primitives` as keyof NonNullable<
+              NonNullable<Calibration["policy"]>["routing"]
+            >
+            const prims = calibration?.policy?.routing?.[key]
+            return (
+              <li key={m.id}>
+                <b>{m.name}</b> — {m.mission}
+                {Array.isArray(prims) ? (
+                  <>
+                    {" "}
+                    · JEV : <code>{prims.length ? prims.join(" + ") : "aucun"}</code>
+                  </>
+                ) : null}
+              </li>
+            )
+          })}
         </ul>
+        <p style={{ fontSize: 12, color: "var(--muted)" }}>
+          Routage NOUL/CHOICE/SCORE issu de l’étude{" "}
+          <code>GET /api/engine/eve/primitive-study</code> — pas d’appel systématique des 3
+          primitives sur chaque mode.
+        </p>
 
         <h3 style={{ marginTop: 16 }}>Dossiers récents</h3>
         {loading ? (
