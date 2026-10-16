@@ -319,6 +319,7 @@ def run_followup(
         paper = submit_paper_from_dossier(
             session,
             dossier_id,
+            portfolio_code=None,  # tous les portefeuilles virtuels
             execute=None,  # respects autonomy hard-gate
             allow_screener=True,
             action_override="CLOSE",

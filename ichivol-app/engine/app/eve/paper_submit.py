@@ -1,14 +1,10 @@
-"""V2 — Eve potential verdict → Risk Kernel → existing paper portfolios.
+"""V2 — Eve verdict → Risk Kernel → portefeuilles virtuels.
 
-Autonomy is OFF by default (``EVE_PAPER_AUTONOMY=false``). When off, Risk Kernel
-is still evaluated (dry-run) and recorded on the dossier; no position is opened
-or closed.
+Par défaut Ève soumet sur **tous** les portefeuilles paper actifs.
+Passe ``portfolio_code`` seulement pour cibler un livre.
 
-Constraints:
-- No Eve-specific portfolio — reuse baseline / existing strategy profiles only.
-- Never real trading / live broker.
-- Risk Kernel remains the sole open authority (Guardian advisory only).
-- CLOSE uses existing ``close_manually`` (not Risk Kernel opens).
+Autonomy OFF (défaut) = dry-run Risk Kernel, aucune ouverture.
+Jamais de broker live. Risk Kernel = seule autorité d'ouverture.
 """
 
 from __future__ import annotations
@@ -27,7 +23,13 @@ from app.eve.dossier import get_dossier, get_verdict
 from app.paper import broker as paper_broker
 from app.paper import engine as paper_engine
 from app.paper import gates as paper_gates
-from app.paper.portfolio import ensure_baseline_portfolio, ensure_portfolio, get_portfolio_by_code
+from app.paper.portfolio import (
+    ensure_baseline_portfolio,
+    ensure_portfolio,
+    ensure_syncable_portfolios,
+    get_portfolio_by_code,
+    list_portfolios,
+)
 from app.paper.risk_kernel import (
     OpenPlan,
     PortfolioState,
@@ -40,6 +42,7 @@ from app.paper.strategy_profiles import BASELINE_CODE, syncable_profile_codes
 logger = logging.getLogger(__name__)
 
 AUTONOMY_ENV = "EVE_PAPER_AUTONOMY"
+ALL_VIRTUAL = "ALL"
 
 
 def autonomy_enabled() -> bool:
@@ -53,6 +56,48 @@ def autonomy_enabled() -> bool:
         return bool(settings.eve_paper_autonomy)
     except Exception:
         return False
+
+
+def virtual_portfolio_codes(session: Session) -> list[str]:
+    """Codes de tous les portefeuilles virtuels actifs (seed syncable inclus)."""
+    try:
+        ensure_syncable_portfolios(session)
+    except Exception:  # noqa: BLE001 — lister ce qui existe quand même
+        logger.exception("eve: seed portefeuilles virtuels échoué")
+    codes: list[str] = []
+    seen: set[str] = set()
+    for pf in list_portfolios(session, active_only=True):
+        code = str(getattr(pf, "code", "") or "")
+        if not code or code in seen:
+            continue
+        seen.add(code)
+        codes.append(code)
+    if not codes:
+        ensure_baseline_portfolio(session)
+        return [BASELINE_CODE]
+    return codes
+
+
+def _aggregate_portfolio_results(results: list[dict[str, Any]]) -> str:
+    """Statut dossier après soumission multi-portefeuilles."""
+    if not results:
+        return "no_portfolios"
+    statuses = [str(r.get("status") or "") for r in results]
+    if any(s == "opened" for s in statuses):
+        return "opened" if statuses.count("opened") == 1 else "opened_all_books"
+    if any(s == "closed" for s in statuses):
+        return "closed" if statuses.count("closed") == 1 else "closed_all_books"
+    if any(s == "already_open" for s in statuses):
+        return "already_open"
+    if any(s == "dry_run_autonomy_off" for s in statuses):
+        return "dry_run_autonomy_off"
+    if any(s == "dry_run_close" for s in statuses):
+        return "dry_run_close"
+    if all(s.startswith("skipped_") or s in ("close_no_position", "skipped_symbol") for s in statuses):
+        return statuses[0] if len(set(statuses)) == 1 else "skipped_all_books"
+    if any(s == "risk_kernel_refused" for s in statuses):
+        return "risk_kernel_refused"
+    return statuses[-1] or "submitted_all_books"
 
 
 def _action_to_pipeline(action: str) -> PipelineResult | None:
@@ -225,21 +270,136 @@ def submit_paper_from_dossier(
     session: Session,
     dossier_id: str,
     *,
-    portfolio_code: str = BASELINE_CODE,
+    portfolio_code: str | None = None,
     price: float | None = None,
     stop_distance: float | None = None,
     execute: bool | None = None,
     allow_screener: bool = True,
     action_override: str | None = None,
 ) -> dict[str, Any]:
-    """Submit (or dry-run) an Eve potential verdict via Risk Kernel / close path.
+    """Soumet (ou dry-run) le verdict Ève via Risk Kernel / close.
 
-    ``execute`` defaults to ``autonomy_enabled()``. HOLD/ABSTAIN never open.
-    CLOSE closes an existing open lot when autonomy is on; otherwise dry-runs.
-    LONG/SHORT go through Risk Kernel then ``open_user_confirmed``.
-    ``action_override`` lets Phase J follow-up submit CLOSE without mutating
-    the original strategic verdict permanently.
+    ``portfolio_code=None`` ou ``ALL`` → **tous** les portefeuilles virtuels actifs.
+    Un code précis → un seul livre.
+
+    ``execute`` défaut = ``autonomy_enabled()``. HOLD/ABSTAIN n'ouvrent pas.
     """
+    code = (portfolio_code or "").strip()
+    if not code or code.upper() == ALL_VIRTUAL:
+        return _submit_all_virtual_portfolios(
+            session,
+            dossier_id,
+            price=price,
+            stop_distance=stop_distance,
+            execute=execute,
+            allow_screener=allow_screener,
+            action_override=action_override,
+        )
+    return _submit_one_portfolio(
+        session,
+        dossier_id,
+        portfolio_code=code,
+        price=price,
+        stop_distance=stop_distance,
+        execute=execute,
+        allow_screener=allow_screener,
+        action_override=action_override,
+    )
+
+
+def _submit_all_virtual_portfolios(
+    session: Session,
+    dossier_id: str,
+    *,
+    price: float | None = None,
+    stop_distance: float | None = None,
+    execute: bool | None = None,
+    allow_screener: bool = True,
+    action_override: str | None = None,
+) -> dict[str, Any]:
+    """Ève sur chaque portefeuille virtuel actif."""
+    dossier = get_dossier(session, dossier_id)
+    if dossier is None:
+        return {"ok": False, "error": "dossier_not_found", "dossier_id": dossier_id}
+
+    codes = virtual_portfolio_codes(session)
+    per_book: list[dict[str, Any]] = []
+    for code in codes:
+        one = _submit_one_portfolio(
+            session,
+            dossier_id,
+            portfolio_code=code,
+            price=price,
+            stop_distance=stop_distance,
+            execute=execute,
+            allow_screener=allow_screener,
+            action_override=action_override,
+        )
+        per_book.append(one)
+
+    now = datetime.now(timezone.utc).isoformat()
+    agg_status = _aggregate_portfolio_results(per_book)
+    executed_any = any(bool(r.get("executed")) for r in per_book)
+    ok_any = any(bool(r.get("ok")) for r in per_book)
+    auto = autonomy_enabled()
+
+    dossier = get_dossier(session, dossier_id)
+    verdict = None
+    if dossier is not None:
+        verdict = get_verdict(session, dossier.verdict_id) if dossier.verdict_id else None
+        dossier.execution_status = agg_status
+        _patch_verdict(
+            verdict,
+            paper_submit_at=now,
+            status=agg_status,
+            autonomy_enabled=auto,
+            portfolios=[
+                {
+                    "portfolio_code": r.get("portfolio_code"),
+                    "status": r.get("status"),
+                    "executed": r.get("executed"),
+                    "position_id": r.get("position_id"),
+                    "risk_authorization": r.get("risk_authorization"),
+                }
+                for r in per_book
+            ],
+            executed=executed_any,
+            order_submitted=any(bool(r.get("order_submitted")) for r in per_book),
+        )
+        if executed_any and verdict is not None:
+            verdict.status = "authorized"
+        session.flush()
+
+    return {
+        "schema": "ichivol.eve.paper_submit.v1",
+        "dossier_id": dossier_id,
+        "symbol": dossier.symbol if dossier else None,
+        "timeframe": dossier.timeframe if dossier else None,
+        "portfolio_code": ALL_VIRTUAL,
+        "portfolios": per_book,
+        "portfolio_codes": codes,
+        "autonomy_enabled": auto,
+        "ok": ok_any,
+        "status": agg_status,
+        "executed": executed_any,
+        "order_submitted": any(bool(r.get("order_submitted")) for r in per_book),
+        "evaluated_at": now,
+        "note": "Ève → tous les portefeuilles virtuels actifs",
+    }
+
+
+def _submit_one_portfolio(
+    session: Session,
+    dossier_id: str,
+    *,
+    portfolio_code: str,
+    price: float | None = None,
+    stop_distance: float | None = None,
+    execute: bool | None = None,
+    allow_screener: bool = True,
+    action_override: str | None = None,
+) -> dict[str, Any]:
+    """Soumet sur un seul portefeuille virtuel."""
     dossier = get_dossier(session, dossier_id)
     if dossier is None:
         return {"ok": False, "error": "dossier_not_found", "dossier_id": dossier_id}
@@ -344,6 +504,17 @@ def submit_paper_from_dossier(
         result["ok"] = False
         result["error"] = "unknown_portfolio"
         result["status"] = "refused"
+        return result
+
+    # Livre dédié (ex. futures/crypto) : pas d'ouverture hors de son univers.
+    # CLOSE reste possible s'il y a déjà une position sur ce livre.
+    profile = getattr(portfolio, "strategy_profile", None) or {}
+    symbol_ok = paper_engine.trades_symbol(profile if isinstance(profile, dict) else {}, dossier.symbol)
+    if action in ("LONG", "SHORT") and not symbol_ok:
+        result["ok"] = True
+        result["status"] = "skipped_symbol"
+        result["risk_authorization"] = "not_applicable"
+        result["note"] = f"{portfolio_code} ne trade pas {dossier.symbol}"
         return result
 
     px, stop, mkt_source = resolve_market_inputs(

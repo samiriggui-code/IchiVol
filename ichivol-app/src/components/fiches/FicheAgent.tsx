@@ -218,7 +218,7 @@ export function FicheAgent({
             {badge('IA CENTRALE', 'green')}
             <p>
               Une seule intelligence Ève · modes Analyst / Challenger / Guardian / Shadow ·
-              test paper sur livres existants (jamais live).
+              trade paper sur tous les livres virtuels (jamais live).
             </p>
             <div className="statline">
               <span>Exécution</span>
@@ -226,7 +226,7 @@ export function FicheAgent({
             </div>
             <div className="statline">
               <span>Portefeuille</span>
-              <b>existants seulement</b>
+              <b>tous les virtuels actifs</b>
             </div>
             <div className="statline">
               <span>Risk Kernel</span>

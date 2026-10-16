@@ -362,14 +362,14 @@ export function AgentsPage() {
           <span className="tag green">IA CENTRALE</span>
           <div className="agent-icon">◆</div>
           <h2>Hub dossiers</h2>
-          <p>Dossiers, modes, Risk Kernel → ouverture paper si autonomie on.</p>
+          <p>Dossiers, modes, Risk Kernel → trade paper sur tous les livres virtuels si autonomie on.</p>
           <div className="statline">
             <span>Exécution</span>
             <b>paper si autonomie on</b>
           </div>
           <div className="statline">
             <span>Portefeuille</span>
-            <b>existants seulement</b>
+            <b>tous les virtuels actifs</b>
           </div>
           <div className="statline">
             <span>Permission</span>

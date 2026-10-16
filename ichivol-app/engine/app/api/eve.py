@@ -20,7 +20,7 @@ from app.eve.dossier import (
 )
 from app.eve.followup import followup_summary, list_tracked, run_followup, sync_outcomes
 from app.eve.orchestrator import evaluate_opportunity
-from app.eve.paper_submit import autonomy_enabled, submit_paper_from_dossier
+from app.eve.paper_submit import ALL_VIRTUAL, autonomy_enabled, submit_paper_from_dossier
 from app.eve.primitive_study import run_primitive_routing_study
 from app.eve.event_radar import analyze_symbol as event_radar_analyze
 from app.eve.settings_schema import apply_patch, settings_bundle
@@ -184,23 +184,23 @@ def eve_paper_autonomy() -> dict:
         "autonomy_enabled": autonomy_enabled(),
         "env": "EVE_PAPER_AUTONOMY",
         "default": False,
-        "note": "No Eve portfolio; existing paper books only; never live trading",
+        "note": "Ève trade sur tous les portefeuilles virtuels actifs; jamais live",
+        "default_portfolio_code": ALL_VIRTUAL,
     }
 
 
 @router.post("/dossiers/{dossier_id}/paper-submit")
 def eve_paper_submit(
     dossier_id: str,
-    portfolio_code: str = BASELINE_CODE,
+    portfolio_code: str | None = None,
     price: float | None = None,
     stop_distance: float | None = None,
     execute: bool | None = None,
 ) -> dict:
-    """V2: submit potential LONG/SHORT via Risk Kernel (default dry-run).
+    """Soumet LONG/SHORT/CLOSE via Risk Kernel.
 
-    ``execute`` defaults to the autonomy flag. Passing ``execute=true`` while
-    autonomy is off is ignored unless autonomy is on — callers must enable
-    ``EVE_PAPER_AUTONOMY`` to open paper lots.
+    Sans ``portfolio_code`` (ou ``ALL``) → tous les portefeuilles virtuels.
+    Un code précis → un seul livre. Autonomie off = dry-run.
     """
     session = SessionLocal()
     try:

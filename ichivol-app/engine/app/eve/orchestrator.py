@@ -331,16 +331,15 @@ def evaluate_opportunity(
         result["dossier_id"] = dossier.id
         result["verdict_id"] = dossier.verdict_id
 
-        # Paper path on existing portfolios: execute follows EVE_PAPER_AUTONOMY.
-        # When autonomy off → Risk Kernel dry-run only. When on → Eve can open/close paper.
+        # Paper path: tous les portefeuilles virtuels actifs.
+        # Autonomy off → dry-run Risk Kernel. On → Ève ouvre/ferme paper sur chaque livre.
         if paper_dry_run:
             try:
                 auto = autonomy_enabled()
                 paper = submit_paper_from_dossier(
                     session,
                     dossier.id,
-                    # None → submit_paper_from_dossier uses autonomy_enabled()
-                    # (was hard-coded False — blocked paper tests even with flag on).
+                    portfolio_code=None,  # tous les livres virtuels
                     execute=None,
                     allow_screener=True,
                 )
@@ -348,10 +347,12 @@ def evaluate_opportunity(
                 result["execution_status"] = dossier.execution_status
                 verdict["risk_authorization"] = paper.get("risk_authorization")
                 verdict["paper_submit_status"] = paper.get("status")
+                n_books = len(paper.get("portfolio_codes") or paper.get("portfolios") or [])
                 verdict["note"] = (
                     "Potential + Risk Kernel"
                     + (" execute" if auto and paper.get("executed") else " dry-run")
                     + f"; autonomy={'on' if auto else 'off'}"
+                    + f"; livres={n_books or 1}"
                 )
             except Exception as exc:  # noqa: BLE001 — evaluation must not fail on RK path
                 result["paper_submit"] = {
