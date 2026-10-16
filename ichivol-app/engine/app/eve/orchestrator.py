@@ -23,6 +23,7 @@ from app.eve.modes import (
     run_shadow_mode,
     synthesize_action,
 )
+from app.eve.paper_submit import autonomy_enabled, submit_paper_from_dossier
 
 
 def evaluate_opportunity(
@@ -33,8 +34,13 @@ def evaluate_opportunity(
     persist: bool = True,
     use_jev: bool | None = None,
     policy_override: dict[str, Any] | None = None,
+    paper_dry_run: bool = True,
 ) -> dict[str, Any]:
-    """Run Eve Intelligence evaluation. Never places orders."""
+    """Run Eve Intelligence evaluation. Never places orders.
+
+    When ``persist`` and ``paper_dry_run``, runs Risk Kernel dry-run via
+    ``paper_submit`` (autonomy still gates any real open — default off).
+    """
     policy = active_policy(policy_override)
     routing = policy.get("routing") or {}
     context = build_engine_context(symbol, timeframe)
@@ -187,8 +193,34 @@ def evaluate_opportunity(
                 "verdict": verdict,
             },
         )
-        session.commit()
+        session.flush()
         result["dossier_id"] = dossier.id
         result["verdict_id"] = dossier.verdict_id
+
+        # V2 Phase H dry-run: record Risk Kernel stance without opening.
+        if paper_dry_run:
+            try:
+                paper = submit_paper_from_dossier(
+                    session,
+                    dossier.id,
+                    execute=False,  # always dry-run from evaluate path
+                    allow_screener=True,
+                )
+                result["paper_submit"] = paper
+                result["execution_status"] = dossier.execution_status
+                verdict["risk_authorization"] = paper.get("risk_authorization")
+                verdict["paper_submit_status"] = paper.get("status")
+                verdict["note"] = (
+                    "Potential + Risk Kernel dry-run; "
+                    f"autonomy={'on' if autonomy_enabled() else 'off'}"
+                )
+            except Exception as exc:  # noqa: BLE001 — evaluation must not fail on RK dry-run
+                result["paper_submit"] = {
+                    "ok": False,
+                    "error": type(exc).__name__,
+                    "status": "dry_run_error",
+                }
+
+        session.commit()
 
     return result

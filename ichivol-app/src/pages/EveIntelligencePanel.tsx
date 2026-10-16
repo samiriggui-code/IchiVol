@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 type DossierRow = {
   id: string
@@ -9,7 +9,12 @@ type DossierRow = {
   execution_status: string
   created_at: string | null
   coherence?: { score?: number }
-  verdict?: { action?: string; status?: string; coherence_score?: number | null }
+  verdict?: {
+    action?: string
+    status?: string
+    coherence_score?: number | null
+    body?: { risk_authorization?: string; paper_submit_status?: string }
+  }
 }
 
 type Health = {
@@ -54,15 +59,24 @@ export function EveIntelligencePanel() {
   const [paperAutonomy, setPaperAutonomy] = useState<PaperAutonomy | null>(null)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [lastSubmit, setLastSubmit] = useState<string>("")
+
+  const reloadDossiers = useCallback(async (signal?: AbortSignal) => {
+    const r = await fetch("/api/engine/eve/dossiers?limit=20", {
+      credentials: "include",
+      signal,
+    })
+    if (!r.ok) throw new Error(`dossiers ${r.status}`)
+    const data = await r.json()
+    setItems(Array.isArray(data?.results) ? data.results : [])
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
     const { signal } = controller
     Promise.all([
-      fetch("/api/engine/eve/dossiers?limit=20", { credentials: "include", signal }).then(async (r) => {
-        if (!r.ok) throw new Error(`dossiers ${r.status}`)
-        return r.json()
-      }),
+      reloadDossiers(signal),
       fetch("/api/engine/jev-shadow/health", { credentials: "include", signal }).then(async (r) => {
         if (!r.ok) return null
         return r.json()
@@ -76,9 +90,8 @@ export function EveIntelligencePanel() {
         return r.json()
       }),
     ])
-      .then(([dossiers, h, cal, auto]) => {
+      .then(([, h, cal, auto]) => {
         if (controller.signal.aborted) return
-        setItems(Array.isArray(dossiers?.results) ? dossiers.results : [])
         setHealth(h)
         setCalibration(cal)
         setPaperAutonomy(auto)
@@ -90,7 +103,28 @@ export function EveIntelligencePanel() {
         if (!controller.signal.aborted) setLoading(false)
       })
     return () => controller.abort()
-  }, [])
+  }, [reloadDossiers])
+
+  async function runDrySubmit(dossierId: string) {
+    setBusyId(dossierId)
+    setLastSubmit("")
+    try {
+      const r = await fetch(`/api/engine/eve/dossiers/${dossierId}/paper-submit`, {
+        method: "POST",
+        credentials: "include",
+      })
+      const data = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(data?.detail || `submit ${r.status}`)
+      setLastSubmit(
+        `${data.symbol ?? dossierId}: ${data.status ?? "?"} · RK ${data.risk_authorization ?? "—"}`,
+      )
+      await reloadDossiers()
+    } catch (e) {
+      setLastSubmit(String(e))
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   return (
     <section className="card">
@@ -99,8 +133,8 @@ export function EveIntelligencePanel() {
       </div>
       <div className="card-body">
         <p>
-          Une seule intelligence Ève. Modes Analyst / Challenger / Guardian / Shadow. Verdicts{" "}
-          <b>potentiels</b> uniquement — aucune exécution autonome.
+          Une seule intelligence Ève. Modes Analyst / Challenger / Guardian / Shadow. Verdicts
+          potentiels — Risk Kernel en dry-run tant que l’autonomie paper est off.
         </p>
 
         <div className="statline">
@@ -151,12 +185,20 @@ export function EveIntelligencePanel() {
         </p>
 
         <h3 style={{ marginTop: 16 }}>Dossiers récents</h3>
+        {lastSubmit ? (
+          <p style={{ fontSize: 12 }} role="status">
+            Dernier dry-run : {lastSubmit}
+          </p>
+        ) : null}
         {loading ? (
           <p>Chargement…</p>
         ) : error ? (
           <p role="alert">{error}</p>
         ) : items.length === 0 ? (
-          <p>Aucun dossier. Déclencher POST /api/engine/eve/evaluate/{"{symbol}"} (paper non touché).</p>
+          <p>
+            Aucun dossier. Déclencher{" "}
+            <code>POST /api/engine/eve/evaluate/{"{symbol}"}</code> (persiste + dry-run RK).
+          </p>
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table>
@@ -168,6 +210,7 @@ export function EveIntelligencePanel() {
                   <th>Ève</th>
                   <th>Cohérence</th>
                   <th>Exécution</th>
+                  <th>RK dry-run</th>
                 </tr>
               </thead>
               <tbody>
@@ -191,6 +234,16 @@ export function EveIntelligencePanel() {
                       </td>
                       <td>{typeof coh === "number" ? coh.toFixed(2) : "—"}</td>
                       <td>{d.execution_status}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="ghost"
+                          disabled={busyId === d.id}
+                          onClick={() => runDrySubmit(d.id)}
+                        >
+                          {busyId === d.id ? "…" : "Dry-run"}
+                        </button>
+                      </td>
                     </tr>
                   )
                 })}

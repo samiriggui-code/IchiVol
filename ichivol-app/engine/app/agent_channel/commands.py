@@ -1492,3 +1492,50 @@ def cmd_get_eve_dossier(args: dict) -> dict:
         return dossier_to_dict(d, v)
     finally:
         session.close()
+
+
+def cmd_get_eve_paper_autonomy(args: dict) -> dict:
+    """V2 — flag d'autonomie paper (lecture seule)."""
+    from app.eve.paper_submit import AUTONOMY_ENV, autonomy_enabled
+
+    return {
+        "autonomy_enabled": autonomy_enabled(),
+        "env": AUTONOMY_ENV,
+        "default": False,
+        "note": "Agent channel never opens/closes; use HTTP paper-submit when autonomy is on",
+    }
+
+
+def cmd_submit_eve_paper(args: dict) -> dict:
+    """V2 — dry-run Risk Kernel / CLOSE pour un dossier (jamais d'exécution ici)."""
+    from app.db.session import SessionLocal
+    from app.eve.paper_submit import submit_paper_from_dossier
+    from app.paper.strategy_profiles import BASELINE_CODE
+
+    dossier_id = _require_str(args, "dossier_id")
+    portfolio_code = str(args.get("portfolio_code") or BASELINE_CODE)
+    price = args.get("price")
+    stop_distance = args.get("stop_distance")
+    if price is not None and not isinstance(price, (int, float)):
+        raise CommandError("price must be number")
+    if stop_distance is not None and not isinstance(stop_distance, (int, float)):
+        raise CommandError("stop_distance must be number")
+
+    session = SessionLocal()
+    try:
+        # Channel invariant: never open/close — always execute=False.
+        out = submit_paper_from_dossier(
+            session,
+            dossier_id,
+            portfolio_code=portfolio_code,
+            price=float(price) if price is not None else None,
+            stop_distance=float(stop_distance) if stop_distance is not None else None,
+            execute=False,
+            allow_screener=True,
+        )
+        if out.get("error") == "dossier_not_found":
+            raise CommandError("dossier_not_found")
+        session.commit()
+        return out
+    finally:
+        session.close()

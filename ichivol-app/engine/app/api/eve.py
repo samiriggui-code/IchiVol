@@ -39,8 +39,14 @@ def eve_evaluate(
     timeframe: str = "1h",
     persist: bool = True,
     use_jev: bool | None = None,
+    paper_dry_run: bool = True,
 ) -> dict:
-    """Run Analyst→Challenger→Guardian→Shadow synthesis. Potential only."""
+    """Run Analyst→Challenger→Guardian→Shadow synthesis. Potential only.
+
+    When persist=true, optionally dry-runs Risk Kernel (``paper_dry_run``, default
+    true). Never opens unless ``EVE_PAPER_AUTONOMY`` is enabled *and* a separate
+    paper-submit with execute is used.
+    """
     if not symbol.replace("-", "").replace("_", "").isalnum():
         raise HTTPException(status_code=422, detail="Invalid symbol")
     session = SessionLocal() if persist else None
@@ -51,6 +57,7 @@ def eve_evaluate(
             session=session,
             persist=persist and session is not None,
             use_jev=use_jev,
+            paper_dry_run=paper_dry_run,
         )
     finally:
         if session is not None:

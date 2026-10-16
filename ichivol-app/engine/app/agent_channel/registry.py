@@ -70,6 +70,8 @@ from app.agent_channel.commands import (
     cmd_evaluate_eve,
     cmd_list_eve_dossiers,
     cmd_get_eve_dossier,
+    cmd_get_eve_paper_autonomy,
+    cmd_submit_eve_paper,
 )
 
 Handler = Callable[[dict], dict]
@@ -131,6 +133,26 @@ TOOLS: dict[str, ToolSpec] = {
             True,
             {"dossier_id": "str, requis"},
             cmd_get_eve_dossier,
+        ),
+        ToolSpec(
+            "get_eve_paper_autonomy",
+            "Ève V2 — lit le flag EVE_PAPER_AUTONOMY (défaut off). Lecture seule.",
+            True,
+            {},
+            cmd_get_eve_paper_autonomy,
+        ),
+        ToolSpec(
+            "submit_eve_paper",
+            "Ève V2 — dry-run Risk Kernel / CLOSE pour un dossier. Jamais d'ouverture "
+            "ni de fermeture depuis le channel (execute forcé à false).",
+            True,
+            {
+                "dossier_id": "str, requis",
+                "portfolio_code": "str, défaut baseline",
+                "price": "float optionnel",
+                "stop_distance": "float optionnel",
+            },
+            cmd_submit_eve_paper,
         ),
         ToolSpec(
             "get_symbol_context",
