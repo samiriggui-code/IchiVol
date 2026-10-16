@@ -14,17 +14,6 @@ from app.jev.questions import choice_question, noul_question, score_question
 from app.jev.shadow import compare_decision
 
 
-def _fact_map(context: dict[str, Any]) -> dict[str, Any]:
-    out: dict[str, Any] = {}
-    for f in context.get("facts") or []:
-        if not isinstance(f, dict):
-            continue
-        key = str(f.get("id") or f.get("field") or "")
-        if key:
-            out[key] = f
-    return out
-
-
 def _values_by_engine(context: dict[str, Any], engine: str) -> list[dict[str, Any]]:
     return list((context.get("engines") or {}).get(engine) or [])
 
