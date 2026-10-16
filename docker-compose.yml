@@ -58,9 +58,10 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ichivol}:${POSTGRES_PASSWORD}@postgres:5432/ichivol_engine
       ENGINE_API_PREFIX: /api/engine
-      # System One: jevos (local VPS, default) | typesafe (hosted official key).
+      # System One: typesafe (JEV API) primary; jevos = credit/quota fallback.
       # OpenRouter remains Copilot chat only — never used as JEV transport.
-      JEV_PROVIDER: ${JEV_PROVIDER:-jevos}
+      JEV_PROVIDER: ${JEV_PROVIDER:-typesafe}
+      JEV_FALLBACK: ${JEV_FALLBACK:-jevos}
       JEV_URL: ${JEV_URL:-http://jevos-v4:8017}
       JEV_MODEL: ${JEV_MODEL:-jev-latest}
       JEV_SHADOW_ENABLED: ${JEV_SHADOW_ENABLED:-false}

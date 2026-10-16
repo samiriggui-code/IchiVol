@@ -306,10 +306,43 @@ export function EveIntelligencePanel() {
           })}
         </ul>
         <p style={{ fontSize: 12, color: "var(--muted)" }}>
-          Routage NOUL/CHOICE/SCORE issu de l’étude{" "}
-          <code>GET /api/engine/eve/primitive-study</code> — pas d’appel systématique des 3
-          primitives sur chaque mode.
+          Policy paper test : chaque mode appelle NOUL + CHOICE + SCORE via JEV API (jevos si plus de crédit). L’étude{" "}
+          <code>/eve/primitive-study</code> reste en observe (calibration), plus le filtre
+          sélectif d’avant.
         </p>
+        {calibration?.policy?.routing ? (
+          <div style={{ overflowX: "auto", marginTop: 8 }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>MODE</th>
+                  <th>NOUL</th>
+                  <th>CHOICE</th>
+                  <th>SCORE</th>
+                </tr>
+              </thead>
+              <tbody>
+                {MODES.map((m) => {
+                  const key = `${m.id}_primitives` as keyof NonNullable<
+                    NonNullable<Calibration["policy"]>["routing"]
+                  >
+                  const prims = (calibration.policy?.routing?.[key] as string[] | undefined) ?? []
+                  const has = (p: string) => prims.includes(p)
+                  return (
+                    <tr key={m.id}>
+                      <td>
+                        <b>{m.name}</b>
+                      </td>
+                      <td>{has("noul") ? "●" : "—"}</td>
+                      <td>{has("choice") ? "●" : "—"}</td>
+                      <td>{has("score") ? "●" : "—"}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
 
         <h3 style={{ marginTop: 16 }}>Suivi (Phase J)</h3>
         <p style={{ fontSize: 12, color: "var(--muted)" }}>

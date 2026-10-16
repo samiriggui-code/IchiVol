@@ -101,7 +101,7 @@ function loadLocal(): Record<string, string> {
 
 export function SettingsPage() {
   const llmLive = useLlmStatus()
-  const [settingsTab, setSettingsTab] = useState<SettingsTab>('Limites de risque')
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('LLM')
   const [local, setLocal] = useState(loadLocal)
   const [engine, setEngine] = useState<AppSettings | null>(null)
   const [saved, setSaved] = useState(false)
@@ -305,9 +305,14 @@ export function SettingsPage() {
   function renderEveField(item: EveSettingItem): ReactNode {
     const value = eveDraft[item.key]
     const disabled = !item.writable || Boolean(item.read_only)
+    const label = item.is_advanced ? `${item.label} · avancé` : item.label
     if (item.type === 'boolean') {
       return (
-        <label key={item.key} className="field" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <label key={item.key} className="checkrow">
+          <span className="check-copy">
+            {label}
+            {item.description ? <small>{item.description}</small> : null}
+          </span>
           <input
             type="checkbox"
             checked={Boolean(value)}
@@ -316,23 +321,13 @@ export function SettingsPage() {
               setEveDraft((prev) => ({ ...prev, [item.key]: e.target.checked }))
             }
           />
-          <span>
-            {item.label}
-            {item.is_advanced ? ' · avancé' : ''}
-            {item.description ? (
-              <small style={{ display: 'block', color: 'var(--muted)' }}>{item.description}</small>
-            ) : null}
-          </span>
         </label>
       )
     }
     if (item.type === 'number') {
       return (
         <div className="field" key={item.key}>
-          <label htmlFor={`eve-${item.key}`}>
-            {item.label}
-            {item.is_advanced ? ' · avancé' : ''}
-          </label>
+          <label htmlFor={`eve-${item.key}`}>{label}</label>
           <input
             id={`eve-${item.key}`}
             type="number"
@@ -353,10 +348,7 @@ export function SettingsPage() {
     }
     return (
       <div className="field" key={item.key}>
-        <label htmlFor={`eve-${item.key}`}>
-          {item.label}
-          {item.is_advanced ? ' · avancé' : ''}
-        </label>
+        <label htmlFor={`eve-${item.key}`}>{label}</label>
         <input
           id={`eve-${item.key}`}
           type={item.type === 'password' ? 'password' : 'text'}
@@ -371,6 +363,15 @@ export function SettingsPage() {
       </div>
     )
   }
+
+  const saveHint =
+    settingsTab === 'Limites de risque'
+      ? 'Lecture seule — plafonds du profil paper ICHIVOL_BASELINE_V1.'
+      : settingsTab === 'Ève / JEV'
+        ? 'Knobs Ève écrits sur le moteur. Secrets JEV / TypeSafe restent en .env.'
+        : settingsTab === 'Connexions'
+          ? 'Statut lecture seule — rien à enregistrer ici.'
+          : 'Marché, alertes et LLM sont écrits sur votre compte.'
 
   const llmRows: LlmConnection[] =
     engine?.llmConnections && engine.llmConnections.length > 0
@@ -413,22 +414,32 @@ export function SettingsPage() {
     }
   }
 
+  const eveAutonomy = Boolean(eveValues.EVE_PAPER_AUTONOMY)
+  const eveRadar = Boolean(eveValues.EVENT_RADAR_ENABLED)
+  const showSave =
+    settingsTab !== 'Limites de risque' && settingsTab !== 'Connexions'
+
   return (
     <div className="params-page">
       <div className="page-head">
         <div>
-          <div className="eyebrow">11 / ICHIVOL WORKSPACE</div>
+          <div className="eyebrow">IchiVol · Desk</div>
           <h1>Paramètres</h1>
-          <p className="subtitle">Votre environnement de travail.</p>
+          <p className="subtitle">LLM, Ève / JEV API, marché, alertes — paper only.</p>
         </div>
-        <div className="actions">{badge('DONNÉES LIVE', 'gray')}</div>
+        <div className="actions">
+          {badge(engine ? 'MOTEUR OK' : 'MOTEUR OFF', engine ? 'green' : 'red')}
+          {badge(eveAutonomy ? 'ÈVE AUTO ON' : 'ÈVE DRY-RUN', eveAutonomy ? 'green' : 'amber')}
+        </div>
       </div>
 
-      <div className="tabs">
+      <div className="tabs" role="tablist" aria-label="Sections paramètres">
         {TABS.map((t) => (
           <button
             key={t}
             type="button"
+            role="tab"
+            aria-selected={settingsTab === t}
             className={settingsTab === t ? 'active' : ''}
             onClick={() => setSettingsTab(t)}
           >
@@ -437,7 +448,7 @@ export function SettingsPage() {
         ))}
       </div>
 
-      <div className="grid">
+      <div className="params-layout">
         <section className="card">
           <div className="card-head">
             <h2>{settingsTab}</h2>
@@ -445,9 +456,9 @@ export function SettingsPage() {
           <form id="settings-form" className="card-body" onSubmit={(ev) => void onSave(ev)}>
             {settingsTab === 'Limites de risque' && (
               <>
-                <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  Plafonds appliqués par le profil paper ICHIVOL_BASELINE_V1. Ils ne sont pas des
-                  préférences navigateur : les modifier ici ne changerait pas le risk kernel.
+                <p className="lede">
+                  Plafonds du profil paper ICHIVOL_BASELINE_V1 — lecture seule. Le Risk Kernel
+                  ne se configure pas depuis le navigateur.
                 </p>
                 <div className="statline">
                   <span>Risque par trade</span>
@@ -474,8 +485,9 @@ export function SettingsPage() {
 
             {settingsTab === 'Marché et univers' && (
               <>
+                <p className="lede">Sources et paramètres Ichimoku × RVOL du moteur.</p>
                 <div className="field">
-                  <span>Sources de données</span>
+                  <span className="label">Sources de données</span>
                   {(
                     [
                       ['binance', 'Binance'],
@@ -484,7 +496,7 @@ export function SettingsPage() {
                     ] as const
                   ).map(([id, label]) => (
                     <label className="checkrow" key={id}>
-                      {label}
+                      <span className="check-copy">{label}</span>
                       <input
                         type="checkbox"
                         checked={sources.includes(id)}
@@ -498,7 +510,7 @@ export function SettingsPage() {
                       />
                     </label>
                   ))}
-                  <small>Enregistré sur votre compte (activeSources).</small>
+                  <small>Enregistré sur le compte (activeSources).</small>
                 </div>
                 <div className="field">
                   <label htmlFor="rvol">Seuil RVOL</label>
@@ -512,7 +524,7 @@ export function SettingsPage() {
                     onChange={(ev) => setRvol(ev.target.value)}
                   />
                 </div>
-                <div className="grid equal">
+                <div className="field-row">
                   {(
                     [
                       ['tenkan', 'Tenkan', tenkan, setTenkan],
@@ -538,6 +550,9 @@ export function SettingsPage() {
 
             {settingsTab === 'LLM' && (
               <>
+                <p className="lede">
+                  Copilot / chat. Distinct de JEV API / System One — onglet Ève / JEV.
+                </p>
                 <div className="field">
                   <label htmlFor="llmProvider">Provider</label>
                   <select
@@ -561,10 +576,10 @@ export function SettingsPage() {
                       </option>
                     ))}
                   </select>
-                  <small>OpenRouter reste le provider par défaut (une clé, plusieurs modèles).</small>
+                  <small>OpenRouter par défaut (une clé, plusieurs modèles).</small>
                 </div>
                 <div className="field">
-                  <label htmlFor="llmModel">Modèle d’analyse</label>
+                  <label htmlFor="llmModel">Modèle</label>
                   <select
                     id="llmModel"
                     name="llmModel"
@@ -599,13 +614,13 @@ export function SettingsPage() {
                   />
                   <small>
                     {engine
-                      ? `État : ${engine.llmProvider}${engine.llmApiKeySet ? ' · clé enregistrée' : ' · pas de clé UI'}${engine.llmReady ? ' · prêt' : ' · non prêt'}. Vide = conserver la clé actuelle.`
-                      : 'Settings engine : —.'}
+                      ? `${engine.llmProvider}${engine.llmApiKeySet ? ' · clé OK' : ' · pas de clé UI'}${engine.llmReady ? ' · prêt' : ' · non prêt'}. Vide = garder la clé.`
+                      : 'Moteur indisponible.'}
                   </small>
                 </div>
                 {engine?.llmApiKeySet && (
                   <label className="checkrow">
-                    Effacer la clé enregistrée
+                    <span className="check-copy">Effacer la clé enregistrée</span>
                     <input
                       type="checkbox"
                       checked={clearKey}
@@ -613,37 +628,29 @@ export function SettingsPage() {
                     />
                   </label>
                 )}
-                <button
-                  type="button"
-                  className="suggestion"
-                  disabled={!engine || testing}
-                  onClick={() => {
-                    void probeProvider(llmProvider, llmModel)
-                  }}
-                >
-                  {testing ? 'Test…' : 'Tester la connexion'}
-                </button>
-                {testResult && (
-                  <div
-                    className="notice"
-                    role="status"
-                    style={{
-                      marginTop: 12,
-                      background: testResult.ok ? '#e7f3ee' : '#f8ecea',
-                      borderColor: testResult.ok ? '#c5ddd4' : '#e8cfc9',
-                      color: testResult.ok ? '#168579' : '#c8412f',
+                <div className="btn-row">
+                  <button
+                    type="button"
+                    className="suggestion"
+                    disabled={!engine || testing}
+                    onClick={() => {
+                      void probeProvider(llmProvider, llmModel)
                     }}
                   >
+                    {testing ? 'Test…' : 'Tester la connexion'}
+                  </button>
+                </div>
+                {testResult && (
+                  <div className={`notice ${testResult.ok ? 'ok' : 'err'}`} role="status">
                     {testResult.ok ? 'Connecté' : 'Échec'} · {providerLabel(testResult.provider)} ·{' '}
                     {testResult.model} · {testResult.message}
                     {testResult.latencyMs ? ` · ${testResult.latencyMs} ms` : ''}
                   </div>
                 )}
 
-                <h3 style={{ marginTop: 22 }}>LLM enregistrés</h3>
-                <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  Chaque provider avec une clé (interface ou serveur) apparaît ici. « Connecté »
-                  veut dire que le dernier test a répondu.
+                <h3 className="section-title">Providers enregistrés</h3>
+                <p className="hint">
+                  « Connecté » = dernier test OK. Distinct de JEV API / System One.
                 </p>
                 <div className="table-wrap">
                   <table>
@@ -692,11 +699,11 @@ export function SettingsPage() {
                           <tr key={row.provider}>
                             <td>
                               <b>{providerLabel(row.provider)}</b>
-                              {row.active ? <small>provider actif</small> : null}
+                              {row.active ? <small>actif</small> : null}
                             </td>
                             <td>{badge(status, tone)}</td>
                             <td>{modelShown}</td>
-                            <td>{row.connected ? 'Configurée' : 'Absente'}</td>
+                            <td>{row.connected ? 'OK' : '—'}</td>
                             <td>{sourceLabel(row.keySource)}</td>
                             <td>{latency != null ? `${latency} ms` : '—'}</td>
                             <td>
@@ -720,23 +727,24 @@ export function SettingsPage() {
 
             {settingsTab === 'Ève / JEV' && (
               <>
-                <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  Schéma moteur (Basic / Advanced). Les secrets restent en{' '}
-                  <code>.env</code> — jamais écrits depuis l’UI. Pas de broker live.
+                <p className="lede">
+                  Knobs moteur pour les 4 modes Ève. Secrets{' '}
+                  <code>JEV_*</code> / <code>TYPESAFE_*</code> uniquement en <code>.env</code> —
+                  jamais via l’UI.
                 </p>
-                <div className="field" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <label className="toggle-row">
                   <input
                     id="eve-advanced"
                     type="checkbox"
                     checked={eveAdvanced}
                     onChange={(e) => setEveAdvanced(e.target.checked)}
                   />
-                  <label htmlFor="eve-advanced">Afficher les knobs avancés</label>
-                </div>
+                  Afficher les knobs avancés
+                </label>
                 {!eveLoaded || !eveSchema ? (
-                  <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-                    Schéma indisponible — démarre le moteur Python pour charger{' '}
-                    <code>/api/engine/eve/settings/schema</code>.
+                  <p className="hint">
+                    Schéma indisponible — démarre le moteur Python (
+                    <code>/api/engine/eve/settings/schema</code>).
                   </p>
                 ) : (
                   sortedSchemaGroups(eveSchema).map(([groupKey, group]) => {
@@ -745,8 +753,8 @@ export function SettingsPage() {
                     )
                     if (items.length === 0) return null
                     return (
-                      <div key={groupKey} style={{ marginTop: 16 }}>
-                        <h3 style={{ marginTop: 0 }}>{group.title}</h3>
+                      <div key={groupKey} className="eve-group">
+                        <h3>{group.title}</h3>
                         {items.map((item) => renderEveField(item))}
                       </div>
                     )
@@ -757,6 +765,7 @@ export function SettingsPage() {
 
             {settingsTab === 'Alertes' && (
               <>
+                <p className="lede">Préférences push sur cet appareil.</p>
                 {(
                   [
                     ['targetStop', 'Alerte stop / objectif'],
@@ -765,7 +774,7 @@ export function SettingsPage() {
                   ] as const
                 ).map(([key, label]) => (
                   <label className="checkrow" key={key}>
-                    {label}
+                    <span className="check-copy">{label}</span>
                     <input
                       type="checkbox"
                       checked={alertPrefs[key]}
@@ -775,7 +784,7 @@ export function SettingsPage() {
                     />
                   </label>
                 ))}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
+                <div className="btn-row">
                   <button
                     type="button"
                     className="suggestion"
@@ -807,102 +816,89 @@ export function SettingsPage() {
                       })
                     }}
                   >
-                    Désabonner cet appareil
+                    Désabonner
                   </button>
                 </div>
-                {pushMsg && (
-                  <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 10 }} role="status">
+                {pushMsg ? (
+                  <p className="hint" role="status">
                     {pushMsg}
                   </p>
-                )}
+                ) : null}
               </>
             )}
 
             {settingsTab === 'Connexions' && (
               <>
-                <div className="field">
-                  <label>Connexion moteur</label>
-                  <input
-                    value={engine ? 'Connectée' : 'Non connectée'}
-                    disabled
-                    readOnly
-                  />
-                  <small>
-                    {engine
-                      ? 'Contrat API settings OK.'
-                      : 'La connexion nécessite le contrat API de votre moteur.'}
-                  </small>
+                <p className="lede">État des liens — lecture seule.</p>
+                <div className="statline">
+                  <span>Moteur</span>
+                  <b>{badge(engine ? 'CONNECTÉ' : 'OFF', engine ? 'green' : 'red')}</b>
                 </div>
                 <div className="statline">
-                  <span>Données de marché</span>
-                  <b>{badge(engine ? 'LIVE' : '—', 'gray')}</b>
+                  <span>Marché</span>
+                  <b>{badge(engine ? 'LIVE' : '—', engine ? 'green' : 'gray')}</b>
                 </div>
                 <div className="statline">
-                  <span>Broker</span>
+                  <span>Broker live</span>
                   <b>{badge('NON CONNECTÉ', 'gray')}</b>
                 </div>
-                <h3 style={{ marginTop: 18 }}>JEV / jevos (System One)</h3>
-                <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  Knobs opérationnels (timeout, confiance, Event Radar) : onglet{' '}
-                  <b>Ève / JEV</b>. Secrets provider :{' '}
-                  <code>JEV_PROVIDER</code>, <code>JEV_API_KEY</code>,{' '}
-                  <code>TYPESAFE_API_KEY</code> en <code>.env</code>. Risk Kernel inchangé.
+                <div className="statline">
+                  <span>Ève autonomie paper</span>
+                  <b>{badge(eveAutonomy ? 'ON' : 'OFF', eveAutonomy ? 'green' : 'amber')}</b>
+                </div>
+                <div className="statline">
+                  <span>Event Radar</span>
+                  <b>{badge(eveRadar ? 'ON' : 'OFF', eveRadar ? 'green' : 'gray')}</b>
+                </div>
+                <p className="hint">
+                  JEV API (typesafe) + jevos fallback crédit : env moteur. Knobs : onglet
+                  Ève / JEV.
                 </p>
-                <div className="statline">
-                  <span>Endpoint health</span>
-                  <b>/api/engine/jev-shadow/health</b>
-                </div>
-                <div className="statline">
-                  <span>Schéma knobs</span>
-                  <b>/api/engine/eve/settings/schema</b>
-                </div>
               </>
             )}
 
-            {error && (
-              <p style={{ fontSize: 12, color: 'var(--red)', marginTop: 12 }} role="alert">
+            {error ? (
+              <p className="alert" role="alert">
                 {error}
               </p>
-            )}
+            ) : null}
 
-            <button type="submit" className="primary" disabled={saving}>
-              {saving ? 'Enregistrement…' : saved ? 'Enregistré' : 'Enregistrer les préférences'}
-            </button>
-            <p style={{ fontSize: 10, color: 'var(--muted)' }}>
-              Marché, alertes et LLM sont écrits sur votre compte. Les plafonds de risque affichés
-              sont ceux du profil paper, en lecture seule.
-            </p>
+            <div className="form-foot">
+              {showSave ? (
+                <button type="submit" className="primary" disabled={saving}>
+                  {saving ? 'Enregistrement…' : saved ? 'Enregistré' : 'Enregistrer'}
+                </button>
+              ) : null}
+              <p className="hint">{saveHint}</p>
+            </div>
           </form>
         </section>
 
-        <section className="card">
+        <aside className="card side-card">
           <div className="card-head">
-            <h2>Environnement</h2>
+            <h2>Statut</h2>
           </div>
           <div className="card-body">
             <div className="statline">
               <span>Mode</span>
               <b>{badge('PAPER', 'gray')}</b>
             </div>
-            <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-              Aucun ordre n’est envoyé à un courtier. Le portefeuille est simulé : c’est voulu, pas
-              une panne.
-            </p>
+            <p>Aucun ordre broker. Portefeuilles simulés.</p>
             <div className="statline">
-              <span>Bougies utilisées</span>
-              <b>Déjà clôturées</b>
+              <span>Bougies</span>
+              <b>Clôturées</b>
             </div>
-            <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-              Le moteur ignore la bougie en cours. Une décision ne sort qu’une fois la bougie
-              fermée.
-            </p>
-            <h3 style={{ marginTop: 28 }}>Identité IchiVol</h3>
-            <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-              Fond crème, surfaces sobres, couleurs réservées aux décisions. Une lecture
-              cohérente sur les onze espaces.
+            <p>Décision uniquement sur bougie fermée.</p>
+            <div className="statline">
+              <span>Ève</span>
+              <b>{eveAutonomy ? 'Trade paper' : 'Dry-run'}</b>
+            </div>
+            <p>
+              Autonomie on = ouverture paper via Risk Kernel. Kill-switch ={' '}
+              <code>EVE_PAPER_AUTONOMY</code>.
             </p>
           </div>
-        </section>
+        </aside>
       </div>
     </div>
   )

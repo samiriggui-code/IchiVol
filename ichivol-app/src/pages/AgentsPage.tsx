@@ -69,7 +69,7 @@ const EVE_MODES: EveModeDef[] = [
     name: 'Ève Shadow',
     tag: 'MODE',
     icon: '◉',
-    blurb: 'Contre-évaluation indépendante via jevos (≠ ShadowBroker).',
+    blurb: 'Contre-évaluation indépendante via JEV API (jevos si plus de crédit).',
     primitives: 'NOUL + CHOICE + SCORE',
     permission: 'market_read',
     advisoryOnly: true,

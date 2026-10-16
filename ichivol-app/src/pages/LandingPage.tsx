@@ -63,7 +63,7 @@ const EVE_MODES = [
     icon: '◉',
     name: 'Shadow',
     tag: 'NOUL · CHOICE · SCORE',
-    body: 'Contre-évaluation jevos indépendante avant d’exécuter.',
+    body: 'Contre-évaluation JEV API indépendante avant d’exécuter.',
   },
 ]
 
@@ -135,7 +135,7 @@ const FAQ = [
   },
   {
     q: 'Qu’est-ce qu’Ève Intelligence ?',
-    a: 'Une seule IA trading avec quatre modes actifs : Analyst, Challenger, Guardian, Shadow — chacun en NOUL / CHOICE / SCORE via jevos. Pas quatre LLM concurrents.',
+    a: 'Une seule IA trading avec quatre modes actifs : Analyst, Challenger, Guardian, Shadow — chacun en NOUL / CHOICE / SCORE via JEV API (jevos en fallback crédit). Pas quatre LLM concurrents.',
   },
   {
     q: 'Que se passe-t-il si JEV est late ou down ?',

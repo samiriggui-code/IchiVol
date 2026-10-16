@@ -18,8 +18,19 @@ def _response(status: int, body: Any) -> MagicMock:
     return resp
 
 
-def test_resolve_provider_defaults_to_jevos(monkeypatch: Any) -> None:
+def test_resolve_provider_defaults_to_typesafe(monkeypatch: Any) -> None:
+    """JEV API (typesafe) is primary; jevos is credit fallback only."""
     monkeypatch.delenv("JEV_PROVIDER", raising=False)
+    monkeypatch.setenv("TYPESAFE_API_KEY", "ts-key")
+    monkeypatch.delenv("JEV_API_KEY", raising=False)
+    cfg = resolve_provider()
+    assert cfg.name == "typesafe"
+    assert cfg.base_url == "https://api.typesafe.ai"
+    assert cfg.score_maturity == "full"
+
+
+def test_resolve_provider_jevos_explicit(monkeypatch: Any) -> None:
+    monkeypatch.setenv("JEV_PROVIDER", "jevos")
     monkeypatch.setenv("JEV_URL", "http://jevos-v4:8017")
     monkeypatch.setenv("JEV_API_KEY", "local-key")
     cfg = resolve_provider()
@@ -149,3 +160,38 @@ def test_health_jevos_ok(monkeypatch: Any) -> None:
     assert out["ok"] is True
     assert out["provider"] == "jevos"
     assert out["probe"] == "health"
+
+
+def test_evaluate_falls_back_to_jevos_on_credit_exhausted(monkeypatch: Any) -> None:
+    """typesafe (JEV API) is primary; jevos answers when API has no credits left."""
+    monkeypatch.setenv("JEV_PROVIDER", "typesafe")
+    monkeypatch.setenv("TYPESAFE_API_KEY", "ts")
+    monkeypatch.setenv("JEV_FALLBACK", "jevos")
+    monkeypatch.setenv("JEV_URL", "http://jevos-v4:8017")
+    monkeypatch.setenv("JEV_API_KEY", "local-key")
+
+    credit_body = {"error": "insufficient_credits", "message": "No credits remaining"}
+    ok_body = {
+        "model": "jevos-v4",
+        "answers": {"review": {"type": "noul", "noul": 0.77}},
+        "usage": {"input_tokens": 10, "output_tokens": 5},
+    }
+
+    def _post_side_effect(url: str, **_kwargs: Any) -> Any:
+        if "typesafe" in url or "api.typesafe" in url:
+            return _response(402, credit_body)
+        return _response(200, ok_body)
+
+    with patch("app.jev.adapter.httpx.Client") as client_cls:
+        client = MagicMock()
+        client.__enter__.return_value = client
+        client.post.side_effect = _post_side_effect
+        client_cls.return_value = client
+        out = evaluate({"symbol": "ETHUSDT"}, {"review": noul_question("ok?")})
+
+    assert out["ok"] is True
+    assert out["provider"] == "jevos"
+    assert out["fallback_from"] == "typesafe"
+    assert out["fallback_reason"] == "credit_exhausted"
+    assert out["answers"]["review"]["noul"] == 0.77
+    assert client.post.call_count == 2

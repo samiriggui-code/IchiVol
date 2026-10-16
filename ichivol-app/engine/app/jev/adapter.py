@@ -14,8 +14,11 @@ import httpx
 
 from app.jev.normalize import normalize_answers
 from app.jev.providers import (
+    JevProviderConfig,
     JevProviderName,
     estimate_cost_usd,
+    is_credit_exhausted,
+    resolve_fallback_provider,
     resolve_provider,
 )
 
@@ -79,30 +82,15 @@ def _failure(
     }
 
 
-def evaluate(
+def _evaluate_once(
     state: Any,
     questions: dict[str, Any],
     *,
-    provider: str | None = None,
-    timeout_s: float | None = None,
+    cfg: JevProviderConfig,
+    timeout_s: float,
+    started: float,
 ) -> dict[str, Any]:
-    """Call System One and return a traced, validated envelope."""
-    started = time.monotonic()
-    if timeout_s is None:
-        timeout_s = _configured_timeout_s()
-    try:
-        cfg = resolve_provider(provider)
-    except ValueError as exc:
-        return _failure(provider=str(provider or "unknown"), error=str(exc), latency_ms=0.0)
-
-    if not questions or not isinstance(questions, dict):
-        return _failure(
-            provider=cfg.name,
-            error="questions_empty",
-            latency_ms=0.0,
-            request_model=cfg.model,
-            score_maturity=cfg.score_maturity,
-        )
+    """Single provider call — no fallback."""
     if not cfg.api_key:
         return _failure(
             provider=cfg.name,
@@ -128,14 +116,17 @@ def evaluate(
             response = client.post(url, json=payload, headers=headers)
             latency_ms = round((time.monotonic() - started) * 1000, 2)
             if response.status_code >= 400:
-                return _failure(
+                raw = _safe_json(response)
+                fail = _failure(
                     provider=cfg.name,
                     error=f"http_{response.status_code}",
                     latency_ms=latency_ms,
                     request_model=cfg.model,
                     score_maturity=cfg.score_maturity,
-                    raw=_safe_json(response),
+                    raw=raw,
                 )
+                fail["http_status"] = response.status_code
+                return fail
             body = response.json()
     except httpx.TimeoutException:
         fail = _failure(
@@ -192,7 +183,6 @@ def evaluate(
         and cfg.model not in ("jev-latest",)
         and response_model != cfg.model
     ):
-        # Pin guard: silent upgrades must surface on the dossier.
         model_mismatch = True
 
     return {
@@ -210,6 +200,66 @@ def evaluate(
         "error": None,
         "raw": body,
     }
+
+
+def evaluate(
+    state: Any,
+    questions: dict[str, Any],
+    *,
+    provider: str | None = None,
+    timeout_s: float | None = None,
+) -> dict[str, Any]:
+    """Call System One (JEV API primary) ; fallback jevos si plus de crédit."""
+    started = time.monotonic()
+    if timeout_s is None:
+        timeout_s = _configured_timeout_s()
+    try:
+        cfg = resolve_provider(provider)
+    except ValueError as exc:
+        return _failure(provider=str(provider or "unknown"), error=str(exc), latency_ms=0.0)
+
+    if not questions or not isinstance(questions, dict):
+        return _failure(
+            provider=cfg.name,
+            error="questions_empty",
+            latency_ms=0.0,
+            request_model=cfg.model,
+            score_maturity=cfg.score_maturity,
+        )
+
+    primary = _evaluate_once(
+        state, questions, cfg=cfg, timeout_s=timeout_s, started=started
+    )
+    if primary.get("ok"):
+        return primary
+
+    # Auto-fallback only: hosted JEV API (typesafe) → local jevos on credit/quota.
+    if cfg.name != "typesafe":
+        return primary
+
+    http_status = primary.get("http_status")
+    if not is_credit_exhausted(
+        error=str(primary.get("error") or ""),
+        http_status=http_status if isinstance(http_status, int) else None,
+        raw=primary.get("raw"),
+    ):
+        return primary
+
+    fb = resolve_fallback_provider()
+    if fb is None or fb.name == cfg.name:
+        return primary
+    if not fb.api_key:
+        primary["fallback_attempted"] = True
+        primary["fallback_error"] = "jevos_key_missing"
+        return primary
+
+    secondary = _evaluate_once(
+        state, questions, cfg=fb, timeout_s=timeout_s, started=started
+    )
+    secondary["fallback_from"] = cfg.name
+    secondary["fallback_reason"] = "credit_exhausted"
+    secondary["primary_error"] = primary.get("error")
+    return secondary
 
 
 def health(

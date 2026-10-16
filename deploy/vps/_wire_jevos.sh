@@ -34,7 +34,9 @@ set_kv() {
   fi
 }
 
-set_kv JEV_PROVIDER jevos
+# Keep JEV API as primary; wire local jevos as credit fallback only.
+set_kv JEV_PROVIDER typesafe
+set_kv JEV_FALLBACK jevos
 set_kv JEV_URL "http://jevos-v4:8017"
 set_kv JEV_MODEL jev-latest
 set_kv JEV_SHADOW_ENABLED true

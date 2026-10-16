@@ -20,6 +20,7 @@ SCHEMA_VERSION = "ichivol.eve.settings_schema.v1"
 ADVANCED_KEYS: frozenset[str] = frozenset(
     {
         "JEV_PROVIDER",
+        "JEV_FALLBACK",
         "JEV_URL",
         "JEV_MODEL",
         "JEV_TIMEOUT_SECONDS",
@@ -65,14 +66,21 @@ CONFIG_SCHEMA: dict[str, Any] = {
                 "label": "Provider JEV",
                 "type": "text",
                 "read_only": True,
-                "description": "jevos (VPS) ou typesafe — via JEV_PROVIDER.",
+                "description": "Primary: typesafe (JEV API). jevos = force local only.",
+            },
+            {
+                "key": "JEV_FALLBACK",
+                "label": "Fallback crédit",
+                "type": "text",
+                "read_only": True,
+                "description": "Quand l’API JEV n’a plus de crédit → jevos (défaut). none pour désactiver.",
             },
             {
                 "key": "JEV_URL",
-                "label": "URL jevos",
+                "label": "URL jevos (fallback)",
                 "type": "text",
                 "read_only": True,
-                "description": "Base URL System One (JEV_URL).",
+                "description": "Base URL jevos local (fallback crédit / force local).",
             },
             {
                 "key": "JEV_MODEL",
@@ -237,13 +245,15 @@ def _provider_snapshot() -> dict[str, Any]:
         cfg = resolve_provider()
         return {
             "JEV_PROVIDER": cfg.name,
+            "JEV_FALLBACK": os.getenv("JEV_FALLBACK", "jevos"),
             "JEV_URL": cfg.base_url,
             "JEV_MODEL": cfg.model,
             "JEV_API_KEY_SET": bool(cfg.api_key),
         }
     except Exception:
         return {
-            "JEV_PROVIDER": os.getenv("JEV_PROVIDER", "jevos"),
+            "JEV_PROVIDER": os.getenv("JEV_PROVIDER", "typesafe"),
+            "JEV_FALLBACK": os.getenv("JEV_FALLBACK", "jevos"),
             "JEV_URL": os.getenv("JEV_URL", ""),
             "JEV_MODEL": os.getenv("JEV_MODEL", ""),
             "JEV_API_KEY_SET": bool(
