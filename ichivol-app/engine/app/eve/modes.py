@@ -16,10 +16,10 @@ from app.jev.history import save_evaluation
 from app.jev.questions import choice_question, noul_question, score_question
 
 DEFAULT_PRIMITIVES: dict[str, tuple[str, ...]] = {
-    # Fallbacks before study-backed policy is loaded (conservative).
-    "analyst": ("score",),
-    "challenger": ("choice", "noul"),
-    "guardian": ("noul", "score"),
+    # All modes run full NOUL/CHOICE/SCORE (paper trade test activation).
+    "analyst": ("noul", "choice", "score"),
+    "challenger": ("noul", "choice", "score"),
+    "guardian": ("noul", "choice", "score"),
     "shadow": ("noul", "choice", "score"),
 }
 

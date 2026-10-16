@@ -22,18 +22,27 @@ from app.eve.settings_schema import policy_threshold_overrides
 _STUDY = run_primitive_routing_study()
 _STUDY_ROUTING = routing_from_study(_STUDY)
 
+# Full mode activation for paper trade tests: every mode runs JEV with all
+# primitives. Study routing remains in primitive_study for observe/calibration.
+_ALL_PRIMITIVES = ["noul", "choice", "score"]
+
 DEFAULT_POLICY: dict[str, Any] = {
-    "version": "eve.policy.v1.1",
+    "version": "eve.policy.v1.2",
     "created_at": "2026-10-16T00:00:00+00:00",
     "kind": "calibration_policy",
     "not": "llm_finetune",
     "routing": {
         **_STUDY_ROUTING,
-        # Keep feature flags aligned with non-empty primitive lists.
-        "use_jev_analyst": bool(_STUDY_ROUTING.get("analyst_primitives")),
-        "use_jev_challenger": bool(_STUDY_ROUTING.get("challenger_primitives")),
-        "use_jev_guardian": bool(_STUDY_ROUTING.get("guardian_primitives")),
-        "use_jev_shadow": bool(_STUDY_ROUTING.get("shadow_primitives")),
+        # Force all four modes + full NOUL/CHOICE/SCORE (paper test).
+        "use_jev_analyst": True,
+        "use_jev_challenger": True,
+        "use_jev_guardian": True,
+        "use_jev_shadow": True,
+        "analyst_primitives": list(_ALL_PRIMITIVES),
+        "challenger_primitives": list(_ALL_PRIMITIVES),
+        "guardian_primitives": list(_ALL_PRIMITIVES),
+        "shadow_primitives": list(_ALL_PRIMITIVES),
+        "skip_jev_if_data_quality_below": 0.0,
     },
     "primitive_study": {
         "version": _STUDY.get("thresholds", {}).get("version"),
