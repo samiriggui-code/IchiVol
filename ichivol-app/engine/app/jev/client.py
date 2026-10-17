@@ -1,17 +1,40 @@
-"""Client HTTP JEV — observation uniquement."""
-import os
-import httpx
+"""Backward-compatible JEV client.
+
+Prefer ``app.jev.adapter.evaluate`` for new code (provider tracing + validation).
+This module keeps the historical ``evaluate(state, questions)`` shape used by Eve Shadow.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from app.jev.adapter import evaluate as adapter_evaluate
+
 
 def evaluate(state: str, questions: dict) -> dict:
-    url = os.getenv("JEV_URL", "http://jevos-v4:8017").rstrip("/")
-    key = os.getenv("JEV_API_KEY", "")
-    if not key:
-        return {"ok": False, "error": "jev_key_missing"}
-    payload = {"model": "jev-latest", "state": state, "questions": questions}
-    try:
-        with httpx.Client(timeout=5.0) as client:
-            response = client.post(url + "/v1/systemone", json=payload, headers={"Authorization": "Bearer " + key})
-            response.raise_for_status()
-            return {"ok": True, "result": response.json()}
-    except (httpx.HTTPError, ValueError) as exc:
-        return {"ok": False, "error": type(exc).__name__}
+    """Call System One via the multi-provider adapter.
+
+    Legacy shape: ``{ok, result?, error?}`` where ``result`` is the raw provider body
+    when successful (EveShadowPanel reads ``result.answers.*.noul``).
+    """
+    envelope = adapter_evaluate(state, questions)
+    if not envelope.get("ok"):
+        return {
+            "ok": False,
+            "error": envelope.get("error") or "jev_error",
+            "provider": envelope.get("provider"),
+            "latency_ms": envelope.get("latency_ms"),
+        }
+    raw = envelope.get("raw")
+    result: Any = raw if isinstance(raw, dict) else {"answers": envelope.get("answers")}
+    return {
+        "ok": True,
+        "result": result,
+        "provider": envelope.get("provider"),
+        "response_model": envelope.get("response_model"),
+        "request_model": envelope.get("request_model"),
+        "latency_ms": envelope.get("latency_ms"),
+        "usage": envelope.get("usage"),
+        "cost_usd": envelope.get("cost_usd"),
+        "score_maturity": envelope.get("score_maturity"),
+    }

@@ -1,19 +1,10 @@
-import { ModalSheetHost } from "../components/ModalSheetHost"
 /**
- * Agents — port littéral de design-reference/ichivol-workspace `agents()` + page-head.
- * Classes HTML = maquette. Données = GET /api/agents (Eve runtime + 5 rôles code).
- * FicheHost absent sur main → deep-link ?fiche=agent:id ouvre le dialog permissions (stub).
+ * Agents — cartes Ève (hub + 4 modes) + chaîne opérationnelle (6 rôles).
+ * Fiches = FicheHost / `?fiche=agent:…` (même chrome que Opportunités), pas ModalSheetHost.
  */
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type FormEvent,
-  type ReactNode,
-} from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import {
   createAgentMission,
   fetchAgents,
@@ -24,12 +15,62 @@ import {
   type AuthorityChain,
 } from '../lib/agentsRuntime'
 import { labelEngineCode } from '../lib/engineTerminology'
-import { EveShadowPanel } from './EveShadowPanel'
+import { useFicheNav } from '../lib/useFicheNav'
 import './AgentsPage.css'
 
 type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
 
-/** Fallback static cards when API unreachable — still shows structure, statuses as — . */
+type EveModeId = 'analyst' | 'challenger' | 'guardian' | 'shadow'
+
+type EveModeDef = {
+  id: EveModeId
+  name: string
+  tag: string
+  icon: string
+  blurb: string
+  primitives: string
+  advisoryOnly: boolean
+}
+
+const EVE_MODES: EveModeDef[] = [
+  {
+    id: 'analyst',
+    name: 'Ève Analyste',
+    tag: 'MODE',
+    icon: '◇',
+    blurb: 'Lit les calculs du moteur et la structure du marché, puis construit les scénarios.',
+    primitives: 'NOUL + CHOICE + SCORE',
+    advisoryOnly: true,
+  },
+  {
+    id: 'challenger',
+    name: 'Ève Contradictrice',
+    tag: 'MODE',
+    icon: '↺',
+    blurb: 'Cherche ce qui contredit le scénario retenu et les autres possibilités.',
+    primitives: 'NOUL + CHOICE + SCORE',
+    advisoryOnly: true,
+  },
+  {
+    id: 'guardian',
+    name: 'Ève Gardienne',
+    tag: 'MODE',
+    icon: '◈',
+    blurb: 'Signale les risques et les anomalies. Le Risk Kernel garde le dernier mot.',
+    primitives: 'NOUL + CHOICE + SCORE',
+    advisoryOnly: true,
+  },
+  {
+    id: 'shadow',
+    name: 'Ève Contre-avis',
+    tag: 'MODE',
+    icon: '◉',
+    blurb: 'Refait l’évaluation de son côté avec JEV (API hébergée, puis jevos si les crédits sont épuisés).',
+    primitives: 'NOUL + CHOICE + SCORE',
+    advisoryOnly: true,
+  },
+]
+
 const FALLBACK_CARDS: AgentRoleCard[] = [
   {
     id: 'observer',
@@ -171,6 +212,15 @@ const FALLBACK_CARDS: AgentRoleCard[] = [
   },
 ]
 
+const ROLE_ORDER = [
+  'observer',
+  'opportunities',
+  'risk',
+  'execution',
+  'position',
+  'session',
+] as const
+
 const CHAIN_DEFAULT = ['Observation', 'Opportunité', 'Risk Kernel', 'Position', 'Exécution']
 
 function badge(text: string, tone: BadgeTone = ''): ReactNode {
@@ -180,7 +230,7 @@ function badge(text: string, tone: BadgeTone = ''): ReactNode {
       ? 'green'
       : /REFUS|BLOQU|ERREUR/i.test(text)
         ? 'red'
-        : /PRUDENCE|ARMED|WATCH|VEILLE/i.test(text)
+        : /PRUDENCE|ARMED|WATCH|VEILLE|ADVISORY|MODE/i.test(text)
           ? 'amber'
           : ''
   }
@@ -196,13 +246,8 @@ function dash(value: string | null | undefined, reason?: string, max = 72): stri
 }
 
 function runtimeNotice(data: AgentsListResponse | null, loadError: string | null): string {
-  // Keep length close to maquette notice (~62px height at 390).
-  if (loadError) {
-    return 'Supervision des agents · runtime inaccessible · —'
-  }
-  if (!data) {
-    return 'Supervision des agents · chargement du runtime Eve…'
-  }
+  if (loadError) return 'Supervision des agents · runtime inaccessible · —'
+  if (!data) return 'Supervision des agents · chargement du runtime Eve…'
   const r = data.runtime
   const eve = data.agents.find((a) => a.id === 'opportunities')
   const worker = r.workerStarted ? 'worker minute démarré' : 'worker non détecté'
@@ -215,19 +260,27 @@ function runtimeNotice(data: AgentsListResponse | null, loadError: string | null
   return `Supervision des agents · ${worker} · ${run}.`
 }
 
+function orderRoleCards(cards: AgentRoleCard[]): AgentRoleCard[] {
+  const byId = new Map(cards.map((c) => [c.id, c]))
+  const ordered: AgentRoleCard[] = []
+  for (const id of ROLE_ORDER) {
+    const c = byId.get(id)
+    if (c) ordered.push(c)
+  }
+  for (const c of cards) {
+    if (!ROLE_ORDER.includes(c.id as (typeof ROLE_ORDER)[number])) ordered.push(c)
+  }
+  return ordered
+}
+
 export function AgentsPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const { openFiche } = useFicheNav()
   const [data, setData] = useState<AgentsListResponse | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [detail, setDetail] = useState<AgentRoleCard | null>(null)
-  const [ficheStub, setFicheStub] = useState<string | null>(null)
   const [missionSymbol, setMissionSymbol] = useState('BTCUSDT')
-  const [shadowOpen, setShadowOpen] = useState(false)
   const [missionBusy, setMissionBusy] = useState(false)
   const [missionMsg, setMissionMsg] = useState<{ ok: boolean; text: string } | null>(null)
-  const dialogRef = useRef<HTMLDialogElement>(null)
-  const ficheHandled = useRef<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -247,37 +300,10 @@ export function AgentsPage() {
     void load()
   }, [load])
 
-  const cards = data?.agents?.length ? data.agents : FALLBACK_CARDS
+  const cards = orderRoleCards(data?.agents?.length ? data.agents : FALLBACK_CARDS)
   const chain: AuthorityChain | null = data?.authorityChain ?? null
   const chainSteps = chain?.steps?.length ? [...chain.steps] : CHAIN_DEFAULT
-
-  const openDetail = useCallback((card: AgentRoleCard) => {
-    setDetail(card)
-    dialogRef.current?.showModal()
-  }, [])
-
-  const closeDetail = useCallback(() => {
-    dialogRef.current?.close()
-    setDetail(null)
-    setFicheStub(null)
-  }, [])
-
-  // Deep-link stub: ?fiche=agent:<id> — FicheHost not on main tip.
-  useEffect(() => {
-    const raw = searchParams.get('fiche')
-    if (!raw || !raw.startsWith('agent:')) return
-    if (ficheHandled.current === raw) return
-    ficheHandled.current = raw
-    const id = raw.slice('agent:'.length).trim()
-    const card = cards.find((c) => c.id === id || c.runtimeAgentId === id) ?? null
-    setFicheStub(
-      `FicheAgent non branchée (FicheHost absent sur main) · deep-link ${raw} · dialog permissions ci-dessous.`,
-    )
-    if (card) openDetail(card)
-    const next = new URLSearchParams(searchParams)
-    next.delete('fiche')
-    setSearchParams(next, { replace: true })
-  }, [searchParams, setSearchParams, cards, openDetail])
+  const eveCard = cards.find((c) => c.id === 'opportunities')
 
   async function onMission(e: FormEvent) {
     e.preventDefault()
@@ -306,8 +332,6 @@ export function AgentsPage() {
     }
   }
 
-  const eveCard = cards.find((c) => c.id === 'opportunities')
-
   return (
     <div className="agents-page">
       <div className="page-head">
@@ -323,14 +347,68 @@ export function AgentsPage() {
         ⬡ <span>{runtimeNotice(data, loadError)}</span>
       </div>
 
-      {ficheStub ? (
-        <div className="notice">
-          ⬡ <span>{ficheStub}</span>
-        </div>
-      ) : null}
+      <div className="agents-section-head">
+        <h2>Ève Intelligence</h2>
+        <p>Une seule IA · quatre modes · test paper sur portefeuilles existants (pas de live).</p>
+      </div>
 
       <div className="grid three">
-        <section className="card agent-card"><span className="tag green">IA DECISIONNELLE</span><div className="agent-icon">◉</div><h2>Ève Shadow</h2><p>Analyse des décisions et contrôle des risques avec jevos-v4.</p><div className="statline"><span>Moteur</span><b>jevos-v4</b></div><div className="statline"><span>Mode</span><b>Observation</b></div><div className="statline"><span>Permission</span><b>market_read</b></div><button type="button" onClick={() => setShadowOpen(v => !v)}>{shadowOpen ? "Fermer la fiche" : "Ouvrir la fiche"}</button></section>
+        <section className="card agent-card">
+          <span className="tag green">IA CENTRALE</span>
+          <div className="agent-icon">◆</div>
+          <h2>Hub dossiers</h2>
+          <p>Dossiers, modes, Risk Kernel → trade paper sur tous les livres virtuels si autonomie on.</p>
+          <div className="statline">
+            <span>Exécution</span>
+            <b>paper si autonomie on</b>
+          </div>
+          <div className="statline">
+            <span>Portefeuille</span>
+            <b>tous les virtuels actifs</b>
+          </div>
+          <div className="statline">
+            <span>Permission</span>
+            <b>market_read</b>
+          </div>
+          <button type="button" onClick={() => openFiche({ kind: 'agent', id: 'eve' })}>
+            Ouvrir la fiche →
+          </button>
+        </section>
+
+        {EVE_MODES.map((m) => (
+          <section className="card agent-card" key={m.id}>
+            {badge(m.tag, m.id === 'guardian' ? 'amber' : 'green')}
+            <div className="agent-icon">{m.icon}</div>
+            <h2>{m.name}</h2>
+            <p>{m.blurb}</p>
+            <div className="statline">
+              <span>Questions JEV</span>
+              <b>{m.primitives}</b>
+            </div>
+            <div className="statline">
+              <span>Accès</span>
+              <b>lecture des calculs du moteur</b>
+            </div>
+            <div className="statline">
+              <span>Rôle</span>
+              <b>{m.advisoryOnly ? 'donne son avis, la synthèse d’Ève tranche' : '—'}</b>
+            </div>
+            <button
+              type="button"
+              onClick={() => openFiche({ kind: 'agent', id: `eve:${m.id}` })}
+            >
+              Ouvrir la fiche →
+            </button>
+          </section>
+        ))}
+      </div>
+
+      <div className="agents-section-head">
+        <h2>Chaîne opérationnelle</h2>
+        <p>Six rôles (code ou IA), chacun avec ses permissions. Tout reste en paper. Quand l’autonomie est activée, Ève décide sans confirmation humaine.</p>
+      </div>
+
+      <div className="grid three">
         {cards.map((a) => (
           <section className="card agent-card" key={a.id}>
             {badge(
@@ -360,14 +438,13 @@ export function AgentsPage() {
                   : dash(null, a.statusReason)}
               </b>
             </div>
-            <button type="button" onClick={() => openDetail(a)}>
-              Voir les permissions →
+            <button type="button" onClick={() => openFiche({ kind: 'agent', id: a.id })}>
+              Ouvrir la fiche →
             </button>
           </section>
         ))}
       </div>
 
-      {shadowOpen ? <ModalSheetHost ariaLabel="Fiche agent Ève Shadow" onCancel={() => setShadowOpen(false)}><aside className="panel trade-sheet"><header className="panel-head trade-sheet-head"><h2>Ève Shadow</h2><button type="button" className="ghost" onClick={() => setShadowOpen(false)}>Fermer</button></header><div className="trade-sheet-scroll"><EveShadowPanel /></div></aside></ModalSheetHost> : null}
       <section className="card">
         <div className="card-head">
           <h2>Chaîne d’autorité</h2>
@@ -395,7 +472,7 @@ export function AgentsPage() {
       <section className="card">
         <div className="card-head">
           <h2>Surveiller avec Eve</h2>
-          <small>mission 1 symbole · paper · confirm humaine</small>
+          <small>surveillance d’un instrument · paper · confirmation humaine</small>
         </div>
         <div className="card-body">
           <form className="toolbar" onSubmit={onMission} style={{ flexWrap: 'wrap' }}>
@@ -433,87 +510,6 @@ export function AgentsPage() {
           )}
         </div>
       </section>
-
-      <dialog
-        id="detail"
-        ref={dialogRef}
-        onClose={() => {
-          setDetail(null)
-        }}
-      >
-        {detail ? (
-          <div className="dialog-body">
-            <div className="dialog-head">
-              <h2>{detail.name}</h2>
-              <button type="button" onClick={closeDetail} aria-label="Fermer">
-                ×
-              </button>
-            </div>
-            {badge(detail.status, statusBadgeTone(detail.status))}
-            <p>
-              {detail.kind === 'llm'
-                ? 'Eve (LLM) · permissions runtime · paper only.'
-                : 'Rôle code déterministe · permissions runtime · paper only.'}{' '}
-              {labelEngineCode(detail.statusReason)}
-            </p>
-            <div className="statline">
-              <span>Lecture du marché</span>
-              <b>
-                {badge(
-                  /market_read|signals_read|risk_read|paper_orders|orders_execute/.test(
-                    detail.permission,
-                  )
-                    ? 'AUTORISÉE'
-                    : '—',
-                  'gray',
-                )}
-              </b>
-            </div>
-            <div className="statline">
-              <span>Modification du risque</span>
-              <b>{badge(detail.id === 'risk' ? 'CODE ONLY' : 'BLOQUÉE', 'gray')}</b>
-            </div>
-            <div className="statline">
-              <span>Ordres réels</span>
-              <b>{badge('BLOQUÉS')}</b>
-            </div>
-            <div className="statline">
-              <span>Paper / confirm humaine</span>
-              <b>
-                {badge('OUI', 'green')} · humanConfirmDefault=
-                {String(detail.humanConfirmDefault)}
-              </b>
-            </div>
-            <div className="statline">
-              <span>Dernière action</span>
-              <b>{dash(detail.lastAction, detail.statusReason, 200)}</b>
-            </div>
-            <div className="statline">
-              <span>Prochaine tâche</span>
-              <b>
-                {detail.nextTaskDue
-                  ? `${detail.nextTaskKind ?? 'task'}${detail.nextTaskSymbol ? ` · ${detail.nextTaskSymbol}` : ''} · ${fmtDue(detail.nextTaskDue)}`
-                  : dash(null, detail.statusReason)}
-              </b>
-            </div>
-            <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-              FicheAgent (?fiche=agent:{detail.id}) : shell fiches non mergé — dialog maquette
-              réutilisé. Activation et permissions effectives vérifiées via le runtime server /
-              engine Python.
-            </p>
-            <div className="dialog-actions">
-              {detail.kind === 'llm' ? (
-                <Link to="/app/agent" className="link" onClick={closeDetail}>
-                  Copilot Eve →
-                </Link>
-              ) : null}
-              <button type="button" onClick={closeDetail}>
-                Fermer
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </dialog>
     </div>
   )
 }

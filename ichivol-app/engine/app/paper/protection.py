@@ -82,7 +82,10 @@ from app.paper.protection_trail import (
 )
 from app.strategy_lab.partial_tp import PartialTpStep
 from app.strategy_lab.reinforce import apply_reinforce_add, cap_add_by_notional_equity
-from app.strategy_lab.stop_trail import update_trailing_stop
+from app.strategy_lab.stop_trail import (
+    trailing_exit_locks_net_profit,
+    update_trailing_stop,
+)
 from app.paper.risk import apply_entry_friction
 from app.universe.catalog import get_instrument
 
@@ -229,6 +232,36 @@ def _hit_stop_only(direction: str, stop: float, high: float, low: float) -> bool
     return (low <= stop) if long else (high >= stop)
 
 
+def _trail_ratcheted_stop_exit_allowed(
+    direction: str,
+    *,
+    entry: float,
+    exit_price: float,
+    cur_stop: float,
+    trail_cfg: PaperTrailConfig | None,
+) -> bool:
+    """Fee-aware gate for trail-ratcheted stops (QuantDinger risk_guard).
+
+    Hard / initial stop always fires. A stop moved by trail only exits when the
+    fill would lock net profit after round-trip fees.
+    """
+    if trail_cfg is None:
+        return True
+    long = direction.upper() == "LONG"
+    initial = float(trail_cfg.initial_stop)
+    if long and cur_stop <= initial + 1e-12:
+        return True
+    if (not long) and cur_stop >= initial - 1e-12:
+        return True
+    return trailing_exit_locks_net_profit(
+        _direction_enum(direction),
+        entry_price=entry,
+        exit_price=exit_price,
+        commission_bps=trail_cfg.commission_bps,
+        slippage_bps=trail_cfg.slippage_bps,
+    )
+
+
 def _hit_target_only(direction: str, target: float, high: float, low: float) -> bool:
     long = direction.upper() == "LONG"
     return (high >= target) if long else (low <= target)
@@ -346,21 +379,30 @@ def find_breach_manage(
         o, h, l, c = float(k[1]), float(k[2]), float(k[3]), float(k[4])
         checked = open_ms + MINUTE_MS
 
-        # 1) Stop first
+        # 1) Stop first (hard stop always; trail-ratcheted needs net-profit lock)
         if _hit_stop_only(direction, cur_stop, h, l):
             gapped = (o < cur_stop) if direction.upper() == "LONG" else (o > cur_stop)
             reason = "stop_gap" if gapped else "stop_hit"
             price = float(o) if gapped else float(cur_stop)
-            return ManageScanResult(
-                Breach(reason, price, open_ms, "1m", ""),
-                checked,
-                cur_stop,
-                seen,
-                expected,
-                tuple(found_partials),
-                tuple(found_reinforces),
-                rf_prev,
-            )
+            entry_for_fee = sim_avg if reinforce_cfg is not None else entry
+            if _trail_ratcheted_stop_exit_allowed(
+                direction,
+                entry=entry_for_fee,
+                exit_price=price,
+                cur_stop=cur_stop,
+                trail_cfg=trail_cfg,
+            ):
+                return ManageScanResult(
+                    Breach(reason, price, open_ms, "1m", ""),
+                    checked,
+                    cur_stop,
+                    seen,
+                    expected,
+                    tuple(found_partials),
+                    tuple(found_reinforces),
+                    rf_prev,
+                )
+            # Trail stop hit but fees would leave a net loss — skip close this bar.
 
         # 2) Partials ascending R
         while remaining_steps and partial_cfg is not None:
@@ -586,10 +628,21 @@ def find_breach_with_trail(
                 "target_hit": "take_profit_hit",
                 "target_gap": "take_profit_hit",
             }.get(r.reason, r.reason)
-            return (
-                ScanResult(Breach(reason, float(r.price), open_ms, "1m", r.note), checked),
-                cur_stop,
-            )
+            stop_like = str(r.reason).startswith("stop")
+            if stop_like and not _trail_ratcheted_stop_exit_allowed(
+                direction,
+                entry=entry,
+                exit_price=float(r.price),
+                cur_stop=cur_stop,
+                trail_cfg=config,
+            ):
+                # Fee-aware: trail stop hit without net profit → do not close yet.
+                pass
+            else:
+                return (
+                    ScanResult(Breach(reason, float(r.price), open_ms, "1m", r.note), checked),
+                    cur_stop,
+                )
 
         cur_stop = update_trailing_stop(
             dir_enum,

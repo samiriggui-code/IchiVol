@@ -43,13 +43,19 @@ import {
 import {
   getPaperActivity,
   getPaperOverview,
+  listPaperPortfolios,
   type PaperOrderRow,
   type PaperOverview,
   type PaperOverviewPosition,
 } from '../lib/paper'
 import { getRiskLock, type RiskLockState } from '../lib/riskLock'
 import { verdictBucket } from '../lib/deskSummarize'
-import { concentrationFromPositions } from '../components/desk/deskMetrics'
+import {
+  aggregateDeskBooks,
+  concentrationFromPositions,
+  snapshotFromOverview,
+  type DeskBooksAggregate,
+} from '../components/desk/deskMetrics'
 import {
   BASELINE,
   PRIMARY_SYMBOLS,
@@ -524,13 +530,20 @@ function decisionBadgeText(r: ScreenerDecisionRow): string {
   return d
 }
 
+type BookEquityCurve = {
+  code: string
+  label: string
+  color: string
+  points: { t: string; equity: number }[]
+}
+
 function EquityViz({
-  points,
+  books,
   period,
   actions,
   orders,
 }: {
-  points: { t: string; equity: number }[]
+  books: BookEquityCurve[]
   period: EquityPeriod
   actions: ActivityItem[]
   orders: PaperOrderRow[]
@@ -539,7 +552,6 @@ function EquityViz({
   const [activeId, setActiveId] = useState<string | null>(null)
   const [tipPos, setTipPos] = useState<{ left: number; top: number } | null>(null)
 
-  const filtered = useMemo(() => filterEquityCurve(points, period), [points, period])
   const markers = useMemo(
     () => buildEquityMarkers(actions, orders, period),
     [actions, orders, period],
@@ -554,43 +566,50 @@ function EquityViz({
   const innerW = w - padL - padR
   const innerH = h - padT - padB
 
-  const series = useMemo(() => densifyEquityPath(cleanEquitySeries(filtered)), [filtered])
+  /** Une série nettoyée par livre — jamais fusionnées. */
+  const prepared = useMemo(() => {
+    return books
+      .map((b) => {
+        const series = densifyEquityPath(
+          cleanEquitySeries(filterEquityCurve(b.points, period)),
+        )
+        return { code: b.code, label: b.label, color: b.color, series }
+      })
+      .filter((b) => b.series.length >= 2)
+  }, [books, period])
 
   const geometry = useMemo(() => {
-    if (series.length < 2) return null
-    const vals = series.map((p) => p.equity)
-    const axis = niceAxis(Math.min(...vals), Math.max(...vals))
+    if (prepared.length === 0) return null
+    const allVals = prepared.flatMap((b) => b.series.map((p) => p.equity))
+    const t0 = Math.min(...prepared.map((b) => b.series[0]!.ms))
+    const t1 = Math.max(...prepared.map((b) => b.series[b.series.length - 1]!.ms))
+    if (!(t1 > t0) || allVals.length === 0) return null
+
+    const axis = niceAxis(Math.min(...allVals), Math.max(...allVals))
     const { min, max, ticks: yTicks } = axis
     const span = Math.max(1e-6, max - min)
-    const n = series.length - 1
-    // Index X : les plateaux ne mangent plus toute la largeur — comme ta capture.
-    const xAtIndex = (i: number) => padL + (i / n) * innerW
     const yAt = (equity: number) => padT + (1 - (equity - min) / span) * innerH
     const xAtMs = (ms: number) => {
-      if (ms <= series[0]!.ms) return xAtIndex(0)
-      if (ms >= series[series.length - 1]!.ms) return xAtIndex(n)
-      for (let i = 1; i < series.length; i++) {
-        const b = series[i]!
-        if (ms <= b.ms) {
-          const a = series[i - 1]!
-          const r = (ms - a.ms) / Math.max(1, b.ms - a.ms)
-          return xAtIndex(i - 1) + r * (xAtIndex(i) - xAtIndex(i - 1))
-        }
-      }
-      return xAtIndex(n)
+      if (ms <= t0) return padL
+      if (ms >= t1) return padL + innerW
+      return padL + ((ms - t0) / (t1 - t0)) * innerW
     }
 
-    const coords = series.map((p, i) => [xAtIndex(i), yAt(p.equity)] as const)
-    const d = coords.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(' ')
-    const last = coords[coords.length - 1]!
-    const area = `${d} L${last[0]},${h - padB} L${padL},${h - padB} Z`
+    const traces = prepared.map((b) => {
+      const coords = b.series.map((p) => [xAtMs(p.ms), yAt(p.equity)] as const)
+      const d = coords
+        .map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(2)},${p[1].toFixed(2)}`)
+        .join(' ')
+      const last = coords[coords.length - 1]!
+      return { code: b.code, label: b.label, color: b.color, d, last }
+    })
 
-    const t0 = series[0]!.ms
-    const t1 = series[series.length - 1]!.ms
+    // Markers collés sur le 1er livre (baseline) pour ne pas polluer les autres courbes.
+    const anchor = prepared[0]!.series
     const placed = markers
       .map((m) => {
         if (m.ms < t0 - 60_000 || m.ms > t1 + 60_000) return null
-        const eq = equityAtTime(series, m.ms)
+        const eq = equityAtTime(anchor, m.ms)
         if (eq == null) return null
         return { ...m, x: xAtMs(m.ms), y: yAt(eq), equity: eq }
       })
@@ -598,12 +617,12 @@ function EquityViz({
       .sort((a, b) => a.ms - b.ms)
 
     const xTicks = [
-      { ms: series[0]!.ms, x: xAtIndex(0) },
-      { ms: series[Math.floor(n / 2)]!.ms, x: xAtIndex(Math.floor(n / 2)) },
-      { ms: series[n]!.ms, x: xAtIndex(n) },
+      { ms: t0, x: xAtMs(t0) },
+      { ms: t0 + (t1 - t0) / 2, x: xAtMs(t0 + (t1 - t0) / 2) },
+      { ms: t1, x: xAtMs(t1) },
     ]
-    return { min, max, span, d, area, last, placed, yTicks, xTicks }
-  }, [series, markers, innerW, innerH])
+    return { max, span, traces, placed, yTicks, xTicks }
+  }, [prepared, markers, innerW, innerH])
 
   const active = geometry?.placed.find((m) => m.id === activeId) ?? null
 
@@ -632,13 +651,13 @@ function EquityViz({
           className="chart"
           viewBox={`0 0 ${w} ${h}`}
           role="img"
-          aria-label="Courbe de performance indisponible"
+          aria-label="Courbes de performance indisponibles"
         />
       </div>
     )
   }
 
-  const { max, span, d, area, last, placed, yTicks, xTicks } = geometry
+  const { max, span, traces, placed, yTicks, xTicks } = geometry
 
   return (
     <div id="equity" className="desk-equity-wrap" ref={wrapRef}>
@@ -646,15 +665,9 @@ function EquityViz({
         className="chart"
         viewBox={`0 0 ${w} ${h}`}
         role="img"
-        aria-label={`Courbe equity ${period}${placed.length ? ` · ${placed.length} événements` : ''}`}
+        aria-label={`Trajectoires ${traces.length} portefeuilles · ${period}`}
         onPointerLeave={hideTip}
       >
-        <defs>
-          <linearGradient id="desk-eq-fade" x1="0" y1="0" x2="0" y2="1">
-            <stop stopColor="#b5d6cc" stopOpacity=".28" />
-            <stop offset="1" stopColor="#b5d6cc" stopOpacity="0" />
-          </linearGradient>
-        </defs>
         {yTicks.map((v, i) => {
           const y = padT + ((max - v) / span) * innerH
           return (
@@ -679,15 +692,25 @@ function EquityViz({
             </g>
           )
         })}
-        <path d={area} fill="url(#desk-eq-fade)" />
-        <path
-          d={d}
-          fill="none"
-          stroke="#478f83"
-          strokeWidth="2"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
+        {traces.map((tr) => (
+          <g key={tr.code}>
+            <path
+              d={tr.d}
+              fill="none"
+              stroke={tr.color}
+              strokeWidth="2"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            <circle
+              cx={tr.last[0]}
+              cy={tr.last[1]}
+              r="3.5"
+              fill={tr.color}
+              pointerEvents="none"
+            />
+          </g>
+        ))}
         {placed.map((m) => {
           const hot = activeId === m.id
           if (m.source === 'transaction') {
@@ -737,7 +760,6 @@ function EquityViz({
             </g>
           )
         })}
-        <circle cx={last[0]} cy={last[1]} r="4" fill="#478f83" pointerEvents="none" />
         {xTicks.map((tick, i) => (
           <text
             key={`x-${tick.ms}-${i}`}
@@ -781,16 +803,14 @@ function EquityViz({
           </dl>
         </div>
       ) : null}
-      {placed.length > 0 ? (
-        <div className="desk-eq-legend" aria-hidden="true">
-          <span>
-            <i className="desk-eq-legend-dot is-tx" /> transactions paper
+      <div className="desk-eq-legend">
+        {traces.map((tr) => (
+          <span key={tr.code}>
+            <i className="desk-eq-legend-line" style={{ background: tr.color }} />
+            {tr.label}
           </span>
-          <span>
-            <i className="desk-eq-legend-dot is-action" /> actions circuit
-          </span>
-        </div>
-      ) : null}
+        ))}
+      </div>
     </div>
   )
 }
@@ -800,6 +820,8 @@ export function OverviewPage() {
   const [rows, setRows] = useState<ScreenerDecisionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [overview, setOverview] = useState<PaperOverview | null>(null)
+  const [booksAgg, setBooksAgg] = useState<DeskBooksAggregate | null>(null)
+  const [bookCurves, setBookCurves] = useState<BookEquityCurve[]>([])
   const [tape, setTape] = useState<ActivityItem[]>([])
   const [equityActions, setEquityActions] = useState<ActivityItem[]>([])
   const [paperOrders, setPaperOrders] = useState<PaperOrderRow[]>([])
@@ -815,7 +837,34 @@ export function OverviewPage() {
   const load = useCallback(async (force = false) => {
     setLoading(true)
     type ScreenerOk = Awaited<ReturnType<typeof getScreener>>
-    const [screenerRes, ovRes, feedRes, ordersRes, lockRes, healthRes, mktRes, fngRes, tickersRes] =
+    const booksPromise = listPaperPortfolios()
+      .then(async (rows) => {
+        const active = rows.filter((p) => p.is_active !== false)
+        const list = active.length > 0 ? active : rows
+        const overs = await Promise.all(
+          list.map((p, i) =>
+            getPaperOverview(p.code)
+              .then((ov) => ({
+                snap: snapshotFromOverview(p.code, p.label || p.code, ov),
+                curve: {
+                  code: p.code,
+                  label: p.label || p.code,
+                  color: RING_COLORS[i % RING_COLORS.length]!,
+                  points: ov.equity_curve ?? [],
+                } satisfies BookEquityCurve,
+              }))
+              .catch(() => null),
+          ),
+        )
+        const ok = overs.filter((x): x is NonNullable<typeof x> => x != null)
+        return {
+          agg: aggregateDeskBooks(ok.map((x) => x.snap)),
+          curves: ok.map((x) => x.curve),
+        }
+      })
+      .catch(() => null)
+
+    const [screenerRes, ovRes, booksRes, feedRes, ordersRes, lockRes, healthRes, mktRes, fngRes, tickersRes] =
       await Promise.all([
         getScreener('1h', force)
           .then((r): ScreenerOk | Error => r)
@@ -825,6 +874,7 @@ export function OverviewPage() {
         getPaperOverview(BASELINE)
           .then((r) => ({ ok: true as const, data: r }))
           .catch(() => ({ ok: false as const })),
+        booksPromise,
         getActivityFeed(100)
           .then((r) => ({ ok: true as const, items: r.items }))
           .catch(() => ({ ok: false as const, items: [] as ActivityItem[] })),
@@ -867,6 +917,14 @@ export function OverviewPage() {
     if (ovRes.ok) setOverview(ovRes.data)
     else setOverview(null)
 
+    if (booksRes) {
+      setBooksAgg(booksRes.agg)
+      setBookCurves(booksRes.curves)
+    } else {
+      setBooksAgg(null)
+      setBookCurves([])
+    }
+
     if (feedRes.ok) {
       setEquityActions(feedRes.items)
       setTape(feedRes.items.slice(0, TAPE_LIMIT))
@@ -903,10 +961,19 @@ export function OverviewPage() {
   const now = useMemo(() => new Date(nowTick), [nowTick])
   const acct = overview?.account
   const risk = overview?.risk
-  const dayUp = (acct?.day_change ?? 0) > 0
+  /** Totaux Desk = tous les livres paper ; fallback baseline si liste vide. */
+  const deskEquity = booksAgg?.book_count ? booksAgg.equity : acct?.equity
+  const deskCash = booksAgg?.book_count ? booksAgg.cash : acct?.cash
+  const deskDay = booksAgg?.book_count ? booksAgg.day_change : acct?.day_change
+  const deskRiskPct = booksAgg?.book_count ? booksAgg.open_risk_pct : risk?.open_risk_pct
+  const deskRiskMax = booksAgg?.book_count
+    ? booksAgg.max_open_risk_pct
+    : risk?.max_open_risk_pct
+  const deskBookCount = booksAgg?.book_count ?? (overview ? 1 : 0)
+  const dayUp = (deskDay ?? 0) > 0
   const dayPct =
-    acct?.day_change != null && acct.equity
-      ? acct.day_change / Math.max(1e-9, acct.equity - acct.day_change)
+    deskDay != null && deskEquity
+      ? deskDay / Math.max(1e-9, deskEquity - deskDay)
       : null
 
   const watchList = useMemo(() => {
@@ -1017,14 +1084,30 @@ export function OverviewPage() {
         <div>
           <div className="eyebrow">01 / ICHIVOL WORKSPACE</div>
           <h1>Desk</h1>
-          <p className="subtitle">Votre marché, en un regard.</p>
+          <p className="subtitle">
+            Tous les portefeuilles paper réunis · marché · Ève.
+          </p>
         </div>
         <div className="actions">
-          <span className="subtitle">{loading && !acct ? '—' : dateLabel || '—'}</span>
+          <span className="subtitle">{loading && !deskEquity ? '—' : dateLabel || '—'}</span>
+          <Link className="link" to="/app/portefeuille" style={{ marginLeft: 14 }}>
+            Portefeuilles ↗
+          </Link>
           <Link className="link" to="/app/market" style={{ marginLeft: 14 }}>
-            Ouvrir le marché ↗
+            Marché ↗
+          </Link>
+          <Link className="link" to="/app/agents" style={{ marginLeft: 14 }}>
+            Ève ↗
           </Link>
         </div>
+      </div>
+
+      <div className="notice">
+        ⬡{' '}
+        <span>
+          Desk = agrégat de tous les livres paper. Ève peut trader paper (autonomie on) via Risk
+          Kernel — jamais live.
+        </span>
       </div>
 
       <div className="desk-workspace">
@@ -1033,17 +1116,25 @@ export function OverviewPage() {
             <div className="metric-label">
               Capital total<span>↗</span>
             </div>
-            <div className="metric-value">{acct ? fmtEur(acct.equity, 2) : '—'}</div>
-            <small>Portefeuille paper · EUR</small>
+            <div className="metric-value">
+              {deskEquity != null ? fmtEur(deskEquity, 2) : '—'}
+            </div>
+            <small>
+              {deskBookCount > 0
+                ? `${deskBookCount} livre${deskBookCount > 1 ? 's' : ''} paper · EUR`
+                : 'Portefeuilles paper · EUR'}
+            </small>
           </div>
           <div className="metric">
             <div className="metric-label">
               Disponible<span>↗</span>
             </div>
-            <div className="metric-value">{acct ? fmtEur(acct.cash, 2) : '—'}</div>
+            <div className="metric-value">
+              {deskCash != null ? fmtEur(deskCash, 2) : '—'}
+            </div>
             <small>
-              {acct && acct.equity > 0
-                ? `${fmtPct(acct.cash / acct.equity, 1, false)} du capital`
+              {deskCash != null && deskEquity && deskEquity > 0
+                ? `${fmtPct(deskCash / deskEquity, 1, false)} du capital`
                 : '—'}
             </small>
           </div>
@@ -1052,10 +1143,10 @@ export function OverviewPage() {
               P&amp;L du jour<span>↗</span>
             </div>
             <div className="metric-value">
-              {acct?.day_change != null ? fmtEur(acct.day_change, 2) : '—'}
+              {deskDay != null ? fmtEur(deskDay, 2) : '—'}
             </div>
             <small>
-              {dayPct != null ? `↗ ${fmtPct(dayPct)} aujourd’hui` : '—'}
+              {dayPct != null ? `${dayUp ? '↗' : '↘'} ${fmtPct(dayPct)} aujourd’hui` : '—'}
             </small>
           </div>
           <div className="metric">
@@ -1063,17 +1154,68 @@ export function OverviewPage() {
               Risque utilisé<span>↗</span>
             </div>
             <div className="metric-value">
-              {risk?.open_risk_pct != null
-                ? fmtPct(risk.open_risk_pct, 1, false)
-                : '—'}
+              {deskRiskPct != null ? fmtPct(deskRiskPct, 1, false) : '—'}
             </div>
             <small>
-              {risk?.max_open_risk_pct != null
-                ? `Limite de risque ouverte : ${fmtPct(risk.max_open_risk_pct, 0, false)}`
+              {deskRiskMax != null
+                ? `Limite max livres : ${fmtPct(deskRiskMax, 0, false)}`
                 : '—'}
             </small>
           </div>
         </div>
+
+        {booksAgg && booksAgg.books.length > 0 ? (
+          <section className="card desk-books" aria-label="Tous les portefeuilles paper">
+            <div className="card-head">
+              <h2>Portefeuilles virtuels</h2>
+              {badge(`${booksAgg.books.length} LIVRES`, 'gray')}
+            </div>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>LIVRE</th>
+                    <th>EQUITY</th>
+                    <th>CASH</th>
+                    <th>P&amp;L JOUR</th>
+                    <th>RISQUE</th>
+                    <th>POS.</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {booksAgg.books.map((b) => (
+                    <tr key={b.code}>
+                      <td>
+                        <b>{b.label}</b>
+                        <small>{b.code}</small>
+                      </td>
+                      <td className="mono">{fmtEur(b.equity, 2)}</td>
+                      <td className="mono">{fmtEur(b.cash, 2)}</td>
+                      <td className="mono">
+                        {b.day_change != null ? fmtEur(b.day_change, 2) : '—'}
+                      </td>
+                      <td className="mono">
+                        {b.open_risk_pct != null
+                          ? fmtPct(b.open_risk_pct, 1, false)
+                          : '—'}
+                      </td>
+                      <td>{b.open_positions}</td>
+                      <td>
+                        <Link
+                          className="link"
+                          to={`/app/portefeuille?pf=${encodeURIComponent(b.code)}`}
+                        >
+                          Ouvrir ↗
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : null}
 
         <div className="desk-overview">
           <DeskCard
@@ -1236,7 +1378,7 @@ export function OverviewPage() {
 
         <div className="grid">
           <DeskCard
-            title="Trajectoire du portefeuille"
+            title="Trajectoire des portefeuilles"
             extra={
               <div className="segmented">
                 {EQUITY_PERIODS.map((p) => (
@@ -1254,7 +1396,11 @@ export function OverviewPage() {
           >
             <div className="chart-summary">
               <span>
-                CAPITAL <b>{acct ? fmtEur(acct.equity, 2) : '—'}</b>
+                CAPITAL TOTAL{' '}
+                <b>{deskEquity != null ? fmtEur(deskEquity, 2) : '—'}</b>
+              </span>
+              <span>
+                LIVRES <b>{bookCurves.length || deskBookCount || '—'}</b>
               </span>
               <span>
                 DRAWDOWN{' '}
@@ -1264,7 +1410,20 @@ export function OverviewPage() {
               </span>
             </div>
             <EquityViz
-              points={overview?.equity_curve ?? []}
+              books={
+                bookCurves.length > 0
+                  ? bookCurves
+                  : overview
+                    ? [
+                        {
+                          code: BASELINE,
+                          label: 'IchiVol',
+                          color: RING_COLORS[0]!,
+                          points: overview.equity_curve ?? [],
+                        },
+                      ]
+                    : []
+              }
               period={equityPeriod}
               actions={equityActions}
               orders={paperOrders}

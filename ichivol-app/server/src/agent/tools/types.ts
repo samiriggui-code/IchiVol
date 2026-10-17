@@ -20,6 +20,9 @@ export const READ_ONLY_TOOLS = [
   'get_live_snapshot',
   'get_journal_context',
   'search_kb',
+  'get_eve_context',
+  'list_eve_dossiers',
+  'get_eve_dossier',
 ] as const
 
 export type ReadOnlyToolName = (typeof READ_ONLY_TOOLS)[number]

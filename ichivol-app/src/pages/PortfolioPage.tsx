@@ -191,12 +191,42 @@ export function PortfolioPage() {
     }
   }, [code])
 
-  const tabs = [
-    { code: BASELINE_CODE, label: 'IchiVol', title: undefined as string | undefined },
-    { code: SESSIONS_CODE, label: 'Sessions', title: SESSIONS_LABEL },
-    { code: FUTURES_CRYPTO_CODE, label: 'Futures & Crypto', title: FUTURES_CRYPTO_LABEL },
-    { code: RS_D1_CODE, label: 'RS-D1', title: RS_D1_LABEL },
-  ].filter((t) => t.code === BASELINE_CODE || t.code === code || portfolios.some((p) => p.code === t.code))
+  const knownLabels: Record<string, { label: string; title?: string }> = {
+    [BASELINE_CODE]: { label: 'IchiVol' },
+    [SESSIONS_CODE]: { label: 'Sessions', title: SESSIONS_LABEL },
+    [FUTURES_CRYPTO_CODE]: { label: 'Futures & Crypto', title: FUTURES_CRYPTO_LABEL },
+    [RS_D1_CODE]: { label: 'RS-D1', title: RS_D1_LABEL },
+  }
+  const tabs = (() => {
+    const fromApi = portfolios
+      .filter((p) => p.is_active !== false)
+      .map((p) => {
+        const known = knownLabels[p.code]
+        return {
+          code: p.code,
+          label: known?.label ?? p.label ?? p.code,
+          title: known?.title,
+        }
+      })
+    if (fromApi.length > 0) {
+      // Toujours inclure le livre courant s’il manque dans la liste API.
+      if (!fromApi.some((t) => t.code === code)) {
+        const known = knownLabels[code]
+        fromApi.unshift({
+          code,
+          label: known?.label ?? code,
+          title: known?.title,
+        })
+      }
+      return fromApi
+    }
+    return [
+      { code: BASELINE_CODE, label: 'IchiVol', title: undefined as string | undefined },
+      { code: SESSIONS_CODE, label: 'Sessions', title: SESSIONS_LABEL },
+      { code: FUTURES_CRYPTO_CODE, label: 'Futures & Crypto', title: FUTURES_CRYPTO_LABEL },
+      { code: RS_D1_CODE, label: 'RS-D1', title: RS_D1_LABEL },
+    ]
+  })()
   const selectPortfolio = (next: string) => {
     const params = new URLSearchParams(searchParams)
     if (next === BASELINE_CODE) params.delete('pf')

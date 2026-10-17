@@ -3591,6 +3591,877 @@
         ]
       }
     },
+    "/api/engine/eve/calibration": {
+      "get": {
+        "description": "Active policy + observation-backed proposal (never auto-applied).",
+        "operationId": "eve_calibration_api_engine_eve_calibration_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Calibration Api Engine Eve Calibration Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eve Calibration",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
+    "/api/engine/eve/context/{symbol}": {
+      "get": {
+        "operationId": "eve_context_api_engine_eve_context__symbol__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Context Api Engine Eve Context  Symbol  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eve Context",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
+    "/api/engine/eve/dossiers": {
+      "get": {
+        "operationId": "eve_dossiers_api_engine_eve_dossiers_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Symbol"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Dossiers Api Engine Eve Dossiers Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eve Dossiers",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
+    "/api/engine/eve/dossiers/{dossier_id}": {
+      "get": {
+        "operationId": "eve_dossier_detail_api_engine_eve_dossiers__dossier_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dossier_id",
+            "required": true,
+            "schema": {
+              "title": "Dossier Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Dossier Detail Api Engine Eve Dossiers  Dossier Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eve Dossier Detail",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
+    "/api/engine/eve/dossiers/{dossier_id}/followup": {
+      "get": {
+        "description": "Phase J \u2014 r\u00e9sum\u00e9 suivi / outcome (decision_time immuable).",
+        "operationId": "eve_followup_get_api_engine_eve_dossiers__dossier_id__followup_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dossier_id",
+            "required": true,
+            "schema": {
+              "title": "Dossier Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Followup Get Api Engine Eve Dossiers  Dossier Id  Followup Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eve Followup Get",
+        "tags": [
+          "eve"
+        ]
+      },
+      "post": {
+        "description": "Phase J/K \u2014 proposer HOLD/CLOSE/ABSTAIN (+ Shadow audit).\n\n``apply=true`` attempts CLOSE via paper_submit; autonomy off \u2192 dry-run only.\n``use_shadow`` (default true) runs \u00c8ve Shadow independent review (\u2260 ShadowBroker).",
+        "operationId": "eve_followup_run_api_engine_eve_dossiers__dossier_id__followup_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dossier_id",
+            "required": true,
+            "schema": {
+              "title": "Dossier Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "apply",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Apply",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "use_jev",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Use Jev",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "use_shadow",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Use Shadow",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Followup Run Api Engine Eve Dossiers  Dossier Id  Followup Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eve Followup Run",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
+    "/api/engine/eve/dossiers/{dossier_id}/paper-submit": {
+      "post": {
+        "description": "Soumet LONG/SHORT/CLOSE via Risk Kernel.\n\nSans ``portfolio_code`` (ou ``ALL``) \u2192 tous les portefeuilles virtuels.\nUn code pr\u00e9cis \u2192 un seul livre. Autonomie off = dry-run.",
+        "operationId": "eve_paper_submit_api_engine_eve_dossiers__dossier_id__paper_submit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dossier_id",
+            "required": true,
+            "schema": {
+              "title": "Dossier Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "portfolio_code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Portfolio Code"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Price"
+            }
+          },
+          {
+            "in": "query",
+            "name": "stop_distance",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stop Distance"
+            }
+          },
+          {
+            "in": "query",
+            "name": "execute",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Execute"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Paper Submit Api Engine Eve Dossiers  Dossier Id  Paper Submit Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eve Paper Submit",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
+    "/api/engine/eve/evaluate/{symbol}": {
+      "post": {
+        "description": "Run Analyst\u2192Challenger\u2192Guardian\u2192Shadow synthesis.\n\nWhen persist=true and ``paper_dry_run`` (default true), runs Risk Kernel on an\nexisting paper portfolio. Opens/closes only when ``EVE_PAPER_AUTONOMY`` is on\n(local paper test). Never live brokers.",
+        "operationId": "eve_evaluate_api_engine_eve_evaluate__symbol__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "persist",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Persist",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "use_jev",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Use Jev"
+            }
+          },
+          {
+            "in": "query",
+            "name": "paper_dry_run",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Paper Dry Run",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Evaluate Api Engine Eve Evaluate  Symbol  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eve Evaluate",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
+    "/api/engine/eve/event-radar/{symbol}": {
+      "get": {
+        "description": "Instrument-scoped Event Radar (reference-only). Respects EVENT_RADAR_ENABLED.",
+        "operationId": "eve_event_radar_api_engine_eve_event_radar__symbol__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "use_jev",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Use Jev",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Event Radar Api Engine Eve Event Radar  Symbol  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eve Event Radar",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
+    "/api/engine/eve/followup": {
+      "get": {
+        "description": "Phase J \u2014 positions Eve track\u00e9es + dossiers en surveillance.",
+        "operationId": "eve_followup_list_api_engine_eve_followup_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "portfolio_code",
+            "required": false,
+            "schema": {
+              "default": "ICHIVOL_BASELINE_V1",
+              "title": "Portfolio Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Followup List Api Engine Eve Followup Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eve Followup List",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
+    "/api/engine/eve/outcomes/sync": {
+      "post": {
+        "description": "Phase J \u2014 enregistre les outcomes des positions CLOSED li\u00e9es aux dossiers.",
+        "operationId": "eve_outcomes_sync_api_engine_eve_outcomes_sync_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Outcomes Sync Api Engine Eve Outcomes Sync Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eve Outcomes Sync",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
+    "/api/engine/eve/paper-autonomy": {
+      "get": {
+        "description": "V2 flag \u2014 when false, paper-submit is Risk Kernel dry-run only.",
+        "operationId": "eve_paper_autonomy_api_engine_eve_paper_autonomy_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Paper Autonomy Api Engine Eve Paper Autonomy Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Eve Paper Autonomy",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
+    "/api/engine/eve/primitive-study": {
+      "get": {
+        "description": "Matrice Mode \u00d7 NOUL/CHOICE/SCORE \u2014 base du routage JEV (\u00e9tude d\u00e9terministe).",
+        "operationId": "eve_primitive_study_api_engine_eve_primitive_study_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Primitive Study Api Engine Eve Primitive Study Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Eve Primitive Study",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
+    "/api/engine/eve/settings/schema": {
+      "get": {
+        "description": "QuantDinger-style schema with ``is_advanced`` for Settings Basic/Advanced.",
+        "operationId": "eve_settings_schema_api_engine_eve_settings_schema_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Settings Schema Api Engine Eve Settings Schema Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Eve Settings Schema",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
+    "/api/engine/eve/settings/values": {
+      "get": {
+        "description": "Effective JEV / Radar knobs (secrets masked).",
+        "operationId": "eve_settings_values_api_engine_eve_settings_values_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Settings Values Api Engine Eve Settings Values Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Eve Settings Values",
+        "tags": [
+          "eve"
+        ]
+      },
+      "patch": {
+        "description": "Persist writable knobs (timeouts, confidences, radar flags). Secrets rejected.",
+        "operationId": "eve_settings_patch_api_engine_eve_settings_values_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Settings Patch Api Engine Eve Settings Values Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eve Settings Patch",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
+    "/api/engine/eve/verdicts/{verdict_id}": {
+      "get": {
+        "operationId": "eve_verdict_detail_api_engine_eve_verdicts__verdict_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "verdict_id",
+            "required": true,
+            "schema": {
+              "title": "Verdict Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Verdict Detail Api Engine Eve Verdicts  Verdict Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eve Verdict Detail",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
     "/api/engine/event-study/{symbol}": {
       "get": {
         "description": "Strategy Lab Phase 1 \u2014 Event Study.\n\nFor each entry signal of the named backtest variant, measure forward\nATR-normalized returns at +N candles, MFE/MAE, and % hitting +R before -R.\nNo capital, fees, or sizing. Complements `/backtest/{symbol}` (full\nsimulator) without replacing it.",
@@ -4009,6 +4880,157 @@
         "summary": "Get Indicator Series",
         "tags": [
           "indicators"
+        ]
+      }
+    },
+    "/api/engine/jev-shadow/health": {
+      "get": {
+        "description": "Provider readiness probe. Available even when Shadow evaluations are disabled.",
+        "operationId": "get_jev_shadow_health_api_engine_jev_shadow_health_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "provider",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Jev Shadow Health Api Engine Jev Shadow Health Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Jev Shadow Health",
+        "tags": [
+          "jev-shadow"
+        ]
+      }
+    },
+    "/api/engine/jev-shadow/history": {
+      "get": {
+        "operationId": "get_shadow_history_api_engine_jev_shadow_history_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Shadow History Api Engine Jev Shadow History Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Shadow History",
+        "tags": [
+          "jev-shadow"
+        ]
+      }
+    },
+    "/api/engine/jev-shadow/{symbol}": {
+      "get": {
+        "operationId": "evaluate_shadow_api_engine_jev_shadow__symbol__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Evaluate Shadow Api Engine Jev Shadow  Symbol  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Evaluate Shadow",
+        "tags": [
+          "jev-shadow"
         ]
       }
     },

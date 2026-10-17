@@ -10,7 +10,12 @@ export const SESSIONS_LABEL = 'Sessions — décisions aux ouvertures et clôtur
 /** YM, MGC et BTC (spot / perpétuel / CME) sur un compte à part : src/lib/futuresCrypto.ts. */
 export const FUTURES_CRYPTO_CODE = 'FUTURES_CRYPTO_V1'
 
-const SELECTABLE = new Set([RS_D1_CODE, SESSIONS_CODE, FUTURES_CRYPTO_CODE])
+const SELECTABLE = new Set([
+  BASELINE_PORTFOLIO_CODE,
+  RS_D1_CODE,
+  SESSIONS_CODE,
+  FUTURES_CRYPTO_CODE,
+])
 
 /** Portefeuilles qui acceptent un achat manuel (RS-D1 reste piloté par sa seule règle, RS-09 §7). */
 export const MANUAL_PORTFOLIOS: ReadonlyArray<{ code: string; label: string }> = [
@@ -22,9 +27,13 @@ export function isRsPortfolio(code: string | null | undefined): boolean {
   return code === RS_D1_CODE
 }
 
-/** Code du portefeuille demandé par l'URL (`?pf=`) ; tout autre valeur retombe sur le baseline. */
+/** Code du portefeuille demandé par l'URL (`?pf=`) ; inconnu → baseline. */
 export function portfolioFromParam(param: string | null | undefined): string {
-  return param && SELECTABLE.has(param) ? param : BASELINE_PORTFOLIO_CODE
+  if (!param) return BASELINE_PORTFOLIO_CODE
+  if (SELECTABLE.has(param)) return param
+  // Tout code paper actif (virtuel) est accepté — pas seulement la liste hardcodée.
+  if (/^[A-Z0-9_]+$/i.test(param)) return param
+  return BASELINE_PORTFOLIO_CODE
 }
 
 /** Actions manuelles (achat, fermeture) partout sauf sur RS-D1. Futures & Crypto : fermeture d'une position

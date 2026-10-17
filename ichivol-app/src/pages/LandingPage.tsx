@@ -5,114 +5,149 @@ import { ThemeToggle } from '../components/ThemeToggle'
 
 const FEATURES = [
   {
-    icon: 'element-11',
-    title: 'Desk workspace V3',
-    body: '11 pages alignées maquette : Desk, Marché, Opportunités, Portefeuille, Lab, Journal, Contexte, Copilot, Agents, Opérations, Paramètres.',
-  },
-  {
     icon: 'abstract-39',
-    title: 'Eve — agent de surveillance',
-    body: 'File AgentTask type Comp AI : mission 1 symbole, réveil à la bougie fermée, réponse dans Copilot. Paper only · confirm humaine.',
-  },
-  {
-    icon: 'shield-tick',
-    title: 'Risk Kernel + kill-switch',
-    body: 'Toute ouverture paper passe le risk_kernel. Kill-switch et pertes journalières bloquent les entrées — le LLM ne bypass jamais.',
+    title: 'Ève — IA qui trade paper',
+    body: 'Une IA, quatre modes. Chaque portefeuille propose ses trades selon sa méthode ; autonomie activée, Ève décide seule de les prendre ou non. Le Risk Kernel garde le dernier mot.',
   },
   {
     icon: 'kanban',
     title: 'Decision Engine · 5 portes',
-    body: 'Direction → Participation → Structure → Location → Régime. Portes = action ; badge combiner = diagnostic. Le LLM ne décide pas.',
+    body: 'Direction → Participation → Structure → Location → Régime. Les portes alimentent la décision d’Ève — pas un chat qui invente un BUY.',
+  },
+  {
+    icon: 'shield-tick',
+    title: 'Autonomie bornée',
+    body: 'Entry gate, signal rules, late→HOLD, kill-switch. Ève trade ; le Risk Kernel peut couper. Pas de live.',
+  },
+  {
+    icon: 'notification-status',
+    title: 'Event Radar',
+    body: 'News et événements dans le dossier avant d’agir. Enrichit la décision de trade, ne remplace pas les portes.',
   },
   {
     icon: 'chart-simple',
     title: 'Strategy Lab',
-    body: 'Event study, rulesets, ablation, walk-forward, Monte Carlo — recherche hors capital, sans promotion auto vers le live.',
+    body: 'Event study, ablation, walk-forward, Monte Carlo — affûter les règles hors capital avant de laisser Ève trader paper.',
   },
   {
     icon: 'message-text-2',
-    title: 'Copilot + preuves moteur',
-    body: 'Tools allowlistés, DECISION_DATA, evidence et qualité. Explication ancrée — pas d’invention de BUY.',
+    title: 'Preuves + timeline',
+    body: 'Chaque trade paper a un dossier : modes JEV, gate, dégradation, Risk. Tu vois pourquoi Ève a agi.',
+  },
+]
+
+const EVE_MODES = [
+  {
+    id: 'analyst',
+    icon: '◇',
+    name: 'Analyste',
+    tag: 'NOUL · CHOICE · SCORE',
+    body: 'Lit le setup et pose le scénario d’engagement.',
+  },
+  {
+    id: 'challenger',
+    icon: '↺',
+    name: 'Contradictrice',
+    tag: 'NOUL · CHOICE · SCORE',
+    body: 'Contre-attaque — alternatives et fragilités avant d’ouvrir.',
+  },
+  {
+    id: 'guardian',
+    icon: '◈',
+    name: 'Gardienne',
+    tag: 'NOUL · CHOICE · SCORE',
+    body: 'Anomalies et risque. Le Risk Kernel peut bloquer.',
+  },
+  {
+    id: 'shadow',
+    icon: '◉',
+    name: 'Contre-avis',
+    tag: 'NOUL · CHOICE · SCORE',
+    body: 'Refait l’évaluation de son côté avec JEV, sans voir les autres modes.',
   },
 ]
 
 const ENGINE_STACK = [
-  { code: 'CORE', label: 'Ichimoku × RVOL + Decision Engine' },
-  { code: 'MS', label: 'Market Structure · swings · FVG · Fib' },
-  { code: 'RISK', label: 'Risk Kernel · kill-switch · paper gateway' },
-  { code: 'EVE', label: 'AgentTask · schedule_recheck · Copilot thread' },
-  { code: 'LAB', label: 'Strategy Lab — recherche hors capital' },
-  { code: 'CYCLE', label: 'CycleState V0 — observation seule (FFT / Hilbert)' },
+  { code: 'CORE', label: 'Ichimoku × RVOL + Decision Engine (5 portes)' },
+  { code: 'EVE', label: 'Ève — IA trading paper · 4 modes · dossiers JEV' },
+  { code: 'GATE', label: 'Entry gate · signal rules · dégradation late→HOLD' },
+  { code: 'RADAR', label: 'Event Radar — contexte avant d’agir' },
+  { code: 'RISK', label: 'Risk Kernel — autorise / bloque l’exécution paper' },
+  { code: 'LAB', label: 'Strategy Lab — affûter hors capital' },
 ]
 
 const TRUST = [
-  'Moteur Python = vérité · Eve explique, ne décide pas',
-  'Paper only · confirm humaine par défaut · pas d’auto-open',
-  'Risk Kernel obligatoire avant toute entrée paper',
-  'Lab et expériences hors capital — pas de promo live auto',
+  'IchiVol V4 : le moteur propose, Ève décide seule en paper',
+  'Quatre modes JEV · Decision Engine · Event Radar',
+  'Risk Kernel + kill-switch : elle trade, le risk peut couper',
+  'Paper only — pas de live, pas de conseil financier',
 ]
 
 const STEPS = [
   {
     n: '01',
     icon: 'filter-search',
-    title: 'Lire',
-    body: 'Desk et Marché : régime, sessions, screener, preuves pipeline.',
+    title: 'Mesurer',
+    body: 'Cinq portes + structure. Le marché est lu avant toute action.',
   },
   {
     n: '02',
-    icon: 'verify',
-    title: 'Qualifier',
-    body: 'Portes Decision Engine + Risk Kernel. Shadow journal si blocage.',
+    icon: 'abstract-39',
+    title: 'Décider',
+    body: 'Ève en 4 modes + Event Radar. Dossier JEV, gate, signal rules.',
   },
   {
     n: '03',
-    icon: 'abstract-39',
-    title: 'Surveiller',
-    body: 'Mission Eve sur un symbole · réveil à la bougie · rapport dans Copilot.',
+    icon: 'verify',
+    title: 'Exécuter',
+    body: 'Autonomie activée : Ève accepte ou refuse chaque proposition. Le Risk Kernel peut encore refuser.',
   },
 ]
 
 const COMPARE = {
   without: [
-    'Un croisement Tenkan/Kijun sans volume = faux départ',
-    'Un chat IA invente un BUY hors du moteur',
-    'Aucune surveillance durable entre deux sessions',
+    'Un chat qui « conseillerait » d’acheter sans exécuter',
+    'Pas de modes, pas de gate, pas de contre-lecture',
+    'Trade possible sur signal pourri ou JEV down',
   ],
   with: [
-    'Signal + participation + structure mesurés hors échantillon',
-    'Eve dort / se réveille (file Postgres) — reply dans Copilot',
-    'Risk Kernel + kill-switch avant paper · toi confirmes',
+    'Ève juge chaque trade proposé par tes portefeuilles et décide seule',
+    '4 modes + entry gate + late→HOLD avant d’ouvrir',
+    'Risk Kernel / kill-switch peuvent bloquer l’exécution',
   ],
 }
 
 const STATS = [
-  { value: '11', label: 'Pages workspace' },
-  { value: '5', label: 'Portes Decision Engine' },
-  { value: '1', label: 'Agent LLM (Eve)' },
-  { value: '0', label: 'Votes LONG/SHORT par le LLM' },
+  { value: 'V4', label: 'Version' },
+  { value: '4', label: 'Modes Ève' },
+  { value: '1', label: 'IA qui trade paper' },
+  { value: '0', label: 'Live brokers' },
 ]
 
 const FAQ = [
   {
-    q: 'IchiVol donne-t-il un conseil financier ?',
-    a: 'Non. Le moteur produit une lecture structurée ; Eve / Copilot l’expliquent. La décision de trade reste la vôtre.',
+    q: 'Qu’est-ce qu’IchiVol V4 ?',
+    a: 'Un desk où Ève, l’IA décisionnelle, trade en paper : Decision Engine, 4 modes JEV, entry gate, Event Radar, Risk Kernel, Lab. Pas de live.',
   },
   {
-    q: 'Que fait Eve quand je « Surveille BTC » ?',
-    a: 'Une mission AgentTask est planifiée à la prochaine bougie fermée. Eve se réveille, lit le moteur via tools, écrit dans le thread Copilot, et peut se reprogrammer. Paper only, confirm humaine.',
+    q: 'Ève trade vraiment ?',
+    a: 'Oui, en paper, quand l’autonomie est activée. Chaque portefeuille (Baseline, Sessions, Futures & Crypto…) applique sa méthode et propose ; Ève, avec JEV, accepte ou refuse à chaque nouvelle bougie, sans intervention humaine. Le Risk Kernel autorise ou bloque par portefeuille, et le kill-switch coupe toute entrée. Pas de broker réel.',
   },
   {
-    q: 'Les 6 cartes Agents sont-elles 6 LLM ?',
-    a: 'Non. Un seul LLM (Eve / Opportunités). Les cinq autres sont des rôles code (observateur, risque, exécution, position, session) déjà dans le moteur — la page affiche leur état.',
+    q: 'Qu’est-ce qu’Ève Intelligence ?',
+    a: 'Une seule IA avec quatre modes : Analyste, Contradictrice, Gardienne et Contre-avis. Chacun pose ses questions à JEV (NOUL, CHOICE, SCORE), d’abord par l’API JEV, puis jevos quand les crédits sont épuisés. Ce ne sont pas quatre IA concurrentes.',
   },
   {
-    q: 'Qu’est-ce que le Strategy Lab ?',
-    a: 'Un banc de recherche : event study, ablation, walk-forward, Monte Carlo. Aucune promotion automatique vers le trading live.',
+    q: 'Que se passe-t-il si JEV répond trop tard ou ne répond pas ?',
+    a: 'Ève s’abstient : réponse trop tardive, JEV injoignable ou confiance trop faible, elle n’ouvre rien.',
   },
   {
-    q: 'Le Risk Kernel peut-il être contourné par l’agent ?',
-    a: 'Non. Toute ouverture paper passe le risk_kernel et le paper gateway. Kill-switch armé = entrées bloquées.',
+    q: 'Les cartes Agents sont-elles plusieurs LLM ?',
+    a: 'Non. Ève est l’unique IA qui trade. Observateur, Risque, Exécution, Position, Session sont des rôles code autour d’elle.',
+  },
+  {
+    q: 'Le Risk Kernel peut-il être contourné ?',
+    a: 'Non. Toute ouverture paper passe par le Risk Kernel. Kill-switch armé : Ève ne peut plus ouvrir.',
   },
 ]
 
@@ -221,8 +256,9 @@ export function LandingPage() {
             <span className="camap-word">IchiVol</span>
           </Link>
           <div className="camap-nav-links">
-            <a href="#moteur">Moteur</a>
-            <a href="#methode">Méthode</a>
+            <a href="#moteur">Moteur V4</a>
+            <a href="#eve">Ève</a>
+            <a href="#methode">Décision</a>
             <a href="#capacites">Capacités</a>
             <a href="#comparatif">Comparatif</a>
             <a href="#faq">FAQ</a>
@@ -241,17 +277,18 @@ export function LandingPage() {
           <div className="camap-hero-glow" aria-hidden />
           <div className="camap-hero-grid">
             <div className="camap-hero-copy camap-reveal">
-              <p className="camap-brand-lockup">IchiVol</p>
+              <p className="camap-brand-lockup">IchiVol V4</p>
               <h1 className="camap-hero-title">
-                Observer. Qualifier. <em>Surveiller.</em>
+                Ève décide. <em>Le risque borne.</em>
               </h1>
               <p className="camap-hero-lede">
-                Workspace V3 : le moteur tranche, le Risk Kernel borne, Eve
-                surveille — Claude explique, sans jamais inventer le BUY.
+                Le moteur calcule et chaque portefeuille propose ses trades. Ève,
+                avec ses quatre modes JEV, décide seule de les prendre ou non. Le
+                Risk Kernel peut couper. Paper seulement, jamais d’argent réel.
               </p>
               <div className="camap-hero-cta">
                 <Link to="/login" className="camap-btn camap-btn-primary camap-btn-lg">
-                  Entrer dans le Desk
+                  Lancer le Desk V4
                 </Link>
               </div>
             </div>
@@ -260,18 +297,18 @@ export function LandingPage() {
               <div className="camap-hero-visual">
                 <span className="camap-hero-visual-badge">
                   <span className="camap-dot camap-dot-live" aria-hidden />
-                  Eve · mission · paper
+                  V4 · Ève décide en paper
                 </span>
                 <MockChart />
                 <div className="camap-hero-visual-footer">
                   <span>BTCUSDT · 1h</span>
-                  <span className="camap-chip camap-chip-bull">recheck due</span>
+                  <span className="camap-chip camap-chip-bull">illustration</span>
                 </div>
                 <div className="camap-hero-gates" aria-hidden>
-                  <span className="is-pass">Direction</span>
-                  <span className="is-pass">Participation</span>
+                  <span className="is-pass">Portes</span>
+                  <span className="is-pass">Gate</span>
                   <span className="is-pass">Risk</span>
-                  <span className="is-watch">Eve veille</span>
+                  <span className="is-watch">Ève décide</span>
                 </div>
               </div>
             </div>
@@ -290,10 +327,10 @@ export function LandingPage() {
         </section>
 
         <section id="moteur" className="camap-section">
-          <h2 className="camap-section-title">Stack moteur V3</h2>
+          <h2 className="camap-section-title">Les briques d’IchiVol V4</h2>
           <p className="camap-section-lede">
-            Core Ichimoku×RVOL, structure, risk, agent Eve, Lab — Cycle en
-            observation seule.
+            Du signal à l’exécution paper : moteur, puis Ève, contrôle d’entrée,
+            radar d’événements, Risk Kernel, et le Lab pour affûter les règles.
           </p>
           <ol className="camap-engine-stack">
             {ENGINE_STACK.map((row) => (
@@ -305,10 +342,36 @@ export function LandingPage() {
           </ol>
         </section>
 
-        <section id="methode" className="camap-section">
-          <h2 className="camap-section-title">Ce que l’app traite</h2>
+        <section id="eve" className="camap-section">
+          <h2 className="camap-section-title">Ève — l’IA qui trade</h2>
           <p className="camap-section-lede">
-            Live → portes → risk → Lab / Paper → Eve / Copilot.
+            Quatre modes avant d’ouvrir. Autonomie activée, elle accepte ou refuse
+            chaque trade proposé par tes portefeuilles.
+          </p>
+          <div className="camap-eve-modes">
+            {EVE_MODES.map((m) => (
+              <article key={m.id} className="camap-eve-mode">
+                <span className="camap-eve-mode-icon" aria-hidden>
+                  {m.icon}
+                </span>
+                <div className="camap-eve-mode-head">
+                  <h3>{m.name}</h3>
+                  <span className="camap-eve-mode-tag">{m.tag}</span>
+                </div>
+                <p>{m.body}</p>
+              </article>
+            ))}
+          </div>
+          <p className="camap-eve-footnote">
+            Hub dossiers → modes → entry gate → Risk Kernel → ouverture paper.
+            Elle trade ; le Risk Kernel peut refuser.
+          </p>
+        </section>
+
+        <section id="methode" className="camap-section">
+          <h2 className="camap-section-title">Chaîne de trade V4</h2>
+          <p className="camap-section-lede">
+            Mesurer → décider (Ève) → exécuter paper (Risk peut couper).
           </p>
           <ol className="camap-steps camap-steps-numbered">
             {STEPS.map((step) => (
@@ -326,17 +389,18 @@ export function LandingPage() {
           </ol>
           <blockquote className="camap-inline-quote">
             <p>
-              « Ne demande pas à Claude s’il faut acheter — demande au moteur
-              ce qu’il a mesuré, puis laisse Eve te le rappeler à la bougie. »
+              « Ève n’est pas un copilote qui te demande permission à chaque
+              bougie — c’est une IA qui trade paper, bornée par le Risk Kernel. »
             </p>
-            <cite>Principe IchiVol V3</cite>
+            <cite>Principe IchiVol V4</cite>
           </blockquote>
         </section>
 
         <section id="capacites" className="camap-section">
-          <h2 className="camap-section-title">Capacités</h2>
+          <h2 className="camap-section-title">Capacités V4</h2>
           <p className="camap-section-lede">
-            Livré dans le workspace — Desk, Eve, Risk Kernel, Lab, preuves.
+            Trading paper autonome, portes, gate, radar, Risk, Lab — dans le
+            Desk.
           </p>
           <div className="camap-bento">
             {FEATURES.map((f) => (
@@ -352,13 +416,13 @@ export function LandingPage() {
         </section>
 
         <section id="comparatif" className="camap-section">
-          <h2 className="camap-section-title">Ce que ça change</h2>
+          <h2 className="camap-section-title">Ce que change la V4</h2>
           <p className="camap-section-lede">
-            Même Ichimoku. La différence : risk borné + Eve qui survit au restart.
+            Pas un chatbot. Une IA qui décide et exécute paper, avec garde-fous.
           </p>
           <div className="camap-compare">
             <div className="camap-compare-col">
-              <span className="camap-compare-label">Sans IchiVol</span>
+              <span className="camap-compare-label">Chat IA classique</span>
               <ul>
                 {COMPARE.without.map((item) => (
                   <li key={item}>{item}</li>
@@ -366,7 +430,7 @@ export function LandingPage() {
               </ul>
             </div>
             <div className="camap-compare-col camap-compare-col-highlight">
-              <span className="camap-compare-label">Avec IchiVol V3</span>
+              <span className="camap-compare-label">IchiVol V4 · Ève</span>
               <ul>
                 {COMPARE.with.map((item) => (
                   <li key={item}>
@@ -389,7 +453,7 @@ export function LandingPage() {
         </section>
 
         <section id="faq" className="camap-section">
-          <h2 className="camap-section-title">Avant de décider</h2>
+          <h2 className="camap-section-title">Avant de lancer Ève</h2>
           <div className="camap-faq">
             {FAQ.map((item) => (
               <details key={item.q} className="camap-faq-item">
@@ -401,8 +465,11 @@ export function LandingPage() {
         </section>
 
         <section className="camap-closing">
-          <h2>Prêt à entrer dans le Desk</h2>
-          <p>Workspace V3 · Eve · Risk Kernel · Lab · Copilot — session sécurisée.</p>
+          <h2>Laisse Ève trader le paper</h2>
+          <p>
+            IchiVol V4 · autonomie paper · 4 modes · Decision Engine · Risk
+            Kernel. Pas de live.
+          </p>
           <Link to="/login" className="camap-btn camap-btn-primary camap-btn-lg">
             Se connecter
           </Link>
@@ -417,24 +484,25 @@ export function LandingPage() {
               <span className="camap-word">IchiVol</span>
             </Link>
             <p>
-              Cockpit Ichimoku × RVOL V3 : Desk, Eve, Risk Kernel, Lab —
-              le moteur tranche, toi confirmes.
+              IchiVol V4 — Ève trade le paper sur Ichimoku × RVOL. Decision
+              Engine, modes JEV, Risk Kernel. Autonomie bornée, pas de live.
             </p>
           </div>
 
           <div className="camap-footer-cols">
             <div className="camap-footer-col">
-              <h3>Produit</h3>
+              <h3>Produit V4</h3>
               <a href="#moteur">Moteur</a>
-              <a href="#methode">Méthode</a>
+              <a href="#eve">Ève</a>
+              <a href="#methode">Décision</a>
               <a href="#capacites">Capacités</a>
               <a href="#comparatif">Comparatif</a>
               <a href="#faq">FAQ</a>
             </div>
             <div className="camap-footer-col">
               <h3>Workspace</h3>
-              <Link to="/login">Desk</Link>
-              <Link to="/login">Agents / Eve</Link>
+              <Link to="/login">Desk V4</Link>
+              <Link to="/login">Agents / Ève</Link>
               <Link to="/login">Portefeuille</Link>
               <Link to="/login">Strategy Lab</Link>
               <Link to="/login">Copilot</Link>
@@ -449,10 +517,10 @@ export function LandingPage() {
 
         <div className="camap-footer-bar">
           <span className="camap-footer-muted">
-            © {new Date().getFullYear()} IchiVol — lecture structurée, pas un conseil financier.
+            © {new Date().getFullYear()} IchiVol V4 — trading paper autonome, pas un conseil financier.
           </span>
           <span className="camap-footer-muted">
-            Eve surveille · Risk borne · toi confirmes
+            Ève trade · Risk borne · paper only
           </span>
         </div>
       </footer>

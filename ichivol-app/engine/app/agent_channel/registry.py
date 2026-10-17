@@ -66,6 +66,16 @@ from app.agent_channel.commands import (
     cmd_run_optimize,
     cmd_scan_market,
     cmd_get_factsheet,
+    cmd_get_eve_context,
+    cmd_evaluate_eve,
+    cmd_list_eve_dossiers,
+    cmd_get_eve_dossier,
+    cmd_get_eve_paper_autonomy,
+    cmd_submit_eve_paper,
+    cmd_list_eve_followup,
+    cmd_run_eve_followup,
+    cmd_sync_eve_outcomes,
+    cmd_eve_calibration_report,
 )
 
 Handler = Callable[[dict], dict]
@@ -95,6 +105,94 @@ TOOLS: dict[str, ToolSpec] = {
             True,
             {"symbol": "str, requis", "timeframe": "str, défaut '1h'", "as_of": "int unix, optionnel (historique)"},
             cmd_get_factsheet,
+        ),
+        ToolSpec(
+            "get_eve_context",
+            "Ève V1-B — contexte consolidé des moteurs Python (valeurs, unités, fraîcheur, indisponibilités).",
+            True,
+            {"symbol": "str, requis", "timeframe": "str, défaut '1h'"},
+            cmd_get_eve_context,
+        ),
+        ToolSpec(
+            "evaluate_eve",
+            "Ève V1 — Analyst/Challenger/Guardian/Shadow → verdict potentiel. Aucune exécution.",
+            True,
+            {
+                "symbol": "str, requis",
+                "timeframe": "str, défaut '1h'",
+                "use_jev": "bool optionnel",
+            },
+            cmd_evaluate_eve,
+        ),
+        ToolSpec(
+            "list_eve_dossiers",
+            "Liste des Dossiers IchiVol (évaluations Eve potentielles).",
+            True,
+            {"limit": "int, défaut 20", "symbol": "str optionnel"},
+            cmd_list_eve_dossiers,
+        ),
+        ToolSpec(
+            "get_eve_dossier",
+            "Détail d'un Dossier IchiVol (contexte, modes, verdict, cohérence).",
+            True,
+            {"dossier_id": "str, requis"},
+            cmd_get_eve_dossier,
+        ),
+        ToolSpec(
+            "get_eve_paper_autonomy",
+            "Ève V2 — lit le flag EVE_PAPER_AUTONOMY (défaut off). Lecture seule.",
+            True,
+            {},
+            cmd_get_eve_paper_autonomy,
+        ),
+        ToolSpec(
+            "submit_eve_paper",
+            "Ève V2 — dry-run Risk Kernel / CLOSE pour un dossier. Jamais d'ouverture "
+            "ni de fermeture depuis le channel (execute forcé à false).",
+            True,
+            {
+                "dossier_id": "str, requis",
+                "portfolio_code": "str, défaut baseline",
+                "price": "float optionnel",
+                "stop_distance": "float optionnel",
+            },
+            cmd_submit_eve_paper,
+        ),
+        ToolSpec(
+            "list_eve_followup",
+            "Ève Phase J — liste des positions Eve trackées et dossiers en surveillance.",
+            True,
+            {"limit": "int, défaut 30", "portfolio_code": "str, défaut baseline"},
+            cmd_list_eve_followup,
+        ),
+        ToolSpec(
+            "run_eve_followup",
+            "Ève Phase J — propose HOLD/CLOSE/ABSTAIN pour un dossier. "
+            "apply=true → dry-run CLOSE via paper_submit (autonomie reste le hard-gate).",
+            True,
+            {
+                "dossier_id": "str, requis",
+                "apply": "bool, défaut false",
+                "use_jev": "bool optionnel",
+                "use_shadow": "bool, défaut true (Phase K)",
+            },
+            cmd_run_eve_followup,
+        ),
+        ToolSpec(
+            "sync_eve_outcomes",
+            "Ève Phase J — écrit outcome_json (PnL/frais) pour dossiers liés à des "
+            "positions CLOSED. Ne modifie jamais decision_time.",
+            True,
+            {"limit": "int, défaut 50"},
+            cmd_sync_eve_outcomes,
+        ),
+        ToolSpec(
+            "eve_calibration_report",
+            "Ève — observe dossiers/outcomes (abstain, cohérence, win-rate paper) et "
+            "propose des ajustements de seuils. Jamais auto-appliqué, jamais fine-tune LLM.",
+            True,
+            {"limit": "int, défaut 100"},
+            cmd_eve_calibration_report,
         ),
         ToolSpec(
             "get_symbol_context",

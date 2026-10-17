@@ -1423,3 +1423,193 @@ def cmd_get_factsheet(args: dict) -> dict:
         raise CommandError(str(exc)) from exc
     except ValueError as exc:
         raise CommandError(str(exc)) from exc
+
+
+def cmd_get_eve_context(args: dict) -> dict:
+    """Ève V1-B — contexte moteurs consolidé (lecture seule)."""
+    from app.eve.context import build_engine_context
+
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = args.get("timeframe", "1h")
+    return build_engine_context(symbol, str(timeframe or "1h"))
+
+
+def cmd_evaluate_eve(args: dict) -> dict:
+    """Ève V1 — cycle modes → verdict potentiel. Jamais d'exécution paper/réel."""
+    from app.eve.orchestrator import evaluate_opportunity
+
+    symbol = _require_str(args, "symbol").upper()
+    timeframe = str(args.get("timeframe") or "1h")
+    use_jev = args.get("use_jev")
+    if use_jev is not None and not isinstance(use_jev, bool):
+        raise CommandError("use_jev must be bool")
+    # Channel: no persist by default (API /eve/evaluate persists).
+    return evaluate_opportunity(
+        symbol,
+        timeframe,
+        session=None,
+        persist=False,
+        use_jev=use_jev,
+    )
+
+
+def cmd_list_eve_dossiers(args: dict) -> dict:
+    """Liste des Dossiers IchiVol (potentiels, non exécutés)."""
+    from app.db.session import SessionLocal
+    from app.eve.dossier import dossier_to_dict, get_verdict, list_dossiers
+
+    limit = int(args.get("limit") or 20)
+    symbol = args.get("symbol")
+    session = SessionLocal()
+    try:
+        rows = list_dossiers(
+            session,
+            limit=limit,
+            symbol=str(symbol).upper() if symbol else None,
+        )
+        return {
+            "results": [
+                dossier_to_dict(d, get_verdict(session, d.verdict_id) if d.verdict_id else None)
+                for d in rows
+            ]
+        }
+    finally:
+        session.close()
+
+
+def cmd_get_eve_dossier(args: dict) -> dict:
+    """Détail d'un Dossier IchiVol par id."""
+    from app.db.session import SessionLocal
+    from app.eve.dossier import dossier_to_dict, get_dossier, get_verdict
+
+    dossier_id = _require_str(args, "dossier_id")
+    session = SessionLocal()
+    try:
+        d = get_dossier(session, dossier_id)
+        if d is None:
+            raise CommandError("dossier_not_found")
+        v = get_verdict(session, d.verdict_id) if d.verdict_id else None
+        return dossier_to_dict(d, v)
+    finally:
+        session.close()
+
+
+def cmd_get_eve_paper_autonomy(args: dict) -> dict:
+    """V2 — flag d'autonomie paper (lecture seule)."""
+    from app.eve.paper_submit import AUTONOMY_ENV, autonomy_enabled
+
+    return {
+        "autonomy_enabled": autonomy_enabled(),
+        "env": AUTONOMY_ENV,
+        "default": False,
+        "note": "Agent channel never opens/closes; use HTTP paper-submit when autonomy is on",
+    }
+
+
+def cmd_submit_eve_paper(args: dict) -> dict:
+    """V2 — dry-run Risk Kernel / CLOSE pour un dossier (jamais d'exécution ici)."""
+    from app.db.session import SessionLocal
+    from app.eve.paper_submit import submit_paper_from_dossier
+    from app.paper.strategy_profiles import BASELINE_CODE
+
+    dossier_id = _require_str(args, "dossier_id")
+    portfolio_code = str(args.get("portfolio_code") or BASELINE_CODE)
+    price = args.get("price")
+    stop_distance = args.get("stop_distance")
+    if price is not None and not isinstance(price, (int, float)):
+        raise CommandError("price must be number")
+    if stop_distance is not None and not isinstance(stop_distance, (int, float)):
+        raise CommandError("stop_distance must be number")
+
+    session = SessionLocal()
+    try:
+        # Channel invariant: never open/close — always execute=False.
+        out = submit_paper_from_dossier(
+            session,
+            dossier_id,
+            portfolio_code=portfolio_code,
+            price=float(price) if price is not None else None,
+            stop_distance=float(stop_distance) if stop_distance is not None else None,
+            execute=False,
+            allow_screener=True,
+        )
+        if out.get("error") == "dossier_not_found":
+            raise CommandError("dossier_not_found")
+        session.commit()
+        return out
+    finally:
+        session.close()
+
+
+def cmd_list_eve_followup(args: dict) -> dict:
+    """Phase J — positions / dossiers en surveillance (lecture seule)."""
+    from app.db.session import SessionLocal
+    from app.eve.followup import list_tracked
+    from app.paper.strategy_profiles import BASELINE_CODE
+
+    limit = int(args.get("limit") or 30)
+    portfolio_code = str(args.get("portfolio_code") or BASELINE_CODE)
+    session = SessionLocal()
+    try:
+        return list_tracked(session, portfolio_code=portfolio_code, limit=limit)
+    finally:
+        session.close()
+
+
+def cmd_run_eve_followup(args: dict) -> dict:
+    """Phase J — proposer HOLD/CLOSE/ABSTAIN (apply forcé dry-run côté channel)."""
+    from app.db.session import SessionLocal
+    from app.eve.followup import run_followup
+
+    dossier_id = _require_str(args, "dossier_id")
+    use_jev = args.get("use_jev")
+    if use_jev is not None and not isinstance(use_jev, bool):
+        raise CommandError("use_jev must be bool")
+    # Channel: propose + optional CLOSE dry-run via apply=True (autonomy still gates open/close).
+    apply = bool(args.get("apply") or False)
+    use_shadow = args.get("use_shadow")
+    if use_shadow is not None and not isinstance(use_shadow, bool):
+        raise CommandError("use_shadow must be bool")
+    session = SessionLocal()
+    try:
+        out = run_followup(
+            session,
+            dossier_id,
+            apply=apply,
+            use_jev=bool(use_jev) if use_jev is not None else False,
+            use_shadow=True if use_shadow is None else bool(use_shadow),
+        )
+        if out.get("error") == "dossier_not_found":
+            raise CommandError("dossier_not_found")
+        session.commit()
+        return out
+    finally:
+        session.close()
+
+
+def cmd_sync_eve_outcomes(args: dict) -> dict:
+    """Phase J — enregistrer outcomes des positions CLOSED (jamais decision_time)."""
+    from app.db.session import SessionLocal
+    from app.eve.followup import sync_outcomes
+
+    limit = int(args.get("limit") or 50)
+    session = SessionLocal()
+    try:
+        out = sync_outcomes(session, limit=limit)
+        session.commit()
+        return out
+    finally:
+        session.close()
+
+
+def cmd_eve_calibration_report(args: dict) -> dict:
+    """Calibration — observe dossiers/outcomes → proposal (jamais auto-appliqué)."""
+    from app.db.session import SessionLocal
+    from app.eve.calibration import calibration_report
+
+    limit = int(args.get("limit") or 100)
+    session = SessionLocal()
+    try:
+        return calibration_report(session, limit=limit)
+    finally:
+        session.close()

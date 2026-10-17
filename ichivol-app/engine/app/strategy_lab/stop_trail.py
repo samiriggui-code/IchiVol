@@ -31,6 +31,37 @@ def round_trip_cost_fraction(commission_bps: float, slippage_bps: float) -> floa
     return 2.0 * (commission_bps + slippage_bps) / 10_000.0
 
 
+def trailing_exit_locks_net_profit(
+    direction: Direction,
+    *,
+    entry_price: float,
+    exit_price: float,
+    commission_bps: float = 5.0,
+    slippage_bps: float = 3.0,
+    extra_buffer: float = 0.0,
+) -> bool:
+    """True when a trail exit price is beyond round-trip fee breakeven.
+
+    QuantDinger ``risk_guard.trailing_exit_locks_net_profit`` — adapted to IchiVol
+    bps costs. Prevents presenting a trail exit as profit-protecting when fees
+    would still leave a net loss.
+    """
+    try:
+        entry = float(entry_price or 0.0)
+        exit_px = float(exit_price or 0.0)
+        extra = max(0.0, float(extra_buffer or 0.0))
+    except (TypeError, ValueError):
+        return False
+    if entry <= 0 or exit_px <= 0:
+        return False
+    min_move = max(0.0, round_trip_cost_fraction(commission_bps, slippage_bps) + extra)
+    if direction == Direction.LONG:
+        return exit_px >= entry * (1.0 + min_move)
+    if direction == Direction.SHORT:
+        return exit_px <= entry * (1.0 - min_move)
+    return False
+
+
 def breakeven_price(
     direction: Direction,
     entry: float,

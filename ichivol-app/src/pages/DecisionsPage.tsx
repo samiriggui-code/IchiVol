@@ -39,6 +39,13 @@ import {
   maquetteGateBadge,
   type MaquetteBadgeTone,
 } from './market/marketMaquetteHelpers'
+import {
+  eveActionTone,
+  jevHealthTone,
+  latestDossierBySymbol,
+  overlayFromDossier,
+  type EveDossierLite,
+} from '../lib/eveMatrix'
 import './DecisionsPage.css'
 
 type OppFilter = 'Tous' | 'WATCH' | 'ARMED' | 'TRIGGERED'
@@ -168,6 +175,9 @@ export function DecisionsPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [rows, setRows] = useState<ScreenerDecisionRow[]>([])
+  const [eveBySymbol, setEveBySymbol] = useState<Map<string, EveDossierLite>>(
+    () => new Map(),
+  )
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [oppFilter, setOppFilter] = useState<OppFilter>('Tous')
@@ -191,10 +201,20 @@ export function DecisionsPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await getScreener('1h')
+      const [res, eveRes] = await Promise.all([
+        getScreener('1h'),
+        fetch('/api/engine/eve/dossiers?limit=100', { credentials: 'include' })
+          .then(async (r) => {
+            if (!r.ok) return { results: [] as EveDossierLite[] }
+            return (await r.json()) as { results?: EveDossierLite[] }
+          })
+          .catch(() => ({ results: [] as EveDossierLite[] })),
+      ])
       setRows(res.rows ?? [])
+      setEveBySymbol(latestDossierBySymbol(eveRes.results ?? []))
     } catch {
       setRows([])
+      setEveBySymbol(new Map())
     } finally {
       setLoading(false)
     }
@@ -453,6 +473,10 @@ export function DecisionsPage() {
       ? `${Math.round(detail.confidence * 100)} / 100`
       : '—'
   const alreadyOpen = detailSym ? openPaperSymbols.has(detailSym) : false
+  const detailEveDossier = detailSym
+    ? eveBySymbol.get(String(detailSym).toUpperCase())
+    : undefined
+  const detailEve = detailEveDossier ? overlayFromDossier(detailEveDossier) : null
 
   return (
     <div className="opps-page">
@@ -460,9 +484,17 @@ export function DecisionsPage() {
         <div>
           <div className="eyebrow">03 / ICHIVOL WORKSPACE</div>
           <h1>Opportunités</h1>
-          <p className="subtitle">Chaque décision commence par une preuve.</p>
+          <p className="subtitle">
+            5 portes moteur + décision d’Ève (trade paper ou pas). Paper only.
+          </p>
         </div>
-        <div className="actions">{badge('CLOTURE 1H', 'gray')}</div>
+        <div className="actions">
+          {badge('CLOTURE 1H', 'gray')}
+          {badge(
+            eveBySymbol.size ? `ÈVE ${eveBySymbol.size}` : 'ÈVE —',
+            eveBySymbol.size ? 'green' : 'gray',
+          )}
+        </div>
       </div>
 
       {paperToast && (
@@ -502,7 +534,7 @@ export function DecisionsPage() {
       <section className="card">
         <div className="card-head">
           <h2>Matrice de décision</h2>
-          {badge('5 PORTES', 'gray')}
+          {badge('5 PORTES + ÈVE', 'gray')}
         </div>
         <div className="table-wrap">
           <table>
@@ -510,18 +542,22 @@ export function DecisionsPage() {
               <tr>
                 <th>ACTIF</th>
                 <th>DIRECTION</th>
-                <th>PARTICIPATION</th>
+                <th>PARTICIP.</th>
                 <th>STRUCTURE</th>
-                <th>EMPLACEMENT</th>
+                <th>EMPLAC.</th>
                 <th>RÉGIME</th>
+                <th title="Ce qu’Ève décide : LONG / SHORT / HOLD / ABSTAIN">DÉCISION ÈVE</th>
+                <th title="Le modèle System One (JEV API, ou jevos en fallback crédit) a-t-il répondu correctement ?">MODÈLE OK</th>
+                <th title="Filtre avant ouverture paper (confiance / setup)">FILTRE ENTRÉE</th>
+                <th title="Le Risk Kernel autorise-t-il l’ouverture paper ?">RISQUE</th>
                 <th>CYCLE</th>
-                <th>CONFIANCE</th>
+                <th>CONF.</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8}>
+                  <td colSpan={12}>
                     <b>—</b>
                     <small>{loading ? 'Chargement…' : 'Aucune ligne'}</small>
                   </td>
@@ -530,6 +566,8 @@ export function DecisionsPage() {
                 filtered.map((r) => {
                   const base = displaySymbol(r.symbol)
                   const cycle = cycleFromRow(r)
+                  const dossier = eveBySymbol.get(String(r.symbol).toUpperCase())
+                  const eve = dossier ? overlayFromDossier(dossier) : null
                   return (
                     <tr
                       key={r.symbol}
@@ -552,9 +590,53 @@ export function DecisionsPage() {
                       <td>{stageBadge(r, 'structure')}</td>
                       <td>{stageBadge(r, 'location')}</td>
                       <td>{stageBadge(r, 'regime')}</td>
+                      <td>
+                        {eve
+                          ? badge(eve.action, eveActionTone(eve.action))
+                          : badge('—', 'gray')}
+                      </td>
+                      <td>
+                        {eve
+                          ? badge(
+                              eve.jevHealth === 'ok'
+                                ? 'OK'
+                                : eve.jevHealth === '—'
+                                  ? '—'
+                                  : eve.jevHealth.toUpperCase(),
+                              jevHealthTone(eve.jevHealth),
+                            )
+                          : badge('—', 'gray')}
+                      </td>
+                      <td>
+                        {eve
+                          ? badge(
+                              eve.entryGate === 'PASS'
+                                ? 'OK'
+                                : eve.entryGate === 'BLOQUÉ'
+                                  ? 'BLOQUÉ'
+                                  : eve.entryGate,
+                              eve.entryGate === 'PASS'
+                                ? 'green'
+                                : eve.entryGate === 'BLOQUÉ'
+                                  ? 'red'
+                                  : 'gray',
+                            )
+                          : badge('—', 'gray')}
+                      </td>
+                      <td>
+                        {eve && eve.risk !== '—' ? (
+                          <small title={eve.risk}>{eve.risk}</small>
+                        ) : (
+                          badge('—', 'gray')
+                        )}
+                      </td>
                       <td>{badge(CYCLE_FR[cycle])}</td>
                       <td>
-                        <span className="mono">{confidencePct(r)} %</span>
+                        <span className="mono">
+                          {eve && eve.confidenceLabel !== '—'
+                            ? eve.confidenceLabel
+                            : `${confidencePct(r)} %`}
+                        </span>
                       </td>
                     </tr>
                   )
@@ -582,9 +664,10 @@ export function DecisionsPage() {
               ))}
             </div>
             <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-              Veille : pas d’entrée. Armé : le setup est prêt, le volume ou une porte retient.
-              Déclenché : les cinq portes autorisent une lecture d’achat ou de vente. Accepté ou
-              refusé : vous avez tranché. La confiance ne remplace pas le contrôle du risque.
+              Les 5 portes = lecture marché (Ichimoku × RVOL). Ensuite Ève décide si on trade
+              paper (LONG/SHORT) ou non (HOLD/ABSTAIN). « Modèle OK » = JEV API (jevos si plus de crédit) a
+              répondu. « Filtre entrée » = garde-fou avant d’ouvrir. « Risque » = le Risk Kernel
+              autorise ou bloque. Tirets = pas encore de décision Ève sur ce symbole (Agents).
             </p>
           </div>
         </section>
@@ -644,6 +727,57 @@ export function DecisionsPage() {
               {detail?.strategy_version ? ` · ${detail.strategy_version}` : ''}
               {detailLoading ? ' · chargement…' : ''}
             </p>
+            {detailEve ? (
+              <>
+                <h3 style={{ marginTop: 14, fontSize: 13 }}>Décision Ève</h3>
+                <div className="statline">
+                  <span>Elle décide</span>
+                  <b>{badge(detailEve.action, eveActionTone(detailEve.action))}</b>
+                </div>
+                <div className="statline">
+                  <span>Lecture portes</span>
+                  <b>{detailEve.baseline}</b>
+                </div>
+                <div className="statline">
+                  <span>Modèle System One</span>
+                  <b>
+                    {badge(
+                      detailEve.jevHealth === 'ok' || detailEve.jevHealth === 'healthy'
+                        ? 'OK'
+                        : detailEve.jevHealth === '—'
+                          ? '—'
+                          : 'PANNE / LENT',
+                      jevHealthTone(detailEve.jevHealth),
+                    )}
+                  </b>
+                </div>
+                <div className="statline">
+                  <span>Filtre avant ouverture</span>
+                  <b>
+                    {badge(
+                      detailEve.entryGate === 'PASS'
+                        ? 'OK'
+                        : detailEve.entryGate === 'BLOQUÉ'
+                          ? 'BLOQUÉ'
+                          : detailEve.entryGate,
+                      detailEve.entryGate === 'PASS'
+                        ? 'green'
+                        : detailEve.entryGate === 'BLOQUÉ'
+                          ? 'red'
+                          : 'gray',
+                    )}
+                  </b>
+                </div>
+                <div className="statline">
+                  <span>Risk Kernel</span>
+                  <b>{detailEve.risk}</b>
+                </div>
+              </>
+            ) : (
+              <p style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Pas encore de décision Ève sur ce symbole — lance une évaluation depuis Agents.
+              </p>
+            )}
             <div className="statline">
               <span>Direction</span>
               <b>
