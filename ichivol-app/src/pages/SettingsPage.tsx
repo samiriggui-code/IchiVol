@@ -4,7 +4,8 @@
  */
 
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { getPaperOverview, type PaperOverview } from '../lib/paper'
+import { type PaperOverview } from '../lib/paper'
+import { loadAllBooks } from '../lib/allBooks'
 import { disablePushAlerts, enablePushAlerts } from '../lib/pushAlerts'
 import {
   DEFAULT_MODELS,
@@ -127,7 +128,8 @@ export function SettingsPage() {
     accel: true,
     directionFlip: true,
   })
-  const [paperRisk, setPaperRisk] = useState<PaperOverview['risk'] | null>(null)
+  /** Plafonds de risque de chaque portefeuille paper actif. */
+  const [bookRisks, setBookRisks] = useState<Array<{ code: string; label: string; risk: PaperOverview['risk'] | null }>>([])
   const [eveSchema, setEveSchema] = useState<Record<string, EveSettingGroup> | null>(null)
   const [eveValues, setEveValues] = useState<Record<string, string | number | boolean>>({})
   const [eveDraft, setEveDraft] = useState<Record<string, string | number | boolean>>({})
@@ -152,9 +154,9 @@ export function SettingsPage() {
         })
       })
       .catch(() => setEngine(null))
-    getPaperOverview()
-      .then((ov) => setPaperRisk(ov.risk ?? null))
-      .catch(() => setPaperRisk(null))
+    loadAllBooks()
+      .then((books) => setBookRisks(books.map((b) => ({ code: b.code, label: b.label, risk: b.overview.risk ?? null }))))
+      .catch(() => setBookRisks([]))
     Promise.all([getEveSettingsSchema(), getEveSettingsValues()])
       .then(([schemaRes, valuesRes]) => {
         setEveSchema(schemaRes.schema)
@@ -457,29 +459,37 @@ export function SettingsPage() {
             {settingsTab === 'Limites de risque' && (
               <>
                 <p className="lede">
-                  Plafonds du profil paper ICHIVOL_BASELINE_V1 — lecture seule. Le Risk Kernel
-                  ne se configure pas depuis le navigateur.
+                  Plafonds de chaque portefeuille paper, en lecture seule. Le Risk Kernel ne se
+                  configure pas depuis le navigateur.
                 </p>
-                <div className="statline">
-                  <span>Risque par trade</span>
-                  <b>0,5 %</b>
-                </div>
-                <div className="statline">
-                  <span>Risque ouvert max</span>
-                  <b>
-                    {paperRisk?.max_open_risk_pct != null
-                      ? `${(paperRisk.max_open_risk_pct * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`
-                      : '4 %'}
-                  </b>
-                </div>
-                <div className="statline">
-                  <span>Positions simultanées max</span>
-                  <b>{paperRisk?.max_open_positions ?? '—'}</b>
-                </div>
-                <div className="statline">
-                  <span>Positions ouvertes</span>
-                  <b>{paperRisk?.open_positions ?? '—'}</b>
-                </div>
+                {bookRisks.length === 0 ? (
+                  <div className="statline">
+                    <span>Portefeuilles</span>
+                    <b>—</b>
+                  </div>
+                ) : (
+                  bookRisks.map((b) => (
+                    <div key={b.code} style={{ marginBottom: 14 }}>
+                      <h3 style={{ fontSize: 13, margin: '8px 0 4px' }}>{b.label}</h3>
+                      <div className="statline">
+                        <span>Risque ouvert max</span>
+                        <b>
+                          {b.risk?.max_open_risk_pct != null
+                            ? `${(b.risk.max_open_risk_pct * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`
+                            : '—'}
+                        </b>
+                      </div>
+                      <div className="statline">
+                        <span>Positions simultanées max</span>
+                        <b>{b.risk?.max_open_positions ?? '—'}</b>
+                      </div>
+                      <div className="statline">
+                        <span>Positions ouvertes</span>
+                        <b>{b.risk?.open_positions ?? '—'}</b>
+                      </div>
+                    </div>
+                  ))
+                )}
               </>
             )}
 

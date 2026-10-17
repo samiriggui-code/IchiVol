@@ -41,14 +41,20 @@ import {
   type SessionStatus,
 } from '../lib/marketSessions'
 import {
-  getPaperActivity,
-  getPaperOverview,
-  listPaperPortfolios,
   type PaperOrderRow,
   type PaperOverview,
   type PaperOverviewPosition,
 } from '../lib/paper'
-import { getRiskLock, type RiskLockState } from '../lib/riskLock'
+import { type RiskLockState } from '../lib/riskLock'
+import {
+  combineLocks,
+  combineOverviews,
+  listActiveBooks,
+  loadAllActivity,
+  loadAllBooks,
+  type BookPosition,
+  type BookTag,
+} from '../lib/allBooks'
 import { verdictBucket } from '../lib/deskSummarize'
 import {
   aggregateDeskBooks,
@@ -206,6 +212,8 @@ type EquityMarker = {
   title: string
   detail: string
   source: 'transaction' | 'action'
+  /** Portefeuille de l'ordre : le repère se pose sur sa courbe. */
+  bookCode?: string
 }
 
 const MAX_EQUITY_MARKERS = 80
@@ -235,7 +243,7 @@ function nearKey(symbol: string, ms: number): string {
 
 function buildEquityMarkers(
   actions: ActivityItem[],
-  orders: PaperOrderRow[],
+  orders: Array<PaperOrderRow & Partial<BookTag>>,
   period: EquityPeriod,
   now = Date.now(),
 ): EquityMarker[] {
@@ -256,12 +264,13 @@ function buildEquityMarkers(
         ? fmtPrice(o.filled_price)
         : '—'
     fromOrders.push({
-      id: `tx-${o.id}`,
+      id: `tx-${o.book_code ?? ''}-${o.id}`,
+      bookCode: o.book_code,
       ms,
       kind: isBuy ? 'tx_buy' : 'tx_sell',
       tone: isBuy ? 'good' : 'neutral',
       symbol: o.symbol,
-      title: `${isBuy ? 'Achat' : 'Vente'} ${o.symbol}`,
+      title: `${isBuy ? 'Achat' : 'Vente'} ${o.symbol}${o.book_label ? ` · ${o.book_label}` : ''}`,
       detail: [
         `${side} · ${fmtDec(o.qty, 4)} @ ${px}`,
         `notional ${notional}`,
@@ -546,7 +555,7 @@ function EquityViz({
   books: BookEquityCurve[]
   period: EquityPeriod
   actions: ActivityItem[]
-  orders: PaperOrderRow[]
+  orders: Array<PaperOrderRow & Partial<BookTag>>
 }) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -604,12 +613,13 @@ function EquityViz({
       return { code: b.code, label: b.label, color: b.color, d, last }
     })
 
-    // Markers collés sur le 1er livre (baseline) pour ne pas polluer les autres courbes.
-    const anchor = prepared[0]!.series
+    // Un ordre se pose sur la courbe de son portefeuille ; le reste sur la première courbe.
+    const anchorOf = (m: EquityMarker) =>
+      (m.bookCode ? prepared.find((b) => b.code === m.bookCode) : undefined)?.series ?? prepared[0]!.series
     const placed = markers
       .map((m) => {
         if (m.ms < t0 - 60_000 || m.ms > t1 + 60_000) return null
-        const eq = equityAtTime(anchor, m.ms)
+        const eq = equityAtTime(anchorOf(m), m.ms)
         if (eq == null) return null
         return { ...m, x: xAtMs(m.ms), y: yAt(eq), equity: eq }
       })
@@ -837,29 +847,25 @@ export function OverviewPage() {
   const load = useCallback(async (force = false) => {
     setLoading(true)
     type ScreenerOk = Awaited<ReturnType<typeof getScreener>>
-    const booksPromise = listPaperPortfolios()
+    // Desk = tous les portefeuilles paper actifs : totaux, positions, ordres, verrous.
+    const booksPromise = listActiveBooks()
       .then(async (rows) => {
-        const active = rows.filter((p) => p.is_active !== false)
-        const list = active.length > 0 ? active : rows
-        const overs = await Promise.all(
-          list.map((p, i) =>
-            getPaperOverview(p.code)
-              .then((ov) => ({
-                snap: snapshotFromOverview(p.code, p.label || p.code, ov),
-                curve: {
-                  code: p.code,
-                  label: p.label || p.code,
-                  color: RING_COLORS[i % RING_COLORS.length]!,
-                  points: ov.equity_curve ?? [],
-                } satisfies BookEquityCurve,
-              }))
-              .catch(() => null),
-          ),
-        )
-        const ok = overs.filter((x): x is NonNullable<typeof x> => x != null)
+        const books = await loadAllBooks(rows)
+        const orders = await loadAllActivity(books, 200)
         return {
-          agg: aggregateDeskBooks(ok.map((x) => x.snap)),
-          curves: ok.map((x) => x.curve),
+          rows,
+          books,
+          orders,
+          agg: aggregateDeskBooks(books.map((b) => snapshotFromOverview(b.code, b.label, b.overview))),
+          curves: books.map(
+            (b, i) =>
+              ({
+                code: b.code,
+                label: b.label,
+                color: RING_COLORS[i % RING_COLORS.length]!,
+                points: b.overview.equity_curve ?? [],
+              }) satisfies BookEquityCurve,
+          ),
         }
       })
       .catch(() => null)
@@ -871,17 +877,18 @@ export function OverviewPage() {
           .catch((err: unknown): ScreenerOk | Error =>
             err instanceof Error ? err : new Error('Screener indisponible'),
           ),
-        getPaperOverview(BASELINE)
-          .then((r) => ({ ok: true as const, data: r }))
-          .catch(() => ({ ok: false as const })),
+        booksPromise.then((b) => {
+          const combined = b ? combineOverviews(b.books) : null
+          return combined ? { ok: true as const, data: combined } : { ok: false as const }
+        }),
         booksPromise,
         getActivityFeed(100)
           .then((r) => ({ ok: true as const, items: r.items }))
           .catch(() => ({ ok: false as const, items: [] as ActivityItem[] })),
-        getPaperActivity(BASELINE, 200)
-          .then((r) => ({ ok: true as const, orders: r }))
-          .catch(() => ({ ok: false as const, orders: [] as PaperOrderRow[] })),
-        getRiskLock(BASELINE).catch(() => null),
+        booksPromise.then((b) =>
+          b ? { ok: true as const, orders: b.orders as PaperOrderRow[] } : { ok: false as const, orders: [] as PaperOrderRow[] },
+        ),
+        booksPromise.then((b) => (b ? combineLocks(b.rows) : null)),
         fetch('/api/engine/health', { credentials: 'include' })
           .then(async (res) => {
             if (!res.ok) return { engine: false }
@@ -1158,7 +1165,7 @@ export function OverviewPage() {
             </div>
             <small>
               {deskRiskMax != null
-                ? `Limite max livres : ${fmtPct(deskRiskMax, 0, false)}`
+                ? `Plafond global : ${fmtPct(deskRiskMax, 1, false)}`
                 : '—'}
             </small>
           </div>
@@ -1517,7 +1524,7 @@ export function OverviewPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(overview?.positions ?? []).slice(0, 3).map((p: PaperOverviewPosition) => {
+                  {(overview?.positions ?? []).slice(0, 3).map((p: PaperOverviewPosition & Partial<BookPosition>) => {
                     const base = p.symbol.replace(/USDT$/i, '')
                     const engaged =
                       p.market_value ??
@@ -1532,7 +1539,7 @@ export function OverviewPage() {
                       pnl == null ? '' : pnl > 0 ? 'up' : pnl < 0 ? 'down' : ''
                     const strat =
                       p.timeframe != null
-                        ? `Ichimoku × RVOL · ${String(p.timeframe).toUpperCase()}`
+                        ? `${p.book_label ? `${p.book_label} · ` : ''}Ichimoku × RVOL · ${String(p.timeframe).toUpperCase()}`
                         : '—'
                     return (
                       <tr

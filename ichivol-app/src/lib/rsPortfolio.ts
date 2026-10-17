@@ -41,3 +41,12 @@ export function portfolioFromParam(param: string | null | undefined): string {
 export function manualActionsAllowed(code: string | null | undefined): boolean {
   return MANUAL_PORTFOLIOS.some((p) => p.code === code) || code === FUTURES_CRYPTO_CODE
 }
+
+/** Nom court d'un portefeuille pour l'écran (onglets, colonne « Portefeuille »). */
+export function portfolioLabel(code: string, apiLabel?: string | null): string {
+  if (code === BASELINE_PORTFOLIO_CODE) return 'IchiVol'
+  if (code === SESSIONS_CODE) return 'Sessions'
+  if (code === FUTURES_CRYPTO_CODE) return 'Futures & Crypto'
+  if (code === RS_D1_CODE) return 'RS-D1'
+  return apiLabel || code
+}

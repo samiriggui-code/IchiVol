@@ -14,7 +14,8 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { displaySymbol } from '../lib/markets'
 import { labelExitReason } from '../lib/engineTerminology'
-import { listPaperPositions, type PaperPosition } from '../lib/paper'
+import { listPaperPortfolios, listPaperPositions, type PaperPosition } from '../lib/paper'
+import { portfolioLabel } from '../lib/rsPortfolio'
 import {
   deleteUserDecision,
   listUserDecisions,
@@ -105,6 +106,8 @@ export function JournalPage() {
   const [journalTab, setJournalTab] = useState<JournalTab>('Trades')
   const [query, setQuery] = useState('')
   const [trades, setTrades] = useState<PaperPosition[]>([])
+  /** id du portefeuille → nom court : chaque trade du journal dit de quel portefeuille il vient. */
+  const [bookLabels, setBookLabels] = useState<ReadonlyMap<string, string>>(() => new Map())
   const [decisions, setDecisions] = useState<UserDecisionRow[]>([])
   const [showArchived, setShowArchived] = useState(false)
   const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(null)
@@ -115,10 +118,12 @@ export function JournalPage() {
 
   const load = useCallback(async () => {
     try {
-      const [closed, rows] = await Promise.all([
+      const [closed, rows, pfs] = await Promise.all([
         listPaperPositions({ status: 'CLOSED' }).catch(() => [] as PaperPosition[]),
         listUserDecisions(80).catch(() => [] as UserDecisionRow[]),
+        listPaperPortfolios().catch(() => []),
       ])
+      setBookLabels(new Map(pfs.map((p) => [p.id, portfolioLabel(p.code, p.label)])))
       setTrades(
         [...closed].sort(
           (a, b) =>
@@ -142,9 +147,10 @@ export function JournalPage() {
     if (!q) return trades
     return trades.filter((p) => {
       const base = displaySymbol(p.symbol).toLowerCase()
-      return base.includes(q) || p.symbol.toLowerCase().includes(q)
+      const book = (p.portfolio_id ? bookLabels.get(p.portfolio_id) : '')?.toLowerCase() ?? ''
+      return base.includes(q) || p.symbol.toLowerCase().includes(q) || book.includes(q)
     })
-  }, [trades, q])
+  }, [trades, q, bookLabels])
 
   const filteredDecisions = useMemo(() => {
     const byStatus = decisions.filter((r) =>
@@ -322,6 +328,9 @@ export function JournalPage() {
               <td>{fmtDate(t.exit_time ?? t.entry_time)}</td>
               <td>
                 <b>{displaySymbol(t.symbol)}</b>
+                {t.portfolio_id && bookLabels.get(t.portfolio_id) ? (
+                  <small style={{ display: 'block', color: 'var(--muted)' }}>{bookLabels.get(t.portfolio_id)}</small>
+                ) : null}
               </td>
               <td>{fmtSens(t.direction)}</td>
               <td>
