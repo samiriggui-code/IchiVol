@@ -11,6 +11,8 @@ Shadow with JEV), a Dossier is written, then every proposal on that symbol is ac
 * proposal CLOSE → closed only if Ève says CLOSE or the opposite direction; otherwise the lot is kept.
 
 Accepted proposals go through ``paper_submit`` (Risk Kernel, entry gate, degradation: JEV down = nothing opens).
+A refused OPEN becomes a shadow trade (``block_source="eve"``, ShadowBroker, no cash) so "was Ève right to refuse?"
+gets measured the same way as the indicator filters.
 What the engine alone would have done stays in the Dossier (``decision_time.engine_proposals``) so "engine alone"
 and "Ève + JEV" can be compared on the same books. Stops and targets still close lots on their own. Paper only.
 """
@@ -44,6 +46,33 @@ def eve_accepts(proposal: dict[str, Any], eve_action: str | None, position_direc
     return False
 
 
+def open_refusal_shadow(
+    session: Session, proposal: dict[str, Any], eve_action: str, dossier_id: str | None
+) -> str | None:
+    """Counterfactual of a refused OPEN: same SL/TP geometry as the book, never touches cash."""
+    from app.paper.portfolio import get_portfolio_by_code
+    from app.shadow.broker import open_shadow
+
+    raw = {"LONG": "BUY", "SHORT": "SELL"}.get(str(proposal.get("direction")))
+    price = proposal.get("price")
+    portfolio = get_portfolio_by_code(session, str(proposal["portfolio_code"]))
+    if raw is None or portfolio is None or not isinstance(price, (int, float)):
+        return None
+    shadow = open_shadow(
+        session,
+        portfolio=portfolio,
+        symbol=str(proposal["symbol"]),
+        timeframe=str(proposal["timeframe"]),
+        raw_decision=raw,
+        price=float(price),
+        stop_distance=proposal.get("stop_distance"),
+        block_source="eve",
+        block_reason=eve_action,
+        meta={"eve_dossier_id": dossier_id, "engine_decision": proposal.get("engine_decision")},
+    )
+    return shadow.id if shadow is not None else None
+
+
 def _group(proposals: list[dict[str, Any]]) -> "OrderedDict[tuple[str, str], list[dict[str, Any]]]":
     groups: OrderedDict[tuple[str, str], list[dict[str, Any]]] = OrderedDict()
     for p in proposals:
@@ -60,10 +89,12 @@ class EveAutopilot:
         max_symbols_per_cycle: int = 8,
         evaluate: Callable[..., dict[str, Any]] | None = None,
         submit: Callable[..., dict[str, Any]] | None = None,
+        shadow: Callable[..., str | None] | None = None,
     ) -> None:
         self.max_symbols_per_cycle = max_symbols_per_cycle
         self._evaluate = evaluate
         self._submit = submit
+        self._shadow = shadow
         self._pending: list[dict[str, Any]] | None = None
         self._lock = threading.Lock()
         self._wake = threading.Event()
@@ -120,6 +151,7 @@ class EveAutopilot:
 
         evaluate = self._evaluate or evaluate_opportunity
         submit = self._submit or paper_submit.submit_to_portfolio
+        shadow = self._shadow or open_refusal_shadow
 
         report: dict[str, Any] = {
             "started_at": datetime.now(timezone.utc).isoformat(),
@@ -178,6 +210,11 @@ class EveAutopilot:
                 else:
                     outcome["status"] = "refused_by_eve" if dossier_id else "no_dossier"
                     outcome["executed"] = False
+                    if dossier_id and proposal.get("action") == "OPEN":
+                        try:
+                            outcome["shadow_id"] = shadow(session, proposal, eve_action, dossier_id)
+                        except Exception:  # a counterfactual must never break Ève's cycle
+                            logger.exception("eve refusal shadow failed for %s", proposal.get("portfolio_code"))
                 outcomes.append(outcome)
 
             if dossier_id:

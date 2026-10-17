@@ -39,6 +39,7 @@ import {
   type SessionStatus,
 } from '../lib/marketSessions'
 import {
+  listPaperPositions,
   type PaperOrderRow,
   type PaperOverview,
   type PaperOverviewPosition,
@@ -75,6 +76,9 @@ import {
 import { toEngineSymbol } from '../lib/engineSymbol'
 import { EquityTrajectory, type TrajectoryBook } from '../components/desk/EquityTrajectory'
 import { bookColors, cleanEquitySeries } from '../components/desk/equityTrajectory'
+import { DeskDeciderSummary, DeskEveLatest } from '../components/decider/DeskDeciders'
+import { DeciderBadge } from '../components/decider/DeciderBadge'
+import { deciderOf, type Decider } from '../lib/decider'
 import './OverviewPage.css'
 
 const RING_COLORS = ['#548f87', '#8c9eb4', '#c2b596', '#a9bdb2', '#7d8288'] as const
@@ -298,10 +302,14 @@ export function OverviewPage() {
   const [sessionId, setSessionId] = useState<SessionId>('crypto')
   const [equityPeriod, setEquityPeriod] = useState<EquityPeriod>('1M')
   const [nowTick, setNowTick] = useState(() => Date.now())
+  const [deciderByPosition, setDeciderByPosition] = useState<Record<string, Decider>>({})
 
   const load = useCallback(async (force = false) => {
     setLoading(true)
     type ScreenerOk = Awaited<ReturnType<typeof getScreener>>
+    void listPaperPositions()
+      .then((all) => setDeciderByPosition(Object.fromEntries(all.map((p) => [p.id, deciderOf(p)]))))
+      .catch(() => undefined)
     // Desk = tous les portefeuilles paper actifs : totaux, positions, ordres, verrous.
     const booksPromise = listActiveBooks()
       .then(async (rows) => {
@@ -893,6 +901,7 @@ export function OverviewPage() {
               }
               period={equityPeriod}
               orders={paperOrders}
+              deciders={deciderByPosition}
             />
           </DeskCard>
 
@@ -949,6 +958,22 @@ export function OverviewPage() {
                 Explorer les opportunités ↗
               </Link>
             </div>
+          </DeskCard>
+        </div>
+
+        <div className="grid">
+          <DeskCard
+            title="Moteur vs Ève"
+            extra={
+              <Link className="link" to="/app/moteur-eve">
+                Détail ↗
+              </Link>
+            }
+          >
+            <DeskDeciderSummary />
+          </DeskCard>
+          <DeskCard title="Derniers jugements d’Ève">
+            <DeskEveLatest />
           </DeskCard>
         </div>
 
@@ -1014,7 +1039,9 @@ export function OverviewPage() {
                         }}
                       >
                         <td>
-                          <b>{base}</b>
+                          <b>
+                            {base} <DeciderBadge decider={deciderOf(p)} compact />
+                          </b>
                           <small>{strat}</small>
                         </td>
                         <td>

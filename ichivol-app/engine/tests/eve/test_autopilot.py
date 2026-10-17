@@ -100,3 +100,40 @@ def test_budget_caps_symbols_per_cycle(monkeypatch: Any) -> None:
     ])
     assert evaluated == ["AAA"]
     assert report["skipped_over_budget"] == 1
+
+
+def test_refused_open_becomes_a_shadow_trade(monkeypatch: Any) -> None:
+    monkeypatch.setenv("EVE_PAPER_AUTONOMY", "true")
+    monkeypatch.setattr("app.eve.dossier.get_dossier", lambda s, i: None)
+    shadows: list[tuple[str, str, str | None]] = []
+
+    def shadow(session: Any, proposal: dict[str, Any], eve_action: str, dossier_id: str | None) -> str:
+        shadows.append((proposal["portfolio_code"], eve_action, dossier_id))
+        return f"sh-{proposal['portfolio_code']}"
+
+    submitted: list[dict[str, Any]] = []
+    pilot, _ = _pilot("LONG", submitted)
+    pilot._shadow = shadow
+    report = pilot.run_cycle(MagicMock(), [
+        _prop(action="OPEN", direction="LONG", portfolio_code="BASE"),
+        _prop(action="OPEN", direction="SHORT", portfolio_code="SESS", engine_decision="SELL"),
+        _prop(action="CLOSE", portfolio_code="WIDE", position_id=None),
+    ])
+    # Only the refused OPEN gets a counterfactual: not the accepted one, not a kept lot.
+    assert shadows == [("SESS", "LONG", "d-BTCUSDT")]
+    outcomes = {o["portfolio_code"]: o for o in report["symbols"][0]["outcomes"]}
+    assert outcomes["SESS"]["shadow_id"] == "sh-SESS"
+    assert "shadow_id" not in outcomes["BASE"] and "shadow_id" not in outcomes["WIDE"]
+
+
+def test_shadow_failure_never_breaks_the_cycle(monkeypatch: Any) -> None:
+    monkeypatch.setenv("EVE_PAPER_AUTONOMY", "true")
+    monkeypatch.setattr("app.eve.dossier.get_dossier", lambda s, i: None)
+
+    def shadow(*a: Any) -> str:
+        raise RuntimeError("db down")
+
+    pilot, _ = _pilot("ABSTAIN", [])
+    pilot._shadow = shadow
+    report = pilot.run_cycle(MagicMock(), [_prop(action="OPEN", direction="LONG")])
+    assert report["symbols"][0]["outcomes"][0]["status"] == "refused_by_eve"

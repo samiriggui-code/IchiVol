@@ -124,3 +124,28 @@ def test_shadow_stats_verdict():
     stats = shadow_stats(session, portfolio_id=p.id)
     assert stats["n_closed"] == 6
     assert stats["filter_verdict"] == "filter_too_aggressive"
+
+
+def test_stats_split_filters_and_eve_refusals():
+    session = _session()
+    p = _portfolio(session)
+    for sym, source, reason in (("BTCUSDT", "structure", "opposing_zone"), ("ETHUSDT", "eve", "ABSTAIN")):
+        open_shadow(
+            session, portfolio=p, symbol=sym, timeframe="1h", raw_decision="BUY", price=100.0,
+            stop_distance=2.0, block_source=source, block_reason=reason,
+        )
+    session.commit()
+    # BTC hits its stop (filter was right), ETH hits its target (Ève refused a winner).
+    mark_shadows(session, marks={"BTCUSDT:1h": 97.0, "ETHUSDT:1h": 105.0})
+    session.commit()
+
+    eve = shadow_stats(session, kind="eve")
+    assert eve["n_closed"] == 1 and eve["n_wins"] == 1
+    assert set(eve["by_block_source"]) == {"eve"}
+    assert eve["by_block_reason"]["ABSTAIN"]["win_rate"] == 1.0
+
+    filters = shadow_stats(session, kind="filters")
+    assert filters["n_closed"] == 1 and filters["n_wins"] == 0
+    assert set(filters["by_block_source"]) == {"structure"}
+
+    assert shadow_stats(session)["n_closed"] == 2

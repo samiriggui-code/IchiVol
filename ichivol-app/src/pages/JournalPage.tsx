@@ -13,6 +13,8 @@ import {
 } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { displaySymbol } from '../lib/markets'
+import { DeciderBadge } from '../components/decider/DeciderBadge'
+import { DECIDER_LABEL, DECIDERS, deciderOf, type Decider } from '../lib/decider'
 import { labelExitReason } from '../lib/engineTerminology'
 import { listPaperPortfolios, listPaperPositions, type PaperPosition } from '../lib/paper'
 import { portfolioLabel } from '../lib/rsPortfolio'
@@ -105,6 +107,7 @@ export function JournalPage() {
   const navigate = useNavigate()
   const [journalTab, setJournalTab] = useState<JournalTab>('Trades')
   const [query, setQuery] = useState('')
+  const [deciderFilter, setDeciderFilter] = useState<Decider | 'all'>('all')
   const [trades, setTrades] = useState<PaperPosition[]>([])
   /** id du portefeuille → nom court : chaque trade du journal dit de quel portefeuille il vient. */
   const [bookLabels, setBookLabels] = useState<ReadonlyMap<string, string>>(() => new Map())
@@ -144,13 +147,14 @@ export function JournalPage() {
   const q = query.trim().toLowerCase()
 
   const visibleTrades = useMemo(() => {
-    if (!q) return trades
-    return trades.filter((p) => {
+    const byDecider = deciderFilter === 'all' ? trades : trades.filter((p) => deciderOf(p) === deciderFilter)
+    if (!q) return byDecider
+    return byDecider.filter((p) => {
       const base = displaySymbol(p.symbol).toLowerCase()
       const book = (p.portfolio_id ? bookLabels.get(p.portfolio_id) : '')?.toLowerCase() ?? ''
       return base.includes(q) || p.symbol.toLowerCase().includes(q) || book.includes(q)
     })
-  }, [trades, q, bookLabels])
+  }, [trades, q, bookLabels, deciderFilter])
 
   const filteredDecisions = useMemo(() => {
     const byStatus = decisions.filter((r) =>
@@ -201,10 +205,11 @@ export function JournalPage() {
     if (journalTab === 'Trades') {
       downloadCsv(
         'journal-trades.csv',
-        ['date', 'actif', 'sens', 'resultat', 'performance', 'sortie'],
+        ['date', 'actif', 'decideur', 'sens', 'resultat', 'performance', 'sortie'],
         visibleTrades.map((t) => [
           fmtDate(t.exit_time ?? t.entry_time),
           displaySymbol(t.symbol),
+          DECIDER_LABEL[deciderOf(t)],
           fmtSens(t.direction),
           fmtR(t),
           fmtPerf(t.pnl_pct),
@@ -327,7 +332,7 @@ export function JournalPage() {
             >
               <td>{fmtDate(t.exit_time ?? t.entry_time)}</td>
               <td>
-                <b>{displaySymbol(t.symbol)}</b>
+                <b>{displaySymbol(t.symbol)}</b> <DeciderBadge decider={deciderOf(t)} compact />
                 {t.portfolio_id && bookLabels.get(t.portfolio_id) ? (
                   <small style={{ display: 'block', color: 'var(--muted)' }}>{bookLabels.get(t.portfolio_id)}</small>
                 ) : null}
@@ -447,6 +452,20 @@ export function JournalPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
+        {journalTab === 'Trades' && (
+          <select
+            aria-label="Qui a décidé le trade"
+            value={deciderFilter}
+            onChange={(e) => setDeciderFilter(e.target.value as Decider | 'all')}
+          >
+            <option value="all">Tous les décideurs</option>
+            {DECIDERS.map((d) => (
+              <option key={d} value={d}>
+                {DECIDER_LABEL[d]}
+              </option>
+            ))}
+          </select>
+        )}
         {journalTab === 'Décisions sauvegardées' && (
           <label className="checkrow" style={{ margin: 0 }}>
             Archivées

@@ -16,6 +16,7 @@ import {
   IconOverview,
   IconPaper,
   IconSettings,
+  IconSynthese,
 } from '../components/NavIcons'
 
 export type NavItem = {
@@ -42,6 +43,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/app/market', label: 'Marché', Icon: IconMarket },
       { to: '/app/opportunites', label: 'Opportunités', Icon: IconDecisions },
       { to: '/app/portefeuille', label: 'Portefeuille', Icon: IconPaper },
+      { to: '/app/moteur-eve', label: 'Moteur vs Ève', Icon: IconSynthese },
     ],
   },
   {

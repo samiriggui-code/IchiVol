@@ -14,6 +14,7 @@ import { ChartIntelligencePanel } from './components/chart-intelligence'
 import { MarketPage } from './pages/MarketPage'
 import { MarketTvPage } from './pages/MarketTvPage'
 import { OverviewPage } from './pages/OverviewPage'
+import { DecidersPage } from './pages/DecidersPage'
 import { PortfolioPage } from './pages/PortfolioPage'
 import { RequireAuth } from './pages/RequireAuth'
 import { SettingsPage } from './pages/SettingsPage'
@@ -57,6 +58,7 @@ export function Root() {
             />
             <Route path="opportunites" element={<DecisionsPage />} />
             <Route path="portefeuille" element={<PortfolioPage />} />
+            <Route path="moteur-eve" element={<DecidersPage />} />
             <Route path="context" element={<ContextPage />} />
             <Route path="journal" element={<JournalPage />} />
             <Route path="operations" element={<ActivityPage />} />

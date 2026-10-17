@@ -15,6 +15,8 @@ import {
   type TradeMark,
   type TradeOrder,
 } from './equityTrajectory'
+import { DeciderBadge } from '../decider/DeciderBadge'
+import type { Decider } from '../../lib/decider'
 import './EquityTrajectory.css'
 
 export type TrajectoryBook = {
@@ -80,10 +82,13 @@ export function EquityTrajectory({
   books,
   orders,
   period,
+  deciders = {},
 }: {
   books: TrajectoryBook[]
   orders: TradeOrder[]
   period: EquityPeriod
+  /** Qui a décidé chaque lot (id de position → moteur seul / Ève / manuel), affiché dans l'info-bulle. */
+  deciders?: Record<string, Decider>
 }) {
   const plotRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(360)
@@ -392,6 +397,9 @@ export function EquityTrajectory({
             <p className="eqt-tip-book">
               <i style={{ background: mark.color }} />
               {mark.bookLabel}
+              {mark.positionId && deciders[mark.positionId] ? (
+                <DeciderBadge decider={deciders[mark.positionId]!} compact />
+              ) : null}
             </p>
             <p>{markExplain(mark)}</p>
             <dl>

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Header, HTTPException
 
 from app.api.common import _atr_params_override, _rvol_params_override
@@ -128,8 +130,11 @@ def get_backtest(
 
 
 @router_shadow.get("/shadow/stats")
-def get_shadow_stats(portfolio_code: str | None = None) -> dict:
-    """ShadowBroker counterfactual summary — hors cash."""
+def get_shadow_stats(
+    portfolio_code: str | None = None,
+    kind: Literal["filters", "eve"] | None = None,
+) -> dict:
+    """ShadowBroker counterfactual summary — hors cash. kind: indicator filters only, or Ève's refusals only."""
     session = SessionLocal()
     try:
         portfolio_id = None
@@ -141,7 +146,7 @@ def get_shadow_stats(portfolio_code: str | None = None) -> dict:
             if p is None:
                 raise HTTPException(status_code=404, detail="portfolio_not_found")
             portfolio_id = p.id
-        return shadow_stats(session, portfolio_id=portfolio_id)
+        return shadow_stats(session, portfolio_id=portfolio_id, kind=kind)
     finally:
         session.close()
 

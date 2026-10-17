@@ -152,11 +152,37 @@ def verdict_to_dict(verdict: EveVerdict) -> dict[str, Any]:
     }
 
 
-def list_dossiers(session: Session, *, limit: int = 20, symbol: str | None = None) -> list[EveDossier]:
-    stmt = select(EveDossier).order_by(EveDossier.created_at.desc()).limit(min(max(limit, 1), 100))
+def list_dossiers(
+    session: Session, *, limit: int = 20, symbol: str | None = None, max_limit: int = 100
+) -> list[EveDossier]:
+    stmt = select(EveDossier).order_by(EveDossier.created_at.desc()).limit(min(max(limit, 1), max_limit))
     if symbol:
         stmt = stmt.where(EveDossier.symbol == symbol.upper())
     return list(session.scalars(stmt))
+
+
+def decision_summary(dossier: EveDossier, verdict: EveVerdict | None = None) -> dict[str, Any]:
+    """Light view of one Ève judgement for the « Moteur vs Ève » page: what the engine proposed on each book,
+    what Ève answered and what happened. No context/facts payload (those stay in the full dossier)."""
+    dt = dossier.decision_time_json if isinstance(dossier.decision_time_json, dict) else {}
+    deg = dt.get("degradation") if isinstance(dt.get("degradation"), dict) else {}
+    gate = dt.get("entry_gate") if isinstance(dt.get("entry_gate"), dict) else {}
+    proposals = [p for p in (dt.get("engine_proposals") or []) if isinstance(p, dict)]
+    reasoning = verdict.reasoning if verdict is not None else None
+    return {
+        "id": dossier.id,
+        "created_at": dossier.created_at.isoformat() if dossier.created_at else None,
+        "symbol": dossier.symbol,
+        "timeframe": dossier.timeframe,
+        "baseline_decision": dossier.baseline_decision,
+        "eve_action": dossier.eve_action,
+        "execution_status": dossier.execution_status,
+        "degradation": deg.get("level"),
+        "entry_gate": {"decision": gate.get("decision"), "reason": gate.get("reason")} if gate else None,
+        "coherence": verdict.coherence_score if verdict is not None else None,
+        "reasoning": reasoning[:400] if isinstance(reasoning, str) else None,
+        "engine_proposals": proposals,
+    }
 
 
 def get_dossier(session: Session, dossier_id: str) -> EveDossier | None:

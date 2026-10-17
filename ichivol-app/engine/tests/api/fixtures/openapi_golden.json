@@ -3693,6 +3693,54 @@
         ]
       }
     },
+    "/api/engine/eve/decisions": {
+      "get": {
+        "description": "Latest \u00c8ve judgements, light: engine proposals per book, \u00c8ve's answer, outcome (\u00ab Moteur vs \u00c8ve \u00bb).",
+        "operationId": "eve_decisions_api_engine_eve_decisions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Eve Decisions Api Engine Eve Decisions Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eve Decisions",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
     "/api/engine/eve/dossiers": {
       "get": {
         "operationId": "eve_dossiers_api_engine_eve_dossiers_get",
@@ -7246,7 +7294,7 @@
     },
     "/api/engine/shadow/stats": {
       "get": {
-        "description": "ShadowBroker counterfactual summary \u2014 hors cash.",
+        "description": "ShadowBroker counterfactual summary \u2014 hors cash. kind: indicator filters only, or \u00c8ve's refusals only.",
         "operationId": "get_shadow_stats_api_engine_shadow_stats_get",
         "parameters": [
           {
@@ -7263,6 +7311,26 @@
                 }
               ],
               "title": "Portfolio Code"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "filters",
+                    "eve"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
             }
           }
         ],

@@ -21,6 +21,7 @@ import {
   getPaperActivity,
   getPaperOverview,
   listPaperPortfolios,
+  listPaperPositions,
   type PaperOrderRow,
   type PaperPortfolioRow,
   type PaperOverview,
@@ -54,6 +55,8 @@ import {
   portfolioFromParam,
   portfolioLabel,
 } from '../lib/rsPortfolio'
+import { DeciderBadge } from '../components/decider/DeciderBadge'
+import { deciderOf, type Decider } from '../lib/decider'
 import './PortfolioPage.css'
 
 type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
@@ -293,6 +296,8 @@ export function PortfolioPage() {
   const [overview, setOverview] = useState<PaperOverview | null>(null)
   const [orders, setOrders] = useState<Array<PaperOrderRow & { book_code?: string; book_label?: string }>>([])
   const [lock, setLock] = useState<RiskLockState | null>(null)
+  /** Qui a décidé chaque lot (moteur seul, Ève, manuel), pour étiqueter aussi les ordres. */
+  const [deciderByPosition, setDeciderByPosition] = useState<Record<string, Decider>>({})
   const [loading, setLoading] = useState(true)
   const [fiche, setFiche] = useState<PaperOverviewPosition | null>(null)
   const [closeTarget, setCloseTarget] = useState<PaperOverviewPosition | null>(null)
@@ -302,6 +307,9 @@ export function PortfolioPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
+    void listPaperPositions()
+      .then((all) => setDeciderByPosition(Object.fromEntries(all.map((p) => [p.id, deciderOf(p)]))))
+      .catch(() => undefined)
     if (showAll) {
       try {
         const rows = await listActiveBooks()
@@ -781,7 +789,9 @@ export function PortfolioPage() {
                       }}
                     >
                       <td className="pf-stack-head">
-                        <b>{base}</b>
+                        <b>
+                          {base} <DeciderBadge decider={deciderOf(p)} compact />
+                        </b>
                         <small>
                           {strat}
                           {engaged != null ? ` · ${fmtEur(engaged, 0)}` : ''}
@@ -875,7 +885,12 @@ export function PortfolioPage() {
                           })}
                     </td>
                     <td className="pf-stack-head">
-                      <b>{displaySymbol(o.symbol)}</b>
+                      <b>
+                        {displaySymbol(o.symbol)}{' '}
+                        {o.position_id && deciderByPosition[o.position_id] ? (
+                          <DeciderBadge decider={deciderByPosition[o.position_id]!} compact />
+                        ) : null}
+                      </b>
                       <small>
                         {showAll && o.book_label ? `${o.book_label} · ` : ''}
                         {String(o.timeframe).toUpperCase()}
