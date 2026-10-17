@@ -127,10 +127,13 @@ export function EquityTrajectory({
     return () => ro.disconnect()
   }, [])
 
-  useEffect(() => {
+  // Changement de période : on oublie la date lue et le repère ouvert (réinitialisation pendant le rendu).
+  const [seenPeriod, setSeenPeriod] = useState(period)
+  if (seenPeriod !== period) {
+    setSeenPeriod(period)
     setHoverMs(null)
     setActiveMark(null)
-  }, [period])
+  }
 
   const cutoff = useMemo(() => periodCutoffMs(period), [period])
 
