@@ -16,7 +16,6 @@ import {
   IconOverview,
   IconPaper,
   IconSettings,
-  IconSynthese,
 } from '../components/NavIcons'
 
 export type NavItem = {
@@ -43,7 +42,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/app/market', label: 'Marché', Icon: IconMarket },
       { to: '/app/opportunites', label: 'Opportunités', Icon: IconDecisions },
       { to: '/app/portefeuille', label: 'Portefeuille', Icon: IconPaper },
-      { to: '/app/moteur-eve', label: 'Moteur vs Ève', Icon: IconSynthese },
     ],
   },
   {
@@ -60,7 +58,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Automatisation',
     items: [
       { to: '/app/agent', label: 'Copilot', Icon: IconChat },
-      { to: '/app/agents', label: 'Agents', Icon: IconAgents },
+      { to: '/app/agents', label: 'Ève', Icon: IconAgents },
       { to: '/app/operations', label: 'Opérations', Icon: IconActivity },
     ],
   },

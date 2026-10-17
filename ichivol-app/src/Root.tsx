@@ -14,7 +14,6 @@ import { ChartIntelligencePanel } from './components/chart-intelligence'
 import { MarketPage } from './pages/MarketPage'
 import { MarketTvPage } from './pages/MarketTvPage'
 import { OverviewPage } from './pages/OverviewPage'
-import { DecidersPage } from './pages/DecidersPage'
 import { PortfolioPage } from './pages/PortfolioPage'
 import { RequireAuth } from './pages/RequireAuth'
 import { SettingsPage } from './pages/SettingsPage'
@@ -58,7 +57,6 @@ export function Root() {
             />
             <Route path="opportunites" element={<DecisionsPage />} />
             <Route path="portefeuille" element={<PortfolioPage />} />
-            <Route path="moteur-eve" element={<DecidersPage />} />
             <Route path="context" element={<ContextPage />} />
             <Route path="journal" element={<JournalPage />} />
             <Route path="operations" element={<ActivityPage />} />
@@ -84,6 +82,7 @@ export function Root() {
               element={<Navigate to="/app/market?filter=pinned" replace />}
             />
             <Route path="backtests" element={<Navigate to="/app/strategy-lab" replace />} />
+            <Route path="moteur-eve" element={<Navigate to="/app/agents" replace />} />
             <Route path="*" element={<Navigate to="desk" replace />} />
           </Route>
         </Route>

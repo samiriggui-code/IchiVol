@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { BrandMark } from '../components/BrandMark'
 import { KeenIcon } from '../components/KeenIcon'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { EVE_MODES as EVE_DECISION_MODES } from '../lib/eveModes'
 
 const FEATURES = [
   {
@@ -36,36 +37,13 @@ const FEATURES = [
   },
 ]
 
-const EVE_MODES = [
-  {
-    id: 'analyst',
-    icon: '◇',
-    name: 'Analyst',
-    tag: 'NOUL · CHOICE · SCORE',
-    body: 'Lit le setup et pose le scénario d’engagement.',
-  },
-  {
-    id: 'challenger',
-    icon: '↺',
-    name: 'Challenger',
-    tag: 'NOUL · CHOICE · SCORE',
-    body: 'Contre-attaque — alternatives et fragilités avant d’ouvrir.',
-  },
-  {
-    id: 'guardian',
-    icon: '◈',
-    name: 'Guardian',
-    tag: 'NOUL · CHOICE · SCORE',
-    body: 'Anomalies et risque. Le Risk Kernel peut bloquer.',
-  },
-  {
-    id: 'shadow',
-    icon: '◉',
-    name: 'Shadow',
-    tag: 'NOUL · CHOICE · SCORE',
-    body: 'Refait l’évaluation de son côté avec JEV, sans voir les autres modes.',
-  },
-]
+const EVE_MODES = EVE_DECISION_MODES.map((m) => ({
+  id: m.id,
+  icon: m.icon,
+  name: m.name,
+  tag: 'NOUL · CHOICE · SCORE',
+  body: m.blurb,
+}))
 
 const ENGINE_STACK = [
   { code: 'CORE', label: 'Ichimoku × RVOL + Decision Engine (5 portes)' },

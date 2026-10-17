@@ -10,6 +10,8 @@
  *   (`source_status` = "not_wired") : affichés comme « pas encore utilisés par le moteur ».
  */
 
+import { EVE_MODES as EVE_DECISION_MODES } from '../../lib/eveModes'
+
 export type KnobUnit = 'pct' | 'seconds' | 'days' | 'count' | 'switch'
 
 export type KnobGroup = 'decision' | 'news' | 'server' | 'autonomy'
@@ -135,27 +137,12 @@ export const EVE_KNOBS: Record<string, KnobCopy> = {
   JEV_MODEL: { group: 'server', label: 'Version du modèle JEV', explain: '' },
 }
 
-/** Les cinq modes d'Ève — noms gardés en anglais, comme dans l'application. */
+/** Les quatre modes de décision d'Ève (source : lib/eveModes), suivis de son chat, le Copilot. */
 export const EVE_MODES: Array<{ name: string; text: string }> = [
+  ...EVE_DECISION_MODES.map((m) => ({ name: m.name, text: `${m.blurb} ${m.effect}` })),
   {
-    name: 'Copilot',
-    text: 'Le chat avec qui vous discutez. Il explique les décisions et répond à vos questions, sans jamais passer d’ordre. Il utilise le modèle choisi dans « Modèles d’IA ».',
-  },
-  {
-    name: 'Analyst',
-    text: 'Lit les signaux du moteur et propose un scénario : acheter, vendre à découvert, attendre ou s’abstenir.',
-  },
-  {
-    name: 'Challenger',
-    text: 'Cherche les arguments contraires. S’il trouve trop de contradictions, Ève s’abstient.',
-  },
-  {
-    name: 'Guardian',
-    text: 'Passe en revue les risques (données manquantes, arrêt d’urgence, anomalies). Un risque critique force l’abstention.',
-  },
-  {
-    name: 'Shadow',
-    text: 'Donne un second avis indépendant sur la décision du moteur, pour repérer les désaccords.',
+    name: 'Copilot (son chat)',
+    text: 'La voix d’Ève : il explique les décisions et répond à vos questions, sans jamais passer d’ordre. Il utilise le modèle de langage choisi dans « Modèles d’IA ».',
   },
 ]
 

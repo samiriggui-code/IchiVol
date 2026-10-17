@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
 import { MtfPanel } from '../components/MtfPanel'
 import { ChartIntelligencePanel } from '../components/chart-intelligence'
@@ -683,7 +683,7 @@ export function DecisionsPage() {
               Les 5 portes = lecture marché (Ichimoku × RVOL). Ensuite Ève décide si on trade
               paper (LONG/SHORT) ou non (HOLD/ABSTAIN). « Modèle OK » = JEV API (jevos si plus de crédit) a
               répondu. « Filtre entrée » = garde-fou avant d’ouvrir. « Risque » = le Risk Kernel
-              autorise ou bloque. Tirets = pas encore de décision Ève sur ce symbole (Agents).
+              autorise ou bloque. Tirets = pas encore de décision d’Ève sur ce symbole.
             </p>
           </div>
         </section>
@@ -791,7 +791,10 @@ export function DecisionsPage() {
               </>
             ) : (
               <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-                Pas encore de décision Ève sur ce symbole — lance une évaluation depuis Agents.
+                Pas encore de décision d’Ève sur ce symbole.{' '}
+                <Link className="link" to={`/app/agents?symbol=${encodeURIComponent(detailSym ?? '')}`}>
+                  Demander son avis →
+                </Link>
               </p>
             )}
             <div className="statline">
