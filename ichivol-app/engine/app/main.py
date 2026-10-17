@@ -27,7 +27,13 @@ async def lifespan(app: FastAPI):
 
         rs_d1_loop.interval_s = settings.rs_d1_interval_s
         rs_d1_loop.start()
+    from app.eve.autopilot import eve_autopilot
+
+    # Idle unless EVE_PAPER_AUTONOMY is on (the screener cycle only hands it proposals then).
+    eve_autopilot.max_symbols_per_cycle = settings.eve_autopilot_max_symbols
+    eve_autopilot.start()
     yield
+    eve_autopilot.stop()
     if settings.enable_rs_d1_paper:
         from app.paper.rs_d1_runner import rs_d1_loop
 

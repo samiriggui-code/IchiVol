@@ -631,3 +631,50 @@ def test_auto_sync_gates_signal_actions_on_decision_windows(monkeypatch):
     by = [(kw["signal_extra"]["portfolio_code"], kw["signal_actions"], kw["signal_extra"].get("decision_event"))
           for kw in seen]
     assert by == [("BASE", True, None), ("SESS", False, None), ("BASE", True, None), ("SESS", True, "ny_open")]
+
+
+def test_eve_mode_engine_proposes_and_never_opens(_session):
+    """EVE_PAPER_AUTONOMY: the engine's BUY becomes a proposal for Ève; nothing is opened by the engine."""
+    pf = _disposable(_session)
+    try:
+        prop = paper.engine_proposal(_session, portfolio=pf, symbol=SYMBOL, timeframe=TIMEFRAME,
+                                     pipeline=_pipeline("BUY"), signal_actions=True)
+        assert prop == {"action": "OPEN", "direction": "LONG"}
+        assert paper.engine_proposal(_session, portfolio=pf, symbol=SYMBOL, timeframe=TIMEFRAME,
+                                     pipeline=_pipeline("BUY"), signal_actions=False) is None
+        assert paper.engine_proposal(_session, portfolio=pf, symbol=SYMBOL, timeframe=TIMEFRAME,
+                                     pipeline=_pipeline("WATCH"), signal_actions=True) is None
+        # With a lot open, a flip is proposed as a CLOSE of that lot; the same direction proposes nothing.
+        opened = paper.sync_position(_session, symbol=SYMBOL, timeframe=TIMEFRAME, source="auto_watchlist",
+                                     user_id=None, price=100.0, pipeline=_pipeline("BUY"),
+                                     stop_distance=STOP, portfolio=pf)
+        assert opened is not None
+        close = paper.engine_proposal(_session, portfolio=pf, symbol=SYMBOL, timeframe=TIMEFRAME,
+                                      pipeline=_pipeline("SELL", Direction.SHORT), signal_actions=True)
+        assert close is not None and close["action"] == "CLOSE" and close["position_id"] == opened.id
+        assert paper.engine_proposal(_session, portfolio=pf, symbol=SYMBOL, timeframe=TIMEFRAME,
+                                     pipeline=_pipeline("BUY"), signal_actions=True) is None
+    finally:
+        _drop_portfolio(_session, pf)
+
+
+def test_auto_sync_in_eve_mode_collects_proposals_instead_of_acting(monkeypatch):
+    seen: list[dict] = []
+    monkeypatch.setattr(paper, "sync_position", lambda session, **kw: seen.append(kw))
+    monkeypatch.setattr(paper, "engine_proposal", lambda session, **kw: {"action": "OPEN", "direction": "LONG"})
+    monkeypatch.setattr(paper, "ensure_syncable_portfolios",
+                        lambda session: [SimpleNamespace(id="a", code="BASE", strategy_profile={"auto_timeframes": ["1h"]})])
+    monkeypatch.setattr(paper.shadow_broker, "mark_shadows", lambda *a, **k: None)
+    monkeypatch.setattr(paper.paper_broker, "snapshot_equity", lambda *a, **k: None)
+    row = SimpleNamespace(symbol="PAPERTEST_EVE", timeframe=TIMEFRAME, price=100.0, pipeline=_pipeline("BUY"),
+                          atr=SimpleNamespace(suggested_stop_distance=STOP), candles=[], rvol=None,
+                          mtf_matrix=None, signal_timing={"signal_bar_close": 1_800_000_000})
+    proposals: list[dict] = []
+    paper.sync_auto_watchlist(SimpleNamespace(commit=lambda: None), [row], proposals=proposals)
+    # sync_position still runs (stop/target) but the signal acts on nothing.
+    assert [kw["signal_actions"] for kw in seen] == [False]
+    assert proposals == [{
+        "action": "OPEN", "direction": "LONG", "portfolio_code": "BASE", "symbol": "PAPERTEST_EVE",
+        "timeframe": TIMEFRAME, "price": 100.0, "stop_distance": STOP, "engine_decision": "BUY",
+        "signal_bar_close": 1_800_000_000,
+    }]

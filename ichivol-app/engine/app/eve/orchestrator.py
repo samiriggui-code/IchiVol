@@ -331,8 +331,8 @@ def evaluate_opportunity(
         result["dossier_id"] = dossier.id
         result["verdict_id"] = dossier.verdict_id
 
-        # Paper path: tous les portefeuilles virtuels actifs.
-        # Autonomy off → dry-run Risk Kernel. On → Ève ouvre/ferme paper sur chaque livre.
+        # Paper path: essai à blanc Risk Kernel sur tous les livres, jamais d'exécution ici.
+        # En autonomie, seul eve.autopilot exécute, sur les livres dont la méthode moteur a proposé le trade.
         if paper_dry_run:
             try:
                 auto = autonomy_enabled()
@@ -340,7 +340,7 @@ def evaluate_opportunity(
                     session,
                     dossier.id,
                     portfolio_code=None,  # tous les livres virtuels
-                    execute=None,
+                    execute=False,
                     allow_screener=True,
                 )
                 result["paper_submit"] = paper
@@ -350,7 +350,7 @@ def evaluate_opportunity(
                 n_books = len(paper.get("portfolio_codes") or paper.get("portfolios") or [])
                 verdict["note"] = (
                     "Potential + Risk Kernel"
-                    + (" execute" if auto and paper.get("executed") else " dry-run")
+                    + " dry-run"
                     + f"; autonomy={'on' if auto else 'off'}"
                     + f"; livres={n_books or 1}"
                 )

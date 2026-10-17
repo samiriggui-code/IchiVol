@@ -1,10 +1,10 @@
 """V2 — Eve verdict → Risk Kernel → portefeuilles virtuels.
 
-Par défaut Ève soumet sur **tous** les portefeuilles paper actifs.
-Passe ``portfolio_code`` seulement pour cibler un livre.
+Sans ``portfolio_code`` la soumission couvre **tous** les portefeuilles paper actifs (essai à blanc par défaut).
+En autonomie, c'est ``eve.autopilot`` qui exécute, livre par livre, seulement là où le moteur a proposé un trade.
 
-Autonomy OFF (défaut) = dry-run Risk Kernel, aucune ouverture.
-Jamais de broker live. Risk Kernel = seule autorité d'ouverture.
+``execute`` n'est jamais implicite : sans ``execute=True`` explicite, rien n'est ouvert ni fermé (essai à blanc),
+et ``execute=True`` est ignoré quand l'autonomie est coupée. Jamais de broker live.
 """
 
 from __future__ import annotations
@@ -282,7 +282,7 @@ def submit_paper_from_dossier(
     ``portfolio_code=None`` ou ``ALL`` → **tous** les portefeuilles virtuels actifs.
     Un code précis → un seul livre.
 
-    ``execute`` défaut = ``autonomy_enabled()``. HOLD/ABSTAIN n'ouvrent pas.
+    ``execute`` défaut = essai à blanc ; ``True`` n'agit qu'avec l'autonomie. HOLD/ABSTAIN n'ouvrent pas.
     """
     code = (portfolio_code or "").strip()
     if not code or code.upper() == ALL_VIRTUAL:
@@ -388,6 +388,29 @@ def _submit_all_virtual_portfolios(
     }
 
 
+def submit_to_portfolio(
+    session: Session,
+    dossier_id: str,
+    *,
+    portfolio_code: str,
+    price: float | None = None,
+    stop_distance: float | None = None,
+    execute: bool | None = None,
+    action_override: str | None = None,
+) -> dict[str, Any]:
+    """One book only (used by ``eve.autopilot`` on the book whose engine method proposed the trade)."""
+    return _submit_one_portfolio(
+        session,
+        dossier_id,
+        portfolio_code=portfolio_code,
+        price=price,
+        stop_distance=stop_distance,
+        execute=execute,
+        allow_screener=True,
+        action_override=action_override,
+    )
+
+
 def _submit_one_portfolio(
     session: Session,
     dossier_id: str,
@@ -411,7 +434,8 @@ def _submit_one_portfolio(
     ) or "ABSTAIN"
 
     auto = autonomy_enabled()
-    do_execute = auto if execute is None else bool(execute)
+    # Never implicit: only an explicit execute=True acts, and only with autonomy on.
+    do_execute = bool(execute)
     # Hard gate: never execute when autonomy is off.
     if do_execute and not auto:
         do_execute = False

@@ -154,7 +154,17 @@ class ScreenerCache:
             crypto_rows = paper_tradable_rows([*rows, *extra_rows])
             paper_session = SessionLocal()
             try:
-                paper_engine.sync_auto_watchlist(paper_session, crypto_rows)
+                from app.eve.paper_submit import autonomy_enabled
+
+                if autonomy_enabled():
+                    # Ève decides: the engine computes every book's method and proposes, Ève accepts or refuses.
+                    from app.eve.autopilot import eve_autopilot
+
+                    proposals: list[dict] = []
+                    paper_engine.sync_auto_watchlist(paper_session, crypto_rows, proposals=proposals)
+                    eve_autopilot.submit_proposals(proposals)
+                else:
+                    paper_engine.sync_auto_watchlist(paper_session, crypto_rows)
             except Exception:
                 logger.warning("screener cache: paper trading sync failed", exc_info=True)
                 paper_session.rollback()

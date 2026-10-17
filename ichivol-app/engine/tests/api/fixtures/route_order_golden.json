@@ -129,6 +129,146 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/jev-shadow/health",
+    "endpoint": "get_jev_shadow_health"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/jev-shadow/history",
+    "endpoint": "get_shadow_history"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/jev-shadow/{symbol}",
+    "endpoint": "evaluate_shadow"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/eve/context/{symbol}",
+    "endpoint": "eve_context"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/eve/evaluate/{symbol}",
+    "endpoint": "eve_evaluate"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/eve/dossiers",
+    "endpoint": "eve_dossiers"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/eve/dossiers/{dossier_id}",
+    "endpoint": "eve_dossier_detail"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/eve/verdicts/{verdict_id}",
+    "endpoint": "eve_verdict_detail"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/eve/settings/schema",
+    "endpoint": "eve_settings_schema"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/eve/settings/values",
+    "endpoint": "eve_settings_values"
+  },
+  {
+    "methods": [
+      "PATCH"
+    ],
+    "path": "/api/engine/eve/settings/values",
+    "endpoint": "eve_settings_patch"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/eve/event-radar/{symbol}",
+    "endpoint": "eve_event_radar"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/eve/calibration",
+    "endpoint": "eve_calibration"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/eve/primitive-study",
+    "endpoint": "eve_primitive_study"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/eve/paper-autonomy",
+    "endpoint": "eve_paper_autonomy"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/eve/dossiers/{dossier_id}/paper-submit",
+    "endpoint": "eve_paper_submit"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/eve/followup",
+    "endpoint": "eve_followup_list"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/eve/dossiers/{dossier_id}/followup",
+    "endpoint": "eve_followup_get"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/eve/dossiers/{dossier_id}/followup",
+    "endpoint": "eve_followup_run"
+  },
+  {
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/engine/eve/outcomes/sync",
+    "endpoint": "eve_outcomes_sync"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/backtest/evidence",
     "endpoint": "get_backtest_evidence"
   },

@@ -308,7 +308,7 @@ export function aggregateAiBadgeState(
     if (
       chat === 'bad_key' ||
       chat === 'no_key' ||
-      (chat !== 'ok' && chat !== 'idle' && chat !== 'checking')
+      (chat !== 'ok' && chat !== 'idle')
     ) {
       // At least one System One up, chat struggling — still show mixed via 'ok' border with detail in title
       if (jevos === 'ok' || typesafe === 'ok') return 'ok'

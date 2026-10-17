@@ -7,7 +7,7 @@ const FEATURES = [
   {
     icon: 'abstract-39',
     title: 'Ève — IA qui trade paper',
-    body: 'Une IA, quatre modes. Autonomie on = elle trade sur tous tes portefeuilles virtuels — Risk Kernel en garde-fou.',
+    body: 'Une IA, quatre modes. Chaque portefeuille propose ses trades selon sa méthode ; autonomie activée, Ève décide seule de les prendre ou non. Le Risk Kernel garde le dernier mot.',
   },
   {
     icon: 'kanban',
@@ -40,30 +40,30 @@ const EVE_MODES = [
   {
     id: 'analyst',
     icon: '◇',
-    name: 'Analyst',
+    name: 'Analyste',
     tag: 'NOUL · CHOICE · SCORE',
     body: 'Lit le setup et pose le scénario d’engagement.',
   },
   {
     id: 'challenger',
     icon: '↺',
-    name: 'Challenger',
+    name: 'Contradictrice',
     tag: 'NOUL · CHOICE · SCORE',
     body: 'Contre-attaque — alternatives et fragilités avant d’ouvrir.',
   },
   {
     id: 'guardian',
     icon: '◈',
-    name: 'Guardian',
+    name: 'Gardienne',
     tag: 'NOUL · CHOICE · SCORE',
     body: 'Anomalies et risque. Le Risk Kernel peut bloquer.',
   },
   {
     id: 'shadow',
     icon: '◉',
-    name: 'Shadow',
+    name: 'Contre-avis',
     tag: 'NOUL · CHOICE · SCORE',
-    body: 'Contre-évaluation JEV API indépendante avant d’exécuter.',
+    body: 'Refait l’évaluation de son côté avec JEV, sans voir les autres modes.',
   },
 ]
 
@@ -77,7 +77,7 @@ const ENGINE_STACK = [
 ]
 
 const TRUST = [
-  'IchiVol V4 : Ève trade le paper — autonomie on = elle ouvre',
+  'IchiVol V4 : le moteur propose, Ève décide seule en paper',
   'Quatre modes JEV · Decision Engine · Event Radar',
   'Risk Kernel + kill-switch : elle trade, le risk peut couper',
   'Paper only — pas de live, pas de conseil financier',
@@ -100,7 +100,7 @@ const STEPS = [
     n: '03',
     icon: 'verify',
     title: 'Exécuter',
-    body: 'Autonomie on → Ève ouvre / gère paper. Risk Kernel peut refuser.',
+    body: 'Autonomie activée : Ève accepte ou refuse chaque proposition. Le Risk Kernel peut encore refuser.',
   },
 ]
 
@@ -111,14 +111,14 @@ const COMPARE = {
     'Trade possible sur signal pourri ou JEV down',
   ],
   with: [
-    'Ève décide et trade paper sur tes portefeuilles',
+    'Ève juge chaque trade proposé par tes portefeuilles et décide seule',
     '4 modes + entry gate + late→HOLD avant d’ouvrir',
     'Risk Kernel / kill-switch peuvent bloquer l’exécution',
   ],
 }
 
 const STATS = [
-  { value: 'V4', label: 'Workspace' },
+  { value: 'V4', label: 'Version' },
   { value: '4', label: 'Modes Ève' },
   { value: '1', label: 'IA qui trade paper' },
   { value: '0', label: 'Live brokers' },
@@ -131,15 +131,15 @@ const FAQ = [
   },
   {
     q: 'Ève trade vraiment ?',
-    a: 'Oui — en paper. Autonomie on = elle ouvre et gère sur tous les portefeuilles virtuels actifs. Le Risk Kernel autorise ou bloque par livre ; kill-switch = plus d’entrées. Pas de broker live.',
+    a: 'Oui, en paper, quand l’autonomie est activée. Chaque portefeuille (Baseline, Sessions, Futures & Crypto…) applique sa méthode et propose ; Ève, avec JEV, accepte ou refuse à chaque nouvelle bougie, sans intervention humaine. Le Risk Kernel autorise ou bloque par portefeuille, et le kill-switch coupe toute entrée. Pas de broker réel.',
   },
   {
     q: 'Qu’est-ce qu’Ève Intelligence ?',
-    a: 'Une seule IA trading avec quatre modes actifs : Analyst, Challenger, Guardian, Shadow — chacun en NOUL / CHOICE / SCORE via JEV API (jevos en fallback crédit). Pas quatre LLM concurrents.',
+    a: 'Une seule IA avec quatre modes : Analyste, Contradictrice, Gardienne et Contre-avis. Chacun pose ses questions à JEV (NOUL, CHOICE, SCORE), d’abord par l’API JEV, puis jevos quand les crédits sont épuisés. Ce ne sont pas quatre IA concurrentes.',
   },
   {
-    q: 'Que se passe-t-il si JEV est late ou down ?',
-    a: 'Dégradation : late → HOLD, low confidence → ABSTAIN. Ève n’ouvre pas sur un état périmé.',
+    q: 'Que se passe-t-il si JEV répond trop tard ou ne répond pas ?',
+    a: 'Ève s’abstient : réponse trop tardive, JEV injoignable ou confiance trop faible, elle n’ouvre rien.',
   },
   {
     q: 'Les cartes Agents sont-elles plusieurs LLM ?',
@@ -147,7 +147,7 @@ const FAQ = [
   },
   {
     q: 'Le Risk Kernel peut-il être contourné ?',
-    a: 'Non. Toute ouverture paper passe le risk_kernel. Kill-switch armé = Ève ne peut plus ouvrir.',
+    a: 'Non. Toute ouverture paper passe par le Risk Kernel. Kill-switch armé : Ève ne peut plus ouvrir.',
   },
 ]
 
@@ -279,12 +279,12 @@ export function LandingPage() {
             <div className="camap-hero-copy camap-reveal">
               <p className="camap-brand-lockup">IchiVol V4</p>
               <h1 className="camap-hero-title">
-                Ève trade. <em>Le risk borne.</em>
+                Ève décide. <em>Le risque borne.</em>
               </h1>
               <p className="camap-hero-lede">
-                IA décisionnelle paper : quatre modes JEV, Decision Engine,
-                entry gate, Event Radar. Autonomie on — elle ouvre. Risk Kernel
-                peut couper. Pas de live.
+                Le moteur calcule et chaque portefeuille propose ses trades. Ève,
+                avec ses quatre modes JEV, décide seule de les prendre ou non. Le
+                Risk Kernel peut couper. Paper seulement, jamais d’argent réel.
               </p>
               <div className="camap-hero-cta">
                 <Link to="/login" className="camap-btn camap-btn-primary camap-btn-lg">
@@ -297,18 +297,18 @@ export function LandingPage() {
               <div className="camap-hero-visual">
                 <span className="camap-hero-visual-badge">
                   <span className="camap-dot camap-dot-live" aria-hidden />
-                  V4 · Ève trading paper
+                  V4 · Ève décide en paper
                 </span>
                 <MockChart />
                 <div className="camap-hero-visual-footer">
                   <span>BTCUSDT · 1h</span>
-                  <span className="camap-chip camap-chip-bull">paper open</span>
+                  <span className="camap-chip camap-chip-bull">illustration</span>
                 </div>
                 <div className="camap-hero-gates" aria-hidden>
                   <span className="is-pass">Portes</span>
                   <span className="is-pass">Gate</span>
                   <span className="is-pass">Risk</span>
-                  <span className="is-watch">Ève trade</span>
+                  <span className="is-watch">Ève décide</span>
                 </div>
               </div>
             </div>
@@ -327,10 +327,10 @@ export function LandingPage() {
         </section>
 
         <section id="moteur" className="camap-section">
-          <h2 className="camap-section-title">Stack IchiVol V4</h2>
+          <h2 className="camap-section-title">Les briques d’IchiVol V4</h2>
           <p className="camap-section-lede">
-            Du signal à l’exécution paper : Core → Ève → gate → radar → Risk →
-            Lab.
+            Du signal à l’exécution paper : moteur, puis Ève, contrôle d’entrée,
+            radar d’événements, Risk Kernel, et le Lab pour affûter les règles.
           </p>
           <ol className="camap-engine-stack">
             {ENGINE_STACK.map((row) => (
@@ -345,8 +345,8 @@ export function LandingPage() {
         <section id="eve" className="camap-section">
           <h2 className="camap-section-title">Ève — l’IA qui trade</h2>
           <p className="camap-section-lede">
-            Quatre modes avant d’ouvrir. Autonomie on = exécution paper sur tes
-            portefeuilles.
+            Quatre modes avant d’ouvrir. Autonomie activée, elle accepte ou refuse
+            chaque trade proposé par tes portefeuilles.
           </p>
           <div className="camap-eve-modes">
             {EVE_MODES.map((m) => (

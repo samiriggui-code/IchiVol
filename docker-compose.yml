@@ -68,7 +68,7 @@ services:
       JEV_API_KEY: ${JEV_API_KEY:-}
       TYPESAFE_API_URL: ${TYPESAFE_API_URL:-https://api.typesafe.ai}
       TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
-      # Paper-only: Eve open/close on existing portfolios when true (never live).
+      # Paper-only: when true the engine proposes per portfolio and Ève + JEV decide (app/eve/autopilot.py).
       EVE_PAPER_AUTONOMY: ${EVE_PAPER_AUTONOMY:-false}
       EVENT_RADAR_ENABLED: ${EVENT_RADAR_ENABLED:-false}
       EVENT_RADAR_CRYPTO_RSS_ENABLED: ${EVENT_RADAR_CRYPTO_RSS_ENABLED:-true}

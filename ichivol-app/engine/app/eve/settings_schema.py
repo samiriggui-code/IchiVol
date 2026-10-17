@@ -93,8 +93,8 @@ CONFIG_SCHEMA: dict[str, Any] = {
                 "key": "JEV_TIMEOUT_SECONDS",
                 "label": "Timeout JEV (s)",
                 "type": "number",
-                "default": 5.0,
-                "description": "Budget latence ; dépassement → late → HOLD.",
+                "default": 30.0,
+                "description": "Temps max d'une réponse JEV ; au-delà la réponse arrive trop tard et Ève s'abstient.",
             },
             {
                 "key": "JEV_MIN_CONFIDENCE",
@@ -347,7 +347,7 @@ def settings_bundle() -> dict[str, Any]:
 
 
 def jev_timeout_seconds() -> float:
-    return float(resolved_values().get("JEV_TIMEOUT_SECONDS") or 5.0)
+    return float(resolved_values().get("JEV_TIMEOUT_SECONDS") or 30.0)
 
 
 def policy_threshold_overrides() -> dict[str, Any]:

@@ -29,49 +29,44 @@ type EveModeDef = {
   icon: string
   blurb: string
   primitives: string
-  permission: string
   advisoryOnly: boolean
 }
 
 const EVE_MODES: EveModeDef[] = [
   {
     id: 'analyst',
-    name: 'Ève Analyst',
+    name: 'Ève Analyste',
     tag: 'MODE',
     icon: '◇',
-    blurb: 'Interprète calculs, structure et scénarios — NOUL / CHOICE / SCORE.',
+    blurb: 'Lit les calculs du moteur et la structure du marché, puis construit les scénarios.',
     primitives: 'NOUL + CHOICE + SCORE',
-    permission: 'market_read',
     advisoryOnly: true,
   },
   {
     id: 'challenger',
-    name: 'Ève Challenger',
+    name: 'Ève Contradictrice',
     tag: 'MODE',
     icon: '↺',
-    blurb: 'Cherche contradictions et alternatives — NOUL / CHOICE / SCORE.',
+    blurb: 'Cherche ce qui contredit le scénario retenu et les autres possibilités.',
     primitives: 'NOUL + CHOICE + SCORE',
-    permission: 'signals_read',
     advisoryOnly: true,
   },
   {
     id: 'guardian',
-    name: 'Ève Guardian',
-    tag: 'ADVISORY',
+    name: 'Ève Gardienne',
+    tag: 'MODE',
     icon: '◈',
-    blurb: 'Risques et anomalies — advisory. Risk Kernel reste autorité.',
+    blurb: 'Signale les risques et les anomalies. Le Risk Kernel garde le dernier mot.',
     primitives: 'NOUL + CHOICE + SCORE',
-    permission: 'risk_read',
     advisoryOnly: true,
   },
   {
     id: 'shadow',
-    name: 'Ève Shadow',
+    name: 'Ève Contre-avis',
     tag: 'MODE',
     icon: '◉',
-    blurb: 'Contre-évaluation indépendante via JEV API (jevos si plus de crédit).',
+    blurb: 'Refait l’évaluation de son côté avec JEV (API hébergée, puis jevos si les crédits sont épuisés).',
     primitives: 'NOUL + CHOICE + SCORE',
-    permission: 'market_read',
     advisoryOnly: true,
   },
 ]
@@ -387,16 +382,16 @@ export function AgentsPage() {
             <h2>{m.name}</h2>
             <p>{m.blurb}</p>
             <div className="statline">
-              <span>JEV</span>
+              <span>Questions JEV</span>
               <b>{m.primitives}</b>
             </div>
             <div className="statline">
-              <span>Permission</span>
-              <b>{m.permission}</b>
+              <span>Accès</span>
+              <b>lecture des calculs du moteur</b>
             </div>
             <div className="statline">
               <span>Rôle</span>
-              <b>{m.advisoryOnly ? 'Advisory' : '—'}</b>
+              <b>{m.advisoryOnly ? 'donne son avis, la synthèse d’Ève tranche' : '—'}</b>
             </div>
             <button
               type="button"
@@ -410,7 +405,7 @@ export function AgentsPage() {
 
       <div className="agents-section-head">
         <h2>Chaîne opérationnelle</h2>
-        <p>Six rôles code / LLM — permissions runtime, paper only, confirm humaine.</p>
+        <p>Six rôles (code ou IA), chacun avec ses permissions. Tout reste en paper. Quand l’autonomie est activée, Ève décide sans confirmation humaine.</p>
       </div>
 
       <div className="grid three">
@@ -477,7 +472,7 @@ export function AgentsPage() {
       <section className="card">
         <div className="card-head">
           <h2>Surveiller avec Eve</h2>
-          <small>mission 1 symbole · paper · confirm humaine</small>
+          <small>surveillance d’un instrument · paper · confirmation humaine</small>
         </div>
         <div className="card-body">
           <form className="toolbar" onSubmit={onMission} style={{ flexWrap: 'wrap' }}>

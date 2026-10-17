@@ -46,10 +46,13 @@ class Settings(BaseSettings):
     # When true, LONG/SHORT potential verdicts may open on *existing* paper portfolios.
     # Never live brokers — paper portfolios only (QuantDinger AGENT_LIVE analogue).
     eve_paper_autonomy: bool = False
+    # Autopilot: at most this many symbols judged by Ève per screener cycle (bounds JEV calls / credit).
+    eve_autopilot_max_symbols: int = 8
 
     # --- Ève / JEV / Event Radar (QuantDinger Settings schema knobs) ---
     # Secrets (JEV_API_KEY / TYPESAFE_API_KEY) stay env-only via jev/providers.
-    jev_timeout_seconds: float = 5.0
+    # jevos-v4 (local fallback) answers in ~14 s on the VPS: 5 s made every fallback call time out.
+    jev_timeout_seconds: float = 30.0
     jev_min_confidence: float = 0.45
     eve_entry_gate_min_confidence: float = 0.55
     event_radar_enabled: bool = False

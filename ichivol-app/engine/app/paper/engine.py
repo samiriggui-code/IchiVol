@@ -437,11 +437,57 @@ def trades_symbol(profile: dict[str, Any] | None, symbol: str) -> bool:
     return symbol not in dedicated_only_ids()
 
 
-def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]:
+def engine_proposal(
+    session: Session,
+    *,
+    portfolio: PaperPortfolio,
+    symbol: str,
+    timeframe: str,
+    pipeline: PipelineResult,
+    signal_actions: bool,
+) -> dict[str, Any] | None:
+    """What the engine alone would do on this book for this row, without doing it.
+
+    Mirrors the signal branches of ``sync_position`` (stop/target excluded: those still close on their own).
+    Returns ``{"action": "OPEN", "direction": ...}``, ``{"action": "CLOSE", "position_id": ...}`` or ``None``."""
+    if not signal_actions:
+        return None
+    profile = portfolio.strategy_profile or {}
+    direction = _direction_for(pipeline.decision)
+    existing = _get_open_by_symbol(session, symbol=symbol, portfolio_id=portfolio.id)
+    if existing is None:
+        if direction is None:
+            return None
+        if direction == "SHORT" and profile.get("allow_short", True) is False:
+            return None
+        return {"action": "OPEN", "direction": direction}
+    if existing.timeframe != timeframe:
+        return None
+    if profile.get("exit_mode") == "direction":
+        pdir = getattr(pipeline.direction, "value", str(pipeline.direction))
+        if pdir == existing.direction:
+            return None
+        return {"action": "CLOSE", "position_id": existing.id, "reason": "direction_flipped"}
+    if direction == existing.direction:
+        return None
+    reason = "pipeline_flipped" if direction is not None else "pipeline_downgraded"
+    return {"action": "CLOSE", "position_id": existing.id, "reason": reason}
+
+
+def sync_auto_watchlist(
+    session: Session,
+    rows: Sequence,
+    *,
+    proposals: list[dict[str, Any]] | None = None,
+) -> list[PaperPosition]:
     """Reuse screener rows; size when ATR stop is present; sync all syncable portfolios.
 
     A portfolio only acts on rows of its ``auto_timeframes`` (default 1h): other timeframes never open, close or
-    manage its positions here (their stop/target stays watched by app/paper/protection.py)."""
+    manage its positions here (their stop/target stays watched by app/paper/protection.py).
+
+    ``proposals`` (Ève decides, EVE_PAPER_AUTONOMY on): the engine still computes every book's decision and still
+    closes on stop/target, but its signal opens or closes nothing. Each would-be open/close is appended to
+    ``proposals`` for Ève to accept or refuse (app/eve/autopilot.py)."""
     try:
         portfolios = ensure_syncable_portfolios(session)
     except Exception:
@@ -601,8 +647,31 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
                 signal_actions = event is not None
                 extra["decision_event"] = event
 
+            if proposals is not None:
+                proposal = engine_proposal(
+                    session,
+                    portfolio=portfolio,
+                    symbol=row.symbol,
+                    timeframe=row.timeframe,
+                    pipeline=final_pipeline,
+                    signal_actions=signal_actions,
+                )
+                if proposal is not None:
+                    proposal.update(
+                        portfolio_code=portfolio.code,
+                        symbol=row.symbol,
+                        timeframe=row.timeframe,
+                        price=row.price,
+                        stop_distance=stop if isinstance(stop, (int, float)) else None,
+                        engine_decision=final_pipeline.decision,
+                        signal_bar_close=(getattr(row, "signal_timing", None) or {}).get("signal_bar_close"),
+                    )
+                    proposals.append(proposal)
+                # Engine signal acts on nothing: only stop/target can still close a lot.
+                signal_actions = False
+
             run_id = None
-            if paper_gates.has_gates(profile):
+            if paper_gates.has_gates(profile) and proposals is None:
                 run_id = paper_gates.observe_decision(
                     portfolio.id, row.symbol, row.timeframe, final_pipeline.decision
                 )
