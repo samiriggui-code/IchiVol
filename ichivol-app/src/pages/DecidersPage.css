@@ -1,0 +1,329 @@
+/* Moteur vs Ève — complète PortfolioPage.css (classes .pf-page partagées). */
+
+.dv-page .dv-mode {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font: 600 11px Manrope, Arial, sans-serif;
+  color: var(--muted);
+  background: var(--card);
+}
+
+.dv-page .dv-mode.is-on {
+  color: #5a48c9;
+  border-color: #c9c1f3;
+  background: #f5f3fe;
+}
+
+.dv-page .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.dv-page .dv-notice {
+  margin: 0 0 14px;
+}
+
+.dv-page .dv-lead {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.dv-page .dv-empty {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dv-page .dv-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dv-page .dv-tile {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+  background: var(--card);
+  border-top: 3px solid #5f666d;
+}
+
+.dv-page .dv-tile.is-eve {
+  border-top-color: #5a48c9;
+}
+
+.dv-page .dv-tile.is-engine {
+  border-top-color: #1f6fd1;
+}
+
+.dv-page .dv-tile-head {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+
+.dv-page .dv-tile-head small {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.dv-page .dv-tile-net {
+  margin: 12px 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.dv-page .dv-tile dl {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.dv-page .dv-tile dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.dv-page .dv-tile dt {
+  color: var(--muted);
+}
+
+.dv-page .dv-tile dd {
+  margin: 0;
+  text-align: right;
+}
+
+.dv-page .dv-table-wrap {
+  margin-top: 16px;
+  overflow-x: auto;
+}
+
+.dv-page .dv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.dv-page .dv-table caption {
+  text-align: left;
+  font-size: 11px;
+  color: var(--muted);
+  padding-bottom: 6px;
+}
+
+.dv-page .dv-table th,
+.dv-page .dv-table td {
+  padding: 8px 6px;
+  border-bottom: 1px solid #efebe5;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.dv-page .dv-table th:first-child,
+.dv-page .dv-table td:first-child {
+  text-align: left;
+}
+
+.dv-page .dv-table thead th {
+  font: 10px 'DM Mono', ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.dv-page .dv-table tbody th {
+  font: 600 12px Manrope, Arial, sans-serif;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--ink, inherit);
+  background: none;
+  white-space: normal;
+}
+
+.dv-page .dv-table td {
+  background: none;
+}
+
+.dv-page .dv-table small {
+  display: inline;
+  color: var(--muted);
+}
+
+.dv-page .dv-foot {
+  margin: 8px 0 0;
+  font-size: 11px;
+}
+
+.dv-page .dv-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.dv-page .dv-counts b {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.dv-page .dv-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.dv-page .dv-filters button {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.dv-page .dv-filters button.active {
+  background: #202b36;
+  border-color: #202b36;
+  color: #fefdfb;
+}
+
+.dv-page .dv-proposals {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dv-page .dv-proposals li {
+  border-bottom: 1px solid #efebe5;
+}
+
+.dv-page .dv-proposals li > button {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1.2fr) minmax(0, 1.6fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+  font-size: 12px;
+}
+
+.dv-page .dv-proposals li > button:hover {
+  background: #f5f2ed;
+}
+
+.dv-page .dv-p-when {
+  font: 11px 'DM Mono', ui-monospace, monospace;
+  color: var(--muted);
+}
+
+.dv-page .dv-p-main,
+.dv-page .dv-p-flow {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dv-page .dv-p-verdict {
+  justify-self: end;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font: 600 10px Manrope, Arial, sans-serif;
+  white-space: nowrap;
+  border: 1px solid currentColor;
+}
+
+/* Statuts : icône implicite par le texte, la couleur seule ne porte jamais le sens. */
+.dv-page .dv-p-verdict.is-executed {
+  color: #0b7d72;
+}
+
+.dv-page .dv-p-verdict.is-refused_by_eve {
+  color: #5a48c9;
+}
+
+.dv-page .dv-p-verdict.is-blocked_after {
+  color: #95600f;
+}
+
+.dv-page .dv-p-verdict.is-pending {
+  color: var(--muted);
+}
+
+.dv-page .dv-p-detail {
+  padding: 0 4px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dv-page .dv-p-detail p {
+  margin: 0 0 6px;
+}
+
+.dv-page .dv-eve-trades {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dv-page .dv-eve-trades li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #efebe5;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .dv-page .dv-tiles {
+    grid-template-columns: 1fr;
+  }
+
+  .dv-page .dv-proposals li > button {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'main verdict'
+      'flow flow'
+      'when when';
+    row-gap: 4px;
+  }
+
+  .dv-page .dv-p-main {
+    grid-area: main;
+  }
+
+  .dv-page .dv-p-flow {
+    grid-area: flow;
+    white-space: normal;
+  }
+
+  .dv-page .dv-p-when {
+    grid-area: when;
+  }
+
+  .dv-page .dv-p-verdict {
+    grid-area: verdict;
+  }
+
+  .dv-page .dv-eve-trades li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .dv-page .dv-eve-trades li .muted {
+    grid-column: 1;
+    grid-row: 2;
+  }
+}

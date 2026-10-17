@@ -162,6 +162,7 @@ export type TradeMark = {
   notional: number
   fee: number
   reason: string | null
+  positionId: string | null
   /** Pour une clôture : sens de la position fermée et résultat brut estimé (prix de sortie − prix d'entrée). */
   closedSide?: 'long' | 'short'
   grossPnl?: number
@@ -252,6 +253,7 @@ function toMark(o: TradeOrder, ms: number, kind: TradeMarkKind): TradeMark {
     notional: o.notional,
     fee: o.fee,
     reason: o.reason?.trim() || null,
+    positionId: o.position_id,
   }
 }
 

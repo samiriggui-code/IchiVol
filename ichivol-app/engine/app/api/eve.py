@@ -12,6 +12,7 @@ from app.db.session import SessionLocal
 from app.eve.calibration import active_policy, calibration_report
 from app.eve.context import build_engine_context
 from app.eve.dossier import (
+    decision_summary,
     dossier_to_dict,
     get_dossier,
     get_verdict,
@@ -80,6 +81,22 @@ def eve_dossiers(
                 dossier_to_dict(d, get_verdict(session, d.verdict_id) if d.verdict_id else None)
                 for d in rows
             ]
+        }
+    finally:
+        session.close()
+
+
+@router.get("/decisions")
+def eve_decisions(limit: int = Query(default=200, ge=1, le=500)) -> dict:
+    """Latest Ève judgements, light: engine proposals per book, Ève's answer, outcome (« Moteur vs Ève »)."""
+    session = SessionLocal()
+    try:
+        rows = list_dossiers(session, limit=limit, max_limit=500)
+        return {
+            "autonomy_enabled": autonomy_enabled(),
+            "results": [
+                decision_summary(d, get_verdict(session, d.verdict_id) if d.verdict_id else None) for d in rows
+            ],
         }
     finally:
         session.close()

@@ -171,6 +171,13 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/eve/decisions",
+    "endpoint": "eve_decisions"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/eve/dossiers/{dossier_id}",
     "endpoint": "eve_dossier_detail"
   },

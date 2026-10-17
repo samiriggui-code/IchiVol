@@ -1,0 +1,121 @@
+/* Cartes « Moteur vs Ève » du Desk. */
+
+.ddv .ddv-mode {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted, #7d8288);
+}
+
+.ddv .ddv-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ddv .ddv-tile {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 12px;
+  border: 1px solid var(--line, #ddd9d3);
+  border-top: 3px solid #5f666d;
+  border-radius: 10px;
+}
+
+.ddv .ddv-tile.is-eve {
+  border-top-color: #5a48c9;
+}
+
+.ddv .ddv-tile.is-engine {
+  border-top-color: #1f6fd1;
+}
+
+.ddv .ddv-tile b {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.ddv .ddv-tile small {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--muted, #7d8288);
+}
+
+.ddv .ddv-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.ddv .ddv-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #efebe5;
+  font-size: 12px;
+}
+
+.ddv .ddv-list small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted, #7d8288);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ddv .ddv-verdict {
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font: 600 10px Manrope, Arial, sans-serif;
+  white-space: nowrap;
+}
+
+.ddv .ddv-verdict.is-executed {
+  color: #0b7d72;
+}
+
+.ddv .ddv-verdict.is-refused_by_eve {
+  color: #5a48c9;
+}
+
+.ddv .ddv-verdict.is-blocked_after {
+  color: #95600f;
+}
+
+.ddv .ddv-verdict.is-pending {
+  color: var(--muted, #7d8288);
+}
+
+@media (max-width: 560px) {
+  .ddv .ddv-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ddv .ddv-tile {
+    grid-template-columns: auto 1fr;
+    align-items: center;
+  }
+
+  .ddv .ddv-tile small {
+    grid-column: 1 / -1;
+  }
+
+  .ddv .ddv-tile b {
+    justify-self: end;
+  }
+
+  .ddv .ddv-list li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ddv .ddv-flow {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
