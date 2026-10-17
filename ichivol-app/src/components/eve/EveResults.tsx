@@ -1,10 +1,11 @@
 /**
- * Moteur vs Ève — qui a décidé quoi, et avec quel résultat, sur tous les portefeuilles paper.
+ * Résultats d'Ève (page Ève) : qui a décidé quoi et avec quel résultat, ce que le moteur a proposé et ce
+ * qu'Ève a répondu, ses refus suivis à blanc, les refus des filtres d'indicateurs.
  * Le moteur calcule et propose ; Ève (avec JEV) accepte ou refuse ; le Risk Kernel garde le dernier mot.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { DeciderBadge } from '../components/decider/DeciderBadge'
+import { DeciderBadge } from '../decider/DeciderBadge'
 import {
   DECIDER_EXPLAIN,
   DECIDER_LABEL,
@@ -13,7 +14,7 @@ import {
   scoreByDecider,
   type Decider,
   type DeciderScore,
-} from '../lib/decider'
+} from '../../lib/decider'
 import {
   engineProposalFr,
   eveActionFr,
@@ -22,7 +23,7 @@ import {
   proposalVerdict,
   type EveDecision,
   type ProposalVerdict,
-} from '../lib/eveDecisions'
+} from '../../lib/eveDecisions'
 import {
   getShadowStats,
   listPaperPortfolios,
@@ -31,11 +32,10 @@ import {
   type PaperPosition,
   type ShadowBucket,
   type ShadowStats,
-} from '../lib/paper'
-import { portfolioLabel } from '../lib/rsPortfolio'
-import { fmtEur, fmtPct } from './desk/deskFormat'
-import './PortfolioPage.css'
-import './DecidersPage.css'
+} from '../../lib/paper'
+import { portfolioLabel } from '../../lib/rsPortfolio'
+import { fmtEur, fmtPct } from '../../pages/desk/deskFormat'
+import './EveResults.css'
 
 type VerdictFilter = 'all' | ProposalVerdict
 
@@ -202,11 +202,10 @@ function ScoreTile({ s }: { s: DeciderScore }) {
   )
 }
 
-export function DecidersPage() {
+export function EveResults({ autonomy, refreshKey = 0 }: { autonomy: boolean | null; refreshKey?: number }) {
   const [positions, setPositions] = useState<PaperPosition[]>([])
   const [portfolios, setPortfolios] = useState<PaperPortfolioRow[]>([])
   const [decisions, setDecisions] = useState<EveDecision[]>([])
-  const [autonomy, setAutonomy] = useState<boolean | null>(null)
   const [shadow, setShadow] = useState<ShadowStats | null>(null)
   const [eveShadow, setEveShadow] = useState<ShadowStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -239,7 +238,6 @@ export function DecidersPage() {
     setPositions(pos)
     setPortfolios(pfs)
     setDecisions(dec?.results ?? [])
-    setAutonomy(dec ? dec.autonomy_enabled : null)
     setShadow(sh)
     setEveShadow(esh)
     setErrors(errs)
@@ -248,7 +246,7 @@ export function DecidersPage() {
 
   useEffect(() => {
     void load()
-  }, [load])
+  }, [load, refreshKey])
 
   const bookLabelById = useMemo(
     () => Object.fromEntries(portfolios.map((p) => [p.id, portfolioLabel(p.code, p.label)])),
@@ -297,29 +295,11 @@ export function DecidersPage() {
   )
 
   return (
-    <div className="pf-page dv-page">
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">ICHIVOL WORKSPACE</div>
-          <h1>Moteur vs Ève</h1>
-          <p className="subtitle">
-            Le moteur calcule ses indicateurs et propose un trade. Ève, avec JEV, l’accepte ou le refuse, et le
-            Risk Kernel garde le dernier mot. Cette page montre qui a décidé chaque trade et lequel des deux fait
-            le mieux, sur tous les portefeuilles paper.
-          </p>
-        </div>
-        <div className="actions">
-          <span className={`dv-mode${autonomy ? ' is-on' : ''}`}>
-            {autonomy == null
-              ? 'Mode inconnu'
-              : autonomy
-                ? 'Ève décide (autonomie active)'
-                : 'Moteur seul (autonomie d’Ève coupée)'}
-          </span>
-          <button type="button" onClick={() => void load()} disabled={loading}>
-            {loading ? 'Chargement…' : 'Actualiser'}
-          </button>
-        </div>
+    <div className="dv-page">
+      <div className="dv-toolbar">
+        <button type="button" onClick={() => void load()} disabled={loading}>
+          {loading ? 'Chargement…' : 'Actualiser les résultats'}
+        </button>
       </div>
 
       {errors.length > 0 ? (
@@ -476,8 +456,8 @@ export function DecidersPage() {
           <p className="dv-lead">
             Quand Ève refuse une ouverture proposée par le moteur, le trade est suivi à blanc, sans argent, avec le
             même stop et le même objectif que le portefeuille. S’il touche son stop, Ève a eu raison de refuser.
-            S’il touche son objectif, elle a laissé passer un gagnant. Les refus d’avant le 17 octobre ne sont pas
-            suivis.
+            S’il touche son objectif, elle a laissé passer un gagnant. Les refus antérieurs à la mise en place de
+            ce suivi ne sont pas comptés.
           </p>
           {!eveShadow || eveShadow.n_total === 0 ? (
             <p className="muted dv-empty">

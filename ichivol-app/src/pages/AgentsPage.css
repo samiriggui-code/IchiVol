@@ -1247,3 +1247,74 @@
     gap: 18px;
   }
 }
+
+/* Page Ève : évaluation à la demande, chaîne de décision. */
+.agents-page .eve-evaluate {
+  flex-wrap: wrap;
+}
+.agents-page .eve-evaluate input {
+  min-width: 140px;
+  text-transform: uppercase;
+}
+.agents-page .eve-evaluate select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  padding: 9px 10px;
+  font: inherit;
+  color: inherit;
+}
+.agents-page .eve-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.agents-page .eve-chain {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.agents-page .eve-chain li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.agents-page .eve-chain li:first-child {
+  border-top: 0;
+}
+.agents-page .eve-chain-n {
+  font-size: 11px;
+  color: var(--muted);
+  padding-top: 2px;
+}
+.agents-page .eve-chain b {
+  display: block;
+  font-size: 13px;
+}
+.agents-page .eve-chain p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.agents-page .page-head .actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.agents-page .grid.eve-modes {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+@media (max-width: 1100px) {
+  .agents-page .grid.eve-modes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .agents-page .grid.eve-modes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

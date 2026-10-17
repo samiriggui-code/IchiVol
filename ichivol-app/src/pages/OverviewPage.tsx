@@ -965,7 +965,7 @@ export function OverviewPage() {
           <DeskCard
             title="Moteur vs Ève"
             extra={
-              <Link className="link" to="/app/moteur-eve">
+              <Link className="link" to="/app/agents">
                 Détail ↗
               </Link>
             }

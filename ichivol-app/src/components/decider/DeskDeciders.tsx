@@ -1,6 +1,6 @@
 /**
  * Desk : le résumé « Moteur vs Ève » (bilan par décideur) et les derniers jugements d'Ève.
- * Le détail complet est sur la page Moteur vs Ève (/app/moteur-eve).
+ * Le détail complet est sur la page Ève (/app/agents).
  */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -99,7 +99,7 @@ export function DeskDeciderSummary() {
           )
         })}
       </div>
-      <Link className="link" to="/app/moteur-eve">
+      <Link className="link" to="/app/agents">
         Comparer en détail →
       </Link>
     </div>
@@ -146,7 +146,7 @@ export function DeskEveLatest() {
           ))}
         </ul>
       )}
-      <Link className="link" to="/app/moteur-eve">
+      <Link className="link" to="/app/agents">
         Toutes les décisions →
       </Link>
     </div>

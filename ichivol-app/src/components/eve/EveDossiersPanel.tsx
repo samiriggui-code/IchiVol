@@ -1,4 +1,7 @@
 import { Fragment, useCallback, useEffect, useState } from "react"
+import { EVE_MODES, JEV_PRIMITIVES_EXPLAIN } from "../../lib/eveModes"
+import { jevServiceLabel } from "../../pages/settings/eveCopy"
+import { eveActionFr } from "../../lib/eveDecisions"
 
 type TimelineEvent = {
   kind?: string
@@ -57,12 +60,6 @@ type Health = {
   probe?: { ok?: boolean; error?: string }
 }
 
-type PaperAutonomy = {
-  autonomy_enabled?: boolean
-  env?: string
-  default?: boolean
-}
-
 type Calibration = {
   policy?: {
     version?: string
@@ -93,13 +90,6 @@ type Calibration = {
   }
 }
 
-const MODES = [
-  { id: "analyst", name: "Ève Analyst", mission: "lit les calculs du moteur et construit les scénarios" },
-  { id: "challenger", name: "Ève Challenger", mission: "cherche ce qui contredit le scénario retenu" },
-  { id: "guardian", name: "Ève Guardian", mission: "signale les risques et les anomalies" },
-  { id: "shadow", name: "Ève Shadow", mission: "refait l'évaluation de son côté, sans voir les autres modes" },
-] as const
-
 const EXECUTION_LABELS: Record<string, string> = {
   not_executed: "rien d'exécuté",
   opened: "position ouverte",
@@ -113,6 +103,16 @@ const EXECUTION_LABELS: Record<string, string> = {
   dry_run_close: "essai à blanc de fermeture",
   close_no_position: "rien à fermer",
   open_refused: "ouverture refusée",
+}
+
+/** Ce que le moteur seul aurait fait, en français. */
+function baselineFr(d: string | null | undefined): string {
+  const v = (d ?? "").toUpperCase()
+  if (!v) return "—"
+  if (v === "BUY") return "Acheter"
+  if (v === "SELL") return "Vendre à découvert"
+  if (v === "NO_TRADE" || v === "WAIT" || v === "HOLD") return "Attendre"
+  return v
 }
 
 function executionLabel(code: string | null | undefined): string {
@@ -132,11 +132,11 @@ function proposalSummary(d: DossierRow): string {
     .join(" · ")
 }
 
-export function EveIntelligencePanel() {
+/** Dossiers d'Ève, suivi des positions et questions posées à JEV. `refreshKey` force un rechargement. */
+export function EveDossiersPanel({ autonomy, refreshKey = 0 }: { autonomy: boolean | null; refreshKey?: number }) {
   const [items, setItems] = useState<DossierRow[]>([])
   const [health, setHealth] = useState<Health | null>(null)
   const [calibration, setCalibration] = useState<Calibration | null>(null)
-  const [paperAutonomy, setPaperAutonomy] = useState<PaperAutonomy | null>(null)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -179,16 +179,11 @@ export function EveIntelligencePanel() {
         if (!r.ok) return null
         return r.json()
       }),
-      fetch("/api/engine/eve/paper-autonomy", { credentials: "include", signal }).then(async (r) => {
-        if (!r.ok) return null
-        return r.json()
-      }),
     ])
-      .then(([, , h, cal, auto]) => {
+      .then(([, , h, cal]) => {
         if (controller.signal.aborted) return
         setHealth(h)
         setCalibration(cal)
-        setPaperAutonomy(auto)
       })
       .catch((e) => {
         if (!controller.signal.aborted) setError(String(e))
@@ -197,7 +192,7 @@ export function EveIntelligencePanel() {
         if (!controller.signal.aborted) setLoading(false)
       })
     return () => controller.abort()
-  }, [reloadDossiers, reloadFollowup])
+  }, [reloadDossiers, reloadFollowup, refreshKey])
 
   async function runDrySubmit(dossierId: string) {
     setBusyId(dossierId)
@@ -263,19 +258,19 @@ export function EveIntelligencePanel() {
   return (
     <section className="card">
       <div className="card-head">
-        <h2>Ève — décisions et Dossiers</h2>
+        <h2>Dossiers d’Ève</h2>
       </div>
       <div className="card-body">
         <p>
-          Chaque portefeuille applique sa propre méthode du moteur et propose des trades. Quand
-          l'autonomie est activée, Ève (avec JEV) juge chaque proposition : elle l'accepte, la
-          refuse ou s'abstient, sans intervention humaine. Le Risk Kernel garde le dernier mot. Tout
-          reste en paper, jamais d'argent réel. Chaque Dossier garde ce que le moteur seul aurait fait.
+          Un dossier est écrit à chaque fois qu'Ève évalue un instrument : ce que le moteur seul aurait
+          fait, ce que chaque mode a répondu, le contrôle d'entrée et le Risk Kernel. Avec le pilote
+          automatique, un dossier naît à chaque proposition d'un portefeuille et Ève l'accepte ou le refuse
+          sans intervention humaine. Tout reste en paper, jamais d'argent réel.
         </p>
 
         <div className="statline">
-          <span>Fournisseur JEV</span>
-          <b>{health?.configured_provider ?? "—"}</b>
+          <span>Service JEV</span>
+          <b>{jevServiceLabel(health?.configured_provider)}</b>
         </div>
         <div className="statline">
           <span>Clé JEV présente</span>
@@ -318,38 +313,23 @@ export function EveIntelligencePanel() {
           <b>{calibration?.proposal?.changes?.length ?? 0} (jamais appliqués tout seuls)</b>
         </div>
         <div className="statline">
-          <span>Ève décide seule</span>
-          <b>{paperAutonomy?.autonomy_enabled ? "oui, à chaque nouvelle bougie" : "non : le moteur trade seul, Ève observe"}</b>
+          <span>Pilote automatique</span>
+          <b>
+            {autonomy == null
+              ? "—"
+              : autonomy
+                ? "activé : Ève juge chaque proposition du moteur à la clôture de la bougie"
+                : "coupé : le moteur trade seul, Ève observe"}
+          </b>
         </div>
         <div className="statline">
           <span>Positions ouvertes par Ève</span>
           <b>{trackedOpen}</b>
         </div>
 
-        <h3 style={{ marginTop: 16 }}>Les quatre modes d'Ève</h3>
-        <ul>
-          {MODES.map((m) => {
-            const key = `${m.id}_primitives` as keyof NonNullable<
-              NonNullable<Calibration["policy"]>["routing"]
-            >
-            const prims = calibration?.policy?.routing?.[key]
-            return (
-              <li key={m.id}>
-                <b>{m.name}</b> — {m.mission}
-                {Array.isArray(prims) ? (
-                  <>
-                    {" "}
-                    · questions JEV : <code>{prims.length ? prims.join(" + ") : "aucune"}</code>
-                  </>
-                ) : null}
-              </li>
-            )
-          })}
-        </ul>
+        <h3 style={{ marginTop: 16 }}>Questions posées à JEV</h3>
         <p style={{ fontSize: 12, color: "var(--muted)" }}>
-          JEV répond à trois types de questions : NOUL (oui / non avec une probabilité), CHOICE (choisir
-          parmi des options) et SCORE (noter de 0 à 1). L'API JEV hébergée est appelée en premier, puis
-          jevos sur le VPS si les crédits sont épuisés.
+          {JEV_PRIMITIVES_EXPLAIN} Si le service cloud n'a plus de crédit, le service local prend le relais.
         </p>
         {calibration?.policy?.routing ? (
           <div style={{ overflowX: "auto", marginTop: 8 }}>
@@ -363,7 +343,7 @@ export function EveIntelligencePanel() {
                 </tr>
               </thead>
               <tbody>
-                {MODES.map((m) => {
+                {EVE_MODES.map((m) => {
                   const key = `${m.id}_primitives` as keyof NonNullable<
                     NonNullable<Calibration["policy"]>["routing"]
                   >
@@ -372,7 +352,7 @@ export function EveIntelligencePanel() {
                   return (
                     <tr key={m.id}>
                       <td>
-                        <b>{m.name}</b>
+                        <b>Ève {m.name}</b>
                       </td>
                       <td>{has("noul") ? "●" : "—"}</td>
                       <td>{has("choice") ? "●" : "—"}</td>
@@ -448,10 +428,9 @@ export function EveIntelligencePanel() {
                         <td>
                           {d.symbol} · {d.timeframe}
                         </td>
-                        <td>{d.baseline_decision ?? "—"}</td>
+                        <td>{baselineFr(d.baseline_decision)}</td>
                       <td>
-                        {d.eve_action ?? d.verdict?.action ?? "—"}
-                        {d.verdict?.status ? ` (${d.verdict.status})` : ""}
+                        {eveActionFr(d.eve_action ?? d.verdict?.action)}
                         {d.decision_time?.degradation?.level &&
                         d.decision_time.degradation.level !== "healthy" ? (
                           <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.8 }}>

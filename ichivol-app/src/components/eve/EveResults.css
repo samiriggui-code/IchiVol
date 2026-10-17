@@ -1,4 +1,4 @@
-/* Moteur vs Ève — complète PortfolioPage.css (classes .pf-page partagées). */
+/* Résultats d'Ève (ex-page Moteur vs Ève). Moteur vs Ève — complète PortfolioPage.css (classes .pf-page partagées). */
 
 .dv-page .dv-mode {
   display: inline-flex;
@@ -326,4 +326,10 @@
     grid-column: 1;
     grid-row: 2;
   }
+}
+
+.dv-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 12px;
 }
