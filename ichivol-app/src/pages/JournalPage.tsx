@@ -526,7 +526,7 @@ export function JournalPage() {
               disabled={!replay}
               onClick={() => replay && openTrade(replay.symbol)}
             >
-              Ouvrir le détail du trade →
+              Voir sur le graphique →
             </button>
           </div>
         </section>

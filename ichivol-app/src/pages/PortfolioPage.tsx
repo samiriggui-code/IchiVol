@@ -284,6 +284,16 @@ function BooksSummary({
 export function PortfolioPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const pfParam = searchParams.get('pf')
+  const tabParam = searchParams.get('tab')
+
+  // `?tab=positions|risque|ordres` (notifications, Desk, anciennes routes) : on amène à la carte correspondante.
+  useEffect(() => {
+    if (!tabParam) return
+    const id = { positions: 'pf-positions', risque: 'pf-risque', ordres: 'pf-ordres' }[tabParam]
+    if (!id) return
+    const t = window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 150)
+    return () => window.clearTimeout(t)
+  }, [tabParam])
   // Sans `?pf=` : tous les portefeuilles ensemble ; `?pf=CODE` : le détail d'un seul.
   const showAll = !pfParam || pfParam === ALL_BOOKS_CODE
   const code = showAll ? ALL_BOOKS_CODE : portfolioFromParam(pfParam)
@@ -528,7 +538,7 @@ export function PortfolioPage() {
       {showAll ? <BooksSummary books={books} portfolios={portfolios} loading={loading} onOpen={selectPortfolio} /> : null}
 
       <div className="grid">
-        <section className="card">
+        <section className="card" id="pf-risque">
           <div className="card-head">
             <h2>Risk Kernel</h2>
             <Link to="/app/settings" className="muted" style={{ fontSize: 11 }}>
@@ -731,7 +741,7 @@ export function PortfolioPage() {
         </section>
       </div>
 
-      <section className="card">
+      <section className="card" id="pf-positions">
         <div className="card-head">
           <h2>Positions ouvertes</h2>
           {badge(positionsBadge, 'gray')}
@@ -845,7 +855,7 @@ export function PortfolioPage() {
 
       <div style={{ height: 20 }} />
 
-      <section className="card">
+      <section className="card" id="pf-ordres">
         <div className="card-head">
           <h2>Carnet d’ordres</h2>
           {badge(orders.length ? `${orders.length} DERNIERS` : '—', 'gray')}
