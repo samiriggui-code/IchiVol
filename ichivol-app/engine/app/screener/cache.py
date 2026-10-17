@@ -25,6 +25,7 @@ from app.paper import engine as paper_engine
 from app.config import settings
 from app.evidence.recorder import record_signal_evidence
 from app.screener.persistence import persist_scan
+from app.paper.strategy_profiles import WIDE_EXTRA_SYMBOLS, wants_wide_universe
 from app.screener.service import DEFAULT_WATCHLIST, ScreenerRow, scan_watchlist
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,9 @@ def dedicated_extra_symbols() -> list[str]:
         for pf in ensure_syncable_portfolios(session):
             if futures_crypto.is_dedicated(pf.strategy_profile):
                 wanted += [s for s in futures_crypto.traded_symbols(pf.strategy_profile) if s not in wanted]
+            if wants_wide_universe(pf.strategy_profile) and "1h" in paper_engine.auto_timeframes(pf.strategy_profile):
+                # ICHIVOL_WIDE_V1: its extra pairs ride the same background cycle (never the shared screener).
+                wanted += [s for s in WIDE_EXTRA_SYMBOLS if s not in wanted]
         session.commit()
         return [s for s in wanted if s not in DEFAULT_WATCHLIST]
     except Exception:
@@ -69,6 +73,45 @@ def dedicated_extra_symbols() -> list[str]:
         return []
     finally:
         session.close()
+
+
+def paper_other_timeframes(default_timeframe: str) -> list[str]:
+    """Timeframes a synced paper account trades other than the default one (ICHIVOL_4H_V1: 4h). Empty on a DB error."""
+    from app.paper.portfolio import ensure_syncable_portfolios
+
+    session = SessionLocal()
+    try:
+        tfs = {tf for pf in ensure_syncable_portfolios(session) for tf in paper_engine.auto_timeframes(pf.strategy_profile)}
+        session.commit()
+        return sorted(tfs - {default_timeframe})
+    except Exception:
+        logger.warning("screener cache: paper timeframes lookup failed", exc_info=True)
+        session.rollback()
+        return []
+    finally:
+        session.close()
+
+
+def feed_paper(rows) -> None:
+    """Feed rows to the automatic paper strategy (each book keeps only the rows of its own timeframes/markets)."""
+    paper_session = SessionLocal()
+    try:
+        from app.eve.paper_submit import autonomy_enabled
+
+        if autonomy_enabled():
+            # Ève decides: the engine computes every book's method and proposes, Ève accepts or refuses.
+            from app.eve.autopilot import eve_autopilot
+
+            proposals: list[dict] = []
+            paper_engine.sync_auto_watchlist(paper_session, rows, proposals=proposals)
+            eve_autopilot.submit_proposals(proposals)
+        else:
+            paper_engine.sync_auto_watchlist(paper_session, rows)
+    except Exception:
+        logger.warning("screener cache: paper trading sync failed", exc_info=True)
+        paper_session.rollback()
+    finally:
+        paper_session.close()
 
 
 class ScreenerCache:
@@ -103,7 +146,19 @@ class ScreenerCache:
                 self.refresh(paper_sync=True)
             except Exception:
                 logger.warning("screener cache: background refresh failed", exc_info=True)
+            try:
+                self.sync_other_paper_timeframes()
+            except Exception:
+                logger.warning("screener cache: paper sync on other timeframes failed", exc_info=True)
             self._stop.wait(self.refresh_interval_s)
+
+    def sync_other_paper_timeframes(self) -> None:
+        """Paper accounts on another timeframe (ICHIVOL_4H_V1): scanned here for paper only -- never cached for the
+        UI, never persisted -- and each account keeps only the rows of its own auto_timeframes."""
+        for tf in paper_other_timeframes(self.default_timeframe):
+            rows = scan_watchlist(DEFAULT_WATCHLIST, timeframe=tf)
+            if rows:
+                feed_paper(paper_tradable_rows(rows))
 
     def refresh(self, timeframe: str | None = None, persist: bool = True, paper_sync: bool = False) -> CacheEntry:
         """Scan + cache (+ persistence / evidence when ``persist``).
@@ -151,25 +206,7 @@ class ScreenerCache:
             # Paper trading's auto_watchlist track rides the background cycle only -- reuses `rows` as-is (no extra
             # provider calls). Multi-market since 2026-09-21: crypto (binance) AND forex / metals / indices /
             # energy (biquote), see `paper_tradable_rows`.
-            crypto_rows = paper_tradable_rows([*rows, *extra_rows])
-            paper_session = SessionLocal()
-            try:
-                from app.eve.paper_submit import autonomy_enabled
-
-                if autonomy_enabled():
-                    # Ève decides: the engine computes every book's method and proposes, Ève accepts or refuses.
-                    from app.eve.autopilot import eve_autopilot
-
-                    proposals: list[dict] = []
-                    paper_engine.sync_auto_watchlist(paper_session, crypto_rows, proposals=proposals)
-                    eve_autopilot.submit_proposals(proposals)
-                else:
-                    paper_engine.sync_auto_watchlist(paper_session, crypto_rows)
-            except Exception:
-                logger.warning("screener cache: paper trading sync failed", exc_info=True)
-                paper_session.rollback()
-            finally:
-                paper_session.close()
+            feed_paper(paper_tradable_rows([*rows, *extra_rows]))
 
         entry = CacheEntry(rows=rows, computed_at=time.time(), timeframe=tf)
         with self._lock:

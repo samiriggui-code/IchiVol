@@ -22,6 +22,7 @@ from app.market_data.timeframes import TF_SECONDS
 from app.paper import broker as paper_broker
 from app.paper import counters as paper_counters
 from app.paper import futures_crypto
+from app.paper.strategy_profiles import WIDE_EXTRA_SYMBOLS, wants_wide_universe
 from app.paper import gates as paper_gates
 from app.paper.risk_kernel import (
     OpenPlan,
@@ -434,6 +435,9 @@ def trades_symbol(profile: dict[str, Any] | None, symbol: str) -> bool:
 
     if futures_crypto.is_dedicated(profile):
         return symbol in futures_crypto.traded_symbols(profile)
+    if symbol in WIDE_EXTRA_SYMBOLS and not wants_wide_universe(profile):
+        # The wide-universe pairs belong to ICHIVOL_WIDE_V1 only: the baseline never sees them.
+        return False
     return symbol not in dedicated_only_ids()
 
 
@@ -508,7 +512,14 @@ def sync_auto_watchlist(
 
     for row in rows:
         bars_by_key[f"{row.symbol}:{row.timeframe}"] = getattr(row, "candles", None) or []
-        if funnel_portfolio is not None and getattr(row, "candles", None):
+        # The funnel journal stays the reference account's: only rows that account itself acts on.
+        funnel_profile = (funnel_portfolio.strategy_profile or {}) if funnel_portfolio is not None else {}
+        if (
+            funnel_portfolio is not None
+            and getattr(row, "candles", None)
+            and row.timeframe in auto_timeframes(funnel_profile)
+            and (row.symbol not in WIDE_EXTRA_SYMBOLS or wants_wide_universe(funnel_profile))
+        ):
             tf_s = TF_SECONDS.get(row.timeframe, 3600)
             last_open = row.candles[-1].time
             funnels.setdefault(row.timeframe, paper_counters.FunnelAccumulator()).add(

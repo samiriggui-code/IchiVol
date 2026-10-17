@@ -165,6 +165,12 @@ function fmtPx(n: number | null | undefined): string {
   return n.toLocaleString('fr-FR', { maximumFractionDigits: 6 })
 }
 
+/** Rendement depuis le départ (capital actuel / capital de départ − 1), pour classer les portefeuilles. */
+function bookReturn(b: Book): number {
+  const a = b.overview.account
+  return a && a.initial_cash > 0 ? a.equity / a.initial_cash - 1 : -Infinity
+}
+
 /** Une carte par portefeuille dans la vue « Tous » : ses chiffres à lui, et un clic ouvre son détail. */
 function BooksSummary({
   books,
@@ -180,7 +186,7 @@ function BooksSummary({
   return (
     <section className="card pf-books">
       <div className="card-head">
-        <h2>Par portefeuille</h2>
+        <h2>Par portefeuille, du meilleur au moins bon</h2>
         {badge(books.length ? `${books.length} PORTEFEUILLES` : '—', 'gray')}
       </div>
       <div className="card-body">
@@ -190,7 +196,9 @@ function BooksSummary({
           </p>
         ) : (
           <div className="pf-books-grid">
-            {books.map((b) => {
+            {[...books]
+              .sort((x, y) => bookReturn(y) - bookReturn(x))
+              .map((b, rank) => {
               const a = b.overview.account
               const r = b.overview.risk
               const row = portfolios.find((p) => p.code === b.code)
@@ -199,10 +207,14 @@ function BooksSummary({
               const pnlPct = a && a.initial_cash > 0 && pnl != null ? pnl / a.initial_cash : null
               const dd = drawdownFromCurve(b.overview.equity_curve ?? [], a?.equity)
               const open = r?.open_positions ?? a?.open_positions ?? 0
+              const c = b.overview.costs
+              const winRate = c && c.closed_trades > 0 ? c.wins / c.closed_trades : null
               return (
                 <button key={b.code} type="button" className="pf-book" onClick={() => onOpen(b.code)}>
                   <span className="pf-book-head">
-                    <b>{portfolioLabel(b.code, b.label)}</b>
+                    <b>
+                      {rank + 1}. {portfolioLabel(b.code, b.label)}
+                    </b>
                     {badge(blocked ? 'BLOQUÉ' : 'PASSE', blocked ? 'red' : 'green')}
                   </span>
                   <span className="pf-book-line">
@@ -215,6 +227,33 @@ function BooksSummary({
                       {fmtEur(pnl, 2)}
                       {pnlPct != null ? ` · ${fmtPct(pnlPct, 1, true)}` : ''}
                     </b>
+                  </span>
+                  <span className="pf-book-line">
+                    <span>Dont réalisé / latent</span>
+                    <b className="mono">
+                      {fmtEur(a?.realized_pnl, 2)} / {fmtEur(a?.unrealized_pnl, 2)}
+                    </b>
+                  </span>
+                  <span className="pf-book-line">
+                    <span>Trades clôturés</span>
+                    <b className="mono">
+                      {c ? `${c.closed_trades} · ${c.wins} gagnés / ${c.losses} perdus` : '—'}
+                    </b>
+                  </span>
+                  <span className="pf-book-line">
+                    <span>Taux de réussite</span>
+                    <b className="mono">{winRate != null ? fmtPct(winRate, 0) : '—'}</b>
+                  </span>
+                  <span className="pf-book-line">
+                    <span>Gain moyen / perte moyenne</span>
+                    <b className="mono">
+                      {c && c.wins > 0 ? fmtEur(c.sum_wins / c.wins, 2) : '—'} /{' '}
+                      {c && c.losses > 0 ? fmtEur(c.sum_losses / c.losses, 2) : '—'}
+                    </b>
+                  </span>
+                  <span className="pf-book-line">
+                    <span>Frais payés</span>
+                    <b className="mono">{c ? fmtEur(c.total_costs, 2) : '—'}</b>
                   </span>
                   <span className="pf-book-line">
                     <span>Engagé</span>
