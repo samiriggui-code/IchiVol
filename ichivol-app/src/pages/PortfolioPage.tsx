@@ -1005,9 +1005,11 @@ export function PortfolioPage() {
             <p>
               {fiche.source === 'rs_d1'
                 ? 'Ouverte par la règle RS-D1 (cassure Donchian 55, stop suiveur 3 ATR, sortie canal 20).'
-                : fiche.source === 'auto_watchlist'
-                  ? 'Ouverte par le screener.'
-                  : 'Ouverte après votre confirmation.'}{' '}
+                : deciderOf(fiche) === 'eve'
+                  ? 'Proposée par le moteur et acceptée par Ève.'
+                  : deciderOf(fiche) === 'engine'
+                    ? 'Ouverte par le moteur seul, sur son signal.'
+                    : 'Ouverte à la main, après votre confirmation.'}{' '}
               Entrée le {new Date(fiche.entry_time).toLocaleString('fr-FR')} à{' '}
               {fmtPx(fiche.entry_price)}.
               {fiche.entry_decision ? ` Signal : ${fiche.entry_decision}.` : ''}{' '}

@@ -344,25 +344,6 @@ export function ContextPage() {
         })
       }
 
-      if (nextVigilance.length === 0) {
-        nextVigilance.push(
-          {
-            id: 'fallback-corr',
-            title: 'Exposition corrélée',
-            body: 'Plusieurs positions crypto peuvent réagir au même mouvement de BTC.',
-          },
-          {
-            id: 'fallback-vol',
-            title: 'Volume inhabituel',
-            body: 'Un pic de volume peut accompagner un événement. Vérifier le contexte.',
-          },
-          {
-            id: 'fallback-gap',
-            title: 'Gap et volatilité',
-            body: 'Relire le plan de risque si les conditions de marché changent.',
-          },
-        )
-      }
       setVigilance(nextVigilance)
     } finally {
       setLoading(false)
@@ -498,7 +479,7 @@ export function ContextPage() {
         </div>
         <div className="metric">
           <div className="metric-label">
-            Régime crypto<span>↗</span>
+            {fg ? 'Climat crypto' : 'Régime crypto'}<span>↗</span>
           </div>
           <div className="metric-value">{regimeLabel}</div>
           <small>{regimeMeta}</small>
@@ -608,12 +589,18 @@ export function ContextPage() {
             {badge(`${vigilance.length}`, 'gray')}
           </div>
           <div className="card-body">
-            {vigilance.map((item) => (
-              <div className="step" key={item.id}>
-                <b>{item.title}</b>
-                <p>{item.body}</p>
-              </div>
-            ))}
+            {vigilance.length === 0 ? (
+              <p className="muted" style={{ fontSize: 12 }}>
+                {loading ? 'Chargement…' : 'Rien à signaler d’après les données disponibles.'}
+              </p>
+            ) : (
+              vigilance.map((item) => (
+                <div className="step" key={item.id}>
+                  <b>{item.title}</b>
+                  <p>{item.body}</p>
+                </div>
+              ))
+            )}
           </div>
         </section>
       </div>

@@ -76,6 +76,7 @@ import {
 import { toEngineSymbol } from '../lib/engineSymbol'
 import { EquityTrajectory, type TrajectoryBook } from '../components/desk/EquityTrajectory'
 import { bookColors, cleanEquitySeries } from '../components/desk/equityTrajectory'
+import { isRsPortfolio } from '../lib/rsPortfolio'
 import { DeskDeciderSummary, DeskEveLatest } from '../components/decider/DeskDeciders'
 import { DeciderBadge } from '../components/decider/DeciderBadge'
 import { deciderOf, type Decider } from '../lib/decider'
@@ -283,6 +284,24 @@ function decisionBadgeText(r: ScreenerDecisionRow): string {
   const d = String(r.decision ?? '').toUpperCase()
   if (!d) return '—'
   return d
+}
+
+/** Répartition de l'exposition ouverte entre crypto (paires USDT) et le reste (indices, forex, matières premières). */
+function exposureMixLabel(positions: Array<{ symbol: string; notional?: number | null; market_value?: number | null }>): string {
+  let crypto = 0
+  let other = 0
+  for (const p of positions) {
+    const v = Math.abs(p.market_value ?? p.notional ?? 0)
+    if (!Number.isFinite(v) || v <= 0) continue
+    if (/USDT$/i.test(p.symbol)) crypto += v
+    else other += v
+  }
+  const total = crypto + other
+  if (total <= 0) return 'Aucune exposition ouverte.'
+  const pc = Math.round((crypto / total) * 100)
+  if (pc === 100) return '100 % de l’exposition en crypto.'
+  if (pc === 0) return '100 % de l’exposition hors crypto (indices, forex, matières premières).'
+  return `${pc} % de l’exposition en crypto, ${100 - pc} % hors crypto (indices, forex, matières premières).`
 }
 
 export function OverviewPage() {
@@ -758,7 +777,7 @@ export function OverviewPage() {
               ) : null}
             </div>
             <div className="map-foot">
-              Cash, futures CME et crypto. Le vendredi soir en Europe, l’Asie, Londres et New York sont déjà fermés.
+              Cash, futures CME et crypto, en heure locale.
             </div>
           </DeskCard>
 
@@ -1023,7 +1042,7 @@ export function OverviewPage() {
                       pnl == null ? '' : pnl > 0 ? 'up' : pnl < 0 ? 'down' : ''
                     const strat =
                       p.timeframe != null
-                        ? `${p.book_label ? `${p.book_label} · ` : ''}Ichimoku × RVOL · ${String(p.timeframe).toUpperCase()}`
+                        ? `${p.book_label ? `${p.book_label} · ` : ''}${isRsPortfolio(p.book_code) ? 'RS-D1 Donchian' : 'Ichimoku × RVOL'} · ${String(p.timeframe).toUpperCase()}`
                         : '—'
                     return (
                       <tr
@@ -1351,9 +1370,7 @@ export function OverviewPage() {
                     <b className="mono">{fmtPctPoints(c.pct, 1, false)}</b>
                   </button>
                 ))}
-                <p className="desk-note">
-                  {concentration.length ? '100 % de l’exposition en crypto spot.' : '—'}
-                </p>
+                <p className="desk-note">{exposureMixLabel(overview?.positions ?? [])}</p>
               </div>
             </div>
             <div className="card-foot">
