@@ -566,7 +566,7 @@ export function PortfolioPage() {
           {badge(positionsBadge, 'gray')}
         </div>
         <div className="table-wrap">
-          <table>
+          <table className="pf-stack">
             <thead>
               <tr>
                 <th>ACTIF</th>
@@ -582,7 +582,7 @@ export function PortfolioPage() {
             <tbody>
               {positions.length === 0 ? (
                 <tr>
-                  <td colSpan={8}>
+                  <td colSpan={8} className="pf-stack-empty">
                     <b>—</b>
                     <small>{loading ? 'Chargement…' : 'Aucune position ouverte'}</small>
                   </td>
@@ -616,33 +616,33 @@ export function PortfolioPage() {
                         }
                       }}
                     >
-                      <td>
+                      <td className="pf-stack-head">
                         <b>{base}</b>
                         <small>
                           {strat}
                           {engaged != null ? ` · ${fmtEur(engaged, 0)}` : ''}
                         </small>
                       </td>
-                      <td>{p.direction === 'SHORT' ? 'Vente' : 'Achat'}</td>
-                      <td>
+                      <td data-label="Sens">{p.direction === 'SHORT' ? 'Vente' : 'Achat'}</td>
+                      <td data-label="Quantité">
                         <span className="mono">{p.qty != null ? fmtPx(p.qty) : '—'}</span>
                       </td>
-                      <td>
+                      <td data-label="Entrée">
                         <span className="mono">{fmtPx(p.entry_price)}</span>
                       </td>
-                      <td>
+                      <td data-label="Dernier cours">
                         <span className="mono">{fmtPx(p.current_price)}</span>
                       </td>
-                      <td>
+                      <td data-label="Stop">
                         <span className="mono">{fmtPx(p.stop_price)}</span>
                       </td>
-                      <td>
+                      <td data-label="Gain / perte">
                         <span className={`mono ${pnlCls}`.trim()}>
                           {fmtEur(pnl, 2)}
                           {perf != null ? ` · ${fmtPct(perf, 2, true)}` : ''}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="État">
                         <div className="pf-pos-state">
                           {badge(p.mark_stale ? 'COURS PÉRIMÉ' : 'OUVERTE', p.mark_stale ? 'amber' : '')}
                           {p.id && manualAllowed ? (
@@ -677,7 +677,7 @@ export function PortfolioPage() {
           {badge(orders.length ? `${orders.length} DERNIERS` : '—', 'gray')}
         </div>
         <div className="table-wrap">
-          <table>
+          <table className="pf-stack">
             <thead>
               <tr>
                 <th>HEURE</th>
@@ -692,7 +692,7 @@ export function PortfolioPage() {
             <tbody>
               {orders.length === 0 ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={7} className="pf-stack-empty">
                     <b>—</b>
                     <small>{loading ? 'Chargement…' : 'Aucun ordre paper'}</small>
                   </td>
@@ -700,7 +700,7 @@ export function PortfolioPage() {
               ) : (
                 orders.map((o) => (
                   <tr key={o.id}>
-                    <td>
+                    <td data-label="Heure">
                       {Number.isNaN(Date.parse(o.time))
                         ? '—'
                         : new Date(o.time).toLocaleString('fr-FR', {
@@ -710,24 +710,24 @@ export function PortfolioPage() {
                             minute: '2-digit',
                           })}
                     </td>
-                    <td>
+                    <td className="pf-stack-head">
                       <b>{displaySymbol(o.symbol)}</b>
                       <small>
                         {String(o.timeframe).toUpperCase()}
                         {orderReasonFr(o.reason) ? ` · ${orderReasonFr(o.reason)}` : ''}
                       </small>
                     </td>
-                    <td>{o.side === 'SELL' ? 'Vente' : 'Achat'}</td>
-                    <td>
+                    <td data-label="Sens">{o.side === 'SELL' ? 'Vente' : 'Achat'}</td>
+                    <td data-label="Quantité">
                       <span className="mono">{fmtPx(o.qty)}</span>
                     </td>
-                    <td>
+                    <td data-label="Prix exécuté">
                       <span className="mono">{fmtPx(o.filled_price)}</span>
                     </td>
-                    <td>
+                    <td data-label="Frais">
                       <span className="mono">{fmtEur(o.fee, 2)}</span>
                     </td>
-                    <td>{badge(o.status === 'FILLED' ? 'EXÉCUTÉ' : o.status, 'gray')}</td>
+                    <td data-label="Statut">{badge(o.status === 'FILLED' ? 'EXÉCUTÉ' : o.status, 'gray')}</td>
                   </tr>
                 ))
               )}

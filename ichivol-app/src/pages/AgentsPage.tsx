@@ -35,7 +35,7 @@ type EveModeDef = {
 const EVE_MODES: EveModeDef[] = [
   {
     id: 'analyst',
-    name: 'Ève Analyste',
+    name: 'Ève Analyst',
     tag: 'MODE',
     icon: '◇',
     blurb: 'Lit les calculs du moteur et la structure du marché, puis construit les scénarios.',
@@ -44,7 +44,7 @@ const EVE_MODES: EveModeDef[] = [
   },
   {
     id: 'challenger',
-    name: 'Ève Contradictrice',
+    name: 'Ève Challenger',
     tag: 'MODE',
     icon: '↺',
     blurb: 'Cherche ce qui contredit le scénario retenu et les autres possibilités.',
@@ -53,7 +53,7 @@ const EVE_MODES: EveModeDef[] = [
   },
   {
     id: 'guardian',
-    name: 'Ève Gardienne',
+    name: 'Ève Guardian',
     tag: 'MODE',
     icon: '◈',
     blurb: 'Signale les risques et les anomalies. Le Risk Kernel garde le dernier mot.',
@@ -62,7 +62,7 @@ const EVE_MODES: EveModeDef[] = [
   },
   {
     id: 'shadow',
-    name: 'Ève Contre-avis',
+    name: 'Ève Shadow',
     tag: 'MODE',
     icon: '◉',
     blurb: 'Refait l’évaluation de son côté avec JEV (API hébergée, puis jevos si les crédits sont épuisés).',

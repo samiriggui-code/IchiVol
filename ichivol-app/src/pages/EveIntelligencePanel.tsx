@@ -94,10 +94,10 @@ type Calibration = {
 }
 
 const MODES = [
-  { id: "analyst", name: "Ève Analyste", mission: "lit les calculs du moteur et construit les scénarios" },
-  { id: "challenger", name: "Ève Contradictrice", mission: "cherche ce qui contredit le scénario retenu" },
-  { id: "guardian", name: "Ève Gardienne", mission: "signale les risques et les anomalies" },
-  { id: "shadow", name: "Ève Contre-avis", mission: "refait l'évaluation de son côté, sans voir les autres modes" },
+  { id: "analyst", name: "Ève Analyst", mission: "lit les calculs du moteur et construit les scénarios" },
+  { id: "challenger", name: "Ève Challenger", mission: "cherche ce qui contredit le scénario retenu" },
+  { id: "guardian", name: "Ève Guardian", mission: "signale les risques et les anomalies" },
+  { id: "shadow", name: "Ève Shadow", mission: "refait l'évaluation de son côté, sans voir les autres modes" },
 ] as const
 
 const EXECUTION_LABELS: Record<string, string> = {
@@ -282,7 +282,7 @@ export function EveIntelligencePanel() {
           <b>{health?.key_present ? "oui" : "non"}</b>
         </div>
         <div className="statline">
-          <span>Contre-avis JEV activé</span>
+          <span>Shadow JEV activé</span>
           <b>{health?.shadow_enabled ? "oui" : "non"}</b>
         </div>
         <div className="statline">
