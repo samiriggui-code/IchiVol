@@ -433,6 +433,10 @@ export interface PaperPortfolioRow {
   is_active: boolean
   started_at: string
   strategy_profile: string
+  /** État du verrou (kill switch / perte du jour) renvoyé avec la liste. */
+  kill_switch_armed?: boolean
+  daily_loss_locked?: boolean
+  entries_blocked?: boolean
 }
 
 export async function listPaperPortfolios(): Promise<PaperPortfolioRow[]> {

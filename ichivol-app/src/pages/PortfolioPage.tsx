@@ -32,6 +32,17 @@ import { isActionableBuySell } from '../lib/vpValidationCopy'
 import { getRiskLock, type RiskLockState } from '../lib/riskLock'
 import { displaySymbol } from '../lib/markets'
 import {
+  ALL_BOOKS_CODE,
+  combineLocks,
+  combineOverviews,
+  listActiveBooks,
+  loadAllActivity,
+  loadAllBooks,
+  type Book,
+  type BookOrder,
+  type BookPosition,
+} from '../lib/allBooks'
+import {
   BASELINE_PORTFOLIO_CODE as BASELINE_CODE,
   FUTURES_CRYPTO_CODE,
   RS_D1_CODE,
@@ -41,6 +52,7 @@ import {
   isRsPortfolio,
   manualActionsAllowed,
   portfolioFromParam,
+  portfolioLabel,
 } from '../lib/rsPortfolio'
 import './PortfolioPage.css'
 
@@ -153,16 +165,94 @@ function fmtPx(n: number | null | undefined): string {
   return n.toLocaleString('fr-FR', { maximumFractionDigits: 6 })
 }
 
+/** Une carte par portefeuille dans la vue « Tous » : ses chiffres à lui, et un clic ouvre son détail. */
+function BooksSummary({
+  books,
+  portfolios,
+  loading,
+  onOpen,
+}: {
+  books: Book[]
+  portfolios: PaperPortfolioRow[]
+  loading: boolean
+  onOpen: (code: string) => void
+}) {
+  return (
+    <section className="card pf-books">
+      <div className="card-head">
+        <h2>Par portefeuille</h2>
+        {badge(books.length ? `${books.length} PORTEFEUILLES` : '—', 'gray')}
+      </div>
+      <div className="card-body">
+        {books.length === 0 ? (
+          <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+            {loading ? 'Chargement…' : 'Aucun portefeuille paper actif.'}
+          </p>
+        ) : (
+          <div className="pf-books-grid">
+            {books.map((b) => {
+              const a = b.overview.account
+              const r = b.overview.risk
+              const row = portfolios.find((p) => p.code === b.code)
+              const blocked = Boolean(row?.kill_switch_armed || row?.daily_loss_locked)
+              const pnl = a ? a.equity - a.initial_cash : null
+              const pnlPct = a && a.initial_cash > 0 && pnl != null ? pnl / a.initial_cash : null
+              const dd = drawdownFromCurve(b.overview.equity_curve ?? [], a?.equity)
+              const open = r?.open_positions ?? a?.open_positions ?? 0
+              return (
+                <button key={b.code} type="button" className="pf-book" onClick={() => onOpen(b.code)}>
+                  <span className="pf-book-head">
+                    <b>{portfolioLabel(b.code, b.label)}</b>
+                    {badge(blocked ? 'BLOQUÉ' : 'PASSE', blocked ? 'red' : 'green')}
+                  </span>
+                  <span className="pf-book-line">
+                    <span>Capital</span>
+                    <b className="mono">{fmtEur(a?.equity, 2)}</b>
+                  </span>
+                  <span className="pf-book-line">
+                    <span>Gain / perte depuis le départ</span>
+                    <b className={`mono ${pnl == null ? '' : pnl > 0 ? 'up' : pnl < 0 ? 'down' : ''}`.trim()}>
+                      {fmtEur(pnl, 2)}
+                      {pnlPct != null ? ` · ${fmtPct(pnlPct, 1, true)}` : ''}
+                    </b>
+                  </span>
+                  <span className="pf-book-line">
+                    <span>Engagé</span>
+                    <b className="mono">{fmtEur(a?.invested, 2)}</b>
+                  </span>
+                  <span className="pf-book-line">
+                    <span>Positions ouvertes</span>
+                    <b className="mono">{r ? `${open} / ${r.max_open_positions}` : String(open)}</b>
+                  </span>
+                  <span className="pf-book-line">
+                    <span>Drawdown</span>
+                    <b className="mono">{dd != null ? fmtPct(dd, 1, true) : '—'}</b>
+                  </span>
+                  <span className="pf-book-more">Voir le détail →</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
 export function PortfolioPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const code = portfolioFromParam(searchParams.get('pf'))
+  const pfParam = searchParams.get('pf')
+  // Sans `?pf=` : tous les portefeuilles ensemble ; `?pf=CODE` : le détail d'un seul.
+  const showAll = !pfParam || pfParam === ALL_BOOKS_CODE
+  const code = showAll ? ALL_BOOKS_CODE : portfolioFromParam(pfParam)
   const isRs = isRsPortfolio(code)
   const isSessions = code === SESSIONS_CODE
   const isFutures = code === FUTURES_CRYPTO_CODE
-  const manualAllowed = manualActionsAllowed(code)
+  const bookOf = (row: { book_code?: string }) => row.book_code ?? code
   const [portfolios, setPortfolios] = useState<PaperPortfolioRow[]>([])
+  const [books, setBooks] = useState<Book[]>([])
   const [overview, setOverview] = useState<PaperOverview | null>(null)
-  const [orders, setOrders] = useState<PaperOrderRow[]>([])
+  const [orders, setOrders] = useState<Array<PaperOrderRow & { book_code?: string; book_label?: string }>>([])
   const [lock, setLock] = useState<RiskLockState | null>(null)
   const [loading, setLoading] = useState(true)
   const [fiche, setFiche] = useState<PaperOverviewPosition | null>(null)
@@ -173,6 +263,24 @@ export function PortfolioPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
+    if (showAll) {
+      try {
+        const rows = await listActiveBooks()
+        const all = await loadAllBooks(rows)
+        const activity: BookOrder[] = await loadAllActivity(all, 12)
+        setPortfolios(rows)
+        setBooks(all)
+        setOverview(combineOverviews(all))
+        setLock(combineLocks(rows))
+        setOrders(activity.slice(0, 30))
+      } catch {
+        setOverview(null)
+        setBooks([])
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
     try {
       const [ov, lk, activity, pfs] = await Promise.all([
         getPaperOverview(code),
@@ -189,7 +297,7 @@ export function PortfolioPage() {
     } finally {
       setLoading(false)
     }
-  }, [code])
+  }, [code, showAll])
 
   const knownLabels: Record<string, { label: string; title?: string }> = {
     [BASELINE_CODE]: { label: 'IchiVol' },
@@ -197,7 +305,8 @@ export function PortfolioPage() {
     [FUTURES_CRYPTO_CODE]: { label: 'Futures & Crypto', title: FUTURES_CRYPTO_LABEL },
     [RS_D1_CODE]: { label: 'RS-D1', title: RS_D1_LABEL },
   }
-  const tabs = (() => {
+  const allTab = { code: ALL_BOOKS_CODE, label: 'Tous', title: 'Tous les portefeuilles additionnés' as string | undefined }
+  const tabs = [allTab, ...(() => {
     const fromApi = portfolios
       .filter((p) => p.is_active !== false)
       .map((p) => {
@@ -210,7 +319,7 @@ export function PortfolioPage() {
       })
     if (fromApi.length > 0) {
       // Toujours inclure le livre courant s’il manque dans la liste API.
-      if (!fromApi.some((t) => t.code === code)) {
+      if (!showAll && !fromApi.some((t) => t.code === code)) {
         const known = knownLabels[code]
         fromApi.unshift({
           code,
@@ -226,10 +335,10 @@ export function PortfolioPage() {
       { code: FUTURES_CRYPTO_CODE, label: 'Futures & Crypto', title: FUTURES_CRYPTO_LABEL },
       { code: RS_D1_CODE, label: 'RS-D1', title: RS_D1_LABEL },
     ]
-  })()
+  })()]
   const selectPortfolio = (next: string) => {
     const params = new URLSearchParams(searchParams)
-    if (next === BASELINE_CODE) params.delete('pf')
+    if (next === ALL_BOOKS_CODE) params.delete('pf')
     else params.set('pf', next)
     params.delete('symbol')
     setFiche(null)
@@ -298,7 +407,9 @@ export function PortfolioPage() {
           <div className="eyebrow">04 / ICHIVOL WORKSPACE</div>
           <h1>Portefeuille</h1>
           <p className="subtitle">
-            {isRs
+            {showAll
+              ? `Les ${books.length || ''} portefeuilles paper additionnés : capital, positions et ordres de chacun, avec le nom du portefeuille sur chaque ligne. Touche un portefeuille pour voir son détail. Aucun ordre n’est envoyé à un courtier.`.replace('Les  ', 'Les ')
+              : isRs
               ? `${RS_D1_LABEL}. Portefeuille séparé, piloté uniquement par la règle RS-D1 (Donchian 4h) : aucun ordre manuel.`
               : isSessions
                 ? 'Mêmes règles qu’IchiVol, mais le signal n’ouvre et ne ferme qu’aux ouvertures et clôtures de Tokyo, Londres et New York. Stop et objectif restent surveillés en continu.'
@@ -326,7 +437,7 @@ export function PortfolioPage() {
             </div>
           ) : null}
           {badge(
-            isRs ? 'RS-D1 · PAPER' : isSessions ? 'SESSIONS · PAPER' : isFutures ? 'FUTURES & CRYPTO · PAPER' : 'BROKER PAPER',
+            showAll ? 'TOUS · PAPER' : isRs ? 'RS-D1 · PAPER' : isSessions ? 'SESSIONS · PAPER' : isFutures ? 'FUTURES & CRYPTO · PAPER' : 'BROKER PAPER',
             'gray',
           )}
         </div>
@@ -338,7 +449,7 @@ export function PortfolioPage() {
             Capital<span>↗</span>
           </div>
           <div className="metric-value">{acct ? fmtEur(acct.equity, 2) : loading ? '—' : '—'}</div>
-          <small>Portefeuille paper</small>
+          <small>{showAll ? `${books.length} portefeuilles paper` : 'Portefeuille paper'}</small>
         </div>
         <div className="metric">
           <div className="metric-label">
@@ -366,6 +477,8 @@ export function PortfolioPage() {
       </div>
 
       {isFutures ? <FuturesCryptoPanel overview={overview} onChanged={() => void load()} /> : null}
+
+      {showAll ? <BooksSummary books={books} portfolios={portfolios} loading={loading} onOpen={selectPortfolio} /> : null}
 
       <div className="grid">
         <section className="card">
@@ -406,7 +519,9 @@ export function PortfolioPage() {
                 {riskPass === true
                   ? 'Les nouvelles entrées paper sont autorisées.'
                   : riskPass === false
-                    ? 'Entrées bloquées (kill-switch et/ou perte journalière).'
+                    ? showAll
+                    ? 'Au moins un portefeuille a ses entrées bloquées.'
+                    : 'Entrées bloquées (kill-switch et/ou perte journalière).'
                     : 'État du verrou indisponible.'}
                 <br />
                 {risk
@@ -416,7 +531,16 @@ export function PortfolioPage() {
                   : '—'}
               </span>
             </div>
-            {lock && (
+            {showAll && lock && 'blocked' in lock ? (
+              <p style={{ fontSize: 11, margin: '0 0 14px', lineHeight: 1.5 }}>
+                {(lock as ReturnType<typeof combineLocks>).blocked.length === 0
+                  ? `Entrées ouvertes sur les ${(lock as ReturnType<typeof combineLocks>).book_count} portefeuilles.`
+                  : `Entrées bloquées sur : ${(lock as ReturnType<typeof combineLocks>).blocked
+                      .map((b) => `${b.label} (${b.kill && b.daily ? 'arrêt d’urgence + perte du jour' : b.kill ? 'arrêt d’urgence' : 'perte du jour'})`)
+                      .join(', ')}.`}
+              </p>
+            ) : null}
+            {lock && !showAll && (
               <ul
                 style={{
                   margin: '0 0 14px',
@@ -588,8 +712,9 @@ export function PortfolioPage() {
                   </td>
                 </tr>
               ) : (
-                positions.map((p: PaperOverviewPosition) => {
+                positions.map((p: PaperOverviewPosition & Partial<BookPosition>) => {
                   const base = displaySymbol(p.symbol)
+                  const book = bookOf(p)
                   const engaged =
                     p.market_value ??
                     (p.current_price != null && p.qty != null
@@ -601,7 +726,7 @@ export function PortfolioPage() {
                     pnl == null ? '' : pnl > 0 ? 'up' : pnl < 0 ? 'down' : ''
                   const strat =
                     p.timeframe != null
-                      ? `${isRs ? 'RS-D1 Donchian' : 'Ichimoku × RVOL'} · ${String(p.timeframe).toUpperCase()}`
+                      ? `${showAll && p.book_label ? `${p.book_label} · ` : ''}${isRsPortfolio(book) ? 'RS-D1 Donchian' : 'Ichimoku × RVOL'} · ${String(p.timeframe).toUpperCase()}`
                       : '—'
                   return (
                     <tr
@@ -645,7 +770,7 @@ export function PortfolioPage() {
                       <td data-label="État">
                         <div className="pf-pos-state">
                           {badge(p.mark_stale ? 'COURS PÉRIMÉ' : 'OUVERTE', p.mark_stale ? 'amber' : '')}
-                          {p.id && manualAllowed ? (
+                          {p.id && manualActionsAllowed(book) ? (
                             <button
                               type="button"
                               className="suggestion pf-close-btn"
@@ -699,7 +824,7 @@ export function PortfolioPage() {
                 </tr>
               ) : (
                 orders.map((o) => (
-                  <tr key={o.id}>
+                  <tr key={`${o.book_code ?? code}-${o.id}`}>
                     <td data-label="Heure">
                       {Number.isNaN(Date.parse(o.time))
                         ? '—'
@@ -713,6 +838,7 @@ export function PortfolioPage() {
                     <td className="pf-stack-head">
                       <b>{displaySymbol(o.symbol)}</b>
                       <small>
+                        {showAll && o.book_label ? `${o.book_label} · ` : ''}
                         {String(o.timeframe).toUpperCase()}
                         {orderReasonFr(o.reason) ? ` · ${orderReasonFr(o.reason)}` : ''}
                       </small>

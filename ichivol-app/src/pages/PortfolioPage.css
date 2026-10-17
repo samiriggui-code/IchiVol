@@ -1392,3 +1392,51 @@
     gap: 8px;
   }
 }
+
+/* Vue « Tous » : une carte par portefeuille. */
+.pf-books {
+  margin-bottom: 20px;
+}
+.pf-books-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.pf-book {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: var(--surface-subtle, #f4f2ec);
+  border: 1px solid var(--line, #e3dfd6);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.pf-book:hover,
+.pf-book:focus-visible {
+  border-color: var(--primary, #347d78);
+}
+.pf-book-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.pf-book-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+.pf-book-line > span {
+  color: var(--muted);
+}
+.pf-book-more {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--primary, #347d78);
+}

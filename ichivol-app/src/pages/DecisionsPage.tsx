@@ -11,6 +11,7 @@ import { MtfPanel } from '../components/MtfPanel'
 import { ChartIntelligencePanel } from '../components/chart-intelligence'
 import { PaperConfirmSheet } from '../components/PaperConfirmSheet'
 import { BASELINE_PORTFOLIO_CODE, SESSIONS_CODE } from '../lib/rsPortfolio'
+import { loadAllBooks } from '../lib/allBooks'
 import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
 import '../components/engineEvidence.css'
 import {
@@ -25,7 +26,6 @@ import { labelEngineCode } from '../lib/engineTerminology'
 import { displaySymbol } from '../lib/markets'
 import { toEngineSymbol } from '../lib/engineSymbol'
 import {
-  getPaperOverview,
   listPaperPositions,
   openPaperPosition,
   proposePaperTrade,
@@ -186,6 +186,10 @@ export function DecisionsPage() {
   const [detailSym, setDetailSym] = useState<string | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [openPaperSymbols, setOpenPaperSymbols] = useState<ReadonlySet<string>>(() => new Set())
+  /** Symbole → portefeuilles où il est ouvert (tous les livres, pas seulement IchiVol). */
+  const [openBooksBySymbol, setOpenBooksBySymbol] = useState<ReadonlyMap<string, { code: string; label: string }[]>>(
+    () => new Map(),
+  )
   const [paperConfirm, setPaperConfirm] = useState<PaperConfirmState | null>(null)
   const [paperToast, setPaperToast] = useState<string | null>(null)
   const [paperConfirming, setPaperConfirming] = useState(false)
@@ -222,11 +226,22 @@ export function DecisionsPage() {
 
   const refreshOpenPaperSymbols = useCallback(async () => {
     try {
-      const ov = await getPaperOverview()
-      const fromOverview = ov.positions
-        .filter((p) => String(p.status).toUpperCase() === 'OPEN')
-        .map((p) => p.symbol)
-      setOpenPaperSymbols(new Set(fromOverview))
+      const books = await loadAllBooks()
+      if (books.length === 0) throw new Error('no books')
+      const bySymbol = new Map<string, { code: string; label: string }[]>()
+      for (const b of books) {
+        for (const p of b.overview.positions ?? []) {
+          if (String(p.status).toUpperCase() !== 'OPEN') continue
+          const list = bySymbol.get(p.symbol) ?? []
+          if (!list.some((x) => x.code === b.code)) list.push({ code: b.code, label: b.label })
+          bySymbol.set(p.symbol, list)
+        }
+      }
+      setOpenBooksBySymbol(bySymbol)
+      // « Déjà ouvert » pour le ticket manuel = déjà en lot sur IchiVol (un lot par marché et par livre).
+      setOpenPaperSymbols(
+        new Set([...bySymbol].filter(([, l]) => l.some((x) => x.code === BASELINE_PORTFOLIO_CODE)).map(([sym]) => sym)),
+      )
     } catch {
       try {
         const [user, auto] = await Promise.all([
@@ -473,6 +488,7 @@ export function DecisionsPage() {
       ? `${Math.round(detail.confidence * 100)} / 100`
       : '—'
   const alreadyOpen = detailSym ? openPaperSymbols.has(detailSym) : false
+  const openIn = detailSym ? (openBooksBySymbol.get(detailSym) ?? []) : []
   const detailEveDossier = detailSym
     ? eveBySymbol.get(String(detailSym).toUpperCase())
     : undefined
@@ -843,8 +859,10 @@ export function DecisionsPage() {
             )}
             <div className="notice blue" style={{ marginTop: 20 }}>
               {alreadyOpen
-                ? 'Position paper déjà ouverte sur ce symbole dans IchiVol. Vous pouvez l’ouvrir sur Sessions.'
-                : 'Lecture moteur + Chart Intelligence. Enregistrement journal ou ouverture paper au choix.'}
+                ? `Position paper déjà ouverte sur ce symbole dans : ${openIn.map((b) => b.label).join(', ')}. Vous pouvez l’ouvrir sur Sessions.`
+                : openIn.length > 0
+                  ? `Position paper déjà ouverte sur ce symbole dans : ${openIn.map((b) => b.label).join(', ')}.`
+                  : 'Lecture moteur + Chart Intelligence. Enregistrement journal ou ouverture paper au choix.'}
             </div>
             {saveMsg && (
               <div

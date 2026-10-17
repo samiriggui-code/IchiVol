@@ -75,11 +75,13 @@ export function aggregateDeskBooks(books: DeskBookSnapshot[]): DeskBooksAggregat
   const open_risk_amount = books.reduce((s, b) => s + b.open_risk_amount, 0)
   const capital = books.reduce((s, b) => s + Math.max(0, b.capital || b.equity), 0)
   const open_risk_pct = capital > 0 ? open_risk_amount / capital : null
-  const maxLimits = books
-    .map((b) => b.max_open_risk_pct)
-    .filter((x): x is number => x != null && Number.isFinite(x))
-  const max_open_risk_pct =
-    maxLimits.length > 0 ? Math.max(...maxLimits) : null
+  // Global cap = each book's cap in euros, summed, over total capital (not the largest per-book %).
+  const capEur = books.reduce(
+    (s, b) =>
+      s + (b.max_open_risk_pct != null && Number.isFinite(b.max_open_risk_pct) ? b.max_open_risk_pct * Math.max(0, b.capital || b.equity) : 0),
+    0,
+  )
+  const max_open_risk_pct = capital > 0 && capEur > 0 ? capEur / capital : null
   const open_positions = books.reduce((s, b) => s + b.open_positions, 0)
   return {
     books,
@@ -107,10 +109,13 @@ export function concentrationFromPositions(
       ),
     }))
     .filter((p) => p.mv > 0)
+  // Same symbol held by several portfolios counts once, with the sum of its lots.
+  const bySymbol = new Map<string, number>()
+  for (const v of values) bySymbol.set(v.symbol, (bySymbol.get(v.symbol) ?? 0) + v.mv)
   const total = values.reduce((s, v) => s + v.mv, 0)
   if (total <= 0) return []
-  return values
-    .map((v) => ({ symbol: v.symbol, pct: (v.mv / total) * 100 }))
+  return [...bySymbol]
+    .map(([symbol, mv]) => ({ symbol, pct: (mv / total) * 100 }))
     .sort((a, b) => b.pct - a.pct)
 }
 
