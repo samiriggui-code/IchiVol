@@ -29,6 +29,7 @@ import {
   listPaperPositions,
   type PaperPortfolioRow,
   type PaperPosition,
+  type ShadowBucket,
   type ShadowStats,
 } from '../lib/paper'
 import { portfolioLabel } from '../lib/rsPortfolio'
@@ -57,6 +58,82 @@ const FILTER_SOURCE_FR: Record<string, string> = {
   fibonacci: 'Fibonacci',
   context: 'RSI, flux et régime',
   unknown: 'Autre filtre',
+}
+
+/** Ce qu'Ève a répondu à la place d'accepter (motif enregistré sur le trade fantôme). */
+function eveRefusalFr(action: string): string {
+  const a = action.toUpperCase()
+  if (a === 'ABSTAIN') return 'Elle s’est abstenue'
+  if (a === 'HOLD') return 'Elle a préféré attendre'
+  if (a === 'LONG') return 'Elle voulait acheter (sens inverse)'
+  if (a === 'SHORT') return 'Elle voulait vendre à découvert (sens inverse)'
+  if (a === 'CLOSE') return 'Elle voulait clôturer'
+  return action
+}
+
+function fmtR(v: number): string {
+  return `${v > 0 ? '+' : ''}${v.toFixed(2).replace('.', ',')} R`
+}
+
+/** Ève a-t-elle eu raison de refuser ? Compare ses refus (à blanc) à ses trades acceptés. */
+function eveRefusalVerdict(sh: ShadowStats, accepted: DeciderScore): string {
+  if (sh.n_closed < 5) return 'Bilan : moins de 5 refus terminés, trop tôt pour juger.'
+  const refusedWin = sh.win_rate ?? 0
+  const mean = sh.mean_pnl_r ?? 0
+  const vs =
+    accepted.winRate != null && accepted.trades > 0
+      ? ` Ses trades acceptés gagnent ${fmtPct(accepted.winRate, 0, false)} du temps, ses refus auraient gagné ${fmtPct(refusedWin, 0, false)} du temps.`
+      : ''
+  if (mean < -0.1) return `Bilan : Ève a surtout écarté des trades perdants, ses refus lui ont évité des pertes.${vs}`
+  if (mean > 0.1) return `Bilan : Ève a refusé trop de trades qui auraient gagné, elle est trop prudente.${vs}`
+  return `Bilan : pas de tendance nette, ses refus auraient autant gagné que perdu.${vs}`
+}
+
+function ShadowTable({
+  caption,
+  head,
+  buckets,
+  labelOf,
+}: {
+  caption: string
+  head: string
+  buckets: Record<string, ShadowBucket>
+  labelOf: (key: string) => string
+}) {
+  return (
+    <div className="dv-table-wrap">
+      <table className="dv-table">
+        <caption>{caption}</caption>
+        <thead>
+          <tr>
+            <th>{head}</th>
+            <th>Refus</th>
+            <th>Auraient gagné</th>
+            <th>Résultat moyen</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.entries(buckets).map(([key, b]) => (
+            <tr key={key}>
+              <th scope="row">{labelOf(key)}</th>
+              <td data-label="Refus" className="mono">
+                {b.n}
+              </td>
+              <td data-label="Auraient gagné" className="mono">
+                {b.win_rate != null ? fmtPct(b.win_rate, 0, false) : '—'}
+              </td>
+              <td data-label="Résultat moyen" className={`mono ${toneOf(b.mean_pnl_r)}`}>
+                {fmtR(b.mean_pnl_r)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="muted dv-foot">
+        R = multiple du risque pris : +1 R veut dire que le trade aurait gagné autant que ce qu’il risquait.
+      </p>
+    </div>
+  )
 }
 
 function fmtWhen(iso: string | null): string {
@@ -131,6 +208,7 @@ export function DecidersPage() {
   const [decisions, setDecisions] = useState<EveDecision[]>([])
   const [autonomy, setAutonomy] = useState<boolean | null>(null)
   const [shadow, setShadow] = useState<ShadowStats | null>(null)
+  const [eveShadow, setEveShadow] = useState<ShadowStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [errors, setErrors] = useState<string[]>([])
   const [filter, setFilter] = useState<VerdictFilter>('all')
@@ -139,7 +217,7 @@ export function DecidersPage() {
   const load = useCallback(async () => {
     setLoading(true)
     const errs: string[] = []
-    const [pos, pfs, dec, sh] = await Promise.all([
+    const [pos, pfs, dec, sh, esh] = await Promise.all([
       listPaperPositions().catch(() => {
         errs.push('les trades')
         return [] as PaperPosition[]
@@ -149,8 +227,12 @@ export function DecidersPage() {
         errs.push('les décisions d’Ève')
         return null
       }),
-      getShadowStats().catch(() => {
+      getShadowStats(undefined, 'filters').catch(() => {
         errs.push('les trades refusés par les filtres')
+        return null
+      }),
+      getShadowStats(undefined, 'eve').catch(() => {
+        errs.push('les refus d’Ève')
         return null
       }),
     ])
@@ -159,6 +241,7 @@ export function DecidersPage() {
     setDecisions(dec?.results ?? [])
     setAutonomy(dec ? dec.autonomy_enabled : null)
     setShadow(sh)
+    setEveShadow(esh)
     setErrors(errs)
     setLoading(false)
   }, [])
@@ -387,6 +470,51 @@ export function DecidersPage() {
 
       <section className="card">
         <div className="card-head">
+          <h2>Ève a-t-elle eu raison de refuser ?</h2>
+        </div>
+        <div className="card-body">
+          <p className="dv-lead">
+            Quand Ève refuse une ouverture proposée par le moteur, le trade est suivi à blanc, sans argent, avec le
+            même stop et le même objectif que le portefeuille. S’il touche son stop, Ève a eu raison de refuser.
+            S’il touche son objectif, elle a laissé passer un gagnant. Les refus d’avant le 17 octobre ne sont pas
+            suivis.
+          </p>
+          {!eveShadow || eveShadow.n_total === 0 ? (
+            <p className="muted dv-empty">
+              {loading ? 'Chargement…' : 'Aucun refus d’Ève suivi pour l’instant.'}
+            </p>
+          ) : (
+            <>
+              <div className="dv-counts">
+                <span>
+                  <b className="mono">{eveShadow.n_total}</b> refus suivis
+                </span>
+                <span>
+                  <b className="mono">{eveShadow.n_open}</b> encore en cours
+                </span>
+                <span>
+                  <b className="mono">{eveShadow.n_losses}</b> refus justes (auraient perdu)
+                </span>
+                <span>
+                  <b className="mono">{eveShadow.n_wins}</b> refus à tort (auraient gagné)
+                </span>
+              </div>
+              <p className="dv-lead">{eveRefusalVerdict(eveShadow, scores.eve)}</p>
+              {Object.keys(eveShadow.by_block_reason ?? {}).length > 0 ? (
+                <ShadowTable
+                  caption="Selon ce qu’Ève a répondu (refus terminés)"
+                  head="Réponse d’Ève"
+                  buckets={eveShadow.by_block_reason ?? {}}
+                  labelOf={eveRefusalFr}
+                />
+              ) : null}
+            </>
+          )}
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-head">
           <h2>Trades refusés par les filtres d’indicateurs</h2>
         </div>
         <div className="card-body">
@@ -426,38 +554,12 @@ export function DecidersPage() {
                       : 'Bilan : moins de 5 refus terminés, trop tôt pour juger.'}
               </p>
               {Object.keys(shadow.by_block_source ?? {}).length > 0 ? (
-                <div className="dv-table-wrap">
-                  <table className="dv-table">
-                    <caption>Par filtre (refus terminés)</caption>
-                    <thead>
-                      <tr>
-                        <th>Filtre</th>
-                        <th>Refus</th>
-                        <th>Auraient gagné</th>
-                        <th>Résultat moyen</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.entries(shadow.by_block_source).map(([src, b]) => (
-                        <tr key={src}>
-                          <th scope="row">{FILTER_SOURCE_FR[src] ?? src}</th>
-                          <td data-label="Refus" className="mono">
-                            {b.n}
-                          </td>
-                          <td data-label="Auraient gagné" className="mono">
-                            {b.win_rate != null ? fmtPct(b.win_rate, 0, false) : '—'}
-                          </td>
-                          <td data-label="Résultat moyen" className={`mono ${toneOf(b.mean_pnl_r)}`}>
-                            {`${b.mean_pnl_r > 0 ? '+' : ''}${b.mean_pnl_r.toFixed(2).replace('.', ',')} R`}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <p className="muted dv-foot">
-                    R = multiple du risque pris : +1 R veut dire que le trade aurait gagné autant que ce qu’il risquait.
-                  </p>
-                </div>
+                <ShadowTable
+                  caption="Par filtre (refus terminés)"
+                  head="Filtre"
+                  buckets={shadow.by_block_source}
+                  labelOf={(k) => FILTER_SOURCE_FR[k] ?? k}
+                />
               ) : null}
             </>
           )}

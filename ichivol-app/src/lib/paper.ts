@@ -462,12 +462,25 @@ export interface ShadowStats {
   win_rate: number | null
   mean_pnl_r: number | null
   filter_verdict: string | null
-  by_block_source: Record<string, { n: number; mean_pnl_r: number; wins: number; win_rate?: number }>
+  by_block_source: Record<string, ShadowBucket>
+  /** Par motif : pour les refus d'Ève, son action (ABSTAIN, HOLD, sens inverse…). */
+  by_block_reason?: Record<string, ShadowBucket>
   note: string
 }
 
-export async function getShadowStats(portfolioCode?: string): Promise<ShadowStats> {
-  const q = portfolioCode ? `?portfolio_code=${encodeURIComponent(portfolioCode)}` : ''
+export interface ShadowBucket {
+  n: number
+  mean_pnl_r: number
+  wins: number
+  win_rate?: number
+}
+
+/** kind : 'filters' = refus des filtres d'indicateurs, 'eve' = refus d'Ève ; sans kind = tout. */
+export async function getShadowStats(portfolioCode?: string, kind?: 'filters' | 'eve'): Promise<ShadowStats> {
+  const params = new URLSearchParams()
+  if (portfolioCode) params.set('portfolio_code', portfolioCode)
+  if (kind) params.set('kind', kind)
+  const q = params.toString() ? `?${params}` : ''
   const res = await fetch(`/api/engine/shadow/stats${q}`, { credentials: 'include' })
   if (!res.ok) throw new Error(await parseError(res))
   return res.json() as Promise<ShadowStats>

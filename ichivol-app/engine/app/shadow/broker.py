@@ -1,6 +1,7 @@
 """ShadowBroker — counterfactual trades outside portfolio cash.
 
-When Structure / Fib / Context blocks a raw BUY/SELL, open a SHADOW_* trade
+When Structure / Fib / Context blocks a raw BUY/SELL, or Ève refuses an engine proposal
+(block_source="eve", block_reason = Ève's action), open a SHADOW_* trade
 with the same SL/TP geometry as Paper. Mark to market; never debit cash.
 After N closed shadows: if mean pnl_r > 0 the filter was too aggressive.
 """
@@ -201,14 +202,23 @@ def mark_shadows(
     return closed
 
 
+EVE_BLOCK_SOURCE = "eve"
+
+
 def shadow_stats(
     session: Session,
     *,
     portfolio_id: str | None = None,
+    kind: str | None = None,
 ) -> dict[str, Any]:
+    """kind: None = every shadow, "filters" = indicator filters only, "eve" = Ève's refusals only."""
     q = select(ShadowPosition)
     if portfolio_id:
         q = q.where(ShadowPosition.portfolio_id == portfolio_id)
+    if kind == "eve":
+        q = q.where(ShadowPosition.block_source == EVE_BLOCK_SOURCE)
+    elif kind == "filters":
+        q = q.where(ShadowPosition.block_source != EVE_BLOCK_SOURCE)
     rows = list(session.execute(q).scalars())
     closed = [r for r in rows if r.status == "CLOSED" and r.pnl_r is not None]
     open_n = sum(1 for r in rows if r.status == "OPEN")
@@ -228,16 +238,15 @@ def shadow_stats(
             filter_verdict = "inconclusive"
 
     by_source: dict[str, dict[str, Any]] = {}
+    by_reason: dict[str, dict[str, Any]] = {}
     for r in closed:
-        bucket = by_source.setdefault(
-            r.block_source,
-            {"n": 0, "mean_pnl_r": 0.0, "wins": 0},
-        )
-        bucket["n"] += 1
-        bucket["mean_pnl_r"] += float(r.pnl_r or 0)
-        if (r.pnl_r or 0) > 0:
-            bucket["wins"] += 1
-    for b in by_source.values():
+        for buckets, key in ((by_source, r.block_source), (by_reason, r.block_reason or "unknown")):
+            bucket = buckets.setdefault(key, {"n": 0, "mean_pnl_r": 0.0, "wins": 0})
+            bucket["n"] += 1
+            bucket["mean_pnl_r"] += float(r.pnl_r or 0)
+            if (r.pnl_r or 0) > 0:
+                bucket["wins"] += 1
+    for b in [*by_source.values(), *by_reason.values()]:
         if b["n"]:
             b["mean_pnl_r"] = b["mean_pnl_r"] / b["n"]
             b["win_rate"] = b["wins"] / b["n"]
@@ -252,6 +261,7 @@ def shadow_stats(
         "mean_pnl_r": mean_r,
         "filter_verdict": filter_verdict,
         "by_block_source": by_source,
+        "by_block_reason": by_reason,
         "note": (
             "ShadowBroker counterfactuals — hors cash. "
             "mean_pnl_r > 0 sur trades bloqués ⇒ le filtre a écarté des winners."
