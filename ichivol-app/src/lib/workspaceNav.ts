@@ -22,8 +22,6 @@ export type NavItem = {
   to: string
   label: string
   Icon: ComponentType<{ className?: string }>
-  /** Hide from sidebar (still reachable via redirect / deep link). */
-  sidebarHidden?: boolean
 }
 
 export type NavGroup = {
@@ -86,13 +84,3 @@ export const MOBILE_PRIMARY_ITEMS = NAV_ITEMS.filter((item) =>
 export const MOBILE_MORE_ITEMS = NAV_ITEMS.filter(
   (item) => !MOBILE_PRIMARY_PATHS.has(item.to),
 )
-
-/** Legacy path → canonical (T14a redirects). */
-export const LEGACY_REDIRECTS: Record<string, string> = {
-  '/app/overview': '/app/desk',
-  '/app/decisions': '/app/opportunites',
-  '/app/activite': '/app/operations',
-  '/app/synthese': '/app/portefeuille',
-  '/app/paper': '/app/portefeuille?tab=positions',
-  '/app/watchlist': '/app/market?filter=pinned',
-}

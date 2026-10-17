@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { askAgentStream } from '../lib/agent'
+import { askAgentStream, type AgentMode } from '../lib/agent'
 import { FactsheetAnswer } from '../components/FactsheetAnswer'
 import { useAgentSession } from '../lib/agentSession'
 import { getSettings } from '../lib/settings'
@@ -39,7 +39,7 @@ function badge(text: string, tone: BadgeTone = ''): ReactNode {
 }
 
 export function AgentPage() {
-  const { history, setHistory, input, setInput, loading, setLoading, threadId, setThreadId } =
+  const { history, setHistory, input, setInput, loading, setLoading, threadId, setThreadId, launch, takeLaunch } =
     useAgentSession()
   const [llmReady, setLlmReady] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -52,7 +52,7 @@ export function AgentPage() {
   }, [])
 
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, mode: AgentMode = 'research') => {
       const q = text.trim()
       if (!q || loading) return
       setError(null)
@@ -66,7 +66,7 @@ export function AgentPage() {
           {
             question: q,
             threadId: threadId ?? undefined,
-            mode: 'research',
+            mode,
           },
           {
             onText: (t) => {
@@ -125,6 +125,13 @@ export function AgentPage() {
     },
     [loading, setHistory, setInput, setLoading, setThreadId, threadId],
   )
+
+  // Une autre page a demandé une explication (« Demander à Ève d'expliquer ») : on l'envoie, ou on la prépare.
+  useEffect(() => {
+    if (!launch || !takeLaunch(launch.requestId)) return
+    if (launch.autoSend) void send(launch.prompt, launch.mode)
+    else setInput(launch.prompt)
+  }, [launch, takeLaunch, send, setInput])
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()

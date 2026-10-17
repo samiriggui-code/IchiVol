@@ -10,7 +10,6 @@ import { DecisionsPage } from './pages/DecisionsPage'
 import { JournalPage } from './pages/JournalPage'
 import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
-import { ChartIntelligencePanel } from './components/chart-intelligence'
 import { MarketPage } from './pages/MarketPage'
 import { MarketTvPage } from './pages/MarketTvPage'
 import { OverviewPage } from './pages/OverviewPage'
@@ -41,20 +40,6 @@ export function Root() {
             {/* T14a canonical routes */}
             <Route path="desk" element={<OverviewPage />} />
             <Route path="market" element={<MarketPage />} />
-            <Route
-              path="chart-intelligence"
-              element={
-                <div className="market-page">
-                  <ChartIntelligencePanel
-                    symbol="SOLUSDT"
-                    timeframe="1h"
-                    source="api"
-                    variant="full"
-                    context="explore"
-                  />
-                </div>
-              }
-            />
             <Route path="opportunites" element={<DecisionsPage />} />
             <Route path="portefeuille" element={<PortfolioPage />} />
             <Route path="context" element={<ContextPage />} />
@@ -77,10 +62,7 @@ export function Root() {
               path="paper/tech"
               element={<Navigate to="/app/portefeuille?tab=positions" replace />}
             />
-            <Route
-              path="watchlist"
-              element={<Navigate to="/app/market?filter=pinned" replace />}
-            />
+            <Route path="watchlist" element={<Navigate to="/app/market" replace />} />
             <Route path="backtests" element={<Navigate to="/app/strategy-lab" replace />} />
             <Route path="moteur-eve" element={<Navigate to="/app/agents" replace />} />
             <Route path="*" element={<Navigate to="desk" replace />} />
