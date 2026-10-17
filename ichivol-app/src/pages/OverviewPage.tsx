@@ -453,7 +453,7 @@ export function OverviewPage() {
   const now = useMemo(() => new Date(nowTick), [nowTick])
   const acct = overview?.account
   const risk = overview?.risk
-  /** Totaux Desk = tous les livres paper ; fallback baseline si liste vide. */
+  /** Totaux Desk = tous les portefeuilles paper ; fallback baseline si liste vide. */
   const deskEquity = booksAgg?.book_count ? booksAgg.equity : acct?.equity
   const deskCash = booksAgg?.book_count ? booksAgg.cash : acct?.cash
   const deskDay = booksAgg?.book_count ? booksAgg.day_change : acct?.day_change
@@ -597,7 +597,7 @@ export function OverviewPage() {
       <div className="notice">
         ⬡{' '}
         <span>
-          Desk = agrégat de tous les livres paper. Ève peut trader paper (autonomie on) via Risk
+          Desk = agrégat de tous les portefeuilles paper. Avec son pilote actif, Ève trade en paper via le Risk
           Kernel — jamais live.
         </span>
       </div>
@@ -613,7 +613,7 @@ export function OverviewPage() {
             </div>
             <small>
               {deskBookCount > 0
-                ? `${deskBookCount} livre${deskBookCount > 1 ? 's' : ''} paper · EUR`
+                ? `${deskBookCount} portefeuille${deskBookCount > 1 ? 's' : ''} paper · EUR`
                 : 'Portefeuilles paper · EUR'}
             </small>
           </div>
@@ -660,13 +660,13 @@ export function OverviewPage() {
           <section className="card desk-books" aria-label="Tous les portefeuilles paper">
             <div className="card-head">
               <h2>Portefeuilles virtuels</h2>
-              {badge(`${booksAgg.books.length} LIVRES`, 'gray')}
+              {badge(`${booksAgg.books.length} PORTEFEUILLES`, 'gray')}
             </div>
             <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>LIVRE</th>
+                    <th>PORTEFEUILLE</th>
                     <th>EQUITY</th>
                     <th>CASH</th>
                     <th>P&amp;L JOUR</th>
@@ -892,7 +892,7 @@ export function OverviewPage() {
                 <b>{deskEquity != null ? fmtEur(deskEquity, 2) : '—'}</b>
               </span>
               <span>
-                LIVRES <b>{bookCurves.length || deskBookCount || '—'}</b>
+                PORTEFEUILLES <b>{bookCurves.length || deskBookCount || '—'}</b>
               </span>
               <span>
                 DRAWDOWN{' '}
@@ -1196,7 +1196,7 @@ export function OverviewPage() {
           <DeskCard title="État du système">
             <div className="card-body">
               <StatLine
-                label="Moteur Python"
+                label="Moteur"
                 value={
                   engineOk == null
                     ? '—'
@@ -1209,7 +1209,7 @@ export function OverviewPage() {
                 label="Source des données"
                 value={
                   engineOk
-                    ? badge('ENGINE', 'gray')
+                    ? badge('MOTEUR', 'gray')
                     : rows.length
                       ? badge('CACHE', 'gray')
                       : '—'
@@ -1227,7 +1227,7 @@ export function OverviewPage() {
                       : badge('BLOQUÉ', 'red')
                 }
               />
-              <StatLine label="Exécution réelle" value={badge('BLOQUÉE', 'red')} />
+              <StatLine label="Argent réel" value={badge('JAMAIS · PAPER SEULEMENT', 'gray')} />
             </div>
           </DeskCard>
         </div>

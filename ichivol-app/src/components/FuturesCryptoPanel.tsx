@@ -165,7 +165,7 @@ function MarketCard({
         </div>
         <p className="fc-note">{signalSentenceFr(sig, allowShort)}</p>
         <button type="button" className="suggestion" onClick={askEve}>
-          Demander à Eve d’expliquer
+          Demander à Ève d’expliquer
         </button>
 
         <small className="fc-hint">

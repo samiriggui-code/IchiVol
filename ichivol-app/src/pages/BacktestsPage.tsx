@@ -60,7 +60,7 @@ const STEPS: [string, string, string, LabTab | null][] = [
   ['02', 'Backtest', 'Mesurer rendement, risque et coûts.', 'Backtests'],
   ['03', 'Ablation', 'Garder seulement les filtres qui apportent quelque chose.', 'Ablations'],
   ['04', 'Walk-forward', 'Vérifier hors échantillon.', 'Walk-forward'],
-  ['05', 'Paper', 'Observer avant toute exécution réelle.', null],
+  ['05', 'Paper', 'La stratégie tourne avec de l’argent fictif, sous le regard d’Ève.', null],
 ]
 
 function badge(text: string, tone: BadgeTone = 'gray'): ReactNode {

@@ -501,11 +501,11 @@ export function DecisionsPage() {
           <div className="eyebrow">03 / ICHIVOL WORKSPACE</div>
           <h1>Opportunités</h1>
           <p className="subtitle">
-            5 portes moteur + décision d’Ève (trade paper ou pas). Paper only.
+            Les 5 portes du moteur, puis Ève accepte ou refuse quand son pilote est actif. Paper seulement.
           </p>
         </div>
         <div className="actions">
-          {badge('CLOTURE 1H', 'gray')}
+          {badge('CLÔTURE 1H', 'gray')}
           {badge(
             eveBySymbol.size ? `ÈVE ${eveBySymbol.size}` : 'ÈVE —',
             eveBySymbol.size ? 'green' : 'gray',
@@ -562,8 +562,8 @@ export function DecisionsPage() {
                 <th>STRUCTURE</th>
                 <th>EMPLAC.</th>
                 <th>RÉGIME</th>
-                <th title="Ce qu’Ève décide : LONG / SHORT / HOLD / ABSTAIN">DÉCISION ÈVE</th>
-                <th title="Le modèle System One (JEV API, ou jevos en fallback crédit) a-t-il répondu correctement ?">MODÈLE OK</th>
+                <th title="Ce qu’Ève répond : acheter, vendre à découvert, garder, s’abstenir">DÉCISION ÈVE</th>
+                <th title="JEV a-t-il répondu correctement ?">MODÈLE OK</th>
                 <th title="Filtre avant ouverture paper (confiance / setup)">FILTRE ENTRÉE</th>
                 <th title="Le Risk Kernel autorise-t-il l’ouverture paper ?">RISQUE</th>
                 <th>CYCLE</th>
@@ -680,8 +680,8 @@ export function DecisionsPage() {
               ))}
             </div>
             <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-              Les 5 portes = lecture marché (Ichimoku × RVOL). Ensuite Ève décide si on trade
-              paper (LONG/SHORT) ou non (HOLD/ABSTAIN). « Modèle OK » = JEV API (jevos si plus de crédit) a
+              Les 5 portes = lecture marché (Ichimoku × RVOL). Ensuite, si son pilote est actif, Ève
+              accepte (achat ou vente à découvert) ou refuse (garder, s’abstenir). « Modèle OK » = JEV a
               répondu. « Filtre entrée » = garde-fou avant d’ouvrir. « Risque » = le Risk Kernel
               autorise ou bloque. Tirets = pas encore de décision d’Ève sur ce symbole.
             </p>
@@ -755,7 +755,7 @@ export function DecisionsPage() {
                   <b>{detailEve.baseline}</b>
                 </div>
                 <div className="statline">
-                  <span>Modèle System One</span>
+                  <span>JEV</span>
                   <b>
                     {badge(
                       detailEve.jevHealth === 'ok' || detailEve.jevHealth === 'healthy'
@@ -805,7 +805,7 @@ export function DecisionsPage() {
                       detailPipeline.direction === 'SHORT'
                         ? 'VENTE'
                         : detailPipeline.direction === 'LONG'
-                          ? 'PASSE'
+                          ? 'ACHAT'
                           : '—',
                     )
                   : badge('—', 'gray')}

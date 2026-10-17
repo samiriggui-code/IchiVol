@@ -465,14 +465,14 @@ export function PortfolioPage() {
           <h1>Portefeuille</h1>
           <p className="subtitle">
             {showAll
-              ? `Les ${books.length || ''} portefeuilles paper additionnés : capital, positions et ordres de chacun, avec le nom du portefeuille sur chaque ligne. Touche un portefeuille pour voir son détail. Aucun ordre n’est envoyé à un courtier.`.replace('Les  ', 'Les ')
+              ? `Les ${books.length || ''} portefeuilles paper additionnés : capital, positions et ordres de chacun, avec le nom du portefeuille sur chaque ligne. Touche un portefeuille pour voir son détail, ou le Desk pour la répartition et la concentration de l’ensemble. Aucun ordre n’est envoyé à un courtier.`.replace('Les  ', 'Les ')
               : isRs
               ? `${RS_D1_LABEL}. Portefeuille séparé, piloté uniquement par la règle RS-D1 (Donchian 4h) : aucun ordre manuel.`
               : isSessions
                 ? 'Mêmes règles qu’IchiVol, mais le signal n’ouvre et ne ferme qu’aux ouvertures et clôtures de Tokyo, Londres et New York. Stop et objectif restent surveillés en continu.'
                 : isFutures
-                  ? 'Compte paper dédié à trois marchés : Dow Jones (YM), or (MGC) et bitcoin. Mêmes règles qu’IchiVol, avec un plafond de risque commun aux trois. Aucun ordre n’est envoyé à un courtier.'
-                  : 'Compte paper. Les ordres sont simulés ici, aucun n’est envoyé à un courtier.'}
+                  ? 'Portefeuille paper dédié à trois marchés : Dow Jones (YM), or (MGC) et bitcoin. Mêmes règles qu’IchiVol, avec un plafond de risque commun aux trois. Aucun ordre n’est envoyé à un courtier.'
+                  : 'Portefeuille paper. Les ordres sont simulés ici, aucun n’est envoyé à un courtier.'}
           </p>
         </div>
         <div className="actions">
@@ -494,7 +494,7 @@ export function PortfolioPage() {
             </div>
           ) : null}
           {badge(
-            showAll ? 'TOUS · PAPER' : isRs ? 'RS-D1 · PAPER' : isSessions ? 'SESSIONS · PAPER' : isFutures ? 'FUTURES & CRYPTO · PAPER' : 'BROKER PAPER',
+            showAll ? 'TOUS · PAPER' : isRs ? 'RS-D1 · PAPER' : isSessions ? 'SESSIONS · PAPER' : isFutures ? 'FUTURES & CRYPTO · PAPER' : 'PAPER',
             'gray',
           )}
         </div>
@@ -547,8 +547,7 @@ export function PortfolioPage() {
           </div>
           <div className="card-body">
             <p style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 12px', lineHeight: 1.45 }}>
-              Garde-fou du <b>moteur paper Python</b> (<code style={{ fontSize: 10 }}>risk_kernel_v1</code>
-              ) : avant toute ouverture, il vérifie shorts, cash, plafonds, kill-switch et perte du jour.
+              Garde-fou du <b>moteur</b> : avant toute ouverture, il vérifie shorts, cash, plafonds, arrêt d’urgence et perte du jour.
               Ce n’est pas un score de marché — c’est l’autorisation d’entrer.
             </p>
             <div
@@ -578,7 +577,7 @@ export function PortfolioPage() {
                   : riskPass === false
                     ? showAll
                     ? 'Au moins un portefeuille a ses entrées bloquées.'
-                    : 'Entrées bloquées (kill-switch et/ou perte journalière).'
+                    : 'Entrées bloquées (arrêt d’urgence ou perte journalière).'
                     : 'État du verrou indisponible.'}
                 <br />
                 {risk
@@ -610,7 +609,7 @@ export function PortfolioPage() {
                 }}
               >
                 <li>
-                  Kill-switch :{' '}
+                  Arrêt d’urgence :{' '}
                   <b>{lock.kill_switch_armed ? 'armé (entrées coupées)' : 'désarmé'}</b>
                 </li>
                 <li>
@@ -680,10 +679,10 @@ export function PortfolioPage() {
           </div>
         </section>
 
-        <section className="card">
+        <section className="card" hidden={showAll}>
           <div className="card-head">
             <h2>Allocation du capital</h2>
-            {badge('COMPTE PAPER', 'gray')}
+            {badge('PAPER', 'gray')}
           </div>
           <div className="card-body">
             <EquitySpark points={overview?.equity_curve ?? []} />
@@ -857,7 +856,7 @@ export function PortfolioPage() {
 
       <section className="card" id="pf-ordres">
         <div className="card-head">
-          <h2>Carnet d’ordres</h2>
+          <h2>Historique des ordres</h2>
           {badge(orders.length ? `${orders.length} DERNIERS` : '—', 'gray')}
         </div>
         <div className="table-wrap">
@@ -952,7 +951,7 @@ export function PortfolioPage() {
 
       <div style={{ height: 20 }} />
 
-      <section className="card">
+      <section className="card" hidden={showAll}>
         <div className="card-head">
           <h2>Concentration des positions</h2>
         </div>
