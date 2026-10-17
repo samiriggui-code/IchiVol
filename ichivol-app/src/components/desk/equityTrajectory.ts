@@ -26,6 +26,7 @@ const BOOK_SLOT: Record<string, number> = {
   ICHIVOL_4H_V1: 4,
   ICHIVOL_WIDE_V1: 5,
   RS_D1_PAPER_V1: 6,
+  ICHIVOL_COMBO_V1: 7,
 }
 
 /** Couleur d'un livre : fixée par son code (un filtre ne repeint jamais les autres), sinon le premier emplacement libre. */
