@@ -7,7 +7,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -15,7 +14,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import {
   getActivityFeed,
   type ActivityItem,
-  type FeedTone,
 } from '../lib/activity'
 import {
   getScreener,
@@ -53,7 +51,6 @@ import {
   loadAllActivity,
   loadAllBooks,
   type BookPosition,
-  type BookTag,
 } from '../lib/allBooks'
 import { verdictBucket } from '../lib/deskSummarize'
 import {
@@ -76,6 +73,8 @@ import {
   type EquityPeriod,
 } from './desk/deskFormat'
 import { toEngineSymbol } from '../lib/engineSymbol'
+import { EquityTrajectory, type TrajectoryBook } from '../components/desk/EquityTrajectory'
+import { bookColors, cleanEquitySeries } from '../components/desk/equityTrajectory'
 import './OverviewPage.css'
 
 const RING_COLORS = ['#548f87', '#8c9eb4', '#c2b596', '#a9bdb2', '#7d8288'] as const
@@ -171,233 +170,6 @@ function pickPrimaryMarkets(rows: ScreenerDecisionRow[]): ScreenerDecisionRow[] 
   return [...preferred, ...rest].slice(0, 4)
 }
 
-function periodCutoffMs(period: EquityPeriod, now = Date.now()): number {
-  const ms =
-    period === '1J'
-      ? 86_400_000
-      : period === '1S'
-        ? 7 * 86_400_000
-        : period === '1M'
-          ? 30 * 86_400_000
-          : 90 * 86_400_000
-  return now - ms
-}
-
-function filterEquityCurve(
-  points: { t: string; equity: number }[],
-  period: EquityPeriod,
-  now = Date.now(),
-): { t: string; equity: number }[] {
-  const cutoff = periodCutoffMs(period, now)
-  return points.filter((p) => {
-    const t = Date.parse(p.t)
-    return !Number.isNaN(t) && t >= cutoff
-  })
-}
-
-type EquityMarkerKind =
-  | 'tx_buy'
-  | 'tx_sell'
-  | 'paper_opened'
-  | 'paper_closed'
-  | 'shadow_blocked'
-  | 'shadow_closed'
-
-type EquityMarker = {
-  id: string
-  ms: number
-  kind: EquityMarkerKind
-  tone: FeedTone
-  symbol: string
-  title: string
-  detail: string
-  source: 'transaction' | 'action'
-  /** Portefeuille de l'ordre : le repère se pose sur sa courbe. */
-  bookCode?: string
-}
-
-const MAX_EQUITY_MARKERS = 80
-
-function equityAtTime(
-  series: { ms: number; equity: number }[],
-  ms: number,
-): number | null {
-  if (series.length === 0) return null
-  if (ms <= series[0]!.ms) return series[0]!.equity
-  const last = series[series.length - 1]!
-  if (ms >= last.ms) return last.equity
-  for (let i = 1; i < series.length; i++) {
-    const b = series[i]!
-    if (ms <= b.ms) {
-      const a = series[i - 1]!
-      const r = (ms - a.ms) / Math.max(1, b.ms - a.ms)
-      return a.equity + r * (b.equity - a.equity)
-    }
-  }
-  return null
-}
-
-function nearKey(symbol: string, ms: number): string {
-  return `${symbol.toUpperCase()}@${Math.round(ms / 120_000)}`
-}
-
-function buildEquityMarkers(
-  actions: ActivityItem[],
-  orders: Array<PaperOrderRow & Partial<BookTag>>,
-  period: EquityPeriod,
-  now = Date.now(),
-): EquityMarker[] {
-  const cutoff = periodCutoffMs(period, now)
-  const fromOrders: EquityMarker[] = []
-  const covered = new Set<string>()
-
-  for (const o of orders) {
-    const ms = Date.parse(o.time)
-    if (Number.isNaN(ms) || ms < cutoff) continue
-    covered.add(nearKey(o.symbol, ms))
-    const side = String(o.side).toUpperCase()
-    const isBuy = side === 'BUY'
-    const notional =
-      Number.isFinite(o.notional) && o.notional > 0 ? fmtEur(o.notional, 2) : '—'
-    const px =
-      Number.isFinite(o.filled_price) && o.filled_price > 0
-        ? fmtPrice(o.filled_price)
-        : '—'
-    fromOrders.push({
-      id: `tx-${o.book_code ?? ''}-${o.id}`,
-      bookCode: o.book_code,
-      ms,
-      kind: isBuy ? 'tx_buy' : 'tx_sell',
-      tone: isBuy ? 'good' : 'neutral',
-      symbol: o.symbol,
-      title: `${isBuy ? 'Achat' : 'Vente'} ${o.symbol}${o.book_label ? ` · ${o.book_label}` : ''}`,
-      detail: [
-        `${side} · ${fmtDec(o.qty, 4)} @ ${px}`,
-        `notional ${notional}`,
-        o.reason?.trim() || null,
-        o.status ? `statut ${o.status}` : null,
-      ]
-        .filter(Boolean)
-        .join(' · '),
-      source: 'transaction',
-    })
-  }
-
-  const fromActions: EquityMarker[] = []
-  for (const it of actions) {
-    const ms = Date.parse(it.time)
-    if (Number.isNaN(ms) || ms < cutoff) continue
-    if (covered.has(nearKey(it.symbol, ms))) continue
-    fromActions.push({
-      id: `act-${it.kind}-${it.symbol}-${it.time}`,
-      ms,
-      kind: it.kind,
-      tone: it.tone,
-      symbol: it.symbol,
-      title: it.title,
-      detail: it.detail || '—',
-      source: 'action',
-    })
-  }
-
-  const merged = [...fromOrders, ...fromActions].sort((a, b) => a.ms - b.ms)
-  if (merged.length <= MAX_EQUITY_MARKERS) return merged
-  const rank = (m: EquityMarker): number => {
-    if (m.source === 'transaction') return 3
-    if (m.kind === 'paper_opened' || m.kind === 'paper_closed') return 2
-    return 1
-  }
-  return [...merged]
-    .sort((a, b) => rank(b) - rank(a) || b.ms - a.ms)
-    .slice(0, MAX_EQUITY_MARKERS)
-    .sort((a, b) => a.ms - b.ms)
-}
-
-function markerToneClass(tone: FeedTone): string {
-  switch (tone) {
-    case 'good':
-      return 'is-good'
-    case 'bad':
-      return 'is-bad'
-    case 'blocked':
-      return 'is-blocked'
-    case 'neutral':
-      return 'is-neutral'
-    default: {
-      const _exhaustive: never = tone
-      return _exhaustive
-    }
-  }
-}
-
-function fmtMarkerWhen(ms: number): string {
-  return new Date(ms).toLocaleString('fr-FR', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
-}
-
-/** Snapshots corrompus (79 M€…) — marche point à point autour de la médiane du compte. */
-function cleanEquitySeries(
-  points: { t: string; equity: number }[],
-): { ms: number; equity: number }[] {
-  const raw = points
-    .map((p) => ({ ms: Date.parse(p.t), equity: p.equity }))
-    .filter((p) => !Number.isNaN(p.ms) && Number.isFinite(p.equity) && p.equity > 0)
-    .sort((a, b) => a.ms - b.ms)
-  if (raw.length === 0) return []
-
-  const sorted = [...raw.map((p) => p.equity)].sort((a, b) => a - b)
-  const mid = sorted[Math.floor(sorted.length / 2)] ?? 5000
-  const lo = mid * 0.9
-  const hi = mid * 1.12
-
-  const out: { ms: number; equity: number }[] = []
-  for (const p of raw) {
-    if (p.equity < lo || p.equity > hi) continue
-    const prev = out[out.length - 1]
-    if (prev) {
-      if (p.ms === prev.ms) {
-        out[out.length - 1] = p
-        continue
-      }
-      const jump = Math.abs(p.equity - prev.equity)
-      if (jump > Math.max(120, prev.equity * 0.04)) continue
-    }
-    out.push(p)
-  }
-  return out.length >= 2 ? out : raw.filter((p) => p.equity >= lo && p.equity <= hi)
-}
-
-/** Compresse les longs plateaux plats : la session active garde la place visuelle. */
-function densifyEquityPath(
-  series: { ms: number; equity: number }[],
-): { ms: number; equity: number; i: number }[] {
-  if (series.length < 2) return series.map((p, i) => ({ ...p, i }))
-  const flatEps = 0.75
-  const kept: { ms: number; equity: number }[] = []
-  for (let i = 0; i < series.length; i++) {
-    const p = series[i]!
-    const prev = kept[kept.length - 1]
-    const next = series[i + 1]
-    if (!prev) {
-      kept.push(p)
-      continue
-    }
-    const flatWithPrev = Math.abs(p.equity - prev.equity) <= flatEps
-    const flatWithNext =
-      next != null && Math.abs(next.equity - p.equity) <= flatEps
-    // Keep first of plateau, skip middle flats, keep last before a move.
-    if (flatWithPrev && flatWithNext) continue
-    kept.push(p)
-  }
-  if (kept.length < 2) return series.map((p, i) => ({ ...p, i }))
-  return kept.map((p, i) => ({ ...p, i }))
-}
-
 function drawdownRatio(
   curve: { equity: number; t?: string }[],
   equity: number | null | undefined,
@@ -412,36 +184,6 @@ function drawdownRatio(
   }
   if (peak <= 0) return null
   return (equity - peak) / peak
-}
-
-/** Graduations type 4985 / 5010 / 5035 / 5060. */
-function niceAxis(min: number, max: number): { min: number; max: number; ticks: number[] } {
-  const span = Math.max(20, max - min)
-  const pad = Math.max(8, span * 0.2)
-  let lo = min - pad
-  let hi = max + pad
-  const step = span <= 90 ? 25 : span <= 200 ? 50 : 100
-  lo = Math.floor(lo / step) * step
-  hi = Math.ceil(hi / step) * step
-  if (hi - lo < step * 3) {
-    const mid = (lo + hi) / 2
-    lo = Math.floor((mid - step * 1.5) / step) * step
-    hi = lo + step * 3
-  }
-  const ticks: number[] = []
-  for (let v = hi; v >= lo - 0.001; v -= step) ticks.push(v)
-  return { min: lo, max: hi, ticks }
-}
-
-function fmtAxisNum(v: number): string {
-  return Math.round(v).toLocaleString('fr-FR')
-}
-
-function fmtAxisTick(ms: number): string {
-  return new Date(ms)
-    .toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
-    .replace(/\./g, '')
-    .toUpperCase()
 }
 
 function fearGreedFr(classification: string): string {
@@ -539,301 +281,14 @@ function decisionBadgeText(r: ScreenerDecisionRow): string {
   return d
 }
 
-type BookEquityCurve = {
-  code: string
-  label: string
-  color: string
-  points: { t: string; equity: number }[]
-}
-
-function EquityViz({
-  books,
-  period,
-  actions,
-  orders,
-}: {
-  books: BookEquityCurve[]
-  period: EquityPeriod
-  actions: ActivityItem[]
-  orders: Array<PaperOrderRow & Partial<BookTag>>
-}) {
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const [activeId, setActiveId] = useState<string | null>(null)
-  const [tipPos, setTipPos] = useState<{ left: number; top: number } | null>(null)
-
-  const markers = useMemo(
-    () => buildEquityMarkers(actions, orders, period),
-    [actions, orders, period],
-  )
-
-  const w = 720
-  const h = 248
-  const padL = 14
-  const padR = 48
-  const padT = 14
-  const padB = 34
-  const innerW = w - padL - padR
-  const innerH = h - padT - padB
-
-  /** Une série nettoyée par livre — jamais fusionnées. */
-  const prepared = useMemo(() => {
-    return books
-      .map((b) => {
-        const series = densifyEquityPath(
-          cleanEquitySeries(filterEquityCurve(b.points, period)),
-        )
-        return { code: b.code, label: b.label, color: b.color, series }
-      })
-      .filter((b) => b.series.length >= 2)
-  }, [books, period])
-
-  const geometry = useMemo(() => {
-    if (prepared.length === 0) return null
-    const allVals = prepared.flatMap((b) => b.series.map((p) => p.equity))
-    const t0 = Math.min(...prepared.map((b) => b.series[0]!.ms))
-    const t1 = Math.max(...prepared.map((b) => b.series[b.series.length - 1]!.ms))
-    if (!(t1 > t0) || allVals.length === 0) return null
-
-    const axis = niceAxis(Math.min(...allVals), Math.max(...allVals))
-    const { min, max, ticks: yTicks } = axis
-    const span = Math.max(1e-6, max - min)
-    const yAt = (equity: number) => padT + (1 - (equity - min) / span) * innerH
-    const xAtMs = (ms: number) => {
-      if (ms <= t0) return padL
-      if (ms >= t1) return padL + innerW
-      return padL + ((ms - t0) / (t1 - t0)) * innerW
-    }
-
-    const traces = prepared.map((b) => {
-      const coords = b.series.map((p) => [xAtMs(p.ms), yAt(p.equity)] as const)
-      const d = coords
-        .map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(2)},${p[1].toFixed(2)}`)
-        .join(' ')
-      const last = coords[coords.length - 1]!
-      return { code: b.code, label: b.label, color: b.color, d, last }
-    })
-
-    // Un ordre se pose sur la courbe de son portefeuille ; le reste sur la première courbe.
-    const anchorOf = (m: EquityMarker) =>
-      (m.bookCode ? prepared.find((b) => b.code === m.bookCode) : undefined)?.series ?? prepared[0]!.series
-    const placed = markers
-      .map((m) => {
-        if (m.ms < t0 - 60_000 || m.ms > t1 + 60_000) return null
-        const eq = equityAtTime(anchorOf(m), m.ms)
-        if (eq == null) return null
-        return { ...m, x: xAtMs(m.ms), y: yAt(eq), equity: eq }
-      })
-      .filter((m): m is EquityMarker & { x: number; y: number; equity: number } => m != null)
-      .sort((a, b) => a.ms - b.ms)
-
-    const xTicks = [
-      { ms: t0, x: xAtMs(t0) },
-      { ms: t0 + (t1 - t0) / 2, x: xAtMs(t0 + (t1 - t0) / 2) },
-      { ms: t1, x: xAtMs(t1) },
-    ]
-    return { max, span, traces, placed, yTicks, xTicks }
-  }, [prepared, markers, innerW, innerH])
-
-  const active = geometry?.placed.find((m) => m.id === activeId) ?? null
-
-  const showTip = useCallback((id: string, clientX: number, clientY: number) => {
-    const box = wrapRef.current?.getBoundingClientRect()
-    if (!box) return
-    setActiveId(id)
-    const left = Math.min(Math.max(8, clientX - box.left + 12), box.width - 200)
-    const top = Math.min(Math.max(8, clientY - box.top - 8), box.height - 12)
-    setTipPos({ left, top })
-  }, [])
-
-  const hideTip = useCallback(() => {
-    setActiveId(null)
-    setTipPos(null)
-  }, [])
-
-  useEffect(() => {
-    hideTip()
-  }, [period, hideTip])
-
-  if (!geometry) {
-    return (
-      <div id="equity" className="desk-equity-wrap" ref={wrapRef}>
-        <svg
-          className="chart"
-          viewBox={`0 0 ${w} ${h}`}
-          role="img"
-          aria-label="Courbes de performance indisponibles"
-        />
-      </div>
-    )
-  }
-
-  const { max, span, traces, placed, yTicks, xTicks } = geometry
-
-  return (
-    <div id="equity" className="desk-equity-wrap" ref={wrapRef}>
-      <svg
-        className="chart"
-        viewBox={`0 0 ${w} ${h}`}
-        role="img"
-        aria-label={`Trajectoires ${traces.length} portefeuilles · ${period}`}
-        onPointerLeave={hideTip}
-      >
-        {yTicks.map((v, i) => {
-          const y = padT + ((max - v) / span) * innerH
-          return (
-            <g key={`y-${i}-${v}`}>
-              <line
-                x1={padL}
-                y1={y}
-                x2={w - padR}
-                y2={y}
-                stroke="#eeeae5"
-                strokeDasharray="3 5"
-              />
-              <text
-                x={w - padR + 6}
-                y={y + 3}
-                fontSize="10"
-                fill="#939a9d"
-                fontFamily="DM Mono, ui-monospace, monospace"
-              >
-                {fmtAxisNum(v)}
-              </text>
-            </g>
-          )
-        })}
-        {traces.map((tr) => (
-          <g key={tr.code}>
-            <path
-              d={tr.d}
-              fill="none"
-              stroke={tr.color}
-              strokeWidth="2"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-            <circle
-              cx={tr.last[0]}
-              cy={tr.last[1]}
-              r="3.5"
-              fill={tr.color}
-              pointerEvents="none"
-            />
-          </g>
-        ))}
-        {placed.map((m) => {
-          const hot = activeId === m.id
-          if (m.source === 'transaction') {
-            return (
-              <g key={m.id} className="desk-eq-marker is-tx">
-                <circle
-                  cx={m.x}
-                  cy={m.y}
-                  r={hot ? 6 : 4.5}
-                  fill="#fefdfb"
-                  stroke="#478f83"
-                  strokeWidth="1.7"
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`${m.title} · ${fmtMarkerWhen(m.ms)}`}
-                  onPointerEnter={(e) => showTip(m.id, e.clientX, e.clientY)}
-                  onBlur={hideTip}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    if (activeId === m.id) hideTip()
-                    else showTip(m.id, e.clientX, e.clientY)
-                  }}
-                />
-              </g>
-            )
-          }
-          return (
-            <g key={m.id} className={`desk-eq-marker ${markerToneClass(m.tone)}`}>
-              <circle
-                cx={m.x}
-                cy={m.y}
-                r={hot ? 5 : 3.5}
-                fill="#6b7c86"
-                stroke="#fefdfb"
-                strokeWidth="1.2"
-                role="button"
-                tabIndex={0}
-                aria-label={`${m.title} · ${fmtMarkerWhen(m.ms)}`}
-                onPointerEnter={(e) => showTip(m.id, e.clientX, e.clientY)}
-                onBlur={hideTip}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  if (activeId === m.id) hideTip()
-                  else showTip(m.id, e.clientX, e.clientY)
-                }}
-              />
-            </g>
-          )
-        })}
-        {xTicks.map((tick, i) => (
-          <text
-            key={`x-${tick.ms}-${i}`}
-            x={tick.x}
-            y={h - 10}
-            fontSize="10"
-            fill="#969a9c"
-            fontFamily="DM Mono, ui-monospace, monospace"
-            textAnchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'}
-          >
-            {fmtAxisTick(tick.ms)}
-          </text>
-        ))}
-      </svg>
-      {active && tipPos ? (
-        <div
-          className="desk-eq-tip"
-          role="tooltip"
-          style={{ left: tipPos.left, top: tipPos.top }}
-        >
-          <header>
-            <strong>{active.title}</strong>
-            <span className={`desk-eq-tip-kind ${active.source}`}>
-              {active.source === 'transaction' ? 'Transaction' : 'Action'}
-            </span>
-          </header>
-          <p>{active.detail}</p>
-          <dl>
-            <div>
-              <dt>Quand</dt>
-              <dd>{fmtMarkerWhen(active.ms)}</dd>
-            </div>
-            <div>
-              <dt>Symbole</dt>
-              <dd>{active.symbol || '—'}</dd>
-            </div>
-            <div>
-              <dt>Equity</dt>
-              <dd>{fmtEur(active.equity, 2)}</dd>
-            </div>
-          </dl>
-        </div>
-      ) : null}
-      <div className="desk-eq-legend">
-        {traces.map((tr) => (
-          <span key={tr.code}>
-            <i className="desk-eq-legend-line" style={{ background: tr.color }} />
-            {tr.label}
-          </span>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 export function OverviewPage() {
   const navigate = useNavigate()
   const [rows, setRows] = useState<ScreenerDecisionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [overview, setOverview] = useState<PaperOverview | null>(null)
   const [booksAgg, setBooksAgg] = useState<DeskBooksAggregate | null>(null)
-  const [bookCurves, setBookCurves] = useState<BookEquityCurve[]>([])
+  const [bookCurves, setBookCurves] = useState<TrajectoryBook[]>([])
   const [tape, setTape] = useState<ActivityItem[]>([])
-  const [equityActions, setEquityActions] = useState<ActivityItem[]>([])
   const [paperOrders, setPaperOrders] = useState<PaperOrderRow[]>([])
   const [lock, setLock] = useState<RiskLockState | null>(null)
   const [engineOk, setEngineOk] = useState<boolean | null>(null)
@@ -857,15 +312,20 @@ export function OverviewPage() {
           books,
           orders,
           agg: aggregateDeskBooks(books.map((b) => snapshotFromOverview(b.code, b.label, b.overview))),
-          curves: books.map(
-            (b, i) =>
-              ({
-                code: b.code,
-                label: b.label,
-                color: RING_COLORS[i % RING_COLORS.length]!,
-                points: b.overview.equity_curve ?? [],
-              }) satisfies BookEquityCurve,
-          ),
+          curves: (() => {
+            const colors = bookColors(books.map((b) => b.code))
+            return books.map(
+              (b) =>
+                ({
+                  code: b.code,
+                  label: b.label,
+                  color: colors[b.code]!,
+                  initialCash: b.overview.account?.initial_cash ?? null,
+                  points: b.overview.equity_curve ?? [],
+                  openSymbols: (b.overview.positions ?? []).map((p) => p.symbol),
+                }) satisfies TrajectoryBook,
+            )
+          })(),
         }
       })
       .catch(() => null)
@@ -933,10 +393,8 @@ export function OverviewPage() {
     }
 
     if (feedRes.ok) {
-      setEquityActions(feedRes.items)
       setTape(feedRes.items.slice(0, TAPE_LIMIT))
     } else {
-      setEquityActions([])
       setTape([])
     }
 
@@ -1416,7 +874,7 @@ export function OverviewPage() {
                 </b>
               </span>
             </div>
-            <EquityViz
+            <EquityTrajectory
               books={
                 bookCurves.length > 0
                   ? bookCurves
@@ -1425,14 +883,15 @@ export function OverviewPage() {
                         {
                           code: BASELINE,
                           label: 'IchiVol',
-                          color: RING_COLORS[0]!,
+                          color: bookColors([BASELINE])[BASELINE]!,
+                          initialCash: overview.account?.initial_cash ?? null,
                           points: overview.equity_curve ?? [],
+                          openSymbols: (overview.positions ?? []).map((p) => p.symbol),
                         },
                       ]
                     : []
               }
               period={equityPeriod}
-              actions={equityActions}
               orders={paperOrders}
             />
           </DeskCard>
