@@ -358,6 +358,9 @@ RS_D1_PROFILE: dict[str, Any] = {
 # - SHORTS: shorts allowed (the 2026-09-21 ban came from the research study; this measures it live).
 # - 4H: the automatic loop on 4h candles instead of 1h (longs only).
 # - WIDE: 1h, longs only, on the baseline universe + WIDE_EXTRA_SYMBOLS (liquid Binance spot pairs).
+# - COMBO (2026-10-17, user decision): every confirmation filter stacked on the baseline signal -- market structure,
+#   Fibonacci confluence, RSI, CMF/OBV flow and hard ATR regime. Downgrade only: a filter can refuse a trade, never
+#   create one. Refused trades are followed as shadows so we can see what each filter cost or saved.
 # They first ran from an unmerged branch (2026-10-01); once main was deployed they kept their DB rows but nothing
 # synced them any more. An existing account keeps the profile stored in its row (ensure_portfolio never rewrites it).
 WIDE_EXTRA_SYMBOLS: tuple[str, ...] = (
@@ -369,6 +372,7 @@ WIDE_EXTRA_SYMBOLS: tuple[str, ...] = (
 SHORTS_CODE = "ICHIVOL_SHORTS_V1"
 H4_CODE = "ICHIVOL_4H_V1"
 WIDE_CODE = "ICHIVOL_WIDE_V1"
+COMBO_CODE = "ICHIVOL_COMBO_V1"
 
 PARALLEL_PROFILES: dict[str, dict[str, Any]] = {
     SHORTS_CODE: _with(
@@ -385,6 +389,18 @@ PARALLEL_PROFILES: dict[str, dict[str, Any]] = {
         code=WIDE_CODE,
         label="Baseline univers élargi (paper parallèle)",
         universe="wide",
+    ),
+    COMBO_CODE: _with(
+        code=COMBO_CODE,
+        label="Tout combiné : Ichimoku + structure + Fibonacci + RSI/flux (paper parallèle)",
+        structure_filter="block_near_opposing",
+        structure_detectors=["mvpp", "trendln"],
+        fibonacci_filter="require_confluence",
+        context_rsi=True,
+        context_cmf=True,
+        context_obv=True,
+        context_regime_hard=True,
+        shadow_on_block=True,
     ),
 }
 
@@ -417,7 +433,7 @@ SINGLE_PORTFOLIO_MODE = True
 # 2026-10-06 (user decision): the market-session schedule runs as a separate account next to the baseline, so
 # the hourly baseline stays the reference it is compared against.
 # 2026-10-07: the Futures & Crypto account joins the same loop, on its own three markets only.
-# 2026-10-17: the three parallel accounts (shorts, 4h, wide universe) are synced again.
+# 2026-10-17: the three parallel accounts (shorts, 4h, wide universe) are synced again, plus the all-filters account.
 PARALLEL_SYNCED_CODES: tuple[str, ...] = (SESSIONS_CODE, FUTURES_CRYPTO_CODE, *PARALLEL_PROFILES)
 
 
