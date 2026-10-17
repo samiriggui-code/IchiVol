@@ -42,3 +42,10 @@ def _clear_mtf_cache():
     clear_cache()
     yield
     clear_cache()
+
+
+@pytest.fixture(autouse=True)
+def _eve_circuit_off(monkeypatch):
+    """Ève's circuit calls JEV over the network: off unless a test turns it on (tests/jev)."""
+    monkeypatch.setenv("EVE_ENABLED", "false")
+    yield

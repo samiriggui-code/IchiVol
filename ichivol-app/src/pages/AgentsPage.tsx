@@ -24,7 +24,7 @@ import {
   type AuthorityChain,
 } from '../lib/agentsRuntime'
 import { labelEngineCode } from '../lib/engineTerminology'
-import { EveShadowPanel } from './EveShadowPanel'
+import { EvePanel } from './EvePanel'
 import './AgentsPage.css'
 
 type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
@@ -215,6 +215,93 @@ function runtimeNotice(data: AgentsListResponse | null, loadError: string | null
   return `Supervision des agents · ${worker} · ${run}.`
 }
 
+type EveStatus = {
+  enabled: boolean
+  execution: boolean
+  endpoints: { role: string; provider: string; key_set: boolean }[]
+  calls_today: number
+  daily_cap: number
+  last_call: { symbol: string; eve_action: string; created_at: string; provider: string | null } | null
+}
+
+const EVE_PROVIDER: Record<string, string> = {
+  typesafe: 'JEV hébergé',
+  openrouter: 'JEV (OpenRouter)',
+  jevos: 'jevos4 local',
+  custom: 'JEV',
+}
+const EVE_ACTION: Record<string, string> = {
+  LONG: 'achat',
+  SHORT: 'vente',
+  ABSTAIN: 'abstention',
+  HOLD: 'garde',
+  CLOSE: 'liquidation',
+  UNAVAILABLE: 'sans réponse',
+}
+
+/** Carte Ève : statut réel lu sur l'engine (/api/engine/eve/status), aucune valeur figée. */
+function EveCard({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  const [st, setSt] = useState<EveStatus | null>(null)
+  const [err, setErr] = useState(false)
+  useEffect(() => {
+    const c = new AbortController()
+    fetch('/api/engine/eve/status', { credentials: 'include', signal: c.signal })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d: EveStatus) => setSt(d))
+      .catch(() => !c.signal.aborted && setErr(true))
+    return () => c.abort()
+  }, [])
+  const sources = st?.endpoints.length
+    ? st.endpoints
+        .map((e) => `${EVE_PROVIDER[e.provider] ?? e.provider}${e.provider !== 'jevos' && !e.key_set ? ' (sans clé)' : ''}`)
+        .join(' puis ')
+    : '—'
+  const state = err
+    ? 'engine injoignable'
+    : !st
+      ? '—'
+      : !st.enabled
+        ? 'coupée'
+        : st.execution
+          ? 'décide et exécute (paper)'
+          : 'dossiers seulement'
+  const last = st?.last_call
+  return (
+    <section className="card agent-card">
+      {badge(st?.enabled ? 'ACTIF' : err ? '—' : 'EN VEILLE', st?.enabled ? 'green' : 'gray')}
+      <div className="agent-icon">◉</div>
+      <h2>Ève</h2>
+      <p>
+        Trade seule dans ses portefeuilles paper à partir des calculs du moteur. Modes Analyst, Challenger,
+        Guardian et Shadow ; la décision vient de JEV.
+      </p>
+      <div className="statline">
+        <span>Décision</span>
+        <b>{sources}</b>
+      </div>
+      <div className="statline">
+        <span>Statut</span>
+        <b>{state}</b>
+      </div>
+      <div className="statline">
+        <span>Appels JEV du jour</span>
+        <b>{st ? `${st.calls_today} / ${st.daily_cap}` : '—'}</b>
+      </div>
+      <div className="statline">
+        <span>Dernière décision</span>
+        <b>
+          {last
+            ? `${last.symbol} · ${EVE_ACTION[last.eve_action] ?? last.eve_action} · ${new Date(last.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+            : '—'}
+        </b>
+      </div>
+      <button type="button" onClick={onToggle}>
+        {open ? 'Fermer la fiche' : 'Ouvrir la fiche →'}
+      </button>
+    </section>
+  )
+}
+
 export function AgentsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [data, setData] = useState<AgentsListResponse | null>(null)
@@ -330,7 +417,7 @@ export function AgentsPage() {
       ) : null}
 
       <div className="grid three">
-        <section className="card agent-card"><span className="tag green">IA DECISIONNELLE</span><div className="agent-icon">◉</div><h2>Ève Shadow</h2><p>Analyse des décisions et contrôle des risques avec jevos-v4.</p><div className="statline"><span>Moteur</span><b>jevos-v4</b></div><div className="statline"><span>Mode</span><b>Observation</b></div><div className="statline"><span>Permission</span><b>market_read</b></div><button type="button" onClick={() => setShadowOpen(v => !v)}>{shadowOpen ? "Fermer la fiche" : "Ouvrir la fiche"}</button></section>
+        <EveCard open={shadowOpen} onToggle={() => setShadowOpen((v) => !v)} />
         {cards.map((a) => (
           <section className="card agent-card" key={a.id}>
             {badge(
@@ -367,7 +454,21 @@ export function AgentsPage() {
         ))}
       </div>
 
-      {shadowOpen ? <ModalSheetHost ariaLabel="Fiche agent Ève Shadow" onCancel={() => setShadowOpen(false)}><aside className="panel trade-sheet"><header className="panel-head trade-sheet-head"><h2>Ève Shadow</h2><button type="button" className="ghost" onClick={() => setShadowOpen(false)}>Fermer</button></header><div className="trade-sheet-scroll"><EveShadowPanel /></div></aside></ModalSheetHost> : null}
+      {shadowOpen ? (
+        <ModalSheetHost ariaLabel="Fiche Ève" onCancel={() => setShadowOpen(false)}>
+          <aside className="panel trade-sheet">
+            <header className="panel-head trade-sheet-head">
+              <h2>Ève · Dossiers IchiVol</h2>
+              <button type="button" className="ghost" onClick={() => setShadowOpen(false)}>
+                Fermer
+              </button>
+            </header>
+            <div className="trade-sheet-scroll">
+              <EvePanel />
+            </div>
+          </aside>
+        </ModalSheetHost>
+      ) : null}
       <section className="card">
         <div className="card-head">
           <h2>Chaîne d’autorité</h2>

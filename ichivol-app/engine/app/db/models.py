@@ -756,3 +756,60 @@ class LedgerLeg(Base):
     memo: Mapped[str] = mapped_column(String(255), default="")
 
     transaction: Mapped[LedgerTransaction] = relationship(back_populates="legs")
+
+
+class EveDossier(Base):
+    """Dossier IchiVol — one Ève decision for one (portfolio, symbol, timeframe, closed bar).
+
+    Holds the why and the how: the engine calculations sent to JEV (``state``), the questions and JEV's typed
+    answers, the verdict computed in code, what the engine alone would have done, what the circuit executed
+    (Ève when she decides, otherwise the engine), and later the observed outcome. Several portfolios on the same bar reuse one JEV call
+    (``call_key``); only the dossier that made the call stores the state.
+    """
+
+    __tablename__ = "eve_dossiers"
+    __table_args__ = (
+        UniqueConstraint("portfolio_code", "symbol", "timeframe", "bar_time", name="uq_eve_dossier_bar"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+    )
+    portfolio_code: Mapped[str] = mapped_column(String(64), index=True)
+    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    timeframe: Mapped[str] = mapped_column(String(8))
+    bar_time: Mapped[int] = mapped_column(BigInteger, index=True)  # close time (epoch s) of the decided bar
+    price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    holding: Mapped[str | None] = mapped_column(String(8), nullable=True)  # LONG | SHORT | None (flat)
+    battery: Mapped[str] = mapped_column(String(16))  # entry | manage
+    battery_version: Mapped[str] = mapped_column(String(32))
+    call_key: Mapped[str] = mapped_column(String(128), index=True)
+    reused: Mapped[bool] = mapped_column(Boolean, default=False)
+    state: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    state_chars: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    questions: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    answers: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    jev_ok: Mapped[bool] = mapped_column(Boolean, default=False)
+    jev_error: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    jev_errors: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    provider: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    model: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    usage: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    latency_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
+    engine_decision: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    eve_action: Mapped[str] = mapped_column(String(16))
+    eve_label: Mapped[str] = mapped_column(String(16))
+    decisive: Mapped[bool] = mapped_column(Boolean, default=False)
+    coherence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    p_up: Mapped[float | None] = mapped_column(Float, nullable=True)
+    reasons: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    engine_action: Mapped[str] = mapped_column(String(16))  # what the engine alone would have done
+    executed_action: Mapped[str] = mapped_column(String(16))
+    decided_by: Mapped[str] = mapped_column(String(16))  # eve | moteur (Ève could not decide)
+    executed_result: Mapped[str | None] = mapped_column(String(32), nullable=True)  # opened | closed | none
+    position_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    outcome_bars: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    outcome_close: Mapped[float | None] = mapped_column(Float, nullable=True)
+    outcome_return: Mapped[float | None] = mapped_column(Float, nullable=True)  # close-to-close over outcome_bars
+    outcome_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

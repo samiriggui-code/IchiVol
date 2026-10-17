@@ -58,9 +58,16 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ichivol}:${POSTGRES_PASSWORD}@postgres:5432/ichivol_engine
       ENGINE_API_PREFIX: /api/engine
-      JEV_URL: ${JEV_URL:-http://jevos-v4:8017}
-      JEV_SHADOW_ENABLED: ${JEV_SHADOW_ENABLED:-false}
+      # Ève Intelligence V1 (app/jev/): hosted JEV first, jevos-v4 (service below) when it refuses a call.
+      JEV_URL: ${JEV_URL:-https://api.typesafe.ai}
+      JEV_MODEL: ${JEV_MODEL:-jev-latest}
       JEV_API_KEY: ${JEV_API_KEY:-}
+      JEV_TIMEOUT_S: ${JEV_TIMEOUT_S:-8}
+      JEV_FALLBACK_URL: ${JEV_FALLBACK_URL:-http://jevos-v4:8017}
+      JEV_FALLBACK_TIMEOUT_S: ${JEV_FALLBACK_TIMEOUT_S:-60}
+      JEV_DAILY_MAX_CALLS: ${JEV_DAILY_MAX_CALLS:-1000}
+      EVE_ENABLED: ${EVE_ENABLED:-true}
+      EVE_EXECUTION: ${EVE_EXECUTION:-true}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       TWELVE_DATA_API_KEY: ${TWELVE_DATA_API_KEY:-}
       ENABLE_BACKTEST_EVIDENCE: ${ENABLE_BACKTEST_EVIDENCE:-true}
@@ -69,7 +76,17 @@ services:
     volumes:
       # OB-1: files written by orderbook-collector, read-only for the engine (API /orderbook, FactSheet ob.*)
       - ichivol_orderbook:/data/orderbook:ro
-      - ./jev-shadow-data:/data/jev-shadow
+    networks:
+      - ichivol
+
+  # jevos-v4 — JEV local on the VPS CPU (github.com/feder-cr/jev, MIT, ~1 GB RAM). Judge of the EVE_JEVOS_V1
+  # account and fallback of the hosted JEV. Internal network only, never published on a host port.
+  jevos-v4:
+    build:
+      context: ./deploy/jevos
+    image: ichivol-jevos:v4
+    container_name: ichivol-jevos
+    restart: unless-stopped
     networks:
       - ichivol
 

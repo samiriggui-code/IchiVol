@@ -129,6 +129,34 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/eve/status",
+    "endpoint": "get_eve_status"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/eve/dossiers",
+    "endpoint": "list_eve_dossiers"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/eve/dossiers/{dossier_id}",
+    "endpoint": "get_eve_dossier"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/eve/calibration",
+    "endpoint": "get_eve_calibration"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/backtest/evidence",
     "endpoint": "get_backtest_evidence"
   },

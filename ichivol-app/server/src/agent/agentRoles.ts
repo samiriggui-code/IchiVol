@@ -90,9 +90,10 @@ const ROLE_META: Record<
   opportunities: {
     name: 'Opportunités',
     kind: 'llm',
-    mode: 'LLM / règles',
+    mode: 'Claude (LLM) / règles',
     permission: 'signals_read',
-    blurb: 'Repère les setups et rassemble les preuves.',
+    blurb:
+      'Copilot : Claude répond dans le chat, repère les setups et explique les décisions d’Ève (JEV / jevos4) et les calculs du moteur.',
     icon: '◇',
     chat: 'copilot_threads',
   },

@@ -8,6 +8,8 @@ Never a real order.
 
 from __future__ import annotations
 
+import dataclasses
+import logging
 from datetime import datetime, timezone
 from typing import Any, Sequence
 
@@ -18,6 +20,7 @@ from app.db.models import PaperPortfolio, PaperPosition
 from app.decision.pipeline import PipelineResult
 from app.context.gate import apply_context_gate
 from app.fibonacci.gate import apply_fibonacci_gate
+from app.jev import dossier as eve_dossier
 from app.market_data.timeframes import TF_SECONDS
 from app.paper import broker as paper_broker
 from app.paper import counters as paper_counters
@@ -34,6 +37,8 @@ from app.paper.portfolio import ensure_baseline_portfolio, ensure_syncable_portf
 from app.sessions.decision_windows import decision_event_for_bar
 from app.shadow import broker as shadow_broker
 from app.structure.gate import apply_structure_gate
+
+_log = logging.getLogger(__name__)
 
 
 def _direction_for(decision: str) -> str | None:
@@ -182,6 +187,7 @@ def sync_position(
     manual_notional: float | None = None,
     take_profit_r: float | None = None,
     signal_actions: bool = True,
+    close_reason: str | None = None,
 ) -> PaperPosition | None:
     """One symbol open/hold/close for one portfolio. Capital sizing when stop set.
 
@@ -261,7 +267,7 @@ def sync_position(
             # (checked above, and by app/paper/protection.py) or the user can close it.
             return None
 
-        reason = "pipeline_flipped" if direction is not None else "pipeline_downgraded"
+        reason = close_reason or ("pipeline_flipped" if direction is not None else "pipeline_downgraded")
         if existing.qty:
             paper_broker.close_capital_position(
                 session, existing, price=price, reason=reason, signal=signal
@@ -459,6 +465,7 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
     funnels: dict[str, paper_counters.FunnelAccumulator] = {}
     bars_by_key: dict[str, Sequence] = {}
     now_s = datetime.now(timezone.utc).timestamp()
+    eve_cycle = eve_dossier.CycleCalls()
 
     for row in rows:
         bars_by_key[f"{row.symbol}:{row.timeframe}"] = getattr(row, "candles", None) or []
@@ -601,6 +608,41 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
                 signal_actions = event is not None
                 extra["decision_event"] = event
 
+            # Ève's own accounts: the engine presents its calculations, Ève decides, the broker executes what the
+            # Risk Kernel / kill switch allow (in sync_position; stop / target are checked first). The engine's
+            # signal never acts on these accounts: no Ève decision for this bar = only stop / target this cycle.
+            eve_out = None
+            eve_before = None
+            if eve_dossier.source_of(profile) is not None:
+                eve_bar = (getattr(row, "signal_timing", None) or {}).get("signal_bar_close")
+                if signal_actions and eve_bar is not None and isinstance(stop, (int, float)) and eve_dossier.enabled():
+                    eve_before = _get_open_by_symbol(session, symbol=row.symbol, portfolio_id=portfolio.id)
+                    if eve_before is None or (
+                        eve_before.source == "auto_watchlist" and eve_before.timeframe == row.timeframe
+                    ):
+                        try:
+                            with session.begin_nested():
+                                eve_out = eve_dossier.run(
+                                    session,
+                                    row=row,
+                                    portfolio_code=portfolio.code,
+                                    source=eve_dossier.source_of(profile),
+                                    allow_short=profile.get("allow_short", True) is not False,
+                                    existing=eve_before,
+                                    engine_decision=final_pipeline.decision,
+                                    cycle=eve_cycle,
+                                )
+                        except Exception:
+                            _log.exception("eve failed for %s %s on %s", row.symbol, row.timeframe, portfolio.code)
+                            eve_out = None
+                if eve_out is not None:
+                    extra["eve"] = {"dossier_id": eve_out.dossier.id, "decided_by": eve_out.dossier.decided_by,
+                                    "eve_action": eve_out.dossier.eve_action,
+                                    "engine_decision": final_pipeline.decision}
+                    final_pipeline = dataclasses.replace(final_pipeline, decision=eve_out.decision)
+                if eve_out is None or not eve_out.execute:
+                    signal_actions = False
+
             run_id = None
             if paper_gates.has_gates(profile):
                 run_id = paper_gates.observe_decision(
@@ -619,7 +661,10 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
                 portfolio=portfolio,
                 run_id=run_id,
                 signal_actions=signal_actions,
+                close_reason=eve_out.close_reason if eve_out is not None else None,
             )
+            if eve_out is not None and eve_out.execute:
+                eve_dossier.record_execution(eve_out.dossier, before=eve_before, result=result)
             if result is not None:
                 touched.append(result)
             if futures_crypto.is_dedicated(profile):
@@ -635,6 +680,11 @@ def sync_auto_watchlist(session: Session, rows: Sequence) -> list[PaperPosition]
             paper_counters.record_funnel(session, funnel_portfolio, acc, tf)
 
     shadow_broker.mark_shadows(session, marks=marks)
+    if eve_dossier.enabled():
+        try:
+            eve_dossier.fill_outcomes(session, bars_by_key)
+        except Exception:
+            _log.exception("eve outcome fill failed")
 
     for portfolio in portfolios:
         paper_broker.snapshot_equity(session, portfolio, marks=marks)

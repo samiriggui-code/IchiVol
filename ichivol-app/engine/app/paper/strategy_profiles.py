@@ -302,8 +302,35 @@ FUTURES_CRYPTO_V1 = _with(
     financing_bps_per_day_short_default=0.0,
 )
 
+# 2026-10-16 (user decision, Ève Intelligence V1): Ève trades her own paper accounts. The engine computes and
+# presents its calculations, Ève decides (open / close / hold / abstain), the paper broker executes what the Risk
+# Kernel and kill switch allow. Same universe, timeframe, sizing and costs as the baseline, which stays the
+# "engine alone" reference. One account per judgment source so they can be compared on the same bars
+# (app/jev/dossier.py, Dossier IchiVol). When Ève cannot decide she abstains or keeps what she holds.
+EVE_JEV_CODE = "EVE_JEV_V1"
+EVE_JEVOS_CODE = "EVE_JEVOS_V1"
+EVE_JEV_V1 = _with(
+    code=EVE_JEV_CODE,
+    label="Ève autonome - JEV hébergé (TypeSafe), jevos4 en secours",
+    eve_source="jev",
+    # Ève decides every exit herself (hold / close); the baseline's Ichimoku direction-change exit would bypass her.
+    exit_mode="eve",
+    exit=["eve_close", "stop_hit", "take_profit_hit", "manual_close"],
+)
+EVE_JEVOS_V1 = _with(
+    code=EVE_JEVOS_CODE,
+    label="Ève autonome - jevos4 local",
+    eve_source="jevos",
+    # Ève decides every exit herself (hold / close); the baseline's Ichimoku direction-change exit would bypass her.
+    exit_mode="eve",
+    exit=["eve_close", "stop_hit", "take_profit_hit", "manual_close"],
+)
+EVE_CODES: tuple[str, ...] = (EVE_JEV_CODE, EVE_JEVOS_CODE)
+
 EXPERIMENTAL_PROFILES: dict[str, dict[str, Any]] = {
     ICHIVOL_SESSIONS_V1["code"]: ICHIVOL_SESSIONS_V1,
+    EVE_JEV_V1["code"]: EVE_JEV_V1,
+    EVE_JEVOS_V1["code"]: EVE_JEVOS_V1,
     FUTURES_CRYPTO_V1["code"]: FUTURES_CRYPTO_V1,
     STRUCTURE_MVPP["code"]: STRUCTURE_MVPP,
     STRUCTURE_TRENDLN["code"]: STRUCTURE_TRENDLN,
@@ -376,7 +403,8 @@ SINGLE_PORTFOLIO_MODE = True
 # 2026-10-06 (user decision): the market-session schedule runs as a separate account next to the baseline, so
 # the hourly baseline stays the reference it is compared against.
 # 2026-10-07: the Futures & Crypto account joins the same loop, on its own three markets only.
-PARALLEL_SYNCED_CODES: tuple[str, ...] = (SESSIONS_CODE, FUTURES_CRYPTO_CODE)
+# 2026-10-16: Ève's own accounts (EVE_CODES) join the loop; the baseline is unchanged and stays the reference.
+PARALLEL_SYNCED_CODES: tuple[str, ...] = (SESSIONS_CODE, FUTURES_CRYPTO_CODE, *EVE_CODES)
 
 
 def syncable_profile_codes() -> list[str]:

@@ -3591,6 +3591,232 @@
         ]
       }
     },
+    "/api/engine/eve/calibration": {
+      "get": {
+        "operationId": "get_eve_calibration_api_engine_eve_calibration_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "portfolio",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Portfolio"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Eve Calibration Api Engine Eve Calibration Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Eve Calibration",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
+    "/api/engine/eve/dossiers": {
+      "get": {
+        "operationId": "list_eve_dossiers_api_engine_eve_dossiers_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "portfolio",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Portfolio"
+            }
+          },
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Symbol"
+            }
+          },
+          {
+            "in": "query",
+            "name": "decided_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(eve|eve_indecise|observation)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Decided By"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Eve Dossiers Api Engine Eve Dossiers Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Eve Dossiers",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
+    "/api/engine/eve/dossiers/{dossier_id}": {
+      "get": {
+        "operationId": "get_eve_dossier_api_engine_eve_dossiers__dossier_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dossier_id",
+            "required": true,
+            "schema": {
+              "title": "Dossier Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Eve Dossier Api Engine Eve Dossiers  Dossier Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Eve Dossier",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
+    "/api/engine/eve/status": {
+      "get": {
+        "operationId": "get_eve_status_api_engine_eve_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Eve Status Api Engine Eve Status Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Eve Status",
+        "tags": [
+          "eve"
+        ]
+      }
+    },
     "/api/engine/event-study/{symbol}": {
       "get": {
         "description": "Strategy Lab Phase 1 \u2014 Event Study.\n\nFor each entry signal of the named backtest variant, measure forward\nATR-normalized returns at +N candles, MFE/MAE, and % hitting +R before -R.\nNo capital, fees, or sizing. Complements `/backtest/{symbol}` (full\nsimulator) without replacing it.",

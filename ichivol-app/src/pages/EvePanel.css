@@ -1,0 +1,54 @@
+/* Fiche Ève — rendue dans un portal (hors .agents-page) : palette locale. */
+.eve-panel {
+  --eve-line: rgba(125, 130, 136, 0.35);
+  --eve-muted: #7d8288;
+  --eve-blue: #1a7df5;
+  --eve-green: #0b8f83;
+  --eve-red: #c8412f;
+  --eve-soft: rgba(125, 130, 136, 0.12);
+  color: inherit;
+  font: 12px/1.5 Manrope, Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.eve-panel h3 { font-size: 13px; margin: 0 0 6px; }
+.eve-panel h4 { font-size: 12px; margin: 12px 0 4px; }
+.eve-panel p { margin: 4px 0; }
+.eve-panel button,
+.eve-panel select {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--eve-line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.eve-block { border: 1px solid var(--eve-line); border-radius: 10px; padding: 10px 12px; }
+.eve-muted, .eve-sub { color: var(--eve-muted); }
+.eve-sub { display: block; font-size: 10px; }
+.eve-row-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.eve-dl { display: grid; grid-template-columns: minmax(110px, 38%) 1fr; gap: 4px 10px; margin: 6px 0; }
+.eve-dl dt { color: var(--eve-muted); }
+.eve-dl dd { margin: 0; }
+.eve-contents { display: contents; }
+.eve-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.eve-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.eve-table th, .eve-table td { text-align: left; padding: 6px 6px; border-bottom: 1px solid var(--eve-line); vertical-align: top; }
+.eve-table thead th { color: var(--eve-muted); font-weight: 600; white-space: nowrap; }
+.eve-table th[scope='row'] { font-weight: 600; width: 40%; }
+.eve-table td.up { color: var(--eve-green); }
+.eve-table td.down { color: var(--eve-red); }
+.eve-list tbody tr { cursor: pointer; }
+.eve-list tbody tr:hover, .eve-list tbody tr:focus { background: var(--eve-soft); outline: none; }
+.eve-reasons { margin: 4px 0; padding-left: 18px; }
+.eve-pre { max-height: 320px; overflow: auto; font-size: 10px; background: var(--eve-soft); padding: 8px; border-radius: 6px; white-space: pre-wrap; word-break: break-word; }
+.eve-filter { display: flex; justify-content: flex-end; }
+.eve-cal { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+.eve-cal .eve-dl { flex: 1 1 200px; }
+.eve-rel { width: 260px; max-width: 100%; height: auto; }
+.eve-rel text { font-size: 9px; fill: var(--eve-muted); }
+.eve-rel-axis { stroke: var(--eve-line); }
+.eve-rel-diag { stroke: var(--eve-muted); stroke-dasharray: 3 3; }
+.eve-rel-dot { fill: var(--eve-blue); fill-opacity: 0.75; }
