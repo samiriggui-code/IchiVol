@@ -1,914 +1,813 @@
 /**
- * Paramètres — port littéral de design-reference/ichivol-workspace `parametres()` + page-head.
- * Classes HTML = maquette. Préférences locales + écritures engine (patchSettings / push).
+ * Paramètres — une page qui s'explique d'elle-même.
+ *
+ * Sections : Trading automatique · Ève et JEV · Modèles d'IA · Alertes · Graphiques · Connexions et état.
+ * Sources : `/api/settings` (compte), `/api/engine/eve/settings/*` (moteur), portefeuilles paper (`loadAllBooks`),
+ * Web Push (`pushAlerts`), sondes de connexion (`useLlmStatus`). Argent fictif uniquement.
  */
 
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { type PaperOverview } from '../lib/paper'
-import { loadAllBooks } from '../lib/allBooks'
-import { disablePushAlerts, enablePushAlerts } from '../lib/pushAlerts'
-import {
-  DEFAULT_MODELS,
-  getSettings,
-  modelsForProvider,
-  patchSettings,
-  testLlm,
-  type AppSettings,
-  type LlmProvider,
-  type LlmTestResult,
-} from '../lib/settings'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { loadAllBooks, type Book } from '../lib/allBooks'
+import { detectPushSupport, disablePushAlerts, enablePushAlerts } from '../lib/pushAlerts'
+import { getSettings, patchSettings, type AppSettings } from '../lib/settings'
 import {
   getEveSettingsSchema,
   getEveSettingsValues,
-  patchEveSettingsValues,
-  sortedSchemaGroups,
-  type EveSettingItem,
   type EveSettingGroup,
 } from '../lib/eveSettings'
 import { invalidateEngineThresholdsCache } from '../lib/engineThresholds'
-import { llmStatusLabel, useLlmStatus } from '../lib/llmStatus'
-import type { LlmConnection } from '../lib/settings'
+import { useLlmStatus, type JevProbeStatus } from '../lib/llmStatus'
+import { DEFAULT_ICHI, DEFAULT_VOL } from '../lib/types'
+import { AiModelsSettings, connText } from './settings/AiModelsSettings'
+import { EveSettings } from './settings/EveSettings'
 import './SettingsPage.css'
 
-type SettingsTab =
-  | 'Marché et univers'
-  | 'LLM'
-  | 'Ève / JEV'
-  | 'Alertes'
-  | 'Limites de risque'
-  | 'Connexions'
+type SectionId = 'auto' | 'eve' | 'ia' | 'alertes' | 'graphiques' | 'connexions'
 
-type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
-
-const TABS: SettingsTab[] = [
-  'Marché et univers',
-  'LLM',
-  'Ève / JEV',
-  'Alertes',
-  'Limites de risque',
-  'Connexions',
+const SECTIONS: Array<{ id: SectionId; label: string; sub: string }> = [
+  { id: 'auto', label: 'Trading automatique', sub: 'Pilote d’Ève, portefeuilles, limites' },
+  { id: 'eve', label: 'Ève et JEV', sub: 'Modes, seuils, actualités' },
+  { id: 'ia', label: 'Modèles d’IA', sub: 'Clé et modèle du Copilot' },
+  { id: 'alertes', label: 'Alertes', sub: 'Notifications sur vos positions' },
+  { id: 'graphiques', label: 'Graphiques', sub: 'Ichimoku et volume' },
+  { id: 'connexions', label: 'Connexions et état', sub: 'Ce qui répond, ce qui manque' },
 ]
 
-const LS_KEY = 'ichivol-settings'
+type EveValue = string | number | boolean
+type Tone = 'green' | 'amber' | 'red' | 'gray' | ''
 
-const PROVIDERS: { id: LlmProvider; label: string; keyHint: string }[] = [
-  { id: 'openrouter', label: 'OpenRouter', keyHint: 'sk-or-…' },
-  { id: 'anthropic', label: 'Anthropic', keyHint: 'sk-ant-…' },
-  { id: 'openai', label: 'OpenAI', keyHint: 'sk-…' },
-]
-
-function providerLabel(id: LlmProvider): string {
-  return PROVIDERS.find((p) => p.id === id)?.label ?? id
+function Tag({ tone = '', children }: { tone?: Tone; children: ReactNode }) {
+  return <span className={`tag ${tone}`.trim()}>{children}</span>
 }
 
-function sourceLabel(source: LlmConnection['keySource']): string {
-  switch (source) {
-    case 'ui':
-      return 'Clé enregistrée'
-    case 'env':
-      return '.env serveur'
-    case 'both':
-      return 'UI + .env'
-    case 'none':
-      return '—'
+function pct(v: number | null | undefined, digits = 1): string {
+  if (v == null || !Number.isFinite(v)) return '—'
+  return `${(v * 100).toLocaleString('fr-FR', { maximumFractionDigits: digits })} %`
+}
+
+function errText(err: unknown): string {
+  return err instanceof Error ? err.message : String(err)
+}
+
+/* ------------------------------------------------------------------ */
+/* Trading automatique                                                  */
+/* ------------------------------------------------------------------ */
+
+function Meter({ value, max, label }: { value: number | null | undefined; max: number | null | undefined; label: string }) {
+  const ratio = value != null && max ? Math.min(1, Math.max(0, value / max)) : 0
+  const tone = ratio >= 1 ? 'red' : ratio >= 0.8 ? 'amber' : 'green'
+  return (
+    <div className="meter" role="img" aria-label={label}>
+      <span className={tone} style={{ width: `${Math.round(ratio * 100)}%` }} />
+    </div>
+  )
+}
+
+function AutoTradingSection({
+  autonomy,
+  books,
+  booksError,
+}: {
+  autonomy: boolean | null
+  books: Book[] | null
+  booksError: string | null
+}) {
+  return (
+    <>
+      <section className="card">
+        <div className="card-head">
+          <h2>Pilote automatique d’Ève</h2>
+          {autonomy == null ? (
+            <Tag tone="gray">État inconnu</Tag>
+          ) : autonomy ? (
+            <Tag tone="green">Actif</Tag>
+          ) : (
+            <Tag tone="amber">Arrêté</Tag>
+          )}
+        </div>
+        <div className="card-body">
+          <p className="state-line">
+            {autonomy == null
+              ? 'Le moteur ne répond pas : impossible de savoir si Ève trade seule en ce moment.'
+              : autonomy
+                ? 'Ève décide seule des ouvertures et fermetures sur tous les portefeuilles actifs ci-dessous.'
+                : 'Ève ne trade pas seule. Chaque portefeuille applique uniquement sa propre méthode, sans l’avis d’Ève.'}
+          </p>
+          <ol className="steps">
+            <li>
+              <b>Le moteur repère un signal</b> à la clôture d’une bougie, selon la méthode du portefeuille.
+            </li>
+            <li>
+              <b>Ève accepte ou refuse</b> après l’avis de ses modes et de JEV. Dans le doute, elle ne fait rien.
+            </li>
+            <li>
+              <b>Le garde-fou de risque (Risk Kernel) a le dernier mot</b> : il bloque tout ordre qui dépasse les
+              limites du portefeuille. Les stops et objectifs restent appliqués dans tous les cas.
+            </li>
+          </ol>
+          <p className="hint">
+            Ce pilote s’allume et s’éteint uniquement sur le serveur du moteur, pas depuis le navigateur : un clic
+            ne doit jamais pouvoir le lancer par erreur. Tout se passe en argent fictif.
+          </p>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <h2>Portefeuilles et limites de risque</h2>
+          {books ? <small>{books.length} actif{books.length > 1 ? 's' : ''}</small> : null}
+        </div>
+        <div className="card-body">
+          <p className="lede">
+            Les portefeuilles fictifs suivis par le moteur, et ce que le garde-fou de risque leur autorise. Le{' '}
+            <b>risque engagé</b> est ce que vous perdriez si tous les stops étaient touchés, en part du capital.
+            Ces limites viennent de la méthode de chaque portefeuille et ne se modifient pas ici.
+          </p>
+          {booksError ? <p className="notice err">Portefeuilles indisponibles : {booksError}</p> : null}
+          {books == null && !booksError ? <p className="hint">Chargement…</p> : null}
+          {books && books.length === 0 ? <p className="hint">Aucun portefeuille actif.</p> : null}
+          <div className="books">
+            {books?.map((b) => {
+              const r = b.overview.risk
+              const blocked = b.row.kill_switch_armed || b.row.daily_loss_locked
+              const refusals = r?.recent_refusals?.length ?? 0
+              return (
+                <article className="book" key={b.code}>
+                  <header>
+                    <h3>{b.label}</h3>
+                    {b.row.kill_switch_armed ? (
+                      <Tag tone="red">Arrêt d’urgence</Tag>
+                    ) : b.row.daily_loss_locked ? (
+                      <Tag tone="red">Perte du jour atteinte</Tag>
+                    ) : (
+                      <Tag tone="green">Ouvert aux entrées</Tag>
+                    )}
+                  </header>
+                  {r ? (
+                    <>
+                      <div className="limit">
+                        <div className="limit-head">
+                          <span>Risque engagé</span>
+                          <b>
+                            {pct(r.open_risk_pct)} <small>sur {pct(r.max_open_risk_pct)} max</small>
+                          </b>
+                        </div>
+                        <Meter
+                          value={r.open_risk_pct}
+                          max={r.max_open_risk_pct}
+                          label={`Risque engagé ${pct(r.open_risk_pct)} sur ${pct(r.max_open_risk_pct)}`}
+                        />
+                      </div>
+                      <div className="limit">
+                        <div className="limit-head">
+                          <span>Positions ouvertes</span>
+                          <b>
+                            {r.open_positions} <small>sur {r.max_open_positions} max</small>
+                          </b>
+                        </div>
+                        <Meter
+                          value={r.open_positions}
+                          max={r.max_open_positions}
+                          label={`${r.open_positions} positions sur ${r.max_open_positions}`}
+                        />
+                      </div>
+                      <p className="book-foot">
+                        {blocked
+                          ? 'Aucune nouvelle position tant que le verrou est en place ; les positions ouvertes restent gérées.'
+                          : refusals > 0
+                            ? `${refusals} ordre${refusals > 1 ? 's' : ''} refusé${refusals > 1 ? 's' : ''} récemment par le garde-fou.`
+                            : 'Aucun refus récent du garde-fou.'}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="book-foot">Limites non communiquées par le moteur pour ce portefeuille.</p>
+                  )}
+                </article>
+              )
+            })}
+          </div>
+          <p className="hint">
+            L’arrêt d’urgence et le détail des refus se gèrent depuis le <Link to="/app/portefeuille">Portefeuille</Link>.
+          </p>
+        </div>
+      </section>
+    </>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Alertes                                                              */
+/* ------------------------------------------------------------------ */
+
+type AlertPrefs = NonNullable<AppSettings['pushAlertPrefs']>
+
+const DEFAULT_ALERTS: AlertPrefs = {
+  enabled: false,
+  targetStop: true,
+  accel: true,
+  directionFlip: true,
+  nearPct: 0.2,
+  cooldownMin: 30,
+}
+
+async function deviceSubscribed(): Promise<boolean> {
+  try {
+    if (!('serviceWorker' in navigator)) return false
+    const reg = await navigator.serviceWorker.getRegistration()
+    return Boolean(await reg?.pushManager.getSubscription())
+  } catch {
+    return false
+  }
+}
+
+function AlertsSection({ engine, onSaved }: { engine: AppSettings | null; onSaved: (s: AppSettings) => void }) {
+  const saved = { ...DEFAULT_ALERTS, ...(engine?.pushAlertPrefs ?? {}) }
+  const [prefs, setPrefs] = useState<AlertPrefs>(saved)
+  const [nearText, setNearText] = useState(String(Math.round(saved.nearPct * 100)))
+  const [coolText, setCoolText] = useState(String(saved.cooldownMin))
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [device, setDevice] = useState<boolean | null>(null)
+  const [deviceBusy, setDeviceBusy] = useState(false)
+  const [deviceMsg, setDeviceMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const support = detectPushSupport()
+
+  useEffect(() => {
+    if (!engine) return
+    const s = { ...DEFAULT_ALERTS, ...(engine.pushAlertPrefs ?? {}) }
+    setPrefs(s)
+    setNearText(String(Math.round(s.nearPct * 100)))
+    setCoolText(String(s.cooldownMin))
+  }, [engine])
+
+  useEffect(() => {
+    void deviceSubscribed().then(setDevice)
+  }, [])
+
+  const near = Number(nearText)
+  const cool = Number(coolText)
+  const nearOk = Number.isFinite(near) && near >= 1 && near <= 100
+  const coolOk = Number.isFinite(cool) && cool >= 1 && cool <= 1440
+
+  async function save() {
+    if (!engine || !nearOk || !coolOk) return
+    setBusy(true)
+    setMsg(null)
+    try {
+      const updated = await patchSettings({
+        pushAlertPrefs: { ...prefs, nearPct: near / 100, cooldownMin: Math.floor(cool) },
+      })
+      onSaved(updated)
+      setMsg({ ok: true, text: 'Préférences enregistrées.' })
+    } catch (err: unknown) {
+      setMsg({ ok: false, text: errText(err) })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const kinds: Array<[keyof Pick<AlertPrefs, 'targetStop' | 'accel' | 'directionFlip'>, string, string]> = [
+    ['targetStop', 'Objectif ou stop proche', 'Quand le prix a parcouru l’essentiel du chemin vers l’objectif ou le stop.'],
+    ['accel', 'Accélération confirmée', 'Volume nettement au-dessus de la normale et cassure dans le sens de votre position.'],
+    ['directionFlip', 'Tendance qui se retourne', 'Quand la lecture Ichimoku passe dans le sens opposé à votre position.'],
+  ]
+
+  return (
+    <>
+      <section className="card">
+        <div className="card-head">
+          <h2>Alertes sur vos positions</h2>
+          <Tag tone={saved.enabled ? 'green' : 'gray'}>{saved.enabled ? 'Activées' : 'Désactivées'}</Tag>
+        </div>
+        <div className="card-body">
+          <p className="lede">
+            IchiVol surveille les positions fictives que vous avez confirmées vous-même et vous prévient dans
+            l’application (et par notification si cet appareil est abonné). Ce sont des informations : aucune alerte
+            ne passe d’ordre.
+          </p>
+          {!engine ? <p className="notice err">Serveur IchiVol injoignable : préférences non modifiables.</p> : null}
+          <label className="checkrow strong">
+            <span className="check-copy">
+              Recevoir les alertes
+              <small>Interrupteur général. Désactivé, aucune alerte n’est envoyée, quels que soient les choix dessous.</small>
+            </span>
+            <span className="switch">
+              <input
+                type="checkbox"
+                checked={prefs.enabled}
+                disabled={!engine}
+                onChange={(e) => setPrefs((p) => ({ ...p, enabled: e.target.checked }))}
+              />
+              <span aria-hidden="true" />
+            </span>
+          </label>
+          <div className={prefs.enabled ? '' : 'dimmed'}>
+            {kinds.map(([key, label, help]) => (
+              <label className="checkrow" key={key}>
+                <span className="check-copy">
+                  {label}
+                  <small>{help}</small>
+                </span>
+                <span className="switch">
+                  <input
+                    type="checkbox"
+                    checked={prefs[key]}
+                    disabled={!engine}
+                    onChange={(e) => setPrefs((p) => ({ ...p, [key]: e.target.checked }))}
+                  />
+                  <span aria-hidden="true" />
+                </span>
+              </label>
+            ))}
+            <div className="field-row two">
+              <div className="field">
+                <label htmlFor="nearPct">Prévenir quand il reste</label>
+                <div className={`num-input${nearOk ? '' : ' bad'}`}>
+                  <input
+                    id="nearPct"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={100}
+                    step={1}
+                    value={nearText}
+                    disabled={!engine}
+                    onChange={(e) => setNearText(e.target.value)}
+                  />
+                  <span>%</span>
+                </div>
+                <small>
+                  … de la distance vers l’objectif ou le stop. Par défaut : 20 %. Plus haut = prévenu plus tôt, plus
+                  souvent.
+                </small>
+              </div>
+              <div className="field">
+                <label htmlFor="cooldown">Délai entre deux alertes identiques</label>
+                <div className={`num-input${coolOk ? '' : ' bad'}`}>
+                  <input
+                    id="cooldown"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={1440}
+                    step={1}
+                    value={coolText}
+                    disabled={!engine}
+                    onChange={(e) => setCoolText(e.target.value)}
+                  />
+                  <span>min</span>
+                </div>
+                <small>Évite d’être prévenu en boucle pour la même position. Par défaut : 30 min.</small>
+              </div>
+            </div>
+          </div>
+          <div className="btn-row">
+            <button type="button" className="primary" disabled={!engine || busy || !nearOk || !coolOk} onClick={() => void save()}>
+              {busy ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          </div>
+          {msg ? <p className={`notice ${msg.ok ? 'ok' : 'err'}`}>{msg.text}</p> : null}
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <h2>Notifications sur cet appareil</h2>
+          {device == null ? null : <Tag tone={device ? 'green' : 'gray'}>{device ? 'Abonné' : 'Non abonné'}</Tag>}
+        </div>
+        <div className="card-body">
+          <p className="lede">
+            Pour recevoir les alertes même quand IchiVol est fermé. À faire sur chaque téléphone ou ordinateur.
+          </p>
+          {!support.ok ? <p className="notice err">{support.message}</p> : null}
+          <div className="btn-row">
+            <button
+              type="button"
+              className="suggestion"
+              disabled={deviceBusy || !support.ok}
+              onClick={() => {
+                setDeviceBusy(true)
+                void enablePushAlerts().then(async (r) => {
+                  setDeviceBusy(false)
+                  setDevice(await deviceSubscribed())
+                  setDeviceMsg(
+                    r.ok ? { ok: true, text: 'Cet appareil recevra les notifications.' } : { ok: false, text: r.message },
+                  )
+                })
+              }}
+            >
+              {deviceBusy ? 'Activation…' : 'Activer sur cet appareil'}
+            </button>
+            <button
+              type="button"
+              className="suggestion"
+              disabled={deviceBusy || !device}
+              onClick={() => {
+                setDeviceBusy(true)
+                void disablePushAlerts().then(async () => {
+                  setDeviceBusy(false)
+                  setDevice(await deviceSubscribed())
+                  setDeviceMsg({ ok: true, text: 'Cet appareil ne recevra plus de notifications.' })
+                })
+              }}
+            >
+              Désactiver sur cet appareil
+            </button>
+          </div>
+          {deviceMsg ? <p className={`notice ${deviceMsg.ok ? 'ok' : 'err'}`}>{deviceMsg.text}</p> : null}
+          {device && !saved.enabled ? (
+            <p className="hint">Cet appareil est abonné, mais l’interrupteur « Recevoir les alertes » est coupé.</p>
+          ) : null}
+        </div>
+      </section>
+    </>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Graphiques                                                           */
+/* ------------------------------------------------------------------ */
+
+function ChartsSection({ engine, onSaved }: { engine: AppSettings | null; onSaved: (s: AppSettings) => void }) {
+  const [vals, setVals] = useState({ tenkan: '9', kijun: '26', senkouB: '52', rvol: '1.5' })
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  useEffect(() => {
+    if (!engine) return
+    setVals({
+      tenkan: String(engine.ichimokuParams?.tenkan ?? DEFAULT_ICHI.tenkan),
+      kijun: String(engine.ichimokuParams?.kijun ?? DEFAULT_ICHI.kijun),
+      senkouB: String(engine.ichimokuParams?.senkouB ?? DEFAULT_ICHI.senkouB),
+      rvol: String(engine.volumeParams?.rvolConfirm ?? DEFAULT_VOL.rvolConfirm),
+    })
+  }, [engine])
+
+  const vol = { ...DEFAULT_VOL, ...(engine?.volumeParams ?? {}) }
+  const n = {
+    tenkan: Number(vals.tenkan),
+    kijun: Number(vals.kijun),
+    senkouB: Number(vals.senkouB),
+    rvol: Number(vals.rvol.replace(',', '.')),
+  }
+  const periodsOk = [n.tenkan, n.kijun, n.senkouB].every((x) => Number.isInteger(x) && x >= 1 && x <= 300)
+  // Le moteur exige seuil bas < seuil significatif < seuil fort.
+  const rvolOk = Number.isFinite(n.rvol) && n.rvol > vol.rvolLow && n.rvol < vol.rvolStrong
+
+  async function save() {
+    if (!engine || !periodsOk || !rvolOk) return
+    setBusy(true)
+    setMsg(null)
+    try {
+      const updated = await patchSettings({
+        ichimokuParams: { ...engine.ichimokuParams, tenkan: n.tenkan, kijun: n.kijun, senkouB: n.senkouB },
+        volumeParams: { ...engine.volumeParams, rvolConfirm: n.rvol, rvolSignificant: n.rvol },
+      })
+      onSaved(updated)
+      invalidateEngineThresholdsCache()
+      setMsg({ ok: true, text: 'Enregistré. Les graphiques et analyses utilisent ces valeurs dès le prochain chargement.' })
+    } catch (err: unknown) {
+      setMsg({ ok: false, text: errText(err) })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const periods: Array<[keyof typeof vals, string, number, string]> = [
+    ['tenkan', 'Ligne rapide (Tenkan)', DEFAULT_ICHI.tenkan, 'Réagit vite aux mouvements récents.'],
+    ['kijun', 'Ligne de référence (Kijun)', DEFAULT_ICHI.kijun, 'Équilibre de moyen terme.'],
+    ['senkouB', 'Bord lent du nuage (Senkou B)', DEFAULT_ICHI.senkouB, 'Support ou résistance de fond.'],
+  ]
+
+  return (
+    <section className="card">
+      <div className="card-head">
+        <h2>Ichimoku et volume</h2>
+      </div>
+      <div className="card-body">
+        <p className="lede">
+          Réglages de vos graphiques et des analyses que vous lancez vous-même (opportunités, tests de stratégie).
+          Ils ne changent pas les méthodes des portefeuilles ni les décisions automatiques d’Ève.
+        </p>
+        {!engine ? <p className="notice err">Serveur IchiVol injoignable : réglages non modifiables.</p> : null}
+        <h3 className="sub">Périodes Ichimoku (en bougies)</h3>
+        <div className="field-row">
+          {periods.map(([key, label, def, help]) => (
+            <div className="field" key={key}>
+              <label htmlFor={`ichi-${key}`}>{label}</label>
+              <input
+                id={`ichi-${key}`}
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={300}
+                step={1}
+                value={vals[key]}
+                disabled={!engine}
+                onChange={(e) => setVals((v) => ({ ...v, [key]: e.target.value }))}
+              />
+              <small>
+                {help} Par défaut : {def}.
+              </small>
+            </div>
+          ))}
+        </div>
+        <p className="hint">Périodes plus longues = lignes plus lisses, signaux plus rares et plus tardifs.</p>
+        {!periodsOk ? <p className="knob-bad">Chaque période doit être un nombre entier entre 1 et 300.</p> : null}
+
+        <h3 className="sub">Volume</h3>
+        <div className="field">
+          <label htmlFor="rvol">Volume « significatif » à partir de</label>
+          <div className={`num-input short${rvolOk ? '' : ' bad'}`}>
+            <input
+              id="rvol"
+              type="number"
+              inputMode="decimal"
+              min={vol.rvolLow}
+              max={vol.rvolStrong}
+              step={0.1}
+              value={vals.rvol}
+              disabled={!engine}
+              onChange={(e) => setVals((v) => ({ ...v, rvol: e.target.value }))}
+            />
+            <span>× la normale</span>
+          </div>
+          <small>
+            Un volume est jugé significatif quand il dépasse ce multiple du volume habituel. Par défaut : 1,5×. Plus haut =
+            moins de signaux, mais plus solides. Doit rester entre{' '}
+            {vol.rvolLow.toLocaleString('fr-FR')}× (volume faible) et {vol.rvolStrong.toLocaleString('fr-FR')}× (volume fort).
+          </small>
+        </div>
+        <div className="btn-row">
+          <button type="button" className="primary" disabled={!engine || busy || !periodsOk || !rvolOk} onClick={() => void save()}>
+            {busy ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+        </div>
+        {msg ? <p className={`notice ${msg.ok ? 'ok' : 'err'}`}>{msg.text}</p> : null}
+      </div>
+    </section>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Connexions et état                                                   */
+/* ------------------------------------------------------------------ */
+
+function jevText(p: JevProbeStatus): { text: string; tone: Tone } {
+  switch (p.state) {
+    case 'ok':
+      return { text: p.latencyMs != null ? `Joignable · ${p.latencyMs} ms` : 'Joignable', tone: 'green' }
+    case 'idle':
+    case 'checking':
+      return { text: 'Vérification…', tone: 'amber' }
+    case 'no_key':
+      return { text: 'Non configuré', tone: 'gray' }
+    case 'disabled':
+      return { text: 'Désactivé', tone: 'gray' }
+    case 'unreachable':
+      return { text: 'Injoignable', tone: 'red' }
+    case 'error':
+      return { text: 'Erreur', tone: 'red' }
     default: {
-      const _exhaustive: never = source
+      const _exhaustive: never = p.state
       return _exhaustive
     }
   }
 }
 
-function badge(text: string, tone: BadgeTone = ''): ReactNode {
-  let inferred = tone
-  if (!inferred) {
-    inferred = /PASSE|ACCEPTÉ|OUVERTE|VALIDÉ/i.test(text)
-      ? 'green'
-      : /REFUS|BLOQU|ERREUR/i.test(text)
-        ? 'red'
-        : /PRUDENCE|ARMED|WATCH/i.test(text)
-          ? 'amber'
-          : ''
+function ConnectionsSection({
+  engine,
+  engineHealth,
+  onRecheck,
+  onSaved,
+}: {
+  engine: AppSettings | null
+  engineHealth: boolean | null
+  onRecheck: () => void
+  onSaved: (s: AppSettings) => void
+}) {
+  const llm = useLlmStatus()
+  const [tdKey, setTdKey] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function saveTd(clear: boolean) {
+    setBusy(true)
+    setMsg(null)
+    try {
+      const updated = await patchSettings({ twelveDataApiKey: clear ? '' : tdKey.trim() })
+      onSaved(updated)
+      setTdKey('')
+      setMsg({ ok: true, text: clear ? 'Clé supprimée.' : 'Clé enregistrée.' })
+    } catch (err: unknown) {
+      setMsg({ ok: false, text: errText(err) })
+    } finally {
+      setBusy(false)
+    }
   }
-  return <span className={`tag ${inferred}`.trim()}>{text}</span>
+
+  const chat = connText(llm.state)
+  const rows: Array<{ name: string; help: string; status: { text: string; tone: Tone } }> = [
+    {
+      name: 'Moteur de trading',
+      help: 'Calcule les signaux, tient les portefeuilles fictifs, fait tourner Ève.',
+      status:
+        engineHealth == null
+          ? { text: 'Vérification…', tone: 'amber' }
+          : engineHealth
+            ? { text: 'Joignable', tone: 'green' }
+            : { text: 'Injoignable', tone: 'red' },
+    },
+    {
+      name: 'Serveur IchiVol',
+      help: 'Votre compte, vos réglages et vos alertes.',
+      status: engine ? { text: 'Joignable', tone: 'green' } : { text: 'Injoignable', tone: 'red' },
+    },
+    { name: 'JEV · Cloud', help: 'Service principal du modèle de jugement d’Ève.', status: jevText(llm.typesafe) },
+    { name: 'JEV · Local', help: 'Secours quand les crédits du service Cloud sont épuisés.', status: jevText(llm.jevos) },
+    { name: 'Copilot', help: 'Le chat d’Ève (voir « Modèles d’IA »).', status: { text: chat.text, tone: chat.tone } },
+    {
+      name: 'Cours crypto (Binance, Bybit, OKX)',
+      help: 'Données publiques, aucune clé nécessaire.',
+      status: engine ? { text: 'Sans clé', tone: 'green' } : { text: '—', tone: 'gray' },
+    },
+    {
+      name: 'Courtier réel',
+      help: 'IchiVol ne passe jamais d’ordre réel. Aucun courtier n’est branché, et ce n’est pas prévu.',
+      status: { text: 'Aucun · argent fictif', tone: 'gray' },
+    },
+  ]
+
+  return (
+    <>
+      <section className="card">
+        <div className="card-head">
+          <h2>État des services</h2>
+          <button type="button" className="suggestion" onClick={onRecheck} disabled={llm.state === 'checking'}>
+            {llm.state === 'checking' ? 'Vérification…' : 'Revérifier'}
+          </button>
+        </div>
+        <div className="card-body">
+          <ul className="rows">
+            {rows.map((r) => (
+              <li key={r.name}>
+                <div className="row-main">
+                  <b>{r.name}</b>
+                  <Tag tone={r.status.tone}>{r.status.text}</Tag>
+                </div>
+                <p className="row-sub">{r.help}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <h2>Clé Twelve Data</h2>
+          <Tag tone={engine?.twelveDataApiKeySet ? 'green' : 'gray'}>
+            {engine?.twelveDataApiKeySet ? 'Clé enregistrée' : 'Aucune clé ici'}
+          </Tag>
+        </div>
+        <div className="card-body">
+          <p className="lede">
+            Facultatif. Sert uniquement aux cours des actions Apple et Tesla ; forex, métaux, indices et énergie sont déjà
+            gratuits. Sans clé ici, IchiVol utilise celle du serveur.
+          </p>
+          <div className="field">
+            <label htmlFor="tdKey">{engine?.twelveDataApiKeySet ? 'Remplacer la clé' : 'Votre clé'}</label>
+            <input
+              id="tdKey"
+              type="password"
+              autoComplete="off"
+              value={tdKey}
+              disabled={!engine}
+              onChange={(e) => setTdKey(e.target.value)}
+            />
+            <small>Chiffrée sur le serveur, jamais réaffichée.</small>
+          </div>
+          <div className="btn-row">
+            <button type="button" className="primary" disabled={!engine || busy || !tdKey.trim()} onClick={() => void saveTd(false)}>
+              Enregistrer
+            </button>
+            {engine?.twelveDataApiKeySet ? (
+              <button type="button" className="suggestion" disabled={busy} onClick={() => void saveTd(true)}>
+                Supprimer la clé
+              </button>
+            ) : null}
+          </div>
+          {msg ? <p className={`notice ${msg.ok ? 'ok' : 'err'}`}>{msg.text}</p> : null}
+        </div>
+      </section>
+    </>
+  )
 }
 
-function loadLocal(): Record<string, string> {
-  try {
-    return JSON.parse(localStorage.getItem(LS_KEY) || '{}') as Record<string, string>
-  } catch {
-    return {}
-  }
-}
+/* ------------------------------------------------------------------ */
+/* Page                                                                 */
+/* ------------------------------------------------------------------ */
 
 export function SettingsPage() {
-  const llmLive = useLlmStatus()
-  const [settingsTab, setSettingsTab] = useState<SettingsTab>('LLM')
-  const [local, setLocal] = useState(loadLocal)
+  const llm = useLlmStatus()
+  const [params, setParams] = useSearchParams()
+  const requested = params.get('section')
+  const section: SectionId = SECTIONS.some((s) => s.id === requested) ? (requested as SectionId) : 'auto'
+
   const [engine, setEngine] = useState<AppSettings | null>(null)
-  const [saved, setSaved] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [pushBusy, setPushBusy] = useState(false)
-  const [pushMsg, setPushMsg] = useState<string | null>(null)
-  const [llmProvider, setLlmProvider] = useState<LlmProvider>('openrouter')
-  const [llmModel, setLlmModel] = useState(DEFAULT_MODELS.openrouter)
-  const [llmApiKey, setLlmApiKey] = useState('')
-  const [clearKey, setClearKey] = useState(false)
-  const [testing, setTesting] = useState(false)
-  const [testResult, setTestResult] = useState<LlmTestResult | null>(null)
-  const [rowTests, setRowTests] = useState<Partial<Record<LlmProvider, LlmTestResult>>>({})
-  const [rowTesting, setRowTesting] = useState<LlmProvider | null>(null)
-  const [rvol, setRvol] = useState('1.5')
-  const [tenkan, setTenkan] = useState('9')
-  const [kijun, setKijun] = useState('26')
-  const [senkouB, setSenkouB] = useState('52')
-  const [sources, setSources] = useState<string[]>(['binance'])
-  const [alertPrefs, setAlertPrefs] = useState({
-    targetStop: true,
-    accel: true,
-    directionFlip: true,
-  })
-  /** Plafonds de risque de chaque portefeuille paper actif. */
-  const [bookRisks, setBookRisks] = useState<Array<{ code: string; label: string; risk: PaperOverview['risk'] | null }>>([])
+  const [books, setBooks] = useState<Book[] | null>(null)
+  const [booksError, setBooksError] = useState<string | null>(null)
   const [eveSchema, setEveSchema] = useState<Record<string, EveSettingGroup> | null>(null)
-  const [eveValues, setEveValues] = useState<Record<string, string | number | boolean>>({})
-  const [eveDraft, setEveDraft] = useState<Record<string, string | number | boolean>>({})
-  const [eveAdvanced, setEveAdvanced] = useState(false)
-  const [eveLoaded, setEveLoaded] = useState(false)
+  const [eveValues, setEveValues] = useState<Record<string, EveValue>>({})
+  const [eveError, setEveError] = useState<string | null>(null)
+  const [engineHealth, setEngineHealth] = useState<boolean | null>(null)
+
+  const checkHealth = useCallback(() => {
+    setEngineHealth(null)
+    fetch('/api/engine/health', { credentials: 'include' })
+      .then(async (res) => {
+        const j = (await res.json().catch(() => null)) as { status?: string } | null
+        setEngineHealth(res.ok && j?.status === 'ok')
+      })
+      .catch(() => setEngineHealth(false))
+  }, [])
 
   useEffect(() => {
     getSettings()
-      .then((s) => {
-        setEngine(s)
-        setLlmProvider(s.llmProvider)
-        setLlmModel(s.llmModel || DEFAULT_MODELS[s.llmProvider])
-        setRvol(String(s.volumeParams?.rvolConfirm ?? 1.5))
-        setTenkan(String(s.ichimokuParams?.tenkan ?? 9))
-        setKijun(String(s.ichimokuParams?.kijun ?? 26))
-        setSenkouB(String(s.ichimokuParams?.senkouB ?? 52))
-        setSources(s.activeSources?.length ? s.activeSources : ['binance'])
-        setAlertPrefs({
-          targetStop: s.pushAlertPrefs?.targetStop ?? true,
-          accel: s.pushAlertPrefs?.accel ?? true,
-          directionFlip: s.pushAlertPrefs?.directionFlip ?? true,
-        })
-      })
+      .then(setEngine)
       .catch(() => setEngine(null))
     loadAllBooks()
-      .then((books) => setBookRisks(books.map((b) => ({ code: b.code, label: b.label, risk: b.overview.risk ?? null }))))
-      .catch(() => setBookRisks([]))
+      .then(setBooks)
+      .catch((err: unknown) => setBooksError(errText(err)))
     Promise.all([getEveSettingsSchema(), getEveSettingsValues()])
-      .then(([schemaRes, valuesRes]) => {
-        setEveSchema(schemaRes.schema)
-        setEveValues(valuesRes.values)
-        setEveDraft(valuesRes.values)
-        setEveLoaded(true)
+      .then(([s, v]) => {
+        setEveSchema(s.schema)
+        setEveValues(v.values)
       })
-      .catch(() => {
-        setEveSchema(null)
-        setEveLoaded(false)
-      })
-  }, [])
+      .catch((err: unknown) => setEveError(errText(err)))
+    checkHealth()
+  }, [checkHealth])
 
-  const onSave = useCallback(
-    async (e: FormEvent<HTMLFormElement>) => {
-      e.preventDefault()
-      const fd = new FormData(e.currentTarget)
-      const next: Record<string, string> = { ...local }
-      fd.forEach((v, k) => {
-        if (k === 'llmApiKey') return
-        if (typeof v === 'string') next[k] = v
-      })
-      for (let i = 0; i < 4; i++) {
-        next[`alert${i}`] = fd.get(`alert${i}`) ? '1' : '0'
-      }
-      try {
-        localStorage.setItem(LS_KEY, JSON.stringify(next))
-        setLocal(next)
-      } catch {
-        /* ignore quota */
-      }
-
-      setSaving(true)
-      setError(null)
-      setSaved(false)
-      try {
-        const patch: Parameters<typeof patchSettings>[0] = {}
-        if (settingsTab === 'Marché et univers' && engine) {
-          const rvolN = Number(rvol)
-          const tenkanN = Number(tenkan)
-          const kijunN = Number(kijun)
-          const senkouN = Number(senkouB)
-          if (!Number.isFinite(rvolN) || rvolN <= 0) {
-            throw new Error('Seuil RVOL invalide')
-          }
-          if (![tenkanN, kijunN, senkouN].every((n) => Number.isFinite(n) && n > 0)) {
-            throw new Error('Paramètres Ichimoku invalides')
-          }
-          if (sources.length === 0) throw new Error('Au moins une source de données')
-          patch.activeSources = sources
-          patch.volumeParams = {
-            ...engine.volumeParams,
-            rvolConfirm: rvolN,
-            rvolSignificant: rvolN,
-          }
-          patch.ichimokuParams = {
-            ...engine.ichimokuParams,
-            tenkan: tenkanN,
-            kijun: kijunN,
-            senkouB: senkouN,
-          }
-        }
-        if (settingsTab === 'LLM' && engine) {
-          patch.llmProvider = llmProvider
-          patch.llmModel = llmModel || DEFAULT_MODELS[llmProvider]
-          if (clearKey) patch.llmApiKey = ''
-          else if (llmApiKey.trim()) patch.llmApiKey = llmApiKey.trim()
-        }
-        if (settingsTab === 'Alertes') {
-          patch.pushAlertPrefs = {
-            enabled: engine?.pushAlertPrefs?.enabled ?? false,
-            targetStop: alertPrefs.targetStop,
-            accel: alertPrefs.accel,
-            directionFlip: alertPrefs.directionFlip,
-            nearPct: engine?.pushAlertPrefs?.nearPct ?? 0.5,
-            cooldownMin: engine?.pushAlertPrefs?.cooldownMin ?? 30,
-          }
-        }
-        if (settingsTab === 'Ève / JEV') {
-          if (!eveSchema) {
-            throw new Error('Schéma Ève / JEV indisponible (moteur ?)')
-          }
-          const writablePatch: Record<string, string | number | boolean> = {}
-          for (const [, group] of sortedSchemaGroups(eveSchema)) {
-            for (const item of group.items) {
-              if (!item.writable) continue
-              const next = eveDraft[item.key]
-              const prev = eveValues[item.key]
-              if (next !== undefined && next !== prev) {
-                writablePatch[item.key] = next
-              }
-            }
-          }
-          if (Object.keys(writablePatch).length === 0) {
-            setError('Aucun knob Ève / JEV modifié (ou champs en lecture seule).')
-            return
-          }
-          const saved = await patchEveSettingsValues(writablePatch)
-          setEveValues(saved.values)
-          setEveDraft(saved.values)
-          setSaved(true)
-          window.setTimeout(() => setSaved(false), 1500)
-          return
-        }
-        if (Object.keys(patch).length === 0) {
-          if (settingsTab === 'Limites de risque' || settingsTab === 'Connexions') {
-            setError(
-              'Ces valeurs viennent du profil paper ou de l’état du moteur. Ce formulaire ne les réécrit pas.',
-            )
-          }
-          return
-        }
-        const updated = await patchSettings(patch)
-        setEngine(updated)
-        invalidateEngineThresholdsCache()
-        setLlmApiKey('')
-        setClearKey(false)
-        if (settingsTab === 'LLM') void llmLive.refresh()
-        setSaved(true)
-        window.setTimeout(() => setSaved(false), 1500)
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Échec de la sauvegarde moteur')
-      } finally {
-        setSaving(false)
-      }
-    },
-    [
-      local,
-      settingsTab,
-      engine,
-      llmProvider,
-      llmModel,
-      llmApiKey,
-      clearKey,
-      llmLive,
-      rvol,
-      tenkan,
-      kijun,
-      senkouB,
-      sources,
-      alertPrefs,
-      eveSchema,
-      eveDraft,
-      eveValues,
-    ],
-  )
-
-  function renderEveField(item: EveSettingItem): ReactNode {
-    const value = eveDraft[item.key]
-    const disabled = !item.writable || Boolean(item.read_only)
-    const label = item.is_advanced ? `${item.label} · avancé` : item.label
-    if (item.type === 'boolean') {
-      return (
-        <label key={item.key} className="checkrow">
-          <span className="check-copy">
-            {label}
-            {item.description ? <small>{item.description}</small> : null}
-          </span>
-          <input
-            type="checkbox"
-            checked={Boolean(value)}
-            disabled={disabled}
-            onChange={(e) =>
-              setEveDraft((prev) => ({ ...prev, [item.key]: e.target.checked }))
-            }
-          />
-        </label>
-      )
-    }
-    if (item.type === 'number') {
-      return (
-        <div className="field" key={item.key}>
-          <label htmlFor={`eve-${item.key}`}>{label}</label>
-          <input
-            id={`eve-${item.key}`}
-            type="number"
-            step="any"
-            disabled={disabled}
-            value={value === undefined || value === null ? '' : String(value)}
-            onChange={(e) => {
-              const n = Number(e.target.value)
-              setEveDraft((prev) => ({
-                ...prev,
-                [item.key]: Number.isFinite(n) ? n : e.target.value,
-              }))
-            }}
-          />
-          {item.description ? <small>{item.description}</small> : null}
-        </div>
-      )
-    }
-    return (
-      <div className="field" key={item.key}>
-        <label htmlFor={`eve-${item.key}`}>{label}</label>
-        <input
-          id={`eve-${item.key}`}
-          type={item.type === 'password' ? 'password' : 'text'}
-          disabled={disabled}
-          value={value === undefined || value === null ? '' : String(value)}
-          onChange={(e) =>
-            setEveDraft((prev) => ({ ...prev, [item.key]: e.target.value }))
-          }
-          readOnly={disabled}
-        />
-        {item.description ? <small>{item.description}</small> : null}
-      </div>
-    )
-  }
-
-  const saveHint =
-    settingsTab === 'Limites de risque'
-      ? 'Lecture seule — plafonds du profil paper ICHIVOL_BASELINE_V1.'
-      : settingsTab === 'Ève / JEV'
-        ? 'Knobs Ève écrits sur le moteur. Secrets JEV / TypeSafe restent en .env.'
-        : settingsTab === 'Connexions'
-          ? 'Statut lecture seule — rien à enregistrer ici.'
-          : 'Marché, alertes et LLM sont écrits sur votre compte.'
-
-  const llmRows: LlmConnection[] =
-    engine?.llmConnections && engine.llmConnections.length > 0
-      ? engine.llmConnections
-      : PROVIDERS.map((p) => ({
-          provider: p.id,
-          connected: p.id === engine?.llmProvider && Boolean(engine?.llmReady || engine?.llmApiKeySet),
-          keySource:
-            p.id === engine?.llmProvider
-              ? engine?.llmApiKeySet
-                ? 'ui'
-                : engine?.llmReady
-                  ? 'env'
-                  : 'none'
-              : 'none',
-          active: p.id === engine?.llmProvider,
-          model: p.id === engine?.llmProvider ? engine?.llmModel ?? null : null,
-        }))
-
-  async function probeProvider(provider: LlmProvider, model: string | null) {
-    const modelId =
-      model && model !== '—' ? model : DEFAULT_MODELS[provider]
-    const apiKey = provider === llmProvider && llmApiKey.trim() ? llmApiKey.trim() : undefined
-    setRowTesting(provider)
-    setTesting(true)
-    setTestResult(null)
-    setError(null)
-    try {
-      const result = await testLlm({ provider, model: modelId, apiKey })
-      setRowTests((prev) => ({ ...prev, [provider]: result }))
-      setTestResult(result)
-      if (!engine || provider === engine.llmProvider) {
-        await llmLive.refresh({ provider, model: modelId, apiKey })
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Test LLM échoué')
-    } finally {
-      setTesting(false)
-      setRowTesting(null)
-    }
-  }
-
-  const eveAutonomy = Boolean(eveValues.EVE_PAPER_AUTONOMY)
-  const eveRadar = Boolean(eveValues.EVENT_RADAR_ENABLED)
-  const showSave =
-    settingsTab !== 'Limites de risque' && settingsTab !== 'Connexions'
+  const autonomy = eveError || !eveSchema ? null : Boolean(eveValues.EVE_PAPER_AUTONOMY)
+  const current = SECTIONS.find((s) => s.id === section)!
 
   return (
     <div className="params-page">
       <div className="page-head">
         <div>
-          <div className="eyebrow">IchiVol · Desk</div>
+          <div className="eyebrow">IchiVol · Système</div>
           <h1>Paramètres</h1>
-          <p className="subtitle">LLM, Ève / JEV API, marché, alertes — paper only.</p>
+          <p className="subtitle">
+            Tout ce qui pilote IchiVol, expliqué simplement. Argent fictif uniquement : aucun ordre réel n’est jamais
+            passé.
+          </p>
         </div>
         <div className="actions">
-          {badge(engine ? 'MOTEUR OK' : 'MOTEUR OFF', engine ? 'green' : 'red')}
-          {badge(eveAutonomy ? 'ÈVE AUTO ON' : 'ÈVE DRY-RUN', eveAutonomy ? 'green' : 'amber')}
+          <Tag tone="gray">Argent fictif</Tag>
+          {autonomy == null ? null : (
+            <Tag tone={autonomy ? 'green' : 'amber'}>{autonomy ? 'Pilote Ève actif' : 'Pilote Ève arrêté'}</Tag>
+          )}
+          {engineHealth === false ? <Tag tone="red">Moteur injoignable</Tag> : null}
         </div>
-      </div>
-
-      <div className="tabs" role="tablist" aria-label="Sections paramètres">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            type="button"
-            role="tab"
-            aria-selected={settingsTab === t}
-            className={settingsTab === t ? 'active' : ''}
-            onClick={() => setSettingsTab(t)}
-          >
-            {t}
-          </button>
-        ))}
       </div>
 
       <div className="params-layout">
-        <section className="card">
-          <div className="card-head">
-            <h2>{settingsTab}</h2>
-          </div>
-          <form id="settings-form" className="card-body" onSubmit={(ev) => void onSave(ev)}>
-            {settingsTab === 'Limites de risque' && (
-              <>
-                <p className="lede">
-                  Plafonds de chaque portefeuille paper, en lecture seule. Le Risk Kernel ne se
-                  configure pas depuis le navigateur.
-                </p>
-                {bookRisks.length === 0 ? (
-                  <div className="statline">
-                    <span>Portefeuilles</span>
-                    <b>—</b>
-                  </div>
-                ) : (
-                  bookRisks.map((b) => (
-                    <div key={b.code} style={{ marginBottom: 14 }}>
-                      <h3 style={{ fontSize: 13, margin: '8px 0 4px' }}>{b.label}</h3>
-                      <div className="statline">
-                        <span>Risque ouvert max</span>
-                        <b>
-                          {b.risk?.max_open_risk_pct != null
-                            ? `${(b.risk.max_open_risk_pct * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`
-                            : '—'}
-                        </b>
-                      </div>
-                      <div className="statline">
-                        <span>Positions simultanées max</span>
-                        <b>{b.risk?.max_open_positions ?? '—'}</b>
-                      </div>
-                      <div className="statline">
-                        <span>Positions ouvertes</span>
-                        <b>{b.risk?.open_positions ?? '—'}</b>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </>
-            )}
+        <nav className="params-nav" aria-label="Sections des réglages">
+          {SECTIONS.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className={s.id === section ? 'active' : ''}
+              aria-current={s.id === section ? 'page' : undefined}
+              onClick={() => setParams({ section: s.id }, { replace: true })}
+            >
+              <b>{s.label}</b>
+              <small>{s.sub}</small>
+            </button>
+          ))}
+        </nav>
 
-            {settingsTab === 'Marché et univers' && (
-              <>
-                <p className="lede">Sources et paramètres Ichimoku × RVOL du moteur.</p>
-                <div className="field">
-                  <span className="label">Sources de données</span>
-                  {(
-                    [
-                      ['binance', 'Binance'],
-                      ['bybit', 'Bybit'],
-                      ['okx', 'OKX'],
-                    ] as const
-                  ).map(([id, label]) => (
-                    <label className="checkrow" key={id}>
-                      <span className="check-copy">{label}</span>
-                      <input
-                        type="checkbox"
-                        checked={sources.includes(id)}
-                        onChange={(ev) => {
-                          setSources((prev) =>
-                            ev.target.checked
-                              ? [...prev, id]
-                              : prev.filter((s) => s !== id),
-                          )
-                        }}
-                      />
-                    </label>
-                  ))}
-                  <small>Enregistré sur le compte (activeSources).</small>
-                </div>
-                <div className="field">
-                  <label htmlFor="rvol">Seuil RVOL</label>
-                  <input
-                    id="rvol"
-                    name="rvol"
-                    type="number"
-                    min="0.1"
-                    step="0.1"
-                    value={rvol}
-                    onChange={(ev) => setRvol(ev.target.value)}
-                  />
-                </div>
-                <div className="field-row">
-                  {(
-                    [
-                      ['tenkan', 'Tenkan', tenkan, setTenkan],
-                      ['kijun', 'Kijun', kijun, setKijun],
-                      ['senkou', 'Senkou B', senkouB, setSenkouB],
-                    ] as const
-                  ).map(([id, label, value, setValue]) => (
-                    <div className="field" key={id}>
-                      <label htmlFor={id}>{label}</label>
-                      <input
-                        id={id}
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={value}
-                        onChange={(ev) => setValue(ev.target.value)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {settingsTab === 'LLM' && (
-              <>
-                <p className="lede">
-                  Copilot / chat. Distinct de JEV API / System One — onglet Ève / JEV.
-                </p>
-                <div className="field">
-                  <label htmlFor="llmProvider">Provider</label>
-                  <select
-                    id="llmProvider"
-                    name="llmProvider"
-                    value={llmProvider}
-                    disabled={!engine}
-                    onChange={(ev) => {
-                      const next = ev.target.value as LlmProvider
-                      setLlmProvider(next)
-                      const models = modelsForProvider(next, engine?.llmModels)
-                      setLlmModel(
-                        models.some((m) => m.id === llmModel) ? llmModel : DEFAULT_MODELS[next],
-                      )
-                      setTestResult(null)
-                    }}
-                  >
-                    {PROVIDERS.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.label}
-                      </option>
-                    ))}
-                  </select>
-                  <small>OpenRouter par défaut (une clé, plusieurs modèles).</small>
-                </div>
-                <div className="field">
-                  <label htmlFor="llmModel">Modèle</label>
-                  <select
-                    id="llmModel"
-                    name="llmModel"
-                    value={llmModel}
-                    disabled={!engine}
-                    onChange={(ev) => setLlmModel(ev.target.value)}
-                  >
-                    {modelsForProvider(llmProvider, engine?.llmModels).map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.label}
-                      </option>
-                    ))}
-                    {llmModel &&
-                    !modelsForProvider(llmProvider, engine?.llmModels).some((m) => m.id === llmModel) ? (
-                      <option value={llmModel}>{llmModel}</option>
-                    ) : null}
-                  </select>
-                </div>
-                <div className="field">
-                  <label htmlFor="llmApiKey">
-                    {engine?.llmApiKeySet ? 'Nouvelle clé (optionnel)' : 'Clé API'}
-                  </label>
-                  <input
-                    id="llmApiKey"
-                    name="llmApiKey"
-                    type="password"
-                    autoComplete="off"
-                    value={llmApiKey}
-                    placeholder={PROVIDERS.find((p) => p.id === llmProvider)?.keyHint ?? 'sk-…'}
-                    onChange={(ev) => setLlmApiKey(ev.target.value)}
-                    disabled={!engine}
-                  />
-                  <small>
-                    {engine
-                      ? `${engine.llmProvider}${engine.llmApiKeySet ? ' · clé OK' : ' · pas de clé UI'}${engine.llmReady ? ' · prêt' : ' · non prêt'}. Vide = garder la clé.`
-                      : 'Moteur indisponible.'}
-                  </small>
-                </div>
-                {engine?.llmApiKeySet && (
-                  <label className="checkrow">
-                    <span className="check-copy">Effacer la clé enregistrée</span>
-                    <input
-                      type="checkbox"
-                      checked={clearKey}
-                      onChange={(ev) => setClearKey(ev.target.checked)}
-                    />
-                  </label>
-                )}
-                <div className="btn-row">
-                  <button
-                    type="button"
-                    className="suggestion"
-                    disabled={!engine || testing}
-                    onClick={() => {
-                      void probeProvider(llmProvider, llmModel)
-                    }}
-                  >
-                    {testing ? 'Test…' : 'Tester la connexion'}
-                  </button>
-                </div>
-                {testResult && (
-                  <div className={`notice ${testResult.ok ? 'ok' : 'err'}`} role="status">
-                    {testResult.ok ? 'Connecté' : 'Échec'} · {providerLabel(testResult.provider)} ·{' '}
-                    {testResult.model} · {testResult.message}
-                    {testResult.latencyMs ? ` · ${testResult.latencyMs} ms` : ''}
-                  </div>
-                )}
-
-                <h3 className="section-title">Providers enregistrés</h3>
-                <p className="hint">
-                  « Connecté » = dernier test OK. Distinct de JEV API / System One.
-                </p>
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>PROVIDER</th>
-                        <th>STATUT</th>
-                        <th>MODÈLE</th>
-                        <th>CLÉ</th>
-                        <th>SOURCE</th>
-                        <th>LATENCE</th>
-                        <th />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {llmRows.map((row) => {
-                        const tested = rowTests[row.provider]
-                        const live =
-                          llmLive.provider === row.provider && row.active ? llmLive : null
-                        const checking =
-                          rowTesting === row.provider || (row.active && llmLive.state === 'checking')
-                        let status = 'Non configuré'
-                        let tone: BadgeTone = 'gray'
-                        if (checking) {
-                          status = 'Test…'
-                          tone = 'amber'
-                        } else if (tested?.ok || live?.state === 'ok') {
-                          status = row.active ? 'Connecté · actif' : 'Connecté'
-                          tone = 'green'
-                        } else if (tested && !tested.ok) {
-                          status = tested.status === 'bad_key' ? 'Clé refusée' : 'Échec test'
-                          tone = 'red'
-                        } else if (live && live.state !== 'idle') {
-                          status = llmStatusLabel(live.state)
-                          tone = 'red'
-                        } else if (row.connected) {
-                          status = row.active ? 'Enregistré · actif' : 'Clé enregistrée'
-                          tone = 'amber'
-                        }
-                        const latency =
-                          tested?.latencyMs ??
-                          (live?.state === 'ok' ? live.latencyMs : undefined)
-                        const modelShown =
-                          (row.provider === llmProvider ? llmModel : row.model) || '—'
-                        return (
-                          <tr key={row.provider}>
-                            <td>
-                              <b>{providerLabel(row.provider)}</b>
-                              {row.active ? <small>actif</small> : null}
-                            </td>
-                            <td>{badge(status, tone)}</td>
-                            <td>{modelShown}</td>
-                            <td>{row.connected ? 'OK' : '—'}</td>
-                            <td>{sourceLabel(row.keySource)}</td>
-                            <td>{latency != null ? `${latency} ms` : '—'}</td>
-                            <td>
-                              <button
-                                type="button"
-                                className="suggestion"
-                                disabled={checking || !engine}
-                                onClick={() => void probeProvider(row.provider, modelShown)}
-                              >
-                                Tester
-                              </button>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-
-            {settingsTab === 'Ève / JEV' && (
-              <>
-                <p className="lede">
-                  Knobs moteur pour les 4 modes Ève. Secrets{' '}
-                  <code>JEV_*</code> / <code>TYPESAFE_*</code> uniquement en <code>.env</code> —
-                  jamais via l’UI.
-                </p>
-                <label className="toggle-row">
-                  <input
-                    id="eve-advanced"
-                    type="checkbox"
-                    checked={eveAdvanced}
-                    onChange={(e) => setEveAdvanced(e.target.checked)}
-                  />
-                  Afficher les knobs avancés
-                </label>
-                {!eveLoaded || !eveSchema ? (
-                  <p className="hint">
-                    Schéma indisponible — démarre le moteur Python (
-                    <code>/api/engine/eve/settings/schema</code>).
-                  </p>
-                ) : (
-                  sortedSchemaGroups(eveSchema).map(([groupKey, group]) => {
-                    const items = group.items.filter(
-                      (item) => eveAdvanced || !item.is_advanced,
-                    )
-                    if (items.length === 0) return null
-                    return (
-                      <div key={groupKey} className="eve-group">
-                        <h3>{group.title}</h3>
-                        {items.map((item) => renderEveField(item))}
-                      </div>
-                    )
-                  })
-                )}
-              </>
-            )}
-
-            {settingsTab === 'Alertes' && (
-              <>
-                <p className="lede">Préférences push sur cet appareil.</p>
-                {(
-                  [
-                    ['targetStop', 'Alerte stop / objectif'],
-                    ['accel', 'Alerte accélération'],
-                    ['directionFlip', 'Alerte retournement de direction'],
-                  ] as const
-                ).map(([key, label]) => (
-                  <label className="checkrow" key={key}>
-                    <span className="check-copy">{label}</span>
-                    <input
-                      type="checkbox"
-                      checked={alertPrefs[key]}
-                      onChange={(ev) =>
-                        setAlertPrefs((prev) => ({ ...prev, [key]: ev.target.checked }))
-                      }
-                    />
-                  </label>
-                ))}
-                <div className="btn-row">
-                  <button
-                    type="button"
-                    className="suggestion"
-                    disabled={pushBusy}
-                    onClick={() => {
-                      setPushBusy(true)
-                      setPushMsg(null)
-                      void enablePushAlerts().then((r) => {
-                        setPushBusy(false)
-                        setPushMsg(
-                          r.ok
-                            ? 'Abonnement push enregistré sur cet appareil.'
-                            : r.message,
-                        )
-                      })
-                    }}
-                  >
-                    {pushBusy ? 'Activation…' : 'Activer les alertes push'}
-                  </button>
-                  <button
-                    type="button"
-                    className="suggestion"
-                    disabled={pushBusy}
-                    onClick={() => {
-                      setPushBusy(true)
-                      void disablePushAlerts().then(() => {
-                        setPushBusy(false)
-                        setPushMsg('Abonnement push retiré sur cet appareil.')
-                      })
-                    }}
-                  >
-                    Désabonner
-                  </button>
-                </div>
-                {pushMsg ? (
-                  <p className="hint" role="status">
-                    {pushMsg}
-                  </p>
-                ) : null}
-              </>
-            )}
-
-            {settingsTab === 'Connexions' && (
-              <>
-                <p className="lede">État des liens — lecture seule.</p>
-                <div className="statline">
-                  <span>Moteur</span>
-                  <b>{badge(engine ? 'CONNECTÉ' : 'OFF', engine ? 'green' : 'red')}</b>
-                </div>
-                <div className="statline">
-                  <span>Marché</span>
-                  <b>{badge(engine ? 'LIVE' : '—', engine ? 'green' : 'gray')}</b>
-                </div>
-                <div className="statline">
-                  <span>Broker live</span>
-                  <b>{badge('NON CONNECTÉ', 'gray')}</b>
-                </div>
-                <div className="statline">
-                  <span>Ève autonomie paper</span>
-                  <b>{badge(eveAutonomy ? 'ON' : 'OFF', eveAutonomy ? 'green' : 'amber')}</b>
-                </div>
-                <div className="statline">
-                  <span>Event Radar</span>
-                  <b>{badge(eveRadar ? 'ON' : 'OFF', eveRadar ? 'green' : 'gray')}</b>
-                </div>
-                <p className="hint">
-                  JEV API (typesafe) + jevos fallback crédit : env moteur. Knobs : onglet
-                  Ève / JEV.
-                </p>
-              </>
-            )}
-
-            {error ? (
-              <p className="alert" role="alert">
-                {error}
-              </p>
-            ) : null}
-
-            <div className="form-foot">
-              {showSave ? (
-                <button type="submit" className="primary" disabled={saving}>
-                  {saving ? 'Enregistrement…' : saved ? 'Enregistré' : 'Enregistrer'}
-                </button>
-              ) : null}
-              <p className="hint">{saveHint}</p>
-            </div>
-          </form>
-        </section>
-
-        <aside className="card side-card">
-          <div className="card-head">
-            <h2>Statut</h2>
-          </div>
-          <div className="card-body">
-            <div className="statline">
-              <span>Mode</span>
-              <b>{badge('PAPER', 'gray')}</b>
-            </div>
-            <p>Aucun ordre broker. Portefeuilles simulés.</p>
-            <div className="statline">
-              <span>Bougies</span>
-              <b>Clôturées</b>
-            </div>
-            <p>Décision uniquement sur bougie fermée.</p>
-            <div className="statline">
-              <span>Ève</span>
-              <b>{eveAutonomy ? 'Trade paper' : 'Dry-run'}</b>
-            </div>
-            <p>
-              Autonomie on = ouverture paper via Risk Kernel. Kill-switch ={' '}
-              <code>EVE_PAPER_AUTONOMY</code>.
-            </p>
-          </div>
-        </aside>
+        <div className="params-content">
+          <h2 className="section-heading">{current.label}</h2>
+          {section === 'auto' ? <AutoTradingSection autonomy={autonomy} books={books} booksError={booksError} /> : null}
+          {section === 'eve' ? (
+            <EveSettings schema={eveSchema} values={eveValues} loadError={eveError} onSaved={setEveValues} />
+          ) : null}
+          {section === 'ia' ? <AiModelsSettings engine={engine} onSaved={setEngine} /> : null}
+          {section === 'alertes' ? <AlertsSection engine={engine} onSaved={setEngine} /> : null}
+          {section === 'graphiques' ? <ChartsSection engine={engine} onSaved={setEngine} /> : null}
+          {section === 'connexions' ? (
+            <ConnectionsSection
+              engine={engine}
+              engineHealth={engineHealth}
+              onSaved={setEngine}
+              onRecheck={() => {
+                checkHealth()
+                void llm.refresh()
+              }}
+            />
+          ) : null}
+        </div>
       </div>
     </div>
   )

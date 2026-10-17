@@ -1,4 +1,4 @@
-/** Paramètres — scoped, theme-aware (light/dark via CSS vars). */
+/** Réglages — scopé .params-page, suit le thème clair / sombre via les variables globales. */
 
 .params-page {
   --p-line: var(--border, #ddd9d3);
@@ -11,7 +11,7 @@
   --p-amber: #a76c17;
   color: var(--p-ink);
   font: 13px Manrope, system-ui, sans-serif;
-  max-width: 1100px;
+  max-width: 1180px;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
@@ -23,12 +23,17 @@
   box-sizing: border-box;
 }
 
+.params-page a {
+  color: var(--p-blue);
+}
+
+/* En-tête */
 .params-page .page-head {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
 .params-page .eyebrow {
@@ -39,10 +44,14 @@
   margin-bottom: 8px;
 }
 
-.params-page h1 {
-  font: 32px/1.15 Newsreader, Georgia, serif;
+.dash-shell .params-page .page-head h1,
+.dash-shell.is-mobile .params-page .page-head h1,
+.params-page .page-head h1 {
+  font: 36px/1.15 Newsreader, Georgia, serif;
+  font-weight: 400;
   margin: 0 0 6px;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.8px;
+  color: var(--p-ink);
 }
 
 .params-page .subtitle {
@@ -50,24 +59,28 @@
   color: var(--p-muted);
   font-size: 13px;
   line-height: 1.5;
+  max-width: 560px;
 }
 
 .params-page .actions {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
   align-items: center;
-  flex-shrink: 0;
 }
 
+/* Pastilles */
 .params-page .tag {
-  font: 10px/1 'DM Mono', ui-monospace, monospace;
+  display: inline-flex;
+  align-items: center;
+  font: 500 11px/1 Manrope, system-ui, sans-serif;
   padding: 5px 8px;
-  border-radius: 4px;
+  border-radius: 999px;
   background: color-mix(in srgb, var(--p-blue) 12%, transparent);
   color: var(--p-blue);
   white-space: nowrap;
 }
-
 .params-page .tag.green {
   background: color-mix(in srgb, var(--p-green) 14%, transparent);
   color: var(--p-green);
@@ -85,51 +98,78 @@
   color: var(--p-muted);
 }
 
-/* Tabs */
-.params-page .tabs {
-  display: flex;
-  gap: 4px;
-  border-bottom: 1px solid var(--p-line);
-  margin-bottom: 20px;
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-
-.params-page .tabs button {
-  cursor: pointer;
-  border: 0;
-  background: none;
-  border-radius: 0;
-  padding: 10px 14px;
-  color: var(--p-muted);
-  white-space: nowrap;
-  font: 500 13px Manrope, system-ui, sans-serif;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-}
-
-.params-page .tabs button:hover {
-  color: var(--p-ink);
-}
-
-.params-page .tabs button.active {
-  border-bottom-color: var(--p-blue);
-  color: var(--p-blue);
-}
-
-/* Layout */
+/* Mise en page : navigation à gauche, contenu à droite */
 .params-page .params-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 280px);
-  gap: 18px;
+  grid-template-columns: 230px minmax(0, 1fr);
+  gap: 24px;
   align-items: start;
 }
 
+.params-page .params-nav {
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.params-page .params-nav button {
+  cursor: pointer;
+  text-align: left;
+  border: 0;
+  border-left: 2px solid transparent;
+  background: none;
+  border-radius: 0 8px 8px 0;
+  padding: 10px 12px;
+  color: var(--p-ink);
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.params-page .params-nav button b {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.params-page .params-nav button small {
+  font-size: 11px;
+  color: var(--p-muted);
+  line-height: 1.35;
+}
+
+.params-page .params-nav button:hover {
+  background: color-mix(in srgb, var(--p-blue) 5%, transparent);
+}
+
+.params-page .params-nav button.active {
+  border-left-color: var(--p-blue);
+  background: color-mix(in srgb, var(--p-blue) 8%, transparent);
+}
+
+.params-page .params-nav button.active b {
+  color: var(--p-blue);
+}
+
+.params-page .params-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.params-page .section-heading {
+  font: 24px/1.2 Newsreader, Georgia, serif;
+  margin: 0;
+}
+
+/* Cartes */
 .params-page .card {
   border: 1px solid var(--p-line);
   border-radius: 12px;
   background: var(--p-card);
-  overflow: hidden;
   min-width: 0;
 }
 
@@ -137,17 +177,18 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 18px 20px 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 16px 20px 6px;
 }
 
 .params-page .card-head h2 {
-  font: 20px/1.2 Newsreader, Georgia, serif;
+  font: 600 15px/1.3 Manrope, system-ui, sans-serif;
   margin: 0;
 }
 
 .params-page .card-head small {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--p-muted);
 }
 
@@ -155,29 +196,383 @@
   padding: 8px 20px 20px;
 }
 
-.params-page .card-body > .lede {
-  margin: 0 0 16px;
+.params-page .lede {
+  margin: 0 0 14px;
   font-size: 13px;
   line-height: 1.55;
   color: var(--p-muted);
 }
 
-/* Fields */
-.params-page .field {
-  margin-bottom: 16px;
+.params-page .lede b {
+  color: var(--p-ink);
+  font-weight: 600;
 }
 
-.params-page .field > label,
-.params-page .field > span.label {
+.params-page .hint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--p-muted);
+}
+
+.params-page .muted {
+  color: var(--p-muted);
+}
+
+.params-page .ok-text {
+  color: var(--p-green);
+}
+
+.params-page h3.sub {
+  font: 600 12px Manrope, system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--p-muted);
+  margin: 18px 0 10px;
+}
+
+/* Trading automatique */
+.params-page .state-line {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.params-page .steps {
+  margin: 0;
+  font-size: 13px;
+  padding: 0 0 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  line-height: 1.5;
+  color: var(--p-muted);
+}
+
+.params-page .steps b {
+  color: var(--p-ink);
+  font-weight: 600;
+}
+
+.params-page .books {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.params-page .book {
+  border: 1px solid var(--p-line);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.params-page .book header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.params-page .book h3 {
+  margin: 0;
+  font: 600 14px Manrope, system-ui, sans-serif;
+}
+
+.params-page .limit-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.params-page .limit-head span {
+  color: var(--p-muted);
+}
+
+.params-page .limit-head b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.params-page .limit-head small {
+  color: var(--p-muted);
+  font-weight: 400;
+}
+
+.params-page .meter {
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--p-muted) 16%, transparent);
+  overflow: hidden;
+}
+
+.params-page .meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+.params-page .meter span.green { background: var(--p-green); }
+.params-page .meter span.amber { background: var(--p-amber); }
+.params-page .meter span.red { background: var(--p-red); }
+
+.params-page .book-foot {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--p-muted);
+}
+
+/* Modes d'Ève */
+.params-page .modes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.params-page .modes li {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--p-line);
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+.params-page .modes li:first-child {
+  border-top: 0;
+}
+
+.params-page .modes b {
+  font-weight: 600;
+}
+
+.params-page .modes span {
+  color: var(--p-muted);
+}
+
+/* Réglages un par un */
+.params-page .knob {
+  padding: 14px 0;
+  border-top: 1px solid var(--p-line);
+}
+
+.params-page .knob:first-of-type {
+  border-top: 0;
+  padding-top: 4px;
+}
+
+.params-page .knob.is-unused {
+  opacity: 0.75;
+}
+
+.params-page .knob-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.params-page .knob-label {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.params-page .knob-explain {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--p-muted);
+  max-width: 640px;
+}
+
+.params-page .knob-effects {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--p-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.params-page .knob-effects b {
+  color: var(--p-ink);
+  font-weight: 600;
+}
+
+.params-page .knob-meta {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--p-muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.params-page .knob-meta b {
+  color: var(--p-ink);
+  font-weight: 600;
+}
+
+.params-page .knob .tag {
+  margin-top: 8px;
+}
+
+.params-page .knob-meta .tag {
+  margin-top: 0;
+}
+
+.params-page .knob-bad {
+  color: var(--p-red);
+  font-size: 12px;
+}
+
+.params-page button.linkish {
+  cursor: pointer;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--p-blue);
+  text-decoration: underline;
+}
+
+/* Champ numérique avec unité */
+.params-page .num-input {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--p-line);
+  border-radius: 8px;
+  background: var(--background, var(--p-card));
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.params-page .num-input.bad {
+  border-color: var(--p-red);
+}
+
+.params-page .num-input input {
+  width: 84px;
+  border: 0;
+  background: transparent;
+  padding: 8px 10px;
+  font: 500 13px Manrope, system-ui, sans-serif;
+  color: var(--p-ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.params-page .num-input input:focus {
+  outline: none;
+}
+
+.params-page .num-input:focus-within {
+  border-color: var(--p-blue);
+}
+
+.params-page .num-input span {
+  padding: 0 10px 0 2px;
+  color: var(--p-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.params-page .num-input input:disabled {
+  opacity: 0.6;
+}
+
+/* Interrupteur */
+.params-page .switch {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.params-page .switch input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.params-page .switch input:disabled {
+  cursor: not-allowed;
+}
+
+.params-page .switch span {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--p-muted) 35%, transparent);
+  transition: background 0.15s;
+}
+
+.params-page .switch span::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  transition: transform 0.15s;
+}
+
+.params-page .switch input:checked + span {
+  background: var(--p-blue);
+}
+
+.params-page .switch input:checked + span::after {
+  transform: translateX(16px);
+}
+
+.params-page .switch input:disabled + span {
+  opacity: 0.5;
+}
+
+.params-page .switch input:focus-visible + span {
+  outline: 2px solid var(--p-blue);
+  outline-offset: 2px;
+}
+
+/* Champs classiques */
+.params-page .field {
+  margin-bottom: 16px;
+  min-width: 0;
+}
+
+.params-page .field > label {
   display: block;
   font-size: 12px;
   font-weight: 600;
   margin-bottom: 6px;
 }
 
-.params-page .field input,
-.params-page .field select,
-.params-page .field textarea {
+.params-page .field > input,
+.params-page .field > select {
   width: 100%;
   font: inherit;
   border: 1px solid var(--p-line);
@@ -187,15 +582,15 @@
   color: var(--p-ink);
 }
 
-.params-page .field input:disabled,
-.params-page .field select:disabled {
+.params-page .field > input:disabled,
+.params-page .field > select:disabled {
   opacity: 0.65;
   cursor: not-allowed;
 }
 
 .params-page .field small {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--p-muted);
   margin-top: 6px;
   line-height: 1.45;
@@ -207,21 +602,32 @@
   gap: 12px;
 }
 
-.params-page .checkrow {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 12px 0;
-  font-size: 13px;
-  line-height: 1.4;
+.params-page .field-row.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 8px;
 }
 
-.params-page .checkrow input {
+.params-page .checkrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--p-line);
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.params-page .checkrow.strong {
+  border-top: 0;
+}
+
+.params-page .checkrow > input[type='checkbox'] {
   accent-color: var(--p-blue);
-  width: auto;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
-  margin-top: 2px;
 }
 
 .params-page .checkrow .check-copy {
@@ -231,44 +637,65 @@
 
 .params-page .checkrow .check-copy small {
   display: block;
-  margin-top: 4px;
-  font-size: 11px;
+  margin-top: 3px;
+  font-size: 12px;
   color: var(--p-muted);
   font-weight: 400;
+  line-height: 1.45;
 }
 
-.params-page .toggle-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 16px;
-  font-size: 13px;
+.params-page .dimmed {
+  opacity: 0.55;
 }
 
-.params-page .toggle-row input {
-  width: auto;
-  accent-color: var(--p-blue);
+/* Listes de statut */
+.params-page .rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-/* Eve groups */
-.params-page .eve-group {
-  margin-top: 18px;
-  padding-top: 14px;
+.params-page .rows li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'main action'
+    'sub action';
+  column-gap: 12px;
+  padding: 12px 0;
   border-top: 1px solid var(--p-line);
 }
 
-.params-page .eve-group:first-of-type {
-  margin-top: 8px;
-  padding-top: 0;
+.params-page .rows li:first-child {
   border-top: 0;
+  padding-top: 4px;
 }
 
-.params-page .eve-group h3 {
-  font: 600 13px Manrope, system-ui, sans-serif;
-  margin: 0 0 12px;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+.params-page .rows .row-main {
+  grid-area: main;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.params-page .rows .row-main b {
+  font-weight: 600;
+  margin-right: 2px;
+}
+
+.params-page .rows .row-sub {
+  grid-area: sub;
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
   color: var(--p-muted);
+  overflow-wrap: anywhere;
+}
+
+.params-page .rows li > button {
+  grid-area: action;
+  align-self: center;
 }
 
 .params-page .statline {
@@ -276,7 +703,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 11px 0;
+  padding: 10px 0;
   border-bottom: 1px solid var(--p-line);
   font-size: 13px;
 }
@@ -294,34 +721,14 @@
   text-align: right;
 }
 
-.params-page .hint {
-  margin: 10px 0 0;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--p-muted);
-}
-
-.params-page .form-foot {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--p-line);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.params-page .form-foot .hint {
-  margin: 0;
-  font-size: 11px;
-}
-
+/* Boutons */
 .params-page button.primary,
 .params-page button.suggestion {
   cursor: pointer;
   border: 1px solid var(--p-line);
   border-radius: 8px;
   background: var(--p-card);
-  padding: 10px 14px;
+  padding: 9px 14px;
   color: inherit;
   font: 500 13px Manrope, system-ui, sans-serif;
   transition: border-color 0.15s, background 0.15s;
@@ -331,7 +738,6 @@
   background: var(--p-blue);
   color: #fff;
   border-color: var(--p-blue);
-  align-self: flex-start;
 }
 
 .params-page button.primary:hover:not(:disabled) {
@@ -340,14 +746,8 @@
 
 .params-page button.primary:disabled,
 .params-page button.suggestion:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
-}
-
-.params-page button.suggestion {
-  display: inline-flex;
-  width: auto;
-  margin-top: 4px;
 }
 
 .params-page button.suggestion:hover:not(:disabled) {
@@ -362,12 +762,35 @@
   margin-top: 12px;
 }
 
+.params-page .btn-row.tight {
+  margin-top: 0;
+}
+
+/* Barre d'enregistrement Ève */
+.params-page .savebar {
+  position: sticky;
+  bottom: 12px;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--p-line);
+  border-radius: 12px;
+  background: var(--p-card);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.08);
+  font-size: 13px;
+}
+
+/* Messages */
 .params-page .notice {
-  margin-top: 12px;
+  margin: 12px 0 0;
   padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--p-line);
-  font-size: 12px;
+  font-size: 12.5px;
   line-height: 1.45;
 }
 
@@ -378,83 +801,103 @@
 }
 
 .params-page .notice.err {
-  background: color-mix(in srgb, var(--p-red) 10%, transparent);
+  background: color-mix(in srgb, var(--p-red) 8%, transparent);
   border-color: color-mix(in srgb, var(--p-red) 25%, transparent);
   color: var(--p-red);
 }
 
-.params-page .alert {
-  margin-top: 12px;
-  font-size: 12px;
-  color: var(--p-red);
-}
-
-.params-page .table-wrap {
-  overflow: auto;
-  margin-top: 12px;
-  border: 1px solid var(--p-line);
-  border-radius: 8px;
-}
-
-.params-page table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 12px;
-}
-
-.params-page th {
-  font-size: 10px;
-  letter-spacing: 0.5px;
-  font-weight: 600;
-  color: var(--p-muted);
-  background: color-mix(in srgb, var(--p-muted) 6%, transparent);
-  padding: 10px 12px;
-  white-space: nowrap;
-}
-
-.params-page td {
-  padding: 12px;
-  border-top: 1px solid var(--p-line);
-  vertical-align: middle;
-}
-
-.params-page td small {
-  display: block;
-  color: var(--p-muted);
-  font-size: 10px;
-  margin-top: 3px;
-}
-
-.params-page .section-title {
-  margin: 22px 0 8px;
-  font: 600 14px Manrope, system-ui, sans-serif;
-}
-
-.params-page code {
-  font: 11px 'DM Mono', ui-monospace, monospace;
-  padding: 1px 4px;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--p-muted) 10%, transparent);
-}
-
-.params-page .side-card .card-body p {
-  margin: 0 0 12px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--p-muted);
-}
-
+/* Tablette : la navigation passe au-dessus, en bande défilante */
 @media (max-width: 900px) {
   .params-page .params-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
   }
 
-  .params-page .field-row {
-    grid-template-columns: 1fr;
+  .params-page .params-nav {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 6px;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
 
-  .params-page h1 {
-    font-size: 28px;
+  .params-page .params-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .params-page .params-nav button {
+    flex-shrink: 0;
+    border: 1px solid var(--p-line);
+    border-radius: 999px;
+    padding: 8px 14px;
+  }
+
+  .params-page .params-nav button.active {
+    border-color: var(--p-blue);
+  }
+
+  .params-page .params-nav button small {
+    display: none;
+  }
+
+  .params-page .page-head {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .params-page .actions {
+    justify-content: flex-start;
+  }
+}
+
+/* Téléphone */
+@media (max-width: 560px) {
+  .dash-shell .params-page .page-head h1,
+  .dash-shell.is-mobile .params-page .page-head h1,
+  .params-page .page-head h1 {
+    font-size: 30px;
+  }
+
+  .params-page .card-head {
+    padding: 14px 14px 4px;
+  }
+
+  .params-page .card-body {
+    padding: 8px 14px 16px;
+  }
+
+  .params-page .field-row,
+  .params-page .field-row.two {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .params-page .modes li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .params-page .books {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .params-page .knob-main {
+    align-items: flex-start;
+  }
+
+  .params-page .savebar {
+    bottom: 8px;
+  }
+
+  .params-page .savebar .btn-row {
+    width: 100%;
+  }
+
+  .params-page .savebar .btn-row button {
+    flex: 1;
   }
 }
