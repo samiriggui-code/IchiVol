@@ -109,3 +109,16 @@ def test_module_singleton_is_the_one_the_route_uses():
     from app.api import market
 
     assert market.screener_cache is screener_cache
+
+
+def test_background_loop_also_feeds_the_4h_account_without_caching_it(paper_calls, monkeypatch):
+    # 2026-10-17: ICHIVOL_4H_V1 trades 4h candles; the loop scans 4h for paper only, never for the UI cache.
+    monkeypatch.setattr(cache_module, "paper_other_timeframes", lambda default: ["4h"])
+    c = ScreenerCache(refresh_interval_s=999, default_timeframe="1h")
+    c.sync_other_paper_timeframes()
+    assert paper_calls == ["4h"]
+    assert c.get("4h") is None
+
+
+def test_synced_books_trade_the_4h_timeframe():
+    assert cache_module.paper_other_timeframes("1h") == ["4h"]
