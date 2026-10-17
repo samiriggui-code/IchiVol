@@ -288,3 +288,27 @@ export function fmtSignedPct(v: number, digits = 2): string {
   if (txt === '0' || n === 0) return '0 %'
   return `${v > 0 ? '+' : '−'}${txt} %`
 }
+
+/**
+ * Étiquettes de fin de courbe : écarte les positions verticales d'au moins `gap` px, dans [lo, hi], en bougeant
+ * chaque étiquette le moins possible. Les étiquettes gardent leur ordre vertical (celle du haut reste en haut).
+ */
+export function dodgeLabels(ys: number[], gap: number, lo: number, hi: number): number[] {
+  const order = ys.map((y, i) => ({ y, i })).sort((a, b) => a.y - b.y)
+  const out = order.map((o) => o.y)
+  // Descente : chaque étiquette au moins `gap` sous la précédente.
+  for (let k = 0; k < out.length; k++) {
+    const minY = k === 0 ? lo : out[k - 1]! + gap
+    if (out[k]! < minY) out[k] = minY
+  }
+  // Remontée si la pile dépasse en bas.
+  for (let k = out.length - 1; k >= 0; k--) {
+    const maxY = k === out.length - 1 ? hi : out[k + 1]! - gap
+    if (out[k]! > maxY) out[k] = maxY
+  }
+  const result = new Array<number>(ys.length)
+  order.forEach((o, k) => {
+    result[o.i] = out[k]!
+  })
+  return result
+}
