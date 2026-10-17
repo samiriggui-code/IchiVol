@@ -440,7 +440,7 @@ export function DecisionsPage() {
         await confirmUserDecision({
           symbol: paperConfirm.symbol,
           interval: paperConfirm.timeframe,
-          bias: 'BULLISH',
+          bias: gate === 'SELL' ? 'BEARISH' : gate === 'BUY' ? 'BULLISH' : 'NEUTRAL',
           rvol: sameDetail?.rvol ?? 0,
           signalKind:
             sameDetail?.decision ??

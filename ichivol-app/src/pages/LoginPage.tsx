@@ -139,14 +139,9 @@ export function LoginPage() {
             </div>
 
             <div className="camap-hero-visual camap-login-brand-visual">
-              <span className="camap-hero-visual-badge">
-                <span className="camap-dot camap-dot-live" aria-hidden />
-                Signal confirmé
-              </span>
               <IchimokuMockChart />
               <div className="camap-hero-visual-footer">
-                <span>BTCUSDT · 1h</span>
-                <span className="camap-chip camap-chip-bull">RVOL 2.4×</span>
+                <span>Illustration · Ichimoku et volume</span>
               </div>
             </div>
           </div>

@@ -58,8 +58,10 @@ function fmtDate(iso: string | null | undefined): string {
 }
 
 function fmtSens(direction: string | null | undefined): string {
-  if (direction === 'LONG') return 'Achat'
-  if (direction === 'SHORT') return 'Vente'
+  const d = (direction ?? '').toUpperCase()
+  if (d === 'LONG' || d === 'BULLISH') return 'Achat'
+  if (d === 'SHORT' || d === 'BEARISH') return 'Vente'
+  if (d === 'NEUTRAL') return 'Neutre'
   return '—'
 }
 
