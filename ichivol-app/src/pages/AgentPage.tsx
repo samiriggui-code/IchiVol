@@ -1,6 +1,6 @@
 /**
- * Copilot — port littéral de design-reference/ichivol-workspace `copilot()` + page-head.
- * Classes HTML = maquette. Données / chat = engine (manquant → « — »).
+ * Copilot — le chat d'Ève : il explique les signaux, les décisions et le risque avec un modèle de langage
+ * (choisi dans Paramètres › Modèles d'IA). Il ne passe jamais d'ordre.
  */
 
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
@@ -144,35 +144,34 @@ export function AgentPage() {
         <div>
           <div className="eyebrow">08 / ICHIVOL WORKSPACE</div>
           <h1>Copilot</h1>
-          <p className="subtitle">Explorer et expliquer chaque décision.</p>
+          <p className="subtitle">Le chat d’Ève : explorer et expliquer chaque décision.</p>
         </div>
-        <div className="actions">{badge('APERÇU DU COPILOT', 'gray')}</div>
+        <div className="actions">{badge('CHAT D’ÈVE', 'gray')}</div>
       </div>
 
       <div className="grid">
         <section className="card chat">
           <div className="card-head">
             <h2>Une seconde lecture</h2>
-            {badge('APERÇU DU COPILOT', 'gray')}
           </div>
           <div className="chat-log" id="chat-log">
             <div className="bubble">
               <b>Votre décision, rendue lisible.</b>
               <p>
                 Choisissez une question pour explorer les données. Le Copilot explique les
-                signaux et le risque ; la validation reste au moteur.
+                signaux et le risque ; les décisions de trade restent à Ève et au Risk Kernel.
               </p>
               <span className="tag gray">
                 {llmReady === null
                   ? '—'
                   : llmReady
-                    ? 'LLM connecté'
-                    : 'Claude non connecté'}
+                    ? 'Modèle connecté'
+                    : 'Modèle non connecté'}
               </span>
             </div>
             {history.map((m, i) => (
               <div className="bubble" key={`${m.role}-${i}`}>
-                <span className="eyebrow">{m.role === 'user' ? 'VOUS' : 'COPILOT'}</span>
+                <span className="eyebrow">{m.role === 'user' ? 'VOUS' : 'ÈVE'}</span>
                 {m.role === 'assistant' && m.factsheet && !m.factsheet.fallback ? (
                   <FactsheetAnswer view={m.factsheet} />
                 ) : (
@@ -267,7 +266,7 @@ export function AgentPage() {
               </div>
             </div>
             <p style={{ fontSize: 11, color: 'var(--muted)' }}>
-              Les réponses passent par le moteur / LLM configuré. Sans clé : « — ».
+              Le Copilot utilise le modèle de langage choisi dans Paramètres › Modèles d’IA. Sans clé, il ne répond pas.
             </p>
           </div>
         </section>

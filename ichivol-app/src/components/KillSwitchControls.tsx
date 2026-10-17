@@ -101,7 +101,7 @@ export function KillSwitchProvider({ children }: { children: ReactNode }) {
         <ConfirmDialog
           title={
             pending === 'arm'
-              ? 'Armer le kill switch ?'
+              ? 'Armer l’arrêt d’urgence ?'
               : pending === 'disarm'
                 ? 'Rouvrir les entrées paper ?'
                 : 'Déverrouiller la perte journalière ?'

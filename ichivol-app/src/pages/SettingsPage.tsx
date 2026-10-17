@@ -188,7 +188,7 @@ function AutoTradingSection({
             })}
           </div>
           <p className="hint">
-            L’arrêt d’urgence et le détail des refus se gèrent depuis le <Link to="/app/portefeuille">Portefeuille</Link>.
+            L’arrêt d’urgence est dans le bandeau du haut ; le détail des refus, dans le <Link to="/app/portefeuille?tab=risque">Portefeuille</Link>.
           </p>
         </div>
       </section>
@@ -726,8 +726,9 @@ export function SettingsPage() {
     setEngineHealth(null)
     fetch('/api/engine/health', { credentials: 'include' })
       .then(async (res) => {
-        const j = (await res.json().catch(() => null)) as { status?: string } | null
-        setEngineHealth(res.ok && j?.status === 'ok')
+        const j = (await res.json().catch(() => null)) as { status?: string; ok?: boolean } | null
+        // Même critère que le Desk : le moteur dit « ok » ou « healthy ».
+        setEngineHealth(res.ok && (j?.ok === true || j?.status === 'ok' || j?.status === 'healthy'))
       })
       .catch(() => setEngineHealth(false))
   }, [])

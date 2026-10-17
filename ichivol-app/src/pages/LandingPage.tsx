@@ -8,7 +8,7 @@ const FEATURES = [
   {
     icon: 'abstract-39',
     title: 'Ève — IA qui trade paper',
-    body: 'Une IA, quatre modes. Chaque portefeuille propose ses trades selon sa méthode ; autonomie activée, Ève décide seule de les prendre ou non. Le Risk Kernel garde le dernier mot.',
+    body: 'Une IA, quatre modes. Chaque portefeuille propose ses trades selon sa méthode ; pilote activé, Ève les accepte ou les refuse. Le Risk Kernel garde le dernier mot.',
   },
   {
     icon: 'kanban',
@@ -18,7 +18,7 @@ const FEATURES = [
   {
     icon: 'shield-tick',
     title: 'Autonomie bornée',
-    body: 'Entry gate, signal rules, late→HOLD, kill-switch. Ève trade ; le Risk Kernel peut couper. Pas de live.',
+    body: 'Contrôle d’entrée, règles de signal, abstention si JEV est en retard, arrêt d’urgence. Ève trade en paper ; le Risk Kernel peut couper.',
   },
   {
     icon: 'notification-status',
@@ -28,12 +28,12 @@ const FEATURES = [
   {
     icon: 'chart-simple',
     title: 'Strategy Lab',
-    body: 'Event study, ablation, walk-forward, Monte Carlo — affûter les règles hors capital avant de laisser Ève trader paper.',
+    body: 'Backtests, ablations, régimes de marché, walk-forward — affûter les règles hors capital avant de laisser Ève trader en paper.',
   },
   {
     icon: 'message-text-2',
     title: 'Preuves + timeline',
-    body: 'Chaque trade paper a un dossier : modes JEV, gate, dégradation, Risk. Tu vois pourquoi Ève a agi.',
+    body: 'Chaque trade paper a un dossier : modes JEV, contrôle d’entrée, état de JEV, Risk Kernel. Tu vois pourquoi Ève a agi.',
   },
 ]
 
@@ -48,16 +48,16 @@ const EVE_MODES = EVE_DECISION_MODES.map((m) => ({
 const ENGINE_STACK = [
   { code: 'CORE', label: 'Ichimoku × RVOL + Decision Engine (5 portes)' },
   { code: 'EVE', label: 'Ève — IA trading paper · 4 modes · dossiers JEV' },
-  { code: 'GATE', label: 'Entry gate · signal rules · dégradation late→HOLD' },
+  { code: 'GATE', label: 'Contrôle d’entrée · règles de signal · abstention si JEV est en retard' },
   { code: 'RADAR', label: 'Event Radar — contexte avant d’agir' },
   { code: 'RISK', label: 'Risk Kernel — autorise / bloque l’exécution paper' },
   { code: 'LAB', label: 'Strategy Lab — affûter hors capital' },
 ]
 
 const TRUST = [
-  'IchiVol V4 : le moteur propose, Ève décide seule en paper',
+  'Le moteur propose, Ève accepte ou refuse, en paper',
   'Quatre modes JEV · Decision Engine · Event Radar',
-  'Risk Kernel + kill-switch : elle trade, le risk peut couper',
+  'Risk Kernel + arrêt d’urgence : elle trade, le risque peut couper',
   'Paper only — pas de live, pas de conseil financier',
 ]
 
@@ -89,14 +89,13 @@ const COMPARE = {
     'Trade possible sur signal pourri ou JEV down',
   ],
   with: [
-    'Ève juge chaque trade proposé par tes portefeuilles et décide seule',
-    '4 modes + entry gate + late→HOLD avant d’ouvrir',
-    'Risk Kernel / kill-switch peuvent bloquer l’exécution',
+    'Ève juge chaque trade proposé par tes portefeuilles : elle accepte ou refuse',
+    '4 modes + contrôle d’entrée + abstention si JEV est en retard',
+    'Risk Kernel et arrêt d’urgence peuvent bloquer l’exécution',
   ],
 }
 
 const STATS = [
-  { value: 'V4', label: 'Version' },
   { value: '4', label: 'Modes Ève' },
   { value: '1', label: 'IA qui trade paper' },
   { value: '0', label: 'Live brokers' },
@@ -104,28 +103,28 @@ const STATS = [
 
 const FAQ = [
   {
-    q: 'Qu’est-ce qu’IchiVol V4 ?',
-    a: 'Un desk où Ève, l’IA décisionnelle, trade en paper : Decision Engine, 4 modes JEV, entry gate, Event Radar, Risk Kernel, Lab. Pas de live.',
+    q: 'Qu’est-ce qu’IchiVol ?',
+    a: 'Un desk où Ève, l’IA décisionnelle, trade en paper : Decision Engine, 4 modes JEV, contrôle d’entrée, Event Radar, Risk Kernel, Strategy Lab. Jamais d’argent réel.',
   },
   {
     q: 'Ève trade vraiment ?',
-    a: 'Oui, en paper, quand l’autonomie est activée. Chaque portefeuille (Baseline, Sessions, Futures & Crypto…) applique sa méthode et propose ; Ève, avec JEV, accepte ou refuse à chaque nouvelle bougie, sans intervention humaine. Le Risk Kernel autorise ou bloque par portefeuille, et le kill-switch coupe toute entrée. Pas de broker réel.',
+    a: 'Oui, en paper, quand l’autonomie est activée. Chaque portefeuille (IchiVol, Sessions, Futures & Crypto…) applique sa méthode et propose ; Ève, avec JEV, accepte ou refuse à chaque nouvelle bougie, sans intervention humaine. Le Risk Kernel autorise ou bloque par portefeuille, et l’arrêt d’urgence coupe toute entrée. Aucun courtier réel.',
   },
   {
-    q: 'Qu’est-ce qu’Ève Intelligence ?',
-    a: 'Une seule IA avec quatre modes : Analyst, Challenger, Guardian et Shadow. Chacun pose ses questions à JEV (NOUL, CHOICE, SCORE), d’abord par l’API JEV, puis jevos quand les crédits sont épuisés. Ce ne sont pas quatre IA concurrentes.',
+    q: 'Qu’est-ce qu’Ève ?',
+    a: 'Une seule IA avec quatre modes : Analyst, Challenger, Guardian et Shadow. Chacun pose ses questions à JEV (NOUL, CHOICE, SCORE), d’abord par le service cloud, puis par le service local quand les crédits sont épuisés. Ce ne sont pas quatre IA concurrentes.',
   },
   {
     q: 'Que se passe-t-il si JEV répond trop tard ou ne répond pas ?',
     a: 'Ève s’abstient : réponse trop tardive, JEV injoignable ou confiance trop faible, elle n’ouvre rien.',
   },
   {
-    q: 'Les cartes Agents sont-elles plusieurs LLM ?',
-    a: 'Non. Ève est l’unique IA qui trade. Observateur, Risque, Exécution, Position, Session sont des rôles code autour d’elle.',
+    q: 'Le Copilot, c’est une autre IA ?',
+    a: 'Le Copilot est le chat d’Ève : il explique les décisions avec un modèle de langage, sans jamais passer d’ordre. Les décisions de trade, elles, viennent des quatre modes et de JEV.',
   },
   {
     q: 'Le Risk Kernel peut-il être contourné ?',
-    a: 'Non. Toute ouverture paper passe par le Risk Kernel. Kill-switch armé : Ève ne peut plus ouvrir.',
+    a: 'Non. Toute ouverture paper passe par le Risk Kernel. Arrêt d’urgence armé : Ève ne peut plus ouvrir.',
   },
 ]
 
@@ -234,7 +233,7 @@ export function LandingPage() {
             <span className="camap-word">IchiVol</span>
           </Link>
           <div className="camap-nav-links">
-            <a href="#moteur">Moteur V4</a>
+            <a href="#moteur">Moteur</a>
             <a href="#eve">Ève</a>
             <a href="#methode">Décision</a>
             <a href="#capacites">Capacités</a>
@@ -255,18 +254,18 @@ export function LandingPage() {
           <div className="camap-hero-glow" aria-hidden />
           <div className="camap-hero-grid">
             <div className="camap-hero-copy camap-reveal">
-              <p className="camap-brand-lockup">IchiVol V4</p>
+              <p className="camap-brand-lockup">IchiVol</p>
               <h1 className="camap-hero-title">
-                Ève décide. <em>Le risque borne.</em>
+                Ève accepte ou refuse. <em>Le risque borne.</em>
               </h1>
               <p className="camap-hero-lede">
                 Le moteur calcule et chaque portefeuille propose ses trades. Ève,
-                avec ses quatre modes JEV, décide seule de les prendre ou non. Le
+                avec ses quatre modes JEV, les accepte ou les refuse. Le
                 Risk Kernel peut couper. Paper seulement, jamais d’argent réel.
               </p>
               <div className="camap-hero-cta">
                 <Link to="/login" className="camap-btn camap-btn-primary camap-btn-lg">
-                  Lancer le Desk V4
+                  Lancer le Desk
                 </Link>
               </div>
             </div>
@@ -275,7 +274,7 @@ export function LandingPage() {
               <div className="camap-hero-visual">
                 <span className="camap-hero-visual-badge">
                   <span className="camap-dot camap-dot-live" aria-hidden />
-                  V4 · Ève décide en paper
+                  Ève accepte ou refuse, en paper
                 </span>
                 <MockChart />
                 <div className="camap-hero-visual-footer">
@@ -286,7 +285,7 @@ export function LandingPage() {
                   <span className="is-pass">Portes</span>
                   <span className="is-pass">Gate</span>
                   <span className="is-pass">Risk</span>
-                  <span className="is-watch">Ève décide</span>
+                  <span className="is-watch">Ève juge</span>
                 </div>
               </div>
             </div>
@@ -305,7 +304,7 @@ export function LandingPage() {
         </section>
 
         <section id="moteur" className="camap-section">
-          <h2 className="camap-section-title">Les briques d’IchiVol V4</h2>
+          <h2 className="camap-section-title">Les briques d’IchiVol</h2>
           <p className="camap-section-lede">
             Du signal à l’exécution paper : moteur, puis Ève, contrôle d’entrée,
             radar d’événements, Risk Kernel, et le Lab pour affûter les règles.
@@ -341,15 +340,15 @@ export function LandingPage() {
             ))}
           </div>
           <p className="camap-eve-footnote">
-            Hub dossiers → modes → entry gate → Risk Kernel → ouverture paper.
+            Moteur → Ève (4 modes) → contrôle d’entrée → Risk Kernel → position paper.
             Elle trade ; le Risk Kernel peut refuser.
           </p>
         </section>
 
         <section id="methode" className="camap-section">
-          <h2 className="camap-section-title">Chaîne de trade V4</h2>
+          <h2 className="camap-section-title">Chaîne de trade</h2>
           <p className="camap-section-lede">
-            Mesurer → décider (Ève) → exécuter paper (Risk peut couper).
+            Mesurer → juger (Ève) → exécuter en paper (le Risk Kernel peut couper).
           </p>
           <ol className="camap-steps camap-steps-numbered">
             {STEPS.map((step) => (
@@ -370,12 +369,12 @@ export function LandingPage() {
               « Ève n’est pas un copilote qui te demande permission à chaque
               bougie — c’est une IA qui trade paper, bornée par le Risk Kernel. »
             </p>
-            <cite>Principe IchiVol V4</cite>
+            <cite>Principe IchiVol</cite>
           </blockquote>
         </section>
 
         <section id="capacites" className="camap-section">
-          <h2 className="camap-section-title">Capacités V4</h2>
+          <h2 className="camap-section-title">Capacités</h2>
           <p className="camap-section-lede">
             Trading paper autonome, portes, gate, radar, Risk, Lab — dans le
             Desk.
@@ -394,9 +393,9 @@ export function LandingPage() {
         </section>
 
         <section id="comparatif" className="camap-section">
-          <h2 className="camap-section-title">Ce que change la V4</h2>
+          <h2 className="camap-section-title">Ce qui change avec Ève</h2>
           <p className="camap-section-lede">
-            Pas un chatbot. Une IA qui décide et exécute paper, avec garde-fous.
+            Pas un chatbot. Une IA qui juge chaque trade proposé et l’exécute en paper, avec garde-fous.
           </p>
           <div className="camap-compare">
             <div className="camap-compare-col">
@@ -408,7 +407,7 @@ export function LandingPage() {
               </ul>
             </div>
             <div className="camap-compare-col camap-compare-col-highlight">
-              <span className="camap-compare-label">IchiVol V4 · Ève</span>
+              <span className="camap-compare-label">IchiVol · Ève</span>
               <ul>
                 {COMPARE.with.map((item) => (
                   <li key={item}>
@@ -445,7 +444,7 @@ export function LandingPage() {
         <section className="camap-closing">
           <h2>Laisse Ève trader le paper</h2>
           <p>
-            IchiVol V4 · autonomie paper · 4 modes · Decision Engine · Risk
+            IchiVol · autonomie paper · 4 modes · Decision Engine · Risk
             Kernel. Pas de live.
           </p>
           <Link to="/login" className="camap-btn camap-btn-primary camap-btn-lg">
@@ -462,14 +461,14 @@ export function LandingPage() {
               <span className="camap-word">IchiVol</span>
             </Link>
             <p>
-              IchiVol V4 — Ève trade le paper sur Ichimoku × RVOL. Decision
+              IchiVol — Ève trade le paper sur Ichimoku × RVOL. Decision
               Engine, modes JEV, Risk Kernel. Autonomie bornée, pas de live.
             </p>
           </div>
 
           <div className="camap-footer-cols">
             <div className="camap-footer-col">
-              <h3>Produit V4</h3>
+              <h3>Produit</h3>
               <a href="#moteur">Moteur</a>
               <a href="#eve">Ève</a>
               <a href="#methode">Décision</a>
@@ -479,8 +478,8 @@ export function LandingPage() {
             </div>
             <div className="camap-footer-col">
               <h3>Workspace</h3>
-              <Link to="/login">Desk V4</Link>
-              <Link to="/login">Agents / Ève</Link>
+              <Link to="/login">Desk</Link>
+              <Link to="/login">Ève</Link>
               <Link to="/login">Portefeuille</Link>
               <Link to="/login">Strategy Lab</Link>
               <Link to="/login">Copilot</Link>
@@ -495,7 +494,7 @@ export function LandingPage() {
 
         <div className="camap-footer-bar">
           <span className="camap-footer-muted">
-            © {new Date().getFullYear()} IchiVol V4 — trading paper autonome, pas un conseil financier.
+            © {new Date().getFullYear()} IchiVol — trading paper autonome, pas un conseil financier.
           </span>
           <span className="camap-footer-muted">
             Ève trade · Risk borne · paper only
