@@ -5,6 +5,7 @@ import { fmtEur, fmtPrice } from '../../pages/desk/deskFormat'
 import {
   buildPctSeries,
   buildTrades,
+  dodgeLabels,
   fmtSignedPct,
   heldAt,
   lerpPctAt,
@@ -37,6 +38,10 @@ const MARK_TITLE: Record<TradeMark['kind'], string> = {
   exit: 'Clôture',
 }
 
+/** Largeur de la colonne des étiquettes de fin de courbe (nom + valeur), selon la place. */
+const LABEL_COL = { wide: 176, mid: 120 } as const
+const LABEL_GAP = 16
+
 function markExplain(m: TradeMark): string {
   if (m.kind === 'entry_long') return 'Le portefeuille ouvre une position acheteuse : il gagne si le prix monte.'
   if (m.kind === 'entry_short') return 'Le portefeuille ouvre une position vendeuse : il gagne si le prix baisse.'
@@ -66,16 +71,31 @@ function fmtQty(v: number): string {
   return v.toLocaleString('fr-FR', { maximumFractionDigits: v >= 100 ? 0 : 4 })
 }
 
+/** Valeur d'étiquette de fin de courbe, toujours avec une décimale : « +27,0 % ». */
+function fmtEndPct(v: number): string {
+  const n = Math.abs(v * 100).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+  return `${v > 0 ? '+' : v < 0 ? '−' : ''}${n} %`
+}
+
+function truncate(s: string, max: number): string {
+  return s.length <= max ? s : `${s.slice(0, max - 1).trimEnd()}…`
+}
+
+/** Graduations de dates : jamais sur un bord, espacées régulièrement. */
+function timeTicks(t0: number, t1: number, n: number): number[] {
+  return Array.from({ length: n }, (_, i) => t0 + ((t1 - t0) * (i + 0.5)) / n)
+}
+
 function MarkGlyph({ kind, x, y, color, size = 1 }: { kind: TradeMark['kind']; x: number; y: number; color: string; size?: number }) {
-  const s = 6 * size
+  const s = 5.5 * size
   if (kind === 'exit') {
-    return <circle cx={x} cy={y} r={4.5 * size} fill="var(--card, #fefdfb)" stroke={color} strokeWidth={2.2} />
+    return <circle cx={x} cy={y} r={4.5 * size} fill="var(--eqt-surface)" stroke={color} strokeWidth={2} />
   }
   const up = kind === 'entry_long'
   const pts = up
     ? `${x},${y - s} ${x + s},${y + s * 0.75} ${x - s},${y + s * 0.75}`
     : `${x},${y + s} ${x + s},${y - s * 0.75} ${x - s},${y - s * 0.75}`
-  return <polygon points={pts} fill={color} stroke="var(--card, #fefdfb)" strokeWidth={1.5} strokeLinejoin="round" />
+  return <polygon points={pts} fill={color} stroke="var(--eqt-surface)" strokeWidth={1.5} strokeLinejoin="round" />
 }
 
 export function EquityTrajectory({
@@ -107,10 +127,13 @@ export function EquityTrajectory({
     return () => ro.disconnect()
   }, [])
 
-  useEffect(() => {
+  // Changement de période : on oublie la date lue et le repère ouvert (réinitialisation pendant le rendu).
+  const [seenPeriod, setSeenPeriod] = useState(period)
+  if (seenPeriod !== period) {
+    setSeenPeriod(period)
     setHoverMs(null)
     setActiveMark(null)
-  }, [period])
+  }
 
   const cutoff = useMemo(() => periodCutoffMs(period), [period])
 
@@ -135,12 +158,14 @@ export function EquityTrajectory({
     [orders, books],
   )
 
-  const compact = width < 560
-  const h = compact ? 250 : 300
-  const padL = 8
-  const padR = compact ? 52 : 60
-  const padT = 14
-  const padB = 28
+  // Étroit : pas d'étiquettes de fin de courbe, la liste en dessous sert de légende.
+  const compact = width < 520
+  const labelCol = compact ? 0 : width < 760 ? LABEL_COL.mid : LABEL_COL.wide
+  const h = compact ? 240 : 320
+  const padL = 46
+  const padR = compact ? 12 : labelCol
+  const padT = 18
+  const padB = 26
   const innerW = Math.max(40, width - padL - padR)
   const innerH = h - padT - padB
 
@@ -158,15 +183,21 @@ export function EquityTrajectory({
     const axis = pctAxis(Math.min(...vals), Math.max(...vals))
     const yAt = (pct: number) => padT + ((axis.max - pct) / (axis.max - axis.min)) * innerH
     const xAt = (ms: number) => padL + ((Math.min(Math.max(ms, t0), t1) - t0) / (t1 - t0)) * innerW
-    const traces = prepared.map((b, i) => ({
-      book: b,
-      series: series[i]!,
-      d: series[i]!
-        .map((p, k) => `${k ? 'L' : 'M'}${xAt(p.ms).toFixed(1)},${yAt(p.pct).toFixed(1)}`)
-        .join(' '),
-    }))
-    const nTicks = compact ? 3 : 5
-    const xTicks = Array.from({ length: nTicks }, (_, i) => t0 + ((t1 - t0) * i) / (nTicks - 1))
+    const xEnd = padL + innerW
+    const traces = prepared.map((b, i) => {
+      const s = series[i]!
+      const last = s[s.length - 1]!
+      const d = s.map((p, k) => `${k ? 'L' : 'M'}${xAt(p.ms).toFixed(1)},${yAt(p.pct).toFixed(1)}`).join(' ')
+      const area = `${d} L${xEnd.toFixed(1)},${yAt(0).toFixed(1)} L${xAt(s[0]!.ms).toFixed(1)},${yAt(0).toFixed(1)} Z`
+      return { book: b, series: s, d, area, last, yEnd: yAt(last.pct) }
+    })
+    const labelYs = dodgeLabels(
+      traces.map((t) => t.yEnd),
+      LABEL_GAP,
+      padT + LABEL_GAP / 2,
+      padT + innerH - LABEL_GAP / 2,
+    )
+    const xTicks = timeTicks(t0, t1, compact ? 3 : 5)
     const marks = trades.marks
       .filter((m) => m.ms >= t0 && m.ms <= t1)
       .map((m) => {
@@ -177,7 +208,7 @@ export function EquityTrajectory({
         return { ...m, x: xAt(m.ms), y: yAt(pct), pct, color: tr.book.color }
       })
       .filter((m): m is TradeMark & { x: number; y: number; pct: number; color: string } => m != null)
-    return { t0, t1, axis, yAt, xAt, traces, xTicks, marks }
+    return { t0, t1, axis, yAt, xAt, xEnd, traces, labelYs, xTicks, marks }
   }, [prepared, trades, cutoff, innerW, innerH, compact])
 
   if (!geo) {
@@ -191,11 +222,16 @@ export function EquityTrajectory({
     )
   }
 
-  const { t0, t1, axis, yAt, xAt, traces, xTicks, marks } = geo
+  const { t0, t1, axis, yAt, xAt, xEnd, traces, labelYs, xTicks, marks } = geo
   const readMs = hoverMs ?? t1
   const stepDigits = axis.step < 0.001 ? 2 : axis.step < 0.01 ? 1 : 0
-  const visibleMarks = focus ? marks.filter((m) => m.bookCode === focus) : marks
+  // Les repères de trades n'apparaissent que sur le portefeuille mis en avant : les courbes restent lisibles.
+  const visibleMarks = focus ? marks.filter((m) => m.bookCode === focus) : []
   const mark = marks.find((m) => m.id === activeMark) ?? null
+  const focusTrace = focus ? traces.find((t) => t.book.code === focus) : null
+  // Largeur moyenne : le nom seul (la valeur est dans la liste en dessous).
+  const withValue = labelCol >= LABEL_COL.wide
+  const nameMax = withValue ? 16 : 14
 
   const rows = traces
     .map((t) => {
@@ -214,38 +250,37 @@ export function EquityTrajectory({
   const tipLeft = mark ? Math.min(Math.max(4, mark.x - 120), width - 244) : 0
   // Assez de place au-dessus du repère ? Sinon l'info-bulle s'ouvre dessous (jamais sous l'en-tête de l'app).
   const tipBelow = mark ? mark.y < 250 : false
+  const hoverX = hoverMs != null ? xAt(hoverMs) : null
+  const hoverLabelAnchor = hoverX == null ? 'middle' : hoverX < padL + 60 ? 'start' : hoverX > xEnd - 60 ? 'end' : 'middle'
 
   return (
     <div className="eqt" ref={plotRef}>
       <p className="eqt-intro">
-        Chaque courbe montre ce que chaque portefeuille a gagné ou perdu depuis son lancement, en % de son
-        capital de départ. Au-dessus de la ligne <b>0 %</b> il gagne, en dessous il perd. Touchez le graphique
-        pour lire une date, un repère pour le détail du trade.
+        Gain ou perte de chaque portefeuille depuis son lancement, en % de son capital de départ.
+        {focus ? ' Repères : ' : ' Touchez un portefeuille pour voir ses trades.'}
+        {focus ? (
+          <span className="eqt-keys" aria-label="Repères">
+            <span>
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <MarkGlyph kind="entry_long" x={8} y={8.5} color={focusTrace?.book.color ?? 'currentColor'} size={0.9} />
+              </svg>
+              achat
+            </span>
+            <span>
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <MarkGlyph kind="entry_short" x={8} y={7.5} color={focusTrace?.book.color ?? 'currentColor'} size={0.9} />
+              </svg>
+              vente à découvert
+            </span>
+            <span>
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <MarkGlyph kind="exit" x={8} y={8} color={focusTrace?.book.color ?? 'currentColor'} size={0.9} />
+              </svg>
+              clôture
+            </span>
+          </span>
+        ) : null}
       </p>
-      <ul className="eqt-keys" aria-label="Repères">
-        <li>
-          <svg viewBox="0 0 16 16" aria-hidden="true">
-            <MarkGlyph kind="entry_long" x={8} y={8.5} color="var(--ink, #202b36)" size={0.9} />
-          </svg>
-          Achat
-        </li>
-        <li>
-          <svg viewBox="0 0 16 16" aria-hidden="true">
-            <MarkGlyph kind="entry_short" x={8} y={7.5} color="var(--ink, #202b36)" size={0.9} />
-          </svg>
-          Vente à découvert
-        </li>
-        <li>
-          <svg viewBox="0 0 16 16" aria-hidden="true">
-            <MarkGlyph kind="exit" x={8} y={8} color="var(--ink, #202b36)" size={0.9} />
-          </svg>
-          Clôture (revente ou rachat)
-        </li>
-        <li>
-          <i className="eqt-key-line" />
-          Entre deux repères : maintien
-        </li>
-      </ul>
 
       <div className="eqt-plot">
         <svg
@@ -260,58 +295,68 @@ export function EquityTrajectory({
             const zero = v === 0
             return (
               <g key={v}>
-                <line
-                  x1={padL}
-                  x2={padL + innerW}
-                  y1={y}
-                  y2={y}
-                  className={zero ? 'eqt-zero' : 'eqt-grid'}
-                />
-                <text x={padL + innerW + 6} y={y + 4} className={zero ? 'eqt-axis is-zero' : 'eqt-axis'}>
+                <line x1={padL} x2={xEnd} y1={y} y2={y} className={zero ? 'eqt-zero' : 'eqt-grid'} />
+                <text x={padL - 8} y={y + 3.5} className={zero ? 'eqt-axis is-zero' : 'eqt-axis'} textAnchor="end">
                   {fmtSignedPct(v, stepDigits)}
                 </text>
               </g>
             )
           })}
-          {xTicks.map((ms, i) => (
-            <text
-              key={ms}
-              x={xAt(ms)}
-              y={h - 8}
-              className="eqt-axis"
-              textAnchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'}
-            >
-              {fmtTick(ms, t1 - t0)}
-            </text>
+          {xTicks.map((ms) => (
+            <g key={ms}>
+              <line x1={xAt(ms)} x2={xAt(ms)} y1={padT + innerH} y2={padT + innerH + 4} className="eqt-tick" />
+              <text x={xAt(ms)} y={h - 7} className="eqt-axis" textAnchor="middle">
+                {fmtTick(ms, t1 - t0)}
+              </text>
+            </g>
           ))}
 
+          {focusTrace ? <path d={focusTrace.area} fill={focusTrace.book.color} opacity={0.1} /> : null}
           {traces.map(({ book, d }) => (
             <path
               key={book.code}
               d={d}
               fill="none"
               stroke={book.color}
-              strokeWidth={focus === book.code ? 3 : 2}
+              strokeWidth={focus === book.code ? 2.5 : 2}
               strokeLinejoin="round"
               strokeLinecap="round"
-              opacity={focus && focus !== book.code ? 0.15 : 1}
+              opacity={focus && focus !== book.code ? 0.18 : 1}
             />
           ))}
-          {traces.map(({ book, series }) => {
-            const last = series[series.length - 1]!
-            if (focus && focus !== book.code) return null
-            return (
-              <circle
-                key={`end-${book.code}`}
-                cx={xAt(last.ms)}
-                cy={yAt(last.pct)}
-                r={4}
-                fill={book.color}
-                stroke="var(--card, #fefdfb)"
-                strokeWidth={2}
-              />
-            )
-          })}
+          {traces.map(({ book, last, yEnd }) =>
+            focus && focus !== book.code ? null : (
+              <circle key={`end-${book.code}`} cx={xAt(last.ms)} cy={yEnd} r={4} fill={book.color} stroke="var(--eqt-surface)" strokeWidth={2} />
+            ),
+          )}
+
+          {!compact
+            ? traces.map(({ book, last, yEnd }, i) => {
+                const dim = focus != null && focus !== book.code
+                const y = labelYs[i]!
+                const x0 = xEnd + 6
+                const x1 = xEnd + 18
+                return (
+                  <g
+                    key={`lbl-${book.code}`}
+                    className={`eqt-endlabel${dim ? ' is-dim' : ''}`}
+                    onClick={() => setFocus(focus === book.code ? null : book.code)}
+                  >
+                    {Math.abs(y - yEnd) > 1 ? (
+                      <path d={`M${x0},${yEnd} C${x0 + 6},${yEnd} ${x1 - 6},${y} ${x1},${y}`} fill="none" stroke={book.color} strokeWidth={1} opacity={0.6} />
+                    ) : null}
+                    <text x={x1 + 4} y={y + 3.5} className="eqt-endname">
+                      {truncate(book.label, nameMax)}
+                    </text>
+                    {withValue ? (
+                      <text x={xEnd + labelCol - 6} y={y + 3.5} className="eqt-endval" textAnchor="end">
+                        {fmtEndPct(last.pct)}
+                      </text>
+                    ) : null}
+                  </g>
+                )
+              })
+            : null}
 
           <rect
             className="eqt-hit"
@@ -331,24 +376,17 @@ export function EquityTrajectory({
             }}
           />
 
-          {hoverMs != null ? (
+          {hoverMs != null && hoverX != null ? (
             <g pointerEvents="none">
-              <line x1={xAt(hoverMs)} x2={xAt(hoverMs)} y1={padT} y2={padT + innerH} className="eqt-cross" />
+              <line x1={hoverX} x2={hoverX} y1={padT} y2={padT + innerH} className="eqt-cross" />
+              <text x={hoverX} y={padT - 6} className="eqt-axis eqt-hover-date" textAnchor={hoverLabelAnchor}>
+                {fmtWhen(hoverMs)}
+              </text>
               {traces.map(({ book, series }) => {
                 if (focus && focus !== book.code) return null
                 const v = valueAt(series, hoverMs)
                 if (!v) return null
-                return (
-                  <circle
-                    key={`x-${book.code}`}
-                    cx={xAt(hoverMs)}
-                    cy={yAt(v.pct)}
-                    r={4.5}
-                    fill={book.color}
-                    stroke="var(--card, #fefdfb)"
-                    strokeWidth={2}
-                  />
-                )
+                return <circle key={`x-${book.code}`} cx={hoverX} cy={yAt(v.pct)} r={4.5} fill={book.color} stroke="var(--eqt-surface)" strokeWidth={2} />
               })}
             </g>
           ) : null}
@@ -458,9 +496,7 @@ export function EquityTrajectory({
             <button type="button" onClick={() => setFocus(null)}>
               Tout afficher
             </button>
-          ) : (
-            <small>Touchez un portefeuille pour le mettre en avant</small>
-          )}
+          ) : null}
         </div>
         <ol>
           {rows.map(({ t, v, held }) => {
@@ -471,19 +507,17 @@ export function EquityTrajectory({
                 <button type="button" aria-pressed={on} onClick={() => setFocus(on ? null : t.book.code)}>
                   <i className="eqt-swatch" style={{ background: t.book.color }} />
                   <span className="eqt-name">{t.book.label}</span>
-                  <span className="eqt-val">{v ? fmtSignedPct(v.pct) : '—'}</span>
-                  <span className="eqt-eur">
-                    {pnl != null ? `${pnl >= 0 ? '+' : '−'}${fmtEur(Math.abs(pnl), 0)}` : 'pas encore lancé'}
-                  </span>
                   <span className="eqt-held">
                     {!v
-                      ? 'Ce portefeuille ne tournait pas encore à cette date.'
+                      ? 'pas encore lancé à cette date'
                       : held.length === 0
-                        ? 'Aucune position : il attend un signal.'
-                        : `Maintien de ${held.length} position${held.length > 1 ? 's' : ''} : ${held
-                            .map((p) => `${p.symbol} (${p.side === 'long' ? 'achat' : 'vente'})`)
-                            .join(', ')}`}
+                        ? 'aucune position'
+                        : held.map((p) => `${p.symbol} ${p.side === 'long' ? '↑' : '↓'}`).join(' · ')}
                   </span>
+                  <span className={`eqt-val${v ? (v.pct > 0 ? ' up' : v.pct < 0 ? ' down' : '') : ''}`}>
+                    {v ? fmtSignedPct(v.pct) : '—'}
+                  </span>
+                  <span className="eqt-eur">{pnl != null ? `${pnl >= 0 ? '+' : '−'}${fmtEur(Math.abs(pnl), 0)}` : ''}</span>
                 </button>
               </li>
             )

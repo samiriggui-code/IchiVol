@@ -3,7 +3,7 @@
  */
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { bookColors, buildPctSeries, buildTrades, heldAt, pctAxis, type TradeOrder } from './equityTrajectory'
+import { bookColors, buildPctSeries, buildTrades, dodgeLabels, heldAt, pctAxis, type TradeOrder } from './equityTrajectory'
 
 test('chaque livre garde sa couleur, quel que soit l’ordre', () => {
   const a = bookColors(['ICHIVOL_WIDE_V1', 'ICHIVOL_BASELINE_V1', 'X'])
@@ -77,4 +77,14 @@ test('l’axe contient toujours 0 %', () => {
   const ax = pctAxis(0.01, 0.03)
   assert.ok(ax.min <= 0 && ax.max >= 0.03)
   assert.ok(ax.ticks.includes(0))
+})
+
+test('les étiquettes de fin de courbe ne se chevauchent pas et gardent leur ordre', () => {
+  const ys = dodgeLabels([100, 104, 101, 250], 14, 10, 290)
+  assert.ok(ys[1]! - ys[2]! >= 14 - 1e-9)
+  assert.ok(ys[2]! - ys[0]! >= 14 - 1e-9)
+  assert.ok(ys[0]! <= ys[2]! && ys[2]! <= ys[1]! && ys[1]! < ys[3]!)
+  assert.equal(ys[3], 250)
+  const packed = dodgeLabels([285, 288, 289], 14, 10, 290)
+  assert.ok(Math.max(...packed) <= 290 && Math.min(...packed) >= 10)
 })

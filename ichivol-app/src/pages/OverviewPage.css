@@ -306,10 +306,14 @@
 }
 .desk-page .chart-summary{
   display: flex;
-  gap: 22px;
+  flex-wrap: wrap;
+  gap: 4px 22px;
   padding: 0 23px;
   font: 10px 'DM Mono';
   color: var(--muted);
+}
+.desk-page .chart-summary > span{
+  white-space: nowrap;
 }
 .desk-page .chart-summary b{
   color: var(--green);
