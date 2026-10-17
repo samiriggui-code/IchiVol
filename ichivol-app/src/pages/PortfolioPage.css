@@ -1328,3 +1328,67 @@
 .pf-page .fc-mode input { margin-top: 2px; }
 .pf-page .fc-modes + .fc-note, .pf-page .card-body .fc-hint { font-size: 11px; }
 .pf-page button:disabled { opacity: .45; cursor: default; }
+
+/* Téléphone : positions et ordres en fiches empilées (plus de colonnes cachées à faire défiler). */
+@media (max-width: 640px) {
+  .pf-page table.pf-stack,
+  .pf-page table.pf-stack tbody,
+  .pf-page table.pf-stack tr,
+  .pf-page table.pf-stack td {
+    display: block;
+    width: 100%;
+  }
+  .pf-page table.pf-stack thead { display: none; }
+  .pf-page table.pf-stack tr {
+    display: flex;
+    flex-direction: column;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .pf-page table.pf-stack tr:last-child { border-bottom: 0; }
+  .pf-page table.pf-stack td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 3px 0;
+    border: 0;
+    white-space: normal;
+    text-align: right;
+  }
+  .pf-page table.pf-stack td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    text-align: left;
+    flex: 0 0 auto;
+  }
+  .pf-page table.pf-stack td.pf-stack-head,
+  .pf-page table.pf-stack td.pf-stack-empty {
+    display: block;
+    order: -1;
+    text-align: left;
+    padding-bottom: 6px;
+  }
+  .pf-page table.pf-stack td.pf-stack-head::before,
+  .pf-page table.pf-stack td.pf-stack-empty::before { content: none; }
+  .pf-page table.pf-stack .pf-pos-state { justify-content: flex-end; }
+}
+
+/* Onglets de portefeuille : celui affiché doit se voir. */
+.pf-page .pf-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pf-page .pf-switch button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-foreground, #fff);
+}
+@media (max-width: 640px) {
+  .pf-page .page-head .actions {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+}

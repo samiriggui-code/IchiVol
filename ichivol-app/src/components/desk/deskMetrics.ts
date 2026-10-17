@@ -102,7 +102,8 @@ export function concentrationFromPositions(
     .map((p) => ({
       symbol: p.symbol.replace(/USDT$/i, ''),
       mv: Math.abs(
-        p.market_value ?? (p.current_price != null ? p.current_price * (p.qty ?? 0) : 0),
+        // Without a fresh mark, fall back to the notional engaged at entry (else an open lot shows as « aucune position »).
+        p.market_value ?? (p.current_price != null ? p.current_price * (p.qty ?? 0) : (p.notional ?? 0)),
       ),
     }))
     .filter((p) => p.mv > 0)

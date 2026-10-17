@@ -40,28 +40,28 @@ const EVE_MODES = [
   {
     id: 'analyst',
     icon: '◇',
-    name: 'Analyste',
+    name: 'Analyst',
     tag: 'NOUL · CHOICE · SCORE',
     body: 'Lit le setup et pose le scénario d’engagement.',
   },
   {
     id: 'challenger',
     icon: '↺',
-    name: 'Contradictrice',
+    name: 'Challenger',
     tag: 'NOUL · CHOICE · SCORE',
     body: 'Contre-attaque — alternatives et fragilités avant d’ouvrir.',
   },
   {
     id: 'guardian',
     icon: '◈',
-    name: 'Gardienne',
+    name: 'Guardian',
     tag: 'NOUL · CHOICE · SCORE',
     body: 'Anomalies et risque. Le Risk Kernel peut bloquer.',
   },
   {
     id: 'shadow',
     icon: '◉',
-    name: 'Contre-avis',
+    name: 'Shadow',
     tag: 'NOUL · CHOICE · SCORE',
     body: 'Refait l’évaluation de son côté avec JEV, sans voir les autres modes.',
   },
@@ -135,7 +135,7 @@ const FAQ = [
   },
   {
     q: 'Qu’est-ce qu’Ève Intelligence ?',
-    a: 'Une seule IA avec quatre modes : Analyste, Contradictrice, Gardienne et Contre-avis. Chacun pose ses questions à JEV (NOUL, CHOICE, SCORE), d’abord par l’API JEV, puis jevos quand les crédits sont épuisés. Ce ne sont pas quatre IA concurrentes.',
+    a: 'Une seule IA avec quatre modes : Analyst, Challenger, Guardian et Shadow. Chacun pose ses questions à JEV (NOUL, CHOICE, SCORE), d’abord par l’API JEV, puis jevos quand les crédits sont épuisés. Ce ne sont pas quatre IA concurrentes.',
   },
   {
     q: 'Que se passe-t-il si JEV répond trop tard ou ne répond pas ?',

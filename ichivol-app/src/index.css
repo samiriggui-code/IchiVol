@@ -652,9 +652,17 @@ button, select { font: inherit; color: inherit; }
   gap: 0.15rem;
 }
 .dash-shell.is-mobile .llm-status-text {
-  display: inline;
-  font-size: 0.52rem;
-  letter-spacing: 0;
+  /* Phone: one dot per AI (Copilot / Local / Cloud), names in the title — the labels pushed the header past the screen. */
+  display: none;
+}
+.dash-shell.is-mobile .dash-header-right {
+  min-width: 0;
+  gap: 0.25rem;
+}
+.dash-shell.is-mobile .dash-kill {
+  padding-inline: 0.4rem;
+  font-size: 0.6rem;
+  white-space: nowrap;
 }
 .dash-shell.is-mobile .ai-status-chip {
   padding: 0.1rem 0.28rem;
