@@ -1,0 +1,305 @@
+/* Trajectoire des portefeuilles (Desk) : courbes en %, repères de trades, lecture par date. */
+
+.eqt {
+  padding: 4px 20px 16px;
+  color: var(--ink, #202b36);
+}
+
+.eqt-intro {
+  margin: 6px 0 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted, #6b7178);
+}
+
+.eqt-empty {
+  margin: 24px 0;
+  font-size: 12px;
+  color: var(--muted, #6b7178);
+}
+
+.eqt-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+  color: var(--muted, #6b7178);
+}
+
+.eqt-keys li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.eqt-keys svg {
+  width: 14px;
+  height: 14px;
+  overflow: visible;
+}
+
+.eqt-key-line {
+  display: inline-block;
+  width: 16px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--ink, #202b36);
+}
+
+.eqt-plot {
+  position: relative;
+}
+
+.eqt-plot svg {
+  display: block;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.eqt-grid {
+  stroke: #ebe7e1;
+  stroke-width: 1;
+}
+
+.eqt-zero {
+  stroke: #7d8288;
+  stroke-width: 1.5;
+}
+
+.eqt-axis {
+  font: 11px 'DM Mono', ui-monospace, monospace;
+  fill: #7d8288;
+}
+
+.eqt-axis.is-zero {
+  fill: var(--ink, #202b36);
+  font-weight: 600;
+}
+
+.eqt-hit {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+.eqt-cross {
+  stroke: #202b36;
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0.55;
+}
+
+.eqt-mark {
+  cursor: pointer;
+  outline: none;
+}
+
+.eqt-mark:focus-visible circle:first-child {
+  stroke: #1a7df5;
+  stroke-width: 1.5;
+}
+
+.eqt-tip {
+  position: absolute;
+  z-index: 5;
+  width: 240px;
+  padding: 10px 12px;
+  border: 1px solid var(--line, #ddd9d3);
+  border-radius: 10px;
+  background: var(--card, #fefdfb);
+  box-shadow: 0 10px 28px #0000001f;
+  transform: translateY(-100%);
+  font-size: 12px;
+}
+
+.eqt-tip.is-below {
+  transform: none;
+}
+
+.eqt-tip .eqt-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.eqt-tip .eqt-head strong {
+  font-size: 13px;
+}
+
+.desk-page .eqt-tip-close,
+.eqt-tip-close {
+  border: 0;
+  padding: 0 4px;
+  background: none;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--muted, #6b7178);
+}
+
+.eqt-tip p {
+  margin: 4px 0 8px;
+  line-height: 1.4;
+  color: var(--muted, #6b7178);
+}
+
+.eqt-tip .eqt-tip-book {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 4px;
+  color: var(--ink, #202b36);
+  font-weight: 600;
+}
+
+.eqt-tip-book i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.eqt-tip dl {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.eqt-tip dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.eqt-tip dt {
+  color: var(--muted, #6b7178);
+}
+
+.eqt-tip dd {
+  margin: 0;
+  text-align: right;
+  font: 11px 'DM Mono', ui-monospace, monospace;
+}
+
+.eqt-tip dd.up {
+  color: var(--green, #0b8f83);
+}
+
+.eqt-tip dd.down {
+  color: var(--red, #c8412f);
+}
+
+.eqt-readout {
+  margin-top: 10px;
+  border-top: 1px solid var(--line, #ddd9d3);
+  padding-top: 8px;
+}
+
+.eqt-readout .eqt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.eqt-readout .eqt-head small {
+  font-weight: 400;
+  color: var(--muted, #6b7178);
+  text-align: right;
+}
+
+.desk-page .eqt-readout .eqt-head button,
+.eqt-readout .eqt-head button {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+.eqt-readout ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.eqt-readout li + li {
+  border-top: 1px solid #f0ece6;
+}
+
+.eqt-readout li.is-dim {
+  opacity: 0.45;
+}
+
+.desk-page .eqt-readout li button,
+.eqt-readout li button {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    'sw name val eur'
+    '. held held held';
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 2px;
+  width: 100%;
+  padding: 8px 2px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+}
+
+.desk-page .eqt-readout li button:hover,
+.eqt-readout li button:hover {
+  background: #f5f2ed;
+}
+
+.eqt-readout li button[aria-pressed='true'] {
+  background: #f1f5fa;
+}
+
+.eqt-swatch {
+  grid-area: sw;
+  width: 14px;
+  height: 4px;
+  border-radius: 2px;
+}
+
+.eqt-name {
+  grid-area: name;
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eqt-val {
+  grid-area: val;
+  font: 600 12px 'DM Mono', ui-monospace, monospace;
+  text-align: right;
+}
+
+.eqt-eur {
+  grid-area: eur;
+  min-width: 64px;
+  font: 11px 'DM Mono', ui-monospace, monospace;
+  color: var(--muted, #6b7178);
+  text-align: right;
+}
+
+.eqt-held {
+  grid-area: held;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--muted, #6b7178);
+}
+
+@media (max-width: 560px) {
+  .eqt {
+    padding: 4px 12px 14px;
+  }
+}
