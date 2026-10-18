@@ -24,8 +24,8 @@ export function IchimokuMockChart() {
     >
       <defs>
         <linearGradient id="ichiMockCloudFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.32" />
-          <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.05" />
+          <stop offset="0%" stopColor="var(--cyan)" stopOpacity="0.32" />
+          <stop offset="100%" stopColor="var(--cyan)" stopOpacity="0.05" />
         </linearGradient>
       </defs>
       <path
@@ -35,20 +35,20 @@ export function IchimokuMockChart() {
       <path
         d="M0,100 C50,94 70,78 110,80 C150,82 170,66 210,62 C250,58 290,48 320,44"
         fill="none"
-        stroke="var(--primary)"
+        stroke="var(--cyan)"
         strokeOpacity="0.6"
         strokeWidth="1.4"
       />
       <path
         d="M0,110 C50,106 70,114 110,116 C150,118 170,106 210,104 C250,102 290,92 320,86"
         fill="none"
-        stroke="var(--primary)"
+        stroke="var(--cyan)"
         strokeOpacity="0.32"
         strokeWidth="1.4"
       />
       {CANDLES.map((c, i) => {
         const x = step * (i + 1)
-        const color = c.bull ? 'var(--primary)' : 'var(--destructive)'
+        const color = c.bull ? 'var(--bull)' : 'var(--bear)'
         return (
           <g key={i}>
             <line x1={x} x2={x} y1={c.wickTop} y2={c.wickBottom} stroke={color} strokeOpacity="0.6" strokeWidth="1" />
