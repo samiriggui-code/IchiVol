@@ -3,14 +3,12 @@
  * (choisi dans Paramètres › Modèles d'IA). Il ne passe jamais d'ordre.
  */
 
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { askAgentStream, type AgentMode } from '../lib/agent'
 import { FactsheetAnswer } from '../components/FactsheetAnswer'
 import { useAgentSession } from '../lib/agentSession'
 import { getSettings } from '../lib/settings'
 import './AgentPage.css'
-
-type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
 
 type ToolActivity = {
   name: string
@@ -23,20 +21,6 @@ const SUGGESTIONS = [
   'Quel est le risque du portefeuille ?',
   'Explique le setup BNB',
 ]
-
-function badge(text: string, tone: BadgeTone = ''): ReactNode {
-  let inferred = tone
-  if (!inferred) {
-    inferred = /PASSE|ACCEPTÉ|OUVERTE|VALIDÉ|DISPONIBLE/i.test(text)
-      ? 'green'
-      : /REFUS|BLOQU|ERREUR/i.test(text)
-        ? 'red'
-        : /PRUDENCE|ARMED|WATCH/i.test(text)
-          ? 'amber'
-          : ''
-  }
-  return <span className={`tag ${inferred}`.trim()}>{text}</span>
-}
 
 export function AgentPage() {
   const { history, setHistory, input, setInput, loading, setLoading, threadId, setThreadId, launch, takeLaunch } =
@@ -138,54 +122,72 @@ export function AgentPage() {
     void send(input)
   }
 
+  const modelState =
+    llmReady === null ? (
+      <span className="iv-chip is-muted">
+        <i className="iv-dot is-off" aria-hidden="true" />—
+      </span>
+    ) : llmReady ? (
+      <span className="iv-chip is-mint">
+        <i className="iv-dot" aria-hidden="true" />
+        Modèle connecté
+      </span>
+    ) : (
+      <span className="iv-chip is-amber">
+        <i className="iv-dot is-amber" aria-hidden="true" />
+        Modèle non connecté
+      </span>
+    )
+
   return (
     <div className="copilot-page">
-      <div className="page-head">
+      <header className="iv-ph">
         <div>
-          <div className="eyebrow">08 / ICHIVOL WORKSPACE</div>
+          <div className="iv-meta">Copilot · le chat d’Ève</div>
           <h1>Copilot</h1>
-          <p className="subtitle">Le chat d’Ève : explorer et expliquer chaque décision.</p>
+          <p>Le chat d’Ève : explorer et expliquer chaque décision.</p>
         </div>
-        <div className="actions">{badge('CHAT D’ÈVE', 'gray')}</div>
-      </div>
+        <div className="iv-ph-act">{modelState}</div>
+      </header>
 
-      <div className="grid">
-        <section className="card chat">
-          <div className="card-head">
-            <h2>Une seconde lecture</h2>
-          </div>
-          <div className="chat-log" id="chat-log">
-            <div className="bubble">
-              <b>Votre décision, rendue lisible.</b>
-              <p>
-                Choisissez une question pour explorer les données. Le Copilot explique les
-                signaux et le risque ; les décisions de trade restent à Ève et au Risk Kernel.
-              </p>
-              <span className="tag gray">
-                {llmReady === null
-                  ? '—'
-                  : llmReady
-                    ? 'Modèle connecté'
-                    : 'Modèle non connecté'}
-              </span>
+      <div className="iv-grid">
+        <section className="iv-card iv-s8 iv-m-s12 cp-chat">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs">
+              <span className="iv-card-tab is-on">Chat d’Ève</span>
             </div>
+            <div className="iv-card-tools">Il explique, il ne passe jamais d’ordre</div>
+          </div>
+          <div className="cp-log" id="chat-log" aria-live="polite">
+            {history.length === 0 ? (
+              <div className="cp-msg is-eve">
+                <span className="cp-who">Ève</span>
+                <div className="cp-bb">
+                  <b>Votre décision, rendue lisible.</b>
+                  <p>
+                    Choisissez une question pour explorer les données. Le Copilot explique les signaux et le risque ;
+                    les décisions de trade restent à Ève et au Risk Kernel.
+                  </p>
+                </div>
+              </div>
+            ) : null}
             {history.map((m, i) => (
-              <div className="bubble" key={`${m.role}-${i}`}>
-                <span className="eyebrow">{m.role === 'user' ? 'VOUS' : 'ÈVE'}</span>
-                {m.role === 'assistant' && m.factsheet && !m.factsheet.fallback ? (
-                  <FactsheetAnswer view={m.factsheet} />
-                ) : (
-                  <p>{m.content || '—'}</p>
-                )}
+              <div className={`cp-msg ${m.role === 'user' ? 'is-me' : 'is-eve'}`} key={`${m.role}-${i}`}>
+                <span className="cp-who">{m.role === 'user' ? 'Vous' : 'Ève'}</span>
+                <div className="cp-bb">
+                  {m.role === 'assistant' && m.factsheet && !m.factsheet.fallback ? (
+                    <FactsheetAnswer view={m.factsheet} />
+                  ) : (
+                    <p>{m.content || '—'}</p>
+                  )}
+                </div>
                 {m.role === 'assistant' && m.toolCalls && m.toolCalls.length > 0 && (
-                  <ul className="tool-activity done">
+                  <ul className="cp-tools">
                     {m.toolCalls.map((t, j) => (
-                      <li key={`${t.name}-${j}`}>
+                      <li key={`${t.name}-${j}`} className={`iv-chip ${t.ok ? '' : 'is-sell'}`.trim()}>
                         <code>{t.name}</code>
-                        <span className={`tag ${t.ok ? 'green' : 'red'}`.trim()}>
-                          {t.ok ? 'OK' : 'ERREUR'}
-                        </span>
-                        <span className="tool-ms">{t.ms} ms</span>
+                        <span className={t.ok ? 'ok' : 'neg'}>{t.ok ? 'OK' : 'ERREUR'}</span>
+                        <span className="dim">{t.ms} ms</span>
                       </li>
                     ))}
                   </ul>
@@ -193,34 +195,34 @@ export function AgentPage() {
               </div>
             ))}
             {(loading || toolActivity.length > 0) && toolActivity.length > 0 && (
-              <div className="bubble tool-live">
-                <span className="eyebrow">OUTILS</span>
-                <ul className="tool-activity">
+              <div className="cp-msg is-eve is-live">
+                <span className="cp-who">Outils</span>
+                <ul className="cp-tools">
                   {toolActivity.map((t, j) => (
-                    <li key={`${t.name}-${j}-${t.status}`}>
+                    <li
+                      key={`${t.name}-${j}-${t.status}`}
+                      className={`iv-chip ${t.status === 'running' ? 'is-amber' : t.status === 'ok' ? '' : 'is-sell'}`.trim()}
+                    >
                       <code>{t.name}</code>
-                      <span
-                        className={`tag ${
-                          t.status === 'running' ? 'amber' : t.status === 'ok' ? 'green' : 'red'
-                        }`.trim()}
-                      >
+                      <span className={t.status === 'running' ? 'warn' : t.status === 'ok' ? 'ok' : 'neg'}>
                         {t.status === 'running' ? '…' : t.status === 'ok' ? 'OK' : 'ERREUR'}
                       </span>
-                      {t.ms != null && <span className="tool-ms">{t.ms} ms</span>}
+                      {t.ms != null && <span className="dim">{t.ms} ms</span>}
                     </li>
                   ))}
                 </ul>
               </div>
             )}
             {error && (
-              <div className="bubble">
-                <p style={{ color: 'var(--red)' }}>{error}</p>
-              </div>
+              <p className="iv-empty is-error cp-error" role="alert">
+                {error}
+              </p>
             )}
           </div>
-          <form id="chat-form" onSubmit={onSubmit}>
+          <form id="chat-form" className="cp-composer" onSubmit={onSubmit}>
             <input
               id="chat-input"
+              className="iv-input"
               placeholder="Pourquoi BTC n’est-il pas encore déclenché ?"
               aria-label="Votre question"
               value={input}
@@ -228,48 +230,70 @@ export function AgentPage() {
               required
               disabled={loading}
             />
-            <button className="primary" type="submit" disabled={loading}>
+            <button className="iv-btn iv-btn--primary" type="submit" disabled={loading}>
               {loading ? '…' : 'Envoyer ↗'}
             </button>
           </form>
         </section>
 
-        <section className="card">
-          <div className="card-head">
-            <h2>Explorer une décision</h2>
-          </div>
-          <div className="card-body">
-            {SUGGESTIONS.map((q, i) => (
-              <button
-                key={q}
-                type="button"
-                className="suggestion"
-                onClick={() => void send(q)}
-                disabled={loading}
-                data-prompt={i}
-              >
-                {q}
-              </button>
-            ))}
-            <div style={{ marginTop: 30 }}>
-              <div className="statline">
-                <span>Lire le contexte</span>
-                <b>{badge('DISPONIBLE', 'gray')}</b>
-              </div>
-              <div className="statline">
-                <span>Expliquer un refus</span>
-                <b>{badge('DISPONIBLE', 'gray')}</b>
-              </div>
-              <div className="statline">
-                <span>Passer un ordre</span>
-                <b>{badge('BLOQUÉ')}</b>
+        <div className="iv-s4 iv-m-s12 cp-side">
+          <section className="iv-card">
+            <div className="iv-card-head">
+              <div className="iv-card-tabs">
+                <span className="iv-card-tab is-on">Explorer une décision</span>
               </div>
             </div>
-            <p style={{ fontSize: 11, color: 'var(--muted)' }}>
+            <div className="iv-card-body cp-quick">
+              {SUGGESTIONS.map((q, i) => (
+                <button
+                  key={q}
+                  type="button"
+                  className="iv-btn cp-q"
+                  onClick={() => void send(q)}
+                  disabled={loading}
+                  data-prompt={i}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="iv-card">
+            <div className="iv-card-head">
+              <div className="iv-card-tabs">
+                <span className="iv-card-tab is-on">Outils</span>
+              </div>
+            </div>
+            <div className="iv-card-body">
+              <div className="iv-row">
+                <span>Lire le contexte</span>
+                <span className="iv-row-v ok">disponible</span>
+              </div>
+              <div className="iv-row">
+                <span>Expliquer un refus</span>
+                <span className="iv-row-v ok">disponible</span>
+              </div>
+              <div className="iv-row">
+                <span>Passer un ordre</span>
+                <span className="iv-row-v">
+                  <span className="iv-tag is-sell">Bloqué</span>
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <aside className="apex-card cp-apex">
+            <div className="iv-label">Une seconde lecture</div>
+            <p className="iv-note cp-apex-note">
               Le Copilot utilise le modèle de langage choisi dans Paramètres › Modèles d’IA. Sans clé, il ne répond pas.
             </p>
-          </div>
-        </section>
+            <div className="apex-card-foot">
+              <span className="apex-card-sig">ichivol</span>
+              {modelState}
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
   )

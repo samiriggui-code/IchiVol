@@ -1,0 +1,83 @@
+/* Dossiers d'Ève (page Ève) : carte à onglets, jetons premium uniquement. */
+
+.eve-dossiers .ed-intro {
+  margin: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.eve-dossiers .ed-status {
+  margin: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--cyan);
+}
+
+.eve-dossiers .ed-table-wrap {
+  max-height: 480px;
+}
+
+.eve-dossiers .ed-eve {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.eve-dossiers .ed-flag {
+  margin-left: 6px;
+}
+
+.eve-dossiers .ed-props {
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-2);
+}
+
+.eve-dossiers .ed-timeline-row td {
+  height: auto;
+  padding: 8px 12px;
+  background: var(--panel-2);
+}
+
+.eve-dossiers .ed-timeline {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  white-space: normal;
+  color: var(--text-2);
+}
+
+.eve-dossiers .ed-p {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+
+.eve-dossiers .ed-actions {
+  margin: 10px 0 0;
+}
+
+.eve-dossiers .ed-inset {
+  max-width: 520px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+}
+
+.eve-dossiers .ed-state .iv-row-v {
+  max-width: 60%;
+  white-space: normal;
+}
+
+@media (max-width: 760px) {
+  .eve-dossiers .ed-state .iv-row {
+    flex-wrap: wrap;
+    padding: 5px 0;
+  }
+
+  .eve-dossiers .ed-state .iv-row-v {
+    max-width: 100%;
+    margin-left: 0;
+    text-align: left;
+  }
+}
