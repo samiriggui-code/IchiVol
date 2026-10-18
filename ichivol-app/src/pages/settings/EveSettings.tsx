@@ -223,7 +223,7 @@ export function EveSettings({ schema, values, loadError, onSaved }: Props) {
         <div className="iv-card-body">
           <p className="lede">
             Ève est une seule intelligence qui décide avec quatre modes et vous parle par son Copilot. À chaque bougie clôturée,
-            Analyst, Challenger, Guardian et Shadow interrogent JEV, le modèle de jugement d’IchiVol.
+            L’Analyste, le Contradicteur, le Gardien du risque et l’Audit indépendant interrogent JEV, le modèle de jugement d’IchiVol.
             Si JEV est injoignable, trop lent ou pas assez sûr, Ève n’ouvre rien.
           </p>
           <ol className="modes">

@@ -926,6 +926,7 @@ textarea.iv-input {
   .iv-ph-act { margin-left: 0; }
   .iv-card-tools { display: none; }
   .iv-kpi-v { font-size: 16px; }
+  .iv-kpi-k, .iv-kpi-s { white-space: normal; }
   .apex-card { padding: 18px 16px; border-radius: 18px; }
 }
 

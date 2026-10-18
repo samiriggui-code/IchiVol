@@ -106,7 +106,7 @@ function AutoTradingSection({
             <b>Le moteur repère un signal</b> à la clôture d’une bougie, selon la méthode du portefeuille.
           </li>
           <li>
-            <b>Ève accepte ou refuse</b> après l’avis de ses modes et de JEV. Dans le doute, elle ne fait rien.
+            <b>Ève accepte ou refuse</b> après l’avis de ses modes et de JEV. Si elle refuse, le moteur trade quand même et son refus est noté ; si elle accepte, l’audit indépendant tranche.
           </li>
           <li>
             <b>Le garde-fou de risque (Risk Kernel) a le dernier mot</b> : il bloque tout ordre qui dépasse les
