@@ -1,17 +1,16 @@
 /* Trajectoire des portefeuilles (Desk) : courbes en %, étiquettes de fin de courbe, repères de trades sur
-   le portefeuille mis en avant, lecture par date. Les couleurs suivent la carte qui contient le graphique. */
+   le portefeuille mis en avant, lecture par date. Jetons premium uniquement (thèmes sombre et clair). */
 
 .eqt {
-  --eqt-surface: var(--card, #fefdfb);
-  --eqt-ink: var(--ink, #202b36);
-  --eqt-muted: var(--muted, #7d8288);
-  --eqt-line: var(--line, #ddd9d3);
-  --eqt-grid: color-mix(in srgb, var(--eqt-ink) 7%, var(--eqt-surface));
-  --eqt-zero: color-mix(in srgb, var(--eqt-ink) 40%, var(--eqt-surface));
-  --eqt-hover: color-mix(in srgb, var(--eqt-ink) 5%, var(--eqt-surface));
-  --eqt-up: var(--green, #0b8f83);
-  --eqt-down: var(--red, #c8412f);
-  padding: 2px 20px 14px;
+  --eqt-surface: var(--panel);
+  --eqt-ink: var(--text);
+  --eqt-muted: var(--muted);
+  --eqt-line: var(--line);
+  --eqt-grid: var(--chart-grid);
+  --eqt-zero: var(--line-3);
+  --eqt-hover: var(--row-hover);
+  --eqt-up: var(--pos);
+  --eqt-down: var(--neg);
   color: var(--eqt-ink);
 }
 
@@ -20,7 +19,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 6px;
-  margin: 4px 0 8px;
+  margin: 0 0 6px;
   font-size: 11px;
   line-height: 1.45;
   color: var(--eqt-muted);
@@ -70,16 +69,17 @@
 .eqt-zero {
   stroke: var(--eqt-zero);
   stroke-width: 1;
+  stroke-dasharray: 3 3;
 }
 
 .eqt-axis {
-  font: 10.5px 'JetBrains Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
   font-variant-numeric: tabular-nums;
-  fill: var(--eqt-muted);
+  fill: var(--dim);
 }
 
 .eqt-axis.is-zero {
-  fill: var(--eqt-ink);
+  fill: var(--text-2);
   font-weight: 500;
 }
 
@@ -98,14 +98,14 @@
 }
 
 .eqt-endname {
-  font: 600 11px Inter, Arial, sans-serif;
-  fill: var(--eqt-ink);
+  font: 500 10.5px var(--mono);
+  fill: var(--text-2);
 }
 
 .eqt-endval {
-  font: 10.5px 'JetBrains Mono', ui-monospace, monospace;
+  font: 500 10.5px var(--mono);
   font-variant-numeric: tabular-nums;
-  fill: var(--eqt-muted);
+  fill: var(--muted);
 }
 
 .eqt-hit {
@@ -114,9 +114,9 @@
 }
 
 .eqt-cross {
-  stroke: var(--eqt-ink);
+  stroke: var(--cyan);
   stroke-width: 1;
-  opacity: 0.35;
+  opacity: 0.5;
 }
 
 .eqt-mark {
@@ -125,7 +125,7 @@
 }
 
 .eqt-mark:focus-visible circle:first-child {
-  stroke: var(--blue, #1a7df5);
+  stroke: var(--cyan);
   stroke-width: 1.5;
 }
 
@@ -134,10 +134,10 @@
   z-index: 5;
   width: 240px;
   padding: 10px 12px;
-  border: 1px solid var(--eqt-line);
-  border-radius: 10px;
-  background: var(--eqt-surface);
-  box-shadow: 0 10px 28px #0000001f;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r);
+  background: var(--sheet-bg);
+  box-shadow: var(--shadow-pop);
   transform: translateY(-100%);
   font-size: 12px;
   color: var(--eqt-ink);
@@ -156,16 +156,21 @@
 
 .eqt-tip .eqt-head strong {
   font-size: 13px;
+  font-weight: 600;
 }
 
-.desk-page .eqt-tip-close,
-.eqt-tip-close {
+.iv-eqt-close {
   border: 0;
   padding: 0 4px;
   background: none;
   font-size: 16px;
   line-height: 1;
   color: var(--eqt-muted);
+  cursor: pointer;
+}
+
+.iv-eqt-close:hover {
+  color: var(--text);
 }
 
 .eqt-tip p {
@@ -184,9 +189,9 @@
 }
 
 .eqt-tip-book i {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
   flex: none;
 }
 
@@ -209,7 +214,8 @@
 .eqt-tip dd {
   margin: 0;
   text-align: right;
-  font: 11px 'JetBrains Mono', ui-monospace, monospace;
+  font: 11px var(--mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .eqt-tip dd.up {
@@ -220,11 +226,11 @@
   color: var(--eqt-down);
 }
 
-/* Lecture par date : une ligne par portefeuille, sert aussi de légende. */
+/* Lecture par date : une ligne par portefeuille, sert aussi de légende (deux colonnes quand la place le permet). */
 .eqt-readout {
-  margin-top: 8px;
+  margin-top: 6px;
   border-top: 1px solid var(--eqt-line);
-  padding-top: 6px;
+  padding-top: 4px;
 }
 
 .eqt-readout .eqt-head {
@@ -233,17 +239,16 @@
   justify-content: space-between;
   gap: 8px;
   min-height: 26px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.desk-page .eqt-readout .eqt-head button,
-.eqt-readout .eqt-head button {
-  padding: 3px 9px;
-  font-size: 10.5px;
+  font: 500 10px var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .eqt-readout ol {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  column-gap: 16px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -253,42 +258,54 @@
   opacity: 0.45;
 }
 
-.desk-page .eqt-readout li button,
-.eqt-readout li button {
+.iv-eqt-row {
   display: grid;
-  grid-template-columns: 14px auto minmax(0, 1fr) auto auto;
+  grid-template-columns: 12px auto minmax(0, 1fr) auto auto;
   align-items: center;
   column-gap: 10px;
   width: 100%;
-  padding: 6px 4px;
+  min-height: 26px;
+  padding: 3px 6px;
   border: 0;
-  border-radius: 6px;
+  border-bottom: 1px solid var(--row-line);
+  border-radius: 0;
   background: none;
   text-align: left;
   color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 
-.desk-page .eqt-readout li button:hover,
-.eqt-readout li button:hover,
-.eqt-readout li button[aria-pressed='true'] {
+.iv-eqt-row:hover,
+.iv-eqt-row[aria-pressed='true'] {
   background: var(--eqt-hover);
 }
 
+.iv-eqt-row[aria-pressed='true'] {
+  box-shadow: inset 2px 0 0 var(--cyan);
+}
+
+.iv-eqt-row:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: -2px;
+}
+
 .eqt-swatch {
-  width: 14px;
-  height: 3px;
+  width: 12px;
+  height: 2px;
   border-radius: 2px;
 }
 
 .eqt-name {
   font-size: 11.5px;
-  font-weight: 600;
+  font-weight: 500;
+  color: var(--text);
   white-space: nowrap;
 }
 
 .eqt-held {
-  font-size: 10.5px;
-  color: var(--eqt-muted);
+  font: 10px var(--mono);
+  color: var(--dim);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -297,9 +314,9 @@
 }
 
 .eqt-val {
-  font: 600 11.5px 'JetBrains Mono', ui-monospace, monospace;
+  font: 600 11px var(--mono);
   font-variant-numeric: tabular-nums;
-  min-width: 68px;
+  min-width: 58px;
   text-align: right;
 }
 
@@ -312,21 +329,16 @@
 }
 
 .eqt-eur {
-  min-width: 60px;
-  font: 10.5px 'JetBrains Mono', ui-monospace, monospace;
+  min-width: 52px;
+  font: 10.5px var(--mono);
   font-variant-numeric: tabular-nums;
-  color: var(--eqt-muted);
+  color: var(--muted);
   text-align: right;
 }
 
 @media (max-width: 560px) {
-  .eqt {
-    padding: 2px 12px 12px;
-  }
-
-  .desk-page .eqt-readout li button,
-  .eqt-readout li button {
-    grid-template-columns: 14px minmax(0, 1fr) auto;
+  .iv-eqt-row {
+    grid-template-columns: 12px minmax(0, 1fr) auto;
     grid-template-areas:
       'sw name val'
       '. held held';

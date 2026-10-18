@@ -1,44 +1,15 @@
-/* Ève = violet, Moteur seul = bleu, Moteur contre Ève = ambre, Manuel = gris : réservés à « qui a décidé », jamais à un résultat. */
+/* Décideur : losange + nom, sur la primitive .iv-decider (Ève = cyan, Moteur contre Ève = ambre,
+   Manuel = violet, Moteur seul = gris). Réservé à « qui a décidé », jamais à un résultat. */
 .decider-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 8px;
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  font: 600 10px Inter, Arial, sans-serif;
-  letter-spacing: 0.02em;
-  line-height: 1.5;
-  white-space: nowrap;
   vertical-align: middle;
-  background: var(--card, #fefdfb);
-}
-
-.decider-badge i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-  flex: none;
-}
-
-.decider-badge.is-eve {
-  color: #5a48c9;
-}
-
-.decider-badge.is-engine {
-  color: #1f6fd1;
-}
-
-.decider-badge.is-engine_over_eve {
-  color: #a35f00;
-}
-
-.decider-badge.is-manual {
-  color: #5f666d;
 }
 
 .decider-badge.is-compact {
-  padding: 1px 6px;
-  font-size: 9px;
+  gap: 5px;
+  font-size: 10px;
+}
+
+.decider-badge.is-compact i {
+  width: 6px;
+  height: 6px;
 }
