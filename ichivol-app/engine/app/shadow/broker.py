@@ -203,6 +203,8 @@ def mark_shadows(
 
 
 EVE_BLOCK_SOURCE = "eve"
+# Ève and the engine agreed, the independent audit blocked the open (app/eve/autopilot.py).
+AUDIT_BLOCK_SOURCE = "audit"
 
 
 def shadow_stats(
@@ -211,14 +213,17 @@ def shadow_stats(
     portfolio_id: str | None = None,
     kind: str | None = None,
 ) -> dict[str, Any]:
-    """kind: None = every shadow, "filters" = indicator filters only, "eve" = Ève's refusals only."""
+    """kind: None = every shadow, "filters" = indicator filters only, "eve" = Ève's refusals only,
+    "audit" = opens blocked by the independent audit."""
     q = select(ShadowPosition)
     if portfolio_id:
         q = q.where(ShadowPosition.portfolio_id == portfolio_id)
     if kind == "eve":
         q = q.where(ShadowPosition.block_source == EVE_BLOCK_SOURCE)
+    elif kind == "audit":
+        q = q.where(ShadowPosition.block_source == AUDIT_BLOCK_SOURCE)
     elif kind == "filters":
-        q = q.where(ShadowPosition.block_source != EVE_BLOCK_SOURCE)
+        q = q.where(ShadowPosition.block_source.not_in((EVE_BLOCK_SOURCE, AUDIT_BLOCK_SOURCE)))
     rows = list(session.execute(q).scalars())
     closed = [r for r in rows if r.status == "CLOSED" and r.pnl_r is not None]
     open_n = sum(1 for r in rows if r.status == "OPEN")

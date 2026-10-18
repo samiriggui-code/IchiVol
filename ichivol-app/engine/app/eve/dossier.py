@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import EveDossier, EveVerdict
+from app.eve.explain import opinions, why_fr
 
 
 def persist_dossier(
@@ -161,14 +162,29 @@ def list_dossiers(
     return list(session.scalars(stmt))
 
 
-def decision_summary(dossier: EveDossier, verdict: EveVerdict | None = None) -> dict[str, Any]:
-    """Light view of one Ève judgement for the « Moteur vs Ève » page: what the engine proposed on each book,
-    what Ève answered and what happened. No context/facts payload (those stay in the full dossier)."""
+def decision_summary(
+    dossier: EveDossier,
+    verdict: EveVerdict | None = None,
+    *,
+    results: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Light view of one Ève judgement for the Ève page: what the engine proposed on each book, what Ève answered
+    and why, what each judge said, and what happened. No context/facts payload (those stay in the full dossier).
+
+    ``results`` maps a position or shadow-trade id to its outcome (``trade_result``); each proposal gets the one
+    of its real trade (``position_id``) or of its trade replayed without money (``shadow_id``)."""
     dt = dossier.decision_time_json if isinstance(dossier.decision_time_json, dict) else {}
     deg = dt.get("degradation") if isinstance(dt.get("degradation"), dict) else {}
     gate = dt.get("entry_gate") if isinstance(dt.get("entry_gate"), dict) else {}
-    proposals = [p for p in (dt.get("engine_proposals") or []) if isinstance(p, dict)]
+    proposals = []
+    for p in dt.get("engine_proposals") or []:
+        if not isinstance(p, dict):
+            continue
+        ref = p.get("position_id") or p.get("shadow_id")
+        proposals.append({**p, "result": (results or {}).get(ref) if ref else None})
     reasoning = verdict.reasoning if verdict is not None else None
+    modes = getattr(dossier, "modes_json", None)
+    modes = modes if isinstance(modes, dict) else {}
     return {
         "id": dossier.id,
         "created_at": dossier.created_at.isoformat() if dossier.created_at else None,
@@ -181,7 +197,30 @@ def decision_summary(dossier: EveDossier, verdict: EveVerdict | None = None) -> 
         "entry_gate": {"decision": gate.get("decision"), "reason": gate.get("reason")} if gate else None,
         "coherence": verdict.coherence_score if verdict is not None else None,
         "reasoning": reasoning[:400] if isinstance(reasoning, str) else None,
+        "why": why_fr(
+            eve_action=dossier.eve_action,
+            engine_action=dossier.baseline_decision,
+            rationale=reasoning,
+            modes=modes,
+        ),
+        "opinions": opinions(modes, dossier.baseline_decision) if modes else [],
         "engine_proposals": proposals,
+    }
+
+
+def trade_result(row: Any) -> dict[str, Any]:
+    """Outcome of a paper lot or of a shadow trade, in R (result / initial risk) when known."""
+    pnl_r = getattr(row, "pnl_r", None)
+    if pnl_r is None:
+        realized, risk = getattr(row, "realized_pnl", None), getattr(row, "risk_amount", None)
+        if isinstance(realized, (int, float)) and isinstance(risk, (int, float)) and risk > 0:
+            pnl_r = realized / risk
+    return {
+        "kind": "shadow" if getattr(row, "block_source", None) else "position",
+        "status": getattr(row, "status", None),
+        "exit_reason": getattr(row, "exit_reason", None),
+        "pnl_r": pnl_r,
+        "pnl_pct": getattr(row, "pnl_pct", None),
     }
 
 

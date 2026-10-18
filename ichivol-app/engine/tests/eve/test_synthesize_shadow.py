@@ -82,3 +82,40 @@ def test_shadow_aligned_keeps_directional() -> None:
     assert synth["action"] == "LONG"
     assert synth["shadow_noul"] == 0.8
     assert synth["shadow_choice"] == "LONG"
+
+
+def test_synthesis_can_leave_the_audit_apart() -> None:
+    synth = synthesize_action(
+        analyst=run_analyst(_ctx(), use_jev=False),
+        challenger=run_challenger(_ctx(), use_jev=False),
+        guardian={"warnings": []},
+        shadow=_shadow(choice="SHORT", score=0.0, noul=0.1),
+        baseline_action="LONG",
+        apply_audit=False,
+    )
+    assert synth["action"] == "LONG"  # Ève's own opinion; the audit rules elsewhere
+    assert synth["shadow_choice"] == "SHORT"
+
+
+def test_shadow_choice_rationale_names_the_original_action() -> None:
+    synth = synthesize_action(
+        analyst=run_analyst(_ctx(), use_jev=False),
+        challenger=run_challenger(_ctx(), use_jev=False),
+        guardian={"warnings": []},
+        shadow=_shadow(choice="SHORT", score=3.0, noul=0.9),
+        baseline_action="LONG",
+    )
+    assert "disagrees with LONG" in synth["rationale"]
+
+
+def test_audit_verdict() -> None:
+    from app.eve.modes import audit_verdict
+
+    assert audit_verdict({}, "LONG")["verdict"] == "allow"
+    assert audit_verdict(_shadow(choice="LONG", score=3.0, noul=0.8), "LONG")["verdict"] == "allow"
+    assert audit_verdict(_shadow(choice="LONG", score=1.0, noul=0.8), "LONG")["reason"] == "low_score"
+    assert audit_verdict(_shadow(choice="HOLD", score=3.0, noul=0.8), "LONG")["reason"] == "choice:HOLD"
+    assert audit_verdict(_shadow(choice="LONG", score=3.0, noul=0.2), "LONG")["reason"] == "low_noul"
+    # A close is only kept when the audit explicitly wants to keep the lot.
+    assert audit_verdict(_shadow(choice="ABSTAIN", score=0.0), "CLOSE", position_direction="LONG")["verdict"] == "allow"
+    assert audit_verdict(_shadow(choice="LONG", score=3.0), "CLOSE", position_direction="LONG")["verdict"] == "block"

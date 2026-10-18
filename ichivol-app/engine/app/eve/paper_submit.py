@@ -397,8 +397,12 @@ def submit_to_portfolio(
     stop_distance: float | None = None,
     execute: bool | None = None,
     action_override: str | None = None,
+    decided_by: str = "eve",
 ) -> dict[str, Any]:
-    """One book only (used by ``eve.autopilot`` on the book whose engine method proposed the trade)."""
+    """One book only (used by ``eve.autopilot`` on the book whose engine method proposed the trade).
+
+    ``decided_by="engine_over_eve"``: the engine trades although Ève refused. JEV degradation and the entry gate
+    judge Ève's own trades, so they are skipped; the Risk Kernel still applies."""
     return _submit_one_portfolio(
         session,
         dossier_id,
@@ -408,9 +412,29 @@ def submit_to_portfolio(
         execute=execute,
         allow_screener=True,
         action_override=action_override,
+        decided_by=decided_by,
     )
 
 
+def _restore_status(fn):  # noqa: ANN001, ANN202 -- private decorator
+    """Over Ève, put the dossier's execution status back once the engine's trade is submitted."""
+
+    def wrapper(session: Session, dossier_id: str, **kw: Any) -> dict[str, Any]:
+        if kw.get("decided_by") != "engine_over_eve":
+            return fn(session, dossier_id, **kw)
+        dossier = get_dossier(session, dossier_id)
+        before = dossier.execution_status if dossier is not None else None
+        try:
+            return fn(session, dossier_id, **kw)
+        finally:
+            if dossier is not None:
+                dossier.execution_status = before
+                session.flush()
+
+    return wrapper
+
+
+@_restore_status
 def _submit_one_portfolio(
     session: Session,
     dossier_id: str,
@@ -421,8 +445,10 @@ def _submit_one_portfolio(
     execute: bool | None = None,
     allow_screener: bool = True,
     action_override: str | None = None,
+    decided_by: str = "eve",
 ) -> dict[str, Any]:
     """Soumet sur un seul portefeuille virtuel."""
+    engine_over_eve = decided_by == "engine_over_eve"
     dossier = get_dossier(session, dossier_id)
     if dossier is None:
         return {"ok": False, "error": "dossier_not_found", "dossier_id": dossier_id}
@@ -432,6 +458,9 @@ def _submit_one_portfolio(
         action_override
         or ((verdict.action if verdict else None) or dossier.eve_action)
     ) or "ABSTAIN"
+    if engine_over_eve:
+        # The trade is the engine's: Ève's verdict and dossier status keep describing her own answer.
+        verdict = None
 
     auto = autonomy_enabled()
     # Never implicit: only an explicit execute=True acts, and only with autonomy on.
@@ -445,6 +474,8 @@ def _submit_one_portfolio(
     dt = raw_dt if isinstance(raw_dt, dict) else {}
     deg = dt.get("degradation") if isinstance(dt.get("degradation"), dict) else {}
     deg_level = str(deg.get("level") or "healthy")
+    if engine_over_eve:
+        deg_level = "healthy"
     if do_execute and action in ("LONG", "SHORT", "CLOSE") and deg_level in (
         "late",
         "low_confidence",
@@ -454,7 +485,8 @@ def _submit_one_portfolio(
 
     gate = dt.get("entry_gate") if isinstance(dt.get("entry_gate"), dict) else {}
     gate_reject = (
-        action in ("LONG", "SHORT")
+        not engine_over_eve
+        and action in ("LONG", "SHORT")
         and gate.get("decision") == "reject"
         and not gate.get("allowed", False)
     )
@@ -478,6 +510,7 @@ def _submit_one_portfolio(
         "executed": False,
         "position_id": None,
         "evaluated_at": now,
+        "decided_by": decided_by,
         "note": "V2 — Risk Kernel authority; no live trading",
     }
     if gate_reject:
@@ -668,16 +701,26 @@ def _submit_one_portfolio(
         session,
         symbol=dossier.symbol,
         timeframe=dossier.timeframe,
-        user_id="eve_intelligence",
+        user_id="engine_over_eve" if engine_over_eve else "eve_intelligence",
         price=float(px),
         pipeline=pipeline,
         stop_distance=float(stop) if stop is not None else None,
-        signal_extra={
-            "eve_dossier_id": dossier_id,
-            "eve_action": action,
-            "eve_paper_autonomy": True,
-            "risk_kernel": rk,
-        },
+        # Over Ève, the lot is the engine's: no eve_dossier_id, so Ève's follow-up never manages it.
+        signal_extra=(
+            {
+                "decided_by": "engine_over_eve",
+                "refused_by_eve_dossier_id": dossier_id,
+                "eve_action": dossier.eve_action,
+                "risk_kernel": rk,
+            }
+            if engine_over_eve
+            else {
+                "eve_dossier_id": dossier_id,
+                "eve_action": action,
+                "eve_paper_autonomy": True,
+                "risk_kernel": rk,
+            }
+        ),
         portfolio=portfolio,
     )
 

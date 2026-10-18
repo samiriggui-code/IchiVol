@@ -132,9 +132,9 @@ def get_backtest(
 @router_shadow.get("/shadow/stats")
 def get_shadow_stats(
     portfolio_code: str | None = None,
-    kind: Literal["filters", "eve"] | None = None,
+    kind: Literal["filters", "eve", "audit"] | None = None,
 ) -> dict:
-    """ShadowBroker counterfactual summary — hors cash. kind: indicator filters only, or Ève's refusals only."""
+    """ShadowBroker counterfactual summary — hors cash. kind: indicator filters, Ève's refusals or audit blocks."""
     session = SessionLocal()
     try:
         portfolio_id = None

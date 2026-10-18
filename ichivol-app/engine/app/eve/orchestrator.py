@@ -88,6 +88,8 @@ def evaluate_opportunity(
         guardian=guardian,
         shadow=shadow,
         baseline_action=baseline_action,
+        # Ève's own opinion: the independent audit only arbitrates when the engine and Ève agree (autopilot).
+        apply_audit=False,
     )
 
     # Policy thresholds may force abstain.

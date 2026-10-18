@@ -1,4 +1,4 @@
-/* Ève = violet, Moteur seul = bleu, Manuel = gris : réservés à « qui a décidé », jamais à un résultat. */
+/* Ève = violet, Moteur seul = bleu, Moteur contre Ève = ambre, Manuel = gris : réservés à « qui a décidé », jamais à un résultat. */
 .decider-badge {
   display: inline-flex;
   align-items: center;
@@ -28,6 +28,10 @@
 
 .decider-badge.is-engine {
   color: #1f6fd1;
+}
+
+.decider-badge.is-engine_over_eve {
+  color: #a35f00;
 }
 
 .decider-badge.is-manual {

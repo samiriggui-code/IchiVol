@@ -470,8 +470,12 @@ def synthesize_action(
     guardian: dict[str, Any],
     shadow: dict[str, Any],
     baseline_action: EveAction | None,
+    apply_audit: bool = True,
 ) -> dict[str, Any]:
-    """Eve strategic synthesis — potential action only."""
+    """Eve strategic synthesis — potential action only.
+
+    ``apply_audit=False`` keeps Ève's own opinion: the independent audit (Shadow mode) is then read apart by
+    ``audit_verdict`` and only arbitrates when the engine and Ève agree (app/eve/autopilot.py)."""
     rejected: list[str] = []
     warnings = guardian.get("warnings") or []
     critical = [w for w in warnings if w.get("severity") == "critical"]
@@ -523,7 +527,7 @@ def synthesize_action(
     )
     shadow_score = (s_answers.get("audit_confidence") or {}).get("score")
 
-    if not critical and action in ("LONG", "SHORT"):
+    if apply_audit and not critical and action in ("LONG", "SHORT"):
         # SCORE levels: 0 Reject … 4 Strong — weak audit blocks directional potential.
         if isinstance(shadow_score, (int, float)) and shadow_score <= 1:
             rejected.append("shadow_low_audit_confidence")
@@ -531,10 +535,10 @@ def synthesize_action(
             rationale = "Shadow SCORE audit_confidence weak → abstain"
         elif shadow_choice is not None and shadow_choice != action:
             rejected.append(f"shadow_choice:{shadow_choice}")
-            action = "ABSTAIN"
             rationale = (
                 f"Shadow CHOICE {shadow_choice} disagrees with {action} → abstain"
             )
+            action = "ABSTAIN"
         elif isinstance(shadow_noul, (int, float)) and shadow_noul < 0.35:
             rejected.append("shadow_noul_low")
             action = "ABSTAIN"
@@ -553,3 +557,33 @@ def synthesize_action(
         "shadow_choice": shadow_choice,
         "shadow_score": shadow_score if isinstance(shadow_score, (int, float)) else None,
     }
+
+
+def audit_verdict(shadow: dict[str, Any], proposed: str, *, position_direction: str | None = None) -> dict[str, Any]:
+    """Independent audit (Shadow mode) arbitrating a trade the engine and Ève agree on: ``allow`` or ``block``.
+
+    Same thresholds as the synthesis: SCORE ≤ 1 (Reject/Weak), a different CHOICE, or NOUL < 0.35 block an open.
+    A close is blocked only when the audit explicitly says to keep the position. No audit answer → ``allow``
+    (the agreement stands)."""
+    answers = _shadow_answers(shadow)
+    noul = (answers.get("review") or {}).get("noul")
+    choice = normalize_action((answers.get("independent_action") or {}).get("choice"))
+    score = (answers.get("audit_confidence") or {}).get("score")
+    out: dict[str, Any] = {
+        "verdict": "allow",
+        "reason": "no_audit" if not answers else "agrees",
+        "choice": choice,
+        "score": score if isinstance(score, (int, float)) else None,
+        "noul": noul if isinstance(noul, (int, float)) else None,
+    }
+    if proposed == "CLOSE":
+        if choice is not None and (choice == "HOLD" or choice == position_direction):
+            out.update(verdict="block", reason=f"choice:{choice}")
+        return out
+    if isinstance(score, (int, float)) and score <= 1:
+        out.update(verdict="block", reason="low_score")
+    elif choice is not None and choice != proposed:
+        out.update(verdict="block", reason=f"choice:{choice}")
+    elif isinstance(noul, (int, float)) and noul < 0.35:
+        out.update(verdict="block", reason="low_noul")
+    return out
