@@ -2,17 +2,12 @@ type BrandMarkProps = {
   className?: string
 }
 
-/** Logo IchiVol — même SVG que le favicon (`/favicon.svg`). */
+/** Logo IchiVol de la maquette premium : losange cyan, cœur ambre (couleurs = jetons du thème). */
 export function BrandMark({ className }: BrandMarkProps) {
   return (
-    <img
-      src="/favicon.svg"
-      alt=""
-      className={className}
-      width={32}
-      height={32}
-      decoding="async"
-      aria-hidden
-    />
+    <svg viewBox="0 0 24 24" className={className} width={32} height={32} aria-hidden focusable="false">
+      <path d="M12 1.5 22.5 12 12 22.5 1.5 12z" fill="none" stroke="var(--cyan)" strokeWidth={1.4} />
+      <path d="M12 7l5 5-5 5-5-5z" fill="var(--amber)" />
+    </svg>
   )
 }

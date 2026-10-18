@@ -44,7 +44,7 @@ export function readChartColors(): ChartColors {
     kijun: v('--kijun'),
     spanA: v('--span-a'),
     spanB: v('--span-b'),
-    cloud: v('--cloud') || '#d5e8df',
+    cloud: v('--cloud') || '#0f2a2c',
     grid: v('--chart-grid') || v('--border'),
     background: v('--card') || v('--background'),
     foreground: v('--foreground'),

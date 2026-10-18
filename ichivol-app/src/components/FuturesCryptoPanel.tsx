@@ -43,8 +43,8 @@ function when(iso: string | null | undefined): string {
 function Bar({ value }: { value: number | null }) {
   const w = value == null ? 0 : Math.max(0, Math.min(100, value * 100))
   return (
-    <div className="track">
-      <span style={{ width: `${w}%`, background: value != null && value >= 1 ? 'var(--red)' : undefined }} />
+    <div className={`iv-bar fc-bar${value != null && value >= 1 ? ' is-sell' : value != null && value >= 0.8 ? ' is-amber' : ''}`}>
+      <i style={{ width: `${w}%` }} />
     </div>
   )
 }
@@ -80,14 +80,16 @@ function MarketCard({
     })
 
   return (
-    <section className="card fc-market">
-      <div className="card-head">
-        <h2>
-          {market.slot} · {market.name}
-        </h2>
-        <span className="tag gray">{market.venue}</span>
+    <section className="iv-card fc-market iv-s4 iv-m-s12">
+      <div className="iv-card-head">
+        <div className="iv-card-tabs">
+          <span className="iv-card-tab is-on">
+            {market.slot} · {market.name}
+          </span>
+        </div>
+        <div className="iv-card-tools">{market.venue}</div>
       </div>
-      <div className="card-body">
+      <div className="iv-card-body">
         <p className="fc-note">
           Contrat <b>{market.contract}</b> : {market.contract_unit}. Cours : {market.price_source}. {market.price_note}
         </p>
@@ -95,45 +97,45 @@ function MarketCard({
         <h3 className="fc-sub">Position</h3>
         {position ? (
           <>
-            <div className="statline">
+            <div className="iv-row">
               <span>Sens</span>
-              <b>{position.direction === 'SHORT' ? 'Vente' : 'Achat'}</b>
+              <b className="iv-row-v">{position.direction === 'SHORT' ? 'Vente' : 'Achat'}</b>
             </div>
-            <div className="statline">
+            <div className="iv-row">
               <span>Quantité</span>
-              <b>
+              <b className="iv-row-v">
                 {num(position.qty)}
                 {contracts != null && market.contract_size !== 1 ? ` · ${num(contracts, 2)} contrat${contracts >= 2 ? 's' : ''}` : ''}
               </b>
             </div>
-            <div className="statline">
+            <div className="iv-row">
               <span>Entrée → dernier</span>
-              <b>
+              <b className="iv-row-v">
                 {num(position.entry_price, 2)} → {num(position.current_price, 2)}
               </b>
             </div>
-            <div className="statline">
+            <div className="iv-row">
               <span>Stop / objectif</span>
-              <b>
+              <b className="iv-row-v">
                 {num(position.stop_price, 2)} / {num(position.take_profit_price, 2)}
               </b>
             </div>
-            <div className="statline">
+            <div className="iv-row">
               <span>P&amp;L latent</span>
-              <b className={pnl == null ? '' : pnl > 0 ? 'up' : pnl < 0 ? 'down' : ''}>
+              <b className={`iv-row-v ${pnl == null ? '' : pnl > 0 ? 'pos' : pnl < 0 ? 'neg' : ''}`}>
                 {eur(pnl)}
                 {position.unrealized_pct != null ? ` · ${pct(position.unrealized_pct)}` : ''}
               </b>
             </div>
-            <div className="statline">
+            <div className="iv-row">
               <span>Exposition</span>
-              <b>
+              <b className="iv-row-v">
                 {eur(risk.exposure, 0)} · {pct(risk.exposurePctOfEquity, 1)} du capital
               </b>
             </div>
-            <div className="statline">
+            <div className="iv-row">
               <span>Risque jusqu’au stop</span>
-              <b>
+              <b className="iv-row-v">
                 {eur(risk.riskAmount)} · {pct(risk.riskPctOfEquity)} du capital
               </b>
             </div>
@@ -149,9 +151,9 @@ function MarketCard({
           <p className="fc-note">Aucune position ouverte sur ce marché.</p>
         )}
 
-        <div className="statline">
+        <div className="iv-row">
           <span>P&amp;L réalisé</span>
-          <b>
+          <b className="iv-row-v">
             {eur(market.realized_pnl)} · {market.closed_trades} trade{market.closed_trades > 1 ? 's' : ''} fermé
             {market.closed_trades > 1 ? 's' : ''}
             {market.closed_trades > 0 ? `, ${market.wins} gagnant${market.wins > 1 ? 's' : ''}` : ''}
@@ -159,12 +161,12 @@ function MarketCard({
         </div>
 
         <h3 className="fc-sub">Dernier signal (boucle 1h)</h3>
-        <div className="statline">
+        <div className="iv-row">
           <span>{sig ? `Vu le ${when(sig.seen_at)}${sig.price != null ? ` à ${num(sig.price, 2)}` : ''}` : 'Signal'}</span>
-          <b>{sig ? verdictLabelFr(sig.decision) : '—'}</b>
+          <b className="iv-row-v">{sig ? verdictLabelFr(sig.decision) : '—'}</b>
         </div>
         <p className="fc-note">{signalSentenceFr(sig, allowShort)}</p>
-        <button type="button" className="suggestion" onClick={askEve}>
+        <button type="button" className="iv-btn iv-btn--sm" onClick={askEve}>
           Demander à Ève d’expliquer
         </button>
 
@@ -211,8 +213,8 @@ export function FuturesCryptoPanel({
 
   if (error && !view) {
     return (
-      <section className="card">
-        <div className="card-body">
+      <section className="iv-card">
+        <div className="iv-card-body">
           <p className="fc-note">La vue Futures &amp; Crypto n’a pas pu être chargée : {error}</p>
         </div>
       </section>
@@ -242,12 +244,14 @@ export function FuturesCryptoPanel({
   }
 
   return (
-    <>
-      <section className="card fc-intro">
-        <div className="card-head">
-          <h2>Comment marche ce portefeuille</h2>
+    <div className="fc-stack">
+      <section className="iv-card fc-intro">
+        <div className="iv-card-head">
+          <div className="iv-card-tabs">
+            <span className="iv-card-tab is-on">Comment marche ce portefeuille</span>
+          </div>
         </div>
-        <div className="card-body">
+        <div className="iv-card-body">
           <p className="fc-note">
             Un compte paper à part, qui complète l’univers IchiVol sans le remplacer. Il ne suit que trois marchés : le
             Dow Jones (YM), l’or (MGC) et le bitcoin ({current?.name ?? 'BTC'}). Il applique les mêmes règles
@@ -265,15 +269,19 @@ export function FuturesCryptoPanel({
         </div>
       </section>
 
-      <div className="grid equal">
-        <section className="card">
-          <div className="card-head">
-            <h2>Risque global</h2>
-            <span className={`tag ${left === 0 ? 'amber' : 'gray'}`}>
+      <div className="iv-grid">
+        <section className="iv-card iv-s6 iv-m-s12">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs">
+              <span className="iv-card-tab is-on">Risque global</span>
+            </div>
+            <div className="iv-card-tools">
+            <span className={`iv-tag ${left === 0 ? 'is-amber' : 'is-muted'}`}>
               {left == null ? '—' : left === 0 ? 'PLAFOND ATTEINT' : `${left} POSITION${left > 1 ? 'S' : ''} PLEINE${left > 1 ? 'S' : ''} POSSIBLE${left > 1 ? 'S' : ''}`}
             </span>
+            </div>
           </div>
-          <div className="card-body">
+          <div className="iv-card-body">
             <p className="fc-note">
               Pour éviter que YM, l’or et BTC prennent tous une grosse position en même temps, le risque cumulé de toutes
               les positions ouvertes est plafonné à <b>{pct(view.rules.max_open_risk_pct, 1)}</b> du capital
@@ -281,9 +289,9 @@ export function FuturesCryptoPanel({
               plus deux positions de taille pleine à la fois : la suivante est refusée tant qu’une autre n’est pas
               fermée. Le refus apparaît plus bas dans « Ordres refusés par le risque ».
             </p>
-            <div className="risk-row">
+            <div className="iv-row">
               <span>Risque ouvert / plafond</span>
-              <span className="mono">
+              <span className="iv-row-v">
                 {eur(openRisk)} / {capAmount != null ? eur(capAmount) : '—'}
               </span>
             </div>
@@ -292,9 +300,9 @@ export function FuturesCryptoPanel({
               const r = marketRisk(m.symbol, openPositions, equity, view.rules.max_open_risk_pct)
               return (
                 <div key={m.symbol}>
-                  <div className="risk-row">
+                  <div className="iv-row">
                     <span>{m.slot}</span>
-                    <span className="mono">
+                    <span className="iv-row-v">
                       {eur(r.riskAmount)} · {pct(r.shareOfCap, 0)} du plafond
                     </span>
                   </div>
@@ -309,12 +317,14 @@ export function FuturesCryptoPanel({
           </div>
         </section>
 
-        <section className="card">
-          <div className="card-head">
-            <h2>Instrument BTC</h2>
-            <span className="tag gray">{current?.contract ?? '—'}</span>
+        <section className="iv-card iv-s6 iv-m-s12">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs">
+              <span className="iv-card-tab is-on">Instrument BTC</span>
+            </div>
+            <div className="iv-card-tools">{current?.contract ?? '—'}</div>
           </div>
-          <div className="card-body">
+          <div className="iv-card-body">
             <p className="fc-note">
               Selon la source de données et le courtier, « BTC » n’est pas le même instrument. Choisis celui que ce
               portefeuille trade. Le changement s’applique au prochain passage de la boucle.
@@ -347,10 +357,10 @@ export function FuturesCryptoPanel({
                 pas d’instrument en cours de route.
               </p>
             ) : null}
-            {saveError ? <p className="fc-note down">{saveError}</p> : null}
+            {saveError ? <p className="fc-note neg">{saveError}</p> : null}
             <button
               type="button"
-              className="primary"
+              className="iv-btn iv-btn--primary"
               disabled={view.btc_mode_locked || saving || choice === view.btc_mode}
               onClick={() => void saveMode()}
             >
@@ -360,7 +370,7 @@ export function FuturesCryptoPanel({
         </section>
       </div>
 
-      <div className="grid three">
+      <div className="iv-grid">
         {view.markets.map((m) => (
           <MarketCard
             key={m.symbol}
@@ -372,6 +382,6 @@ export function FuturesCryptoPanel({
           />
         ))}
       </div>
-    </>
+    </div>
   )
 }

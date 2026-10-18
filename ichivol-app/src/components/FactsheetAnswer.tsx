@@ -34,7 +34,7 @@ export function FactsheetAnswer({ view }: { view: FactsheetView }) {
         if (!items.length) return null
         return (
           <div className="fs-section" key={section}>
-            <span className="eyebrow">{SECTION_TITLE[section]}</span>
+            <span className="iv-cap fs-title">{SECTION_TITLE[section]}</span>
             <ul>
               {items.map((c, i) => (
                 <li key={`${section}-${i}`} className={`fs-claim fs-${c.kind}`}>
@@ -45,7 +45,7 @@ export function FactsheetAnswer({ view }: { view: FactsheetView }) {
                         <button
                           type="button"
                           key={f.id}
-                          className={`fs-chip${open?.id === f.id ? ' is-open' : ''}${f.status !== 'ok' ? ' is-missing' : ''}`}
+                          className={`iv-chip fs-chip${open?.id === f.id ? ' is-open' : ''}${f.status !== 'ok' ? ' is-missing' : ''}`}
                           onClick={() => setOpen(open?.id === f.id ? null : f)}
                           title={`${f.id} · ${f.timeframe} · barre ${hhmm(f.as_of)} UTC`}
                         >
@@ -85,14 +85,14 @@ export function FactsheetAnswer({ view }: { view: FactsheetView }) {
         </dl>
       )}
       <div className="fs-foot">
-        <span className="tag gray">Faits moteur · {view.symbol} {view.timeframe}</span>
+        <span className="iv-tag is-muted">Faits moteur · {view.symbol} {view.timeframe}</span>
         {view.partial && (
-          <span className="tag amber">
+          <span className="iv-tag is-amber">
             {view.removed} affirmation{view.removed > 1 ? 's' : ''} non vérifiable{view.removed > 1 ? 's' : ''} retirée
             {view.removed > 1 ? 's' : ''}
           </span>
         )}
-        {view.missing.length > 0 && <span className="tag gray">Indisponible : {view.missing.join(', ')}</span>}
+        {view.missing.length > 0 && <span className="iv-tag is-muted">Indisponible : {view.missing.join(', ')}</span>}
       </div>
     </div>
   )

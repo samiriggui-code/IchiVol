@@ -1,7 +1,5 @@
 import type { PaperOverview, PaperOverviewPosition } from '../../lib/paper'
 
-export const RING_COLORS = ['#548f87', '#8c9eb4', '#c2b596', '#a9bdb2', '#7d8288'] as const
-
 export type ConcentrationSlice = { symbol: string; pct: number }
 
 /** Snapshot Desk d’un livre paper (tous les portefeuilles virtuels). */

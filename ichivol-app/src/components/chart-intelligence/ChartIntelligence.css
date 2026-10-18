@@ -1,31 +1,32 @@
 /**
  * Chart Intelligence — styles SCOPÉS (.ci-root / .ci-*). Aucun sélecteur global.
  * Valeurs reprises de la maquette ichivol-workspace (cf. MarketPage.css,
- * MarketLayersMenu.css) : Manrope / DM Mono / Newsreader, cartes 12px, tags 4px.
- * Couleurs de marché : tokens globaux --bull / --bear / --kijun (camap-tokens.css).
- * Mode sombre : même règle que maquette-theme.css (chaque sélecteur préfixé html.dark).
+ * MarketLayersMenu.css) : Inter / 'JetBrains Mono' / Inter, cartes 12px, tags 4px.
+ * Couleurs de marché : tokens globaux --bull / --bear / --kijun (theme/premium.css).
+ * Couleurs raccordées aux jetons premium dans theme/premium.css (bloc .ci-root).
  */
 
 .ci-root {
-  --ci-bg: #faf8f5;
-  --ci-card: #fefdfb;
-  --ci-line: #e5e1db;
-  --ci-ink: #202b36;
-  --ci-muted: #7d8288;
-  --ci-soft: #f3f2ef;
-  --ci-blue: #1a7df5;
-  --ci-blue-soft: #eef4fc;
-  --ci-green: #0b8f83;
-  --ci-red: #c8412f;
-  --ci-amber: #a76c17;
-  --ci-fib: #7f86a6;
-  --ci-chip-bg: rgba(254, 253, 251, 0.92);
+  /* Raccordé aux jetons premium (theme/premium.css), clair et sombre. */
+  --ci-bg: var(--bg0);
+  --ci-card: var(--panel);
+  --ci-line: var(--line);
+  --ci-ink: var(--text);
+  --ci-muted: var(--muted);
+  --ci-soft: var(--panel-2);
+  --ci-blue: var(--cyan);
+  --ci-blue-soft: var(--cyan-soft);
+  --ci-green: var(--mint);
+  --ci-red: var(--sell);
+  --ci-amber: var(--amber);
+  --ci-fib: var(--violet);
+  --ci-chip-bg: var(--panel-h);
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: 16px;
   align-items: start;
   color: var(--ci-ink);
-  font: 12px Manrope, Arial, sans-serif;
+  font: 12px var(--sans);
   box-sizing: border-box;
   min-width: 0;
 }
@@ -52,22 +53,6 @@
 .ci-root *::before,
 .ci-root *::after {
   box-sizing: border-box;
-}
-
-html.dark .ci-root {
-  --ci-bg: #12151a;
-  --ci-card: #1a1e26;
-  --ci-line: #333944;
-  --ci-ink: #f1eee6;
-  --ci-muted: #a0a8b5;
-  --ci-soft: #22262f;
-  --ci-blue: #4b9bf7;
-  --ci-blue-soft: #1a2433;
-  --ci-green: #3aa99a;
-  --ci-red: #d48478;
-  --ci-amber: #e8b86d;
-  --ci-fib: #a7adc8;
-  --ci-chip-bg: rgba(26, 30, 38, 0.92);
 }
 
 .ci-side {
@@ -103,24 +88,24 @@ html.dark .ci-root {
 }
 
 .ci-card h2 {
-  font: 18px Newsreader, Georgia, serif;
+  font: 18px Inter, system-ui, sans-serif;
   margin: 0;
   color: var(--ci-ink);
 }
 
 .ci-card h3 {
-  font: 15px Newsreader, Georgia, serif;
+  font: 15px Inter, system-ui, sans-serif;
   margin: 2px 0 0;
   color: var(--ci-ink);
 }
 
 .ci-sub {
-  font: 11px Manrope, sans-serif;
+  font: 11px Inter, sans-serif;
   color: var(--ci-muted);
 }
 
 .ci-eyebrow {
-  font: 9px 'DM Mono', ui-monospace, monospace;
+  font: 9px var(--mono);
   letter-spacing: 1.2px;
   color: var(--ci-muted);
   text-transform: uppercase;
@@ -128,7 +113,7 @@ html.dark .ci-root {
 
 .ci-source-line {
   margin: 4px 0 0;
-  font: 10px Manrope, sans-serif;
+  font: 10px Inter, sans-serif;
   color: var(--ci-muted);
   line-height: 1.35;
   max-width: 28rem;
@@ -259,7 +244,7 @@ html.dark .ci-root {
   border-radius: 6px;
   background: var(--ci-soft);
   color: var(--ci-ink);
-  font: 11px Manrope, sans-serif;
+  font: 11px Inter, sans-serif;
   text-align: left;
   cursor: pointer;
 }
@@ -289,15 +274,17 @@ html.dark .ci-root {
 }
 
 .ci-root .mono {
-  font-family: 'DM Mono', ui-monospace, monospace;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .ci-notice {
   margin: 0 20px 10px;
   padding: 10px 12px;
   border-radius: 8px;
-  background: #faf0df;
-  color: #a8782a;
+  background: var(--amber-soft);
+  border: 1px solid var(--amber-line);
+  color: var(--amber);
   font-size: 12px;
 }
 
@@ -328,7 +315,7 @@ html.dark .ci-root {
 }
 
 .ci-briefing-label {
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
   letter-spacing: 1.2px;
   text-transform: uppercase;
   color: var(--ci-muted);
@@ -344,7 +331,7 @@ html.dark .ci-root {
 }
 
 .ci-briefing-seg button {
-  font: 11px Manrope, sans-serif;
+  font: 11px Inter, sans-serif;
   padding: 5px 10px;
   border: 1px solid var(--ci-line);
   border-radius: 6px;
@@ -373,20 +360,20 @@ html.dark .ci-root {
   padding: 10px 12px;
   border: 1px solid var(--ci-line);
   border-radius: 8px;
-  background: var(--ci-card, #fff);
-  box-shadow: 0 8px 24px rgba(20, 24, 28, 0.12);
+  background: var(--sheet-bg);
+  box-shadow: var(--shadow-pop);
   pointer-events: none;
   color: var(--ci-ink);
 }
 
 .ci-pack-tip-title {
-  font: 600 12px Manrope, sans-serif;
+  font: 600 12px Inter, sans-serif;
   margin-bottom: 2px;
 }
 
 .ci-pack-tip-hint {
   margin: 0 0 8px;
-  font: 11px Manrope, sans-serif;
+  font: 11px Inter, sans-serif;
   color: var(--ci-muted);
 }
 
@@ -403,7 +390,7 @@ html.dark .ci-root {
   display: flex;
   align-items: center;
   gap: 8px;
-  font: 11px Manrope, sans-serif;
+  font: 11px Inter, sans-serif;
 }
 
 .ci-pack-tip-dot {
@@ -415,7 +402,7 @@ html.dark .ci-root {
 
 .ci-pack-tip-note {
   margin: 8px 0 0;
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
   color: var(--ci-muted);
 }
 
@@ -437,32 +424,32 @@ html.dark .ci-root {
 
 .ci-tag {
   display: inline-block;
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
   padding: 5px 7px;
-  background: #edf3fa;
+  background: var(--cyan-soft);
   border-radius: 4px;
-  color: #3978bb;
+  color: var(--cyan);
   white-space: nowrap;
 }
 
 .ci-tag.green {
-  background: #e7f3ee;
-  color: #168579;
+  background: var(--mint-soft);
+  color: var(--mint);
 }
 
 .ci-tag.amber {
-  background: #faf0df;
-  color: #a8782a;
+  background: var(--amber-soft);
+  color: var(--amber);
 }
 
 .ci-tag.red {
-  background: #f9eae6;
-  color: #b35346;
+  background: var(--sell-soft);
+  color: var(--sell);
 }
 
 .ci-tag.gray {
-  background: #f0efeb;
-  color: #888b89;
+  background: var(--ghost-bg);
+  color: var(--muted);
 }
 
 .ci-tag-lg {
@@ -475,30 +462,10 @@ html.dark .ci-root {
   margin-left: 6px;
 }
 
-html.dark .ci-root .ci-tag {
-  background: #1a2433;
-  color: #8eb0d8;
-}
 
-html.dark .ci-root .ci-tag.green {
-  background: #16302c;
-  color: #3aa99a;
-}
 
-html.dark .ci-root .ci-tag.amber {
-  background: #2a2418;
-  color: #e8b86d;
-}
 
-html.dark .ci-root .ci-tag.red {
-  background: #33201d;
-  color: #d48478;
-}
 
-html.dark .ci-root .ci-tag.gray {
-  background: #22262f;
-  color: #a0a8b5;
-}
 
 /* ---------- Graphique + surface SVG ---------- */
 
@@ -528,7 +495,7 @@ html.dark .ci-root .ci-tag.gray {
   display: block;
   overflow: visible;
   pointer-events: none;
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
 }
 
 .ci-drawing-svg .ci-hit {
@@ -550,10 +517,10 @@ html.dark .ci-root .ci-tag.gray {
 
 /* Tons */
 .ci-drawing-svg .ci-tone-bull {
-  --ci-tone: var(--bull, #318d80);
+  --ci-tone: var(--bull);
 }
 .ci-drawing-svg .ci-tone-bear {
-  --ci-tone: var(--bear, #bf6c61);
+  --ci-tone: var(--bear);
 }
 .ci-drawing-svg .ci-tone-fib,
 .ci-drawing-svg .ci-fib {
@@ -579,7 +546,7 @@ html.dark .ci-root .ci-tag.gray {
 }
 .ci-chip text {
   fill: var(--ci-tone, var(--ci-ink));
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
   letter-spacing: 0.2px;
 }
 .ci-chip.is-strong rect {
@@ -629,7 +596,7 @@ html.dark .ci-root .ci-tag.gray {
 }
 .ci-fib-text {
   fill: var(--ci-tone);
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
 }
 .ci-fib-diag {
   stroke: var(--ci-tone);
@@ -666,7 +633,7 @@ html.dark .ci-root .ci-tag.gray {
 }
 .ci-swing-text {
   fill: var(--ci-tone);
-  font: 700 10px 'DM Mono', ui-monospace, monospace;
+  font: 700 10px var(--mono);
   letter-spacing: 0.6px;
 }
 .ci-event-line {
@@ -750,7 +717,7 @@ html.dark .ci-root .ci-tag.gray {
 .ci-icon-btn {
   border: none;
   background: transparent;
-  font: 11px 'DM Mono', ui-monospace, monospace;
+  font: 11px var(--mono);
   letter-spacing: 0.6px;
   padding: 6px 9px;
   color: var(--ci-muted);
@@ -766,7 +733,7 @@ html.dark .ci-root .ci-tag.gray {
 .ci-replay-btns .ci-replay-play {
   background: var(--ci-card);
   color: var(--ci-ink);
-  box-shadow: 0 1px 3px #0001;
+  box-shadow: inset 0 0 0 1px var(--line-2);
   min-width: 58px;
 }
 
@@ -791,7 +758,7 @@ html.dark .ci-root .ci-tag.gray {
 .ci-replay-speeds button {
   border: none;
   background: transparent;
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
   padding: 5px 7px;
   color: var(--ci-muted);
   border-radius: 4px;
@@ -801,7 +768,7 @@ html.dark .ci-root .ci-tag.gray {
 .ci-replay-speeds button.is-on {
   background: var(--ci-card);
   color: var(--ci-ink);
-  box-shadow: 0 1px 2px #0001;
+  box-shadow: inset 0 0 0 1px var(--line-2);
 }
 
 .ci-replay-range {
@@ -852,7 +819,7 @@ html.dark .ci-root .ci-tag.gray {
 }
 
 .ci-kv > span {
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
   letter-spacing: 1px;
   color: var(--ci-muted);
 }
@@ -909,7 +876,7 @@ html.dark .ci-root .ci-tag.gray {
 
 .ci-components li em {
   grid-column: 1 / -1;
-  font: normal 9px 'DM Mono', ui-monospace, monospace;
+  font: normal 9px var(--mono);
   color: var(--ci-muted);
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -946,7 +913,7 @@ html.dark .ci-root .ci-tag.gray {
 .ci-decision {
   margin: 14px 20px 0;
   padding: 12px 14px;
-  border-left: 2px solid #c7dfd9;
+  border-left: 2px solid var(--cyan-line);
   background: var(--ci-soft);
   border-radius: 0 8px 8px 0;
 }
@@ -1010,7 +977,7 @@ html.dark .ci-root .ci-tag.gray {
 }
 
 .ci-meta {
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
   color: var(--ci-muted);
 }
 
@@ -1034,7 +1001,7 @@ html.dark .ci-root .ci-tag.gray {
   border: 1px solid var(--ci-line);
   background: var(--ci-card);
   color: var(--ci-muted);
-  font: 600 10px 'DM Mono', ui-monospace, monospace;
+  font: 600 10px var(--mono);
   padding: 4px 8px;
   border-radius: 4px;
   cursor: pointer;
@@ -1045,7 +1012,7 @@ html.dark .ci-root .ci-tag.gray {
   border: 1px solid var(--ci-line);
   background: var(--ci-blue-soft);
   color: var(--ci-blue);
-  font: 600 12px 'DM Mono', ui-monospace, monospace;
+  font: 600 12px var(--mono);
   letter-spacing: 0.6px;
   padding: 9px 12px;
   border-radius: 6px;

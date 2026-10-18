@@ -92,7 +92,7 @@ interface ChipProps {
   onClick?: () => void
 }
 
-/** Étiquette compacte (DM Mono), maintenue dans la zone de tracé. */
+/** Étiquette compacte ('JetBrains Mono'), maintenue dans la zone de tracé. */
 export function Chip({ x, y, text, tone, align = 'start', proj, strong, onClick }: ChipProps) {
   const w = textWidth(text) + 10
   const h = 16

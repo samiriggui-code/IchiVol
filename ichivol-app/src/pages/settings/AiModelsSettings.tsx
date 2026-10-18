@@ -168,12 +168,14 @@ export function AiModelsSettings({ engine, onSaved }: Props) {
 
   return (
     <>
-      <section className="card">
-        <div className="card-head">
-          <h2>Modèle du Copilot</h2>
-          <span className={`tag ${connText(llmLive.state).tone}`}>{connText(llmLive.state).text}</span>
+      <section className="iv-card">
+        <div className="iv-card-head">
+          <div className="iv-card-tabs">
+            <span className="iv-card-tab is-on">Modèle du Copilot</span>
+          </div>
+          <div className="iv-card-tools"><span className={`tag ${connText(llmLive.state).tone}`}>{connText(llmLive.state).text}</span></div>
         </div>
-        <div className="card-body">
+        <div className="iv-card-body">
           <p className="lede">
             Le Copilot est le chat d’Ève. Il a besoin d’un modèle de langage et d’une clé chez un
             fournisseur. Ce choix n’a aucun effet sur les décisions de trading : elles passent par JEV.
@@ -242,12 +244,12 @@ export function AiModelsSettings({ engine, onSaved }: Props) {
             </label>
           ) : null}
           <div className="btn-row">
-            <button type="button" className="primary" disabled={!engine || !dirty || busy !== null} onClick={() => void save()}>
+            <button type="button" className="iv-btn iv-btn--primary" disabled={!engine || !dirty || busy !== null} onClick={() => void save()}>
               {busy === 'save' ? 'Enregistrement…' : 'Enregistrer'}
             </button>
             <button
               type="button"
-              className="suggestion"
+              className="iv-btn"
               disabled={!engine || busy !== null}
               onClick={() => void probe(provider, model)}
             >
@@ -267,11 +269,13 @@ export function AiModelsSettings({ engine, onSaved }: Props) {
         </div>
       </section>
 
-      <section className="card">
-        <div className="card-head">
-          <h2>Fournisseurs</h2>
+      <section className="iv-card">
+        <div className="iv-card-head">
+          <div className="iv-card-tabs">
+            <span className="iv-card-tab is-on">Fournisseurs</span>
+          </div>
         </div>
-        <div className="card-body">
+        <div className="iv-card-body">
           <p className="lede">Les clés connues pour chaque fournisseur. Un test vérifie que la clé est acceptée.</p>
           <ul className="rows">
             {rows.map((row) => {
@@ -306,7 +310,7 @@ export function AiModelsSettings({ engine, onSaved }: Props) {
                   </p>
                   <button
                     type="button"
-                    className="suggestion"
+                    className="iv-btn"
                     disabled={!engine || busy !== null}
                     onClick={() => void probe(row.provider, row.provider === provider ? model : row.model)}
                   >

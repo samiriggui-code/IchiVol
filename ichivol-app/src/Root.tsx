@@ -16,13 +16,10 @@ import { OverviewPage } from './pages/OverviewPage'
 import { PortfolioPage } from './pages/PortfolioPage'
 import { RequireAuth } from './pages/RequireAuth'
 import { SettingsPage } from './pages/SettingsPage'
-import './theme/camap-tokens.css'
+// Socle premium en premier : jetons, base, primitives iv-, pont des pages (voir theme/PREMIUM.md).
+import './theme/premium.css'
 import './theme/keenicons.css'
-import './theme/camap-landing.css'
 import './index.css'
-// Workspace refinements follow the base cockpit rules; no !important overrides.
-import './theme/iv-workspace.css'
-import './theme/maquette-theme.css'
 
 initTheme()
 

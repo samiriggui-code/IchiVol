@@ -1,52 +1,39 @@
-/* UI-VP-BADGE — esprit NON_VALIDE AW1 (ci-tag gray / ambre, pas rouge) */
+/* UI-VP-BADGE — « Signal non validé » : discret, ambre (jamais rouge), jetons premium. */
 
 .vp-validation-badge {
   display: inline-block;
-  font: 600 10px 'DM Mono', ui-monospace, monospace;
-  letter-spacing: 0.4px;
-  padding: 4px 7px;
+  font: 600 9.5px/1.2 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 6px;
   border-radius: 4px;
-  border: 1px solid #e2dfd6;
-  background: #f0efeb;
-  color: #8a7a55;
+  border: 1px solid var(--line-2);
+  background: var(--ghost-bg);
+  color: var(--muted);
   text-decoration: none;
   white-space: nowrap;
   vertical-align: middle;
-  line-height: 1.2;
   max-width: 100%;
   cursor: help;
 }
 
 .vp-validation-badge:hover,
 .vp-validation-badge:focus-visible {
-  border-color: #d4c9a8;
-  background: #faf0df;
-  color: #a8782a;
+  border-color: var(--amber-line);
+  background: var(--amber-soft);
+  color: var(--amber);
   outline: none;
 }
 
 .vp-validation-badge.is-compact {
-  font-size: 9px;
+  font-size: 8.5px;
   padding: 2px 5px;
-  letter-spacing: 0.3px;
-}
-
-html.dark .vp-validation-badge {
-  border-color: #2e323a;
-  background: #22262f;
-  color: #b8a882;
-}
-
-html.dark .vp-validation-badge:hover,
-html.dark .vp-validation-badge:focus-visible {
-  border-color: #5a4a2e;
-  background: #2a2418;
-  color: #e8b86d;
+  letter-spacing: 0.06em;
 }
 
 @media (max-width: 640px) {
   .vp-validation-badge {
-    font-size: 9px;
-    padding: 3px 6px;
+    font-size: 8.5px;
+    padding: 2px 5px;
   }
 }

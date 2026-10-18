@@ -2,9 +2,9 @@ import { type FormEvent, useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { BrandMark } from '../components/BrandMark'
 import { IchimokuMockChart } from '../components/IchimokuMockChart'
-import { KeenIcon } from '../components/KeenIcon'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { getMe, login } from '../lib/auth'
+import './landing.css'
 
 const DEV_EMAIL = import.meta.env.VITE_DEV_ADMIN_EMAIL as string | undefined
 const DEV_PASSWORD = import.meta.env.VITE_DEV_ADMIN_PASSWORD as string | undefined
@@ -44,114 +44,94 @@ export function LoginPage() {
   }
 
   return (
-    <div className="camap-shell camap-login-page">
-      {/* Metronic branded: form column (left on desktop) */}
-      <div className="camap-login-form-side">
-        <div className="camap-login-form-wrap">
-          <div className="camap-login-top">
-            <Link to="/" className="camap-brand camap-login-form-mark">
-              <BrandMark className="camap-mark" />
-              <span className="camap-word">IchiVol</span>
-            </Link>
-            <ThemeToggle />
-          </div>
-
-          <form className="camap-login-card" onSubmit={onSubmit}>
-            <div className="camap-login-card-head">
-              <h1>Connexion</h1>
-              <p className="camap-login-lede">Accès admin unique.</p>
-            </div>
-
-            {HAS_DEV_HINT && (
-              <div className="camap-dev-hint">
-                <span className="camap-dev-hint-tag">Dev</span>
-                <div>
-                  <p>
-                    <code>{DEV_EMAIL}</code>
-                  </p>
-                  <p>
-                    <code>{DEV_PASSWORD}</code>
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <label className="camap-field">
-              <span>Email</span>
-              <input
-                type="email"
-                autoComplete="username"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </label>
-            <label className="camap-field">
-              <span>Mot de passe</span>
-              <input
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-              />
-            </label>
-
-            {error && <p className="camap-form-error">{error}</p>}
-
-            <button
-              type="submit"
-              className="camap-btn camap-btn-primary camap-btn-lg camap-btn-block"
-              disabled={submitting || !checked}
-            >
-              {submitting ? 'Connexion…' : 'Se connecter'}
-            </button>
-            <Link to="/" className="camap-back">
-              ← Retour à l’accueil
-            </Link>
-          </form>
-        </div>
-      </div>
-
-      {/* Metronic branded: inset brand panel (right on desktop) */}
-      <aside className="camap-login-brand" aria-label="Présentation IchiVol">
-        <div className="camap-login-brand-panel">
-          <div className="camap-login-brand-glow" aria-hidden />
-
-          <Link to="/" className="camap-brand camap-login-brand-mark">
-            <BrandMark className="camap-mark" />
-            <span className="camap-word">IchiVol</span>
+    <div className="lp-page lg-page">
+      <aside className="lg-brand" aria-label="Présentation IchiVol">
+        <div className="lg-brand-top">
+          <Link to="/" className="lp-brand" aria-label="IchiVol — accueil">
+            <BrandMark className="lp-brand-mark" />
+            <span>IchiVol</span>
           </Link>
-
-          <div className="camap-login-brand-mid">
-            <div className="camap-login-brand-copy">
-              <p className="camap-login-brand-lockup">IchiVol</p>
-              <p className="camap-eyebrow">
-                <KeenIcon icon="abstract-26" style="outline" className="camap-eyebrow-icon" />
-                Trading · Desk paper
-              </p>
-              <h1>
-                Observer. Qualifier. <em>Décider.</em>
-              </h1>
-              <p className="camap-login-brand-lede">
-                Accès au Desk : opportunités, portefeuille, journal et Copilot ancré sur le
-                moteur — sans jamais inventer le BUY.
-              </p>
-            </div>
-
-            <div className="camap-hero-visual camap-login-brand-visual">
-              <IchimokuMockChart />
-              <div className="camap-hero-visual-footer">
-                <span>Illustration · Ichimoku et volume</span>
-              </div>
-            </div>
+          <span className="iv-pill is-amber">PAPER</span>
+          <span className="lg-brand-toggle">
+            <ThemeToggle />
+          </span>
+        </div>
+        <div className="lg-brand-mid">
+          <div className="iv-label">Principe IchiVol</div>
+          <p className="lg-quote">
+            «{'\u00a0'}Un signal Ichimoku ne compte que s’il est confirmé par le{' '}
+            <span className="iv-kw">volume relatif</span>.{'\u00a0'}»
+          </p>
+          <div className="lp-chart lg-chart">
+            <IchimokuMockChart />
           </div>
-
-          <blockquote className="camap-login-quote">
-            <p>« Un signal Ichimoku ne compte que s’il est confirmé par le volume relatif. »</p>
-            <cite>Principe IchiVol</cite>
-          </blockquote>
+        </div>
+        <div className="lg-brand-foot iv-cap">
+          <span>Tenkan · Kijun · nuage · volume</span>
+          <span className="lg-sig">◆ ichivol</span>
         </div>
       </aside>
+
+      <div className="lg-form-side">
+        <form className="lg-form" onSubmit={onSubmit}>
+          <div className="iv-meta">Accès admin unique</div>
+          <h1>Connexion</h1>
+
+          {HAS_DEV_HINT && (
+            <div className="lg-dev-hint">
+              <span className="iv-tag is-amber">Dev</span>
+              <div>
+                <code>{DEV_EMAIL}</code>
+                <code>{DEV_PASSWORD}</code>
+              </div>
+            </div>
+          )}
+
+          <div className="iv-field">
+            <label htmlFor="login-email">Email</label>
+            <input
+              id="login-email"
+              className="iv-input lg-input"
+              type="email"
+              autoComplete="username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div className="iv-field">
+            <label htmlFor="login-password">Mot de passe</label>
+            <input
+              id="login-password"
+              className="iv-input lg-input"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </div>
+
+          {error && (
+            <p className="lg-error" role="alert">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            className="iv-btn iv-btn--primary lg-submit"
+            disabled={submitting || !checked}
+          >
+            {submitting ? 'Connexion…' : 'Se connecter'}
+          </button>
+          <p className="iv-note lg-foot-note">
+            Paper uniquement : aucun ordre n’est envoyé à l’extérieur.
+          </p>
+          <Link to="/" className="lg-back">
+            ← Retour à l’accueil
+          </Link>
+        </form>
+      </div>
     </div>
   )
 }

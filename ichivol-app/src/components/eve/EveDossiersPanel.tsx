@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useState } from "react"
 import { EVE_MODES, JEV_PRIMITIVES_EXPLAIN } from "../../lib/eveModes"
 import { jevServiceLabel } from "../../pages/settings/eveCopy"
 import { eveActionFr } from "../../lib/eveDecisions"
+import "./EveDossiersPanel.css"
 
 type TimelineEvent = {
   kind?: string
@@ -144,6 +145,7 @@ export function EveDossiersPanel({ autonomy, refreshKey = 0 }: { autonomy: boole
   const [followupInfo, setFollowupInfo] = useState<string>("")
   const [trackedOpen, setTrackedOpen] = useState(0)
   const [openTimelineId, setOpenTimelineId] = useState<string | null>(null)
+  const [tab, setTab] = useState<"dossiers" | "suivi" | "jev" | "etat">("dossiers")
 
   const reloadDossiers = useCallback(async (signal?: AbortSignal) => {
     const r = await fetch("/api/engine/eve/dossiers?limit=20", {
@@ -255,272 +257,299 @@ export function EveDossiersPanel({ autonomy, refreshKey = 0 }: { autonomy: boole
     }
   }
 
+  const tabs: Array<{ id: typeof tab; label: string }> = [
+    { id: "dossiers", label: "Dossiers d’Ève" },
+    { id: "suivi", label: "Suivi des positions" },
+    { id: "jev", label: "Questions posées à JEV" },
+    { id: "etat", label: "État d’Ève" },
+  ]
+
   return (
-    <section className="card">
-      <div className="card-head">
-        <h2>Dossiers d’Ève</h2>
+    <section className="iv-card eve-dossiers">
+      <div className="iv-card-head">
+        <div className="iv-card-tabs" role="tablist" aria-label="Dossiers d’Ève">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              className={`iv-card-tab${tab === t.id ? " is-on" : ""}`}
+              aria-selected={tab === t.id}
+              onClick={() => setTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="iv-card-tools">{items.length} dossiers récents</div>
       </div>
-      <div className="card-body">
-        <p>
-          Un dossier est écrit à chaque fois qu'Ève évalue un instrument : ce que le moteur seul aurait
-          fait, ce que chaque mode a répondu, le contrôle d'entrée et le Risk Kernel. Avec le pilote
-          automatique, un dossier naît à chaque proposition d'un portefeuille et Ève l'accepte ou le refuse
-          sans intervention humaine. Tout reste en paper, jamais d'argent réel.
-        </p>
 
-        <div className="statline">
-          <span>Service JEV</span>
-          <b>{jevServiceLabel(health?.configured_provider)}</b>
-        </div>
-        <div className="statline">
-          <span>Clé JEV présente</span>
-          <b>{health?.key_present ? "oui" : "non"}</b>
-        </div>
-        <div className="statline">
-          <span>Shadow JEV activé</span>
-          <b>{health?.shadow_enabled ? "oui" : "non"}</b>
-        </div>
-        <div className="statline">
-          <span>Version des réglages d'Ève</span>
-          <b>{calibration?.policy?.version ?? "—"}</b>
-        </div>
-        <div className="statline">
-          <span>Dossiers suivis / trades gagnants</span>
-          <b>
-            {calibration?.observed?.n ?? 0} ·{" "}
-            {typeof calibration?.observed?.win_rate === "number"
-              ? `${(calibration.observed.win_rate * 100).toFixed(0)}%`
-              : "—"}
-          </b>
-        </div>
-        <div className="statline">
-          <span>Justesse des probabilités (Brier / ECE, plus bas = mieux)</span>
-          <b>
-            {typeof calibration?.observed?.brier === "number"
-              ? calibration.observed.brier.toFixed(3)
-              : "—"}{" "}
-            /{" "}
-            {typeof calibration?.observed?.ece?.ece === "number"
-              ? calibration.observed.ece.ece.toFixed(3)
-              : "—"}{" "}
-            <span style={{ color: "var(--muted)", fontWeight: 400 }}>
-              (sur {calibration?.observed?.calibration_pairs_n ?? 0} trades)
-            </span>
-          </b>
-        </div>
-        <div className="statline">
-          <span>Ajustements de réglages suggérés</span>
-          <b>{calibration?.proposal?.changes?.length ?? 0} (jamais appliqués tout seuls)</b>
-        </div>
-        <div className="statline">
-          <span>Pilote automatique</span>
-          <b>
-            {autonomy == null
-              ? "—"
-              : autonomy
-                ? "activé : Ève juge chaque proposition du moteur à la clôture de la bougie"
-                : "coupé : le moteur trade seul, Ève observe"}
-          </b>
-        </div>
-        <div className="statline">
-          <span>Positions ouvertes par Ève</span>
-          <b>{trackedOpen}</b>
-        </div>
-
-        <h3 style={{ marginTop: 16 }}>Questions posées à JEV</h3>
-        <p style={{ fontSize: 12, color: "var(--muted)" }}>
-          {JEV_PRIMITIVES_EXPLAIN} Si le service cloud n'a plus de crédit, le service local prend le relais.
-        </p>
-        {calibration?.policy?.routing ? (
-          <div style={{ overflowX: "auto", marginTop: 8 }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Mode</th>
-                  <th>NOUL</th>
-                  <th>CHOICE</th>
-                  <th>SCORE</th>
-                </tr>
-              </thead>
-              <tbody>
-                {EVE_MODES.map((m) => {
-                  const key = `${m.id}_primitives` as keyof NonNullable<
-                    NonNullable<Calibration["policy"]>["routing"]
-                  >
-                  const prims = (calibration.policy?.routing?.[key] as string[] | undefined) ?? []
-                  const has = (p: string) => prims.includes(p)
-                  return (
-                    <tr key={m.id}>
-                      <td>
-                        <b>Ève {m.name}</b>
-                      </td>
-                      <td>{has("noul") ? "●" : "—"}</td>
-                      <td>{has("choice") ? "●" : "—"}</td>
-                      <td>{has("score") ? "●" : "—"}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-
-        <h3 style={{ marginTop: 16 }}>Suivi des positions</h3>
-        <p style={{ fontSize: 12, color: "var(--muted)" }}>
-          Pour chaque position ouverte, Ève dit si elle la garde, la ferme ou s'abstient. Le résultat
-          (gain ou perte, frais déduits) est rangé à part de ce qu'Ève savait au moment de décider.
-        </p>
-        <button type="button" className="ghost" disabled={busyId === "sync"} onClick={() => syncOutcomes()}>
-          {busyId === "sync" ? "Mise à jour…" : "Mettre à jour les résultats"}
-        </button>
-        {followupInfo ? (
-          <p style={{ fontSize: 12 }} role="status">
-            Suivi : {followupInfo}
+      {tab === "dossiers" ? (
+        <>
+          <p className="iv-note ed-intro">
+            Un dossier est écrit à chaque fois qu'Ève évalue un instrument : ce que le moteur seul aurait
+            fait, ce que chaque mode a répondu, le contrôle d'entrée et le Risk Kernel. Avec le pilote
+            automatique, un dossier naît à chaque proposition d'un portefeuille et Ève l'accepte ou le refuse
+            sans intervention humaine. Tout reste en paper, jamais d'argent réel.
           </p>
-        ) : null}
-
-        <h3 style={{ marginTop: 16 }}>Dossiers récents</h3>
-        {lastSubmit ? (
-          <p style={{ fontSize: 12 }} role="status">
-            Dernier essai à blanc : {lastSubmit}
-          </p>
-        ) : null}
-        {loading ? (
-          <p>Chargement…</p>
-        ) : error ? (
-          <p role="alert">{error}</p>
-        ) : items.length === 0 ? (
-          <p>
-            Aucun Dossier pour l'instant. Ève en écrit un à chaque fois qu'un portefeuille propose un
-            trade (autonomie activée) ou quand on lui demande d'évaluer un instrument.
-          </p>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Instrument</th>
-                  <th>Moteur seul</th>
-                  <th>Ève</th>
-                  <th>Propositions des portefeuilles</th>
-                  <th>Cohérence</th>
-                  <th>Résultat</th>
-                  <th>Historique</th>
-                  <th>Essai à blanc</th>
-                  <th>Suivi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((d) => {
-                  const coh =
-                    d.verdict?.coherence_score ?? d.coherence?.score ?? null
-                  const timelineOpen = openTimelineId === d.id
-                  const timeline = Array.isArray(d.timeline) ? d.timeline : []
-                  return (
-                    <Fragment key={d.id}>
-                      <tr>
-                        <td>
-                          {d.created_at
-                            ? new Date(d.created_at).toLocaleString("fr-FR")
-                            : "—"}
-                        </td>
-                        <td>
-                          {d.symbol} · {d.timeframe}
-                        </td>
-                        <td>{baselineFr(d.baseline_decision)}</td>
-                      <td>
-                        {eveActionFr(d.eve_action ?? d.verdict?.action)}
-                        {d.decision_time?.degradation?.level &&
-                        d.decision_time.degradation.level !== "healthy" ? (
-                          <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.8 }}>
-                            [{d.decision_time.heuristic?.stand_in
-                              ? d.decision_time.heuristic.label ?? "heuristic"
-                              : d.decision_time.degradation.level}]
-                          </span>
-                        ) : null}
-                        {d.decision_time?.entry_gate?.decision === "reject" ? (
-                          <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.8 }}>
-                            [refus contrôle d'entrée : {d.decision_time.entry_gate.reason ?? "?"}]
-                          </span>
-                        ) : null}
-                        {d.decision_time?.event_radar?.enabled ? (
-                          <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.8 }}>
-                            [radar:{d.decision_time.event_radar.direction ?? "?"}·
-                            {d.decision_time.event_radar.impact ?? "?"}·n=
-                            {d.decision_time.event_radar.event_count ?? 0}]
-                          </span>
-                        ) : null}
-                      </td>
-                        <td style={{ fontSize: 12 }}>{proposalSummary(d)}</td>
-                        <td>{typeof coh === "number" ? coh.toFixed(2) : "—"}</td>
-                        <td>{executionLabel(d.execution_status)}</td>
-                        <td>
-                          <button
-                            type="button"
-                            className="ghost"
-                            onClick={() =>
-                              setOpenTimelineId(timelineOpen ? null : d.id)
-                            }
-                          >
-                            {timelineOpen ? "Masquer" : `Voir (${timeline.length})`}
-                          </button>
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className="ghost"
-                            disabled={busyId === d.id}
-                            onClick={() => runDrySubmit(d.id)}
-                          >
-                            {busyId === d.id ? "…" : "Tester sans trader"}
-                          </button>
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className="ghost"
-                            disabled={busyId === `fu-${d.id}`}
-                            onClick={() => runFollowup(d.id)}
-                          >
-                            {busyId === `fu-${d.id}` ? "…" : "Avis d'Ève"}
-                          </button>
-                        </td>
-                      </tr>
-                      {timelineOpen ? (
+          {lastSubmit ? (
+            <p className="iv-note ed-status" role="status">
+              Dernier essai à blanc : {lastSubmit}
+            </p>
+          ) : null}
+          {loading ? (
+            <p className="iv-empty">Chargement…</p>
+          ) : error ? (
+            <p className="iv-empty is-error" role="alert">
+              {error}
+            </p>
+          ) : items.length === 0 ? (
+            <p className="iv-empty">
+              Aucun Dossier pour l'instant. Ève en écrit un à chaque fois qu'un portefeuille propose un
+              trade (autonomie activée) ou quand on lui demande d'évaluer un instrument.
+            </p>
+          ) : (
+            <div className="iv-table-wrap ed-table-wrap">
+              <table className="iv-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Instrument</th>
+                    <th>Moteur seul</th>
+                    <th>Ève</th>
+                    <th>Propositions des portefeuilles</th>
+                    <th className="n">Cohérence</th>
+                    <th>Résultat</th>
+                    <th>Historique</th>
+                    <th>Essai à blanc</th>
+                    <th>Suivi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((d) => {
+                    const coh = d.verdict?.coherence_score ?? d.coherence?.score ?? null
+                    const timelineOpen = openTimelineId === d.id
+                    const timeline = Array.isArray(d.timeline) ? d.timeline : []
+                    return (
+                      <Fragment key={d.id}>
                         <tr>
-                          <td colSpan={10}>
-                            <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12 }}>
-                              {timeline.length === 0 ? (
-                                <li>Aucun événement</li>
-                              ) : (
-                                timeline.map((ev, i) => (
-                                  <li key={`${d.id}-ev-${i}`}>
-                                    <b>{ev.kind ?? "?"}</b>
-                                    {ev.at
-                                      ? ` · ${new Date(ev.at).toLocaleString("fr-FR")}`
-                                      : ""}
-                                    {ev.action ? ` · ${ev.action}` : ""}
-                                    {ev.baseline ? ` (baseline ${ev.baseline})` : ""}
-                                    {typeof ev.realized_pnl === "number"
-                                      ? ` · PnL ${ev.realized_pnl}`
-                                      : ""}
-                                    {ev.detail ? ` — ${ev.detail}` : ""}
-                                  </li>
-                                ))
-                              )}
-                            </ol>
+                          <td className="mono muted">
+                            {d.created_at ? new Date(d.created_at).toLocaleString("fr-FR") : "—"}
+                          </td>
+                          <td className="sym">
+                            {d.symbol} <small>{d.timeframe}</small>
+                          </td>
+                          <td>{baselineFr(d.baseline_decision)}</td>
+                          <td>
+                            <b className="ed-eve">{eveActionFr(d.eve_action ?? d.verdict?.action)}</b>
+                            {d.decision_time?.degradation?.level &&
+                            d.decision_time.degradation.level !== "healthy" ? (
+                              <span className="iv-tag is-amber ed-flag">
+                                {d.decision_time.heuristic?.stand_in
+                                  ? d.decision_time.heuristic.label ?? "heuristic"
+                                  : d.decision_time.degradation.level}
+                              </span>
+                            ) : null}
+                            {d.decision_time?.entry_gate?.decision === "reject" ? (
+                              <span className="iv-tag is-amber ed-flag">
+                                refus contrôle d'entrée : {d.decision_time.entry_gate.reason ?? "?"}
+                              </span>
+                            ) : null}
+                            {d.decision_time?.event_radar?.enabled ? (
+                              <span className="iv-tag is-muted ed-flag">
+                                radar:{d.decision_time.event_radar.direction ?? "?"}·
+                                {d.decision_time.event_radar.impact ?? "?"}·n=
+                                {d.decision_time.event_radar.event_count ?? 0}
+                              </span>
+                            ) : null}
+                          </td>
+                          <td className="ed-props">{proposalSummary(d)}</td>
+                          <td className="n">{typeof coh === "number" ? coh.toFixed(2) : "—"}</td>
+                          <td>{executionLabel(d.execution_status)}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className="iv-btn iv-btn--sm iv-btn--ghost"
+                              aria-expanded={timelineOpen}
+                              onClick={() => setOpenTimelineId(timelineOpen ? null : d.id)}
+                            >
+                              {timelineOpen ? "Masquer" : `Voir (${timeline.length})`}
+                            </button>
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="iv-btn iv-btn--sm"
+                              disabled={busyId === d.id}
+                              onClick={() => runDrySubmit(d.id)}
+                            >
+                              {busyId === d.id ? "…" : "Tester sans trader"}
+                            </button>
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="iv-btn iv-btn--sm"
+                              disabled={busyId === `fu-${d.id}`}
+                              onClick={() => runFollowup(d.id)}
+                            >
+                              {busyId === `fu-${d.id}` ? "…" : "Avis d'Ève"}
+                            </button>
                           </td>
                         </tr>
-                      ) : null}
-                    </Fragment>
-                  )
-                })}
-              </tbody>
-            </table>
+                        {timelineOpen ? (
+                          <tr className="ed-timeline-row">
+                            <td colSpan={10}>
+                              <ol className="ed-timeline">
+                                {timeline.length === 0 ? (
+                                  <li>Aucun événement</li>
+                                ) : (
+                                  timeline.map((ev, i) => (
+                                    <li key={`${d.id}-ev-${i}`}>
+                                      <b>{ev.kind ?? "?"}</b>
+                                      {ev.at ? ` · ${new Date(ev.at).toLocaleString("fr-FR")}` : ""}
+                                      {ev.action ? ` · ${ev.action}` : ""}
+                                      {ev.baseline ? ` (baseline ${ev.baseline})` : ""}
+                                      {typeof ev.realized_pnl === "number" ? ` · PnL ${ev.realized_pnl}` : ""}
+                                      {ev.detail ? ` — ${ev.detail}` : ""}
+                                    </li>
+                                  ))
+                                )}
+                              </ol>
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      ) : null}
+
+      {tab === "suivi" ? (
+        <div className="iv-card-body">
+          <p className="iv-note ed-p">
+            Pour chaque position ouverte, Ève dit si elle la garde, la ferme ou s'abstient. Le résultat
+            (gain ou perte, frais déduits) est rangé à part de ce qu'Ève savait au moment de décider.
+          </p>
+          <div className="iv-row">
+            <span>Positions ouvertes par Ève</span>
+            <span className="iv-row-v">{trackedOpen}</span>
           </div>
-        )}
-      </div>
+          <div className="ed-actions">
+            <button type="button" className="iv-btn" disabled={busyId === "sync"} onClick={() => syncOutcomes()}>
+              {busyId === "sync" ? "Mise à jour…" : "Mettre à jour les résultats"}
+            </button>
+          </div>
+          {followupInfo ? (
+            <p className="iv-note ed-status" role="status">
+              Suivi : {followupInfo}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {tab === "jev" ? (
+        <div className="iv-card-body">
+          <p className="iv-note ed-p">
+            {JEV_PRIMITIVES_EXPLAIN} Si le service cloud n'a plus de crédit, le service local prend le relais.
+          </p>
+          {calibration?.policy?.routing ? (
+            <div className="iv-table-wrap ed-inset">
+              <table className="iv-table is-compact ed-routing">
+                <thead>
+                  <tr>
+                    <th>Mode</th>
+                    <th>NOUL</th>
+                    <th>CHOICE</th>
+                    <th>SCORE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {EVE_MODES.map((m) => {
+                    const key = `${m.id}_primitives` as keyof NonNullable<
+                      NonNullable<Calibration["policy"]>["routing"]
+                    >
+                    const prims = (calibration.policy?.routing?.[key] as string[] | undefined) ?? []
+                    const has = (p: string) => prims.includes(p)
+                    return (
+                      <tr key={m.id}>
+                        <td className="sym">{m.name}</td>
+                        {(["noul", "choice", "score"] as const).map((p) => (
+                          <td key={p} className={has(p) ? "cy" : "dim"}>
+                            {has(p) ? "●" : "—"}
+                          </td>
+                        ))}
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="iv-empty">—</p>
+          )}
+        </div>
+      ) : null}
+
+      {tab === "etat" ? (
+        <div className="iv-card-body ed-state">
+          <div className="iv-row">
+            <span>Service JEV</span>
+            <span className="iv-row-v">{jevServiceLabel(health?.configured_provider)}</span>
+          </div>
+          <div className="iv-row">
+            <span>Clé JEV présente</span>
+            <span className={`iv-row-v ${health?.key_present ? "ok" : "warn"}`}>{health?.key_present ? "oui" : "non"}</span>
+          </div>
+          <div className="iv-row">
+            <span>Shadow JEV activé</span>
+            <span className={`iv-row-v ${health?.shadow_enabled ? "ok" : ""}`}>{health?.shadow_enabled ? "oui" : "non"}</span>
+          </div>
+          <div className="iv-row">
+            <span>Version des réglages d'Ève</span>
+            <span className="iv-row-v">{calibration?.policy?.version ?? "—"}</span>
+          </div>
+          <div className="iv-row">
+            <span>Dossiers suivis / trades gagnants</span>
+            <span className="iv-row-v">
+              {calibration?.observed?.n ?? 0} ·{" "}
+              {typeof calibration?.observed?.win_rate === "number"
+                ? `${(calibration.observed.win_rate * 100).toFixed(0)}%`
+                : "—"}
+            </span>
+          </div>
+          <div className="iv-row">
+            <span>Justesse des probabilités (Brier / ECE, plus bas = mieux)</span>
+            <span className="iv-row-v">
+              {typeof calibration?.observed?.brier === "number" ? calibration.observed.brier.toFixed(3) : "—"} /{" "}
+              {typeof calibration?.observed?.ece?.ece === "number" ? calibration.observed.ece.ece.toFixed(3) : "—"}{" "}
+              <span className="muted">(sur {calibration?.observed?.calibration_pairs_n ?? 0} trades)</span>
+            </span>
+          </div>
+          <div className="iv-row">
+            <span>Ajustements de réglages suggérés</span>
+            <span className="iv-row-v">{calibration?.proposal?.changes?.length ?? 0} (jamais appliqués tout seuls)</span>
+          </div>
+          <div className="iv-row">
+            <span>Pilote automatique</span>
+            <span className="iv-row-v">
+              {autonomy == null
+                ? "—"
+                : autonomy
+                  ? "activé : Ève juge chaque proposition du moteur à la clôture de la bougie"
+                  : "coupé : le moteur trade seul, Ève observe"}
+            </span>
+          </div>
+          <div className="iv-row">
+            <span>Positions ouvertes par Ève</span>
+            <span className="iv-row-v">{trackedOpen}</span>
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }

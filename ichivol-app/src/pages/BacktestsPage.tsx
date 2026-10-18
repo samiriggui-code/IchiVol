@@ -60,11 +60,24 @@ const STEPS: [string, string, string, LabTab | null][] = [
   ['02', 'Backtest', 'Mesurer rendement, risque et coûts.', 'Backtests'],
   ['03', 'Ablation', 'Garder seulement les filtres qui apportent quelque chose.', 'Ablations'],
   ['04', 'Walk-forward', 'Vérifier hors échantillon.', 'Walk-forward'],
-  ['05', 'Paper', 'La stratégie tourne avec de l’argent fictif, sous le regard d’Ève.', null],
+  ['05', 'Régimes', 'Où la stratégie gagne-t-elle ?', 'Régimes'],
+  ['06', 'Paper', 'La stratégie tourne avec de l’argent fictif, sous le regard d’Ève.', null],
 ]
 
+const TONE_CLASS: Record<BadgeTone, string> = {
+  green: 'is-mint',
+  amber: 'is-amber',
+  red: 'is-sell',
+  gray: 'is-muted',
+  '': 'is-cyan',
+}
+
 function badge(text: string, tone: BadgeTone = 'gray'): ReactNode {
-  return <span className={`tag ${tone}`.trim()}>{text}</span>
+  return <span className={`iv-tag ${TONE_CLASS[tone]}`}>{text}</span>
+}
+
+function signClass(v: number | null | undefined): string {
+  return v != null ? (v > 0 ? 'pos' : 'neg') : ''
 }
 
 function verdictBadge(v: Verdict): ReactNode {
@@ -87,13 +100,11 @@ function fmtDate(iso: string | null | undefined): string {
 function MetricCells({ m }: { m: BacktestMetrics | null }) {
   return (
     <>
-      <td>{m ? m.num_trades : '—'}</td>
-      <td>{pct(m?.win_rate)}</td>
-      <td className={m?.expectancy != null ? (m.expectancy > 0 ? 'lab-up' : 'lab-down') : ''}>
-        {pct(m?.expectancy, 2, true)}
-      </td>
-      <td>{num(m?.profit_factor)}</td>
-      <td>{pct(m?.max_drawdown)}</td>
+      <td className="n">{m ? m.num_trades : '—'}</td>
+      <td className="n">{pct(m?.win_rate)}</td>
+      <td className={`n ${signClass(m?.expectancy)}`}>{pct(m?.expectancy, 2, true)}</td>
+      <td className="n">{num(m?.profit_factor)}</td>
+      <td className="n">{pct(m?.max_drawdown)}</td>
     </>
   )
 }
@@ -151,156 +162,220 @@ export function BacktestsPage() {
   const variants = latest ? Object.entries(latest.experiments) : []
   const hint = LAB_TABS.find((t) => t.id === labTab)?.hint
   const examineBtn = (build: () => Explanation) => (
-    <button type="button" className="subtle lab-examine" onClick={() => setSheet(build())}>
+    <button type="button" className="iv-btn iv-btn--ghost iv-btn--sm lab-examine" onClick={() => setSheet(build())}>
       Examiner ↗
     </button>
+  )
+  const pickTab = (t: LabTab) => {
+    setLabTab(t)
+    setError(null)
+  }
+  const tabMeta =
+    labTab === 'Ablations'
+      ? ablation
+        ? `${ablation.symbol} · ${ablation.timeframe} · ${ablation.n_bars} bougies`
+        : 'Lancez le calcul'
+      : labTab === 'Régimes'
+        ? regimes
+          ? `${regimes.symbol} · ${regimes.timeframe} · ${regimes.n_bars} bougies`
+          : 'Lancez le calcul'
+        : labTab === 'Walk-forward'
+          ? walk
+            ? `${walk.symbol} · ${walk.timeframe} · ${walk.folds.length} périodes`
+            : 'Lancez le calcul'
+          : 'Moyenne sur toutes les paires du dernier run'
+  const emptyRow = (cols: number) => (
+    <tr>
+      <td colSpan={cols} className="lab-empty">
+        {busy ? 'Calcul en cours…' : 'Choisissez un marché puis « Lancer le calcul ».'}
+      </td>
+    </tr>
   )
 
   return (
     <div className="lab-page">
-      <div className="page-head">
+      <div className="iv-ph">
         <div>
-          <div className="eyebrow">05 / ICHIVOL WORKSPACE</div>
+          <div className="iv-meta">Strategy Lab · données moteur · backtest quotidien</div>
           <h1>Strategy Lab</h1>
-          <p className="subtitle">Vérifier sur l’historique ce que chaque brique de la stratégie apporte.</p>
+          <p>Vérifier sur l’historique ce que chaque brique de la stratégie apporte.</p>
         </div>
-        <div className="actions">{badge('DONNÉES MOTEUR')}</div>
+        <div className="iv-ph-act lab-controls">
+          {labTab === 'Backtests' ? (
+            <span className="iv-chip is-mint">
+              <i className="iv-dot" />
+              Données moteur
+            </span>
+          ) : (
+            <>
+              <select
+                className="iv-input"
+                aria-label="Marché"
+                value={symbol}
+                onChange={(e) => setSymbol(e.target.value)}
+                disabled={busy}
+              >
+                {SYMBOLS.map((s) => (
+                  <option key={s} value={s}>
+                    {s.replace(/USDT$/, '')}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="iv-input"
+                aria-label="Unité de temps"
+                value={timeframe}
+                onChange={(e) => setTimeframe(e.target.value)}
+                disabled={busy}
+              >
+                {TIMEFRAMES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="iv-input"
+                aria-label="Historique"
+                value={depth}
+                onChange={(e) => setDepth(Number(e.target.value))}
+                disabled={busy}
+              >
+                {DEPTHS.map((d) => (
+                  <option key={d} value={d}>
+                    {d} bougies
+                  </option>
+                ))}
+              </select>
+              <button type="button" className="iv-btn iv-btn--primary" disabled={busy} onClick={() => void runStudy()}>
+                {busy ? 'Calcul en cours…' : 'Lancer le calcul'}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="tabs">
-        {LAB_TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={labTab === t.id ? 'active' : ''}
-            onClick={() => {
-              setLabTab(t.id)
-              setError(null)
-            }}
-          >
-            {t.id}
-          </button>
-        ))}
+      <ol className="lab-steps" aria-label="De l’idée à la preuve">
+        {STEPS.map(([n, title, text, tab]) => {
+          const cur = tab != null && tab === labTab
+          return (
+            <li className={`lab-step${cur ? ' is-cur' : ''}`} key={n}>
+              <div className="lab-step-n">
+                {n}
+                {cur ? ' · en cours' : ''}
+              </div>
+              <div className="lab-step-h">
+                {tab ? (
+                  <button type="button" className="lab-link" onClick={() => pickTab(tab)}>
+                    {title}
+                  </button>
+                ) : (
+                  title
+                )}
+              </div>
+              <div className="lab-step-d">{text}</div>
+            </li>
+          )
+        })}
+      </ol>
+
+      <div className="iv-kpis lab-kpis">
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">Univers</div>
+          <div className="iv-kpi-v">{coverage?.crypto_symbols ?? '—'}</div>
+          <div className="iv-kpi-s">Cryptos du backtest quotidien</div>
+        </div>
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">Dernier calcul</div>
+          <div className="iv-kpi-v">{fmtDate(latest?.ended_at)}</div>
+          <div className="iv-kpi-s">
+            {latest ? `${latest.n_pairs} paires × unités de temps` : loading ? 'chargement…' : 'aucun run'}
+          </div>
+        </div>
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">Pipeline vs Ichimoku seul</div>
+          <div className="iv-kpi-v">
+            {latest && latest.pipeline_vs_ichimoku.compared > 0 ? (
+              <>
+                {latest.pipeline_vs_ichimoku.beats}
+                <small> / {latest.pipeline_vs_ichimoku.compared}</small>
+              </>
+            ) : (
+              '—'
+            )}
+          </div>
+          <div className="iv-kpi-s">Paires au meilleur Sharpe</div>
+        </div>
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">Échantillon minimum</div>
+          <div className="iv-kpi-v">{runs?.min_trades_per_pair ?? '—'}</div>
+          <div className="iv-kpi-s">Trades par paire, en dessous c’est fragile</div>
+        </div>
       </div>
 
-      <div className="notice blue">
-        ◈ <span>{hint} Résultats nets de frais, sur bougies clôturées uniquement.</span>
-      </div>
-
-      {labTab === 'Backtests' ? (
-        <div className="metrics">
-          <div className="metric">
-            <div className="metric-label">Univers</div>
-            <div className="metric-value">{coverage?.crypto_symbols ?? '—'}</div>
-            <small>Cryptos couvertes par le backtest quotidien</small>
+      <section className="iv-card lab-main">
+        <div className="iv-card-head">
+          <div className="iv-card-tabs" role="tablist">
+            {LAB_TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={labTab === t.id}
+                className={`iv-card-tab${labTab === t.id ? ' is-on' : ''}`}
+                onClick={() => pickTab(t.id)}
+              >
+                {t.id === 'Ablations' ? 'Ablations · A → E' : t.id}
+              </button>
+            ))}
           </div>
-          <div className="metric">
-            <div className="metric-label">Dernier calcul</div>
-            <div className="metric-value">{fmtDate(latest?.ended_at)}</div>
-            <small>{latest ? `${latest.n_pairs} paires × unités de temps` : loading ? 'chargement…' : 'aucun run'}</small>
-          </div>
-          <div className="metric">
-            <div className="metric-label">Pipeline vs Ichimoku seul</div>
-            <div className="metric-value">
-              {latest && latest.pipeline_vs_ichimoku.compared > 0
-                ? `${latest.pipeline_vs_ichimoku.beats} / ${latest.pipeline_vs_ichimoku.compared}`
-                : '—'}
-            </div>
-            <small>Paires où le pipeline complet a un meilleur Sharpe</small>
-          </div>
-          <div className="metric">
-            <div className="metric-label">Échantillon minimum</div>
-            <div className="metric-value">{runs?.min_trades_per_pair ?? '—'}</div>
-            <small>Trades par paire en dessous desquels un chiffre est fragile</small>
-          </div>
+          <div className="iv-card-tools">{tabMeta}</div>
         </div>
-      ) : (
-        <div className="lab-controls">
-          <label>
-            Marché
-            <select value={symbol} onChange={(e) => setSymbol(e.target.value)} disabled={busy}>
-              {SYMBOLS.map((s) => (
-                <option key={s} value={s}>
-                  {s.replace(/USDT$/, '')}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Unité de temps
-            <select value={timeframe} onChange={(e) => setTimeframe(e.target.value)} disabled={busy}>
-              {TIMEFRAMES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Historique
-            <select value={depth} onChange={(e) => setDepth(Number(e.target.value))} disabled={busy}>
-              {DEPTHS.map((d) => (
-                <option key={d} value={d}>
-                  {d} bougies
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="button" className="primary" disabled={busy} onClick={() => void runStudy()}>
-            {busy ? 'Calcul en cours…' : 'Lancer le calcul'}
-          </button>
+        <div className="lab-hint">
+          <span className="iv-kw">◆</span> {hint} Résultats nets de frais, sur bougies clôturées uniquement.
         </div>
-      )}
-
-      {error && (
-        <div className="notice lab-error" role="alert">
-          {error}
-        </div>
-      )}
-
-      {labTab === 'Backtests' && (
-        <section className="card">
-          <div className="card-head">
-            <h2>Variantes comparées</h2>
-            <small>Moyenne sur toutes les paires du dernier run</small>
+        {error && (
+          <div className="lab-error" role="alert">
+            {error}
           </div>
-          <div className="table-wrap">
-            <table>
+        )}
+
+        {labTab === 'Backtests' && (
+          <div className="iv-card-body is-flush iv-table-wrap">
+            <table className="iv-table">
               <thead>
                 <tr>
-                  <th>VARIANTE</th>
-                  <th>PAIRES</th>
-                  <th>TRADES</th>
-                  <th>RÉUSSITE</th>
-                  <th>ESPÉRANCE / TRADE</th>
-                  <th>SHARPE</th>
-                  <th>PROFIT FACTOR</th>
-                  <th>FIABILITÉ</th>
+                  <th>Variante</th>
+                  <th className="n">Paires</th>
+                  <th className="n">Trades</th>
+                  <th className="n">Réussite</th>
+                  <th className="n">Espérance / trade</th>
+                  <th className="n">Sharpe</th>
+                  <th className="n">Profit factor</th>
+                  <th>Fiabilité</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
                 {variants.length === 0 && (
                   <tr>
-                    <td colSpan={9}>{loading ? 'Chargement…' : 'Aucun backtest enregistré pour le moment.'}</td>
+                    <td colSpan={9} className="lab-empty">
+                      {loading ? 'Chargement…' : 'Aucun backtest enregistré pour le moment.'}
+                    </td>
                   </tr>
                 )}
                 {variants.map(([key, e]) => (
                   <Fragment key={key}>
                     <tr>
-                      <td>
-                        <b>{VARIANT_LABELS[key] ?? key}</b>
-                      </td>
-                      <td>{e.n_pairs}</td>
-                      <td>{e.trades_total}</td>
-                      <td>{pct(e.win_rate_mean)}</td>
-                      <td className={e.expectancy_mean != null ? (e.expectancy_mean > 0 ? 'lab-up' : 'lab-down') : ''}>
-                        {pct(e.expectancy_mean, 2, true)}
-                      </td>
-                      <td>{num(e.sharpe_mean)}</td>
-                      <td>{num(e.profit_factor_median)}</td>
+                      <td className="sym">{VARIANT_LABELS[key] ?? key}</td>
+                      <td className="n">{e.n_pairs}</td>
+                      <td className="n">{e.trades_total}</td>
+                      <td className="n">{pct(e.win_rate_mean)}</td>
+                      <td className={`n ${signClass(e.expectancy_mean)}`}>{pct(e.expectancy_mean, 2, true)}</td>
+                      <td className="n">{num(e.sharpe_mean)}</td>
+                      <td className="n">{num(e.profit_factor_median)}</td>
                       <td>{e.small_sample ? badge('ÉCHANTILLON FAIBLE', 'amber') : badge('OK', 'green')}</td>
-                      <td>
+                      <td className="lab-act">
                         {examineBtn(() =>
                           explainVariant(
                             key,
@@ -317,244 +392,189 @@ export function BacktestsPage() {
               </tbody>
             </table>
           </div>
-        </section>
-      )}
+        )}
 
-      {labTab === 'Ablations' && (
-        <section className="card">
-          <div className="card-head">
-            <h2>Échelle A → E</h2>
-            <small>{ablation ? `${ablation.symbol} · ${ablation.timeframe} · ${ablation.n_bars} bougies` : 'Lancez le calcul'}</small>
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>ÉTAPE</th>
-                  <th>SIGNAUX</th>
-                  <th>TRADES</th>
-                  <th>RÉUSSITE</th>
-                  <th>ESPÉRANCE / TRADE</th>
-                  <th>PROFIT FACTOR</th>
-                  <th>DRAWDOWN MAX</th>
-                  <th>APPORT DU FILTRE</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {!ablation && (
+        {labTab === 'Ablations' && (
+          <>
+            <div className="iv-card-body is-flush iv-table-wrap">
+              <table className="iv-table">
+                <thead>
                   <tr>
-                    <td colSpan={9}>{busy ? 'Calcul en cours…' : 'Choisissez un marché puis « Lancer le calcul ».'}</td>
+                    <th>Étape</th>
+                    <th className="n">Signaux</th>
+                    <th className="n">Trades</th>
+                    <th className="n">Réussite</th>
+                    <th className="n">Espérance / trade</th>
+                    <th className="n">Profit factor</th>
+                    <th className="n">Drawdown max</th>
+                    <th>Apport du filtre</th>
+                    <th />
                   </tr>
-                )}
-                {ablation?.steps.map((s, i) => {
-                  const delta = i > 0 ? ablation.deltas[i - 1] : null
-                  const key = `abl-${s.label}`
-                  return (
-                    <Fragment key={key}>
-                      <tr>
-                        <td>
-                          <b>{layerLabel(s.label)}</b>
-                        </td>
-                        <td>{s.n_signals}</td>
-                        <MetricCells m={metricsOf(s.study)} />
-                        <td>
-                          {delta
-                            ? verdictBadge(ablationVerdict(delta.improves_expectancy, delta.improves_profit_factor))
-                            : badge('RÉFÉRENCE')}
-                        </td>
-                        <td>
-                          {examineBtn(() =>
-                            explainAblationStep(s, i > 0 ? ablation.steps[i - 1] : null, delta, {
-                              symbol: ablation.symbol,
-                              timeframe: ablation.timeframe,
-                              nBars: ablation.n_bars,
-                            }),
-                          )}
-                        </td>
-                      </tr>
-                    </Fragment>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-          {ablation && <p className="lab-footnote">Un filtre doit améliorer l’espérance ou le profit factor pour mériter sa place.</p>}
-        </section>
-      )}
-
-      {labTab === 'Régimes' && (
-        <section className="card">
-          <div className="card-head">
-            <h2>Résultats par régime de marché</h2>
-            <small>{regimes ? `${regimes.symbol} · ${regimes.timeframe} · ${regimes.n_bars} bougies` : 'Lancez le calcul'}</small>
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>RÉGIME</th>
-                  <th>BOUGIES</th>
-                  <th>SIGNAUX</th>
-                  <th>TRADES</th>
-                  <th>RÉUSSITE</th>
-                  <th>ESPÉRANCE / TRADE</th>
-                  <th>PROFIT FACTOR</th>
-                  <th>DRAWDOWN MAX</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {!regimes && (
-                  <tr>
-                    <td colSpan={9}>{busy ? 'Calcul en cours…' : 'Choisissez un marché puis « Lancer le calcul ».'}</td>
-                  </tr>
-                )}
-                {regimes?.slices.map((s) => (
-                  <tr key={s.regime}>
-                    <td>
-                      <b>{regimeLabel(s.regime)}</b>
-                    </td>
-                    <td>{s.n_bars_in_regime}</td>
-                    <td>{s.n_signals}</td>
-                    <MetricCells m={metricsOf(s.study)} />
-                    <td>
-                      {examineBtn(() =>
-                        explainRegime(s, regimes.slices.find((x) => x.regime === 'GLOBAL') ?? null, {
-                          symbol: regimes.symbol,
-                          timeframe: regimes.timeframe,
-                          nBars: regimes.n_bars,
-                        }),
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {regimes && (
-            <p className="lab-footnote">
-              Règle testée : {regimes.ruleset?.id ?? '—'}. Un profit factor faible sur « Tous les
-              signaux » mais fort en tendance veut dire que la stratégie ne marche que dans ce régime.
-            </p>
-          )}
-        </section>
-      )}
-
-      {labTab === 'Walk-forward' && (
-        <section className="card">
-          <div className="card-head">
-            <h2>Hors échantillon, période par période</h2>
-            <small>{walk ? `${walk.symbol} · ${walk.timeframe} · ${walk.folds.length} périodes` : 'Lancez le calcul'}</small>
-          </div>
-          {walk && (
-            <div className="metrics lab-metrics-inline">
-              <div className="metric">
-                <div className="metric-label">Périodes rentables</div>
-                <div className="metric-value">{pct(walk.oos_summary.pct_folds_pf_gt_1, 0)}</div>
-                <small>Profit factor &gt; 1 hors échantillon</small>
-              </div>
-              <div className="metric">
-                <div className="metric-label">Espérance moyenne</div>
-                <div className="metric-value">{pct(walk.oos_summary.mean_oos_expectancy, 2, true)}</div>
-                <small>Par trade, hors échantillon</small>
-              </div>
-              <div className="metric">
-                <div className="metric-label">Profit factor moyen</div>
-                <div className="metric-value">{num(walk.oos_summary.mean_oos_profit_factor)}</div>
-                <small>Hors échantillon</small>
-              </div>
-              <div className="metric">
-                <div className="metric-label">Trades testés</div>
-                <div className="metric-value">{walk.oos_summary.total_oos_trades}</div>
-                <small>
-                  {walk.oos_summary.folds_with_trades} / {walk.oos_summary.n_folds} périodes avec trades
-                </small>
-              </div>
+                </thead>
+                <tbody>
+                  {!ablation && emptyRow(9)}
+                  {ablation?.steps.map((s, i) => {
+                    const delta = i > 0 ? ablation.deltas[i - 1] : null
+                    const key = `abl-${s.label}`
+                    return (
+                      <Fragment key={key}>
+                        <tr>
+                          <td className="sym">{layerLabel(s.label)}</td>
+                          <td className="n">{s.n_signals}</td>
+                          <MetricCells m={metricsOf(s.study)} />
+                          <td>
+                            {delta
+                              ? verdictBadge(ablationVerdict(delta.improves_expectancy, delta.improves_profit_factor))
+                              : badge('RÉFÉRENCE', '')}
+                          </td>
+                          <td className="lab-act">
+                            {examineBtn(() =>
+                              explainAblationStep(s, i > 0 ? ablation.steps[i - 1] : null, delta, {
+                                symbol: ablation.symbol,
+                                timeframe: ablation.timeframe,
+                                nBars: ablation.n_bars,
+                              }),
+                            )}
+                          </td>
+                        </tr>
+                      </Fragment>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
-          )}
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>PÉRIODE</th>
-                  <th>TRADES (APPRIS → TESTÉ)</th>
-                  <th>ESPÉRANCE APPRISE</th>
-                  <th>ESPÉRANCE TESTÉE</th>
-                  <th>PF TESTÉ</th>
-                  <th>VERDICT</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {!walk && (
+            <div className="iv-card-foot">Un filtre doit améliorer l’espérance ou le profit factor pour mériter sa place</div>
+          </>
+        )}
+
+        {labTab === 'Régimes' && (
+          <>
+            <div className="iv-card-body is-flush iv-table-wrap">
+              <table className="iv-table">
+                <thead>
                   <tr>
-                    <td colSpan={7}>{busy ? 'Calcul en cours…' : 'Choisissez un marché puis « Lancer le calcul ».'}</td>
+                    <th>Régime</th>
+                    <th className="n">Bougies</th>
+                    <th className="n">Signaux</th>
+                    <th className="n">Trades</th>
+                    <th className="n">Réussite</th>
+                    <th className="n">Espérance / trade</th>
+                    <th className="n">Profit factor</th>
+                    <th className="n">Drawdown max</th>
+                    <th />
                   </tr>
-                )}
-                {walk?.folds.map((f) => {
-                  const is = metricsOf(f.is)
-                  const oos = metricsOf(f.oos)
-                  const pf = oos?.profit_factor
-                  const v = foldVerdict(oos)
-                  return (
-                    <tr key={f.fold_index}>
-                      <td>
-                        <b>#{f.fold_index + 1}</b>
-                      </td>
-                      <td>
-                        {is?.num_trades ?? '—'} → {oos?.num_trades ?? '—'}
-                      </td>
-                      <td>{pct(is?.expectancy, 2, true)}</td>
-                      <td className={oos?.expectancy != null ? (oos.expectancy > 0 ? 'lab-up' : 'lab-down') : ''}>
-                        {pct(oos?.expectancy, 2, true)}
-                      </td>
-                      <td>{num(pf)}</td>
-                      <td>{verdictBadge(v)}</td>
-                      <td>
+                </thead>
+                <tbody>
+                  {!regimes && emptyRow(9)}
+                  {regimes?.slices.map((s) => (
+                    <tr key={s.regime}>
+                      <td className="sym">{regimeLabel(s.regime)}</td>
+                      <td className="n">{s.n_bars_in_regime}</td>
+                      <td className="n">{s.n_signals}</td>
+                      <MetricCells m={metricsOf(s.study)} />
+                      <td className="lab-act">
                         {examineBtn(() =>
-                          explainFold(
-                            f,
-                            { symbol: walk.symbol, timeframe: walk.timeframe, nBars: walk.n_bars },
-                            walk.folds.length,
-                          ),
+                          explainRegime(s, regimes.slices.find((x) => x.regime === 'GLOBAL') ?? null, {
+                            symbol: regimes.symbol,
+                            timeframe: regimes.timeframe,
+                            nBars: regimes.n_bars,
+                          }),
                         )}
                       </td>
                     </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {regimes && (
+              <p className="iv-note lab-footnote">
+                Règle testée : <span className="iv-kw">{regimes.ruleset?.id ?? '—'}</span>. Un profit factor faible
+                sur « Tous les signaux » mais fort en tendance veut dire que la stratégie ne marche que dans ce régime.
+              </p>
+            )}
+          </>
+        )}
+
+        {labTab === 'Walk-forward' && (
+          <>
+            {walk && (
+              <div className="iv-kpis lab-kpis-inline">
+                <div className="iv-kpi">
+                  <div className="iv-kpi-k">Périodes rentables</div>
+                  <div className="iv-kpi-v">{pct(walk.oos_summary.pct_folds_pf_gt_1, 0)}</div>
+                  <div className="iv-kpi-s">Profit factor &gt; 1 hors échantillon</div>
+                </div>
+                <div className="iv-kpi">
+                  <div className="iv-kpi-k">Espérance moyenne</div>
+                  <div className={`iv-kpi-v ${signClass(walk.oos_summary.mean_oos_expectancy)}`}>
+                    {pct(walk.oos_summary.mean_oos_expectancy, 2, true)}
+                  </div>
+                  <div className="iv-kpi-s">Par trade, hors échantillon</div>
+                </div>
+                <div className="iv-kpi">
+                  <div className="iv-kpi-k">Profit factor moyen</div>
+                  <div className="iv-kpi-v">{num(walk.oos_summary.mean_oos_profit_factor)}</div>
+                  <div className="iv-kpi-s">Hors échantillon</div>
+                </div>
+                <div className="iv-kpi">
+                  <div className="iv-kpi-k">Trades testés</div>
+                  <div className="iv-kpi-v">{walk.oos_summary.total_oos_trades}</div>
+                  <div className="iv-kpi-s">
+                    {walk.oos_summary.folds_with_trades} / {walk.oos_summary.n_folds} périodes avec trades
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="iv-card-body is-flush iv-table-wrap">
+              <table className="iv-table">
+                <thead>
+                  <tr>
+                    <th>Période</th>
+                    <th className="n">Trades (appris → testé)</th>
+                    <th className="n">Espérance apprise</th>
+                    <th className="n">Espérance testée</th>
+                    <th className="n">PF testé</th>
+                    <th>Verdict</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {!walk && emptyRow(7)}
+                  {walk?.folds.map((f) => {
+                    const is = metricsOf(f.is)
+                    const oos = metricsOf(f.oos)
+                    const pf = oos?.profit_factor
+                    const v = foldVerdict(oos)
+                    return (
+                      <tr key={f.fold_index}>
+                        <td className="sym">#{f.fold_index + 1}</td>
+                        <td className="n">
+                          {is?.num_trades ?? '—'} → {oos?.num_trades ?? '—'}
+                        </td>
+                        <td className="n">{pct(is?.expectancy, 2, true)}</td>
+                        <td className={`n ${signClass(oos?.expectancy)}`}>{pct(oos?.expectancy, 2, true)}</td>
+                        <td className="n">{num(pf)}</td>
+                        <td>{verdictBadge(v)}</td>
+                        <td className="lab-act">
+                          {examineBtn(() =>
+                            explainFold(
+                              f,
+                              { symbol: walk.symbol, timeframe: walk.timeframe, nBars: walk.n_bars },
+                              walk.folds.length,
+                            ),
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </section>
 
       {sheet && <LabExplainSheet explanation={sheet} onClose={() => setSheet(null)} />}
-
-      <div style={{ height: 20 }} />
-
-      <section className="card">
-        <div className="card-head">
-          <h2>De l’idée à la preuve</h2>
-        </div>
-        <div className="card-body lab-steps">
-          {STEPS.map(([n, title, text, tab]) => (
-            <div className="step" key={n}>
-              <b>
-                {n} ·{' '}
-                {tab ? (
-                  <button type="button" className="lab-link" onClick={() => setLabTab(tab)}>
-                    {title}
-                  </button>
-                ) : (
-                  title
-                )}
-              </b>
-              <p>{text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
     </div>
   )
 }

@@ -161,7 +161,7 @@ export function EquityTrajectory({
   // Étroit : pas d'étiquettes de fin de courbe, la liste en dessous sert de légende.
   const compact = width < 520
   const labelCol = compact ? 0 : width < 760 ? LABEL_COL.mid : LABEL_COL.wide
-  const h = compact ? 240 : 320
+  const h = compact ? 220 : 260
   const padL = 46
   const padR = compact ? 12 : labelCol
   const padT = 18
@@ -428,7 +428,7 @@ export function EquityTrajectory({
               <strong>
                 {MARK_TITLE[mark.kind]} {mark.symbol}
               </strong>
-              <button type="button" className="eqt-tip-close" aria-label="Fermer" onClick={() => setActiveMark(null)}>
+              <button type="button" className="iv-eqt-close" aria-label="Fermer" onClick={() => setActiveMark(null)}>
                 ×
               </button>
             </div>
@@ -489,11 +489,11 @@ export function EquityTrajectory({
         <div className="eqt-head">
           <span>{hoverMs != null ? fmtWhen(hoverMs) : 'Aujourd’hui'}</span>
           {hoverMs != null ? (
-            <button type="button" onClick={() => setHoverMs(null)}>
+            <button type="button" className="iv-btn iv-btn--ghost iv-btn--sm" onClick={() => setHoverMs(null)}>
               Revenir à aujourd’hui
             </button>
           ) : focus ? (
-            <button type="button" onClick={() => setFocus(null)}>
+            <button type="button" className="iv-btn iv-btn--ghost iv-btn--sm" onClick={() => setFocus(null)}>
               Tout afficher
             </button>
           ) : null}
@@ -504,7 +504,7 @@ export function EquityTrajectory({
             const pnl = v ? v.equity - t.book.base : null
             return (
               <li key={t.book.code} className={focus && !on ? 'is-dim' : undefined}>
-                <button type="button" aria-pressed={on} onClick={() => setFocus(on ? null : t.book.code)}>
+                <button type="button" className="iv-eqt-row" aria-pressed={on} onClick={() => setFocus(on ? null : t.book.code)}>
                   <i className="eqt-swatch" style={{ background: t.book.color }} />
                   <span className="eqt-name">{t.book.label}</span>
                   <span className="eqt-held">

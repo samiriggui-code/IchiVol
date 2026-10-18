@@ -1,65 +1,115 @@
-const CANDLES = [
-  { bull: true, top: 118, bottom: 104, wickTop: 122, wickBottom: 98 },
-  { bull: false, top: 108, bottom: 116, wickTop: 104, wickBottom: 120 },
-  { bull: true, top: 102, bottom: 112, wickTop: 116, wickBottom: 96 },
-  { bull: true, top: 92, bottom: 104, wickTop: 108, wickBottom: 86 },
-  { bull: false, top: 90, bottom: 98, wickTop: 84, wickBottom: 102 },
-  { bull: true, top: 78, bottom: 92, wickTop: 96, wickBottom: 72 },
-  { bull: true, top: 68, bottom: 80, wickTop: 84, wickBottom: 62 },
-  { bull: true, top: 58, bottom: 70, wickTop: 74, wickBottom: 52 },
-  { bull: false, top: 56, bottom: 64, wickTop: 50, wickBottom: 68 },
-  { bull: true, top: 44, bottom: 58, wickTop: 62, wickBottom: 38 },
-  { bull: true, top: 34, bottom: 46, wickTop: 50, wickBottom: 28 },
-  { bull: true, top: 26, bottom: 38, wickTop: 42, wickBottom: 20 },
-]
+/**
+ * Schéma Ichimoku de l'accueil et de la connexion : bougies, Tenkan, Kijun, nuage et volume.
+ * Série synthétique déterministe, sans aucun prix affiché : c'est une illustration, pas une donnée.
+ */
 
-export function IchimokuMockChart() {
-  const step = 320 / (CANDLES.length + 1)
+type Bar = { o: number; h: number; l: number; c: number; v: number }
+
+const N = 64
+const W = 600
+const H = 220
+const PRICE_H = 160
+const VOL_TOP = 172
+
+function rng(seed: number) {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function buildSeries(): Bar[] {
+  const r = rng(3)
+  const bars: Bar[] = []
+  let p = 100
+  for (let i = 0; i < N + 52; i++) {
+    // Range puis cassure haussière dans le dernier tiers.
+    const drift = i < 88 ? 0.0012 * Math.sin(i / 7) : 0.0032
+    const o = p
+    const c = o * (1 + drift + (r() - 0.5) * 0.011)
+    const h = Math.max(o, c) * (1 + r() * 0.004)
+    const l = Math.min(o, c) * (1 - r() * 0.004)
+    const v = (0.35 + r() * 0.65) * (i > 92 ? 1.7 : 1)
+    bars.push({ o, h, l, c, v })
+    p = c
+  }
+  return bars
+}
+
+function mid(bars: Bar[], end: number, len: number) {
+  const s = bars.slice(Math.max(0, end - len + 1), end + 1)
+  return (Math.max(...s.map((b) => b.h)) + Math.min(...s.map((b) => b.l))) / 2
+}
+
+const OFFSET = 52
+const SERIES = buildSeries()
+const VIEW = SERIES.slice(OFFSET)
+const TENKAN = VIEW.map((_, i) => mid(SERIES, i + OFFSET, 9))
+const KIJUN = VIEW.map((_, i) => mid(SERIES, i + OFFSET, 26))
+// Nuage projeté 26 bougies en avant : la valeur affichée en i vient de i − 26.
+const SPAN_A = VIEW.map((_, i) => (mid(SERIES, i + OFFSET - 26, 9) + mid(SERIES, i + OFFSET - 26, 26)) / 2)
+const SPAN_B = VIEW.map((_, i) => mid(SERIES, i + OFFSET - 26, 52))
+
+const ALL = [...VIEW.flatMap((b) => [b.h, b.l]), ...SPAN_A, ...SPAN_B]
+const MAX = Math.max(...ALL)
+const MIN = Math.min(...ALL)
+const VMAX = Math.max(...VIEW.map((b) => b.v))
+const STEP = W / N
+
+const y = (v: number) => 8 + ((MAX - v) / (MAX - MIN)) * (PRICE_H - 16)
+const x = (i: number) => STEP * i + STEP / 2
+const path = (vals: number[]) =>
+  vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('')
+const CLOUD =
+  path(SPAN_A) +
+  SPAN_B.map((v, i) => `L${x(i).toFixed(1)},${y(v).toFixed(1)}`)
+    .reverse()
+    .join('') +
+  'Z'
+
+type Props = { className?: string }
+
+export function IchimokuMockChart({ className }: Props) {
   return (
     <svg
-      viewBox="0 0 320 150"
-      className="camap-mock-chart"
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      className={['ichi-sketch', className].filter(Boolean).join(' ')}
       role="img"
-      aria-label="Aperçu schématique d’un nuage Ichimoku en cassure haussière"
+      aria-label="Schéma d’un nuage Ichimoku en cassure haussière, confirmée par le volume"
     >
-      <defs>
-        <linearGradient id="ichiMockCloudFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.32" />
-          <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.05" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M0,100 C50,94 70,78 110,80 C150,82 170,66 210,62 C250,58 290,48 320,44 L320,86 C290,92 250,102 210,104 C170,106 150,118 110,116 C70,114 50,106 0,110 Z"
-        fill="url(#ichiMockCloudFill)"
-      />
-      <path
-        d="M0,100 C50,94 70,78 110,80 C150,82 170,66 210,62 C250,58 290,48 320,44"
-        fill="none"
-        stroke="var(--primary)"
-        strokeOpacity="0.6"
-        strokeWidth="1.4"
-      />
-      <path
-        d="M0,110 C50,106 70,114 110,116 C150,118 170,106 210,104 C250,102 290,92 320,86"
-        fill="none"
-        stroke="var(--primary)"
-        strokeOpacity="0.32"
-        strokeWidth="1.4"
-      />
-      {CANDLES.map((c, i) => {
-        const x = step * (i + 1)
-        const color = c.bull ? 'var(--primary)' : 'var(--destructive)'
+      {[0.25, 0.5, 0.75].map((f) => (
+        <line key={f} x1={0} x2={W} y1={PRICE_H * f} y2={PRICE_H * f} className="ichi-sketch-grid" />
+      ))}
+      <line x1={0} x2={W} y1={VOL_TOP - 4} y2={VOL_TOP - 4} className="ichi-sketch-grid" />
+      <path d={CLOUD} className="ichi-sketch-cloud" />
+      <path d={path(SPAN_A)} className="ichi-sketch-span" />
+      <path d={path(SPAN_B)} className="ichi-sketch-span is-b" />
+      <path d={path(KIJUN)} className="ichi-sketch-kijun" />
+      <path d={path(TENKAN)} className="ichi-sketch-tenkan" />
+      {VIEW.map((b, i) => {
+        const up = b.c >= b.o
+        const top = y(Math.max(b.o, b.c))
+        const vh = (b.v / VMAX) * (H - VOL_TOP - 2)
         return (
-          <g key={i}>
-            <line x1={x} x2={x} y1={c.wickTop} y2={c.wickBottom} stroke={color} strokeOpacity="0.6" strokeWidth="1" />
+          <g key={i} className={up ? 'is-up' : 'is-down'}>
+            <line x1={x(i)} x2={x(i)} y1={y(b.h)} y2={y(b.l)} className="ichi-sketch-wick" />
             <rect
-              x={x - 4}
-              y={Math.min(c.top, c.bottom)}
-              width="8"
-              height={Math.max(2, Math.abs(c.bottom - c.top))}
-              fill={color}
-              fillOpacity="0.85"
-              rx="1.5"
+              x={x(i) - STEP * 0.32}
+              y={top}
+              width={STEP * 0.64}
+              height={Math.max(1.5, y(Math.min(b.o, b.c)) - top)}
+              className="ichi-sketch-body"
+            />
+            <rect
+              x={x(i) - STEP * 0.32}
+              y={H - vh}
+              width={STEP * 0.64}
+              height={vh}
+              className="ichi-sketch-vol"
             />
           </g>
         )

@@ -1,126 +1,92 @@
 import { Link } from 'react-router-dom'
 import { BrandMark } from '../components/BrandMark'
-import { KeenIcon } from '../components/KeenIcon'
+import { IchimokuMockChart } from '../components/IchimokuMockChart'
 import { ThemeToggle } from '../components/ThemeToggle'
-import { EVE_MODES as EVE_DECISION_MODES } from '../lib/eveModes'
+import { VpValidationBadge } from '../components/VpValidationBadge'
+import './landing.css'
+
+const STEPS = [
+  { n: '01', title: 'Marché', body: 'Prix et volume, bougie par bougie.' },
+  { n: '02', title: 'Portes', body: 'Direction, participation, structure, emplacement, régime.' },
+  { n: '03', title: 'Ève juge', body: 'Quatre avis et JEV : elle accepte ou refuse.', current: true },
+  { n: '04', title: 'Risk Kernel', body: 'Autorise ou bloque, par portefeuille.' },
+  { n: '05', title: 'Portefeuille', body: 'Position paper suivie jusqu’au stop ou à l’objectif.' },
+  { n: '06', title: 'Preuves', body: 'Dossier, journal et résultat relisibles.' },
+]
 
 const FEATURES = [
   {
-    icon: 'abstract-39',
-    title: 'Ève — IA qui trade paper',
-    body: 'Une IA, quatre modes. Chaque portefeuille propose ses trades selon sa méthode ; pilote activé, Ève les accepte ou les refuse. Le Risk Kernel garde le dernier mot.',
+    meta: 'Decision Engine',
+    title: 'Cinq portes avant toute action',
+    body: 'Direction, participation, structure, emplacement, régime. Les portes alimentent la décision d’Ève, pas un chat qui invente un achat.',
   },
   {
-    icon: 'kanban',
-    title: 'Decision Engine · 5 portes',
-    body: 'Direction → Participation → Structure → Location → Régime. Les portes alimentent la décision d’Ève — pas un chat qui invente un BUY.',
+    meta: 'Ève',
+    title: 'Elle accepte ou refuse',
+    body: 'Analyste, contradicteur, gardien du risque, audit indépendant. Si JEV répond trop tard ou sans confiance, elle s’abstient.',
   },
   {
-    icon: 'shield-tick',
+    meta: 'Risk Kernel',
     title: 'Autonomie bornée',
-    body: 'Contrôle d’entrée, règles de signal, abstention si JEV est en retard, arrêt d’urgence. Ève trade en paper ; le Risk Kernel peut couper.',
+    body: 'Toute ouverture paper passe par le garde-fou. Arrêt d’urgence armé : plus aucune entrée, sur aucun portefeuille.',
   },
   {
-    icon: 'notification-status',
-    title: 'Event Radar',
-    body: 'News et événements dans le dossier avant d’agir. Enrichit la décision de trade, ne remplace pas les portes.',
+    meta: 'Veille d’actualité',
+    title: 'Le contexte avant d’agir',
+    body: 'Actualités et agenda résumés dans le dossier. Une actualité ne déclenche jamais un trade à elle seule.',
   },
   {
-    icon: 'chart-simple',
-    title: 'Strategy Lab',
-    body: 'Backtests, ablations, régimes de marché, walk-forward — affûter les règles hors capital avant de laisser Ève trader en paper.',
+    meta: 'Strategy Lab',
+    title: 'De l’idée à la preuve',
+    body: 'Backtests, ablations, régimes, walk-forward : affûter les règles hors capital avant de les laisser tourner.',
   },
   {
-    icon: 'message-text-2',
-    title: 'Preuves + timeline',
-    body: 'Chaque trade paper a un dossier : modes JEV, contrôle d’entrée, état de JEV, Risk Kernel. Tu vois pourquoi Ève a agi.',
+    meta: 'Journal',
+    title: 'Qui a décidé, et avait-il raison',
+    body: 'Moteur seul, Ève, Manuel, Moteur contre Ève : chaque trade garde son décideur et son résultat.',
   },
 ]
 
-const EVE_MODES = EVE_DECISION_MODES.map((m) => ({
-  id: m.id,
-  icon: m.icon,
-  name: m.name,
-  tag: 'NOUL · CHOICE · SCORE',
-  body: m.blurb,
-}))
-
-const ENGINE_STACK = [
-  { code: 'CORE', label: 'Ichimoku × RVOL + Decision Engine (5 portes)' },
-  { code: 'EVE', label: 'Ève — IA trading paper · 4 modes · dossiers JEV' },
-  { code: 'GATE', label: 'Contrôle d’entrée · règles de signal · abstention si JEV est en retard' },
-  { code: 'RADAR', label: 'Event Radar — contexte avant d’agir' },
-  { code: 'RISK', label: 'Risk Kernel — autorise / bloque l’exécution paper' },
-  { code: 'LAB', label: 'Strategy Lab — affûter hors capital' },
-]
-
-const TRUST = [
-  'Le moteur propose, Ève accepte ou refuse, en paper',
-  'Quatre modes JEV · Decision Engine · Event Radar',
-  'Risk Kernel + arrêt d’urgence : elle trade, le risque peut couper',
-  'Paper only — pas de live, pas de conseil financier',
-]
-
-const STEPS = [
+const COMPARE: { k: string; without: string; with: string; ok?: boolean }[] = [
   {
-    n: '01',
-    icon: 'filter-search',
-    title: 'Mesurer',
-    body: 'Cinq portes + structure. Le marché est lu avant toute action.',
+    k: 'Qui décide',
+    without: 'Un chat qui conseille d’acheter sans exécuter',
+    with: 'Le moteur propose, Ève accepte ou refuse, en paper',
   },
   {
-    n: '02',
-    icon: 'abstract-39',
-    title: 'Décider',
-    body: 'Ève en 4 modes + Event Radar. Dossier JEV, gate, signal rules.',
+    k: 'Contre-lecture',
+    without: 'Pas de modes, pas de filtre, pas de second avis',
+    with: 'Quatre avis, dont un audit indépendant',
   },
   {
-    n: '03',
-    icon: 'verify',
-    title: 'Exécuter',
-    body: 'Autonomie activée : Ève accepte ou refuse chaque proposition. Le Risk Kernel peut encore refuser.',
+    k: 'Données en retard',
+    without: 'Trade possible sur un signal périmé',
+    with: 'Abstention si JEV est en retard ou injoignable',
+    ok: true,
   },
-]
-
-const COMPARE = {
-  without: [
-    'Un chat qui « conseillerait » d’acheter sans exécuter',
-    'Pas de modes, pas de gate, pas de contre-lecture',
-    'Trade possible sur signal pourri ou JEV down',
-  ],
-  with: [
-    'Ève juge chaque trade proposé par tes portefeuilles : elle accepte ou refuse',
-    '4 modes + contrôle d’entrée + abstention si JEV est en retard',
-    'Risk Kernel et arrêt d’urgence peuvent bloquer l’exécution',
-  ],
-}
-
-const STATS = [
-  { value: '4', label: 'Modes Ève' },
-  { value: '1', label: 'IA qui trade paper' },
-  { value: '0', label: 'Live brokers' },
+  {
+    k: 'Risque',
+    without: 'Aucune borne',
+    with: 'Risk Kernel et arrêt d’urgence peuvent tout bloquer',
+  },
 ]
 
 const FAQ = [
   {
-    q: 'Qu’est-ce qu’IchiVol ?',
-    a: 'Un desk où Ève, l’IA décisionnelle, trade en paper : Decision Engine, 4 modes JEV, contrôle d’entrée, Event Radar, Risk Kernel, Strategy Lab. Jamais d’argent réel.',
-  },
-  {
     q: 'Ève trade vraiment ?',
-    a: 'Oui, en paper, quand l’autonomie est activée. Chaque portefeuille (IchiVol, Sessions, Futures & Crypto…) applique sa méthode et propose ; Ève, avec JEV, accepte ou refuse à chaque nouvelle bougie, sans intervention humaine. Le Risk Kernel autorise ou bloque par portefeuille, et l’arrêt d’urgence coupe toute entrée. Aucun courtier réel.',
+    a: 'Oui, en paper, quand le pilote automatique est activé. Chaque portefeuille (IchiVol, Sessions, Futures & Crypto…) applique sa méthode et propose ; Ève accepte ou refuse à chaque nouvelle bougie. Le Risk Kernel autorise ou bloque, l’arrêt d’urgence coupe toute entrée. Aucun courtier réel.',
   },
   {
-    q: 'Qu’est-ce qu’Ève ?',
-    a: 'Une seule IA avec quatre modes : Analyst, Challenger, Guardian et Shadow. Chacun pose ses questions à JEV (NOUL, CHOICE, SCORE), d’abord par le service cloud, puis par le service local quand les crédits sont épuisés. Ce ne sont pas quatre IA concurrentes.',
-  },
-  {
-    q: 'Que se passe-t-il si JEV répond trop tard ou ne répond pas ?',
-    a: 'Ève s’abstient : réponse trop tardive, JEV injoignable ou confiance trop faible, elle n’ouvre rien.',
+    q: 'Qu’est-ce qu’IchiVol ?',
+    a: 'Un poste de trading paper : le moteur Ichimoku × RVOL calcule, chaque portefeuille propose, Ève juge, le Risk Kernel borne et le Strategy Lab affûte les règles. Jamais d’argent réel.',
   },
   {
     q: 'Le Copilot, c’est une autre IA ?',
-    a: 'Le Copilot est le chat d’Ève : il explique les décisions avec un modèle de langage, sans jamais passer d’ordre. Les décisions de trade, elles, viennent des quatre modes et de JEV.',
+    a: 'Le Copilot est le chat d’Ève : il explique les décisions sans jamais passer d’ordre.',
+  },
+  {
+    q: 'Que se passe-t-il si JEV répond trop tard ?',
+    a: 'Ève s’abstient : réponse trop tardive, JEV injoignable ou confiance trop faible, elle n’ouvre rien.',
   },
   {
     q: 'Le Risk Kernel peut-il être contourné ?',
@@ -128,379 +94,207 @@ const FAQ = [
   },
 ]
 
-function CheckIcon() {
-  return <KeenIcon icon="check-circle" style="outline" className="camap-check-icon" />
-}
-
-const CANDLES = [
-  { bull: true, top: 118, bottom: 104, wickTop: 122, wickBottom: 98 },
-  { bull: false, top: 108, bottom: 116, wickTop: 104, wickBottom: 120 },
-  { bull: true, top: 102, bottom: 112, wickTop: 116, wickBottom: 96 },
-  { bull: true, top: 92, bottom: 104, wickTop: 108, wickBottom: 86 },
-  { bull: false, top: 90, bottom: 98, wickTop: 84, wickBottom: 102 },
-  { bull: true, top: 78, bottom: 92, wickTop: 96, wickBottom: 72 },
-  { bull: true, top: 68, bottom: 80, wickTop: 84, wickBottom: 62 },
-  { bull: true, top: 58, bottom: 70, wickTop: 74, wickBottom: 52 },
-  { bull: false, top: 56, bottom: 64, wickTop: 50, wickBottom: 68 },
-  { bull: true, top: 44, bottom: 58, wickTop: 62, wickBottom: 38 },
-  { bull: true, top: 34, bottom: 46, wickTop: 50, wickBottom: 28 },
-  { bull: true, top: 26, bottom: 38, wickTop: 42, wickBottom: 20 },
-]
-
-function MockChart() {
-  const step = 320 / (CANDLES.length + 1)
-  return (
-    <svg
-      viewBox="0 0 320 150"
-      className="camap-mock-chart"
-      role="img"
-      aria-label="Aperçu schématique d’un nuage Ichimoku en cassure haussière"
-    >
-      <defs>
-        <linearGradient id="camapCloudFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.32" />
-          <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.05" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M0,100 C50,94 70,78 110,80 C150,82 170,66 210,62 C250,58 290,48 320,44 L320,86 C290,92 250,102 210,104 C170,106 150,118 110,116 C70,114 50,106 0,110 Z"
-        fill="url(#camapCloudFill)"
-      />
-      <path
-        d="M0,100 C50,94 70,78 110,80 C150,82 170,66 210,62 C250,58 290,48 320,44"
-        fill="none"
-        stroke="var(--primary)"
-        strokeOpacity="0.6"
-        strokeWidth="1.4"
-      />
-      <path
-        d="M0,110 C50,106 70,114 110,116 C150,118 170,106 210,104 C250,102 290,92 320,86"
-        fill="none"
-        stroke="var(--primary)"
-        strokeOpacity="0.32"
-        strokeWidth="1.4"
-      />
-      <line
-        x1="40"
-        x2="300"
-        y1="72"
-        y2="72"
-        stroke="var(--primary)"
-        strokeOpacity="0.35"
-        strokeWidth="1"
-        strokeDasharray="4 3"
-      />
-      <text x="42" y="68" fill="var(--primary)" fillOpacity="0.55" fontSize="8" fontFamily="var(--font-mono)">
-        Fib 61.8
-      </text>
-      {CANDLES.map((c, i) => {
-        const x = step * (i + 1)
-        const color = c.bull ? 'var(--primary)' : 'var(--destructive)'
-        return (
-          <g key={i}>
-            <line
-              x1={x}
-              x2={x}
-              y1={c.wickTop}
-              y2={c.wickBottom}
-              stroke={color}
-              strokeOpacity="0.6"
-              strokeWidth="1"
-            />
-            <rect
-              x={x - 4}
-              y={Math.min(c.top, c.bottom)}
-              width="8"
-              height={Math.max(2, Math.abs(c.bottom - c.top))}
-              fill={color}
-              fillOpacity="0.85"
-              rx="1.5"
-            />
-          </g>
-        )
-      })}
-    </svg>
-  )
-}
-
 export function LandingPage() {
   return (
-    <div className="camap-shell">
-      <header className="camap-nav-wrap">
-        <nav className="camap-nav" aria-label="Navigation principale">
-          <Link to="/" className="camap-brand" aria-label="IchiVol — accueil">
-            <BrandMark className="camap-mark" />
-            <span className="camap-word">IchiVol</span>
+    <div className="lp-page">
+      <div className="lp-wrap">
+        <nav className="lp-nav" aria-label="Navigation principale">
+          <Link to="/" className="lp-brand" aria-label="IchiVol — accueil">
+            <BrandMark className="lp-brand-mark" />
+            <span>IchiVol</span>
           </Link>
-          <div className="camap-nav-links">
-            <a href="#moteur">Moteur</a>
-            <a href="#eve">Ève</a>
-            <a href="#methode">Décision</a>
-            <a href="#capacites">Capacités</a>
-            <a href="#comparatif">Comparatif</a>
-            <a href="#faq">FAQ</a>
-          </div>
-          <div className="camap-nav-actions">
-            <ThemeToggle />
-            <Link to="/login" className="camap-btn camap-btn-primary">
-              Se connecter
-            </Link>
-          </div>
-        </nav>
-      </header>
-
-      <main>
-        <section className="camap-hero">
-          <div className="camap-hero-glow" aria-hidden />
-          <div className="camap-hero-grid">
-            <div className="camap-hero-copy camap-reveal">
-              <p className="camap-brand-lockup">IchiVol</p>
-              <h1 className="camap-hero-title">
-                Ève accepte ou refuse. <em>Le risque borne.</em>
-              </h1>
-              <p className="camap-hero-lede">
-                Le moteur calcule et chaque portefeuille propose ses trades. Ève,
-                avec ses quatre modes JEV, les accepte ou les refuse. Le
-                Risk Kernel peut couper. Paper seulement, jamais d’argent réel.
-              </p>
-              <div className="camap-hero-cta">
-                <Link to="/login" className="camap-btn camap-btn-primary camap-btn-lg">
-                  Lancer le Desk
-                </Link>
-              </div>
-            </div>
-
-            <div className="camap-hero-visual-wrap camap-reveal camap-reveal-delay">
-              <div className="camap-hero-visual">
-                <span className="camap-hero-visual-badge">
-                  <span className="camap-dot camap-dot-live" aria-hidden />
-                  Ève accepte ou refuse, en paper
-                </span>
-                <MockChart />
-                <div className="camap-hero-visual-footer">
-                  <span>BTCUSDT · 1h</span>
-                  <span className="camap-chip camap-chip-bull">illustration</span>
-                </div>
-                <div className="camap-hero-gates" aria-hidden>
-                  <span className="is-pass">Portes</span>
-                  <span className="is-pass">Gate</span>
-                  <span className="is-pass">Risk</span>
-                  <span className="is-watch">Ève juge</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="camap-trust" aria-label="Points clés">
-          <ul className="camap-checklist camap-checklist-inline">
-            {TRUST.map((item) => (
-              <li key={item}>
-                <CheckIcon />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section id="moteur" className="camap-section">
-          <h2 className="camap-section-title">Les briques d’IchiVol</h2>
-          <p className="camap-section-lede">
-            Du signal à l’exécution paper : moteur, puis Ève, contrôle d’entrée,
-            radar d’événements, Risk Kernel, et le Lab pour affûter les règles.
-          </p>
-          <ol className="camap-engine-stack">
-            {ENGINE_STACK.map((row) => (
-              <li key={row.code}>
-                <span className="camap-engine-code">{row.code}</span>
-                <span>{row.label}</span>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        <section id="eve" className="camap-section">
-          <h2 className="camap-section-title">Ève — l’IA qui trade</h2>
-          <p className="camap-section-lede">
-            Quatre modes avant d’ouvrir. Autonomie activée, elle accepte ou refuse
-            chaque trade proposé par tes portefeuilles.
-          </p>
-          <div className="camap-eve-modes">
-            {EVE_MODES.map((m) => (
-              <article key={m.id} className="camap-eve-mode">
-                <span className="camap-eve-mode-icon" aria-hidden>
-                  {m.icon}
-                </span>
-                <div className="camap-eve-mode-head">
-                  <h3>{m.name}</h3>
-                  <span className="camap-eve-mode-tag">{m.tag}</span>
-                </div>
-                <p>{m.body}</p>
-              </article>
-            ))}
-          </div>
-          <p className="camap-eve-footnote">
-            Moteur → Ève (4 modes) → contrôle d’entrée → Risk Kernel → position paper.
-            Elle trade ; le Risk Kernel peut refuser.
-          </p>
-        </section>
-
-        <section id="methode" className="camap-section">
-          <h2 className="camap-section-title">Chaîne de trade</h2>
-          <p className="camap-section-lede">
-            Mesurer → juger (Ève) → exécuter en paper (le Risk Kernel peut couper).
-          </p>
-          <ol className="camap-steps camap-steps-numbered">
-            {STEPS.map((step) => (
-              <li key={step.n}>
-                <span className="camap-step-number" aria-hidden>
-                  {step.n}
-                </span>
-                <span className="camap-icon-box camap-icon-box-sm" aria-hidden>
-                  <KeenIcon icon={step.icon} style="duotone" />
-                </span>
-                <strong>{step.title}</strong>
-                <span>{step.body}</span>
-              </li>
-            ))}
-          </ol>
-          <blockquote className="camap-inline-quote">
-            <p>
-              « Ève n’est pas un copilote qui te demande permission à chaque
-              bougie — c’est une IA qui trade paper, bornée par le Risk Kernel. »
-            </p>
-            <cite>Principe IchiVol</cite>
-          </blockquote>
-        </section>
-
-        <section id="capacites" className="camap-section">
-          <h2 className="camap-section-title">Capacités</h2>
-          <p className="camap-section-lede">
-            Trading paper autonome, portes, gate, radar, Risk, Lab — dans le
-            Desk.
-          </p>
-          <div className="camap-bento">
-            {FEATURES.map((f) => (
-              <article key={f.title} className="camap-card">
-                <span className="camap-icon-box" aria-hidden>
-                  <KeenIcon icon={f.icon} style="duotone" />
-                </span>
-                <h3>{f.title}</h3>
-                <p>{f.body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section id="comparatif" className="camap-section">
-          <h2 className="camap-section-title">Ce qui change avec Ève</h2>
-          <p className="camap-section-lede">
-            Pas un chatbot. Une IA qui juge chaque trade proposé et l’exécute en paper, avec garde-fous.
-          </p>
-          <div className="camap-compare">
-            <div className="camap-compare-col">
-              <span className="camap-compare-label">Chat IA classique</span>
-              <ul>
-                {COMPARE.without.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="camap-compare-col camap-compare-col-highlight">
-              <span className="camap-compare-label">IchiVol · Ève</span>
-              <ul>
-                {COMPARE.with.map((item) => (
-                  <li key={item}>
-                    <CheckIcon />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        <section className="camap-stats">
-          {STATS.map((s) => (
-            <div key={s.label} className="camap-stat">
-              <span className="camap-stat-value">{s.value}</span>
-              <span className="camap-stat-label">{s.label}</span>
-            </div>
-          ))}
-        </section>
-
-        <section id="faq" className="camap-section">
-          <h2 className="camap-section-title">Avant de lancer Ève</h2>
-          <div className="camap-faq">
-            {FAQ.map((item) => (
-              <details key={item.q} className="camap-faq-item">
-                <summary>{item.q}</summary>
-                <p>{item.a}</p>
-              </details>
-            ))}
-          </div>
-        </section>
-
-        <section className="camap-closing">
-          <h2>Laisse Ève trader le paper</h2>
-          <p>
-            IchiVol · autonomie paper · 4 modes · Decision Engine · Risk
-            Kernel. Pas de live.
-          </p>
-          <Link to="/login" className="camap-btn camap-btn-primary camap-btn-lg">
+          <a className="lp-nav-link" href="#chaine">
+            Produit
+          </a>
+          <a className="lp-nav-link" href="#capacites">
+            Ève
+          </a>
+          <a className="lp-nav-link" href="#faq">
+            FAQ
+          </a>
+          <ThemeToggle />
+          <Link to="/login" className="iv-btn iv-btn--primary lp-nav-cta">
             Se connecter
           </Link>
-        </section>
-      </main>
+        </nav>
 
-      <footer className="camap-footer">
-        <div className="camap-footer-inner">
-          <div className="camap-footer-brand">
-            <Link to="/" className="camap-brand" aria-label="IchiVol — accueil">
-              <BrandMark className="camap-mark" />
-              <span className="camap-word">IchiVol</span>
-            </Link>
+        <main>
+          <section className="lp-hero">
+            <div className="lp-hero-copy">
+              <div className="iv-meta">Paper trading · jamais d’argent réel</div>
+              <h1>
+                Le moteur propose.
+                <br />
+                <em>Ève accepte ou refuse.</em>
+              </h1>
+              <p className="lp-lead">
+                Un poste de trading où Ève, l’IA décisionnelle, juge chaque trade proposé par vos
+                portefeuilles. Cinq portes, quatre avis, un garde-fou de risque qui a toujours le
+                dernier mot.
+              </p>
+              <div className="lp-row">
+                <Link to="/app/desk" className="iv-btn iv-btn--primary lp-btn-lg">
+                  Ouvrir le Desk →
+                </Link>
+                <Link to="/app/agents" className="iv-btn iv-btn--ghost lp-btn-lg">
+                  Voir un dossier d’Ève
+                </Link>
+              </div>
+              <div className="lp-row lp-chips">
+                <span className="iv-chip">Ichimoku × RVOL</span>
+                <span className="iv-chip">5 portes</span>
+                <span className="iv-chip">4 avis</span>
+                <span className="iv-chip is-amber">Arrêt d’urgence</span>
+                <VpValidationBadge />
+              </div>
+            </div>
+
+            <article className="apex-card lp-dossier" aria-label="Exemple de dossier d’Ève">
+              <div className="lp-dossier-head">
+                <div className="iv-meta">Exemple de dossier · schéma</div>
+                <span className="iv-decider is-eve">
+                  <i />
+                  Ève
+                </span>
+              </div>
+              <div className="lp-verdict">
+                <span className="lp-verdict-box">
+                  <span className="lp-verdict-k">Moteur</span>
+                  <span className="pos">Acheter</span>
+                </span>
+                <span className="lp-verdict-ar" aria-hidden>
+                  →
+                </span>
+                <span className="lp-verdict-box is-ok">
+                  <span className="lp-verdict-k">Ève</span>
+                  <span className="ok">Accepte</span>
+                </span>
+              </div>
+              <div className="lp-chart">
+                <IchimokuMockChart />
+              </div>
+              <p className="iv-note lp-dossier-note">
+                Cassure du nuage confirmée par le <span className="iv-kw">volume relatif</span>.{' '}
+                <span className="ok">Risk Kernel : passe. Position paper ouverte.</span>
+              </p>
+              <div className="apex-card-foot">
+                <span className="apex-card-sig">ichivol</span>
+                <span className="iv-chip is-cyan">JEV</span>
+                <span className="iv-chip is-mint">Risk Kernel</span>
+                <span className="lp-foot-end">Illustration, aucune donnée réelle</span>
+              </div>
+            </article>
+          </section>
+
+          <section id="chaine" className="lp-sec">
+            <div className="lp-sec-h">
+              <div className="iv-label">Chaîne de trade</div>
+              <h2>Du prix à la position, chaque étape se lit</h2>
+            </div>
+            <ol className="lp-steps">
+              {STEPS.map((s) => (
+                <li key={s.n} className={s.current ? 'is-current' : undefined}>
+                  <span className="lp-step-n">{s.n}</span>
+                  <strong>{s.title}</strong>
+                  <span>{s.body}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          <section id="capacites" className="lp-sec">
+            <div className="lp-sec-h">
+              <div className="iv-label">Capacités</div>
+              <h2>Les briques d’IchiVol</h2>
+            </div>
+            <div className="lp-feat">
+              {FEATURES.map((f) => (
+                <article key={f.meta} className="apex-card">
+                  <div className="iv-meta">{f.meta}</div>
+                  <h3>{f.title}</h3>
+                  <p>{f.body}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section id="comparatif" className="lp-sec">
+            <div className="lp-sec-h">
+              <div className="iv-label">Comparatif</div>
+              <h2>Ce qui change avec Ève</h2>
+            </div>
+            <div className="iv-card">
+              <div className="iv-table-wrap">
+                <table className="iv-table lp-cmp">
+                  <thead>
+                    <tr>
+                      <th scope="col">
+                        <span className="lp-sr">Critère</span>
+                      </th>
+                      <th scope="col">Chat IA classique</th>
+                      <th scope="col">IchiVol · Ève</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {COMPARE.map((row) => (
+                      <tr key={row.k}>
+                        <td className="lp-cmp-k">{row.k}</td>
+                        <td className="muted" data-label="Chat IA classique">
+                          {row.without}
+                        </td>
+                        <td className={row.ok ? 'ok' : undefined} data-label="IchiVol · Ève">
+                          {row.with}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section id="faq" className="lp-sec">
+            <div className="lp-sec-h">
+              <div className="iv-label">FAQ</div>
+              <h2>Questions fréquentes</h2>
+            </div>
+            <div className="lp-faq">
+              {FAQ.map((item, i) => (
+                <details key={item.q} open={i === 0}>
+                  <summary>{item.q}</summary>
+                  <p>{item.a}</p>
+                </details>
+              ))}
+            </div>
+          </section>
+
+          <section className="apex-card lp-closing">
+            <div className="iv-label">Paper uniquement</div>
             <p>
-              IchiVol — Ève trade le paper sur Ichimoku × RVOL. Decision
-              Engine, modes JEV, Risk Kernel. Autonomie bornée, pas de live.
+              Pas de live, pas de conseil financier.{' '}
+              <span className="iv-kw">Ève accepte ou refuse ce que le moteur propose</span>, avec de
+              l’argent fictif.
             </p>
-          </div>
+            <Link to="/login" className="iv-btn iv-btn--primary lp-btn-lg">
+              Se connecter
+            </Link>
+            <div className="apex-card-foot">
+              <span className="apex-card-sig">ichivol</span>
+            </div>
+          </section>
+        </main>
 
-          <div className="camap-footer-cols">
-            <div className="camap-footer-col">
-              <h3>Produit</h3>
-              <a href="#moteur">Moteur</a>
-              <a href="#eve">Ève</a>
-              <a href="#methode">Décision</a>
-              <a href="#capacites">Capacités</a>
-              <a href="#comparatif">Comparatif</a>
-              <a href="#faq">FAQ</a>
-            </div>
-            <div className="camap-footer-col">
-              <h3>Workspace</h3>
-              <Link to="/login">Desk</Link>
-              <Link to="/login">Ève</Link>
-              <Link to="/login">Portefeuille</Link>
-              <Link to="/login">Strategy Lab</Link>
-              <Link to="/login">Copilot</Link>
-            </div>
-            <div className="camap-footer-col">
-              <h3>Compte</h3>
-              <Link to="/login">Se connecter</Link>
-              <Link to="/login">Paramètres</Link>
-            </div>
-          </div>
-        </div>
-
-        <div className="camap-footer-bar">
-          <span className="camap-footer-muted">
-            © {new Date().getFullYear()} IchiVol — trading paper autonome, pas un conseil financier.
+        <footer className="lp-footer">
+          <span>
+            © {new Date().getFullYear()} IchiVol — trading paper, pas un conseil financier.
           </span>
-          <span className="camap-footer-muted">
-            Ève trade · Risk borne · paper only
+          <span className="lp-footer-links">
+            <a href="#chaine">Produit</a>
+            <a href="#faq">FAQ</a>
+            <Link to="/login">Se connecter</Link>
           </span>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   )
 }

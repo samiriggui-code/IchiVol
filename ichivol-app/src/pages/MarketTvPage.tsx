@@ -300,134 +300,193 @@ export function MarketTvPage() {
           : '—'
 
   return (
-    <div className="market-tv">
-      <header className="market-tv-bar">
-        <div className="market-tv-brand">
-          <span className="market-tv-mark">IchiVol</span>
-          <span className="market-tv-mode">TV Marché</span>
+    <div className="market-tv tv-page">
+      <header className="tv-top">
+        <div className="tv-brand">
+          <b>IchiVol</b>
+          <span className="tv-brand-mode">TV Marché</span>
         </div>
-        <div className="market-tv-symbol">
+        <div className="tv-symbol">
           <h1>
             {shortSymbol(symbol)}
             <span>{quote}</span>
           </h1>
-          <small>
-            {sourceLabel} · bougies clôturées
-            {chartLoading ? ' · chargement…' : ''}
-          </small>
+          <span className="iv-cap">
+            {sourceLabel} · bougies clôturées{chartLoading ? ' · chargement…' : ''}
+          </span>
         </div>
-        <div className="market-tv-stats" aria-label="Résumé">
+        <div className="tv-stats" aria-label="Résumé">
           <span>
-            PRIX <b>{fmtPriceMaq(priceDisplay)}</b>
+            Prix <b>{fmtPriceMaq(priceDisplay)}</b>
           </span>
           <span>
-            24H{' '}
-            <b className={change24h == null ? undefined : change24h >= 0 ? 'up' : 'down'}>
+            24 h{' '}
+            <b className={change24h == null ? undefined : change24h >= 0 ? 'pos' : 'neg'}>
               {fmtPctMaq(change24h)}
             </b>
           </span>
           <span>
-            RVOL <b>{fmtRvolMaq(rvol)}</b>
+            RVOL <b className={rvol != null && rvol >= 1.5 ? 'ok' : undefined}>{fmtRvolMaq(rvol)}</b>
           </span>
         </div>
-        <div className="segmented" role="group" aria-label="Timeframe">
-          {TFS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={interval === t.id ? 'active' : undefined}
-              onClick={() => setInterval(t.id)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-        <div className="mkt-layers-anchor" ref={layersAnchorRef}>
-          <button
-            type="button"
-            className={`mkt-layers-btn mkt-layers-btn-head${layersOpen ? ' is-open' : ''}`}
-            aria-expanded={layersOpen}
-            title="Afficher / masquer Structure, Fib, FVG, Cassures…"
-            onClick={() => setLayersOpen((o) => !o)}
-          >
-            Calques{activeObjectLayerCount ? ` · ${activeObjectLayerCount}` : ''}
-          </button>
-          {layersOpen && (
-            <MarketLayersMenu
-              open
-              onClose={() => setLayersOpen(false)}
-              prefs={layerPrefs}
-              onChange={setLayers}
-              counts={layerCounts}
-              variant="menu"
-            />
-          )}
-        </div>
-        <div className="market-tv-actions">
-          <Link className="market-tv-link" to={`/app/market?symbol=${encodeURIComponent(symbol)}`}>
+        <div className="tv-actions">
+          <Link className="iv-btn iv-btn--sm" to={`/app/market?symbol=${encodeURIComponent(symbol)}`}>
             Page Marché
           </Link>
-          <button type="button" className="market-tv-close" onClick={() => window.close()}>
+          <button type="button" className="iv-btn iv-btn--sm" onClick={() => window.close()}>
             Fermer
           </button>
         </div>
       </header>
 
       {error && (
-        <div className="market-tv-notice" role="alert">
-          <span>△</span>
+        <div className="tv-notice" role="alert">
+          <span aria-hidden>△</span>
           <span>{error}</span>
         </div>
       )}
 
-      <div className="market-tv-chips" role="tablist" aria-label="Classe d’actifs">
-        <button
-          type="button"
-          className={assetClass === 'all' ? 'active' : undefined}
-          onClick={() => setAssetClass('all')}
-        >
-          Tous
-        </button>
-        {classOptions.map((c) => (
-          <button
-            key={c}
-            type="button"
-            className={assetClass === c ? 'active' : undefined}
-            onClick={() => setAssetClass(c)}
-          >
-            {CLASS_LABELS[c]}
-          </button>
-        ))}
-      </div>
-
-      <div className="market-tv-body">
-        <aside className="market-tv-watch" aria-label="Multi-marché">
-          {watchRows.length === 0 && (
-            <button type="button" disabled>
-              <b>—</b>
-              <small>Chargement…</small>
+      <div className="tv-body">
+        <aside className="iv-card tv-watch" aria-label="Multi-marché">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs">
+              <span className="iv-card-tab is-on">Multi-marché</span>
+            </div>
+            <div className="iv-card-tools">{watchRows.length} actifs</div>
+          </div>
+          <div className="tv-ctool" role="tablist" aria-label="Classe d’actifs">
+            <button
+              type="button"
+              className={`tv-iv-tb${assetClass === 'all' ? ' is-on' : ''}`}
+              onClick={() => setAssetClass('all')}
+            >
+              Tous
             </button>
-          )}
-          {watchRows.map((w) => {
-            const ch = w.change24h
-            const up = ch != null && ch >= 0
-            return (
+            {classOptions.map((c) => (
               <button
-                key={w.id}
+                key={c}
                 type="button"
-                className={w.id === symbol ? 'active' : undefined}
-                onClick={() => setSymbol(w.id)}
+                className={`tv-iv-tb${assetClass === c ? ' is-on' : ''}`}
+                onClick={() => setAssetClass(c)}
               >
-                <b>{w.label}</b>
-                <span className={ch == null ? 'chg-na' : up ? 'up' : 'down'}>{fmtPctMaq(ch)}</span>
-                <small>{fmtPriceMaq(w.price)}</small>
+                {CLASS_LABELS[c]}
               </button>
-            )
-          })}
+            ))}
+          </div>
+          <div className="iv-table-wrap tv-watch-scroll">
+            <table className="iv-table is-compact">
+              <thead>
+                <tr>
+                  <th>Actif</th>
+                  <th className="n">Dernier</th>
+                  <th className="n">Var.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {watchRows.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="tv-td-empty">
+                      Chargement…
+                    </td>
+                  </tr>
+                )}
+                {watchRows.map((w) => {
+                  const ch = w.change24h
+                  return (
+                    <tr
+                      key={w.id}
+                      className={`tv-row${w.id === symbol ? ' is-selected' : ''}`}
+                      aria-selected={w.id === symbol}
+                      tabIndex={0}
+                      onClick={() => setSymbol(w.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setSymbol(w.id)
+                        }
+                      }}
+                    >
+                      <td className="sym">{w.label}</td>
+                      <td className="n">{fmtPriceMaq(w.price)}</td>
+                      <td className={`n ${ch == null ? 'dim' : ch >= 0 ? 'pos' : 'neg'}`}>
+                        {fmtPctMaq(ch)}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </aside>
 
-        <section className="market-tv-chart" aria-label="Graphique">
-          <div className="market-tv-chart-slot">
+        <section className="iv-card tv-chart" aria-label="Graphique">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs">
+              <span className="iv-card-tab is-on">
+                {shortSymbol(symbol)} · {interval.toUpperCase()}
+              </span>
+            </div>
+            <div className="iv-card-tools">
+              <span className={change24h == null ? undefined : change24h >= 0 ? 'pos' : 'neg'}>
+                {fmtPriceMaq(priceDisplay)} · {fmtPctMaq(change24h)}
+              </span>
+            </div>
+          </div>
+          <div className="tv-ctool tv-chart-tools">
+            {TFS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={`tv-iv-tb${interval === t.id ? ' is-on' : ''}`}
+                aria-pressed={interval === t.id}
+                onClick={() => setInterval(t.id)}
+              >
+                {t.label}
+              </button>
+            ))}
+            <span className="tv-sep" aria-hidden />
+            <button
+              type="button"
+              className={`tv-iv-tb${ichimokuOn ? ' is-on' : ''}`}
+              aria-pressed={ichimokuOn}
+              title="Ichimoku 9 / 26 / 52"
+              onClick={() => setLayers(withIchimoku(layerPrefs, !ichimokuOn))}
+            >
+              Ichimoku
+            </button>
+            <button
+              type="button"
+              className={`tv-iv-tb${levelsOn ? ' is-on' : ''}`}
+              aria-pressed={levelsOn}
+              title="Supports / résistances"
+              onClick={() => setLayers({ ...layerPrefs, structure: !levelsOn })}
+            >
+              Supports / résistances
+            </button>
+            <span className="tv-sep" aria-hidden />
+            <div className="mkt-layers-anchor" ref={layersAnchorRef}>
+              <button
+                type="button"
+                className={`tv-iv-tb${layersOpen ? ' is-on' : ''}`}
+                aria-expanded={layersOpen}
+                title="Afficher / masquer Structure, Fib, FVG, Cassures…"
+                onClick={() => setLayersOpen((o) => !o)}
+              >
+                Calques{activeObjectLayerCount ? ` · ${activeObjectLayerCount}` : ''}
+              </button>
+              {layersOpen && (
+                <MarketLayersMenu
+                  open
+                  onClose={() => setLayersOpen(false)}
+                  prefs={layerPrefs}
+                  onChange={setLayers}
+                  counts={layerCounts}
+                  variant="menu"
+                />
+              )}
+            </div>
+          </div>
+          <div className="tv-chart-slot">
             {candles.length > 0 ? (
               <PriceChart
                 candles={candles}
@@ -438,29 +497,8 @@ export function MarketTvPage() {
                 chartObjects={chartObjectsForView}
               />
             ) : (
-              <div className="market-tv-empty">Aucune bougie</div>
+              <div className="iv-empty tv-empty">{chartLoading ? 'Chargement…' : 'Aucune bougie'}</div>
             )}
-          </div>
-          <div className="market-tv-tools">
-            <label>
-              <input
-                type="checkbox"
-                checked={ichimokuOn}
-                onChange={(e) => setLayers(withIchimoku(layerPrefs, e.target.checked))}
-              />{' '}
-              Ichimoku 9 / 26 / 52
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={levelsOn}
-                onChange={(e) => setLayers({ ...layerPrefs, structure: e.target.checked })}
-              />{' '}
-              Supports / résistances
-            </label>
-            <span className="market-tv-tools-hint">
-              Fib · FVG · Cassures → <b>Calques</b> en haut
-            </span>
           </div>
         </section>
       </div>

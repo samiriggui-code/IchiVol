@@ -144,15 +144,16 @@ export function KillSwitchButton() {
   return (
     <button
       type="button"
-      className={`dash-kill${armed ? ' is-armed' : ''}`}
+      className={`iv-estop dash-kill${armed ? ' is-armed' : ''}`}
       title={
         armed
-          ? 'Kill switch armé — cliquer pour rouvrir (confirmation)'
-          : 'Arrêt d’urgence — bloque les nouvelles entrées paper'
+          ? 'Arrêt d’urgence armé : cliquer pour rouvrir les entrées (confirmation)'
+          : 'Arrêt d’urgence : bloque toute nouvelle entrée paper sur tous les portefeuilles. Les sorties restent possibles.'
       }
       onClick={() => (armed ? requestDisarm() : requestArm())}
     >
-      {armed ? 'Verrouillé' : 'Arrêt d’urgence'}
+      <i aria-hidden />
+      <span className="dash-kill-text">{armed ? 'Verrouillé' : 'Arrêt d’urgence'}</span>
     </button>
   )
 }

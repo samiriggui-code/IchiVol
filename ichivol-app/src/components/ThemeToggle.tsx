@@ -1,13 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { KeenIcon } from './KeenIcon'
 import { getStoredTheme, toggleTheme, type ThemeMode } from '../lib/theme'
 
 export function ThemeToggle() {
-  const [mode, setMode] = useState<ThemeMode>('light')
-
-  useEffect(() => {
-    setMode(getStoredTheme())
-  }, [])
+  const [mode, setMode] = useState<ThemeMode>(() => getStoredTheme())
 
   return (
     <button

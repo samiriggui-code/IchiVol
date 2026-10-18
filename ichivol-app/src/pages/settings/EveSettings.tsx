@@ -191,7 +191,7 @@ export function EveSettings({ schema, values, loadError, onSaved }: Props) {
           {!changed && differsFromDefault && canEdit ? (
             <button
               type="button"
-              className="linkish"
+              className="iv-btn iv-btn--ghost iv-btn--sm linkish"
               onClick={() => setDraft((p) => ({ ...p, [item.key]: toDisplay(unit, def) }))}
             >
               Revenir au défaut
@@ -214,14 +214,16 @@ export function EveSettings({ schema, values, loadError, onSaved }: Props) {
 
   return (
     <>
-      <section className="card">
-        <div className="card-head">
-          <h2>Comment Ève décide</h2>
+      <section className="iv-card">
+        <div className="iv-card-head">
+          <div className="iv-card-tabs">
+            <span className="iv-card-tab is-on">Comment Ève décide</span>
+          </div>
         </div>
-        <div className="card-body">
+        <div className="iv-card-body">
           <p className="lede">
             Ève est une seule intelligence qui décide avec quatre modes et vous parle par son Copilot. À chaque bougie clôturée,
-            Analyst, Challenger, Guardian et Shadow interrogent JEV, le modèle de jugement d’IchiVol.
+            L’Analyste, le Contradicteur, le Gardien du risque et l’Audit indépendant interrogent JEV, le modèle de jugement d’IchiVol.
             Si JEV est injoignable, trop lent ou pas assez sûr, Ève n’ouvre rien.
           </p>
           <ol className="modes">
@@ -237,8 +239,8 @@ export function EveSettings({ schema, values, loadError, onSaved }: Props) {
       </section>
 
       {loadError || !schema ? (
-        <section className="card">
-          <div className="card-body">
+        <section className="iv-card">
+          <div className="iv-card-body">
             <p className="notice err" role="alert">
               Les réglages d’Ève sont indisponibles : le moteur ne répond pas
               {loadError ? ` (${loadError})` : ''}. Rien n’est modifiable tant qu’il est injoignable.
@@ -247,11 +249,13 @@ export function EveSettings({ schema, values, loadError, onSaved }: Props) {
         </section>
       ) : (
         <>
-          <section className="card">
-            <div className="card-head">
-              <h2>Seuils de décision</h2>
+          <section className="iv-card">
+            <div className="iv-card-head">
+              <div className="iv-card-tabs">
+                <span className="iv-card-tab is-on">Seuils de décision</span>
+              </div>
             </div>
-            <div className="card-body">
+            <div className="iv-card-body">
               <p className="lede">
                 Ce qu’Ève exige de JEV avant d’agir. Ces seuils s’appliquent à toutes les décisions,
                 automatiques ou demandées à la main.
@@ -260,12 +264,14 @@ export function EveSettings({ schema, values, loadError, onSaved }: Props) {
             </div>
           </section>
 
-          <section className="card">
-            <div className="card-head">
-              <h2>Veille d’actualité</h2>
-              <span className={`tag ${radarOn ? 'green' : 'gray'}`}>{radarOn ? 'Activée' : 'Désactivée'}</span>
+          <section className="iv-card">
+            <div className="iv-card-head">
+              <div className="iv-card-tabs">
+                <span className="iv-card-tab is-on">Veille d’actualité</span>
+              </div>
+              <div className="iv-card-tools"><span className={`tag ${radarOn ? 'green' : 'gray'}`}>{radarOn ? 'Activée' : 'Désactivée'}</span></div>
             </div>
-            <div className="card-body">
+            <div className="iv-card-body">
               <p className="lede">
                 Les actualités récentes de l’actif, résumées et ajoutées au contexte de JEV.
               </p>
@@ -274,11 +280,13 @@ export function EveSettings({ schema, values, loadError, onSaved }: Props) {
           </section>
 
           {knobs.other.length > 0 ? (
-            <section className="card">
-              <div className="card-head">
-                <h2>Autres réglages du moteur</h2>
+            <section className="iv-card">
+              <div className="iv-card-head">
+                <div className="iv-card-tabs">
+                  <span className="iv-card-tab is-on">Autres réglages du moteur</span>
+                </div>
               </div>
-              <div className="card-body">{knobs.other.map(renderKnob)}</div>
+              <div className="iv-card-body">{knobs.other.map(renderKnob)}</div>
             </section>
           ) : null}
 
@@ -300,7 +308,7 @@ export function EveSettings({ schema, values, loadError, onSaved }: Props) {
             <div className="btn-row tight">
               <button
                 type="button"
-                className="suggestion"
+                className="iv-btn"
                 disabled={saving || Object.keys(draft).length === 0}
                 onClick={() => {
                   setDraft({})
@@ -311,7 +319,7 @@ export function EveSettings({ schema, values, loadError, onSaved }: Props) {
               </button>
               <button
                 type="button"
-                className="primary"
+                className="iv-btn iv-btn--primary"
                 disabled={saving || changeCount === 0 || invalid.length > 0}
                 onClick={() => void save()}
               >
@@ -320,12 +328,14 @@ export function EveSettings({ schema, values, loadError, onSaved }: Props) {
             </div>
           </div>
 
-          <section className="card">
-            <div className="card-head">
-              <h2>Service JEV</h2>
-              <span className="tag gray">Réglé sur le serveur</span>
+          <section className="iv-card">
+            <div className="iv-card-head">
+              <div className="iv-card-tabs">
+                <span className="iv-card-tab is-on">Service JEV</span>
+              </div>
+              <div className="iv-card-tools"><span className="tag gray">Réglé sur le serveur</span></div>
             </div>
-            <div className="card-body">
+            <div className="iv-card-body">
               <p className="lede">
                 Où Ève envoie ses questions. Ces informations se règlent sur le serveur du moteur
                 et ne sont jamais modifiables depuis le navigateur, pour protéger la clé d’accès.

@@ -1,4 +1,6 @@
-/* Palette calques Marché — tokens alignés maquette / camap */
+/* Palette des calques Marché : jetons premium (src/theme/premium.css).
+   Les classes mkt-iv-* contiennent « iv- » pour échapper au pont des pages
+   (qui restyle tout bouton sans classe iv-). */
 
 .mkt-layers-anchor {
   position: relative;
@@ -6,34 +8,31 @@
 }
 
 .mkt-layers-btn {
-  font: 12px Manrope, sans-serif;
-  border: 1px solid var(--line, #e5e1db);
-  background: var(--card, #fefdfb);
-  border-radius: 8px;
-  padding: 8px 12px;
-  color: var(--ink, #202b36);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.mkt-layers-btn-head {
-  font: 11px 'DM Mono', ui-monospace, monospace;
-  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-s);
+  background: var(--ghost-bg);
+  color: var(--text-2);
+  font: 600 10.5px var(--mono);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  border: 1px solid #1a7df5;
-  background: #eef4fc;
-  color: #1a7df5;
-  font-weight: 700;
-  padding: 7px 11px;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
-.mkt-layers-btn:hover,
-.mkt-layers-btn.is-open,
-.mkt-layers-btn-head:hover,
-.mkt-layers-btn-head.is-open {
-  border-color: #096cde;
-  color: #fff;
-  background: #1a7df5;
+.mkt-layers-btn:hover {
+  border-color: var(--line-3);
+  background: var(--hover-bg);
+  color: var(--text);
+}
+
+.mkt-layers-btn.is-open {
+  border-color: var(--cyan-line);
+  background: var(--cyan-soft);
+  color: var(--cyan);
 }
 
 .mkt-layers-quick {
@@ -42,23 +41,7 @@
   gap: 6px;
   margin-bottom: 8px;
   padding-bottom: 8px;
-  border-bottom: 1px solid var(--line, #e5e1db);
-}
-
-.mkt-layers-quick button {
-  border: 1px solid var(--line, #e5e1db);
-  background: #f3f2ef;
-  border-radius: 6px;
-  padding: 5px 8px;
-  font-size: 11px;
-  cursor: pointer;
-  color: var(--ink, #202b36);
-}
-
-.mkt-layers-quick button:hover {
-  border-color: #1a7df5;
-  color: #1a7df5;
-  background: #eef4fc;
+  border-bottom: 1px solid var(--line);
 }
 
 .mkt-layers-panel.is-menu {
@@ -68,11 +51,12 @@
   z-index: 40;
   min-width: 280px;
   max-width: min(340px, 92vw);
-  padding: 0.5rem;
-  background: var(--card, #fefdfb);
-  border: 1px solid var(--line, #e5e1db);
-  border-radius: 10px;
-  box-shadow: 0 12px 32px #0002;
+  padding: 8px;
+  background: var(--sheet-bg);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-pop);
+  color: var(--text);
 }
 
 .mkt-layers-list {
@@ -83,30 +67,30 @@
 
 .mkt-layer-row {
   display: grid;
-  grid-template-columns: 0.55rem 1fr auto auto;
-  gap: 0.45rem;
+  grid-template-columns: 8px 1fr auto auto;
+  gap: 8px;
   align-items: center;
   width: 100%;
   text-align: left;
   border: 0;
   background: transparent;
-  padding: 0.45rem 0.4rem;
-  border-radius: 0.4rem;
+  padding: 7px 6px;
+  border-radius: var(--r-s);
   cursor: pointer;
-  color: var(--ink, #202b36);
+  color: var(--text);
 }
 
 .mkt-layer-row:hover {
-  background: #f3f2ef;
+  background: var(--hover-bg);
 }
 
 .mkt-layer-row.is-on .mkt-layer-eye {
-  color: var(--blue, #1a7df5);
+  color: var(--cyan);
 }
 
 .mkt-layer-swatch {
-  width: 0.45rem;
-  height: 0.45rem;
+  width: 7px;
+  height: 7px;
   border-radius: 999px;
 }
 
@@ -117,44 +101,46 @@
 }
 
 .mkt-layer-copy strong {
-  font-size: 0.8rem;
-  font-weight: 650;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .mkt-layer-copy small {
-  font-size: 0.65rem;
-  color: var(--muted, #7d8288);
+  font-size: 10.5px;
+  color: var(--muted);
 }
 
 .mkt-layer-count {
-  font: 0.65rem 'DM Mono', ui-monospace, monospace;
-  color: var(--muted, #7d8288);
+  font: 500 10.5px var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
 }
 
 .mkt-layer-eye {
-  font-size: 0.85rem;
-  color: var(--muted, #7d8288);
+  font-size: 13px;
+  color: var(--dim);
 }
 
 .mkt-layers-opts {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  margin-top: 0.4rem;
-  padding-top: 0.45rem;
-  border-top: 1px solid var(--line, #e5e1db);
-  font-size: 0.75rem;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--text-2);
 }
 
 .mkt-layers-opts label {
   display: flex;
-  gap: 0.4rem;
+  gap: 7px;
   align-items: center;
   cursor: pointer;
 }
 
 .mkt-layers-opts input {
-  accent-color: var(--blue, #1a7df5);
+  accent-color: var(--cyan);
 }
 
 .mkt-layers-sheet {
@@ -170,7 +156,8 @@
   position: absolute;
   inset: 0;
   border: 0;
-  background: #0005;
+  background: var(--bg0);
+  opacity: 0.6;
   cursor: pointer;
 }
 
@@ -179,39 +166,38 @@
   z-index: 1;
   max-height: min(78vh, 560px);
   overflow: auto;
-  padding: 0.75rem 0.85rem 1.1rem;
-  background: var(--card, #fefdfb);
+  padding: 12px 16px 18px;
+  background: var(--sheet-bg);
   border-radius: 16px 16px 0 0;
-  border: 1px solid var(--line, #e5e1db);
+  border: 1px solid var(--line-2);
+  color: var(--text);
 }
 
 .mkt-layers-sheet-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.5rem;
+  margin-bottom: 8px;
 }
 
 .mkt-layers-sheet-head strong {
-  font: 18px Newsreader, Georgia, serif;
+  font: 600 15px var(--sans);
 }
 
 .mkt-layers-done {
-  border: 1px solid var(--line, #e5e1db);
-  background: transparent;
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 12px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--cyan-line);
+  border-radius: var(--r-s);
+  background: var(--btn-pri-bg);
+  color: var(--btn-pri-text);
+  font: 500 12px var(--sans);
   cursor: pointer;
 }
 
 .mkt-layers-global {
-  margin: 0.55rem 0 0;
-  font-size: 0.65rem;
+  margin: 9px 0 0;
+  font-size: 10.5px;
   text-align: center;
-  color: var(--muted, #7d8288);
-}
-
-.mono {
-  font-family: 'DM Mono', ui-monospace, monospace;
+  color: var(--muted);
 }
