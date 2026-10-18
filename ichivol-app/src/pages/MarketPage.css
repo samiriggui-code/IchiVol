@@ -1,722 +1,384 @@
 /**
- * Marché — styles portés depuis design-reference/ichivol-workspace/style.css
- * (sélecteurs maquette, valeurs identiques). Scopés sous .market-page pour
- * ne pas altérer les autres pages dans cette PR.
+ * Marché : station premium (watchlist dense, graphique, lecture des portes).
+ * Jetons et primitives : src/theme/premium.css (voir PREMIUM.md).
+ * Les classes locales mk-iv-* contiennent « iv- » pour échapper au pont des
+ * pages, qui restyle tout bouton sans classe iv-.
  */
 
-.market-page {
-  --bg: #faf8f5;
-  --card: #fefdfb;
-  --line: #e5e1db;
-  --ink: #202b36;
-  --muted: #7d8288;
-  --blue: #1a7df5;
-  --green: #0b8f83;
-  --red: #c8412f;
-  --amber: #a76c17;
-  color: var(--ink);
-  font: 11px Inter, Arial, sans-serif;
-  padding: 0;
-  max-width: 1800px;
-  margin: 0 auto;
+.mk-page {
   width: 100%;
-  box-sizing: border-box;
-}
-
-.market-page *,
-.market-page *::before,
-.market-page *::after {
-  box-sizing: border-box;
-}
-
-.market-page .page-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 26px;
-}
-
-.market-page .eyebrow {
-  font: 11px 'JetBrains Mono', ui-monospace, monospace;
-  letter-spacing: 1.6px;
-  color: #8c918f;
-  margin-bottom: 10px;
-}
-
-/* Spécificité > .page-head h1 (index) et .dash-shell.is-mobile .page-head h1 */
-.dash-shell .market-page .page-head h1,
-.market-page .page-head h1 {
-  font: 38px Inter, system-ui, sans-serif;
-  font-weight: 400;
-  line-height: normal;
-  margin: 0 0 6px;
-  letter-spacing: -1px;
-  color: var(--ink);
-}
-
-.market-page h2 {
-  font: 23px Inter, system-ui, sans-serif;
-  margin: 0;
-}
-
-/* Spécificité > .dash-shell.is-mobile .page-head p (index.css) */
-.dash-shell .market-page .page-head .subtitle,
-.market-page .subtitle {
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.7;
-  margin: 0;
-}
-
-.market-page .actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.market-page .actions .market-tv-open {
-  display: inline-block;
-  width: auto;
-  margin-top: 0;
-  font: 11px Inter, sans-serif;
-  padding: 8px 12px;
-}
-
-.market-page .card-head-tools {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.market-page .market-tv-open-inline {
-  border: 1px solid var(--line);
-  background: #f3f2ef;
-  border-radius: 6px;
-  font: 11px 'JetBrains Mono', ui-monospace, monospace;
-  letter-spacing: 0.6px;
-  padding: 6px 10px;
-  color: var(--ink);
-  cursor: pointer;
-}
-
-.market-page .market-tv-open-inline:hover {
-  border-color: var(--blue);
-  color: var(--blue);
-  background: #eef4fc;
-}
-
-.market-page .tag {
-  font: 10px 'JetBrains Mono', ui-monospace, monospace;
-  padding: 5px 7px;
-  background: #edf3fa;
-  border-radius: 4px;
-  color: #3978bb;
-  white-space: nowrap;
-}
-
-.market-page .tag.green {
-  background: #e7f3ee;
-  color: #168579;
-}
-
-.market-page .tag.amber {
-  background: #faf0df;
-  color: #a8782a;
-}
-
-.market-page .tag.red {
-  background: #f9eae6;
-  color: #b35346;
-}
-
-.market-page .tag.gray {
-  background: #f0efeb;
-  color: #888b89;
-}
-
-.market-page .notice {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  background: #f5f0e6;
-  border: 1px solid #e9dfcb;
-  padding: 12px 16px;
-  border-radius: 8px;
-  color: #9b7a3d;
-  font-size: 11px;
-  margin: 0 0 22px;
-}
-
-.market-page .market-layout {
-  display: grid;
-  grid-template-columns: 185px minmax(0, 1fr);
-  gap: 16px;
-}
-
-.market-page .market-layout > .card:nth-child(2) {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.market-page .analysis-panel {
-  grid-column: 1 / -1;
-  width: 100%;
-  justify-self: stretch;
-}
-
-.market-page .analysis-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.market-page .analysis-body {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  width: 100%;
-}
-
-.market-page .analysis-gates {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px 18px;
-  width: 100%;
-}
-
-.market-page .analysis-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.market-page .card {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--card);
-  overflow: hidden;
   min-width: 0;
+  max-width: 100%;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12px;
 }
 
-.market-page .card-head {
+.mk-page .iv-ph-act b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.mk-notice {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 0 0 var(--gap);
+  padding: 8px 12px;
+  border: 1px solid var(--amber-line);
+  border-radius: var(--r);
+  background: var(--amber-soft);
+  color: var(--amber);
+  font-size: 12px;
+}
+
+/* — Barre d'outils du graphique (et filtre de classe) — */
+.mk-ctool {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 21px 23px 15px;
-  gap: 12px;
-}
-
-.market-page .card-head small {
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.market-page .card-body {
-  padding: 10px 23px 22px;
-}
-
-.market-page .card-body p {
-  font-size: 14px !important;
-  line-height: 1.7;
-}
-
-.market-page .chart-summary {
-  display: flex;
-  gap: 22px;
-  padding: 0 23px;
-  font: 12px 'JetBrains Mono', ui-monospace, monospace;
-  color: var(--muted);
-}
-
-.market-page .chart-summary b {
-  color: var(--green);
-}
-
-.market-page .chart-summary .up {
-  color: var(--green) !important;
-}
-
-.market-page .chart-summary .down {
-  color: var(--red) !important;
-}
-
-.market-page .segmented {
-  display: flex;
-  gap: 3px;
-  background: #f3f2ef;
-  padding: 3px;
-  border-radius: 6px;
-}
-
-.market-page .segmented button {
-  border: none;
-  background: transparent;
-  font-size: 11px;
-  padding: 6px 9px;
-  color: var(--muted);
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.market-page .segmented button.active {
-  background: white;
-  box-shadow: 0 1px 3px #0001;
-  color: var(--ink);
-}
-
-.market-page .class-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-.market-page .class-chips button {
-  border: 1px solid var(--line);
-  background: var(--card);
-  border-radius: 999px;
-  padding: 6px 12px;
-  font: 11px Inter, sans-serif;
-  color: var(--ink);
-  cursor: pointer;
-}
-.market-page .class-chips button.active {
-  background: #202b36;
-  color: #faf8f5;
-  border-color: #202b36;
-}
-
-.market-page .watchlist button {
-  border: 0;
-  border-radius: 0;
+  gap: 2px;
+  height: 30px;
+  flex: none;
+  padding: 0 6px;
   border-bottom: 1px solid var(--line);
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 18px 15px;
-  background: var(--card);
-  color: inherit;
-  cursor: pointer;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
-.market-page .watchlist button.active {
-  background: #eef4fc;
-  border-left: 3px solid var(--blue);
-}
-
-.market-page .watchlist button small {
-  display: block;
-  color: var(--muted);
-  font: 10px 'JetBrains Mono', ui-monospace, monospace;
-  margin-top: 5px;
-}
-
-.market-page .watchlist .up,
-.market-page .watchlist .down,
-.market-page .watchlist .chg-na {
-  float: right;
-  margin-left: 8px;
-}
-
-.market-page .watchlist .up {
-  color: var(--green);
-}
-
-.market-page .watchlist .down {
-  color: var(--red);
-}
-
-.market-page .watchlist .chg-na {
-  color: var(--muted);
-}
-
-.market-page .lecture-synthesis {
-  font-size: 14px !important;
-  color: var(--muted);
-  line-height: 1.7;
-  margin: 14px 0 4px;
-}
-
-.market-page .watch-msg {
-  font-size: 11px !important;
-  color: var(--muted);
-}
-
-.market-page .fiche-link {
-  margin-top: 12px;
-}
-
-.market-page .checkrow {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 14px;
-  margin: 17px 0;
-  font-size: 14px;
-  flex-wrap: wrap;
-}
-
-.market-page .chart-tools-hint {
-  font-size: 11px;
-  color: var(--muted);
-  margin-left: auto;
-}
-
-.market-page .chart-tools-hint b {
-  color: var(--blue);
-}
-
-.market-page .checkrow input {
-  accent-color: var(--blue);
-}
-
-.market-page .statline {
-  display: flex;
-  justify-content: space-between;
-  padding: 13px 0;
-  border-bottom: 1px solid var(--line);
-  font-size: 11px;
-}
-
-.market-page .step {
-  border-left: 2px solid #c7dfd9;
-  padding: 3px 0 20px 18px;
-  margin-left: 5px;
-}
-
-.market-page .step b {
-  font-size: 11px;
-}
-
-.market-page .step p {
-  font-size: 14px !important;
-  margin: 5px 0;
-  color: var(--muted);
-}
-
-.market-page button.primary {
-  font: 11px Inter, Arial, sans-serif;
-  background: var(--blue);
-  color: white;
-  border: 1px solid var(--blue);
-  border-radius: 8px;
-  padding: 10px 14px;
-  cursor: pointer;
-  display: inline-block;
-}
-
-.market-page button.primary:hover {
-  background: #096cde;
-  color: white;
-}
-
-.market-page button.suggestion {
-  display: block;
-  text-align: left;
-  width: 100%;
-  margin-top: 10px;
-  font-size: 11px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--card);
-  padding: 10px 14px;
-  color: inherit;
-  cursor: pointer;
-}
-
-.market-page .link {
-  color: var(--blue);
-  font-size: 11px;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.market-page .empty {
-  padding: 45px;
-  text-align: center;
-  color: var(--muted);
-}
-
-.market-page .market-chart-slot {
-  min-height: 520px;
-  height: min(68vh, 760px);
-  position: relative;
-}
-
-.market-page .market-chart-slot .chart-wrap {
-  height: 100%;
-  min-height: 280px;
-}
-
-.market-page .market-chart-slot .chart-host {
-  height: 100% !important;
-  min-height: 260px;
-}
-
-.market-page .market-chart-slot .chart-vol-resize,
-.market-page .market-chart-slot .chart-overlay-msg {
+.mk-ctool::-webkit-scrollbar {
   display: none;
 }
 
-/* —— Media queries maquette (≤1150 / ≤800) —— */
+.mk-iv-tb {
+  flex: none;
+  height: 22px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  font: 500 11px var(--mono);
+  white-space: nowrap;
+  cursor: pointer;
+}
 
-/* Watchlist desktop : même hauteur que la carte graphique, défilement interne (maquette). */
-@media (min-width: 801px) {
-  .market-page .watchlist {
-    height: 0;
-    min-height: 100%;
-    overflow-y: auto;
+.mk-iv-tb:hover {
+  color: var(--text-2);
+  background: var(--hover-bg);
+}
+
+.mk-iv-tb.is-on {
+  background: var(--cyan-soft);
+  color: var(--cyan);
+}
+
+.mk-iv-tb:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 1px;
+}
+
+.mk-sep {
+  flex: none;
+  width: 1px;
+  height: 16px;
+  margin: 0 6px;
+  background: var(--line-2);
+}
+
+/* Le menu Calques déborde de la barre : pas de rognage sur grand écran. */
+@media (min-width: 761px) {
+  .mk-chart-card .mk-ctool,
+  .mk-chart-card {
+    overflow: visible;
   }
 }
 
-@media (max-width: 1150px) {
-  .market-page .market-layout {
-    grid-template-columns: 150px 1fr;
-  }
-  .market-page .analysis-gates {
-    grid-template-columns: 1fr 1fr;
-  }
-  .market-page .market-chart-slot {
-    height: min(56vh, 560px);
-    min-height: 420px;
-  }
+/* — Watchlist — */
+.mk-watch-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
-@media (max-width: 800px) {
-  .market-page {
-    overflow-x: clip;
-    max-width: 100%;
-  }
+.mk-watch-scroll {
+  flex: 1;
+  height: 0;
+  min-height: 100%;
+}
 
-  .market-page .page-head {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
+.mk-watch .mk-row {
+  cursor: pointer;
+}
 
-  .dash-shell .market-page .page-head h1,
-  .dash-shell.is-mobile .market-page .page-head h1,
-  .market-page .page-head h1 {
-    font-size: 28px;
-    font-weight: 400;
-    font-family: Inter, system-ui, sans-serif;
-    line-height: 1.15;
-    letter-spacing: -0.8px;
-  }
+.mk-watch .mk-row:focus-visible {
+  outline: 1px solid var(--cyan-line);
+  outline-offset: -1px;
+}
 
-  .market-page .actions {
-    flex-wrap: wrap;
-    width: 100%;
-    justify-content: flex-start;
-    gap: 8px;
-  }
+.mk-watch .mk-row td.pos {
+  color: var(--pos);
+}
 
-  /* TV déjà dans le card-head — évite une rangée vide sous le titre */
-  .market-page .actions .market-tv-open {
-    display: none;
-  }
+.mk-watch .mk-row td.neg {
+  color: var(--neg);
+}
 
-  .market-page .actions .tag {
-    flex: 0 0 auto;
-  }
+.mk-watch .mk-row td.ok {
+  color: var(--mint);
+}
 
-  /* Chips : scroll horizontal plutôt que wrap sur 2 lignes */
-  .market-page .class-chips {
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
-    gap: 8px;
-    overflow-x: auto;
-    overflow-y: visible;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    margin-bottom: 10px;
-    padding: 2px 0 6px;
-    min-height: 40px;
-  }
+.mk-watch .mk-row td.dim {
+  color: var(--dim);
+}
 
-  .market-page .class-chips::-webkit-scrollbar {
-    display: none;
-  }
+.mk-td-empty {
+  color: var(--muted);
+  text-align: center;
+}
 
-  .market-page .class-chips button {
-    flex: 0 0 auto;
-    white-space: nowrap;
-  }
+/* — Graphique — */
+.mk-quote {
+  margin-left: 2px;
+  color: var(--dim);
+  font-weight: 400;
+}
 
-  /* Rangée actions vide si TV + tag masqués */
-  .market-page .page-head .actions:not(:has(:not([hidden]):not(.market-tv-open))) {
-    display: none;
-  }
+.mk-chart-slot {
+  position: relative;
+  flex: 1;
+  min-height: 520px;
+  height: min(64vh, 680px);
+}
 
-  .market-page .actions:empty {
-    display: none;
-  }
+.mk-chart-slot .chart-wrap {
+  height: 100%;
+  min-height: 280px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
 
-  /*
-   * Critique : en desktop le graphique est forcé en column 2.
-   * Sur 1 colonne ça le poussait hors grille → watchlist ~30px + chart serré.
-   */
-  .market-page .market-layout {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
-  }
+.mk-chart-slot .chart-host {
+  height: 100%;
+  min-height: 260px;
+}
 
-  .market-page .market-layout > .card:nth-child(2) {
-    grid-column: 1;
-    grid-row: auto;
-  }
+.mk-chart-slot .chart-vol-resize,
+.mk-chart-slot .chart-overlay-msg {
+  display: none;
+}
 
-  .market-page .analysis-panel {
-    grid-column: 1;
-  }
+.mk-chart-empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+}
 
-  .market-page .watchlist {
-    display: flex;
-    flex-direction: row;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
+.mk-chart-foot {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.mk-chart-foot .mk-v {
+  margin-left: 4px;
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.mk-chart-foot .mk-v.pos {
+  color: var(--pos);
+}
+
+.mk-chart-foot .mk-v.neg {
+  color: var(--neg);
+}
+
+.mk-chart-foot .mk-v.ok {
+  color: var(--mint);
+}
+
+.mk-foot-src {
+  margin-left: auto;
+}
+
+/* Infobulle du graphique (styles de base dans index.css) */
+.mk-page .chart-tip {
+  background: var(--sheet-bg);
+  border-color: var(--line-2);
+  color: var(--text);
+  box-shadow: var(--shadow-pop);
+}
+
+/* — Colonne de droite — */
+.mk-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
+}
+
+.mk-read {
+  flex: 1;
+}
+
+.mk-inst .iv-row-v.pos {
+  color: var(--pos);
+}
+
+.mk-inst .iv-row-v.neg {
+  color: var(--neg);
+}
+
+.mk-inst .iv-row-v.ok {
+  color: var(--mint);
+}
+
+.mk-inst .iv-row > span:first-child {
+  color: var(--muted);
+}
+
+.mk-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.mk-gates {
+  display: flex;
+  flex-direction: column;
+}
+
+.mk-gate-row {
+  align-items: flex-start;
+  padding: 6px 0;
+}
+
+.mk-gate {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  font: 700 10px var(--mono);
+}
+
+.mk-gate.is-green {
+  color: var(--mint);
+  background: var(--mint-soft);
+}
+
+.mk-gate.is-amber {
+  color: var(--amber);
+  background: var(--amber-soft);
+}
+
+.mk-gate.is-red {
+  color: var(--sell);
+  background: var(--sell-soft);
+}
+
+.mk-gate.is-gray,
+.mk-gate.is-cyan {
+  color: var(--dim);
+  background: var(--track-bg);
+}
+
+.mk-gate-k {
+  flex: none;
+  padding-top: 2px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.mk-gates .mk-gate-row > .mk-gate-v {
+  min-width: 0;
+  padding-top: 3px;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 11.5px;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.mk-synth {
+  margin: 10px 0 0;
+}
+
+.mk-read-act {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.mk-read-act .iv-btn--primary {
+  flex: 1;
+}
+
+.mk-watch-msg {
+  margin: 0;
+  padding: 0 12px 10px;
+}
+
+/* — Preuves du moteur (composants partagés) — */
+.mk-evidence-body .engine-evidence {
+  margin: 0;
+}
+
+/* Un seul panneau par onglet : il prend toute la largeur. */
+.mk-evidence-body .engine-evidence.is-wide {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.mk-evidence-body .argumentaire {
+  margin: 0 0 10px;
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+/* — Responsive — */
+@media (max-width: 1100px) {
+  .mk-watch-scroll {
     height: auto;
     min-height: 0;
-    max-height: none;
+    max-height: 360px;
   }
 
-  .market-page .watchlist button {
-    flex: 0 0 auto;
-    min-width: 118px;
-    max-width: 140px;
-    border-bottom: 0;
-    border-right: 1px solid var(--line);
-    border-left: 0;
-    padding: 12px 14px;
-  }
-
-  .market-page .watchlist button.active {
-    border-left: 0;
-    border-bottom: 3px solid var(--blue);
-    background: #eef4fc;
-  }
-
-  .market-page .watchlist .up,
-  .market-page .watchlist .down,
-  .market-page .watchlist .chg-na {
-    float: none;
-    display: block;
-    margin: 2px 0 0;
-    font-size: 10px;
-  }
-
-  .market-page .analysis-gates {
-    grid-template-columns: 1fr;
-  }
-
-  .engine-evidence.is-wide {
-    grid-template-columns: 1fr;
-  }
-
-  .market-page .card-head {
-    padding: 14px 16px 10px;
-    flex-wrap: wrap;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-
-  .market-page .card-head-tools {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .market-page .card-head .segmented {
-    align-self: stretch;
-    flex: 1;
-    justify-content: space-between;
-  }
-
-  .market-page .card-head .segmented button {
-    flex: 1;
-    padding: 7px 4px;
-    text-align: center;
-  }
-
-  .market-page .card-body {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-
-  .market-page .chart-summary {
-    gap: 8px 14px;
-    flex-wrap: wrap;
-    padding: 0 16px 8px;
-    font-size: 11px;
-  }
-
-  .market-page .checkrow {
-    gap: 10px;
-    flex-wrap: wrap;
-    flex-direction: column;
-    align-items: flex-start;
-    margin: 10px 0 4px;
-  }
-
-  .market-page .market-chart-slot {
-    height: min(46vh, 340px);
-    min-height: 250px;
-  }
-
-  .market-page .market-chart-slot .chart-wrap {
-    min-height: 220px;
-  }
-
-  .market-page .analysis-actions {
-    width: 100%;
-  }
-
-  .market-page .analysis-actions button.suggestion {
-    width: auto;
-    margin-top: 0;
-    display: inline-block;
-  }
-
-  .market-page .analysis-foot {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .market-page .analysis-body {
-    padding-bottom: 8px;
+  .mk-chart-slot {
+    min-height: 420px;
+    height: 56vh;
   }
 }
 
-/* Très petit téléphone */
-@media (max-width: 400px) {
-  .market-page .actions {
+@media (max-width: 760px) {
+  .mk-chart-card .iv-card-tools {
     display: none;
   }
 
-  .market-page .page-head h1 {
-    font-size: 26px;
+  .mk-chart-slot {
+    min-height: 300px;
+    height: 340px;
   }
 
-  .market-page .market-chart-slot {
-    height: min(42vh, 300px);
+  .mk-chart-slot .chart-wrap {
     min-height: 220px;
+  }
+
+  .mk-foot-src {
+    margin-left: 0;
+  }
+
+  .mk-evidence-body .engine-evidence.is-wide .pipeline-readings-grid,
+  .mk-evidence-body .engine-evidence .sec-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
-@media (min-width: 1600px) {
-  .market-page {
-    font-size: 16px;
-  }
-  .market-page .card-head {
-    padding-top: 24px;
-  }
-  .market-page .card-body {
-    padding-bottom: 26px;
-  }
+/* index.css pose `.sym { display: flex }` globalement : on garde la cellule de tableau. */
+.mk-watch td.sym {
+  display: table-cell;
 }

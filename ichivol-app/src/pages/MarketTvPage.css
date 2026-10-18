@@ -1,388 +1,344 @@
 /**
- * Marché TV — plein écran hors shell (fenêtre popup ou onglet).
- * Tokens alignés sur MarketPage (maquette).
+ * TV Marché : plein écran hors cadre (fenêtre popup ou onglet), thème premium.
+ * Jetons et primitives : src/theme/premium.css (voir PREMIUM.md).
+ * Les classes tv-iv-* contiennent « iv- » pour rester hors du pont des pages.
  */
 
-.market-tv {
-  --bg: #faf8f5;
-  --card: #fefdfb;
-  --line: #e5e1db;
-  --ink: #202b36;
-  --muted: #7d8288;
-  --blue: #1a7df5;
-  --green: #0b8f83;
-  --red: #c8412f;
-  color: var(--ink);
-  font: 11px Inter, Arial, sans-serif;
-  background:
-    radial-gradient(1200px 600px at 10% -10%, #e8eef6 0%, transparent 55%),
-    radial-gradient(900px 500px at 100% 0%, #efe8dc 0%, transparent 50%),
-    var(--bg);
-  min-height: 100vh;
-  min-height: 100dvh;
+.tv-page {
+  display: flex;
+  flex-direction: column;
   height: 100vh;
   height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+  min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
+  background: var(--page-bg), var(--bg0);
+  color: var(--text);
+  font: 12px var(--sans);
 }
 
-.market-tv *,
-.market-tv *::before,
-.market-tv *::after {
-  box-sizing: border-box;
-}
-
-.market-tv-bar {
+/* — Barre du haut — */
+.tv-top {
   display: flex;
   align-items: center;
-  gap: 18px;
-  flex-wrap: wrap;
-  padding: 14px 20px 10px;
+  gap: 16px;
+  flex: none;
+  min-height: 44px;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--card) 88%, transparent);
-  backdrop-filter: blur(8px);
+  background: var(--top-bg);
 }
 
-.market-tv-brand {
+.tv-brand {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 88px;
+  align-items: baseline;
+  gap: 8px;
+  flex: none;
 }
 
-.market-tv-mark {
-  font: 22px Inter, system-ui, sans-serif;
-  letter-spacing: -0.6px;
-  line-height: 1;
+.tv-brand b {
+  font: 600 14px var(--sans);
+  letter-spacing: -0.01em;
+  color: var(--text);
 }
 
-.market-tv-mode {
-  font: 10px 'JetBrains Mono', ui-monospace, monospace;
-  letter-spacing: 1.4px;
+.tv-brand-mode {
+  font: 500 10px var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+
+.tv-symbol {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  padding-left: 16px;
+  border-left: 1px solid var(--line);
+}
+
+.tv-symbol h1 {
+  margin: 0;
+  font: 600 16px/1.2 var(--sans);
+  letter-spacing: -0.01em;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.tv-symbol h1 span {
+  margin-left: 2px;
+  color: var(--dim);
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.tv-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font: 500 10.5px var(--mono);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
-.market-tv-symbol {
-  flex: 1 1 160px;
-  min-width: 0;
-}
-
-.market-tv-symbol h1 {
-  margin: 0;
-  font: 28px Inter, system-ui, sans-serif;
-  font-weight: 400;
-  letter-spacing: -0.8px;
-  line-height: 1.1;
-}
-
-.market-tv-symbol h1 span {
-  font: 11px Inter, sans-serif;
-  color: var(--muted);
-  margin-left: 6px;
-}
-
-.market-tv-symbol small {
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.market-tv-stats {
-  display: flex;
-  gap: 18px;
-  font: 11px 'JetBrains Mono', ui-monospace, monospace;
-  color: var(--muted);
-  flex-wrap: wrap;
-}
-
-.market-tv-stats b {
-  color: var(--ink);
+.tv-stats b {
+  margin-left: 4px;
+  color: var(--text);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
 }
 
-.market-tv-stats .up {
-  color: var(--green);
+.tv-stats b.pos {
+  color: var(--pos);
 }
 
-.market-tv-stats .down {
-  color: var(--red);
+.tv-stats b.neg {
+  color: var(--neg);
 }
 
-.market-tv .segmented {
+.tv-stats b.ok {
+  color: var(--mint);
+}
+
+.tv-actions {
   display: flex;
-  gap: 3px;
-  background: #f3f2ef;
-  padding: 3px;
-  border-radius: 6px;
+  gap: 6px;
+  margin-left: auto;
+  flex: none;
 }
 
-.market-tv .segmented button {
-  border: none;
-  background: transparent;
-  font-size: 11px;
-  padding: 6px 10px;
-  color: var(--muted);
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.market-tv .segmented button.active {
-  background: white;
-  box-shadow: 0 1px 3px #0001;
-  color: var(--ink);
-}
-
-.market-tv-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.market-tv-link {
-  font: 11px Inter, sans-serif;
-  color: var(--blue);
-  text-decoration: none;
-  font-weight: 600;
-  padding: 8px 10px;
-}
-
-.market-tv-close {
-  font: 11px Inter, sans-serif;
-  border: 1px solid var(--line);
-  background: var(--card);
-  border-radius: 8px;
-  padding: 8px 12px;
-  cursor: pointer;
-  color: var(--ink);
-}
-
-.market-tv-close:hover {
-  border-color: #cfc9c0;
-}
-
-.market-tv-notice {
+.tv-notice {
   display: flex;
   gap: 10px;
   align-items: center;
-  margin: 8px 20px 0;
-  padding: 10px 14px;
-  background: #f5f0e6;
-  border: 1px solid #e9dfcb;
-  border-radius: 8px;
-  color: #9b7a3d;
-  font-size: 11px;
+  margin: var(--gap) var(--gap) 0;
+  padding: 8px 12px;
+  border: 1px solid var(--amber-line);
+  border-radius: var(--r);
+  background: var(--amber-soft);
+  color: var(--amber);
 }
 
-.market-tv-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px 20px 0;
-}
-
-.market-tv-chips button {
-  border: 1px solid var(--line);
-  background: var(--card);
-  border-radius: 999px;
-  padding: 6px 12px;
-  font: 11px Inter, sans-serif;
-  color: var(--ink);
-  cursor: pointer;
-}
-
-.market-tv-chips button.active {
-  background: #202b36;
-  color: #faf8f5;
-  border-color: #202b36;
-}
-
-.market-tv-body {
+/* — Corps : liste + graphique — */
+.tv-body {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
-  gap: 12px;
-  padding: 12px 16px 16px;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: var(--gap);
+  padding: var(--gap);
 }
 
-.market-tv-watch {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--card);
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.market-tv-watch button {
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 14px 12px;
-  background: var(--card);
-  color: inherit;
-  cursor: pointer;
-}
-
-.market-tv-watch button.active {
-  background: #eef4fc;
-  border-left: 3px solid var(--blue);
-}
-
-.market-tv-watch button small {
-  display: block;
-  color: var(--muted);
-  font: 10px 'JetBrains Mono', ui-monospace, monospace;
-  margin-top: 4px;
-}
-
-.market-tv-watch .up,
-.market-tv-watch .down,
-.market-tv-watch .chg-na {
-  float: right;
-  margin-left: 8px;
-  font-size: 10px;
-}
-
-.market-tv-watch .up {
-  color: var(--green);
-}
-
-.market-tv-watch .down {
-  color: var(--red);
-}
-
-.market-tv-watch .chg-na {
-  color: var(--muted);
-}
-
-.market-tv-chart {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--card);
+.tv-ctool {
   display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  height: 30px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
-.market-tv-chart-slot {
-  flex: 1;
-  min-height: 0;
-  position: relative;
-}
-
-.market-tv-chart-slot .chart-wrap {
-  height: 100%;
-  min-height: 0;
-}
-
-.market-tv-chart-slot .chart-host {
-  height: 100% !important;
-  min-height: 0;
-}
-
-.market-tv-chart-slot .chart-vol-resize,
-.market-tv-chart-slot .chart-overlay-msg {
+.tv-ctool::-webkit-scrollbar {
   display: none;
 }
 
-.market-tv-empty {
+.tv-iv-tb {
+  flex: none;
+  height: 22px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  font: 500 11px var(--mono);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tv-iv-tb:hover {
+  color: var(--text-2);
+  background: var(--hover-bg);
+}
+
+.tv-iv-tb.is-on {
+  background: var(--cyan-soft);
+  color: var(--cyan);
+}
+
+.tv-iv-tb:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 1px;
+}
+
+.tv-sep {
+  flex: none;
+  width: 1px;
+  height: 16px;
+  margin: 0 6px;
+  background: var(--line-2);
+}
+
+.tv-watch {
+  min-height: 0;
+}
+
+.tv-watch-scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+.tv-row {
+  cursor: pointer;
+}
+
+.tv-row:focus-visible {
+  outline: 1px solid var(--cyan-line);
+  outline-offset: -1px;
+}
+
+.tv-row td.pos {
+  color: var(--pos);
+}
+
+.tv-row td.neg {
+  color: var(--neg);
+}
+
+.tv-row td.dim {
+  color: var(--dim);
+}
+
+.tv-td-empty {
+  color: var(--muted);
+  text-align: center;
+}
+
+.tv-chart {
+  min-height: 0;
+  overflow: visible;
+}
+
+.tv-chart .iv-card-tools .pos {
+  color: var(--pos);
+}
+
+.tv-chart .iv-card-tools .neg {
+  color: var(--neg);
+}
+
+/* Le menu Calques déborde de la barre. */
+.tv-chart-tools {
+  overflow: visible;
+}
+
+.tv-chart-slot {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.tv-chart-slot .chart-wrap {
   height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.tv-chart-slot .chart-host {
+  height: 100%;
+  min-height: 0;
+}
+
+.tv-chart-slot .chart-vol-resize,
+.tv-chart-slot .chart-overlay-msg {
+  display: none;
+}
+
+.tv-page .chart-tip {
+  background: var(--sheet-bg);
+  border-color: var(--line-2);
+  color: var(--text);
+  box-shadow: var(--shadow-pop);
+}
+
+.tv-empty {
   display: grid;
   place-items: center;
-  color: var(--muted);
+  height: 100%;
 }
 
-.market-tv-tools {
-  display: flex;
-  gap: 22px;
-  flex-wrap: wrap;
-  align-items: center;
-  padding: 10px 16px 14px;
-  border-top: 1px solid var(--line);
-  font-size: 13px;
-}
-
-.market-tv-tools-hint {
-  margin-left: auto;
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.market-tv-tools-hint b {
-  color: var(--blue);
-}
-
-.market-tv-tools input {
-  accent-color: var(--blue);
+/* — Écrans étroits — */
+@media (max-width: 1100px) {
+  .tv-stats {
+    display: none;
+  }
 }
 
 @media (max-width: 900px) {
-  .market-tv {
+  .tv-page {
     height: auto;
-    min-height: 100dvh;
-    overflow: auto;
+    overflow: visible;
+    overflow-x: clip;
   }
 
-  .market-tv-bar {
-    padding: 12px 14px 8px;
-    gap: 10px;
+  .tv-top {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: 8px 16px;
   }
 
-  .market-tv-body {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(280px, 1fr);
-    padding: 10px 12px 16px;
+  .tv-symbol {
+    padding-left: 12px;
   }
 
-  .market-tv-watch {
-    display: flex;
-    flex-direction: row;
-    overflow-x: auto;
-    overflow-y: hidden;
-    max-height: none;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .market-tv-watch button {
-    flex: 0 0 auto;
-    min-width: 118px;
-    border-bottom: 0;
-    border-right: 1px solid var(--line);
-    border-left: 0;
-  }
-
-  .market-tv-watch button.active {
-    border-left: 0;
-    border-bottom: 3px solid var(--blue);
-  }
-
-  .market-tv-chips {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding: 8px 14px 0;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .market-tv-chips::-webkit-scrollbar {
+  .tv-symbol .iv-cap {
     display: none;
   }
 
-  .market-tv-chips button {
-    flex: 0 0 auto;
+  .tv-stats {
+    display: flex;
+    order: 3;
+    width: 100%;
+    gap: 6px 14px;
   }
 
-  .market-tv-symbol h1 {
-    font-size: 22px;
+  .tv-body {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--gap) 16px 16px;
   }
 
-  .market-tv-chart-slot {
-    min-height: min(50vh, 380px);
+  .tv-chart {
+    order: -1;
   }
+
+  /* Pas de défilement ici : le menu Calques doit pouvoir déborder. */
+  .tv-chart-tools {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 30px;
+    padding: 4px 6px;
+    row-gap: 4px;
+  }
+
+  .tv-chart-slot {
+    flex: none;
+    height: min(56vh, 420px);
+    min-height: 300px;
+  }
+
+  .tv-watch-scroll {
+    max-height: 360px;
+  }
+}
+
+/* index.css pose `.sym { display: flex }` globalement : on garde la cellule de tableau. */
+.tv-watch td.sym {
+  display: table-cell;
 }

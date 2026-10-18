@@ -1,6 +1,6 @@
 /**
- * Marché — port littéral de design-reference/ichivol-workspace `marche()` + page-head.
- * Classes HTML = maquette. Données = engine (pas de démo inventée).
+ * Marché : station en trois colonnes (watchlist, graphique, lecture des portes)
+ * sur les primitives premium iv-. Données = moteur (pas de démo inventée).
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -47,6 +47,7 @@ import {
   fmtRvolMaq,
   lectureSynthesisFr,
   maquetteGateBadge,
+  type MaquetteBadgeTone,
   nearestSrObjects,
   shortSymbol,
 } from './market/marketMaquetteHelpers'
@@ -74,6 +75,26 @@ const GATE_LABELS: Record<PipelineStageId, string> = {
   structure: 'Structure',
   location: 'Emplacement',
   regime: 'Régime',
+}
+
+const GATE_GLYPH: Record<MaquetteBadgeTone, string> = {
+  green: '✓',
+  amber: '~',
+  red: '✕',
+  gray: '·',
+  '': '·',
+}
+
+type EvidenceTab = 'pipeline' | 'signal' | 'mtf'
+
+const EVIDENCE_TABS: { id: EvidenceTab; label: string }[] = [
+  { id: 'pipeline', label: 'Argumentaire et portes' },
+  { id: 'signal', label: 'Preuves du signal' },
+  { id: 'mtf', label: 'Multi-horizons' },
+]
+
+function classLabel(c: EngineAssetClass | 'all'): string {
+  return c === 'all' ? 'Toutes classes' : CLASS_LABELS[c]
 }
 
 type WatchRow = {
@@ -106,6 +127,7 @@ export function MarketPage() {
   const [engineObjects, setEngineObjects] = useState<ChartObject[]>([])
   const [layersOpen, setLayersOpen] = useState(false)
   const [layersSheet, setLayersSheet] = useState(false)
+  const [evidenceTab, setEvidenceTab] = useState<EvidenceTab>('pipeline')
   const layersAnchorRef = useRef<HTMLDivElement>(null)
 
   const ichimokuOn =
@@ -388,158 +410,229 @@ export function MarketPage() {
     }
   }
 
+  const toggleLayer = (key: 'structure' | 'fibonacci' | 'fvg' | 'breaks') =>
+    setLayers({ ...layerPrefs, [key]: !layerPrefs[key] })
+
+  const setupTagTone =
+    pipeline?.direction === 'LONG' ? 'is-buy' : pipeline?.direction === 'SHORT' ? 'is-sell' : 'is-muted'
+  const stateTagTone =
+    setupState.tone === 'green' ? 'is-mint' : setupState.tone === '' ? 'is-amber' : 'is-muted'
+  const rvolOk = rvolDisplay != null && rvolDisplay >= 1.5
+
   return (
-    <div className="market-page">
-      <div className="page-head">
+    <div className="market-page mk-page">
+      <header className="iv-ph">
         <div>
-          <div className="eyebrow">02 / ICHIVOL WORKSPACE</div>
+          <div className="iv-meta">Marché · bougies clôturées · Ichimoku × RVOL</div>
           <h1>Marché</h1>
-          <p className="subtitle">Lire le prix. Comprendre le mouvement.</p>
+          <p>Lire le prix, comprendre le mouvement : graphique et cinq portes sur le même écran.</p>
         </div>
-        <div className="actions">
+        <div className="iv-ph-act">
+          <span className="iv-chip">
+            Classe d’actifs · <b>{classLabel(assetClass)}</b>
+          </span>
+          <span className="iv-chip is-cyan">
+            <i className={`iv-dot${chartLoading ? ' is-amber' : ''}`} />
+            {sourceLabel}
+          </span>
           <button
             type="button"
-            className="suggestion market-tv-open"
+            className="iv-btn iv-btn--sm"
             onClick={() => openMarketTvWindow(symbol, interval)}
           >
-            Ouvrir en TV
+            Ouvrir TV Marché ↗
           </button>
-          <span className="tag gray">BOUGIES CLÔTURÉES</span>
         </div>
-      </div>
+      </header>
 
       {error && (
-        <div className="notice" role="alert">
-          <span>△</span>
+        <div className="mk-notice" role="alert">
+          <span aria-hidden>△</span>
           <span>{error}</span>
         </div>
       )}
 
-      <div className="class-chips" role="tablist" aria-label="Classe d’actifs">
-        <button
-          type="button"
-          className={assetClass === 'all' ? 'active' : undefined}
-          onClick={() => setAssetClass('all')}
-        >
-          Tous
-        </button>
-        {classOptions.map((c) => (
-          <button
-            key={c}
-            type="button"
-            className={assetClass === c ? 'active' : undefined}
-            onClick={() => setAssetClass(c)}
-          >
-            {CLASS_LABELS[c]}
-          </button>
-        ))}
-      </div>
-
-      <div className="market-layout">
-        <section className="card watchlist" aria-label="Watchlist">
-          {watchRows.length === 0 && (
-            <button type="button" disabled>
-              <b>—</b>
-              <small>Chargement…</small>
+      <div className="iv-grid mk-grid">
+        <section className="iv-card iv-s3 iv-m-s12 mk-watch" aria-label="Watchlist">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs">
+              <span className="iv-card-tab is-on">Watchlist</span>
+            </div>
+            <div className="iv-card-tools">{classLabel(assetClass)}</div>
+          </div>
+          <div className="mk-ctool" role="tablist" aria-label="Classe d’actifs">
+            <button
+              type="button"
+              className={`mk-iv-tb${assetClass === 'all' ? ' is-on' : ''}`}
+              onClick={() => setAssetClass('all')}
+            >
+              Tous
             </button>
-          )}
-          {watchRows.map((w) => {
-            const ch = w.change24h
-            const up = ch != null && ch >= 0
-            return (
+            {classOptions.map((c) => (
               <button
-                key={w.id}
+                key={c}
                 type="button"
-                className={w.id === symbol ? 'active' : undefined}
-                onClick={() => setSymbol(w.id)}
+                className={`mk-iv-tb${assetClass === c ? ' is-on' : ''}`}
+                onClick={() => setAssetClass(c)}
               >
-                <b>{w.label}</b>
-                <span
-                  className={ch == null ? 'chg-na' : up ? 'up' : 'down'}
-                  style={{ fontSize: 10 }}
-                >
-                  {fmtPctMaq(ch)}
-                </span>
-                <small>{fmtPriceMaq(w.price)}</small>
+                {CLASS_LABELS[c]}
               </button>
-            )
-          })}
+            ))}
+          </div>
+          <div className="iv-card-body is-flush mk-watch-body">
+            <div className="iv-table-wrap mk-watch-scroll">
+              <table className="iv-table is-compact">
+                <thead>
+                  <tr>
+                    <th>Actif</th>
+                    <th className="n">Dernier</th>
+                    <th className="n">Var.</th>
+                    <th className="n">RVOL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {watchRows.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="mk-td-empty">
+                        Chargement…
+                      </td>
+                    </tr>
+                  )}
+                  {watchRows.map((w) => {
+                    const ch = w.change24h
+                    return (
+                      <tr
+                        key={w.id}
+                        className={`mk-row${w.id === symbol ? ' is-selected' : ''}`}
+                        aria-selected={w.id === symbol}
+                        tabIndex={0}
+                        onClick={() => setSymbol(w.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            setSymbol(w.id)
+                          }
+                        }}
+                      >
+                        <td className="sym">{w.label}</td>
+                        <td className="n">{fmtPriceMaq(w.price)}</td>
+                        <td className={`n ${ch == null ? 'dim' : ch >= 0 ? 'pos' : 'neg'}`}>
+                          {fmtPctMaq(ch)}
+                        </td>
+                        <td className={`n${w.rvol != null && w.rvol >= 1.5 ? ' ok' : ''}`}>
+                          {fmtRvolMaq(w.rvol)}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div className="iv-card-foot">{watchRows.length} actifs</div>
         </section>
 
-        <section className="card">
-          <div className="card-head">
-            <div>
-              <h2>
+        <section className="iv-card iv-s6 iv-m-s12 mk-chart-card" aria-label="Graphique">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs">
+              <span className="iv-card-tab is-on">
                 {shortSymbol(symbol)}
-                <span style={{ font: '12px Inter, sans-serif', color: '#91989d' }}>{quote}</span>
-              </h2>
-              <small>
-                {sourceLabel} · bougies clôturées
-                {chartLoading ? ' · chargement…' : ''}
-              </small>
+                <span className="mk-quote">{quote}</span> · {interval.toUpperCase()}
+              </span>
             </div>
-            <div className="card-head-tools">
-              <div className="mkt-layers-anchor" ref={layersAnchorRef}>
-                <button
-                  type="button"
-                  className={`mkt-layers-btn mkt-layers-btn-head${layersOpen ? ' is-open' : ''}`}
-                  aria-expanded={layersOpen}
-                  aria-haspopup="dialog"
-                  title="Afficher / masquer Structure, Fib, FVG, Cassures…"
-                  onClick={() => setLayersOpen((o) => !o)}
-                >
-                  Calques{activeObjectLayerCount ? ` · ${activeObjectLayerCount}` : ''}
-                </button>
-                {layersOpen && !layersSheet && (
-                  <MarketLayersMenu
-                    open
-                    onClose={() => setLayersOpen(false)}
-                    prefs={layerPrefs}
-                    onChange={setLayers}
-                    counts={layerCounts}
-                    variant="menu"
-                  />
-                )}
-              </div>
+            <div className="iv-card-tools">
+              {chartLoading ? 'Chargement…' : 'Bougies clôturées'}
+            </div>
+          </div>
+          <div className="mk-ctool">
+            {TFS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={`mk-iv-tb${interval === t.id ? ' is-on' : ''}`}
+                aria-pressed={interval === t.id}
+                onClick={() => setInterval(t.id)}
+              >
+                {t.label}
+              </button>
+            ))}
+            <span className="mk-sep" aria-hidden />
+            <button
+              type="button"
+              className={`mk-iv-tb${ichimokuOn ? ' is-on' : ''}`}
+              aria-pressed={ichimokuOn}
+              title="Ichimoku 9 / 26 / 52"
+              onClick={() => setLayers(withIchimoku(layerPrefs, !ichimokuOn))}
+            >
+              Ichimoku
+            </button>
+            <button
+              type="button"
+              className={`mk-iv-tb${levelsOn ? ' is-on' : ''}`}
+              aria-pressed={levelsOn}
+              title="Supports / résistances"
+              onClick={() => toggleLayer('structure')}
+            >
+              Structure
+            </button>
+            <button
+              type="button"
+              className={`mk-iv-tb${layerPrefs.fibonacci ? ' is-on' : ''}`}
+              aria-pressed={layerPrefs.fibonacci}
+              onClick={() => toggleLayer('fibonacci')}
+            >
+              Fib
+            </button>
+            <button
+              type="button"
+              className={`mk-iv-tb${layerPrefs.fvg ? ' is-on' : ''}`}
+              aria-pressed={layerPrefs.fvg}
+              onClick={() => toggleLayer('fvg')}
+            >
+              FVG
+            </button>
+            <button
+              type="button"
+              className={`mk-iv-tb${layerPrefs.breaks ? ' is-on' : ''}`}
+              aria-pressed={layerPrefs.breaks}
+              onClick={() => toggleLayer('breaks')}
+            >
+              Cassures
+            </button>
+            <span className="mk-sep" aria-hidden />
+            <div className="mkt-layers-anchor" ref={layersAnchorRef}>
               <button
                 type="button"
-                className="market-tv-open-inline"
-                title="Ouvrir le graphique en fenêtre TV"
-                onClick={() => openMarketTvWindow(symbol, interval)}
+                className={`mk-iv-tb${layersOpen ? ' is-on' : ''}`}
+                aria-expanded={layersOpen}
+                aria-haspopup="dialog"
+                title="Afficher / masquer Structure, Fib, FVG, Cassures…"
+                onClick={() => setLayersOpen((o) => !o)}
               >
-                TV
+                Calques{activeObjectLayerCount ? ` · ${activeObjectLayerCount}` : ''}
               </button>
-              <div className="segmented">
-                {TFS.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className={interval === t.id ? 'active' : undefined}
-                    onClick={() => setInterval(t.id)}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
+              {layersOpen && !layersSheet && (
+                <MarketLayersMenu
+                  open
+                  onClose={() => setLayersOpen(false)}
+                  prefs={layerPrefs}
+                  onChange={setLayers}
+                  counts={layerCounts}
+                  variant="menu"
+                />
+              )}
             </div>
+            <button
+              type="button"
+              className="mk-iv-tb"
+              title="Ouvrir le graphique en fenêtre TV"
+              onClick={() => openMarketTvWindow(symbol, interval)}
+            >
+              TV ↗
+            </button>
           </div>
 
-          <div className="chart-summary">
-            <span>
-              PRIX <b>{fmtPriceMaq(priceDisplay)}</b>
-            </span>
-            <span>
-              24H{' '}
-              <b className={change24h == null ? undefined : change24h >= 0 ? 'up' : 'down'}>
-                {fmtPctMaq(change24h)}
-              </b>
-            </span>
-            <span>
-              RVOL <b>{fmtRvolMaq(rvolDisplay)}</b>
-            </span>
-          </div>
-
-          <div className="market-chart-slot">
+          <div className="mk-chart-slot">
             {candles.length > 0 ? (
               <PriceChart
                 candles={candles}
@@ -550,32 +643,26 @@ export function MarketPage() {
                 chartObjects={chartObjectsForView}
               />
             ) : (
-              <div className="empty">Aucune bougie</div>
+              <div className="iv-empty mk-chart-empty">
+                {chartLoading ? 'Chargement…' : 'Aucune bougie'}
+              </div>
             )}
           </div>
 
-          <div className="card-body chart-tools">
-            <div className="checkrow">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={ichimokuOn}
-                  onChange={(e) => setLayers(withIchimoku(layerPrefs, e.target.checked))}
-                />{' '}
-                Ichimoku 9 / 26 / 52
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={levelsOn}
-                  onChange={(e) => setLayers({ ...layerPrefs, structure: e.target.checked })}
-                />{' '}
-                Supports / résistances
-              </label>
-              <span className="chart-tools-hint">
-                Fib · FVG · Cassures → bouton <b>Calques</b> en haut à droite
-              </span>
-            </div>
+          <div className="iv-card-foot mk-chart-foot">
+            <span>
+              Prix <b className="mk-v">{fmtPriceMaq(priceDisplay)}</b>
+            </span>
+            <span>
+              24 h{' '}
+              <b className={`mk-v ${change24h == null ? '' : change24h >= 0 ? 'pos' : 'neg'}`}>
+                {fmtPctMaq(change24h)}
+              </b>
+            </span>
+            <span>
+              RVOL <b className={`mk-v${rvolOk ? ' ok' : ''}`}>{fmtRvolMaq(rvolDisplay)}</b> ≥ 1,5
+            </span>
+            <span className="mk-foot-src">{sourceLabel}</span>
           </div>
         </section>
 
@@ -590,13 +677,48 @@ export function MarketPage() {
           />
         )}
 
-        <section className="card analysis-panel">
-          <div className="card-head">
-            <h2>Lecture du marché</h2>
-            <div className="analysis-actions">
+        <div className="iv-s3 iv-m-s12 mk-side">
+          <section className="iv-card iv-glow mk-read" aria-label="Lecture du marché">
+            <div className="iv-card-head">
+              <div className="iv-card-tabs">
+                <span className="iv-card-tab is-on">Lecture du marché</span>
+              </div>
+              <div className="iv-card-tools">{shortSymbol(symbol)}</div>
+            </div>
+            <div className="iv-card-body">
+              <div className="mk-tags">
+                <span className={`iv-tag ${setupTagTone}`}>{setupName}</span>
+                <span className={`iv-tag ${stateTagTone}`}>{setupState.text}</span>
+              </div>
+              <div className="mk-gates">
+                {GATE_ORDER.map((id) => {
+                  const stage = pipeline?.stages.find((s) => s.id === id)
+                  const badge = maquetteGateBadge(stage?.status)
+                  return (
+                    <div className="iv-row mk-gate-row" key={id}>
+                      <span
+                        className={`mk-gate is-${badge.tone || 'cyan'}`}
+                        title={badge.text}
+                        aria-label={badge.text}
+                      >
+                        {GATE_GLYPH[badge.tone]}
+                      </span>
+                      <span className="mk-gate-k">{GATE_LABELS[id]}</span>
+                      <span className="iv-row-v mk-gate-v">
+                        {stage?.summary ? stage.summary : badge.text}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="iv-note mk-synth">
+                <span className="iv-kw">RVOL attendu ≥ 1,5</span> : {synthesis}
+              </p>
+            </div>
+            <div className="mk-read-act">
               <button
                 type="button"
-                className="primary"
+                className="iv-btn iv-btn--primary"
                 onClick={() =>
                   navigate(`/app/opportunites?symbol=${encodeURIComponent(symbol)}&open=1`)
                 }
@@ -605,53 +727,90 @@ export function MarketPage() {
               </button>
               <button
                 type="button"
-                className="suggestion"
+                className="iv-btn"
                 disabled={watchBusy}
                 onClick={() => void onAddWatchlist()}
               >
                 Watchlist
               </button>
             </div>
-          </div>
-          <div className="card-body analysis-body">
-            <div className="analysis-gates">
-              {GATE_ORDER.map((id) => {
-                const stage = pipeline?.stages.find((s) => s.id === id)
-                const badge = maquetteGateBadge(stage?.status)
-                return (
-                  <div className="statline" key={id}>
-                    <span>{GATE_LABELS[id]}</span>
-                    <b>
-                      <span className={`tag ${badge.tone}`.trim()}>{badge.text}</span>
-                    </b>
-                  </div>
-                )
-              })}
+            {watchMsg && <p className="iv-note mk-watch-msg">{watchMsg}</p>}
+            <div className="iv-card-foot">
+              <span>Fiche décision</span>
+              <Link to={`/app/opportunites?symbol=${encodeURIComponent(symbol)}`}>Voir ↗</Link>
             </div>
-            <p className="lecture-synthesis">{synthesis}</p>
+          </section>
+          <section className="iv-card mk-inst" aria-label="Instrument">
+            <div className="iv-card-head">
+              <div className="iv-card-tabs">
+                <span className="iv-card-tab is-on">Instrument</span>
+              </div>
+              <div className="iv-card-tools">{interval.toUpperCase()}</div>
+            </div>
+            <div className="iv-card-body">
+              <div className="iv-row">
+                <span>Dernier prix</span>
+                <span className="iv-row-v">{fmtPriceMaq(priceDisplay)}</span>
+              </div>
+              <div className="iv-row">
+                <span>Variation 24 h</span>
+                <span
+                  className={`iv-row-v${change24h == null ? '' : change24h >= 0 ? ' pos' : ' neg'}`}
+                >
+                  {fmtPctMaq(change24h)}
+                </span>
+              </div>
+              <div className="iv-row">
+                <span>RVOL (attendu ≥ 1,5)</span>
+                <span className={`iv-row-v${rvolOk ? ' ok' : ''}`}>{fmtRvolMaq(rvolDisplay)}</span>
+              </div>
+              <div className="iv-row">
+                <span>Classe d’actifs</span>
+                <span className="iv-row-v">{current ? CLASS_LABELS[current.asset_class] : '—'}</span>
+              </div>
+              <div className="iv-row">
+                <span>Source</span>
+                <span className="iv-row-v">{sourceLabel}</span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <section className="iv-card iv-s12 mk-evidence" aria-label="Preuves du moteur">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs" role="tablist">
+              {EVIDENCE_TABS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  className={`iv-card-tab${evidenceTab === t.id ? ' is-on' : ''}`}
+                  aria-selected={evidenceTab === t.id}
+                  onClick={() => setEvidenceTab(t.id)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <div className="iv-card-tools">
+              {shortSymbol(symbol)} · {interval.toUpperCase()}
+            </div>
+          </div>
+          <div className="iv-card-body mk-evidence-body">
             {detail && pipeline ? (
               <div className="engine-evidence is-wide">
-                <p className="argumentaire">{buildDecisionSummary(detail)}</p>
-                <DecisionPipelinePanel view={pipeline} />
-                <SignalEvidenceCard detail={detail} />
-                <MtfPanel symbol={symbol} timeframe={interval} />
+                {evidenceTab === 'pipeline' && (
+                  <>
+                    <p className="argumentaire">{buildDecisionSummary(detail)}</p>
+                    <DecisionPipelinePanel view={pipeline} />
+                  </>
+                )}
+                {evidenceTab === 'signal' && <SignalEvidenceCard detail={detail} />}
+                {evidenceTab === 'mtf' && <MtfPanel symbol={symbol} timeframe={interval} />}
               </div>
             ) : (
-              <p className="lecture-synthesis">—</p>
+              <div className="iv-empty">—</div>
             )}
-            <div className="analysis-foot">
-              <div className="step">
-                <b>{setupName}</b>
-                <p>RVOL attendu ≥ 1,5</p>
-                <span className={`tag ${setupState.tone}`.trim()}>{setupState.text}</span>
-              </div>
-              {watchMsg && <p className="watch-msg">{watchMsg}</p>}
-              <p className="fiche-link">
-                <Link className="link" to={`/app/opportunites?symbol=${encodeURIComponent(symbol)}`}>
-                  Voir la fiche décision ↗
-                </Link>
-              </p>
-            </div>
           </div>
         </section>
       </div>

@@ -57,19 +57,19 @@ export function MarketLayersMenu({
       {variant === 'sheet' && (
         <header className="mkt-layers-sheet-head">
           <strong>Calques</strong>
-          <button type="button" className="mkt-layers-done" onClick={onClose}>
+          <button type="button" className="iv-btn iv-btn--primary iv-btn--sm" onClick={onClose}>
             Terminé
           </button>
         </header>
       )}
       <div className="mkt-layers-quick">
-        <button type="button" onClick={structureOnly}>
+        <button type="button" className="iv-btn iv-btn--sm" onClick={structureOnly}>
           Structure seule
         </button>
-        <button type="button" onClick={hideAllObjects}>
+        <button type="button" className="iv-btn iv-btn--sm" onClick={hideAllObjects}>
           Tout masquer
         </button>
-        <button type="button" onClick={resetDefaults}>
+        <button type="button" className="iv-btn iv-btn--sm" onClick={resetDefaults}>
           Défaut
         </button>
       </div>
@@ -78,7 +78,7 @@ export function MarketLayersMenu({
           <li key={m.key}>
             <button
               type="button"
-              className={`mkt-layer-row${prefs[m.key] ? ' is-on' : ''}`}
+              className={`mkt-layer-row mkt-iv-row${prefs[m.key] ? ' is-on' : ''}`}
               onClick={() => toggle(m.key)}
               aria-pressed={prefs[m.key]}
             >
@@ -125,7 +125,7 @@ export function MarketLayersMenu({
   if (variant === 'sheet') {
     return (
       <div className="mkt-layers-sheet" role="dialog" aria-label="Calques">
-        <button type="button" className="mkt-layers-backdrop" aria-label="Fermer" onClick={onClose} />
+        <button type="button" className="mkt-layers-backdrop mkt-iv-backdrop" aria-label="Fermer" onClick={onClose} />
         {body}
       </div>
     )

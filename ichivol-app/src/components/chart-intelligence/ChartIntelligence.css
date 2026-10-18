@@ -26,7 +26,7 @@
   gap: 16px;
   align-items: start;
   color: var(--ci-ink);
-  font: 12px Inter, Arial, sans-serif;
+  font: 12px var(--sans);
   box-sizing: border-box;
   min-width: 0;
 }
@@ -105,7 +105,7 @@
 }
 
 .ci-eyebrow {
-  font: 9px 'JetBrains Mono', ui-monospace, monospace;
+  font: 9px var(--mono);
   letter-spacing: 1.2px;
   color: var(--ci-muted);
   text-transform: uppercase;
@@ -274,15 +274,17 @@
 }
 
 .ci-root .mono {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .ci-notice {
   margin: 0 20px 10px;
   padding: 10px 12px;
   border-radius: 8px;
-  background: #faf0df;
-  color: #a8782a;
+  background: var(--amber-soft);
+  border: 1px solid var(--amber-line);
+  color: var(--amber);
   font-size: 12px;
 }
 
@@ -313,7 +315,7 @@
 }
 
 .ci-briefing-label {
-  font: 10px 'JetBrains Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
   letter-spacing: 1.2px;
   text-transform: uppercase;
   color: var(--ci-muted);
@@ -358,8 +360,8 @@
   padding: 10px 12px;
   border: 1px solid var(--ci-line);
   border-radius: 8px;
-  background: var(--ci-card, #fff);
-  box-shadow: 0 8px 24px rgba(20, 24, 28, 0.12);
+  background: var(--sheet-bg);
+  box-shadow: var(--shadow-pop);
   pointer-events: none;
   color: var(--ci-ink);
 }
@@ -400,7 +402,7 @@
 
 .ci-pack-tip-note {
   margin: 8px 0 0;
-  font: 10px 'JetBrains Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
   color: var(--ci-muted);
 }
 
@@ -422,7 +424,7 @@
 
 .ci-tag {
   display: inline-block;
-  font: 10px 'JetBrains Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
   padding: 5px 7px;
   background: var(--cyan-soft);
   border-radius: 4px;
@@ -493,7 +495,7 @@
   display: block;
   overflow: visible;
   pointer-events: none;
-  font: 10px 'JetBrains Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
 }
 
 .ci-drawing-svg .ci-hit {
@@ -515,10 +517,10 @@
 
 /* Tons */
 .ci-drawing-svg .ci-tone-bull {
-  --ci-tone: var(--bull, #318d80);
+  --ci-tone: var(--bull);
 }
 .ci-drawing-svg .ci-tone-bear {
-  --ci-tone: var(--bear, #bf6c61);
+  --ci-tone: var(--bear);
 }
 .ci-drawing-svg .ci-tone-fib,
 .ci-drawing-svg .ci-fib {
@@ -544,7 +546,7 @@
 }
 .ci-chip text {
   fill: var(--ci-tone, var(--ci-ink));
-  font: 10px 'JetBrains Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
   letter-spacing: 0.2px;
 }
 .ci-chip.is-strong rect {
@@ -594,7 +596,7 @@
 }
 .ci-fib-text {
   fill: var(--ci-tone);
-  font: 10px 'JetBrains Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
 }
 .ci-fib-diag {
   stroke: var(--ci-tone);
@@ -631,7 +633,7 @@
 }
 .ci-swing-text {
   fill: var(--ci-tone);
-  font: 700 10px 'JetBrains Mono', ui-monospace, monospace;
+  font: 700 10px var(--mono);
   letter-spacing: 0.6px;
 }
 .ci-event-line {
@@ -715,7 +717,7 @@
 .ci-icon-btn {
   border: none;
   background: transparent;
-  font: 11px 'JetBrains Mono', ui-monospace, monospace;
+  font: 11px var(--mono);
   letter-spacing: 0.6px;
   padding: 6px 9px;
   color: var(--ci-muted);
@@ -731,7 +733,7 @@
 .ci-replay-btns .ci-replay-play {
   background: var(--ci-card);
   color: var(--ci-ink);
-  box-shadow: 0 1px 3px #0001;
+  box-shadow: inset 0 0 0 1px var(--line-2);
   min-width: 58px;
 }
 
@@ -756,7 +758,7 @@
 .ci-replay-speeds button {
   border: none;
   background: transparent;
-  font: 10px 'JetBrains Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
   padding: 5px 7px;
   color: var(--ci-muted);
   border-radius: 4px;
@@ -766,7 +768,7 @@
 .ci-replay-speeds button.is-on {
   background: var(--ci-card);
   color: var(--ci-ink);
-  box-shadow: 0 1px 2px #0001;
+  box-shadow: inset 0 0 0 1px var(--line-2);
 }
 
 .ci-replay-range {
@@ -817,7 +819,7 @@
 }
 
 .ci-kv > span {
-  font: 10px 'JetBrains Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
   letter-spacing: 1px;
   color: var(--ci-muted);
 }
@@ -874,7 +876,7 @@
 
 .ci-components li em {
   grid-column: 1 / -1;
-  font: normal 9px 'JetBrains Mono', ui-monospace, monospace;
+  font: normal 9px var(--mono);
   color: var(--ci-muted);
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -911,7 +913,7 @@
 .ci-decision {
   margin: 14px 20px 0;
   padding: 12px 14px;
-  border-left: 2px solid #c7dfd9;
+  border-left: 2px solid var(--cyan-line);
   background: var(--ci-soft);
   border-radius: 0 8px 8px 0;
 }
@@ -975,7 +977,7 @@
 }
 
 .ci-meta {
-  font: 10px 'JetBrains Mono', ui-monospace, monospace;
+  font: 10px var(--mono);
   color: var(--ci-muted);
 }
 
@@ -999,7 +1001,7 @@
   border: 1px solid var(--ci-line);
   background: var(--ci-card);
   color: var(--ci-muted);
-  font: 600 10px 'JetBrains Mono', ui-monospace, monospace;
+  font: 600 10px var(--mono);
   padding: 4px 8px;
   border-radius: 4px;
   cursor: pointer;
@@ -1010,7 +1012,7 @@
   border: 1px solid var(--ci-line);
   background: var(--ci-blue-soft);
   color: var(--ci-blue);
-  font: 600 12px 'JetBrains Mono', ui-monospace, monospace;
+  font: 600 12px var(--mono);
   letter-spacing: 0.6px;
   padding: 9px 12px;
   border-radius: 6px;
