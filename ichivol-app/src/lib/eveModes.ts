@@ -22,7 +22,7 @@ export type EveMode = {
 export const EVE_MODES: EveMode[] = [
   {
     id: 'analyst',
-    name: 'Analyst',
+    name: 'Analyste',
     icon: '◇',
     blurb: 'Lit les calculs du moteur et la structure du marché, puis propose un scénario : acheter, vendre à découvert, attendre ou s’abstenir.',
     effect: 'Son scénario sert de base ; si JEV lui désigne un scénario principal, c’est celui-là qu’Ève retient.',
@@ -30,7 +30,7 @@ export const EVE_MODES: EveMode[] = [
   },
   {
     id: 'challenger',
-    name: 'Challenger',
+    name: 'Contradicteur',
     icon: '↺',
     blurb: 'Cherche ce qui contredit le scénario retenu et les autres possibilités.',
     effect: 'S’il juge le scénario trop fragile, Ève s’abstient au lieu de prendre position.',
@@ -38,7 +38,7 @@ export const EVE_MODES: EveMode[] = [
   },
   {
     id: 'guardian',
-    name: 'Guardian',
+    name: 'Gardien du risque',
     icon: '◈',
     blurb: 'Passe en revue les risques et les anomalies : données manquantes, arrêt d’urgence, niveau de risque.',
     effect: 'Un risque critique fait abstenir Ève. Le Risk Kernel et l’arrêt d’urgence restent au-dessus de lui.',
@@ -46,10 +46,10 @@ export const EVE_MODES: EveMode[] = [
   },
   {
     id: 'shadow',
-    name: 'Shadow',
+    name: 'Audit indépendant',
     icon: '◉',
     blurb: 'Refait l’évaluation de son côté, sans voir les autres modes, comme un second avis indépendant.',
-    effect: 'S’il contredit la décision ou n’a pas confiance, Ève s’abstient. Il n’exécute jamais rien.',
+    effect: 'Quand le moteur et Ève sont d’accord, il tranche : il laisse passer le trade ou le bloque. Il n’exécute jamais rien.',
     short: 'refait l’évaluation de son côté, sans voir les autres modes',
   },
 ]

@@ -1020,8 +1020,9 @@ html :is(.desk-page, .market-page, .opps-page, .pf-page, .journal-page, .ops-pag
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
+/* Les tableaux .iv-table gardent leurs couleurs de valeur (.pos/.neg…). */
 html :is(.desk-page, .market-page, .opps-page, .pf-page, .journal-page, .ops-page, .lab-page, .ctx-page, .copilot-page, .agents-page, .params-page)
-  td {
+  table:not(.iv-table) td {
   border-color: var(--row-line);
   color: var(--text);
 }
@@ -1045,13 +1046,13 @@ html :is(.desk-page, .market-page, .opps-page, .pf-page, .journal-page, .ops-pag
 }
 /* Boutons des pages : fantôme par défaut, primaire cyan */
 html :is(.desk-page, .market-page, .opps-page, .pf-page, .journal-page, .ops-page, .lab-page, .ctx-page, .copilot-page, .agents-page, .params-page, .fiche-dialog)
-  button:not(.primary):not(.kill):not([class*='iv-']) {
+  button:not(.primary):not(.kill):not([class*='iv-']):not(.iv-seg > button) {
   background: var(--ghost-bg);
   color: var(--text);
   border-color: var(--line-2);
 }
 html :is(.desk-page, .market-page, .opps-page, .pf-page, .journal-page, .ops-page, .lab-page, .ctx-page, .copilot-page, .agents-page, .params-page, .fiche-dialog)
-  button:not(.primary):not(.kill):not([class*='iv-']):hover {
+  button:not(.primary):not(.kill):not([class*='iv-']):not(.iv-seg > button):hover {
   background: var(--hover-bg);
   border-color: var(--line-3);
 }
@@ -1142,4 +1143,10 @@ html :is(dialog, .dialog-body, .fiche-dialog) {
 }
 html dialog::backdrop {
   background: rgba(0, 0, 0, 0.55);
+}
+
+/* index.css met .sym en flex (cellules de symbole des anciens tableaux) : dans
+   une .iv-table, la cellule reste une cellule. */
+.iv-table td.sym {
+  display: table-cell;
 }

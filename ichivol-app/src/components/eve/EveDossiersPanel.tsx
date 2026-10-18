@@ -477,7 +477,7 @@ export function EveDossiersPanel({ autonomy, refreshKey = 0 }: { autonomy: boole
                     const has = (p: string) => prims.includes(p)
                     return (
                       <tr key={m.id}>
-                        <td className="sym">Ève {m.name}</td>
+                        <td className="sym">{m.name}</td>
                         {(["noul", "choice", "score"] as const).map((p) => (
                           <td key={p} className={has(p) ? "cy" : "dim"}>
                             {has(p) ? "●" : "—"}

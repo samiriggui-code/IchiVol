@@ -306,7 +306,7 @@ export function AgentsPage() {
                   <span className="ag-ic" aria-hidden="true">
                     {m.icon}
                   </span>
-                  Ève {m.name}
+                  {m.name}
                 </h3>
                 <p>{m.blurb}</p>
                 <div className="ag-mode-effect">
