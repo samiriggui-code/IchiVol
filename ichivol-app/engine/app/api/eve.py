@@ -7,12 +7,15 @@ V1 routes never execute. V2 ``paper-submit`` evaluates Risk Kernel; opens only w
 from __future__ import annotations
 
 from fastapi import APIRouter, Body, HTTPException, Query
+from sqlalchemy import select
 
+from app.db.models import PaperPosition, ShadowPosition
 from app.db.session import SessionLocal
 from app.eve.calibration import active_policy, calibration_report
 from app.eve.context import build_engine_context
 from app.eve.dossier import (
     decision_summary,
+    trade_result,
     dossier_to_dict,
     get_dossier,
     get_verdict,
@@ -92,10 +95,23 @@ def eve_decisions(limit: int = Query(default=200, ge=1, le=500)) -> dict:
     session = SessionLocal()
     try:
         rows = list_dossiers(session, limit=limit, max_limit=500)
+        refs: dict[str, set[str]] = {"position_id": set(), "shadow_id": set()}
+        for d in rows:
+            dt = d.decision_time_json if isinstance(d.decision_time_json, dict) else {}
+            for p in dt.get("engine_proposals") or []:
+                for key, ids in refs.items():
+                    if isinstance(p, dict) and isinstance(p.get(key), str):
+                        ids.add(p[key])
+        results: dict[str, dict] = {}
+        for model, key in ((PaperPosition, "position_id"), (ShadowPosition, "shadow_id")):
+            if refs[key]:
+                for row in session.scalars(select(model).where(model.id.in_(refs[key]))):
+                    results[row.id] = trade_result(row)
         return {
             "autonomy_enabled": autonomy_enabled(),
             "results": [
-                decision_summary(d, get_verdict(session, d.verdict_id) if d.verdict_id else None) for d in rows
+                decision_summary(d, get_verdict(session, d.verdict_id) if d.verdict_id else None, results=results)
+                for d in rows
             ],
         }
     finally:

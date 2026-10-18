@@ -476,7 +476,10 @@ export interface ShadowBucket {
 }
 
 /** kind : 'filters' = refus des filtres d'indicateurs, 'eve' = refus d'Ève ; sans kind = tout. */
-export async function getShadowStats(portfolioCode?: string, kind?: 'filters' | 'eve'): Promise<ShadowStats> {
+export async function getShadowStats(
+  portfolioCode?: string,
+  kind?: 'filters' | 'eve' | 'audit',
+): Promise<ShadowStats> {
   const params = new URLSearchParams()
   if (portfolioCode) params.set('portfolio_code', portfolioCode)
   if (kind) params.set('kind', kind)

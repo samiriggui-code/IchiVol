@@ -4,15 +4,17 @@ Active only when ``EVE_PAPER_AUTONOMY`` is on. The background screener cycle the
 method (BASELINE, SESSIONS, Futures & Crypto…) as usual, but the engine's signal no longer opens or closes a lot:
 each would-be open/close becomes a *proposal* (``paper.engine.sync_auto_watchlist(proposals=...)``).
 
-For each symbol with at least one proposal, Ève runs once per closed bar (Analyst → Challenger → Guardian →
-Shadow with JEV), a Dossier is written, then every proposal on that symbol is accepted or refused:
+For each symbol with at least one proposal, Ève runs once per closed bar (Analyst → Challenger → Guardian, with
+JEV), a Dossier is written, then every proposal on that symbol is ruled:
 
-* proposal OPEN LONG/SHORT → opened only if Ève's action is that same direction;
-* proposal CLOSE → closed only if Ève says CLOSE or the opposite direction; otherwise the lot is kept.
+* Ève agrees (OPEN in her own direction; CLOSE when she says CLOSE or the opposite direction) → the independent
+  audit (Shadow mode, ``modes.audit_verdict``) rules: it lets the trade go through as Ève's, or blocks it (a
+  blocked OPEN becomes a shadow trade, ``block_source="audit"``, to score the audit);
+* Ève disagrees → the engine trades anyway (``decided_by="engine_over_eve"``) and Ève's answer stays on the
+  proposal, so the real trade's result tells whether she was right to refuse.
 
-Accepted proposals go through ``paper_submit`` (Risk Kernel, entry gate, degradation: JEV down = nothing opens).
-A refused OPEN becomes a shadow trade (``block_source="eve"``, ShadowBroker, no cash) so "was Ève right to refuse?"
-gets measured the same way as the indicator filters.
+Every trade goes through ``paper_submit`` and the Risk Kernel. Ève's own trades also need a healthy JEV and the
+entry gate; the engine's trades over Ève do not (they are the engine's, not hers).
 What the engine alone would have done stays in the Dossier (``decision_time.engine_proposals``) so "engine alone"
 and "Ève + JEV" can be compared on the same books. Stops and targets still close lots on their own. Paper only.
 """
@@ -28,6 +30,7 @@ from typing import Any, Callable
 from sqlalchemy.orm import Session
 
 from app.eve.actions import normalize_action
+from app.eve.modes import audit_verdict
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +50,13 @@ def eve_accepts(proposal: dict[str, Any], eve_action: str | None, position_direc
 
 
 def open_refusal_shadow(
-    session: Session, proposal: dict[str, Any], eve_action: str, dossier_id: str | None
+    session: Session,
+    proposal: dict[str, Any],
+    eve_action: str,
+    dossier_id: str | None,
+    block_source: str = "eve",
 ) -> str | None:
-    """Counterfactual of a refused OPEN: same SL/TP geometry as the book, never touches cash."""
+    """Counterfactual of a blocked OPEN: same SL/TP geometry as the book, never touches cash."""
     from app.paper.portfolio import get_portfolio_by_code
     from app.shadow.broker import open_shadow
 
@@ -66,7 +73,7 @@ def open_refusal_shadow(
         raw_decision=raw,
         price=float(price),
         stop_distance=proposal.get("stop_distance"),
-        block_source="eve",
+        block_source=block_source,
         block_reason=eve_action,
         meta={"eve_dossier_id": dossier_id, "engine_decision": proposal.get("engine_decision")},
     )
@@ -179,6 +186,7 @@ class EveAutopilot:
             evaluation = evaluate(symbol, timeframe, session=session, persist=True, paper_dry_run=False)
             eve_action = normalize_action(evaluation.get("eve_action")) or "ABSTAIN"
             dossier_id = evaluation.get("dossier_id")
+            shadow_mode = (evaluation.get("modes") or {}).get("shadow") or {}
             outcomes: list[dict[str, Any]] = []
             for proposal in group:
                 position_direction = None
@@ -194,27 +202,53 @@ class EveAutopilot:
                     "eve_action": eve_action,
                     "eve_accepts": accepted,
                 }
-                if accepted and dossier_id:
-                    res = submit(
-                        session,
-                        dossier_id,
-                        portfolio_code=proposal["portfolio_code"],
-                        price=proposal.get("price"),
-                        stop_distance=proposal.get("stop_distance"),
-                        execute=True,
-                        action_override="CLOSE" if proposal["action"] == "CLOSE" else None,
-                    )
-                    outcome["status"] = res.get("status")
-                    outcome["executed"] = bool(res.get("executed"))
-                    outcome["risk_authorization"] = res.get("risk_authorization")
-                else:
-                    outcome["status"] = "refused_by_eve" if dossier_id else "no_dossier"
+                if not dossier_id:
+                    outcome["status"] = "no_dossier"
                     outcome["executed"] = False
-                    if dossier_id and proposal.get("action") == "OPEN":
-                        try:
-                            outcome["shadow_id"] = shadow(session, proposal, eve_action, dossier_id)
-                        except Exception:  # a counterfactual must never break Ève's cycle
-                            logger.exception("eve refusal shadow failed for %s", proposal.get("portfolio_code"))
+                    outcomes.append(outcome)
+                    continue
+                is_close = proposal["action"] == "CLOSE"
+                if accepted:
+                    # The engine and Ève agree: the independent audit rules.
+                    audit = audit_verdict(
+                        shadow_mode,
+                        "CLOSE" if is_close else str(proposal.get("direction")),
+                        position_direction=position_direction,
+                    )
+                    outcome["audit"] = audit
+                    if audit["verdict"] == "block":
+                        outcome["decided_by"] = "audit"
+                        outcome["status"] = "blocked_by_audit"
+                        outcome["executed"] = False
+                        if not is_close:
+                            try:
+                                outcome["shadow_id"] = shadow(
+                                    session, proposal, f"audit:{audit['reason']}", dossier_id, "audit"
+                                )
+                            except Exception:  # a counterfactual must never break Ève's cycle
+                                logger.exception("audit block shadow failed for %s", proposal.get("portfolio_code"))
+                        outcomes.append(outcome)
+                        continue
+                    outcome["decided_by"] = "eve"
+                    override = "CLOSE" if is_close else None
+                else:
+                    # Ève disagrees: the engine trades anyway, Ève's answer is kept to score her later.
+                    outcome["decided_by"] = "engine_over_eve"
+                    override = "CLOSE" if is_close else str(proposal.get("direction"))
+                res = submit(
+                    session,
+                    dossier_id,
+                    portfolio_code=proposal["portfolio_code"],
+                    price=proposal.get("price"),
+                    stop_distance=proposal.get("stop_distance"),
+                    execute=True,
+                    action_override=override,
+                    decided_by=outcome["decided_by"],
+                )
+                outcome["status"] = res.get("status")
+                outcome["executed"] = bool(res.get("executed"))
+                outcome["risk_authorization"] = res.get("risk_authorization")
+                outcome["position_id"] = res.get("position_id")
                 outcomes.append(outcome)
 
             if dossier_id:

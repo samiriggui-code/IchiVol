@@ -19,8 +19,10 @@ import {
   engineProposalFr,
   eveActionFr,
   getEveDecisions,
+  JUDGE_LABEL,
   proposalStatusFr,
   proposalVerdict,
+  rightness,
   type EveDecision,
   type ProposalVerdict,
 } from '../../lib/eveDecisions'
@@ -41,13 +43,17 @@ type VerdictFilter = 'all' | ProposalVerdict
 
 const VERDICT_FILTERS: Array<{ id: VerdictFilter; label: string }> = [
   { id: 'all', label: 'Tout' },
-  { id: 'executed', label: 'Exécutées' },
-  { id: 'refused_by_eve', label: 'Refusées par Ève' },
+  { id: 'executed', label: 'Ève et moteur d’accord' },
+  { id: 'engine_over_eve', label: 'Moteur contre Ève' },
+  { id: 'blocked_by_audit', label: 'Bloquées par l’audit' },
   { id: 'blocked_after', label: 'Bloquées ensuite' },
+  { id: 'refused_by_eve', label: 'Refus (ancienne règle)' },
 ]
 
 const VERDICT_LABEL: Record<ProposalVerdict, string> = {
   executed: 'Exécutée',
+  engine_over_eve: 'Ève a refusé, le moteur a tradé',
+  blocked_by_audit: 'Bloquée par l’audit',
   refused_by_eve: 'Refusée par Ève',
   blocked_after: 'Acceptée, puis bloquée',
   pending: 'En attente',
@@ -87,6 +93,20 @@ function eveRefusalVerdict(sh: ShadowStats, accepted: DeciderScore): string {
   if (mean < -0.1) return `Bilan : Ève a surtout écarté des trades perdants, ses refus lui ont évité des pertes.${vs}`
   if (mean > 0.1) return `Bilan : Ève a refusé trop de trades qui auraient gagné, elle est trop prudente.${vs}`
   return `Bilan : pas de tendance nette, ses refus auraient autant gagné que perdu.${vs}`
+}
+
+/** Ève avait-elle raison de refuser ? Se lit sur les trades que le moteur a pris contre son avis. */
+function overEveSentence(s: DeciderScore): string {
+  if (s.trades === 0) {
+    return s.open > 0
+      ? `${s.open} trade${s.open > 1 ? 's' : ''} du moteur contre Ève en cours : pas encore de verdict.`
+      : 'Aucun trade du moteur contre Ève clôturé pour l’instant.'
+  }
+  const few = s.trades < 10 ? ' Moins de 10 trades : trop tôt pour conclure.' : ''
+  const head = `${s.losses} refus juste${s.losses > 1 ? 's' : ''} et ${s.wins} refus à tort sur ${s.trades} trades clôturés.`
+  if (s.net < 0) return `${head} Ces trades ont perdu ${signedEur(s.net)} : Ève avait plutôt raison de refuser.${few}`
+  if (s.net > 0) return `${head} Ces trades ont gagné ${signedEur(s.net)} : Ève refuse trop.${few}`
+  return `${head} Ni gain ni perte nette : pas de tendance.${few}`
 }
 
 function ShadowTable({
@@ -208,6 +228,7 @@ export function EveResults({ autonomy, refreshKey = 0 }: { autonomy: boolean | n
   const [decisions, setDecisions] = useState<EveDecision[]>([])
   const [shadow, setShadow] = useState<ShadowStats | null>(null)
   const [eveShadow, setEveShadow] = useState<ShadowStats | null>(null)
+  const [auditShadow, setAuditShadow] = useState<ShadowStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [errors, setErrors] = useState<string[]>([])
   const [filter, setFilter] = useState<VerdictFilter>('all')
@@ -216,7 +237,7 @@ export function EveResults({ autonomy, refreshKey = 0 }: { autonomy: boolean | n
   const load = useCallback(async () => {
     setLoading(true)
     const errs: string[] = []
-    const [pos, pfs, dec, sh, esh] = await Promise.all([
+    const [pos, pfs, dec, sh, esh, ash] = await Promise.all([
       listPaperPositions().catch(() => {
         errs.push('les trades')
         return [] as PaperPosition[]
@@ -234,12 +255,17 @@ export function EveResults({ autonomy, refreshKey = 0 }: { autonomy: boolean | n
         errs.push('les refus d’Ève')
         return null
       }),
+      getShadowStats(undefined, 'audit').catch(() => {
+        errs.push('les blocages de l’audit')
+        return null
+      }),
     ])
     setPositions(pos)
     setPortfolios(pfs)
     setDecisions(dec?.results ?? [])
     setShadow(sh)
     setEveShadow(esh)
+    setAuditShadow(ash)
     setErrors(errs)
     setLoading(false)
   }, [])
@@ -279,7 +305,14 @@ export function EveResults({ autonomy, refreshKey = 0 }: { autonomy: boolean | n
     [decisions],
   )
   const counts = useMemo(() => {
-    const c: Record<ProposalVerdict, number> = { executed: 0, refused_by_eve: 0, blocked_after: 0, pending: 0 }
+    const c: Record<ProposalVerdict, number> = {
+      executed: 0,
+      engine_over_eve: 0,
+      blocked_by_audit: 0,
+      refused_by_eve: 0,
+      blocked_after: 0,
+      pending: 0,
+    }
     for (const r of rows) c[r.verdict] += 1
     return c
   }, [rows])
@@ -363,8 +396,9 @@ export function EveResults({ autonomy, refreshKey = 0 }: { autonomy: boolean | n
         <div className="card-body">
           <p className="dv-lead">
             Chaque ligne est une proposition du moteur sur un portefeuille (acheter, vendre à découvert ou
-            clôturer). Ève accepte seulement si son propre avis va dans le même sens. Une proposition acceptée peut
-            encore être bloquée par la porte d’entrée de JEV ou par le Risk Kernel. Les stops et objectifs, eux,
+            clôturer). Si Ève n’est pas d’accord, le moteur trade quand même et la réponse d’Ève est gardée : le
+            résultat du trade dira qui avait raison. Si Ève est d’accord, l’audit indépendant tranche : il laisse
+            passer le trade ou le bloque. Le Risk Kernel garde toujours le dernier mot. Les stops et objectifs
             ferment les positions sans passer par Ève.
           </p>
           <div className="dv-counts">
@@ -375,10 +409,18 @@ export function EveResults({ autonomy, refreshKey = 0 }: { autonomy: boolean | n
               <b className="mono">{counts.executed}</b> exécutées
             </span>
             <span>
-              <b className="mono">{counts.refused_by_eve}</b> refusées par Ève
+              <b className="mono">{counts.engine_over_eve}</b> tradées contre l’avis d’Ève
             </span>
             <span>
-              <b className="mono">{counts.blocked_after}</b> acceptées puis bloquées
+              <b className="mono">{counts.blocked_by_audit}</b> bloquées par l’audit
+            </span>
+            {counts.refused_by_eve > 0 ? (
+              <span>
+                <b className="mono">{counts.refused_by_eve}</b> refusées (ancienne règle)
+              </span>
+            ) : null}
+            <span>
+              <b className="mono">{counts.blocked_after}</b> bloquées ensuite (Risk Kernel, données)
             </span>
           </div>
           <div className="dv-filters" role="tablist" aria-label="Filtrer les propositions">
@@ -426,13 +468,52 @@ export function EveResults({ autonomy, refreshKey = 0 }: { autonomy: boolean | n
                         <p>
                           <b>Résultat :</b> {proposalStatusFr(p)}.
                         </p>
-                        {d.reasoning ? (
+                        {d.why ? (
                           <p>
-                            <b>Raisonnement d’Ève :</b> {d.reasoning}
+                            <b>Pourquoi :</b> {d.why}
+                          </p>
+                        ) : d.reasoning ? (
+                          <p>
+                            <b>Raison technique :</b> {d.reasoning}
                           </p>
                         ) : null}
+                        {d.opinions && d.opinions.length > 0 ? (
+                          <ul className="dv-opinions" aria-label="Avis des juges d’Ève">
+                            {d.opinions.map((o) => (
+                              <li key={o.who} className={`is-${o.stance}`}>
+                                <span className="dv-op-who">{JUDGE_LABEL[o.who]}</span>
+                                <span className="dv-op-stance">
+                                  {o.stance === 'pour' ? 'Pour' : o.stance === 'contre' ? 'Contre' : 'Neutre'}
+                                </span>
+                                <span className="dv-op-said">
+                                  {o.action ? eveActionFr(o.action) : ''}
+                                  {o.action && o.details.length > 0 ? ' · ' : ''}
+                                  {o.details.join(' · ')}
+                                  {!o.action && o.details.length === 0 ? 'pas de réponse de JEV' : ''}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        {p.audit ? (
+                          <p>
+                            <b>Audit indépendant :</b>{' '}
+                            {p.audit.verdict === 'block' ? 'a bloqué le trade' : 'a laissé passer le trade'}
+                            {p.audit.reason === 'no_audit' ? ' (pas de réponse de l’audit)' : ''}.
+                          </p>
+                        ) : null}
+                        {(() => {
+                          const r = rightness(p)
+                          return r ? (
+                            <p className={`dv-right is-${r.tone}`}>
+                              <b>Qui avait raison :</b> {r.text}
+                            </p>
+                          ) : null
+                        })()}
                         <p className="muted">
-                          {d.coherence != null ? `Cohérence des indices : ${fmtPct(d.coherence, 0, false)}. ` : ''}
+                          {d.coherence != null
+                            ? `Cohérence des indices : ${fmtPct(d.coherence, 0, false)} (qualité et accord des données, ce n’est pas un avis pour ou contre). `
+                            : ''}
                           {d.degradation && d.degradation !== 'healthy'
                             ? `JEV dégradé (${d.degradation}) : aucune ouverture possible. `
                             : ''}
@@ -454,17 +535,17 @@ export function EveResults({ autonomy, refreshKey = 0 }: { autonomy: boolean | n
         </div>
         <div className="card-body">
           <p className="dv-lead">
-            Quand Ève refuse une ouverture proposée par le moteur, le trade est suivi à blanc, sans argent, avec le
-            même stop et le même objectif que le portefeuille. S’il touche son stop, Ève a eu raison de refuser.
-            S’il touche son objectif, elle a laissé passer un gagnant. Les refus antérieurs à la mise en place de
-            ce suivi ne sont pas comptés.
+            Quand Ève refuse, le moteur trade quand même (« Moteur contre Ève »). Chaque trade perdant de ce côté
+            est un refus juste d’Ève, chaque trade gagnant un refus à tort.
           </p>
-          {!eveShadow || eveShadow.n_total === 0 ? (
-            <p className="muted dv-empty">
-              {loading ? 'Chargement…' : 'Aucun refus d’Ève suivi pour l’instant.'}
-            </p>
-          ) : (
+          <p className="dv-lead">{overEveSentence(scores.engine_over_eve)}</p>
+          {eveShadow && eveShadow.n_total > 0 ? (
             <>
+              <h3 className="dv-sub">Avant ce changement : refus suivis à blanc</h3>
+              <p className="muted">
+                Avant, un refus d’Ève empêchait le trade. Il était suivi à blanc, sans argent, avec le même stop
+                et le même objectif.
+              </p>
               <div className="dv-counts">
                 <span>
                   <b className="mono">{eveShadow.n_total}</b> refus suivis
@@ -489,6 +570,36 @@ export function EveResults({ autonomy, refreshKey = 0 }: { autonomy: boolean | n
                 />
               ) : null}
             </>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <h2>L’audit a-t-il eu raison de bloquer ?</h2>
+        </div>
+        <div className="card-body">
+          <p className="dv-lead">
+            Quand le moteur et Ève sont d’accord, l’audit indépendant tranche. S’il bloque, le trade est suivi à
+            blanc, sans argent, avec le même stop et le même objectif. S’il touche son stop, l’audit a eu raison.
+          </p>
+          {!auditShadow || auditShadow.n_total === 0 ? (
+            <p className="muted dv-empty">{loading ? 'Chargement…' : 'Aucun blocage de l’audit pour l’instant.'}</p>
+          ) : (
+            <div className="dv-counts">
+              <span>
+                <b className="mono">{auditShadow.n_total}</b> blocages suivis
+              </span>
+              <span>
+                <b className="mono">{auditShadow.n_open}</b> encore en cours
+              </span>
+              <span>
+                <b className="mono">{auditShadow.n_losses}</b> blocages justes (auraient perdu)
+              </span>
+              <span>
+                <b className="mono">{auditShadow.n_wins}</b> blocages à tort (auraient gagné)
+              </span>
+            </div>
           )}
         </div>
       </section>

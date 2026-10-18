@@ -258,6 +258,14 @@
   color: #95600f;
 }
 
+.dv-page .dv-p-verdict.is-engine_over_eve {
+  color: #a35f00;
+}
+
+.dv-page .dv-p-verdict.is-blocked_by_audit {
+  color: #95600f;
+}
+
 .dv-page .dv-p-verdict.is-pending {
   color: var(--muted);
 }
@@ -270,6 +278,76 @@
 
 .dv-page .dv-p-detail p {
   margin: 0 0 6px;
+}
+
+/* Avis des juges : une ligne par juge, pour (vert) / contre (rouge) / neutre. */
+.dv-page .dv-opinions {
+  list-style: none;
+  margin: 4px 0 8px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.dv-page .dv-opinions li {
+  display: grid;
+  grid-template-columns: 130px 56px minmax(0, 1fr);
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.dv-page .dv-opinions li:last-child {
+  border-bottom: 0;
+}
+
+.dv-page .dv-op-who {
+  font-weight: 600;
+}
+
+.dv-page .dv-op-stance {
+  font-weight: 700;
+}
+
+.dv-page .dv-opinions li.is-pour .dv-op-stance {
+  color: var(--bull);
+}
+
+.dv-page .dv-opinions li.is-contre .dv-op-stance {
+  color: var(--bear);
+}
+
+.dv-page .dv-opinions li.is-neutre .dv-op-stance,
+.dv-page .dv-op-said {
+  color: var(--muted);
+}
+
+.dv-page .dv-right {
+  padding: 6px 10px;
+  border-left: 3px solid var(--line);
+}
+
+.dv-page .dv-right.is-ok {
+  border-left-color: var(--bull);
+}
+
+.dv-page .dv-right.is-ko {
+  border-left-color: var(--bear);
+}
+
+.dv-page .dv-sub {
+  margin: 16px 0 4px;
+  font-size: 13px;
+}
+
+@media (max-width: 520px) {
+  .dv-page .dv-opinions li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .dv-page .dv-op-said {
+    grid-column: 1 / -1;
+  }
 }
 
 .dv-page .dv-eve-trades {

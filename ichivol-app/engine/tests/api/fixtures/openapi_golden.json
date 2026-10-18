@@ -7294,7 +7294,7 @@
     },
     "/api/engine/shadow/stats": {
       "get": {
-        "description": "ShadowBroker counterfactual summary \u2014 hors cash. kind: indicator filters only, or \u00c8ve's refusals only.",
+        "description": "ShadowBroker counterfactual summary \u2014 hors cash. kind: indicator filters, \u00c8ve's refusals or audit blocks.",
         "operationId": "get_shadow_stats_api_engine_shadow_stats_get",
         "parameters": [
           {
@@ -7322,7 +7322,8 @@
                 {
                   "enum": [
                     "filters",
-                    "eve"
+                    "eve",
+                    "audit"
                   ],
                   "type": "string"
                 },

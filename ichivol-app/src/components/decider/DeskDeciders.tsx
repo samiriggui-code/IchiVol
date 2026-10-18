@@ -24,6 +24,8 @@ const REFRESH_MS = 60_000
 
 const VERDICT_SHORT: Record<ProposalVerdict, string> = {
   executed: 'Exécutée',
+  engine_over_eve: 'Moteur contre Ève',
+  blocked_by_audit: 'Bloquée par l’audit',
   refused_by_eve: 'Refusée',
   blocked_after: 'Bloquée',
   pending: 'En attente',
