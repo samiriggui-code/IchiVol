@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { PaperOverviewPosition, PaperPosition } from '../lib/paper'
 import { assetName, directionWords, eur, pct, price, signedEur } from '../lib/tradeStory'
 import { ModalSheetHost } from './ModalSheetHost'
+import './PaperSheets.css'
 
 type Closable = PaperPosition | PaperOverviewPosition
 
@@ -64,7 +65,7 @@ export function PaperCloseConfirmSheet({
       confirming={confirming}
       onCancel={onCancel}
     >
-      <aside className="panel trade-sheet paper-confirm-sheet">
+      <aside className="panel trade-sheet paper-confirm-sheet pv-sheet">
         <header className="panel-head trade-sheet-head">
           <div>
             <h2>Vendre · clôturer la position</h2>
@@ -72,7 +73,7 @@ export function PaperCloseConfirmSheet({
               {label} · {dir.title} · virtuel — aucun broker réel
             </p>
           </div>
-          <button type="button" className="ghost" onClick={onCancel} disabled={confirming}>
+          <button type="button" className="iv-btn iv-btn--ghost iv-btn--sm" onClick={onCancel} disabled={confirming}>
             Annuler
           </button>
         </header>
@@ -128,7 +129,7 @@ export function PaperCloseConfirmSheet({
             </div>
             <div>
               <dt>Résultat net estimé</dt>
-              <dd className={`mono ${netEst != null && netEst < 0 ? 'down' : netEst != null && netEst > 0 ? 'up' : ''}`}>
+              <dd className={`mono ${netEst != null && netEst < 0 ? 'neg' : netEst != null && netEst > 0 ? 'pos' : ''}`}>
                 {netEst != null ? signedEur(netEst) : '—'}
               </dd>
             </div>
@@ -147,10 +148,10 @@ export function PaperCloseConfirmSheet({
           </p>
 
           <div className="paper-confirm-actions">
-            <button type="button" className="ghost" disabled={confirming} onClick={handleConfirm}>
+            <button type="button" className="iv-btn iv-btn--sell" disabled={confirming} onClick={handleConfirm}>
               {confirming ? 'Clôture…' : 'Confirmer la clôture'}
             </button>
-            <button type="button" className="ghost" disabled={confirming} onClick={onCancel}>
+            <button type="button" className="iv-btn" disabled={confirming} onClick={onCancel}>
               Annuler
             </button>
           </div>

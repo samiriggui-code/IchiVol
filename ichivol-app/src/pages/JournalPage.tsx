@@ -1,6 +1,6 @@
 /**
- * Journal — port littéral de design-reference/ichivol-workspace `journal()` + page-head.
- * Classes HTML = maquette. Données = engine (manquant → « — »).
+ * Journal — poste de trading premium (primitives iv-, voir src/theme/PREMIUM.md).
+ * Données = engine (manquant → « — »).
  */
 
 import {
@@ -9,12 +9,10 @@ import {
   useMemo,
   useState,
   type FormEvent,
-  type ReactNode,
 } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { displaySymbol } from '../lib/markets'
-import { DeciderBadge } from '../components/decider/DeciderBadge'
-import { DECIDER_LABEL, DECIDERS, deciderOf, type Decider } from '../lib/decider'
+import { DECIDER_EXPLAIN, DECIDER_LABEL, DECIDERS, deciderOf, type Decider } from '../lib/decider'
 import { labelExitReason } from '../lib/engineTerminology'
 import { listPaperPortfolios, listPaperPositions, type PaperPosition } from '../lib/paper'
 import { portfolioLabel } from '../lib/rsPortfolio'
@@ -28,22 +26,40 @@ import {
 import './JournalPage.css'
 
 type JournalTab = 'Trades' | 'Décisions sauvegardées'
-type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
 
 const NOTE_KEY = 'ichivol-note'
 
-function badge(text: string, tone: BadgeTone = ''): ReactNode {
-  let inferred = tone
-  if (!inferred) {
-    inferred = /PASSE|ACCEPTÉ|OUVERTE|VALIDÉ/i.test(text)
-      ? 'green'
-      : /REFUS|BLOQU|ERREUR/i.test(text)
-        ? 'red'
-        : /PRUDENCE|ARMED|WATCH|TRIGGERED/i.test(text)
-          ? 'amber'
-          : ''
-  }
-  return <span className={`tag ${inferred}`.trim()}>{text}</span>
+/** Pastille « qui a décidé » au format premium (même libellé et même explication que DeciderBadge). */
+function DeciderMark({ decider }: { decider: Decider }) {
+  const cls = decider === 'eve' ? ' is-eve' : decider === 'manual' ? ' is-manual' : decider === 'engine_over_eve' ? ' is-vs' : ''
+  return (
+    <span
+      className={`iv-decider${cls}`}
+      title={DECIDER_EXPLAIN[decider]}
+      aria-label={`${DECIDER_LABEL[decider]} : ${DECIDER_EXPLAIN[decider]}`}
+    >
+      <i aria-hidden="true" />
+      {DECIDER_LABEL[decider]}
+    </span>
+  )
+}
+
+function SideMark({ direction }: { direction: string | null | undefined }) {
+  const label = fmtSens(direction)
+  if (label === '—') return <span className="dim">—</span>
+  if (label === 'Neutre') return <span className="iv-tag is-muted">NEUTRE</span>
+  return <span className={`iv-side ${label === 'Vente' ? 'is-short' : 'is-long'}`}>{label.toUpperCase()}</span>
+}
+
+function fmtPx(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return '—'
+  return n.toLocaleString('fr-FR', { maximumFractionDigits: 6 })
+}
+
+function fmtSignedEur(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return ''
+  const sign = n > 0 ? '+' : n < 0 ? '−' : ''
+  return `${sign}${Math.abs(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
 }
 
 function fmtDate(iso: string | null | undefined): string {
@@ -313,17 +329,22 @@ export function JournalPage() {
     navigate(`/app/market?symbol=${encodeURIComponent(symbol)}`)
   }
 
+  const replayTrade = journalTab === 'Trades' ? (visibleTrades[0] ?? trades[0] ?? null) : null
+  const bookOf = (t: PaperPosition) => (t.portfolio_id ? bookLabels.get(t.portfolio_id) : undefined)
+
   const tableRows =
     journalTab === 'Trades'
       ? visibleTrades.map((t) => {
           const r = fmtR(t)
           const up = r.startsWith('+')
           const down = r.startsWith('−') || r.startsWith('-')
+          const perfCls = t.pnl_pct == null ? '' : t.pnl_pct > 0 ? 'pos' : t.pnl_pct < 0 ? 'neg' : ''
           return (
             <tr
               key={t.id}
-              className="clickable"
+              className={`jr-click${replayTrade?.id === t.id ? ' is-selected' : ''}`}
               tabIndex={0}
+              title="Voir sur le graphique"
               onClick={() => openTrade(t.symbol)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -332,26 +353,30 @@ export function JournalPage() {
                 }
               }}
             >
-              <td>{fmtDate(t.exit_time ?? t.entry_time)}</td>
+              <td className="mono dim">{fmtDate(t.exit_time ?? t.entry_time)}</td>
+              <td className="sym">{displaySymbol(t.symbol)}</td>
               <td>
-                <b>{displaySymbol(t.symbol)}</b> <DeciderBadge decider={deciderOf(t)} compact />
-                {t.portfolio_id && bookLabels.get(t.portfolio_id) ? (
-                  <small style={{ display: 'block', color: 'var(--muted)' }}>{bookLabels.get(t.portfolio_id)}</small>
-                ) : null}
+                <SideMark direction={t.direction} />
               </td>
-              <td>{fmtSens(t.direction)}</td>
+              <td>{bookOf(t) ?? <span className="dim">—</span>}</td>
               <td>
-                <span className={`mono${up ? ' up' : down ? ' down' : ''}`.trim()}>{r}</span>
+                <DeciderMark decider={deciderOf(t)} />
               </td>
-              <td>{fmtPerf(t.pnl_pct)}</td>
-              <td>{shortExit(t.exit_reason)}</td>
+              <td className="n">{fmtPx(t.entry_price)}</td>
+              <td className="n">{fmtPx(t.exit_price)}</td>
+              <td className={`n${up ? ' pos' : down ? ' neg' : ''}`}>
+                {r}
+                {t.realized_pnl != null ? <span className="jr-sub"> · {fmtSignedEur(t.realized_pnl)}</span> : null}
+              </td>
+              <td className={`n ${perfCls}`.trim()}>{fmtPerf(t.pnl_pct)}</td>
+              <td className="muted">{shortExit(t.exit_reason)}</td>
             </tr>
           )
         })
       : filteredDecisions.map((d) => (
           <tr
             key={d.id}
-            className={`clickable${selectedDecision?.id === d.id ? ' is-selected' : ''}`.trim()}
+            className={`jr-click${selectedDecision?.id === d.id ? ' is-selected' : ''}`.trim()}
             tabIndex={0}
             onClick={() => setSelectedDecisionId(d.id)}
             onKeyDown={(e) => {
@@ -361,22 +386,26 @@ export function JournalPage() {
               }
             }}
           >
-            <td>{fmtDate(d.createdAt)}</td>
-            <td>
-              <b>{displaySymbol(d.symbol)}</b>
+            <td className="mono dim">{fmtDate(d.createdAt)}</td>
+            <td className="sym">
+              {displaySymbol(d.symbol)}
+              <small>{d.interval ? d.interval.toUpperCase() : ''}</small>
             </td>
-            <td>{fmtSens(d.bias)}</td>
             <td>
-              <span className="mono">—</span>
+              <SideMark direction={d.bias} />
             </td>
-            <td>—</td>
+            <td className="n dim">—</td>
+            <td className="n dim">—</td>
+            <td className="jr-note-cell">{d.note?.trim() ? d.note : <span className="dim">—</span>}</td>
             <td>
-              <div className="journal-decision-actions">
-                {badge(d.status === 'archived' ? 'ARCHIVÉE' : 'SAUVEGARDÉE', 'gray')}
+              <div className="jr-actions">
+                <span className={`iv-tag ${d.status === 'archived' ? 'is-muted' : 'is-cyan'}`}>
+                  {d.status === 'archived' ? 'Archivée' : 'Sauvegardée'}
+                </span>
                 {d.status === 'archived' ? (
                   <button
                     type="button"
-                    className="suggestion"
+                    className="iv-btn iv-btn--sm"
                     disabled={busyId === d.id}
                     onClick={(e) => {
                       e.stopPropagation()
@@ -388,7 +417,7 @@ export function JournalPage() {
                 ) : (
                   <button
                     type="button"
-                    className="suggestion"
+                    className="iv-btn iv-btn--sm"
                     disabled={busyId === d.id}
                     onClick={(e) => {
                       e.stopPropagation()
@@ -400,7 +429,7 @@ export function JournalPage() {
                 )}
                 <button
                   type="button"
-                  className="suggestion"
+                  className="iv-btn iv-btn--sm iv-btn--ghost jr-danger"
                   disabled={busyId === d.id}
                   onClick={(e) => {
                     e.stopPropagation()
@@ -414,149 +443,197 @@ export function JournalPage() {
           </tr>
         ))
 
-  const emptyRow = (
-    <tr>
-      <td colSpan={6}>
-        <b>—</b>
-      </td>
-    </tr>
-  )
+  const toolsLabel =
+    journalTab === 'Trades'
+      ? `${visibleTrades.length} trade${visibleTrades.length > 1 ? 's' : ''} clôturé${visibleTrades.length > 1 ? 's' : ''}`
+      : `${filteredDecisions.length} décision${filteredDecisions.length > 1 ? 's' : ''}${showArchived ? ' archivée' + (filteredDecisions.length > 1 ? 's' : '') : ''}`
 
   return (
     <div className="journal-page">
-      <div className="page-head">
+      <div className="iv-ph">
         <div>
-          <div className="eyebrow">06 / ICHIVOL WORKSPACE</div>
+          <div className="iv-meta">Journal · mémoire de trading</div>
           <h1>Journal</h1>
-          <p className="subtitle">La mémoire de vos décisions.</p>
+          <p>La mémoire de vos décisions : qui a décidé, ce qui s’est passé, ce que vous en retenez.</p>
         </div>
-        <div className="actions">{badge('MÉMOIRE DE TRADING', 'gray')}</div>
+        <div className="iv-ph-act jr-toolbar">
+          {journalTab === 'Trades' ? (
+            <select
+              className="iv-input"
+              aria-label="Qui a décidé le trade"
+              value={deciderFilter}
+              onChange={(e) => setDeciderFilter(e.target.value as Decider | 'all')}
+            >
+              <option value="all">Tous les décideurs</option>
+              {DECIDERS.map((d) => (
+                <option key={d} value={d}>
+                  {DECIDER_LABEL[d]}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <label className="iv-chip jr-check">
+              <input
+                className="iv-check"
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+              />
+              Archivées
+            </label>
+          )}
+          <input
+            id="journal-search"
+            className="iv-input jr-search"
+            type="search"
+            placeholder="Rechercher un symbole…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <button type="button" className="iv-btn" onClick={onExport}>
+            Exporter CSV
+          </button>
+        </div>
       </div>
 
-      <div className="tabs">
-        {(['Trades', 'Décisions sauvegardées'] as JournalTab[]).map((t) => (
-          <button
-            key={t}
-            type="button"
-            className={journalTab === t ? 'active' : ''}
-            onClick={() => setJournalTab(t)}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-
-      <div className="toolbar">
-        <input
-          id="journal-search"
-          type="search"
-          placeholder="Rechercher un symbole…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        {journalTab === 'Trades' && (
-          <select
-            aria-label="Qui a décidé le trade"
-            value={deciderFilter}
-            onChange={(e) => setDeciderFilter(e.target.value as Decider | 'all')}
-          >
-            <option value="all">Tous les décideurs</option>
-            {DECIDERS.map((d) => (
-              <option key={d} value={d}>
-                {DECIDER_LABEL[d]}
-              </option>
-            ))}
-          </select>
-        )}
-        {journalTab === 'Décisions sauvegardées' && (
-          <label className="checkrow" style={{ margin: 0 }}>
-            Archivées
-            <input
-              type="checkbox"
-              checked={showArchived}
-              onChange={(e) => setShowArchived(e.target.checked)}
-            />
-          </label>
-        )}
-        <span style={{ marginLeft: 'auto' }}>
-          <button type="button" onClick={onExport}>
-            Exporter CSV ↓
-          </button>
-        </span>
-      </div>
       {actionMsg && (
-        <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }} role="status">
+        <p className="iv-note jr-status" role="status">
           {actionMsg}
         </p>
       )}
 
-      <section className="card">
-        <div className="card-head">
-          <h2>{journalTab}</h2>
-        </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>DATE</th>
-                <th>ACTIF</th>
-                <th>SENS</th>
-                <th>RÉSULTAT</th>
-                <th>PERFORMANCE</th>
-                <th>SORTIE</th>
-              </tr>
-            </thead>
-            <tbody>{tableRows.length ? tableRows : emptyRow}</tbody>
-          </table>
-        </div>
-      </section>
-
-      <div style={{ height: 20 }} />
-
-      <div className="grid">
-        <section className="card">
-          <div className="card-head">
-            <h2>Rejouer une décision</h2>
+      <div className="iv-grid">
+        <section className="iv-card iv-s8 iv-m-s12 jr-main">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs" role="tablist" aria-label="Journal">
+              {(['Trades', 'Décisions sauvegardées'] as JournalTab[]).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  role="tab"
+                  aria-selected={journalTab === t}
+                  className={`iv-card-tab${journalTab === t ? ' is-on' : ''}`}
+                  onClick={() => setJournalTab(t)}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            <div className="iv-card-tools">{toolsLabel}</div>
           </div>
-          <div className="card-body">
-            <div className="eyebrow">{replay?.eyebrow ?? '—'}</div>
-            <h3>{replay?.title ?? '—'}</h3>
-            <p style={{ fontSize: 12, color: 'var(--muted)' }}>{replay?.body ?? '—'}</p>
-            <button
-              type="button"
-              className="primary"
-              disabled={!replay}
-              onClick={() => replay && openTrade(replay.symbol)}
-            >
-              Voir sur le graphique →
-            </button>
-          </div>
+          {tableRows.length === 0 ? (
+            <div className="iv-empty">
+              {journalTab === 'Trades'
+                ? q || deciderFilter !== 'all'
+                  ? 'Aucun trade clôturé ne correspond à ce filtre.'
+                  : 'Aucun trade clôturé pour l’instant.'
+                : 'Aucune décision sauvegardée.'}
+            </div>
+          ) : (
+            <div className="iv-card-body is-flush iv-table-wrap">
+              <table className="iv-table">
+                <thead>
+                  {journalTab === 'Trades' ? (
+                    <tr>
+                      <th>Date</th>
+                      <th>Actif</th>
+                      <th>Sens</th>
+                      <th>Portefeuille</th>
+                      <th>Qui a décidé</th>
+                      <th className="n">Entrée</th>
+                      <th className="n">Sortie</th>
+                      <th className="n">Résultat</th>
+                      <th className="n">Performance</th>
+                      <th>Sortie par</th>
+                    </tr>
+                  ) : (
+                    <tr>
+                      <th>Date</th>
+                      <th>Actif</th>
+                      <th>Sens</th>
+                      <th className="n">Résultat</th>
+                      <th className="n">Performance</th>
+                      <th>Note</th>
+                      <th>Statut</th>
+                    </tr>
+                  )}
+                </thead>
+                <tbody>{tableRows}</tbody>
+              </table>
+            </div>
+          )}
         </section>
 
-        <section className="card">
-          <div className="card-head">
-            <h2>Note personnelle</h2>
-          </div>
-          <form className="card-body" id="note-form" onSubmit={(e) => void onSaveNote(e)}>
-            <textarea
-              id="journal-note"
-              rows={4}
-              placeholder={
-                selectedDecision
-                  ? `Note pour ${displaySymbol(selectedDecision.symbol)}…`
-                  : 'Ce que je retiens de cette session…'
-              }
-              style={{ width: '100%' }}
-              value={note}
-              onChange={(e) => setNote(e.target.value.slice(0, 500))}
-            />
-            <div style={{ marginTop: 10 }}>
-              <button type="submit" disabled={busyId != null && busyId === selectedDecision?.id}>
-                {noteSaved ? 'Enregistrée' : 'Enregistrer la note'}
+        <div className="iv-s4 iv-m-s12 jr-side">
+          <section className="iv-card iv-glow">
+            <div className="iv-card-head">
+              <div className="iv-card-tabs">
+                <span className="iv-card-tab is-on">Rejouer une décision</span>
+              </div>
+              <div className="iv-card-tools">{replay?.eyebrow ?? '—'}</div>
+            </div>
+            <div className="iv-card-body">
+              <h3 className="jr-replay-title">{replay?.title ?? '—'}</h3>
+              {replayTrade ? (
+                <p className="iv-note jr-replay">
+                  <DeciderMark decider={deciderOf(replayTrade)} />
+                  {bookOf(replayTrade) ? ` · ${bookOf(replayTrade)}` : ''} · {fmtSens(replayTrade.direction)} à{' '}
+                  {fmtPx(replayTrade.entry_price)}, sortie à {fmtPx(replayTrade.exit_price)}.{' '}
+                  <span className={fmtR(replayTrade).startsWith('+') ? 'pos' : fmtR(replayTrade).startsWith('−') ? 'neg' : ''}>
+                    {shortExit(replayTrade.exit_reason)} · {fmtR(replayTrade)}
+                    {replayTrade.realized_pnl != null ? ` (${fmtSignedEur(replayTrade.realized_pnl)})` : ''}
+                  </span>
+                </p>
+              ) : (
+                <p className="iv-note jr-replay">{replay?.body ?? '—'}</p>
+              )}
+              <button
+                type="button"
+                className="iv-btn iv-btn--primary"
+                disabled={!replay}
+                onClick={() => replay && openTrade(replay.symbol)}
+              >
+                Voir sur le graphique →
               </button>
             </div>
-          </form>
-        </section>
+          </section>
+
+          <section className="iv-card">
+            <div className="iv-card-head">
+              <div className="iv-card-tabs">
+                <span className="iv-card-tab is-on">Note personnelle</span>
+              </div>
+              <div className="iv-card-tools">
+                {selectedDecision ? displaySymbol(selectedDecision.symbol) : 'Session'}
+              </div>
+            </div>
+            <form className="iv-card-body" id="note-form" onSubmit={(e) => void onSaveNote(e)}>
+              <textarea
+                id="journal-note"
+                className="iv-input jr-note"
+                rows={4}
+                placeholder={
+                  selectedDecision
+                    ? `Note pour ${displaySymbol(selectedDecision.symbol)}…`
+                    : 'Ce que je retiens de cette session…'
+                }
+                value={note}
+                onChange={(e) => setNote(e.target.value.slice(0, 500))}
+              />
+              <div className="jr-note-foot">
+                <button
+                  type="submit"
+                  className="iv-btn iv-btn--sm"
+                  disabled={busyId != null && busyId === selectedDecision?.id}
+                >
+                  {noteSaved ? 'Enregistrée' : 'Enregistrer la note'}
+                </button>
+                {noteSaved ? <span className="iv-chip is-mint">Enregistrée</span> : null}
+                <span className="iv-cap jr-count">{note.length} / 500</span>
+              </div>
+            </form>
+          </section>
+        </div>
       </div>
     </div>
   )

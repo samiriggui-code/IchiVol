@@ -1,9 +1,9 @@
 /**
- * Opérations — port littéral de design-reference/ichivol-workspace `operations()` + page-head.
- * Classes HTML = maquette. Données = engine (manquant → « — »).
+ * Opérations — poste de trading premium (primitives iv-, voir src/theme/PREMIUM.md).
+ * Données = engine (manquant → « — »).
  */
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
 import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
 import {
@@ -26,8 +26,6 @@ import './ActivityPage.css'
 
 type OpsFilter = 'Tous' | 'PASSE' | 'PRUDENCE' | 'REFUSÉ'
 type AuditLevel = 'PASSE' | 'PRUDENCE' | 'REFUSÉ'
-type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
-
 type AuditRow = {
   key: string
   time: string
@@ -37,18 +35,33 @@ type AuditRow = {
   item: ActivityItem
 }
 
-function badge(text: string, tone: BadgeTone = ''): ReactNode {
-  let inferred = tone
-  if (!inferred) {
-    inferred = /PASSE|ACCEPTÉ|OUVERTE|VALIDÉ/i.test(text)
-      ? 'green'
-      : /REFUS|BLOQU|ERREUR/i.test(text)
-        ? 'red'
-        : /PRUDENCE|ARMED|WATCH|TRIGGERED/i.test(text)
-          ? 'amber'
-          : ''
-  }
-  return <span className={`tag ${inferred}`.trim()}>{text}</span>
+/** Libellés lisibles des niveaux (les codes internes et le filtrage restent inchangés). */
+const LEVEL_LABEL: Record<AuditLevel, string> = {
+  PASSE: 'Favorable',
+  PRUDENCE: 'À surveiller',
+  REFUSÉ: 'Défavorable',
+}
+const FILTER_LABEL: Record<OpsFilter, string> = {
+  Tous: 'Tous',
+  PASSE: 'Favorables',
+  PRUDENCE: 'À surveiller',
+  REFUSÉ: 'Défavorables',
+}
+const LEVEL_TONE: Record<AuditLevel, string> = {
+  PASSE: 'is-mint',
+  PRUDENCE: 'is-amber',
+  REFUSÉ: 'is-sell',
+}
+
+function LevelTag({ level }: { level: AuditLevel }) {
+  return <span className={`iv-tag ${LEVEL_TONE[level]}`}>{LEVEL_LABEL[level]}</span>
+}
+
+function fmtWhen(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(+d)) return '—'
+  return d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
 function fmtClock(iso: string): string {
@@ -201,70 +214,123 @@ export function ActivityPage() {
     }
   }, [screener])
 
+  const count = (level: AuditLevel) => rows.filter((r) => r.level === level).length
+
   return (
     <div className="ops-page">
-      <div className="page-head">
+      <div className="iv-ph">
         <div>
-          <div className="eyebrow">10 / ICHIVOL WORKSPACE</div>
+          <div className="iv-meta">Opérations · journal d’audit</div>
           <h1>Opérations</h1>
-          <p className="subtitle">L’activité du système, sans angle mort.</p>
+          <p>L’activité du système, sans angle mort.</p>
         </div>
-        <div className="actions">{badge('JOURNAL PAPER', 'amber')}</div>
-      </div>
-
-      <div className="toolbar">
-        <div className="segmented">
-          {(['Tous', 'PASSE', 'PRUDENCE', 'REFUSÉ'] as OpsFilter[]).map((f) => (
-            <button
-              key={f}
-              type="button"
-              className={opsFilter === f ? 'active' : ''}
-              onClick={() => setOpsFilter(f)}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-        <input
-          id="log-search"
-          type="search"
-          placeholder="Rechercher dans le journal…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </div>
-
-      <div className="grid">
-        <section className="card">
-          <div className="card-head">
-            <h2>Journal d’audit</h2>
-            {badge(loading ? '—' : `${filtered.length} LIGNES`, 'gray')}
+        <div className="iv-ph-act ops-toolbar">
+          <input
+            id="log-search"
+            className="iv-input ops-search"
+            type="search"
+            placeholder="Rechercher dans le journal…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <div className="iv-seg" role="group" aria-label="Filtrer le journal par niveau">
+            {(['Tous', 'PASSE', 'PRUDENCE', 'REFUSÉ'] as OpsFilter[]).map((f) => (
+              <button
+                key={f}
+                type="button"
+                aria-pressed={opsFilter === f}
+                className={`iv-seg-btn${opsFilter === f ? ' is-on' : ''}`}
+                onClick={() => setOpsFilter(f)}
+                title={
+                  f === 'Tous'
+                    ? 'Toutes les lignes du journal'
+                    : f === 'PASSE'
+                      ? 'Sorties gagnantes, et refus qui ont évité une perte'
+                      : f === 'PRUDENCE'
+                        ? 'Ouvertures et trades refusés, à suivre'
+                        : 'Sorties perdantes, et refus qui ont coûté un gain'
+                }
+              >
+                {FILTER_LABEL[f]}
+              </button>
+            ))}
           </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>HEURE</th>
-                  <th>NIVEAU</th>
-                  <th>SOURCE</th>
-                  <th>ÉVÉNEMENT</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
+        </div>
+      </div>
+
+      <div className="iv-kpis ops-kpis">
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">Décisions moteur</div>
+          <div className="iv-kpi-v">{summary ? summary.decisions.last_24h.toLocaleString('fr-FR') : '—'}</div>
+          <div className="iv-kpi-s">{summary ? `sur 24 h · ${summary.decisions.total.toLocaleString('fr-FR')} au total` : '—'}</div>
+        </div>
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">Positions paper</div>
+          <div className="iv-kpi-v">{summary ? summary.paper.open_now : '—'}</div>
+          <div className="iv-kpi-s">
+            {summary
+              ? `ouverte${summary.paper.open_now === 1 ? '' : 's'} · ${summary.paper.closed_total} clôturées`
+              : '—'}
+          </div>
+        </div>
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">Symboles lus</div>
+          <div className={`iv-kpi-v ${!loading && screener.length > 0 ? (quality.problemCount > 0 ? 'warn' : 'ok') : ''}`}>
+            {loading ? '—' : screener.length}
+          </div>
+          <div className="iv-kpi-s">screener 1h</div>
+        </div>
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">Bougies manquantes</div>
+          <div className={`iv-kpi-v ${!loading && quality.gapCount > 0 ? 'warn' : ''}`}>
+            {loading ? '—' : quality.gapCount}
+          </div>
+          <div className="iv-kpi-s">
+            {loading
+              ? '—'
+              : quality.firstProblem
+                ? `${displaySymbol(quality.firstProblem.symbol)} · ${quality.firstProblem.issues.join(', ')}`
+                : 'aucune alerte qualité'}
+          </div>
+        </div>
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">Campagnes de backtest</div>
+          <div className="iv-kpi-v">{summary ? summary.backtest.runs_total : '—'}</div>
+          <div className="iv-kpi-s">{summary ? `dernière ${fmtWhen(summary.backtest.last_at)}` : '—'}</div>
+        </div>
+      </div>
+
+      <div className="iv-grid">
+        <section className="iv-card iv-s8 iv-m-s12 ops-main">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs">
+              <span className="iv-card-tab is-on">Journal d’audit</span>
+            </div>
+            <div className="iv-card-tools">
+              {loading
+                ? '—'
+                : `${filtered.length} ligne${filtered.length > 1 ? 's' : ''} · ${count('PASSE')} fav. · ${count('PRUDENCE')} à surv. · ${count('REFUSÉ')} déf.`}
+            </div>
+          </div>
+          {filtered.length === 0 ? (
+            <div className="iv-empty">{loading ? 'Chargement…' : 'Aucune ligne ne correspond.'}</div>
+          ) : (
+            <div className="iv-card-body is-flush iv-table-wrap ops-table">
+              <table className="iv-table is-compact">
+                <thead>
                   <tr>
-                    <td>
-                      <span className="mono">—</span>
-                    </td>
-                    <td>{badge('—', 'gray')}</td>
-                    <td>—</td>
-                    <td>{loading ? 'Chargement…' : '—'}</td>
+                    <th>Heure</th>
+                    <th>Niveau</th>
+                    <th>Source</th>
+                    <th>Événement</th>
+                    <th>Portefeuille</th>
                   </tr>
-                ) : (
-                  filtered.map((r) => (
+                </thead>
+                <tbody>
+                  {filtered.map((r) => (
                     <tr
                       key={r.key}
-                      className="clickable"
+                      className={`ops-click${selected === r.item ? ' is-selected' : ''}`}
                       tabIndex={0}
                       onClick={() => openRow(r.item)}
                       onKeyDown={(e) => {
@@ -274,157 +340,179 @@ export function ActivityPage() {
                         }
                       }}
                     >
+                      <td className="mono dim">{r.time}</td>
                       <td>
-                        <span className="mono">{r.time}</span>
+                        <LevelTag level={r.level} />
                       </td>
-                      <td>{badge(r.level)}</td>
                       <td>{r.source}</td>
-                      <td>
-                        <b>{r.event}</b>
-                        {r.item.detail ? <small>{r.item.detail}</small> : null}
+                      <td className="ops-event">
+                        <span className="ops-event-t">{r.event}</span>
+                        {r.item.detail ? <span className="ops-event-d"> · {r.item.detail}</span> : null}
                       </td>
+                      <td className="muted">{r.item.portfolio || '—'}</td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="iv-card-foot">Touchez une ligne pour lire la décision du moteur</div>
         </section>
 
-        <section className="card">
-          <div className="card-head">
-            <h2>Qualité des données</h2>
-          </div>
-          <div className="card-body">
-            <div className="statline">
-              <span>Binance</span>
-              <b>
-                {loading
-                  ? '—'
-                  : quality.providerOk
-                    ? badge('PASSE')
-                    : badge('—', 'gray')}
-              </b>
+        <div className="iv-s4 iv-m-s12 ops-side">
+          <section className="iv-card">
+            <div className="iv-card-head">
+              <div className="iv-card-tabs">
+                <span className="iv-card-tab is-on">Qualité des données</span>
+              </div>
             </div>
-            <div className="statline">
-              <span>{quality.firstProblem ? displaySymbol(quality.firstProblem.symbol) : '—'}</span>
-              <b>
-                {quality.firstProblem
-                  ? badge('PRUDENCE')
-                  : loading
+            <div className="iv-card-body">
+              <div className="iv-row">
+                <span>Binance</span>
+                <span className="iv-row-v">
+                  {loading ? '—' : quality.providerOk ? <span className="iv-tag is-mint">OK</span> : '—'}
+                </span>
+              </div>
+              <div className="iv-row">
+                <span>{quality.firstProblem ? displaySymbol(quality.firstProblem.symbol) : 'Symboles du screener'}</span>
+                <span className="iv-row-v">
+                  {quality.firstProblem ? (
+                    <span className="iv-tag is-amber">{quality.firstProblem.issues[0] ?? 'À surveiller'}</span>
+                  ) : loading ? (
+                    '—'
+                  ) : (
+                    <span className="iv-tag is-mint">OK</span>
+                  )}
+                </span>
+              </div>
+              <div className="iv-row">
+                <span>Symboles lus</span>
+                <span className="iv-row-v">{loading ? '—' : screener.length}</span>
+              </div>
+              <div className="iv-row">
+                <span>Bougies manquantes</span>
+                <span className={`iv-row-v ${!loading && quality.gapCount > 0 ? 'warn' : ''}`}>
+                  {loading
                     ? '—'
-                    : badge('PASSE')}
-              </b>
+                    : quality.gapCount > 0
+                      ? `${quality.gapCount} actif${quality.gapCount > 1 ? 's' : ''}`
+                      : '0'}
+                </span>
+              </div>
+              <p className="iv-note ops-small">
+                {quality.problemCount > 0
+                  ? `${quality.problemCount} symbole${quality.problemCount > 1 ? 's' : ''} avec une bougie périmée ou en retard.`
+                  : 'Aucune alerte qualité sur le screener.'}
+              </p>
             </div>
-            <div className="statline">
-              <span>Symboles lus</span>
-              <b>{loading ? '—' : screener.length}</b>
-            </div>
-            <div className="statline">
-              <span>Bougies manquantes</span>
-              <b>
-                {loading
-                  ? '—'
-                  : quality.gapCount > 0
-                    ? `${quality.gapCount} actif${quality.gapCount > 1 ? 's' : ''}`
-                    : '0'}
-              </b>
-            </div>
-            <p style={{ fontSize: 11, color: 'var(--muted)' }}>
-              {quality.problemCount > 0
-                ? `${quality.problemCount} symbole${quality.problemCount > 1 ? 's' : ''} avec une bougie périmée ou en retard.`
-                : 'Aucune alerte qualité sur le screener.'}
-            </p>
-          </div>
-        </section>
-      </div>
+          </section>
 
-      <section className="card">
-        <div className="card-head">
-          <h2>Ce que le moteur a produit</h2>
+          <section className="iv-card iv-glow">
+            <div className="iv-card-head">
+              <div className="iv-card-tabs">
+                <span className="iv-card-tab is-on">Ce que le moteur a produit</span>
+              </div>
+              <div className="iv-card-tools">24 h</div>
+            </div>
+            <div className="iv-card-body">
+              <div className="iv-row">
+                <span>Décisions</span>
+                <span className="iv-row-v">
+                  {summary ? `${summary.decisions.last_24h} sur 24 h · ${summary.decisions.total} au total` : '—'}
+                </span>
+              </div>
+              <div className="iv-row">
+                <span>Paper</span>
+                <span className="iv-row-v">
+                  {summary
+                    ? `${summary.paper.open_now} ouverte${summary.paper.open_now === 1 ? '' : 's'} · ${summary.paper.closed_total} clôturées`
+                    : '—'}
+                </span>
+              </div>
+              <div className="iv-row">
+                <span>Trades refusés puis jugés</span>
+                <span className="iv-row-v">
+                  {summary ? `${summary.shadow.blocked_total} refus · ${summary.shadow.judged_total} verdicts` : '—'}
+                </span>
+              </div>
+              <div className="iv-row">
+                <span>Campagnes de backtest</span>
+                <span className="iv-row-v">{summary ? String(summary.backtest.runs_total) : '—'}</span>
+              </div>
+              <div className="iv-row">
+                <span>Preuves mesurées</span>
+                <span className="iv-row-v">
+                  {summary ? `${summary.evidence.measured} / ${summary.evidence.rows_total}` : '—'}
+                </span>
+              </div>
+              {summary && summary.evidence.rows_total > 0 ? (
+                <div className="iv-bar is-mint ops-bar" title="Part des preuves déjà mesurées">
+                  <i style={{ width: `${Math.min(100, (summary.evidence.measured / summary.evidence.rows_total) * 100)}%` }} />
+                </div>
+              ) : null}
+            </div>
+          </section>
         </div>
-        <div className="card-body">
-          <div className="statline">
-            <span>Décisions</span>
-            <b>
-              {summary
-                ? `${summary.decisions.last_24h} sur 24 h · ${summary.decisions.total} au total`
-                : '—'}
-            </b>
-          </div>
-          <div className="statline">
-            <span>Paper</span>
-            <b>
-              {summary
-                ? `${summary.paper.open_now} ouverte${summary.paper.open_now === 1 ? '' : 's'} · ${summary.paper.closed_total} clôturées`
-                : '—'}
-            </b>
-          </div>
-          <div className="statline">
-            <span>Trades refusés puis jugés</span>
-            <b>
-              {summary
-                ? `${summary.shadow.blocked_total} refus · ${summary.shadow.judged_total} verdicts`
-                : '—'}
-            </b>
-          </div>
-          <div className="statline">
-            <span>Campagnes de backtest</span>
-            <b>{summary ? String(summary.backtest.runs_total) : '—'}</b>
-          </div>
-          <div className="statline">
-            <span>Preuves mesurées</span>
-            <b>
-              {summary
-                ? `${summary.evidence.measured} / ${summary.evidence.rows_total}`
-                : '—'}
-            </b>
-          </div>
-        </div>
-      </section>
+      </div>
 
       {selected && (
         <div className="ops-fiche-backdrop" onClick={() => setSelected(null)}>
-        <div
-          className="ops-dossier"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Récit ${displaySymbol(selected.symbol)}`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="dialog-body">
-            <div className="dialog-head">
-              <h2>
-                {displaySymbol(selected.symbol)} · {selected.title}
-              </h2>
-              <button type="button" onClick={() => setSelected(null)} aria-label="Fermer">
-                ×
-              </button>
-            </div>
-            <p>{selected.detail || 'Le journal n’a pas de détail pour cette ligne.'}</p>
-            <div className="statline">
-              <span>Heure</span>
-              <b>{fmtClock(selected.time)}</b>
-            </div>
-            <div className="statline">
-              <span>Portefeuille</span>
-              <b>{selected.portfolio || '—'}</b>
-            </div>
-            {dossierLoading ? <p>Lecture de la décision moteur…</p> : null}
-            {dossierError ? <p>{dossierError}</p> : null}
-            {dossier ? (
-              <>
-                <DecisionPipelinePanel view={pipelineFromDecisionDetail(dossier)} />
-                <SignalEvidenceCard detail={dossier} />
-              </>
-            ) : null}
-            <div className="dialog-actions">
-              <button type="button" className="primary" onClick={() => setSelected(null)}>
-                Fermer
-              </button>
+          <div
+            className="ops-dossier"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Récit ${displaySymbol(selected.symbol)}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="dialog-body">
+              <div className="ops-dossier-head">
+                <div>
+                  <div className="iv-meta">Journal d’audit · {sourceFromItem(selected)}</div>
+                  <h2>
+                    {displaySymbol(selected.symbol)} · {selected.title}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  className="iv-btn iv-btn--ghost iv-btn--sm"
+                  onClick={() => setSelected(null)}
+                  aria-label="Fermer"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="iv-note">{selected.detail || 'Le journal n’a pas de détail pour cette ligne.'}</p>
+              <div className="ops-dossier-rows">
+                <div className="iv-row">
+                  <span>Heure</span>
+                  <span className="iv-row-v">{fmtClock(selected.time)}</span>
+                </div>
+                <div className="iv-row">
+                  <span>Niveau</span>
+                  <span className="iv-row-v">
+                    <LevelTag level={levelFromTone(selected.tone)} />
+                  </span>
+                </div>
+                <div className="iv-row">
+                  <span>Portefeuille</span>
+                  <span className="iv-row-v">{selected.portfolio || '—'}</span>
+                </div>
+              </div>
+              {dossierLoading ? <p className="iv-note">Lecture de la décision moteur…</p> : null}
+              {dossierError ? <p className="iv-empty is-error">{dossierError}</p> : null}
+              {dossier ? (
+                <>
+                  <DecisionPipelinePanel view={pipelineFromDecisionDetail(dossier)} />
+                  <SignalEvidenceCard detail={dossier} />
+                </>
+              ) : null}
+              <div className="dialog-actions">
+                <button type="button" className="iv-btn iv-btn--primary" onClick={() => setSelected(null)}>
+                  Fermer
+                </button>
+              </div>
             </div>
           </div>
-        </div>
         </div>
       )}
     </div>

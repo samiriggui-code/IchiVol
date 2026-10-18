@@ -1,0 +1,303 @@
+/**
+ * Feuilles paper (ticket d'achat PaperConfirmSheet, clôture PaperCloseConfirmSheet) au look premium.
+ * Scopé sous .pv-sheet (posé sur l'aside des deux feuilles) : remplace les teintes figées d'index.css
+ * par les jetons premium. Aucune couleur en dur : toujours var(--…).
+ */
+
+.trade-sheet.pv-sheet {
+  background: var(--sheet-bg);
+  border: 0;
+  border-left: 1px solid var(--line-2);
+  border-radius: 0;
+  color: var(--text);
+  font: 12px/1.45 var(--sans);
+  box-shadow: var(--shadow-pop);
+}
+.pv-sheet .trade-sheet-head {
+  position: relative;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-head-bg);
+}
+.pv-sheet .trade-sheet-head::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  box-shadow: var(--glow-cyan);
+}
+.pv-sheet .trade-sheet-head h2 {
+  margin: 0 0 3px;
+  font: 600 16px var(--sans);
+  color: var(--text);
+}
+.pv-sheet .trade-sheet-head .muted {
+  margin: 0;
+  font: 500 10.5px var(--mono);
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.pv-sheet .trade-sheet-scroll {
+  padding: 14px 18px 18px;
+}
+.pv-sheet .muted {
+  color: var(--muted);
+}
+.pv-sheet .pos,
+.pv-sheet .up {
+  color: var(--pos);
+}
+.pv-sheet .neg,
+.pv-sheet .down {
+  color: var(--neg);
+}
+
+/* Bandeaux */
+.pv-sheet .banner.error,
+.pv-sheet .banner.warn {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: var(--r-s);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.pv-sheet .banner.error {
+  border: 1px solid var(--sell-line);
+  background: var(--sell-soft);
+  color: var(--sell);
+}
+.pv-sheet .banner.warn {
+  border: 1px solid var(--amber-line);
+  border-left: 3px solid var(--amber);
+  background: var(--amber-soft);
+  color: var(--text);
+}
+
+/* Résumé (clôture) */
+.pv-sheet .trade-sheet-brief {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+  background: var(--panel-2);
+}
+.pv-sheet .trade-sheet-brief .subhead,
+.pv-sheet .ot-card-title,
+.pv-sheet .ot-engine-kicker,
+.pv-sheet .ot-outcome-label {
+  margin: 0 0 6px;
+  font: 500 9.5px var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pv-sheet .trade-sheet-brief p {
+  margin: 2px 0;
+  font-size: 13px;
+}
+.pv-sheet .paper-confirm-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 20px;
+  margin: 0 0 12px;
+}
+.pv-sheet .paper-confirm-stats > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 30px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--row-line);
+}
+.pv-sheet .paper-confirm-stats dt {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 12px;
+}
+.pv-sheet .paper-confirm-stats dd {
+  margin: 0;
+  font: 500 11.5px var(--mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Avis du moteur (ticket) */
+.pv-sheet .ot-engine-card {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-s);
+  background: var(--panel-2);
+}
+.pv-sheet .ot-engine-card.is-buy {
+  border-color: var(--buy-line);
+  background: var(--buy-soft);
+}
+.pv-sheet .ot-engine-card.is-hold {
+  border-color: var(--amber-line);
+  background: var(--amber-soft);
+}
+.pv-sheet .ot-engine-kicker {
+  margin: 0;
+}
+.pv-sheet .ot-engine-badge {
+  padding: 3px 7px;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  font: 600 9.5px var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.pv-sheet .ot-engine-badge.is-buy {
+  color: var(--buy);
+  border-color: var(--buy-line);
+  background: var(--buy-soft);
+}
+.pv-sheet .ot-engine-badge.is-hold {
+  color: var(--amber);
+  border-color: var(--amber-line);
+  background: var(--amber-soft);
+}
+.pv-sheet .ot-engine-copy {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+/* Cartes du ticket */
+.pv-sheet .ot-card {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+  background: var(--panel-bg);
+}
+.pv-sheet .ot-card--split {
+  gap: 14px;
+}
+.pv-sheet .order-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pv-sheet .order-chip.is-on {
+  border-color: var(--cyan-line);
+  background: var(--cyan-soft);
+  color: var(--cyan);
+}
+.pv-sheet .order-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.pv-sheet .order-input {
+  width: 130px;
+  height: 34px;
+  font-size: 15px;
+  text-align: right;
+}
+.pv-sheet .order-outcomes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+.pv-sheet .order-outcome {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--r-s);
+  border: 1px solid var(--line);
+}
+.pv-sheet .order-outcome--gain {
+  border-color: var(--buy-line);
+  background: var(--buy-soft);
+}
+.pv-sheet .order-outcome--loss {
+  border-color: var(--sell-line);
+  background: var(--sell-soft);
+}
+.pv-sheet .order-outcome strong {
+  font: 600 18px var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.pv-sheet .order-outcome .muted {
+  font-size: 10.5px;
+}
+.pv-sheet .ot-kv {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+.pv-sheet .ot-kv > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--row-line);
+  font-size: 12px;
+}
+.pv-sheet .ot-kv > div:last-child {
+  border-bottom: 0;
+}
+.pv-sheet .ot-kv dt {
+  margin: 0;
+  color: var(--text-2);
+}
+.pv-sheet .ot-kv dd {
+  margin: 0;
+  font: 500 11.5px var(--mono);
+  text-align: right;
+}
+.pv-sheet .ot-card--portfolio .ot-portfolio-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+}
+.pv-sheet .ot-card--portfolio .ot-portfolio-row span:first-child {
+  color: var(--text-2);
+}
+
+/* Note et actions */
+.pv-sheet .paper-confirm-note {
+  margin: 12px 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+.pv-sheet .paper-confirm-note a {
+  color: var(--cyan);
+}
+.pv-sheet .paper-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.pv-sheet .paper-confirm-actions .iv-btn {
+  height: 34px;
+  padding: 0 16px;
+}
+
+@media (max-width: 520px) {
+  .pv-sheet .paper-confirm-stats,
+  .pv-sheet .order-outcomes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pv-sheet .trade-sheet-head,
+  .pv-sheet .trade-sheet-scroll {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

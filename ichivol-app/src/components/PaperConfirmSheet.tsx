@@ -11,6 +11,7 @@ import {
 import { eur, price as fmtPrice, signedEur } from '../lib/tradeStory'
 import { ScenariosPanel } from './ScenariosPanel'
 import { BASELINE_PORTFOLIO_CODE, MANUAL_PORTFOLIOS } from '../lib/rsPortfolio'
+import './PaperSheets.css'
 
 const AMOUNT_CHIPS = [100, 250, 500, 1000]
 const STOP_CHIPS = [0.01, 0.02, 0.03, 0.05]
@@ -140,7 +141,7 @@ export function PaperConfirmSheet({
         if (e.target === e.currentTarget && !confirming) onCancel()
       }}
     >
-      <aside className="panel trade-sheet paper-confirm-sheet order-ticket">
+      <aside className="panel trade-sheet paper-confirm-sheet order-ticket pv-sheet">
         <header className="panel-head trade-sheet-head">
           <div>
             <h2>Acheter · {symbolLabel}</h2>
@@ -149,7 +150,7 @@ export function PaperConfirmSheet({
               {preview && ` · px ${fmtPrice(preview.price)}`}
             </p>
           </div>
-          <button type="button" className="ghost" onClick={onCancel} disabled={confirming}>
+          <button type="button" className="iv-btn iv-btn--ghost iv-btn--sm" onClick={onCancel} disabled={confirming}>
             Annuler
           </button>
         </header>
@@ -182,7 +183,7 @@ export function PaperConfirmSheet({
                   key={p.code}
                   role="radio"
                   aria-checked={portfolioCode === p.code}
-                  className={`ghost order-chip${portfolioCode === p.code ? ' is-on' : ''}`}
+                  className={`iv-btn iv-btn--sm order-chip${portfolioCode === p.code ? ' is-on' : ''}`}
                   onClick={() => setPortfolioCode(p.code)}
                   disabled={confirming}
                 >
@@ -196,7 +197,7 @@ export function PaperConfirmSheet({
             <h3 className="ot-card-title">Combien investir ?</h3>
             <div className="order-input-row">
               <input
-                className="order-input mono"
+                className="iv-input order-input"
                 inputMode="decimal"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
@@ -204,7 +205,7 @@ export function PaperConfirmSheet({
               />
               <span className="muted">€</span>
               {suggested && (
-                <button type="button" className="ghost order-chip" onClick={() => setAmount(String(suggested))}>
+                <button type="button" className="iv-btn iv-btn--sm order-chip" onClick={() => setAmount(String(suggested))}>
                   Moteur · {eur(suggested, 0)}
                 </button>
               )}
@@ -214,7 +215,7 @@ export function PaperConfirmSheet({
                 <button
                   type="button"
                   key={c}
-                  className={`ghost order-chip${notional === c ? ' is-on' : ''}`}
+                  className={`iv-btn iv-btn--sm order-chip${notional === c ? ' is-on' : ''}`}
                   onClick={() => setAmount(String(c))}
                 >
                   {c === chips[chips.length - 1] && !AMOUNT_CHIPS.includes(c) ? `Tout · ${eur(c, 0)}` : eur(c, 0)}
@@ -231,7 +232,7 @@ export function PaperConfirmSheet({
                   <button
                     type="button"
                     key={s}
-                    className={`ghost order-chip${Math.abs(stopPct - s) < 1e-6 ? ' is-on' : ''}`}
+                    className={`iv-btn iv-btn--sm order-chip${Math.abs(stopPct - s) < 1e-6 ? ' is-on' : ''}`}
                     onClick={() => setStopPct(s)}
                   >
                     {(s * 100).toFixed(0)} %
@@ -240,7 +241,7 @@ export function PaperConfirmSheet({
                 {suggestedStop && (
                   <button
                     type="button"
-                    className={`ghost order-chip${Math.abs(stopPct - suggestedStop) < 1e-6 ? ' is-on' : ''}`}
+                    className={`iv-btn iv-btn--sm order-chip${Math.abs(stopPct - suggestedStop) < 1e-6 ? ' is-on' : ''}`}
                     onClick={() => setStopPct(suggestedStop)}
                     title="Distance calculée par le moteur (volatilité ATR)"
                   >
@@ -256,7 +257,7 @@ export function PaperConfirmSheet({
                   <button
                     type="button"
                     key={r}
-                    className={`ghost order-chip${tpR === r ? ' is-on' : ''}`}
+                    className={`iv-btn iv-btn--sm order-chip${tpR === r ? ' is-on' : ''}`}
                     onClick={() => setTpR(r)}
                   >
                     {r} ×
@@ -290,12 +291,12 @@ export function PaperConfirmSheet({
               <div className="order-outcomes">
                 <div className="order-outcome order-outcome--gain">
                   <span className="ot-outcome-label">Si objectif</span>
-                  <strong className="mono up">{signedEur(preview.outcomes.net_gain_if_target)}</strong>
+                  <strong className="mono pos">{signedEur(preview.outcomes.net_gain_if_target)}</strong>
                   <span className="muted mono">@ {fmtPrice(preview.order.take_profit_price)} · net frais</span>
                 </div>
                 <div className="order-outcome order-outcome--loss">
                   <span className="ot-outcome-label">Si stop</span>
-                  <strong className="mono down">{signedEur(preview.outcomes.net_loss_if_stop)}</strong>
+                  <strong className="mono neg">{signedEur(preview.outcomes.net_loss_if_stop)}</strong>
                   <span className="muted mono">@ {fmtPrice(preview.order.stop_price)} · frais inclus</span>
                 </div>
               </div>
@@ -374,10 +375,10 @@ export function PaperConfirmSheet({
           </p>
 
           <div className="paper-confirm-actions">
-            <button type="button" className="ghost order-confirm" disabled={!ok || confirming} onClick={handleConfirm}>
+            <button type="button" className="iv-btn iv-btn--buy order-confirm" disabled={!ok || confirming} onClick={handleConfirm}>
               {confirming ? 'Ouverture…' : `Confirmer l’achat · ${valid ? eur(notional, 0) : '—'}`}
             </button>
-            <button type="button" className="ghost" disabled={confirming} onClick={onCancel}>
+            <button type="button" className="iv-btn" disabled={confirming} onClick={onCancel}>
               Annuler
             </button>
           </div>
