@@ -1,4 +1,9 @@
-/* Nested panels inside fiche (EveIntelligence / Shadow) — flatten card chrome. */
+/*
+ * Fiche d'un mode d'Ève (dialog modal ouvert depuis le cadre ou la page Ève).
+ * Jetons premium uniquement : le pont (premium.css) raccorde déjà .fiche-dialog.
+ */
+
+/* Panneaux imbriqués (EveIntelligence / Shadow) : sans habillage de carte. */
 .fiche-dialog .card {
   border: 0;
   box-shadow: none;
@@ -10,47 +15,48 @@
   display: none;
 }
 
-/* Chrome dialog fiche — classes maquette (dialog-body/head/…) ; sizing + scoped tokens. */
 .fiche-dialog {
-  --bg: #faf8f5;
-  --card: #fefdfb;
-  --line: #ddd9d3;
-  --ink: #202b36;
-  --muted: #7d8288;
-  --blue: #1a7df5;
-  --green: #0b8f83;
-  --red: #c8412f;
-  --amber: #a76c17;
-  border: 1px solid var(--line);
-  border-radius: 16px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r);
   padding: 0;
   width: min(720px, 94vw);
   max-width: 720px;
   max-height: min(92vh, 900px);
-  background: var(--card);
-  color: var(--ink);
-  box-shadow: 0 25px 100px #0003;
+  background: var(--sheet-bg);
+  color: var(--text);
+  box-shadow: var(--shadow-pop);
   overflow: hidden;
-  font: 12px Inter, Arial, sans-serif;
+  font: 12.5px/1.5 var(--sans);
+}
+/* Ligne cyan lumineuse en tête, comme les cartes signature */
+.fiche-dialog::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 24px;
+  right: 24px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  box-shadow: var(--glow-cyan);
 }
 
 .fiche-dialog button {
   cursor: pointer;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--card);
-  padding: 10px 14px;
-  color: inherit;
-  font: inherit;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-s);
+  background: var(--ghost-bg);
+  height: 30px;
+  padding: 0 12px;
+  color: var(--text);
+  font: 500 12px var(--sans);
 }
 
 .fiche-dialog::backdrop {
-  background: #18263255;
   backdrop-filter: blur(3px);
 }
 
 .fiche-dialog .dialog-body {
-  padding: 28px;
+  padding: 22px 24px;
   max-height: min(92vh, 900px);
   overflow: auto;
   -webkit-overflow-scrolling: touch;
@@ -66,28 +72,42 @@
 
 .fiche-dialog .dialog-head button {
   border: 0;
-  font-size: 22px;
+  height: auto;
+  font-size: 20px;
   background: none;
-  padding: 4px 8px;
+  padding: 2px 8px;
   line-height: 1;
+  color: var(--muted);
+}
+.fiche-dialog .dialog-head button:hover {
+  color: var(--text);
 }
 
 .fiche-dialog .dialog-body > h2,
 .fiche-dialog .dialog-head h2 {
-  font-size: 29px;
+  font: 600 20px/1.2 var(--sans);
+  letter-spacing: -0.015em;
   margin: 0;
+  color: var(--text);
 }
 
 .fiche-dialog .dialog-body > p {
-  color: var(--muted);
-  font-size: 13px;
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.fiche-dialog code {
+  font: 500 11px var(--mono);
+  color: var(--cyan);
 }
 
 .fiche-dialog .dialog-actions {
   display: flex;
   gap: 10px;
-  margin-top: 24px;
+  margin-top: 20px;
   justify-content: flex-end;
+  align-items: center;
   flex-wrap: wrap;
 }
 
@@ -97,6 +117,12 @@
   margin-top: 0;
   text-align: center;
   align-items: center;
+}
+
+.fiche-dialog .link {
+  color: var(--cyan);
+  text-decoration: none;
+  font-weight: 500;
 }
 
 .fiche-dialog .fiche-term-hint {
@@ -123,38 +149,42 @@
   margin-bottom: 4px;
 }
 
-/* Maquette primitives scoped — fiche hors page-wrappers (.desk-page / .opps-page). */
+/* Filtres segmentés */
 .fiche-dialog .segmented {
-  display: flex;
-  gap: 3px;
-  background: #f3f2ef;
-  padding: 3px;
-  border-radius: 6px;
-  margin: 14px 0 4px;
+  display: inline-flex;
   flex-wrap: wrap;
+  overflow: hidden;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-s);
+  margin: 14px 0 4px;
 }
 
 .fiche-dialog .segmented button {
-  border: none;
+  height: 24px;
+  border: 0;
+  border-radius: 0;
   background: transparent;
-  font-size: 10px;
-  padding: 6px 9px;
+  padding: 0 10px;
+  font: 600 10.5px var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
 .fiche-dialog .segmented button.active {
-  background: white;
-  box-shadow: 0 1px 3px #0001;
-  color: var(--ink);
+  background: var(--cyan-soft);
+  color: var(--cyan);
 }
 
 .fiche-dialog .statline {
   display: flex;
   justify-content: space-between;
-  padding: 13px 0;
-  border-bottom: 1px solid var(--line);
+  align-items: baseline;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--row-line);
   font-size: 12px;
   gap: 12px;
+  color: var(--text-2);
 }
 
 .fiche-dialog .statline:last-child {
@@ -163,55 +193,65 @@
 
 .fiche-dialog .statline > b {
   text-align: right;
-  font-weight: 600;
+  font-weight: 500;
+  color: var(--text);
 }
 
 .fiche-dialog .tag {
-  font: 9px 'JetBrains Mono', monospace;
-  padding: 5px 7px;
-  background: #edf3fa;
+  display: inline-flex;
+  align-items: center;
+  font: 600 9.5px var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 6px;
+  border: 1px solid var(--cyan-line);
   border-radius: 4px;
-  color: #3978bb;
+  background: var(--cyan-soft);
+  color: var(--cyan);
   white-space: nowrap;
 }
 
 .fiche-dialog .tag.green {
-  background: #e7f3ee;
-  color: #168579;
+  border-color: var(--mint-line);
+  background: var(--mint-soft);
+  color: var(--mint);
 }
 
 .fiche-dialog .tag.amber {
-  background: #faf0df;
-  color: #a8782a;
+  border-color: var(--amber-line);
+  background: var(--amber-soft);
+  color: var(--amber);
 }
 
 .fiche-dialog .tag.red {
-  background: #f9eae6;
-  color: #b35346;
+  border-color: var(--sell-line);
+  background: var(--sell-soft);
+  color: var(--sell);
 }
 
 .fiche-dialog .tag.gray {
-  background: #f0efeb;
-  color: #888b89;
+  border-color: var(--line-2);
+  background: var(--ghost-bg);
+  color: var(--muted);
 }
 
 .fiche-dialog .notice {
   display: flex;
   gap: 12px;
   align-items: center;
-  background: #f5f0e6;
-  border: 1px solid #e9dfcb;
-  padding: 12px 16px;
-  border-radius: 8px;
-  color: #9b7a3d;
-  font-size: 11px;
+  background: var(--amber-soft);
+  border: 1px solid var(--amber-line);
+  padding: 10px 14px;
+  border-radius: var(--r-s);
+  color: var(--amber);
+  font-size: 12px;
   margin: 0;
 }
 
 .fiche-dialog .notice.blue {
-  background: #edf3fc;
-  border-color: #dce6f5;
-  color: #56749c;
+  background: var(--cyan-soft);
+  border-color: var(--cyan-line);
+  color: var(--cyan);
 }
 
 .fiche-dialog .table-wrap {
@@ -226,18 +266,21 @@
 }
 
 .fiche-dialog .table-wrap th {
-  font-size: 9px;
-  letter-spacing: 0.6px;
-  font-weight: 500;
-  color: #8d9297;
-  background: #f9f8f5;
-  padding: 12px 16px;
+  height: 28px;
+  padding: 0 10px;
+  font: 500 9.5px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--th-bg);
+  border-bottom: 1px solid var(--line-2);
 }
 
 .fiche-dialog .table-wrap td {
-  padding: 12px 16px;
-  border-bottom: 1px solid #eeebe6;
-  font-size: 11px;
+  height: 28px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--row-line);
+  font-size: 12px;
 }
 
 .fiche-dialog .suggestion {
@@ -248,14 +291,16 @@
   font-size: 12px;
 }
 
-.fiche-dialog .primary {
-  background: var(--blue);
-  color: white;
-  border-color: var(--blue);
+.fiche-dialog .primary,
+.fiche-dialog button.primary {
+  border-color: var(--cyan-line);
+  background: var(--btn-pri-bg);
+  color: var(--btn-pri-text);
 }
 
 .fiche-dialog .mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 800px) {
@@ -270,7 +315,7 @@
   }
 
   .fiche-dialog .dialog-body {
-    padding: 18px 16px 28px;
+    padding: 16px 16px 28px;
     max-height: 100%;
     height: 100%;
   }
@@ -279,13 +324,13 @@
     position: sticky;
     top: 0;
     z-index: 2;
-    background: var(--card);
-    margin: -18px -16px 12px;
+    background: var(--sheet-bg);
+    margin: -16px -16px 12px;
     padding: 14px 16px 10px;
     border-bottom: 1px solid var(--line);
   }
 
   .fiche-dialog .dialog-head h2 {
-    font-size: 22px;
+    font-size: 18px;
   }
 }

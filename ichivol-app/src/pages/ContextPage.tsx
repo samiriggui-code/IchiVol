@@ -3,7 +3,7 @@
  * Layout maquette `.ctx-page` + données live (CoinGecko, F&G, calendar, news, ATR, corr).
  */
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import {
   fetchContextCalendar,
   fetchContextNews,
@@ -54,6 +54,14 @@ const FLAGSHIPS: Record<EngineAssetClass, string[]> = {
 
 const DISPLAY_CLASSES: EngineAssetClass[] = ['crypto', 'forex', 'metal', 'index', 'equity']
 
+const TONE_CLASS: Record<BadgeTone, string> = {
+  green: 'is-mint',
+  amber: 'is-amber',
+  red: 'is-sell',
+  gray: 'is-muted',
+  '': 'is-cyan',
+}
+
 function badge(text: string, tone: BadgeTone = ''): ReactNode {
   let inferred = tone
   if (!inferred) {
@@ -65,7 +73,7 @@ function badge(text: string, tone: BadgeTone = ''): ReactNode {
           ? 'amber'
           : ''
   }
-  return <span className={`tag ${inferred}`.trim()}>{text}</span>
+  return <span className={`iv-tag ${TONE_CLASS[inferred]}`}>{text}</span>
 }
 
 function fearGreedFr(classification: string): string {
@@ -257,7 +265,7 @@ export function ContextPage() {
               label: CLASS_LABELS[assetClass],
               badge: 'Non disponible',
               tone: 'gray' as BadgeTone,
-              detail: 'Provider non câblé',
+              detail: 'Aucune source branchée',
             } satisfies ClassRegime
           }
           try {
@@ -405,234 +413,281 @@ export function ContextPage() {
     ? corr.symbols.map((s) => displaySymbol(s))
     : ['BTC', 'ETH', 'SOL', 'XRP', 'BNB']
 
-  const heatCells: { v: string; strong: boolean }[] = []
+  const heatCells: { v: string; strong: boolean; n: number | null }[] = []
   if (corr?.matrix?.length) {
     const n = Math.min(5, corr.symbols.length)
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
         const x = corr.matrix[i]?.[j]
         if (x == null || !Number.isFinite(x)) {
-          heatCells.push({ v: '—', strong: false })
+          heatCells.push({ v: '—', strong: false, n: null })
         } else {
-          heatCells.push({ v: x.toFixed(2), strong: Math.abs(x) > 0.85 })
+          heatCells.push({ v: x.toFixed(2), strong: Math.abs(x) > 0.85, n: x })
         }
       }
     }
   } else {
-    for (let i = 0; i < 25; i++) heatCells.push({ v: loading ? '…' : '—', strong: false })
+    for (let i = 0; i < 25; i++) heatCells.push({ v: loading ? '…' : '—', strong: false, n: null })
   }
 
   const liveOk = Boolean(global || fg || events.length || news.length || corr || btcSnap)
   const wiredCount = instruments.filter((i) => i.wired).length
 
+  const heatN = Math.min(5, heatLabels.length)
+  const fgPct = fg != null && Number.isFinite(fg.value) ? Math.max(0, Math.min(100, fg.value)) : null
+
   return (
     <div className="ctx-page">
-      <div className="page-head">
+      <div className="iv-ph">
         <div>
-          <div className="eyebrow">07 / ICHIVOL WORKSPACE</div>
+          <div className="iv-meta">Contexte · données live · avant d’agir</div>
           <h1>Contexte</h1>
-          <p className="subtitle">
-            Prendre du recul sur le marché — climat, macro, corrélations. Ne vote jamais.
-          </p>
+          <p>Prendre du recul sur le marché — climat, macro, corrélations. Ne vote jamais.</p>
         </div>
-        <div className="actions">
-          {badge(liveOk ? 'DONNÉES LIVE' : loading ? 'CHARGEMENT' : 'HORS LIGNE', liveOk ? 'green' : 'gray')}
-          <button type="button" className="subtle" onClick={() => void load()} disabled={loading}>
+        <div className="iv-ph-act">
+          <span className={`iv-chip ${liveOk ? 'is-mint' : 'is-muted'}`}>
+            <i className={`iv-dot${liveOk ? '' : ' is-off'}`} />
+            {liveOk ? 'Données live' : loading ? 'Chargement' : 'Hors ligne'}
+          </span>
+          <button type="button" className="iv-btn" onClick={() => void load()} disabled={loading}>
             Actualiser
           </button>
         </div>
       </div>
 
-      {feedError ? (
-        <p className="subtitle" style={{ marginBottom: 16 }}>
-          {feedError}
-        </p>
-      ) : null}
+      {feedError ? <div className="iv-empty is-error ctx-feed-error">{feedError}</div> : null}
 
-      <div className="metrics">
-        <div className="metric">
-          <div className="metric-label">
-            Climat du marché<span>↗</span>
-          </div>
-          <div className="metric-value">{climateLabel}</div>
-          <small>{climateMeta}</small>
+      <div className="iv-kpis ctx-kpis">
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">Climat du marché</div>
+          <div className="iv-kpi-v">{climateLabel}</div>
+          <div className="iv-kpi-s">{climateMeta}</div>
         </div>
-        <div className="metric">
-          <div className="metric-label">
-            Dominance BTC<span>↗</span>
-          </div>
-          <div className="metric-value">
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">Dominance BTC</div>
+          <div className="iv-kpi-v">
             {btcDom != null
               ? `${btcDom.toLocaleString('fr-FR', { maximumFractionDigits: 1, minimumFractionDigits: 1 })} %`
               : loading
                 ? '…'
                 : '—'}
           </div>
-          <small>{btcDom != null ? 'CoinGecko' : '—'}</small>
+          <div className="iv-kpi-s">{btcDom != null ? 'CoinGecko' : '—'}</div>
         </div>
-        <div className="metric">
-          <div className="metric-label">
-            Volatilité<span>↗</span>
-          </div>
-          <div className="metric-value">{volLabel}</div>
-          <small>{volMeta}</small>
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">Volatilité</div>
+          <div className="iv-kpi-v">{volLabel}</div>
+          <div className="iv-kpi-s">{volMeta}</div>
         </div>
-        <div className="metric">
-          <div className="metric-label">
-            {fg ? 'Climat crypto' : 'Régime crypto'}<span>↗</span>
-          </div>
-          <div className="metric-value">{regimeLabel}</div>
-          <small>{regimeMeta}</small>
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">{fg ? 'Climat crypto' : 'Régime crypto'}</div>
+          <div className="iv-kpi-v">{regimeLabel}</div>
+          <div className="iv-kpi-s">{regimeMeta}</div>
         </div>
       </div>
 
-      <div className="grid">
-        <section className="card">
-          <div className="card-head">
-            <h2>Agenda économique</h2>
-            {badge(events.length ? `${events.length} events` : loading ? '…' : 'Vide', 'gray')}
+      <div className="iv-grid">
+        <section className="iv-card iv-s4 iv-m-s12">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs">
+              <span className="iv-card-tab is-on">Régime par classe d’actifs</span>
+            </div>
+            <div className="iv-card-tools">
+              {regimes.some((r) => r.badge !== 'Non disponible') ? 'RSI / ATR' : loading ? '…' : '—'}
+            </div>
           </div>
-          <div className="card-body">
-            <div className="eyebrow">ÉVÉNEMENTS</div>
-            {events.length === 0 ? (
-              <div className="session">
-                <span className="mono">—</span>
-                <b>—</b>
-                <span>{loading ? 'Chargement…' : 'Aucun événement cette semaine'}</span>
-                {badge('—', 'gray')}
-              </div>
-            ) : (
-              events.map((e, i) => (
-                <div className="session" key={`${e.title}-${i}`}>
-                  <span className="mono">{fmtEventTime(e.date)}</span>
-                  <b>{e.country || '—'}</b>
-                  <span>{e.title || '—'}</span>
-                  {impactBadge(e.impact)}
-                </div>
-              ))
-            )}
-            <p style={{ fontSize: 11, color: 'var(--muted)' }}>
-              Le contexte macro éclaire la décision, sans voter dans le signal technique.
-            </p>
-          </div>
-        </section>
-
-        <section className="card">
-          <div className="card-head">
-            <h2>Régime par classe d’actifs</h2>
-            {badge(
-              regimes.some((r) => r.badge !== 'Non disponible')
-                ? 'RSI / ATR'
-                : loading
-                  ? '…'
-                  : '—',
-              'gray',
-            )}
-          </div>
-          <div className="card-body">
-            {(regimes.length > 0 ? regimes : DISPLAY_CLASSES.map((c) => ({
-              assetClass: c,
-              label: CLASS_LABELS[c],
-              badge: loading ? '…' : '—',
-              tone: 'gray' as BadgeTone,
-              detail: '',
-            }))).map((r) => (
-              <div className="statline" key={r.assetClass}>
-                <span>
-                  {r.label}
-                  {r.detail ? (
-                    <small style={{ display: 'block', color: 'var(--muted)', fontSize: 11 }}>
-                      {r.detail}
-                    </small>
-                  ) : null}
-                </span>
-                <b>{badge(r.badge, r.tone)}</b>
+          <div className="iv-card-body ctx-regimes">
+            {(regimes.length > 0
+              ? regimes
+              : DISPLAY_CLASSES.map((c) => ({
+                  assetClass: c,
+                  label: CLASS_LABELS[c],
+                  badge: loading ? '…' : '—',
+                  tone: 'gray' as BadgeTone,
+                  detail: '',
+                }))
+            ).map((r) => (
+              <div className="ctx-regime" key={r.assetClass}>
+                <span className="ctx-regime-name">{r.label}</span>
+                {badge(r.badge, r.tone)}
+                <span className="ctx-regime-detail">{r.detail || '—'}</span>
               </div>
             ))}
-            {wiredCount > 0 ? (
-              <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>
-                {wiredCount} instruments câblés · flagships uniquement
-              </p>
-            ) : null}
-          </div>
-        </section>
-      </div>
-
-      <div className="grid equal">
-        <section className="card">
-          <div className="card-head">
-            <h2>Corrélations · crypto</h2>
-            {badge(corr ? `LIVE · n=${corr.sample_size}` : loading ? '…' : '—', corr ? 'green' : 'gray')}
-          </div>
-          <div className="card-body">
-            <div className="chart-labels">
-              {heatLabels.slice(0, 5).map((s) => (
-                <span key={s}>{s}</span>
-              ))}
-            </div>
-            <div className="heatmap">
-              {heatCells.map((cell, i) => (
-                <div key={i} className={cell.strong ? 'strong' : undefined}>
-                  {cell.v}
-                </div>
-              ))}
-            </div>
-            <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 10 }}>
-              Pearson sur log-returns 1h — lecture seule, hors pipeline.
-            </p>
+            {wiredCount > 0 ? <p className="iv-cap ctx-wired">{wiredCount} instruments câblés · flagships uniquement</p> : null}
           </div>
         </section>
 
-        <section className="card">
-          <div className="card-head">
-            <h2>Points de vigilance</h2>
-            {badge(`${vigilance.length}`, 'gray')}
-          </div>
-          <div className="card-body">
-            {vigilance.length === 0 ? (
-              <p className="muted" style={{ fontSize: 12 }}>
-                {loading ? 'Chargement…' : 'Rien à signaler d’après les données disponibles.'}
-              </p>
-            ) : (
-              vigilance.map((item) => (
-                <div className="step" key={item.id}>
-                  <b>{item.title}</b>
-                  <p>{item.body}</p>
-                </div>
-              ))
-            )}
-          </div>
-        </section>
-      </div>
-
-      <OrderbookQualityCard />
-
-      <section className="card" style={{ marginTop: 16 }}>
-        <div className="card-head">
-          <h2>Actualités crypto</h2>
-          {badge(news.length ? `${news.length}` : loading ? '…' : 'Vide', 'gray')}
-        </div>
-        <div className="card-body">
-          {news.length === 0 ? (
-            <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
-              {loading ? 'Chargement des flux RSS…' : 'Aucun titre disponible (RSS dégradé).'}
+        <section className="apex-card iv-s5 iv-m-s12 ctx-vigil">
+          <div className="iv-label">Points de vigilance</div>
+          {vigilance.length === 0 ? (
+            <p className="ctx-vigil-empty">
+              {loading ? 'Chargement…' : 'Rien à signaler d’après les données disponibles.'}
             </p>
           ) : (
-            <ul className="ctx-news-list">
-              {news.map((item, i) => (
-                <li key={`${item.url}-${i}`}>
-                  <a href={item.url} target="_blank" rel="noreferrer noopener">
-                    {item.title}
-                  </a>
-                  <small>
-                    {item.source || '—'} · {fmtNewsTime(item.published_at)}
-                  </small>
+            <ul className="ctx-vigil-list">
+              {vigilance.map((item) => (
+                <li key={item.id}>
+                  <span className="iv-kw">{item.title}</span> : {item.body}
                 </li>
               ))}
             </ul>
           )}
-        </div>
-      </section>
+          <div className="apex-card-foot">
+            <span className="apex-card-sig">ichivol</span>
+            <span className="iv-chip">
+              {vigilance.length} point{vigilance.length > 1 ? 's' : ''}
+            </span>
+          </div>
+        </section>
+
+        <section className="iv-card iv-s3 iv-m-s12">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs">
+              <span className="iv-card-tab is-on">Climat crypto</span>
+            </div>
+          </div>
+          <div className="iv-card-body">
+            <div className="ctx-fng">
+              <span className={`ctx-fng-v${fgPct != null && (fgPct <= 25 || fgPct >= 75) ? ' warn' : ''}`}>
+                {fgPct != null ? fgPct : loading ? '…' : '—'}
+              </span>
+              <div>
+                <div className="ctx-fng-label">{fg ? fearGreedFr(fg.classification) : '—'}</div>
+                <div className="iv-cap">Fear &amp; Greed · 0 → 100</div>
+              </div>
+            </div>
+            <div className="iv-bar is-amber ctx-fng-bar">
+              <i style={{ width: `${fgPct ?? 0}%` }} />
+            </div>
+            <div className="ctx-fng-legend">
+              <span>Peur extrême</span>
+              <span>Avidité extrême</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div className="iv-grid">
+        <section className="iv-card iv-s5 iv-m-s12">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs">
+              <span className="iv-card-tab is-on">Corrélations · crypto</span>
+            </div>
+            <div className="iv-card-tools">
+              {corr ? (
+                <span className="ok">Live · n={corr.sample_size}</span>
+              ) : loading ? (
+                '…'
+              ) : (
+                '—'
+              )}
+            </div>
+          </div>
+          <div className="iv-card-body iv-table-wrap">
+            <div className="ctx-heat" style={{ gridTemplateColumns: `44px repeat(${heatN}, minmax(46px, 1fr))` }}>
+              <div className="ctx-heat-h" />
+              {heatLabels.slice(0, heatN).map((s) => (
+                <div className="ctx-heat-h" key={`c-${s}`}>
+                  {s}
+                </div>
+              ))}
+              {heatLabels.slice(0, heatN).map((rowLabel, i) => (
+                <Fragment key={`r-${rowLabel}`}>
+                  <div className="ctx-heat-h">{rowLabel}</div>
+                  {heatCells.slice(i * heatN, i * heatN + heatN).map((cell, j) => (
+                    <div
+                      key={j}
+                      className={`ctx-heat-c${cell.n == null ? ' is-na' : cell.n < 0 ? ' is-neg' : ''}${
+                        i === j ? ' is-diag' : ''
+                      }${cell.strong && i !== j ? ' is-strong' : ''}`}
+                      style={
+                        cell.n != null
+                          ? ({ '--a': `${Math.round(Math.abs(cell.n) * 55)}%` } as CSSProperties)
+                          : undefined
+                      }
+                    >
+                      {cell.v}
+                    </div>
+                  ))}
+                </Fragment>
+              ))}
+            </div>
+          </div>
+          <div className="iv-card-foot">Pearson sur log-returns 1h — lecture seule, hors pipeline</div>
+        </section>
+
+        <section className="iv-card iv-s4 iv-m-s12">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs">
+              <span className="iv-card-tab is-on">Agenda économique</span>
+            </div>
+            <div className="iv-card-tools">{events.length ? `${events.length} événements` : loading ? '…' : 'Vide'}</div>
+          </div>
+          <div className="iv-card-body is-flush iv-table-wrap">
+            <table className="iv-table is-compact">
+              <thead>
+                <tr>
+                  <th>Quand</th>
+                  <th>Pays</th>
+                  <th>Événement</th>
+                  <th>Impact</th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="ctx-empty">
+                      {loading ? 'Chargement…' : 'Aucun événement cette semaine'}
+                    </td>
+                  </tr>
+                ) : (
+                  events.map((e, i) => (
+                    <tr key={`${e.title}-${i}`}>
+                      <td className="mono ctx-when">{fmtEventTime(e.date)}</td>
+                      <td className="ctx-country">{e.country || '—'}</td>
+                      <td className="ctx-event">{e.title || '—'}</td>
+                      <td>{impactBadge(e.impact)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="iv-card-foot">Le contexte macro éclaire la décision, sans voter dans le signal</div>
+        </section>
+
+        <OrderbookQualityCard className="iv-s3 iv-m-s12" />
+      </div>
+
+      <div className="iv-grid">
+        <section className="iv-card iv-s12">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs">
+              <span className="iv-card-tab is-on">Actualités crypto</span>
+            </div>
+            <div className="iv-card-tools">{news.length ? `${news.length} titres · informatives` : loading ? '…' : 'Vide'}</div>
+          </div>
+          <div className="iv-card-body ctx-news">
+            {news.length === 0 ? (
+              <p className="iv-note ctx-news-empty">
+                {loading ? 'Chargement des flux RSS…' : 'Aucun titre disponible (RSS dégradé).'}
+              </p>
+            ) : (
+              <ul className="ctx-news-list">
+                {news.map((item, i) => (
+                  <li key={`${item.url}-${i}`}>
+                    <span className="ctx-news-t">{fmtNewsTime(item.published_at)}</span>
+                    <a href={item.url} target="_blank" rel="noreferrer noopener">
+                      {item.title}
+                    </a>
+                    <span className="ctx-news-s">{item.source || '—'}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   )
 }

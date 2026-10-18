@@ -10,7 +10,17 @@ function fmt(v: number | null | undefined, digits = 2): string {
   return v == null ? '—' : v.toLocaleString('fr-FR', { maximumFractionDigits: digits, minimumFractionDigits: digits })
 }
 
-export function OrderbookQualityCard({ symbol = 'BTCUSDT', hours = 24 }: { symbol?: string; hours?: number }) {
+const TONE_CLASS: Record<string, string> = { green: 'is-mint', amber: 'is-amber', red: 'is-sell', gray: 'is-muted' }
+
+export function OrderbookQualityCard({
+  symbol = 'BTCUSDT',
+  hours = 24,
+  className,
+}: {
+  symbol?: string
+  hours?: number
+  className?: string
+}) {
   const [q, setQ] = useState<OrderbookQuality | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -30,56 +40,56 @@ export function OrderbookQualityCard({ symbol = 'BTCUSDT', hours = 24 }: { symbo
 
   const state = q?.status.state ?? 'UNAVAILABLE'
   return (
-    <section className="card" style={{ marginTop: 16 }}>
-      <div className="card-head">
-        <h2>Carnet d’ordres · collecte</h2>
-        <span className={`tag ${bookStateTone(q ? state : 'UNAVAILABLE')}`}>
-          {q ? bookStateLabel(state, q.status.reason) : error ? 'Erreur' : '…'}
-        </span>
+    <section className={`iv-card ob-card${className ? ` ${className}` : ''}`}>
+      <div className="iv-card-head">
+        <div className="iv-card-tabs">
+          <span className="iv-card-tab is-on">Carnet d’ordres · collecte</span>
+        </div>
+        <div className="iv-card-tools">
+          <span className={`iv-tag ${TONE_CLASS[bookStateTone(q ? state : 'UNAVAILABLE')] ?? 'is-muted'}`}>
+            {q ? bookStateLabel(state, q.status.reason) : error ? 'Erreur' : '…'}
+          </span>
+        </div>
       </div>
-      <div className="card-body">
+      <div className="iv-card-body">
         {q ? (
           <>
-            <div className="statline">
-              <span>Instrument</span>
-              <b>
+            <div className="iv-row">
+              Instrument
+              <span className="iv-row-v">
                 {q.symbol} · {q.venue}
-              </b>
+              </span>
             </div>
-            <div className="statline">
-              <span>Minutes synchronisées ({q.window_hours} h)</span>
-              <b>
+            <div className="iv-row">
+              Minutes synchronisées ({q.window_hours} h)
+              <span className="iv-row-v">
                 {fmt(q.synced_pct, 1)} % · {q.states.SYNCED}/{q.expected_minutes}
-              </b>
+              </span>
             </div>
-            <div className="statline">
-              <span>Minutes non mesurées</span>
-              <b>
+            <div className="iv-row">
+              Minutes non mesurées
+              <span className="iv-row-v">
                 {q.missing_minutes + q.states.PARTIAL + q.states.STALE + q.states.UNAVAILABLE}
-              </b>
+              </span>
             </div>
-            <div className="statline">
-              <span>Trous carnet / transactions</span>
-              <b>
+            <div className="iv-row">
+              Trous carnet / transactions
+              <span className="iv-row-v">
                 {q.book_gaps} / {q.trade_gaps}
-              </b>
+              </span>
             </div>
-            <div className="statline">
-              <span>Spread médian · p95</span>
-              <b>
+            <div className="iv-row">
+              Spread médian · p95
+              <span className="iv-row-v">
                 {fmt(q.spread_bps_median)} · {fmt(q.spread_bps_p95)} pb
-              </b>
+              </span>
             </div>
-            {q.status.last_error ? (
-              <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>Dernière erreur : {q.status.last_error}</p>
-            ) : null}
+            {q.status.last_error ? <p className="iv-note ob-note">Dernière erreur : {q.status.last_error}</p> : null}
           </>
         ) : (
-          <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
-            {error ? `Indisponible : ${error}` : 'Chargement…'}
-          </p>
+          <p className="iv-note ob-note">{error ? `Indisponible : ${error}` : 'Chargement…'}</p>
         )}
-        <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 10 }}>
+        <p className="iv-note ob-foot">
           Une seule plateforme (Binance spot) : ne représente pas tout le marché. Liquidité affichée ≠ volume exécuté ;
           ni carte de liquidations, ni stops. Observation seulement, hors décisions.
         </p>

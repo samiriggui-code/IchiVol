@@ -37,8 +37,16 @@ const SECTIONS: Array<{ id: SectionId; label: string; sub: string }> = [
 type EveValue = string | number | boolean
 type Tone = 'green' | 'amber' | 'red' | 'gray' | ''
 
+const TONE_CLASS: Record<Tone, string> = {
+  green: 'is-mint',
+  amber: 'is-amber',
+  red: 'is-sell',
+  gray: 'is-muted',
+  '': 'is-cyan',
+}
+
 function Tag({ tone = '', children }: { tone?: Tone; children: ReactNode }) {
-  return <span className={`tag ${tone}`.trim()}>{children}</span>
+  return <span className={`iv-tag ${TONE_CLASS[tone]}`}>{children}</span>
 }
 
 function pct(v: number | null | undefined, digits = 1): string {
@@ -56,10 +64,10 @@ function errText(err: unknown): string {
 
 function Meter({ value, max, label }: { value: number | null | undefined; max: number | null | undefined; label: string }) {
   const ratio = value != null && max ? Math.min(1, Math.max(0, value / max)) : 0
-  const tone = ratio >= 1 ? 'red' : ratio >= 0.8 ? 'amber' : 'green'
+  const tone = ratio >= 1 ? 'is-sell' : ratio >= 0.8 ? 'is-amber' : 'is-mint'
   return (
-    <div className="meter" role="img" aria-label={label}>
-      <span className={tone} style={{ width: `${Math.round(ratio * 100)}%` }} />
+    <div className={`iv-bar meter ${tone}`} role="img" aria-label={label}>
+      <i style={{ width: `${Math.round(ratio * 100)}%` }} />
     </div>
   )
 }
@@ -75,9 +83,9 @@ function AutoTradingSection({
 }) {
   return (
     <>
-      <section className="card">
-        <div className="card-head">
-          <h2>Pilote automatique d’Ève</h2>
+      <section className="apex-card params-pilot">
+        <div className="params-pilot-head">
+          <div className="iv-label">Pilote automatique d’Ève</div>
           {autonomy == null ? (
             <Tag tone="gray">État inconnu</Tag>
           ) : autonomy ? (
@@ -86,110 +94,143 @@ function AutoTradingSection({
             <Tag tone="amber">Arrêté</Tag>
           )}
         </div>
-        <div className="card-body">
-          <p className="state-line">
-            {autonomy == null
-              ? 'Le moteur ne répond pas : impossible de savoir si Ève trade seule en ce moment.'
-              : autonomy
-                ? 'Ève décide seule des ouvertures et fermetures sur tous les portefeuilles actifs ci-dessous.'
-                : 'Ève ne trade pas seule. Chaque portefeuille applique uniquement sa propre méthode, sans l’avis d’Ève.'}
-          </p>
-          <ol className="steps">
-            <li>
-              <b>Le moteur repère un signal</b> à la clôture d’une bougie, selon la méthode du portefeuille.
-            </li>
-            <li>
-              <b>Ève accepte ou refuse</b> après l’avis de ses modes et de JEV. Dans le doute, elle ne fait rien.
-            </li>
-            <li>
-              <b>Le garde-fou de risque (Risk Kernel) a le dernier mot</b> : il bloque tout ordre qui dépasse les
-              limites du portefeuille. Les stops et objectifs restent appliqués dans tous les cas.
-            </li>
-          </ol>
-          <p className="hint">
+        <p className="params-pilot-why">
+          {autonomy == null
+            ? 'Le moteur ne répond pas : impossible de savoir si Ève trade seule en ce moment.'
+            : autonomy
+              ? 'Ève décide seule des ouvertures et fermetures sur tous les portefeuilles actifs ci-dessous.'
+              : 'Ève ne trade pas seule. Chaque portefeuille applique uniquement sa propre méthode, sans l’avis d’Ève.'}
+        </p>
+        <ol className="steps">
+          <li>
+            <b>Le moteur repère un signal</b> à la clôture d’une bougie, selon la méthode du portefeuille.
+          </li>
+          <li>
+            <b>Ève accepte ou refuse</b> après l’avis de ses modes et de JEV. Dans le doute, elle ne fait rien.
+          </li>
+          <li>
+            <b>Le garde-fou de risque (Risk Kernel) a le dernier mot</b> : il bloque tout ordre qui dépasse les
+            limites du portefeuille. Les stops et objectifs restent appliqués dans tous les cas.
+          </li>
+        </ol>
+        <div className="apex-card-foot">
+          <span className="apex-card-sig">ichivol</span>
+          <span className="params-pilot-foot">
             Ce pilote s’allume et s’éteint uniquement sur le serveur du moteur, pas depuis le navigateur : un clic
             ne doit jamais pouvoir le lancer par erreur. Tout se passe en argent fictif.
-          </p>
+          </span>
         </div>
       </section>
 
-      <section className="card">
-        <div className="card-head">
-          <h2>Portefeuilles et limites de risque</h2>
-          {books ? <small>{books.length} actif{books.length > 1 ? 's' : ''}</small> : null}
+      <section className="iv-card">
+        <div className="iv-card-head">
+          <div className="iv-card-tabs">
+            <span className="iv-card-tab is-on">Portefeuilles et limites de risque</span>
+          </div>
+          <div className="iv-card-tools">
+            {books ? `${books.length} actif${books.length > 1 ? 's' : ''}` : null} · Risk Kernel
+          </div>
         </div>
-        <div className="card-body">
-          <p className="lede">
-            Les portefeuilles fictifs suivis par le moteur, et ce que le garde-fou de risque leur autorise. Le{' '}
-            <b>risque engagé</b> est ce que vous perdriez si tous les stops étaient touchés, en part du capital.
-            Ces limites viennent de la méthode de chaque portefeuille et ne se modifient pas ici.
-          </p>
-          {booksError ? <p className="notice err">Portefeuilles indisponibles : {booksError}</p> : null}
-          {books == null && !booksError ? <p className="hint">Chargement…</p> : null}
-          {books && books.length === 0 ? <p className="hint">Aucun portefeuille actif.</p> : null}
-          <div className="books">
-            {books?.map((b) => {
-              const r = b.overview.risk
-              const blocked = b.row.kill_switch_armed || b.row.daily_loss_locked
-              const refusals = r?.recent_refusals?.length ?? 0
-              return (
-                <article className="book" key={b.code}>
-                  <header>
-                    <h3>{b.label}</h3>
-                    {b.row.kill_switch_armed ? (
-                      <Tag tone="red">Arrêt d’urgence</Tag>
-                    ) : b.row.daily_loss_locked ? (
-                      <Tag tone="red">Perte du jour atteinte</Tag>
-                    ) : (
-                      <Tag tone="green">Ouvert aux entrées</Tag>
-                    )}
-                  </header>
-                  {r ? (
-                    <>
-                      <div className="limit">
-                        <div className="limit-head">
-                          <span>Risque engagé</span>
-                          <b>
-                            {pct(r.open_risk_pct)} <small>sur {pct(r.max_open_risk_pct)} max</small>
-                          </b>
+        <p className="lede params-lede-band">
+          Les portefeuilles fictifs suivis par le moteur, et ce que le garde-fou de risque leur autorise. Le{' '}
+          <b>risque engagé</b> est ce que vous perdriez si tous les stops étaient touchés, en part du capital. Ces
+          limites viennent de la méthode de chaque portefeuille et ne se modifient pas ici.
+        </p>
+        {booksError ? <p className="notice err params-band-notice">Portefeuilles indisponibles : {booksError}</p> : null}
+        <div className="iv-card-body is-flush iv-table-wrap">
+          <table className="iv-table params-books">
+            <thead>
+              <tr>
+                <th>Portefeuille</th>
+                <th>État</th>
+                <th className="n">Risque engagé</th>
+                <th className="n">Positions ouvertes</th>
+                <th>Garde-fou</th>
+              </tr>
+            </thead>
+            <tbody>
+              {books == null && !booksError ? (
+                <tr>
+                  <td colSpan={5} className="params-empty">
+                    Chargement…
+                  </td>
+                </tr>
+              ) : null}
+              {books && books.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="params-empty">
+                    Aucun portefeuille actif.
+                  </td>
+                </tr>
+              ) : null}
+              {books?.map((b) => {
+                const r = b.overview.risk
+                const blocked = b.row.kill_switch_armed || b.row.daily_loss_locked
+                const refusals = r?.recent_refusals?.length ?? 0
+                return (
+                  <tr key={b.code}>
+                    <td className="sym">{b.label}</td>
+                    <td>
+                      {b.row.kill_switch_armed ? (
+                        <Tag tone="red">Arrêt d’urgence</Tag>
+                      ) : b.row.daily_loss_locked ? (
+                        <Tag tone="red">Perte du jour atteinte</Tag>
+                      ) : (
+                        <Tag tone="green">Ouvert aux entrées</Tag>
+                      )}
+                    </td>
+                    <td className="n">
+                      {r ? (
+                        <div className="limit">
+                          <span>
+                            {pct(r.open_risk_pct)} <small>/ {pct(r.max_open_risk_pct)}</small>
+                          </span>
+                          <Meter
+                            value={r.open_risk_pct}
+                            max={r.max_open_risk_pct}
+                            label={`Risque engagé ${pct(r.open_risk_pct)} sur ${pct(r.max_open_risk_pct)}`}
+                          />
                         </div>
-                        <Meter
-                          value={r.open_risk_pct}
-                          max={r.max_open_risk_pct}
-                          label={`Risque engagé ${pct(r.open_risk_pct)} sur ${pct(r.max_open_risk_pct)}`}
-                        />
-                      </div>
-                      <div className="limit">
-                        <div className="limit-head">
-                          <span>Positions ouvertes</span>
-                          <b>
-                            {r.open_positions} <small>sur {r.max_open_positions} max</small>
-                          </b>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td className="n">
+                      {r ? (
+                        <div className="limit">
+                          <span>
+                            {r.open_positions} <small>/ {r.max_open_positions}</small>
+                          </span>
+                          <Meter
+                            value={r.open_positions}
+                            max={r.max_open_positions}
+                            label={`${r.open_positions} positions sur ${r.max_open_positions}`}
+                          />
                         </div>
-                        <Meter
-                          value={r.open_positions}
-                          max={r.max_open_positions}
-                          label={`${r.open_positions} positions sur ${r.max_open_positions}`}
-                        />
-                      </div>
-                      <p className="book-foot">
-                        {blocked
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td className="book-foot">
+                      {!r
+                        ? 'Limites non communiquées par le moteur pour ce portefeuille.'
+                        : blocked
                           ? 'Aucune nouvelle position tant que le verrou est en place ; les positions ouvertes restent gérées.'
                           : refusals > 0
                             ? `${refusals} ordre${refusals > 1 ? 's' : ''} refusé${refusals > 1 ? 's' : ''} récemment par le garde-fou.`
                             : 'Aucun refus récent du garde-fou.'}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="book-foot">Limites non communiquées par le moteur pour ce portefeuille.</p>
-                  )}
-                </article>
-              )
-            })}
-          </div>
-          <p className="hint">
-            L’arrêt d’urgence est dans le bandeau du haut ; le détail des refus, dans le <Link to="/app/portefeuille?tab=risque">Portefeuille</Link>.
-          </p>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div className="iv-card-foot params-foot">
+          <span>
+            L’arrêt d’urgence est dans le bandeau du haut ; le détail des refus, dans le{' '}
+            <Link to="/app/portefeuille?tab=risque">Portefeuille</Link>.
+          </span>
         </div>
       </section>
     </>
@@ -275,12 +316,14 @@ function AlertsSection({ engine, onSaved }: { engine: AppSettings | null; onSave
 
   return (
     <>
-      <section className="card">
-        <div className="card-head">
-          <h2>Alertes sur vos positions</h2>
-          <Tag tone={saved.enabled ? 'green' : 'gray'}>{saved.enabled ? 'Activées' : 'Désactivées'}</Tag>
+      <section className="iv-card">
+        <div className="iv-card-head">
+          <div className="iv-card-tabs">
+            <span className="iv-card-tab is-on">Alertes sur vos positions</span>
+          </div>
+          <div className="iv-card-tools"><Tag tone={saved.enabled ? 'green' : 'gray'}>{saved.enabled ? 'Activées' : 'Désactivées'}</Tag></div>
         </div>
-        <div className="card-body">
+        <div className="iv-card-body">
           <p className="lede">
             IchiVol surveille les positions fictives que vous avez confirmées vous-même et vous prévient dans
             l’application (et par notification si cet appareil est abonné). Ce sont des informations : aucune alerte
@@ -363,7 +406,7 @@ function AlertsSection({ engine, onSaved }: { engine: AppSettings | null; onSave
             </div>
           </div>
           <div className="btn-row">
-            <button type="button" className="primary" disabled={!engine || busy || !nearOk || !coolOk} onClick={() => void save()}>
+            <button type="button" className="iv-btn iv-btn--primary" disabled={!engine || busy || !nearOk || !coolOk} onClick={() => void save()}>
               {busy ? 'Enregistrement…' : 'Enregistrer'}
             </button>
           </div>
@@ -371,12 +414,14 @@ function AlertsSection({ engine, onSaved }: { engine: AppSettings | null; onSave
         </div>
       </section>
 
-      <section className="card">
-        <div className="card-head">
-          <h2>Notifications sur cet appareil</h2>
-          {device == null ? null : <Tag tone={device ? 'green' : 'gray'}>{device ? 'Abonné' : 'Non abonné'}</Tag>}
+      <section className="iv-card">
+        <div className="iv-card-head">
+          <div className="iv-card-tabs">
+            <span className="iv-card-tab is-on">Notifications sur cet appareil</span>
+          </div>
+          <div className="iv-card-tools">{device == null ? null : <Tag tone={device ? 'green' : 'gray'}>{device ? 'Abonné' : 'Non abonné'}</Tag>}</div>
         </div>
-        <div className="card-body">
+        <div className="iv-card-body">
           <p className="lede">
             Pour recevoir les alertes même quand IchiVol est fermé. À faire sur chaque téléphone ou ordinateur.
           </p>
@@ -384,7 +429,7 @@ function AlertsSection({ engine, onSaved }: { engine: AppSettings | null; onSave
           <div className="btn-row">
             <button
               type="button"
-              className="suggestion"
+              className="iv-btn"
               disabled={deviceBusy || !support.ok}
               onClick={() => {
                 setDeviceBusy(true)
@@ -401,7 +446,7 @@ function AlertsSection({ engine, onSaved }: { engine: AppSettings | null; onSave
             </button>
             <button
               type="button"
-              className="suggestion"
+              className="iv-btn"
               disabled={deviceBusy || !device}
               onClick={() => {
                 setDeviceBusy(true)
@@ -481,11 +526,13 @@ function ChartsSection({ engine, onSaved }: { engine: AppSettings | null; onSave
   ]
 
   return (
-    <section className="card">
-      <div className="card-head">
-        <h2>Ichimoku et volume</h2>
+    <section className="iv-card">
+      <div className="iv-card-head">
+        <div className="iv-card-tabs">
+          <span className="iv-card-tab is-on">Ichimoku et volume</span>
+        </div>
       </div>
-      <div className="card-body">
+      <div className="iv-card-body">
         <p className="lede">
           Réglages de vos graphiques et des analyses que vous lancez vous-même (opportunités, tests de stratégie).
           Ils ne changent pas les méthodes des portefeuilles ni les décisions automatiques d’Ève.
@@ -540,7 +587,7 @@ function ChartsSection({ engine, onSaved }: { engine: AppSettings | null; onSave
           </small>
         </div>
         <div className="btn-row">
-          <button type="button" className="primary" disabled={!engine || busy || !periodsOk || !rvolOk} onClick={() => void save()}>
+          <button type="button" className="iv-btn iv-btn--primary" disabled={!engine || busy || !periodsOk || !rvolOk} onClick={() => void save()}>
             {busy ? 'Enregistrement…' : 'Enregistrer'}
           </button>
         </div>
@@ -641,36 +688,49 @@ function ConnectionsSection({
 
   return (
     <>
-      <section className="card">
-        <div className="card-head">
-          <h2>État des services</h2>
-          <button type="button" className="suggestion" onClick={onRecheck} disabled={llm.state === 'checking'}>
+      <section className="iv-card">
+        <div className="iv-card-head">
+          <div className="iv-card-tabs">
+            <span className="iv-card-tab is-on">État des services</span>
+          </div>
+          <div className="iv-card-tools"><button type="button" className="iv-btn" onClick={onRecheck} disabled={llm.state === 'checking'}>
             {llm.state === 'checking' ? 'Vérification…' : 'Revérifier'}
-          </button>
+          </button></div>
         </div>
-        <div className="card-body">
-          <ul className="rows">
-            {rows.map((r) => (
-              <li key={r.name}>
-                <div className="row-main">
-                  <b>{r.name}</b>
-                  <Tag tone={r.status.tone}>{r.status.text}</Tag>
-                </div>
-                <p className="row-sub">{r.help}</p>
-              </li>
-            ))}
-          </ul>
+        <div className="iv-card-body is-flush iv-table-wrap">
+          <table className="iv-table params-services">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Rôle</th>
+                <th>État</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.name}>
+                  <td className="sym">{r.name}</td>
+                  <td className="params-role">{r.help}</td>
+                  <td>
+                    <Tag tone={r.status.tone}>{r.status.text}</Tag>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
-      <section className="card">
-        <div className="card-head">
-          <h2>Clé Twelve Data</h2>
-          <Tag tone={engine?.twelveDataApiKeySet ? 'green' : 'gray'}>
+      <section className="iv-card">
+        <div className="iv-card-head">
+          <div className="iv-card-tabs">
+            <span className="iv-card-tab is-on">Clé Twelve Data</span>
+          </div>
+          <div className="iv-card-tools"><Tag tone={engine?.twelveDataApiKeySet ? 'green' : 'gray'}>
             {engine?.twelveDataApiKeySet ? 'Clé enregistrée' : 'Aucune clé ici'}
-          </Tag>
+          </Tag></div>
         </div>
-        <div className="card-body">
+        <div className="iv-card-body">
           <p className="lede">
             Facultatif. Sert uniquement aux cours des actions Apple et Tesla ; forex, métaux, indices et énergie sont déjà
             gratuits. Sans clé ici, IchiVol utilise celle du serveur.
@@ -688,11 +748,11 @@ function ConnectionsSection({
             <small>Chiffrée sur le serveur, jamais réaffichée.</small>
           </div>
           <div className="btn-row">
-            <button type="button" className="primary" disabled={!engine || busy || !tdKey.trim()} onClick={() => void saveTd(false)}>
+            <button type="button" className="iv-btn iv-btn--primary" disabled={!engine || busy || !tdKey.trim()} onClick={() => void saveTd(false)}>
               Enregistrer
             </button>
             {engine?.twelveDataApiKeySet ? (
-              <button type="button" className="suggestion" disabled={busy} onClick={() => void saveTd(true)}>
+              <button type="button" className="iv-btn" disabled={busy} onClick={() => void saveTd(true)}>
                 Supprimer la clé
               </button>
             ) : null}
@@ -754,16 +814,16 @@ export function SettingsPage() {
 
   return (
     <div className="params-page">
-      <div className="page-head">
+      <div className="iv-ph">
         <div>
-          <div className="eyebrow">IchiVol · Système</div>
+          <div className="iv-meta">Paramètres · IchiVol · système</div>
           <h1>Paramètres</h1>
-          <p className="subtitle">
+          <p>
             Tout ce qui pilote IchiVol, expliqué simplement. Argent fictif uniquement : aucun ordre réel n’est jamais
             passé.
           </p>
         </div>
-        <div className="actions">
+        <div className="iv-ph-act">
           <Tag tone="gray">Argent fictif</Tag>
           {autonomy == null ? null : (
             <Tag tone={autonomy ? 'green' : 'amber'}>{autonomy ? 'Pilote Ève actif' : 'Pilote Ève arrêté'}</Tag>
@@ -773,12 +833,12 @@ export function SettingsPage() {
       </div>
 
       <div className="params-layout">
-        <nav className="params-nav" aria-label="Sections des réglages">
+        <nav className="iv-card params-nav" aria-label="Sections des réglages">
           {SECTIONS.map((s) => (
             <button
               key={s.id}
               type="button"
-              className={s.id === section ? 'active' : ''}
+              className={`iv-btn iv-btn--ghost params-nav-item${s.id === section ? ' is-on' : ''}`}
               aria-current={s.id === section ? 'page' : undefined}
               onClick={() => setParams({ section: s.id }, { replace: true })}
             >
@@ -789,7 +849,9 @@ export function SettingsPage() {
         </nav>
 
         <div className="params-content">
-          <h2 className="section-heading">{current.label}</h2>
+          <h2 className="section-heading">
+            <span className="iv-kw">◆</span> {current.label}
+          </h2>
           {section === 'auto' ? <AutoTradingSection autonomy={autonomy} books={books} booksError={booksError} /> : null}
           {section === 'eve' ? (
             <EveSettings schema={eveSchema} values={eveValues} loadError={eveError} onSaved={setEveValues} />

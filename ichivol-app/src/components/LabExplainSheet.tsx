@@ -23,6 +23,8 @@ function fmtIso(iso: string): string {
     : d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
+const VERDICT_TONE: Record<string, string> = { green: 'is-mint', amber: 'is-amber', red: 'is-sell', gray: 'is-muted' }
+
 /** Fiche « Examiner » du Strategy Lab : le résultat expliqué en clair, le calcul, la conclusion. */
 export function LabExplainSheet({ explanation: x, onClose }: { explanation: Explanation; onClose: () => void }) {
   return (
@@ -33,7 +35,7 @@ export function LabExplainSheet({ explanation: x, onClose }: { explanation: Expl
             <h2>{x.title}</h2>
             <p className="muted">{x.subtitle}</p>
           </div>
-          <button type="button" className="ghost" onClick={onClose}>
+          <button type="button" className="iv-btn" onClick={onClose}>
             Fermer
           </button>
         </header>
@@ -41,7 +43,7 @@ export function LabExplainSheet({ explanation: x, onClose }: { explanation: Expl
         <div className="trade-sheet-scroll">
           <section className="lab-sheet-block">
             <p className="subhead">
-              En bref <span className={`tag ${x.verdict.tone}`}>{x.verdict.text}</span>
+              En bref <span className={`iv-tag ${VERDICT_TONE[x.verdict.tone] ?? 'is-muted'}`}>{x.verdict.text}</span>
             </p>
             {x.summary.map((s) => (
               <p key={s}>{s}</p>
@@ -75,7 +77,7 @@ export function LabExplainSheet({ explanation: x, onClose }: { explanation: Expl
           {x.history && x.history.length > 0 && (
             <section className="lab-sheet-block">
               <p className="subhead">Évolution sur les derniers calculs</p>
-              <table>
+              <table className="iv-table is-compact">
                 <thead>
                   <tr>
                     <th>CALCUL</th>
@@ -105,7 +107,7 @@ export function LabExplainSheet({ explanation: x, onClose }: { explanation: Expl
               <p className="subhead">
                 Les {x.trades.length} trades simulés <small className="muted">(variation du prix, avant frais)</small>
               </p>
-              <table>
+              <table className="iv-table is-compact">
                 <thead>
                   <tr>
                     <th>ENTRÉE</th>
@@ -119,7 +121,7 @@ export function LabExplainSheet({ explanation: x, onClose }: { explanation: Expl
                     <tr key={`${t.entry_time}-${t.exit_time}`}>
                       <td>{fmtTime(t.entry_time)}</td>
                       <td>{fmtTime(t.exit_time)}</td>
-                      <td className={t.pnl_pct > 0 ? 'lab-up' : t.pnl_pct < 0 ? 'lab-down' : ''}>
+                      <td className={t.pnl_pct > 0 ? 'pos' : t.pnl_pct < 0 ? 'neg' : ''}>
                         {pct(t.pnl_pct, 2, true)}
                       </td>
                       <td>{EXIT_WORDS[t.exit_reason] ?? t.exit_reason}</td>
