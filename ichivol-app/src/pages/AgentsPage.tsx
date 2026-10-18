@@ -4,7 +4,7 @@
  * Fiches des modes = FicheHost / `?fiche=agent:eve:<mode>`.
  */
 
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { EveDossiersPanel } from '../components/eve/EveDossiersPanel'
 import { EveResults } from '../components/eve/EveResults'
@@ -14,8 +14,6 @@ import { eveActionFr } from '../lib/eveDecisions'
 import { EVE_MODES, JEV_PRIMITIVES } from '../lib/eveModes'
 import { useFicheNav } from '../lib/useFicheNav'
 import './AgentsPage.css'
-
-type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
 
 const TIMEFRAMES = ['15m', '1h', '4h', '1d'] as const
 
@@ -28,10 +26,6 @@ const CHAIN: Array<{ step: string; detail: string; to: string; link: string }> =
   { step: 'Position paper', detail: 'Ouverte avec de l’argent fictif, suivie jusqu’au stop ou à l’objectif.', to: '/app/portefeuille', link: 'Portefeuille' },
   { step: 'Journal', detail: 'Chaque action est enregistrée et relisible.', to: '/app/operations', link: 'Opérations' },
 ]
-
-function badge(text: string, tone: BadgeTone = 'gray'): ReactNode {
-  return <span className={`tag ${tone}`.trim()}>{text}</span>
-}
 
 export function AgentsPage() {
   const { openFiche } = useFicheNav()
@@ -110,32 +104,146 @@ export function AgentsPage() {
   }
 
   const watcher = runtime?.agents?.find((a) => a.id === 'opportunities')
+  const nextCheck = watcher?.nextTaskDue
+    ? `${watcher.nextTaskSymbol ? `${watcher.nextTaskSymbol} · ` : ''}${fmtDue(watcher.nextTaskDue)}`
+    : null
+
+  const aside = (
+    <>
+      <section className="iv-card">
+        <div className="iv-card-head">
+          <div className="iv-card-tabs">
+            <span className="iv-card-tab is-on">Demander l’avis d’Ève</span>
+          </div>
+          <div className="iv-card-tools">crée un dossier, n’ouvre rien</div>
+        </div>
+        <div className="iv-card-body">
+          <form className="ag-form" onSubmit={onEvaluate}>
+            <div className="ag-form-row">
+              <div className="iv-field">
+                <label htmlFor="ag-eval-symbol">Instrument à évaluer</label>
+                <input
+                  id="ag-eval-symbol"
+                  className="iv-input"
+                  type="text"
+                  value={symbol}
+                  onChange={(e) => setSymbol(e.target.value)}
+                  placeholder="BTCUSDT"
+                />
+              </div>
+              <div className="iv-field">
+                <label htmlFor="ag-eval-tf">Unité de temps</label>
+                <select
+                  id="ag-eval-tf"
+                  className="iv-input"
+                  value={timeframe}
+                  onChange={(e) => setTimeframe(e.target.value as (typeof TIMEFRAMES)[number])}
+                >
+                  {TIMEFRAMES.map((tf) => (
+                    <option key={tf} value={tf}>
+                      {tf}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <p
+              className={`iv-note ag-hint${evalMsg ? (evalMsg.ok ? ' is-ok' : ' is-ko') : ''}`}
+              role={evalMsg ? 'status' : undefined}
+            >
+              {evalMsg
+                ? evalMsg.text
+                : 'Ève lit les calculs du moteur, interroge JEV avec ses quatre modes et passe le Risk Kernel en essai à blanc. Une dizaine de secondes.'}
+            </p>
+            <button type="submit" className="iv-btn iv-btn--primary ag-wide" disabled={evaluating || !symbol.trim()}>
+              {evaluating ? 'Ève réfléchit…' : 'Évaluer maintenant'}
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <section className="iv-card">
+        <div className="iv-card-head">
+          <div className="iv-card-tabs">
+            <span className="iv-card-tab is-on">Surveiller un instrument avec le Copilot d’Ève</span>
+          </div>
+        </div>
+        <div className="iv-card-body">
+          <p className="iv-cap ag-sub">paper · une ouverture attend votre confirmation</p>
+          <form className="ag-inline" onSubmit={onMission}>
+            <input
+              className="iv-input"
+              type="text"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              placeholder="BTCUSDT"
+              aria-label="Instrument à surveiller"
+            />
+            <button type="submit" className="iv-btn iv-btn--primary" disabled={missionBusy || !!runtimeError}>
+              {missionBusy ? 'Création…' : 'Surveiller'}
+            </button>
+          </form>
+          <div className="iv-row ag-next">
+            <span>Prochain contrôle</span>
+            <span className={`iv-row-v${nextCheck ? '' : ' muted'}`}>{nextCheck ?? 'Aucune surveillance en cours'}</span>
+          </div>
+          <p className={`iv-note ag-hint${missionMsg ? (missionMsg.ok ? ' is-ok' : ' is-ko') : ''}`}>
+            {missionMsg
+              ? missionMsg.text
+              : runtimeError
+                ? 'Le Copilot est injoignable pour le moment.'
+                : 'Le Copilot d’Ève relit l’instrument à intervalles réguliers et vous propose une ouverture paper quand les conditions sont réunies. Rien ne s’ouvre sans votre accord.'}
+          </p>
+          <Link to="/app/agent" className="ag-link">
+            Ouvrir le Copilot →
+          </Link>
+        </div>
+      </section>
+    </>
+  )
 
   return (
     <div className="agents-page">
-      <div className="page-head">
+      <header className="iv-ph">
         <div>
-          <div className="eyebrow">09 / ICHIVOL WORKSPACE</div>
+          <div className="iv-meta">Ève · l’IA qui décide · paper</div>
           <h1>Ève</h1>
-          <p className="subtitle">
+          <p>
             Le moteur calcule et propose un trade. Ève, avec JEV, l’accepte ou le refuse. Le Risk Kernel garde le
             dernier mot. Tout est en paper, jamais d’argent réel.
           </p>
         </div>
-        <div className="actions">
-          {autonomy == null
-            ? badge('PILOTE : ÉTAT INCONNU', 'gray')
-            : autonomy
-              ? badge('PILOTE AUTOMATIQUE ACTIF', 'green')
-              : badge('PILOTE COUPÉ · MOTEUR SEUL', 'amber')}
-          <Link to="/app/settings?section=auto" className="link">
+        <div className="iv-ph-act">
+          {autonomy == null ? (
+            <span className="iv-tag is-muted">
+              <i className="iv-dot is-off" aria-hidden="true" />
+              Pilote : état inconnu
+            </span>
+          ) : autonomy ? (
+            <span className="iv-tag is-mint">
+              <i className="iv-dot" aria-hidden="true" />
+              Pilote automatique actif
+            </span>
+          ) : (
+            <span className="iv-tag is-amber">
+              <i className="iv-dot is-amber" aria-hidden="true" />
+              Pilote coupé · moteur seul
+            </span>
+          )}
+          {nextCheck ? <span className="iv-chip">Prochain contrôle · {nextCheck}</span> : null}
+          <Link to="/app/settings?section=auto" className="iv-btn">
             Régler ↗
           </Link>
+          <Link to="/app/agent" className="iv-btn">
+            Ouvrir le Copilot
+          </Link>
         </div>
-      </div>
+      </header>
 
-      <div className="notice blue">
-        ⬡{' '}
+      <p className={`ag-pilot${autonomy === false ? ' is-off' : ''}`}>
+        <span className="ag-pilot-mark" aria-hidden="true">
+          ◆
+        </span>
         <span>
           {autonomy == null
             ? 'Impossible de lire l’état du pilote automatique pour le moment.'
@@ -143,139 +251,78 @@ export function AgentsPage() {
               ? 'Pilote automatique actif : à chaque bougie clôturée où un portefeuille veut ouvrir ou fermer, Ève juge la proposition et l’exécute en paper si elle l’accepte, sans confirmation humaine.'
               : 'Pilote automatique coupé : le moteur ouvre et ferme seul, Ève observe. Vous pouvez quand même lui demander son avis ci-dessous.'}
         </span>
-      </div>
+      </p>
 
-      <div className="agents-section-head">
-        <h2>Comment elle décide</h2>
-        <p>
-          Une seule intelligence, quatre modes. Chacun pose à JEV les mêmes trois types de questions ({JEV_PRIMITIVES}),
-          puis la synthèse d’Ève tranche : acheter, vendre à découvert, attendre, s’abstenir ou clôturer.
+      <nav className="ag-steps" aria-label="La chaîne de décision">
+        <ol>
+          {CHAIN.map((c, i) => {
+            const here = c.to === '/app/agents'
+            return (
+              <li key={c.step} className={here ? 'is-cur' : undefined} aria-current={here ? 'step' : undefined}>
+                <span className="ag-step-n">
+                  {String(i + 1).padStart(2, '0')} · {c.step}
+                </span>
+                <p>{c.detail}</p>
+                {here ? (
+                  <span className="ag-step-link is-here">{c.link}</span>
+                ) : (
+                  <Link to={c.to} className="ag-step-link">
+                    {c.link} ↗
+                  </Link>
+                )}
+              </li>
+            )
+          })}
+        </ol>
+        <p className="ag-steps-foot">
+          <span className="iv-cap">dans l’ordre où elle s’applique</span>
+          <span>
+            Les stops et les objectifs ferment les positions sans repasser par Ève. L’arrêt d’urgence, dans le bandeau
+            du haut, coupe tout.
+          </span>
         </p>
-      </div>
+      </nav>
 
-      <div className="grid eve-modes">
-        {EVE_MODES.map((m) => (
-          <section className="card agent-card" key={m.id}>
-            {badge('MODE', m.id === 'guardian' ? 'amber' : 'green')}
-            <div className="agent-icon">{m.icon}</div>
-            <h2>Ève {m.name}</h2>
-            <p>{m.blurb}</p>
-            <div className="statline">
-              <span>Quand il n’est pas d’accord</span>
-              <b>{m.effect}</b>
-            </div>
-            <button type="button" onClick={() => openFiche({ kind: 'agent', id: `eve:${m.id}` })}>
-              Ouvrir la fiche →
-            </button>
-          </section>
-        ))}
-      </div>
-
-      <section className="card">
-        <div className="card-head">
-          <h2>Demander l’avis d’Ève</h2>
-          <small>crée un dossier, n’ouvre rien</small>
-        </div>
-        <div className="card-body">
-          <form className="toolbar eve-evaluate" onSubmit={onEvaluate}>
-            <input
-              type="text"
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value)}
-              placeholder="BTCUSDT"
-              aria-label="Instrument à évaluer"
-            />
-            <select value={timeframe} onChange={(e) => setTimeframe(e.target.value as (typeof TIMEFRAMES)[number])} aria-label="Unité de temps">
-              {TIMEFRAMES.map((tf) => (
-                <option key={tf} value={tf}>
-                  {tf}
-                </option>
-              ))}
-            </select>
-            <button type="submit" className="primary" disabled={evaluating || !symbol.trim()}>
-              {evaluating ? 'Ève réfléchit…' : 'Évaluer maintenant'}
-            </button>
-          </form>
-          <p className="eve-hint" role={evalMsg ? 'status' : undefined} style={evalMsg ? { color: evalMsg.ok ? 'var(--green)' : 'var(--red)' } : undefined}>
-            {evalMsg
-              ? evalMsg.text
-              : 'Ève lit les calculs du moteur, interroge JEV avec ses quatre modes et passe le Risk Kernel en essai à blanc. Une dizaine de secondes.'}
-          </p>
-        </div>
-      </section>
-
-      <EveResults autonomy={autonomy} refreshKey={refreshKey} />
+      <EveResults autonomy={autonomy} refreshKey={refreshKey} aside={aside} />
 
       <EveDossiersPanel autonomy={autonomy} refreshKey={refreshKey} />
 
-      <section className="card">
-        <div className="card-head">
-          <h2>La chaîne de décision</h2>
-          <small>dans l’ordre où elle s’applique</small>
-        </div>
-        <div className="card-body">
-          <ol className="eve-chain">
-            {CHAIN.map((c, i) => (
-              <li key={c.step}>
-                <span className="eve-chain-n mono">{String(i + 1).padStart(2, '0')}</span>
-                <div>
-                  <b>{c.step}</b>
-                  <p>{c.detail}</p>
-                </div>
-                {c.to !== '/app/agents' ? (
-                  <Link to={c.to} className="link">
-                    {c.link} ↗
-                  </Link>
-                ) : (
-                  <span className="muted">{c.link}</span>
-                )}
-              </li>
-            ))}
-          </ol>
-          <p className="eve-hint">
-            Les stops et les objectifs ferment les positions sans repasser par Ève. L’arrêt d’urgence, dans le bandeau du
-            haut, coupe tout.
-          </p>
-        </div>
-      </section>
-
-      <section className="card">
-        <div className="card-head">
-          <h2>Surveiller un instrument avec le Copilot d’Ève</h2>
-          <small>paper · une ouverture attend votre confirmation</small>
-        </div>
-        <div className="card-body">
-          <form className="toolbar" onSubmit={onMission} style={{ flexWrap: 'wrap' }}>
-            <input
-              type="text"
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value)}
-              placeholder="BTCUSDT"
-              aria-label="Instrument à surveiller"
-              style={{ minWidth: 140 }}
-            />
-            <button type="submit" className="primary" disabled={missionBusy || !!runtimeError}>
-              {missionBusy ? 'Création…' : 'Surveiller'}
-            </button>
-            <Link to="/app/agent" className="link">
-              Ouvrir le Copilot →
-            </Link>
-          </form>
-          <div className="statline">
-            <span>Prochain contrôle</span>
-            <b>
-              {watcher?.nextTaskDue
-                ? `${watcher.nextTaskSymbol ? `${watcher.nextTaskSymbol} · ` : ''}${fmtDue(watcher.nextTaskDue)}`
-                : 'Aucune surveillance en cours'}
-            </b>
+      <section className="iv-card ag-modes-card">
+        <div className="iv-card-head">
+          <div className="iv-card-tabs">
+            <span className="iv-card-tab is-on">Comment elle décide</span>
           </div>
-          <p className="eve-hint" style={missionMsg ? { color: missionMsg.ok ? 'var(--green)' : 'var(--red)' } : undefined}>
-            {missionMsg
-              ? missionMsg.text
-              : runtimeError
-                ? 'Le Copilot est injoignable pour le moment.'
-                : 'Le Copilot d’Ève relit l’instrument à intervalles réguliers et vous propose une ouverture paper quand les conditions sont réunies. Rien ne s’ouvre sans votre accord.'}
+          <div className="iv-card-tools">{JEV_PRIMITIVES}</div>
+        </div>
+        <div className="iv-card-body">
+          <p className="iv-note ag-modes-lead">
+            Une seule intelligence, quatre modes. Chacun pose à JEV les mêmes trois types de questions ({JEV_PRIMITIVES}),
+            puis la synthèse d’Ève tranche : acheter, vendre à découvert, attendre, s’abstenir ou clôturer.
           </p>
+          <div className="ag-modes">
+            {EVE_MODES.map((m) => (
+              <article className={`ag-mode is-${m.id}`} key={m.id}>
+                <h3>
+                  <span className="ag-ic" aria-hidden="true">
+                    {m.icon}
+                  </span>
+                  Ève {m.name}
+                </h3>
+                <p>{m.blurb}</p>
+                <div className="ag-mode-effect">
+                  <span className="iv-cap">Quand il n’est pas d’accord</span>
+                  <p>{m.effect}</p>
+                </div>
+                <button
+                  type="button"
+                  className="iv-btn iv-btn--sm ag-mode-btn"
+                  onClick={() => openFiche({ kind: 'agent', id: `eve:${m.id}` })}
+                >
+                  Ouvrir la fiche →
+                </button>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
     </div>

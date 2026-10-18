@@ -1,413 +1,611 @@
-/* Résultats d'Ève (ex-page Moteur vs Ève). Moteur vs Ève — complète PortfolioPage.css (classes .pf-page partagées). */
+/* Résultats d'Ève (page Ève) : dossier en carte APEX, bilans, propositions. Jetons premium uniquement. */
 
-.dv-page .dv-mode {
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  font: 600 11px Inter, Arial, sans-serif;
-  color: var(--muted);
-  background: var(--card);
-}
-
-.dv-page .dv-mode.is-on {
-  color: #5a48c9;
-  border-color: #c9c1f3;
-  background: #f5f3fe;
-}
-
-.dv-page .actions {
+.dv-page {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
 }
 
-.dv-page .dv-notice {
-  margin: 0 0 14px;
+.dv-page .iv-grid + .iv-grid {
+  margin-top: 0;
 }
 
-.dv-page .dv-lead {
-  margin: 0 0 12px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--ink);
-}
-
-.dv-page .dv-empty {
-  margin: 8px 0 0;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.dv-page .dv-tiles {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.dv-page .dv-tile {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 14px;
-  background: var(--card);
-  border-top: 3px solid #5f666d;
-}
-
-.dv-page .dv-tile.is-eve {
-  border-top-color: #5a48c9;
-}
-
-.dv-page .dv-tile.is-engine {
-  border-top-color: #1f6fd1;
-}
-
-.dv-page .dv-tile-head {
-  display: grid;
-  gap: 6px;
-  justify-items: start;
-}
-
-.dv-page .dv-tile-head small {
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--muted);
-}
-
-.dv-page .dv-tile-net {
-  margin: 12px 0 8px;
-  font-size: 22px;
-  font-weight: 600;
-}
-
-.dv-page .dv-tile dl {
-  display: grid;
-  gap: 5px;
+.dv-page .dv-alert {
   margin: 0;
+  border: 1px solid var(--sell-line);
+  border-radius: var(--r);
+  background: var(--sell-soft);
 }
 
-.dv-page .dv-tile dl > div {
+/* ---------- Dossier d'Ève (carte APEX) ---------- */
+.dv-page .dv-dossier {
+  scroll-margin-top: 12px;
+}
+
+.dv-page .dv-d-top {
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 10px 16px;
+  flex-wrap: wrap;
+}
+
+.dv-page .dv-d-meta {
+  line-height: 1.5;
+}
+
+.dv-page .dv-verdict {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
-  font-size: 11px;
-}
-
-.dv-page .dv-tile dt {
-  color: var(--muted);
-}
-
-.dv-page .dv-tile dd {
-  margin: 0;
-  text-align: right;
-}
-
-.dv-page .dv-table-wrap {
   margin-top: 16px;
-  overflow-x: auto;
 }
 
-.dv-page .dv-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
+.dv-page .dv-v-box {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r);
+  background: var(--ghost-bg);
 }
 
-.dv-page .dv-table caption {
-  text-align: left;
-  font-size: 11px;
+.dv-page .dv-v-box b {
+  font: 600 16px/1.2 var(--sans);
+  color: var(--text);
+}
+
+.dv-page .dv-v-k {
+  font: 500 9.5px var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   color: var(--muted);
-  padding-bottom: 6px;
 }
 
-.dv-page .dv-table th,
-.dv-page .dv-table td {
-  padding: 8px 6px;
-  border-bottom: 1px solid #efebe5;
-  text-align: right;
+.dv-page .dv-v-box.is-refuse {
+  border-color: var(--amber-line);
+  background: var(--amber-soft);
+}
+
+.dv-page .dv-v-box.is-refuse b {
+  color: var(--amber);
+}
+
+.dv-page .dv-v-box.is-agree {
+  border-color: var(--mint-line);
+  background: var(--mint-soft);
+}
+
+.dv-page .dv-v-box.is-agree b {
+  color: var(--mint);
+}
+
+.dv-page .dv-v-ar {
+  color: var(--cyan);
+  font: 600 16px var(--sans);
+}
+
+/* Achat / vente : les seuls bleus et rouges */
+.dv-page .is-buy {
+  color: var(--buy);
+}
+
+.dv-page .is-sell {
+  color: var(--sell);
+}
+
+.dv-page .dv-v-box b.is-buy {
+  color: var(--buy);
+}
+
+.dv-page .dv-v-box b.is-sell {
+  color: var(--sell);
+}
+
+.dv-page .dv-d-label {
+  margin-top: 20px;
+}
+
+.dv-page .dv-d-label.is-mint {
+  color: var(--mint);
+}
+
+.dv-page .dv-why {
+  max-width: 980px;
+  margin: 8px 0 0;
+  font: 400 15px/1.6 var(--sans);
+  color: var(--text);
+}
+
+.dv-page .dv-why.is-tech {
+  font: 500 12.5px/1.6 var(--mono);
+  color: var(--text-2);
+}
+
+.dv-page .dv-why.is-empty {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Avis des juges : une carte par juge, pour / contre / neutre */
+.dv-page .dv-opinions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--gap);
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dv-page .dv-opinions > li {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-bg);
+}
+
+.dv-page .dv-op-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dv-page .dv-op-ic {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--cyan-line);
+  border-radius: var(--r-s);
+  background: var(--cyan-soft);
+  color: var(--cyan);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.dv-page .dv-op-who {
+  min-width: 0;
+  overflow: hidden;
+  font: 600 12.5px var(--sans);
+  color: var(--text);
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.dv-page .dv-table th:first-child,
-.dv-page .dv-table td:first-child {
-  text-align: left;
-}
-
-.dv-page .dv-table thead th {
-  font: 10px 'JetBrains Mono', ui-monospace, monospace;
-  letter-spacing: 0.04em;
-  color: var(--muted);
+.dv-page .dv-op-stance {
+  margin-left: auto;
+  padding: 3px 6px;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  font: 600 9.5px var(--mono);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--muted);
 }
 
-.dv-page .dv-table tbody th {
-  font: 600 12px Inter, Arial, sans-serif;
-  letter-spacing: normal;
-  text-transform: none;
-  color: var(--ink, inherit);
-  background: none;
+.dv-page .dv-opinions li.is-pour .dv-op-stance {
+  border-color: var(--mint-line);
+  background: var(--mint-soft);
+  color: var(--mint);
+}
+
+.dv-page .dv-opinions li.is-contre .dv-op-stance {
+  border-color: var(--amber-line);
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.dv-page .dv-opinions li.is-contre {
+  border-color: var(--amber-line);
+}
+
+.dv-page .dv-op-said {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.dv-page .dv-op-said > b {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dv-page .dv-op-said ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dv-page .dv-op-said ul li {
+  position: relative;
+  padding-left: 12px;
+}
+
+.dv-page .dv-op-said ul li + li {
+  margin-top: 3px;
+}
+
+.dv-page .dv-op-said ul li::before {
+  content: '·';
+  position: absolute;
+  left: 2px;
+  color: var(--dim);
+}
+
+/* Résultat */
+.dv-page .dv-outcome {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-bg);
+}
+
+.dv-page .dv-outcome .dv-d-label {
+  margin-top: 0;
+}
+
+.dv-page .dv-right {
+  margin: 10px 0 6px;
+  padding: 2px 0 2px 12px;
+  border-left: 2px solid var(--line-3);
+  font: 500 15px/1.5 var(--sans);
+  color: var(--text);
+}
+
+.dv-page .dv-right.is-ok {
+  border-left-color: var(--mint);
+}
+
+.dv-page .dv-right.is-ok b {
+  color: var(--mint);
+}
+
+.dv-page .dv-right.is-ko {
+  border-left-color: var(--sell);
+}
+
+.dv-page .dv-right.is-ko b {
+  color: var(--sell);
+}
+
+.dv-page .dv-right.is-wait {
+  border-left-color: var(--amber);
+}
+
+.dv-page .dv-right.is-wait b {
+  color: var(--amber);
+}
+
+.dv-page .dv-outcome-rows .iv-row-v {
+  max-width: 65%;
   white-space: normal;
 }
 
-.dv-page .dv-table td {
-  background: none;
-}
-
-.dv-page .dv-table small {
-  display: inline;
+.dv-page .dv-foot-note {
+  flex-basis: 100%;
+  font: 400 11px/1.5 var(--sans);
+  letter-spacing: 0;
   color: var(--muted);
 }
 
-.dv-page .dv-foot {
-  margin: 8px 0 0;
-  font-size: 11px;
+/* ---------- Cartes de bilan ---------- */
+.dv-page .dv-lead {
+  margin: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.dv-page .dv-strong {
+  font-weight: 600;
+}
+
+.dv-page .dv-intro {
+  margin: 0 0 12px;
+  color: var(--muted);
+}
+
+.dv-page .dv-meter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 10px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+
+.dv-page .dv-meter-t {
+  color: var(--text-2);
+}
+
+.dv-page .dv-meter-v {
+  font: 600 12px var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dv-page .dv-meter .iv-bar {
+  grid-column: 1 / -1;
+}
+
+.dv-page .dv-bilan {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+
+.dv-page .dv-bilan.is-ok {
+  color: var(--mint);
+}
+
+.dv-page .dv-before {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.dv-page .dv-before .iv-note {
+  margin: 6px 0 10px;
+}
+
+.dv-page .dv-cap {
+  margin-bottom: 6px;
 }
 
 .dv-page .dv-counts {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 18px;
-  margin: 0 0 12px;
-  font-size: 12px;
+  gap: 6px 16px;
+  margin: 0 0 10px;
+  font-size: 11.5px;
   color: var(--muted);
 }
 
 .dv-page .dv-counts b {
-  color: var(--ink);
-  font-size: 14px;
+  margin-right: 3px;
+  font: 600 14px var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
 }
 
-.dv-page .dv-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
+.dv-page .dv-counts b.pos {
+  color: var(--pos);
 }
 
-.dv-page .dv-filters button {
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 11px;
+.dv-page .dv-counts b.neg {
+  color: var(--neg);
 }
 
-.dv-page .dv-filters button.active {
-  background: #202b36;
-  border-color: #202b36;
-  color: #fefdfb;
+.dv-page .dv-sub-block {
+  margin-top: 12px;
 }
 
-.dv-page .dv-proposals {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.dv-page .dv-inset {
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
 }
 
-.dv-page .dv-proposals li {
-  border-bottom: 1px solid #efebe5;
+.dv-page .dv-foot {
+  margin: 8px 0 0;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  text-transform: none;
 }
 
-.dv-page .dv-proposals li > button {
+.dv-page .dv-legend {
+  border-top: 1px solid var(--line);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.dv-page .dv-legend summary {
+  padding: 8px 12px;
+  font: 500 10px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  cursor: pointer;
+}
+
+.dv-page .dv-legend dl {
   display: grid;
-  grid-template-columns: 110px minmax(0, 1.2fr) minmax(0, 1.6fr) auto;
-  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0 12px 10px;
+}
+
+.dv-page .dv-legend dl > div {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
   gap: 10px;
-  width: 100%;
-  padding: 10px 4px;
-  border: 0;
-  border-radius: 6px;
-  background: none;
-  text-align: left;
-  font-size: 12px;
+  align-items: baseline;
 }
 
-.dv-page .dv-proposals li > button:hover {
-  background: #f5f2ed;
+.dv-page .dv-legend dd {
+  margin: 0;
+  line-height: 1.45;
 }
 
-.dv-page .dv-p-when {
-  font: 11px 'JetBrains Mono', ui-monospace, monospace;
-  color: var(--muted);
+.dv-page .dv-legend > .iv-note {
+  margin: 0;
+  padding: 0 12px 10px;
 }
 
-.dv-page .dv-p-main,
-.dv-page .dv-p-flow {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dv-page .dv-p-verdict {
-  justify-self: end;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font: 600 10px Inter, Arial, sans-serif;
-  white-space: nowrap;
-  border: 1px solid currentColor;
-}
-
-/* Statuts : icône implicite par le texte, la couleur seule ne porte jamais le sens. */
-.dv-page .dv-p-verdict.is-executed {
-  color: #0b7d72;
-}
-
-.dv-page .dv-p-verdict.is-refused_by_eve {
-  color: #5a48c9;
-}
-
-.dv-page .dv-p-verdict.is-blocked_after {
-  color: #95600f;
-}
-
-.dv-page .dv-p-verdict.is-engine_over_eve {
-  color: #a35f00;
-}
-
-.dv-page .dv-p-verdict.is-blocked_by_audit {
-  color: #95600f;
-}
-
-.dv-page .dv-p-verdict.is-pending {
-  color: var(--muted);
-}
-
-.dv-page .dv-p-detail {
-  padding: 0 4px 12px;
-  font-size: 12px;
+.dv-page .dv-card-foot {
+  margin-top: auto;
   line-height: 1.5;
 }
 
-.dv-page .dv-p-detail p {
-  margin: 0 0 6px;
+/* ---------- Propositions ---------- */
+.dv-page .dv-kpis {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
 }
 
-/* Avis des juges : une ligne par juge, pour (vert) / contre (rouge) / neutre. */
-.dv-page .dv-opinions {
-  list-style: none;
-  margin: 4px 0 8px;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.dv-page .dv-opinions li {
-  display: grid;
-  grid-template-columns: 130px 56px minmax(0, 1fr);
-  gap: 8px;
-  padding: 6px 10px;
+.dv-page .dv-howto {
+  border-top: 0;
   border-bottom: 1px solid var(--line);
 }
 
-.dv-page .dv-opinions li:last-child {
-  border-bottom: 0;
+.dv-page .dv-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
 }
 
-.dv-page .dv-op-who {
+.dv-page .dv-seg {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.dv-page .dv-seg::-webkit-scrollbar {
+  display: none;
+}
+
+.dv-page .dv-seg > button {
+  flex: none;
+  white-space: nowrap;
+}
+
+.dv-page .dv-toolbar .iv-btn {
+  margin-left: auto;
+  flex: none;
+}
+
+.dv-page .dv-props-wrap {
+  max-height: 520px;
+}
+
+.dv-page .dv-props-table tbody tr {
+  cursor: pointer;
+}
+
+.dv-page .dv-flow {
+  font-size: 12px;
+}
+
+.dv-page .dv-flow-ar {
+  margin: 0 6px;
+  color: var(--dim);
+}
+
+.dv-page .dv-flow .is-neutral {
+  color: var(--text-2);
+}
+
+.dv-page .dv-flow b.is-agree {
+  color: var(--mint);
   font-weight: 600;
 }
 
-.dv-page .dv-op-stance {
-  font-weight: 700;
+.dv-page .dv-flow b.is-refuse {
+  color: var(--amber);
+  font-weight: 600;
 }
 
-.dv-page .dv-opinions li.is-pour .dv-op-stance {
-  color: var(--bull);
+.dv-page .dv-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
 }
 
-.dv-page .dv-opinions li.is-contre .dv-op-stance {
-  color: var(--bear);
+@media (max-width: 1100px) {
+  .dv-page .dv-opinions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-.dv-page .dv-opinions li.is-neutre .dv-op-stance,
-.dv-page .dv-op-said {
-  color: var(--muted);
-}
-
-.dv-page .dv-right {
-  padding: 6px 10px;
-  border-left: 3px solid var(--line);
-}
-
-.dv-page .dv-right.is-ok {
-  border-left-color: var(--bull);
-}
-
-.dv-page .dv-right.is-ko {
-  border-left-color: var(--bear);
-}
-
-.dv-page .dv-sub {
-  margin: 16px 0 4px;
-  font-size: 13px;
-}
-
-@media (max-width: 520px) {
-  .dv-page .dv-opinions li {
-    grid-template-columns: minmax(0, 1fr) auto;
+@media (max-width: 760px) {
+  .dv-page .dv-opinions {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .dv-page .dv-op-said {
+  .dv-page .dv-why {
+    font-size: 14px;
+  }
+
+  .dv-page .dv-v-box {
+    padding: 7px 11px;
+  }
+
+  .dv-page .dv-v-box b {
+    font-size: 14px;
+  }
+
+  .dv-page .dv-legend dl > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .dv-page .dv-outcome {
+    padding: 12px;
+  }
+
+  .dv-page .dv-outcome-rows .iv-row {
+    flex-wrap: wrap;
+    padding: 4px 0;
+  }
+
+  .dv-page .dv-outcome-rows .iv-row-v {
+    max-width: 100%;
+    margin-left: 0;
+    text-align: left;
+  }
+
+  .dv-page .dv-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .dv-page .dv-seg {
+    flex-basis: 100%;
+  }
+
+  .dv-page .dv-toolbar .iv-btn {
+    margin-left: 0;
+  }
+
+  .dv-page .dv-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dv-page .dv-kpis .iv-kpi:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .dv-page .dv-kpis .iv-kpi:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
+}
+
+@media (max-width: 760px) {
+  .dv-page .dv-kpis .iv-kpi:last-child:nth-child(odd) {
     grid-column: 1 / -1;
   }
 }
 
-.dv-page .dv-eve-trades {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.dv-page .dv-eve-trades li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid #efebe5;
-  font-size: 12px;
-}
-
-@media (max-width: 760px) {
-  .dv-page .dv-tiles {
-    grid-template-columns: 1fr;
-  }
-
-  .dv-page .dv-proposals li > button {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      'main verdict'
-      'flow flow'
-      'when when';
-    row-gap: 4px;
-  }
-
-  .dv-page .dv-p-main {
-    grid-area: main;
-  }
-
-  .dv-page .dv-p-flow {
-    grid-area: flow;
-    white-space: normal;
-  }
-
-  .dv-page .dv-p-when {
-    grid-area: when;
-  }
-
-  .dv-page .dv-p-verdict {
-    grid-area: verdict;
-  }
-
-  .dv-page .dv-eve-trades li {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .dv-page .dv-eve-trades li .muted {
-    grid-column: 1;
-    grid-row: 2;
-  }
-}
-
-.dv-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin: 0 0 12px;
+.dv-page .dv-kpis .iv-kpi-k {
+  white-space: normal;
+  line-height: 1.3;
 }
