@@ -6,16 +6,16 @@
 
 import type { EquityPeriod } from '../../pages/desk/deskFormat'
 
-/** Palette catégorielle validée (dataviz, fond #fefdfb) : un livre garde toujours sa couleur. */
+/** Palette catégorielle de la maquette premium (lisible sur fond sombre) : un livre garde toujours sa couleur. */
 export const BOOK_PALETTE = [
-  '#2a78d6',
-  '#eb6834',
-  '#1baf7a',
-  '#eda100',
-  '#e87ba4',
-  '#008300',
-  '#6250d6',
-  '#e34948',
+  '#22d3ee',
+  '#f5a623',
+  '#a78bfa',
+  '#f472b6',
+  '#4ade80',
+  '#60a5fa',
+  '#fb923c',
+  '#94a3b8',
 ] as const
 
 const BOOK_SLOT: Record<string, number> = {

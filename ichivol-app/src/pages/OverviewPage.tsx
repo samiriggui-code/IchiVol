@@ -1,6 +1,6 @@
 /**
- * Desk — port littéral de design-reference/ichivol-workspace `desk()` + page-head.
- * Classes HTML = maquette. Données = engine (pas de démo inventée ; manquant → « — »).
+ * Desk : tous les portefeuilles paper réunis, le marché et Ève, sur les primitives premium (iv-).
+ * Mise en page = maquette « poste de trading » validée. Données = moteur (rien d'inventé ; manquant → « — »).
  */
 
 import {
@@ -14,6 +14,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import {
   getActivityFeed,
   type ActivityItem,
+  type FeedTone,
 } from '../lib/activity'
 import {
   getScreener,
@@ -35,6 +36,8 @@ import {
   nextSessionOpen,
   sessionStatus,
   sessionStatusLabel,
+  wallTimeToUtc,
+  type MarketSessionDef,
   type SessionId,
   type SessionStatus,
 } from '../lib/marketSessions'
@@ -51,6 +54,7 @@ import {
   listActiveBooks,
   loadAllActivity,
   loadAllBooks,
+  type BookOrder,
   type BookPosition,
 } from '../lib/allBooks'
 import { verdictBucket } from '../lib/deskSummarize'
@@ -76,90 +80,154 @@ import {
 import { toEngineSymbol } from '../lib/engineSymbol'
 import { EquityTrajectory, type TrajectoryBook } from '../components/desk/EquityTrajectory'
 import { bookColors, cleanEquitySeries } from '../components/desk/equityTrajectory'
-import { isRsPortfolio } from '../lib/rsPortfolio'
 import { DeskDeciderSummary, DeskEveLatest } from '../components/decider/DeskDeciders'
 import { DeciderBadge } from '../components/decider/DeciderBadge'
 import { deciderOf, type Decider } from '../lib/decider'
 import './OverviewPage.css'
 
-const RING_COLORS = ['#548f87', '#8c9eb4', '#c2b596', '#a9bdb2', '#7d8288'] as const
 const RVOL_THRESHOLD = 1.5
 const EQUITY_PERIODS: EquityPeriod[] = ['1J', '1S', '1M', '3M']
+/** Places montrées dans la carte des sessions (la crypto ne ferme jamais). */
+const DESK_SESSIONS: SessionId[] = ['sydney', 'tokyo', 'london', 'newyork', 'chicago', 'crypto']
 
-type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
+type Tone = 'mint' | 'amber' | 'sell' | 'cyan' | 'buy' | 'muted' | ''
 
-function badge(text: string, tone: BadgeTone = ''): ReactNode {
-  const inferred: BadgeTone =
-    tone ||
-    (/PASSE|ACCEPTÉ|OUVERTE|VALIDÉ|CONNECTÉ/.test(text)
-      ? 'green'
-      : /REFUS|BLOQU|ERREUR|HORS/.test(text)
-        ? 'red'
-        : /PRUDENCE|TRIGGERED/.test(text)
-          ? 'amber'
-          : '')
-  return <span className={`tag ${inferred}`.trim()}>{text}</span>
+function Tag({ children, tone = '' }: { children: ReactNode; tone?: Tone }) {
+  return <span className={`iv-tag${tone ? ` is-${tone}` : ''}`}>{children}</span>
 }
 
-function DeskCard({
+function statusTone(text: string): Tone {
+  if (/PASSE|ACCEPTÉ|OUVERTE|VALIDÉ|CONNECTÉ|ÉQUILIBRÉ/.test(text)) return 'mint'
+  if (/REFUS|BLOQU|ERREUR|HORS/.test(text)) return 'sell'
+  if (/PRUDENCE|TRIGGERED|RETARD|STALE/.test(text)) return 'amber'
+  return 'muted'
+}
+
+/** Carte station : onglets (ou un titre), outils à droite, corps, pied. */
+function Card({
   title,
-  extra,
+  tabs,
+  tools,
+  foot,
+  flush = false,
+  glow = false,
   className = '',
+  bodyClassName = '',
   children,
 }: {
-  title: string
-  extra?: ReactNode
+  title?: string
+  tabs?: ReactNode
+  tools?: ReactNode
+  foot?: ReactNode
+  flush?: boolean
+  glow?: boolean
   className?: string
+  bodyClassName?: string
   children: ReactNode
 }) {
   return (
-    <section className={`card ${className}`.trim()}>
-      <div className="card-head">
-        <h2>{title}</h2>
-        {extra}
+    <section className={`iv-card${glow ? ' iv-glow' : ''} ${className}`.trim()}>
+      <div className="iv-card-head">
+        <div className="iv-card-tabs" role={tabs ? 'tablist' : undefined}>
+          {tabs ?? <h2 className="iv-card-tab is-on dk-title">{title}</h2>}
+        </div>
+        {tools ? <div className="iv-card-tools">{tools}</div> : null}
       </div>
-      {children}
+      <div className={`iv-card-body${flush ? ' is-flush' : ''} ${bodyClassName}`.trim()}>{children}</div>
+      {foot ? <div className="iv-card-foot">{foot}</div> : null}
     </section>
   )
 }
 
-function StatLine({ label, value }: { label: ReactNode; value: ReactNode }) {
+function TabButton({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <div className="statline">
+    <button
+      type="button"
+      role="tab"
+      aria-selected={on}
+      className={`iv-card-tab${on ? ' is-on' : ''}`}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  )
+}
+
+function Row({ label, value, className = '' }: { label: ReactNode; value: ReactNode; className?: string }) {
+  return (
+    <div className="iv-row">
       <span>{label}</span>
-      <b>{value}</b>
+      <span className={`iv-row-v ${className}`.trim()}>{value}</span>
     </div>
   )
 }
 
-function ProgressRow({
+function Meter({
   label,
   value,
   pct,
-  warn = false,
+  tone = '',
 }: {
   label: string
   value: string
-  pct: number
-  warn?: boolean
+  pct: number | null
+  tone?: '' | 'amber' | 'mint'
 }) {
-  const width = Math.max(0, Math.min(100, pct))
+  const width = pct == null ? 0 : Math.max(0, Math.min(100, pct))
+  return (
+    <div className="dk-meter">
+      <div className="dk-meter-top">
+        <span>{label}</span>
+        <span className={`mono${tone === 'amber' ? ' warn' : ''}`}>{value}</span>
+      </div>
+      <div className={`iv-bar${tone ? ` is-${tone}` : ''}`}>
+        <i style={{ width: `${width}%` }} />
+      </div>
+    </div>
+  )
+}
+
+/** « 81 136,85 € » → partie entière en grand, décimales en petit (comme la maquette). */
+function SplitEur({ value }: { value: number | null | undefined }) {
+  if (value == null || !Number.isFinite(value)) return <>—</>
+  const s = fmtEur(value, 2)
+  const i = s.lastIndexOf(',')
+  if (i < 0) return <>{s}</>
   return (
     <>
-      <div className="risk-row">
-        <span>{label}</span>
-        <span className={`mono ${warn ? 'warn' : ''}`.trim()}>{value}</span>
-      </div>
-      <div className="track">
-        <span
-          style={
-            warn
-              ? { width: `${width}%`, background: '#b99557' }
-              : { width: `${width}%` }
-          }
-        />
-      </div>
+      {s.slice(0, i)}
+      <small>{s.slice(i)}</small>
     </>
+  )
+}
+
+function signedEur(v: number | null | undefined, digits = 2): string {
+  if (v == null || !Number.isFinite(v)) return '—'
+  return `${v > 0 ? '+' : v < 0 ? '−' : ''}${fmtEur(Math.abs(v), digits)}`
+}
+
+function signCls(v: number | null | undefined): string {
+  return v == null || !Number.isFinite(v) || v === 0 ? '' : v > 0 ? 'pos' : 'neg'
+}
+
+function fmtQty(v: number | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return '—'
+  return Math.abs(v).toLocaleString('fr-FR', { maximumFractionDigits: Math.abs(v) >= 100 ? 0 : 4 })
+}
+
+/** Courbe miniature d'un bandeau de KPI (vraies valeurs de la courbe de capital). */
+function Spark({ values }: { values: number[] }) {
+  if (values.length < 2) return null
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const span = max - min || 1
+  const pts = values
+    .map((v, i) => `${((i / (values.length - 1)) * 60).toFixed(1)},${(20 - ((v - min) / span) * 18 - 1).toFixed(1)}`)
+    .join(' ')
+  return (
+    <svg className="dk-spark" viewBox="0 0 60 20" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points={pts} />
+    </svg>
   )
 }
 
@@ -229,41 +297,19 @@ function decisionFr(label: string): string {
   }
 }
 
-function sessionTone(st: SessionStatus): string {
+function sessionTone(st: SessionStatus): Tone {
   switch (st) {
     case 'open':
-      return 'is-open'
+      return 'mint'
     case 'upcoming':
-      return 'is-soon'
+      return 'amber'
     case 'closed':
-      return 'is-closed'
-    default: {
-      const _e: never = st
-      return _e
-    }
-  }
-}
-
-function sessionStatusClass(st: SessionStatus): string {
-  switch (st) {
-    case 'open':
-      return 'up'
-    case 'closed':
-    case 'upcoming':
       return 'muted'
     default: {
       const _e: never = st
       return _e
     }
   }
-}
-
-function coinLetter(sym: string): { letter: string; cls: string } {
-  const s = sym.replace(/USDT$/i, '').toUpperCase()
-  if (s === 'BTC') return { letter: '₿', cls: '' }
-  if (s === 'ETH') return { letter: 'Ξ', cls: 'eth' }
-  if (s === 'SOL') return { letter: 'S', cls: 'sol' }
-  return { letter: s.slice(0, 1), cls: s === 'LINK' ? 'eth' : '' }
 }
 
 function opportunityCaption(r: ScreenerDecisionRow): string {
@@ -280,10 +326,9 @@ function opportunityCaption(r: ScreenerDecisionRow): string {
   return '—'
 }
 
-function decisionBadgeText(r: ScreenerDecisionRow): string {
-  const d = String(r.decision ?? '').toUpperCase()
-  if (!d) return '—'
-  return d
+function decisionTone(r: ScreenerDecisionRow): Tone {
+  const b = verdictBucket(r)
+  return b === 'buy' ? 'buy' : b === 'sell' ? 'sell' : b === 'watch' ? 'amber' : 'muted'
 }
 
 /** Répartition de l'exposition ouverte entre crypto (paires USDT) et le reste (indices, forex, matières premières). */
@@ -303,6 +348,43 @@ function exposureMixLabel(positions: Array<{ symbol: string; notional?: number |
   if (pc === 0) return '100 % de l’exposition hors crypto (indices, forex, matières premières).'
   return `${pc} % de l’exposition en crypto, ${100 - pc} % hors crypto (indices, forex, matières premières).`
 }
+
+const FEED_LEVEL: Record<FeedTone, { label: string; tone: Tone }> = {
+  neutral: { label: 'INFO', tone: 'cyan' },
+  good: { label: 'OK', tone: 'mint' },
+  bad: { label: 'ALERTE', tone: 'amber' },
+  blocked: { label: 'BLOQUÉ', tone: 'sell' },
+}
+
+/** Heure UTC décimale (0–24) d'une heure locale de place, pour la frise des sessions. */
+function utcHourOf(def: MarketSessionDef, localHour: number, now: Date): number {
+  const h = Math.floor(localHour)
+  const m = Math.round((localHour - h) * 60)
+  const d = wallTimeToUtc(now.getUTCFullYear(), now.getUTCMonth() + 1, now.getUTCDate(), h, m, def.timeZone)
+  return d.getUTCHours() + d.getUTCMinutes() / 60
+}
+
+/** Segments [début, fin] en % de la journée UTC où la place est ouverte. */
+function sessionSegments(def: MarketSessionDef, now: Date): Array<[number, number]> {
+  if (def.kind === 'always') return [[0, 100]]
+  // CME : ouvert tout le jour sauf la pause de 16 h à 17 h (heure de Chicago).
+  const [openL, closeL] = def.kind === 'futures_cme' ? [17, 16] : [def.openLocal, def.closeLocal]
+  const a = utcHourOf(def, openL, now)
+  const b = utcHourOf(def, closeL, now)
+  const pa = (a / 24) * 100
+  const pb = (b / 24) * 100
+  return pb > pa ? [[pa, pb]] : [[pa, 100], [0, pb]]
+}
+
+const ORDER_STATUS_FR: Record<string, string> = {
+  FILLED: 'Exécuté',
+  PARTIALLY_FILLED: 'Partiel',
+  REJECTED: 'Rejeté',
+  CANCELLED: 'Annulé',
+}
+
+type PositionsTab = 'positions' | 'orders' | 'concentration'
+type TrajectoryTab = 'curve' | 'books'
 
 export function OverviewPage() {
   const navigate = useNavigate()
@@ -475,7 +557,7 @@ export function OverviewPage() {
         return b === 'buy' || b === 'sell'
       })
       .sort((a, b) => b.confidence - a.confidence)
-      .slice(0, 3)
+      .slice(0, 5)
   }, [rows])
 
   const primaryMarkets = useMemo(() => pickPrimaryMarkets(rows), [rows])
@@ -529,14 +611,11 @@ export function OverviewPage() {
 
   const btcDom = market?.dominance.find((d) => d.symbol.toUpperCase() === 'BTC')
   const topConc = concentration[0]?.pct ?? null
-  const concentrationTone: BadgeTone =
-    topConc == null ? '' : topConc >= 40 ? 'amber' : 'green'
   const concentrationLabel =
     topConc == null ? '—' : topConc >= 40 ? 'PRUDENCE' : 'ÉQUILIBRÉ'
 
   const climateSymbol =
     fng == null ? '—' : fng.value >= 55 ? '↗' : fng.value <= 45 ? '↘' : '→'
-  const climateTitle = fng ? `${fearGreedFr(fng.classification)} · ${fng.value}` : '—'
   const btcRegime = btcRow?.pipeline?.stages.find((s) => s.id === 'regime')
   const openSessions = MARKET_SESSIONS.filter((s) => sessionStatus(s, now) === 'open').length
   const nextOpen = nextSessionOpen(selectedSession, now)
@@ -570,134 +649,257 @@ export function OverviewPage() {
     navigate(`/app/portefeuille?tab=positions&symbol=${encodeURIComponent(symbol)}`)
   }
 
+  const [posTab, setPosTab] = useState<PositionsTab>('positions')
+  const [trajTab, setTrajTab] = useState<TrajectoryTab>('curve')
+
+  const invested = acct?.invested ?? null
+  const unrealized = acct?.unrealized_pnl ?? null
+  const perfPct =
+    acct && acct.initial_cash > 0 ? acct.total_pnl / acct.initial_cash : null
+  const positions = (overview?.positions ?? []) as Array<PaperOverviewPosition & Partial<BookPosition>>
+  const shortCount = positions.filter((p) => String(p.direction).toUpperCase() === 'SHORT').length
+  const equitySpark = useMemo(
+    () =>
+      cleanEquitySeries(overview?.equity_curve ?? [])
+        .slice(-30)
+        .map((p) => p.equity),
+    [overview?.equity_curve],
+  )
+  const todayKey = now.toDateString()
+  const todayOrders = (paperOrders as Array<PaperOrderRow & Partial<BookOrder>>).filter(
+    (o) => new Date(o.time).toDateString() === todayKey,
+  )
+  const books = booksAgg?.books ?? []
+  const colorsByBook = bookColors(books.map((b) => b.code))
+  const totalBooksEquity = books.reduce((s, b) => s + (Number.isFinite(b.equity) ? b.equity : 0), 0)
+  const topBooks = [...books].sort((a, b) => b.equity - a.equity)
+  const shownBooks = topBooks.slice(0, 5)
+  const otherBooks = topBooks.slice(5)
+  const deskSessions = DESK_SESSIONS.map((id) => MARKET_SESSIONS.find((s) => s.id === id)).filter(
+    (s): s is MarketSessionDef => s != null,
+  )
+  const nowPctUtc = ((now.getUTCHours() + now.getUTCMinutes() / 60) / 24) * 100
+  const utcClock = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
+  const nextCloseUtc = nextClose.toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+  })
+  const regimeText = btcRegime?.summary ?? null
+  const kernelText =
+    riskPass == null ? (risk?.kernel ? String(risk.kernel).toUpperCase() : null) : riskPass ? 'PASSE' : 'BLOQUÉ'
+  const watchSymbols = watchList.map((r) => r.symbol).join(' · ')
+
+  const trajectoryBooks: TrajectoryBook[] =
+    bookCurves.length > 0
+      ? bookCurves
+      : overview
+        ? [
+            {
+              code: BASELINE,
+              label: 'IchiVol',
+              color: bookColors([BASELINE])[BASELINE]!,
+              initialCash: overview.account?.initial_cash ?? null,
+              points: overview.equity_curve ?? [],
+              openSymbols: (overview.positions ?? []).map((p) => p.symbol),
+            },
+          ]
+        : []
+
   return (
-    <div className="desk-page">
-      <div className="page-head">
+    <div className="desk-page dk">
+      <header className="iv-ph">
         <div>
-          <div className="eyebrow">01 / ICHIVOL WORKSPACE</div>
+          <div className="iv-meta">
+            Desk ·{' '}
+            {deskBookCount > 0
+              ? `${deskBookCount} portefeuille${deskBookCount > 1 ? 's' : ''} paper`
+              : 'Portefeuilles paper'}{' '}
+            · EUR · {loading && !deskEquity ? '—' : dateLabel || '—'}
+          </div>
           <h1>Desk</h1>
-          <p className="subtitle">
-            Tous les portefeuilles paper réunis · marché · Ève.
+          <p>
+            Tous les portefeuilles paper réunis · marché · Ève. Avec son pilote actif, Ève trade en paper via le
+            Risk Kernel — jamais live.
           </p>
         </div>
-        <div className="actions">
-          <span className="subtitle">{loading && !deskEquity ? '—' : dateLabel || '—'}</span>
-          <Link className="link" to="/app/portefeuille" style={{ marginLeft: 14 }}>
+        <div className="iv-ph-act">
+          <span className="iv-chip is-cyan">
+            <i className="iv-dot dk-dot-cy" />
+            Clôture 1H dans {formatCountdown(nextClose, now)}
+          </span>
+          <span className="iv-chip">
+            Régime moteur · <b className="warn">{regimeText ?? '—'}</b>
+          </span>
+          <Link className="iv-btn" to="/app/portefeuille">
             Portefeuilles ↗
           </Link>
-          <Link className="link" to="/app/market" style={{ marginLeft: 14 }}>
+          <Link className="iv-btn" to="/app/market">
             Marché ↗
           </Link>
-          <Link className="link" to="/app/agents" style={{ marginLeft: 14 }}>
+          <Link className="iv-btn" to="/app/agents">
             Ève ↗
           </Link>
         </div>
-      </div>
+      </header>
 
-      <div className="notice">
-        ⬡{' '}
-        <span>
-          Desk = agrégat de tous les portefeuilles paper. Avec son pilote actif, Ève trade en paper via le Risk
-          Kernel — jamais live.
-        </span>
-      </div>
-
-      <div className="desk-workspace">
-        <div className="metrics">
-          <div className="metric featured">
-            <div className="metric-label">
-              Capital total<span>↗</span>
-            </div>
-            <div className="metric-value">
-              {deskEquity != null ? fmtEur(deskEquity, 2) : '—'}
-            </div>
-            <small>
-              {deskBookCount > 0
-                ? `${deskBookCount} portefeuille${deskBookCount > 1 ? 's' : ''} paper · EUR`
-                : 'Portefeuilles paper · EUR'}
-            </small>
+      <div className="iv-kpis dk-kpis">
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">Capital total</div>
+          <div className="iv-kpi-v">
+            <SplitEur value={deskEquity} />
           </div>
-          <div className="metric">
-            <div className="metric-label">
-              Disponible<span>↗</span>
-            </div>
-            <div className="metric-value">
-              {deskCash != null ? fmtEur(deskCash, 2) : '—'}
-            </div>
-            <small>
-              {deskCash != null && deskEquity && deskEquity > 0
-                ? `${fmtPct(deskCash / deskEquity, 1, false)} du capital`
-                : '—'}
-            </small>
+          <div className="iv-kpi-s">
+            {deskBookCount > 0 ? `${deskBookCount} portefeuille${deskBookCount > 1 ? 's' : ''}` : '—'}
           </div>
-          <div className={`metric${dayUp ? ' up' : ''}`.trim()}>
-            <div className="metric-label">
-              P&amp;L du jour<span>↗</span>
-            </div>
-            <div className="metric-value">
-              {deskDay != null ? fmtEur(deskDay, 2) : '—'}
-            </div>
-            <small>
-              {dayPct != null ? `${dayUp ? '↗' : '↘'} ${fmtPct(dayPct)} aujourd’hui` : '—'}
-            </small>
+          <Spark values={equitySpark} />
+        </div>
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">Disponible</div>
+          <div className="iv-kpi-v">
+            <SplitEur value={deskCash} />
           </div>
-          <div className="metric">
-            <div className="metric-label">
-              Risque utilisé<span>↗</span>
-            </div>
-            <div className="metric-value">
-              {deskRiskPct != null ? fmtPct(deskRiskPct, 1, false) : '—'}
-            </div>
-            <small>
-              {deskRiskMax != null
-                ? `Plafond global : ${fmtPct(deskRiskMax, 1, false)}`
-                : '—'}
-            </small>
+          <div className="iv-kpi-s">
+            {deskCash != null && deskEquity && deskEquity > 0
+              ? `${fmtPct(deskCash / deskEquity, 1, false)} du capital`
+              : '—'}
           </div>
         </div>
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">Engagé</div>
+          <div className="iv-kpi-v">
+            <SplitEur value={invested} />
+          </div>
+          <div className="iv-kpi-s">
+            {investedPct != null ? `${fmtPctPoints(investedPct, 1, false)} du capital` : '—'}
+          </div>
+        </div>
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">P&amp;L du jour</div>
+          <div className={`iv-kpi-v ${signCls(deskDay)}`.trim()}>{signedEur(deskDay)}</div>
+          <div className={`iv-kpi-s ${signCls(dayPct)}`.trim()}>
+            {dayPct != null ? `${dayUp ? '↗' : '↘'} ${fmtPct(dayPct)} aujourd’hui` : '—'}
+          </div>
+        </div>
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">P&amp;L latent</div>
+          <div className={`iv-kpi-v ${signCls(unrealized)}`.trim()}>{signedEur(unrealized)}</div>
+          <div className="iv-kpi-s">
+            {overview
+              ? `${positions.length} position${positions.length > 1 ? 's' : ''}${shortCount > 0 ? ` · ${shortCount} short` : ''}`
+              : '—'}
+          </div>
+        </div>
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">Performance</div>
+          <div className={`iv-kpi-v ${signCls(perfPct)}`.trim()}>{perfPct != null ? fmtPct(perfPct, 2) : '—'}</div>
+          <div className="iv-kpi-s">
+            {acct ? `sur ${fmtEur(acct.initial_cash, 0)} de départ` : '—'}
+          </div>
+        </div>
+        <div className="iv-kpi">
+          <div className="iv-kpi-k">Risque utilisé</div>
+          <div className="iv-kpi-v">{deskRiskPct != null ? fmtPct(deskRiskPct, 1, false) : '—'}</div>
+          <div className="iv-kpi-s">
+            {deskRiskMax != null ? `Plafond global : ${fmtPct(deskRiskMax, 1, false)}` : '—'}
+          </div>
+        </div>
+      </div>
 
-        {booksAgg && booksAgg.books.length > 0 ? (
-          <section className="card desk-books" aria-label="Tous les portefeuilles paper">
-            <div className="card-head">
-              <h2>Portefeuilles virtuels</h2>
-              {badge(`${booksAgg.books.length} PORTEFEUILLES`, 'gray')}
-            </div>
-            <div className="table-wrap">
-              <table>
+      {freshnessNotice && (
+        <div className="dk-alert" role="status">
+          <span aria-hidden="true">△</span>
+          <span>
+            <b>Cours à vérifier.</b> {freshnessNotice.text}
+          </span>
+          <Link to={freshnessNotice.href}>Voir la position →</Link>
+        </div>
+      )}
+
+      <div className="iv-grid">
+        <Card
+          className="iv-s8 iv-m-s12"
+          tabs={
+            <>
+              <TabButton on={trajTab === 'curve'} onClick={() => setTrajTab('curve')}>
+                Trajectoire des portefeuilles
+              </TabButton>
+              <TabButton on={trajTab === 'books'} onClick={() => setTrajTab('books')}>
+                Portefeuilles virtuels
+              </TabButton>
+            </>
+          }
+          tools={
+            <>
+              <span>
+                Drawdown{' '}
+                <b className={dd != null && dd < 0 ? 'neg' : undefined}>{dd != null ? fmtPct(dd, 1, true) : '—'}</b>
+              </span>
+            </>
+          }
+          flush={trajTab === 'books'}
+        >
+          {trajTab === 'curve' ? (
+            <>
+              <div className="dk-traj-bar">
+                <span className="iv-cap">
+                  Capital total <b className="dk-strong">{deskEquity != null ? fmtEur(deskEquity, 2) : '—'}</b>
+                </span>
+                <span className="iv-cap">
+                  Portefeuilles <b className="dk-strong">{bookCurves.length || deskBookCount || '—'}</b>
+                </span>
+                <div className="iv-seg" role="group" aria-label="Période">
+                  {EQUITY_PERIODS.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`iv-seg-btn${equityPeriod === p ? ' is-on' : ''}`}
+                      aria-pressed={equityPeriod === p}
+                      onClick={() => setEquityPeriod(p)}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <EquityTrajectory
+                books={trajectoryBooks}
+                period={equityPeriod}
+                orders={paperOrders}
+                deciders={deciderByPosition}
+              />
+            </>
+          ) : books.length === 0 ? (
+            <p className="iv-empty">—</p>
+          ) : (
+            <div className="iv-table-wrap">
+              <table className="iv-table">
                 <thead>
                   <tr>
-                    <th>PORTEFEUILLE</th>
-                    <th>EQUITY</th>
-                    <th>CASH</th>
-                    <th>P&amp;L JOUR</th>
-                    <th>RISQUE</th>
-                    <th>POS.</th>
+                    <th>Portefeuille</th>
+                    <th className="n">Equity</th>
+                    <th className="n">Cash</th>
+                    <th className="n">P&amp;L jour</th>
+                    <th className="n">Risque</th>
+                    <th className="n">Pos.</th>
                     <th />
                   </tr>
                 </thead>
                 <tbody>
-                  {booksAgg.books.map((b) => (
+                  {books.map((b) => (
                     <tr key={b.code}>
                       <td>
-                        <b>{b.label}</b>
-                        <small>{b.code}</small>
+                        <span className="dk-swatch" style={{ background: colorsByBook[b.code] }} />
+                        <span className="sym">{b.label}</span>
+                        <small className="dk-code">{b.code}</small>
                       </td>
-                      <td className="mono">{fmtEur(b.equity, 2)}</td>
-                      <td className="mono">{fmtEur(b.cash, 2)}</td>
-                      <td className="mono">
-                        {b.day_change != null ? fmtEur(b.day_change, 2) : '—'}
-                      </td>
-                      <td className="mono">
-                        {b.open_risk_pct != null
-                          ? fmtPct(b.open_risk_pct, 1, false)
-                          : '—'}
-                      </td>
-                      <td>{b.open_positions}</td>
+                      <td className="n">{fmtEur(b.equity, 2)}</td>
+                      <td className="n">{fmtEur(b.cash, 2)}</td>
+                      <td className={`n ${signCls(b.day_change)}`.trim()}>{signedEur(b.day_change)}</td>
+                      <td className="n">{b.open_risk_pct != null ? fmtPct(b.open_risk_pct, 1, false) : '—'}</td>
+                      <td className="n">{b.open_positions}</td>
                       <td>
-                        <Link
-                          className="link"
-                          to={`/app/portefeuille?pf=${encodeURIComponent(b.code)}`}
-                        >
+                        <Link className="dk-link" to={`/app/portefeuille?pf=${encodeURIComponent(b.code)}`}>
                           Ouvrir ↗
                         </Link>
                       </td>
@@ -706,680 +908,579 @@ export function OverviewPage() {
                 </tbody>
               </table>
             </div>
-          </section>
-        ) : null}
+          )}
+        </Card>
 
-        <div className="desk-overview">
-          <DeskCard
-            title="Sessions de marché"
-            extra={badge(
-              openSessions > 0 ? `${openSessions} OUVERTE${openSessions > 1 ? 'S' : ''}` : 'FERMÉES',
-              openSessions > 0 ? 'green' : 'gray',
-            )}
-            className="world-card"
-          >
-            <div className="world-view">
-              <img
-                src="/world-map.svg"
-                alt="Carte des places : Sydney, Asie, Europe, New York, Chicago"
-                width={720}
-                height={290}
-              />
-              {MARKET_SESSIONS.filter((s) => s.kind !== 'always').map((s) => {
-                const st = sessionStatus(s, now)
-                return (
+        <DeskDeciderSummary className="iv-s4 iv-m-s12" />
+      </div>
+
+      <div className="iv-grid">
+        <Card
+          className="iv-s8 iv-m-s12"
+          flush
+          tabs={
+            <>
+              <TabButton on={posTab === 'positions'} onClick={() => setPosTab('positions')}>
+                Positions ouvertes
+              </TabButton>
+              <TabButton on={posTab === 'orders'} onClick={() => setPosTab('orders')}>
+                Ordres du jour
+              </TabButton>
+              <TabButton on={posTab === 'concentration'} onClick={() => setPosTab('concentration')}>
+                Concentration
+              </TabButton>
+            </>
+          }
+          tools={
+            <span>
+              {positions.length} position{positions.length > 1 ? 's' : ''} ·{' '}
+              <b className={signCls(unrealized)}>{signedEur(unrealized)}</b>
+            </span>
+          }
+          foot={
+            <>
+              <span>Cliquez une ligne pour ouvrir la position</span>
+              <Link to="/app/portefeuille">Voir le portefeuille →</Link>
+            </>
+          }
+        >
+          {posTab === 'positions' ? (
+            positions.length === 0 ? (
+              <p className="iv-empty">{loading ? 'Chargement…' : 'Aucune position ouverte.'}</p>
+            ) : (
+              <div className="iv-table-wrap dk-scroll">
+                <table className="iv-table">
+                  <thead>
+                    <tr>
+                      <th>Actif</th>
+                      <th>Sens</th>
+                      <th>Portefeuille</th>
+                      <th>Décideur</th>
+                      <th className="n">Qté</th>
+                      <th className="n">Entrée</th>
+                      <th className="n">Dernier</th>
+                      <th className="n">Stop</th>
+                      <th className="n">P&amp;L latent</th>
+                      <th className="n">R</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {positions.map((p) => {
+                      const short = String(p.direction).toUpperCase() === 'SHORT'
+                      const pnl = p.unrealized_pnl
+                      const r =
+                        pnl != null && p.risk_amount != null && p.risk_amount > 0 ? pnl / p.risk_amount : null
+                      return (
+                        <tr
+                          key={p.id ?? p.symbol}
+                          className="dk-click"
+                          tabIndex={0}
+                          onClick={() => openPosition(p.symbol)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              openPosition(p.symbol)
+                            }
+                          }}
+                        >
+                          <td className="sym">
+                            {p.symbol}
+                            {p.timeframe ? <small>{String(p.timeframe).toUpperCase()}</small> : null}
+                            {p.mark_stale ? (
+                              <>
+                                {' '}
+                                <Tag tone="amber">MARK STALE</Tag>
+                              </>
+                            ) : null}
+                          </td>
+                          <td>
+                            <span className={`iv-side ${short ? 'is-short' : 'is-long'}`}>{short ? 'SHORT' : 'LONG'}</span>
+                          </td>
+                          <td>{p.book_label ?? '—'}</td>
+                          <td>
+                            <DeciderBadge decider={deciderOf(p)} />
+                          </td>
+                          <td className="n">{fmtQty(p.qty)}</td>
+                          <td className="n">{fmtPrice(p.entry_price)}</td>
+                          <td className="n">{fmtPrice(p.current_price)}</td>
+                          <td className="n neg">{fmtPrice(p.stop_price)}</td>
+                          <td className={`n ${signCls(pnl)}`.trim()}>{signedEur(pnl)}</td>
+                          <td className={`n ${signCls(r)}`.trim()}>
+                            {r != null ? `${r > 0 ? '+' : r < 0 ? '−' : ''}${fmtDec(Math.abs(r), 1)}` : '—'}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )
+          ) : posTab === 'orders' ? (
+            todayOrders.length === 0 ? (
+              <p className="iv-empty">Aucun ordre aujourd’hui.</p>
+            ) : (
+              <div className="iv-table-wrap dk-scroll">
+                <table className="iv-table is-compact">
+                  <thead>
+                    <tr>
+                      <th>Heure</th>
+                      <th>Actif</th>
+                      <th>Sens</th>
+                      <th>Portefeuille</th>
+                      <th className="n">Qté</th>
+                      <th className="n">Prix exécuté</th>
+                      <th className="n">Frais</th>
+                      <th>Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {todayOrders.map((o) => {
+                      const buy = String(o.side).toUpperCase() === 'BUY'
+                      return (
+                        <tr key={`${o.book_code ?? ''}-${o.id}`}>
+                          <td className="mono dim">{fmtClock(o.time)}</td>
+                          <td className="sym">{o.symbol}</td>
+                          <td>
+                            <span className={`iv-side ${buy ? 'is-long' : 'is-short'}`}>{buy ? 'ACHAT' : 'VENTE'}</span>
+                          </td>
+                          <td>{o.book_label ?? '—'}</td>
+                          <td className="n">{fmtQty(o.qty)}</td>
+                          <td className="n">{fmtPrice(o.filled_price)}</td>
+                          <td className="n">{fmtEur(o.fee, 2)}</td>
+                          <td>{ORDER_STATUS_FR[String(o.status).toUpperCase()] ?? o.status}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )
+          ) : (
+            <div className="dk-conc">
+              <div className="dk-conc-head">
+                <span className="iv-cap">Part de l’exposition par actif</span>
+                {concentration.length ? <Tag tone={statusTone(concentrationLabel)}>{concentrationLabel}</Tag> : null}
+              </div>
+              {concentration.length === 0 ? (
+                <p className="iv-empty">—</p>
+              ) : (
+                concentration.slice(0, 6).map((c) => (
+                  <button
+                    key={c.symbol}
+                    type="button"
+                    className="iv-row dk-conc-row"
+                    onClick={() => openPosition(toEngineSymbol(c.symbol))}
+                  >
+                    <span className="sym">{c.symbol}</span>
+                    <span className={`iv-bar${c.pct >= 40 ? ' is-amber' : ''}`}>
+                      <i style={{ width: `${Math.min(100, c.pct)}%` }} />
+                    </span>
+                    <span className="iv-row-v">{fmtPctPoints(c.pct, 1, false)}</span>
+                  </button>
+                ))
+              )}
+              <p className="iv-note">{exposureMixLabel(positions)}</p>
+            </div>
+          )}
+        </Card>
+
+        <DeskEveLatest className="iv-s4 iv-m-s12" />
+      </div>
+
+      <div className="iv-grid">
+        <Card title="État du système" className="iv-s3 iv-m-s6" bodyClassName="dk-rows">
+          <Row
+            label="Moteur"
+            value={
+              engineOk == null ? (
+                '—'
+              ) : engineOk ? (
+                <span className="ok">
+                  <i className="iv-dot" /> CONNECTÉ
+                </span>
+              ) : (
+                <span className="dim">
+                  <i className="iv-dot is-off" /> NON CONNECTÉ
+                </span>
+              )
+            }
+          />
+          <Row label="Source des données" value={engineOk ? 'MOTEUR' : rows.length ? 'CACHE' : '—'} />
+          <Row label="Régime moteur" value={regimeText ?? '—'} className={regimeText ? 'warn' : ''} />
+          <Row
+            label="Risk Kernel"
+            value={kernelText ?? '—'}
+            className={kernelText === 'PASSE' ? 'ok' : kernelText === 'BLOQUÉ' ? 'neg' : ''}
+          />
+          <Row label="Argent réel" value="JAMAIS · PAPER SEULEMENT" className="dim" />
+        </Card>
+
+        <Card
+          title="Votre budget de risque"
+          className="iv-s3 iv-m-s6"
+          tools={kernelText ? <span className={riskPass === false ? 'neg' : 'ok'}>{riskPass === false ? 'BLOQUÉ' : riskPass ? 'PASSE' : kernelText}</span> : null}
+          foot={
+            <span>
+              {acct
+                ? `${fmtEur(acct.invested, 2)} engagés sur ${acct.open_positions} positions`
+                : '—'}
+            </span>
+          }
+        >
+          <Meter
+            label="Exposition du capital"
+            value={investedPct != null ? fmtPctPoints(investedPct, 1, false) : '—'}
+            pct={investedPct}
+          />
+          <Meter
+            label="Risque journalier"
+            value={
+              risk?.open_risk_pct != null && risk.max_open_risk_pct != null
+                ? `${fmtPct(risk.open_risk_pct, 1, false).replace(' %', '')} / ${fmtPct(risk.max_open_risk_pct, 0, false)}`
+                : '—'
+            }
+            pct={dailyRiskPct}
+            tone="mint"
+          />
+          <Meter
+            label="Positions simultanées"
+            value={risk ? `${risk.open_positions} / ${risk.max_open_positions}` : '—'}
+            pct={slotsPct}
+          />
+          <Meter
+            label={concentration[0] ? `Concentration · ${concentration[0].symbol}` : 'Concentration'}
+            value={topConc != null ? fmtPctPoints(topConc, 0, false) : '—'}
+            pct={topConc}
+            tone={topConc != null && topConc >= 40 ? 'amber' : ''}
+          />
+        </Card>
+
+        <Card
+          title="Répartition du capital"
+          className="iv-s3 iv-m-s6"
+          tools={<span>{totalBooksEquity > 0 ? fmtEur(totalBooksEquity, 0) : '—'}</span>}
+          foot={<Link to="/app/portefeuille">Voir l’allocation →</Link>}
+        >
+          {books.length === 0 || totalBooksEquity <= 0 ? (
+            <p className="iv-empty">—</p>
+          ) : (
+            <>
+              <div className="dk-alloc" role="img" aria-label="Part de chaque portefeuille dans le capital total">
+                {topBooks.map((b) => (
+                  <i
+                    key={b.code}
+                    title={`${b.label} · ${fmtEur(b.equity, 0)}`}
+                    style={{ width: `${(b.equity / totalBooksEquity) * 100}%`, background: colorsByBook[b.code] }}
+                  />
+                ))}
+              </div>
+              {shownBooks.map((b) => (
+                <div key={b.code} className="iv-row dk-tight">
+                  <span>
+                    <span className="dk-swatch" style={{ background: colorsByBook[b.code] }} />
+                    {b.label}
+                  </span>
+                  <span className="iv-row-v">{fmtEur(b.equity, 0)}</span>
+                </div>
+              ))}
+              {otherBooks.length > 0 ? (
+                <div className="iv-row dk-tight">
+                  <span className="muted">
+                    + {otherBooks.length} autre{otherBooks.length > 1 ? 's' : ''}
+                  </span>
+                  <span className="iv-row-v muted">
+                    {fmtEur(
+                      otherBooks.reduce((s, b) => s + b.equity, 0),
+                      0,
+                    )}
+                  </span>
+                </div>
+              ) : null}
+            </>
+          )}
+        </Card>
+
+        <Card
+          title="Sessions de marché"
+          className="iv-s3 iv-m-s6"
+          tools={
+            <span>
+              <span className={openSessions > 0 ? 'ok' : undefined}>
+                {openSessions} ouverte{openSessions > 1 ? 's' : ''}
+              </span>{' '}
+              · {utcClock} UTC
+            </span>
+          }
+          foot={
+            <span className="dk-sess-detail">
+              <b>
+                {selectedSession.city} · {selectedSession.venue}
+              </b>{' '}
+              · {formatVenueClock(selectedSession, now)} locale · {formatSessionHoursUtc(selectedSession, now)}
+              {nextOpen
+                ? ` · ouverture dans ${formatCountdown(nextOpen, now)}`
+                : selectedSession.kind === 'always'
+                  ? ' · sans clôture'
+                  : ''}
+              {' '}· <span className={selectedSt === 'open' ? 'ok' : 'dim'}>{sessionStatusLabel(selectedSt)}</span>
+            </span>
+          }
+        >
+          <div className="dk-sessions">
+            {deskSessions.map((s) => {
+              const st = sessionStatus(s, now)
+              return (
                 <button
                   key={s.id}
                   type="button"
-                  className={`map-marker${sessionId === s.id ? ' selected' : ''}${st === 'open' ? ' is-open' : ''}`}
-                  style={{ left: `${s.mapLeftPct}%`, top: `${s.mapTopPct}%` }}
-                  aria-label={`Session ${s.city}`}
+                  className={`iv-dk-sess${sessionId === s.id ? ' is-sel' : ''}`}
                   aria-pressed={sessionId === s.id}
                   onClick={() => setSessionId(s.id)}
                 >
-                  <span />
-                  {sessionId === s.id ? <b>{s.city}</b> : null}
+                  <span className="dk-sess-name">{s.region}</span>
+                  <span className="dk-sess-track" aria-hidden="true">
+                    {sessionSegments(s, now).map(([a, b]) => (
+                      <i
+                        key={`${a}-${b}`}
+                        className={st === 'open' ? 'is-open' : undefined}
+                        style={{ left: `${a}%`, width: `${Math.max(0.5, b - a)}%` }}
+                      />
+                    ))}
+                    <b style={{ left: `${nowPctUtc}%` }} />
+                  </span>
+                  <Tag tone={sessionTone(st)}>{sessionStatusLabel(st)}</Tag>
                 </button>
-                )
-              })}
-            </div>
-            <div className="session-selector">
-              {MARKET_SESSIONS.map((s) => {
-                const st = sessionStatus(s, now)
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className={sessionId === s.id ? 'active' : ''}
-                    aria-pressed={sessionId === s.id}
-                    onClick={() => setSessionId(s.id)}
-                  >
-                    {s.region}
-                    <small className={sessionTone(st)}>{sessionStatusLabel(st)}</small>
-                  </button>
-                )
-              })}
-            </div>
-            <div id="desk-session-detail" className="session-detail">
-              <strong>
-                {selectedSession.city} · {selectedSession.venue}{' '}
-                <span className={sessionStatusClass(selectedSt)}>
-                  {sessionStatusLabel(selectedSt)}
-                </span>
-              </strong>
-              <span className="mono">
-                {formatVenueClock(selectedSession, now)} locale · {formatSessionHoursUtc(selectedSession, now)}
-              </span>
-              {nextOpen ? (
-                <span>Prochaine ouverture dans {formatCountdown(nextOpen, now)}</span>
-              ) : selectedSession.kind === 'always' ? (
-                <span>Sans clôture</span>
-              ) : null}
-            </div>
-            <div className="map-foot">
-              Cash, futures CME et crypto, en heure locale.
-            </div>
-          </DeskCard>
-
-          <DeskCard
-            title="Marchés principaux"
-            extra={badge(
-              rows.length === 0 ? '—' : marketsStale ? 'RETARD' : 'COURS',
-              rows.length === 0 ? 'gray' : marketsStale ? 'amber' : 'green',
-            )}
-          >
-            <div className="desk-tickers">
-              {primaryMarkets.map((r) => {
-                const base = r.symbol.replace(/USDT$/i, '')
-                const chg = changeBySymbol[r.symbol.toUpperCase()]
-                const chgCls =
-                  chg == null || Number.isNaN(chg) ? '' : chg > 0 ? 'up' : chg < 0 ? 'down' : ''
-                return (
-                  <button
-                    key={r.symbol}
-                    type="button"
-                    className="desk-ticker"
-                    onClick={() => openMarket(r.symbol)}
-                  >
-                    <span>
-                      <b>
-                        {base}
-                        <small> / USDT</small>
-                      </b>
-                      <small>{r.decision ? decisionFr(String(r.decision)) : '—'}</small>
-                    </span>
-                    <span className="right">
-                      <b className="mono">{fmtPrice(r.price)}</b>
-                      <small className={chgCls}>
-                        {chg == null || Number.isNaN(chg)
-                          ? '—'
-                          : fmtPctPoints(chg, 2, true)}
-                      </small>
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-            <div className="card-foot">
-              <Link to="/app/market" className="link">
-                Tout le marché ↗
-              </Link>
-            </div>
-          </DeskCard>
-
-          <DeskCard title="Lecture du marché">
-            <div className="card-body">
-              <div className="climate-head">
-                <span className="climate-symbol">{climateSymbol}</span>
-                <div>
-                  <small>INDICE FEAR &amp; GREED · CRYPTO</small>
-                  <h3>{climateTitle}</h3>
-                </div>
-              </div>
-              <p className="desk-note">
-                {fng
-                  ? `Avidité ou peur du marché crypto, sur 100. Ce n’est pas un régime calculé par IchiVol.`
-                  : 'Indice crypto indisponible.'}
-              </p>
-              <StatLine
-                label="Volume relatif BTC"
-                value={btcRow?.rvol != null ? `${btcRow.rvol.toFixed(2)}×` : '—'}
-              />
-              <StatLine label="Régime moteur" value={btcRegime?.summary ?? '—'} />
-              <StatLine
-                label="Dominance BTC"
-                value={btcDom ? fmtPctPoints(btcDom.percent, 1, false) : '—'}
-              />
-              <StatLine
-                label="Concentration"
-                value={
-                  concentrationLabel === '—'
-                    ? '—'
-                    : badge(concentrationLabel, concentrationTone)
-                }
-              />
-              <p className="desk-note">
-                Le contexte éclaire le signal. Le risque garde le dernier mot.
-              </p>
-              <Link to="/app/context" className="link">
-                Ouvrir le contexte ↗
-              </Link>
-            </div>
-          </DeskCard>
-        </div>
-
-        <div className="grid">
-          <DeskCard
-            title="Trajectoire des portefeuilles"
-            extra={
-              <div className="segmented">
-                {EQUITY_PERIODS.map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    className={equityPeriod === p ? 'active' : ''}
-                    onClick={() => setEquityPeriod(p)}
-                  >
-                    {p}
-                  </button>
-                ))}
-              </div>
-            }
-          >
-            <div className="chart-summary">
+              )
+            })}
+            <div className="dk-sess-axis" aria-hidden="true">
+              <i />
               <span>
-                CAPITAL TOTAL{' '}
-                <b>{deskEquity != null ? fmtEur(deskEquity, 2) : '—'}</b>
+                <em>00:00</em>
+                <em>12:00</em>
+                <em>24:00</em>
               </span>
-              <span>
-                PORTEFEUILLES <b>{bookCurves.length || deskBookCount || '—'}</b>
-              </span>
-              <span>
-                DRAWDOWN{' '}
-                <b className={dd != null && dd < 0 ? 'down' : undefined}>
-                  {dd != null ? fmtPct(dd, 1, true) : '—'}
-                </b>
-              </span>
+              <i>UTC</i>
             </div>
-            <EquityTrajectory
-              books={
-                bookCurves.length > 0
-                  ? bookCurves
-                  : overview
-                    ? [
-                        {
-                          code: BASELINE,
-                          label: 'IchiVol',
-                          color: bookColors([BASELINE])[BASELINE]!,
-                          initialCash: overview.account?.initial_cash ?? null,
-                          points: overview.equity_curve ?? [],
-                          openSymbols: (overview.positions ?? []).map((p) => p.symbol),
-                        },
-                      ]
-                    : []
-              }
-              period={equityPeriod}
-              orders={paperOrders}
-              deciders={deciderByPosition}
-            />
-          </DeskCard>
-
-          <DeskCard
-            title="À surveiller"
-            extra={badge(
-              watchList.length ? `${watchList.length} SÉLECTIONS` : '—',
-              'gray',
-            )}
-          >
-            <div className="card-body">
-              {watchList.map((r) => {
-                const base = r.symbol.replace(/USDT$/i, '')
-                const coin = coinLetter(base)
-                const score =
-                  r.confidence != null && Number.isFinite(r.confidence)
-                    ? Math.round(r.confidence * 100)
-                    : null
-                return (
-                  <div
-                    key={r.symbol}
-                    className="opportunity"
-                    tabIndex={0}
-                    role="button"
-                    onClick={() => openOpp(r.symbol)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        openOpp(r.symbol)
-                      }
-                    }}
-                  >
-                    <span className={`coin ${coin.cls}`.trim()}>{coin.letter}</span>
-                    <div>
-                      <strong>
-                        {base}
-                        <span style={{ color: '#a0a4a6', fontWeight: 400 }}> / USDT</span>
-                      </strong>
-                      <small>{opportunityCaption(r)}</small>
-                    </div>
-                    <div className="right">
-                      <span className="score">
-                        {score != null ? score : '—'}
-                        <small style={{ display: 'inline' }}> /100</small>
-                      </span>
-                      <small>{badge(decisionBadgeText(r))}</small>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-            <div className="card-foot">
-              <Link className="link" to="/app/opportunites">
-                Explorer les opportunités ↗
-              </Link>
-            </div>
-          </DeskCard>
-        </div>
-
-        <div className="grid">
-          <DeskCard
-            title="Moteur vs Ève"
-            extra={
-              <Link className="link" to="/app/agents">
-                Détail ↗
-              </Link>
-            }
-          >
-            <DeskDeciderSummary />
-          </DeskCard>
-          <DeskCard title="Derniers jugements d’Ève">
-            <DeskEveLatest />
-          </DeskCard>
-        </div>
-
-        {freshnessNotice && (
-          <div className="notice">
-            <span>△</span>
-            <span>
-              <b>Cours à vérifier.</b> {freshnessNotice.text}
-            </span>
-            <Link to={freshnessNotice.href}>Voir la position →</Link>
           </div>
-        )}
+        </Card>
+      </div>
 
-        <div className="grid">
-          <DeskCard
-            title="Positions ouvertes"
-            extra={
-              <Link className="link" to="/app/portefeuille">
-                Portefeuille ↗
-              </Link>
-            }
-          >
-            <div className="table-wrap">
-              <table>
+      <div className="iv-grid">
+        <Card
+          title="À surveiller"
+          className="iv-s5 iv-m-s12"
+          flush
+          tools={<span>Ichimoku × RVOL</span>}
+          foot={<Link to="/app/opportunites">Explorer les opportunités →</Link>}
+        >
+          {watchList.length === 0 ? (
+            <p className="iv-empty">{loading ? 'Chargement…' : 'Aucune sélection pour l’instant.'}</p>
+          ) : (
+            <div className="iv-table-wrap">
+              <table className="iv-table is-compact">
                 <thead>
                   <tr>
-                    <th>ACTIF / STRATÉGIE</th>
-                    <th>ENGAGÉ</th>
-                    <th>PERFORMANCE</th>
-                    <th>P&amp;L LATENT</th>
-                    <th>ÉTAT</th>
+                    <th>Actif</th>
+                    <th>Cycle</th>
+                    <th>Lecture</th>
+                    <th className="n">RVOL</th>
+                    <th className="n">Conf.</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(overview?.positions ?? []).slice(0, 3).map((p: PaperOverviewPosition & Partial<BookPosition>) => {
-                    const base = p.symbol.replace(/USDT$/i, '')
-                    const engaged =
-                      p.market_value ??
-                      (p.current_price != null && p.qty != null
-                        ? p.current_price * Math.abs(p.qty)
-                        : p.notional ?? null)
-                    const perf = p.unrealized_pct
-                    const pnl = p.unrealized_pnl
-                    const perfCls =
-                      perf == null ? '' : perf > 0 ? 'up' : perf < 0 ? 'down' : ''
-                    const pnlCls =
-                      pnl == null ? '' : pnl > 0 ? 'up' : pnl < 0 ? 'down' : ''
-                    const strat =
-                      p.timeframe != null
-                        ? `${p.book_label ? `${p.book_label} · ` : ''}${isRsPortfolio(p.book_code) ? 'RS-D1 Donchian' : 'Ichimoku × RVOL'} · ${String(p.timeframe).toUpperCase()}`
-                        : '—'
+                  {watchList.map((r) => (
+                    <tr
+                      key={r.symbol}
+                      className="dk-click"
+                      tabIndex={0}
+                      onClick={() => openOpp(r.symbol)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          openOpp(r.symbol)
+                        }
+                      }}
+                    >
+                      <td className="sym">{r.symbol}</td>
+                      <td>
+                        <Tag tone={decisionTone(r)}>{r.decision ? decisionFr(String(r.decision)) : '—'}</Tag>
+                      </td>
+                      <td className="dk-ellipsis">{opportunityCaption(r)}</td>
+                      <td className={`n ${r.rvol != null && r.rvol >= RVOL_THRESHOLD ? 'ok' : ''}`.trim()}>
+                        {r.rvol != null ? fmtDec(r.rvol, 2) : '—'}
+                      </td>
+                      <td className="n">
+                        {r.confidence != null && Number.isFinite(r.confidence) ? fmtDec(r.confidence, 2) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+
+        <Card
+          title="Marchés principaux"
+          className="iv-s4 iv-m-s6"
+          flush
+          tools={
+            <span className={rows.length === 0 ? '' : marketsStale ? 'warn' : 'ok'}>
+              {rows.length === 0 ? '24 H' : marketsStale ? 'RETARD' : 'COURS · 24 H'}
+            </span>
+          }
+          foot={<Link to="/app/market">Tout le marché →</Link>}
+        >
+          {primaryMarkets.length === 0 ? (
+            <p className="iv-empty">—</p>
+          ) : (
+            <div className="iv-table-wrap">
+              <table className="iv-table">
+                <tbody>
+                  {primaryMarkets.map((r) => {
+                    const base = r.symbol.replace(/USDT$/i, '')
+                    const chg = changeBySymbol[r.symbol.toUpperCase()]
+                    const has = chg != null && !Number.isNaN(chg)
                     return (
                       <tr
-                        key={p.id ?? p.symbol}
-                        className="clickable"
+                        key={r.symbol}
+                        className="dk-click"
                         tabIndex={0}
-                        onClick={() => openPosition(p.symbol)}
+                        onClick={() => openMarket(r.symbol)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault()
-                            openPosition(p.symbol)
+                            openMarket(r.symbol)
                           }
                         }}
                       >
-                        <td>
-                          <b>
-                            {base} <DeciderBadge decider={deciderOf(p)} compact />
-                          </b>
-                          <small>{strat}</small>
+                        <td className="sym">
+                          {base}
+                          <small>/ USDT</small>
                         </td>
-                        <td>
-                          <span className="mono">{fmtEur(engaged, 2)}</span>
+                        <td className="muted dk-small">{r.decision ? decisionFr(String(r.decision)) : '—'}</td>
+                        <td className="n">{fmtPrice(r.price)}</td>
+                        <td className={`n ${has ? signCls(chg) : ''}`.trim()}>
+                          {has ? fmtPctPoints(chg, 2, true) : '—'}
                         </td>
-                        <td>
-                          <span className={`mono ${perfCls}`.trim()}>
-                            {perf != null ? fmtPct(perf, 2, true) : '—'}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`mono ${pnlCls}`.trim()}>
-                            {fmtEur(pnl, 2)}
-                          </span>
-                        </td>
-                        <td>{badge(p.mark_stale ? 'MARK STALE' : 'OUVERTE')}</td>
                       </tr>
                     )
                   })}
                 </tbody>
               </table>
             </div>
-          </DeskCard>
+          )}
+        </Card>
 
-          <DeskCard
-            title="Votre budget de risque"
-            extra={
-              riskPass == null
-                ? badge('—', 'gray')
-                : riskPass
-                  ? badge('PASSE')
-                  : badge('BLOQUÉ', 'red')
-            }
-          >
-            <div className="card-body">
-              <ProgressRow
-                label="Exposition du capital"
-                value={investedPct != null ? fmtPctPoints(investedPct, 1, false) : '—'}
-                pct={investedPct ?? 0}
-              />
-              <ProgressRow
-                label="Risque journalier"
-                value={
-                  risk?.open_risk_pct != null && risk.max_open_risk_pct != null
-                    ? `${fmtPct(risk.open_risk_pct, 1, false).replace(' %', '')} / ${fmtPct(risk.max_open_risk_pct, 0, false)}`
-                    : '—'
-                }
-                pct={dailyRiskPct ?? 0}
-              />
-              <ProgressRow
-                label="Positions simultanées"
-                value={
-                  risk
-                    ? `${risk.open_positions} / ${risk.max_open_positions}`
-                    : '—'
-                }
-                pct={slotsPct ?? 0}
-              />
-              <div style={{ marginTop: 20, fontSize: 10, color: 'var(--muted)' }}>
-                {acct
-                  ? `${fmtEur(acct.invested, 2)} engagés sur ${acct.open_positions} positions.`
-                  : '—'}
+        <Card
+          title="Lecture du marché"
+          className="iv-s3 iv-m-s6"
+          foot={<Link to="/app/context">Ouvrir le contexte →</Link>}
+        >
+          <div className="iv-cap">Indice Fear &amp; Greed · crypto</div>
+          <div className="dk-fng">
+            <span className={`dk-fng-v${fng ? (fng.value >= 55 ? ' warn' : fng.value <= 45 ? ' cy' : '') : ''}`}>
+              {fng ? fng.value : '—'}
+            </span>
+            <div>
+              <div className="dk-strong">{fng ? fearGreedFr(fng.classification) : 'Indice indisponible'}</div>
+              <div className="muted dk-small">
+                {climateSymbol} {fng ? 'avidité ou peur, sur 100' : '—'}
               </div>
             </div>
-          </DeskCard>
-        </div>
+          </div>
+          <Row label="Dominance BTC" value={btcDom ? fmtPctPoints(btcDom.percent, 1, false) : '—'} />
+          <Row
+            label="Volume relatif BTC"
+            value={btcRow?.rvol != null ? `${fmtDec(btcRow.rvol, 2)} ×` : '—'}
+            className={btcRow?.rvol != null && btcRow.rvol >= RVOL_THRESHOLD ? 'ok' : ''}
+          />
+          <Row
+            label="Concentration"
+            value={concentrationLabel === '—' ? '—' : <Tag tone={statusTone(concentrationLabel)}>{concentrationLabel}</Tag>}
+          />
+          <p className="iv-note dk-mt">
+            {fng ? 'Ce n’est pas un régime calculé par IchiVol. ' : ''}Le contexte éclaire le signal. Le risque garde le
+            dernier mot.
+          </p>
+        </Card>
+      </div>
 
-        <div className="grid three">
-          <DeskCard title="Derniers événements">
-            <div className="card-body">
-              <div className="timeline">
-                {tape.length === 0 ? (
-                  <div className="event">
-                    —<small>—</small>
-                  </div>
-                ) : (
-                  tape.slice(0, 3).map((it) => {
-                    const detail = (it.detail || '—').replace(/\s+/g, ' ').trim()
-                    const short =
-                      detail.length > 36 ? `${detail.slice(0, 34)}…` : detail
-                    const title =
-                      it.title.length > 42 ? `${it.title.slice(0, 40)}…` : it.title
+      <div className="iv-grid">
+        <Card
+          title="Derniers événements"
+          className="iv-s8 iv-m-s12"
+          flush
+          tools={<span>Journal d’audit</span>}
+          foot={<Link to="/app/operations">Toutes les opérations →</Link>}
+        >
+          {tape.length === 0 ? (
+            <p className="iv-empty">{loading ? 'Chargement…' : '—'}</p>
+          ) : (
+            <div className="iv-table-wrap">
+              <table className="iv-table is-compact">
+                <thead>
+                  <tr>
+                    <th>Heure</th>
+                    <th>Niveau</th>
+                    <th>Source</th>
+                    <th>Événement</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tape.map((it) => {
+                    const level = FEED_LEVEL[it.tone] ?? FEED_LEVEL.neutral
+                    const detail = (it.detail || '').replace(/\s+/g, ' ').trim()
                     return (
-                      <div
-                        key={`${it.time}-${it.kind}-${it.symbol}-${it.portfolio}-${it.detail}`}
-                        className="event"
-                      >
-                        {title}
-                        <small>
-                          {fmtClock(it.time)} · {short}
-                        </small>
-                      </div>
-                    )
-                  })
-                )}
-              </div>
-            </div>
-          </DeskCard>
-
-          <DeskCard title="Le prochain contrôle">
-            <div className="card-body">
-              <div className="checkpoint">
-                <span className="checkpoint-icon">◇</span>
-                <div>
-                  <b>Clôture 1H</b>
-                  <small>
-                    {formatCountdown(nextClose, now)} · {fmtClock(nextClose.toISOString())}
-                  </small>
-                </div>
-              </div>
-              <StatLine
-                label="BTC · participation"
-                value={
-                  btcRow?.rvol != null
-                    ? badge(
-                        `RVOL ${fmtDec(btcRow.rvol, 1)}×`,
-                        btcRow.rvol >= RVOL_THRESHOLD ? 'green' : 'amber',
-                      )
-                    : '—'
-                }
-              />
-              <StatLine label="Seuil attendu" value={`≥ ${fmtDec(RVOL_THRESHOLD, 1)}×`} />
-              <p className="desk-note">
-                Le volume reste à confirmer sur BTC. La confiance ne remplace pas les portes de
-                décision.
-              </p>
-              <Link className="link" to="/app/opportunites">
-                Examiner les confirmations →
-              </Link>
-            </div>
-          </DeskCard>
-
-          <DeskCard title="État du système">
-            <div className="card-body">
-              <StatLine
-                label="Moteur"
-                value={
-                  engineOk == null
-                    ? '—'
-                    : engineOk
-                      ? badge('CONNECTÉ')
-                      : badge('NON CONNECTÉ', 'gray')
-                }
-              />
-              <StatLine
-                label="Source des données"
-                value={
-                  engineOk
-                    ? badge('MOTEUR', 'gray')
-                    : rows.length
-                      ? badge('CACHE', 'gray')
-                      : '—'
-                }
-              />
-              <StatLine
-                label="Risk Kernel"
-                value={
-                  riskPass == null
-                    ? risk?.kernel
-                      ? badge(String(risk.kernel).toUpperCase(), 'gray')
-                      : '—'
-                    : riskPass
-                      ? badge('PASSE')
-                      : badge('BLOQUÉ', 'red')
-                }
-              />
-              <StatLine label="Argent réel" value={badge('JAMAIS · PAPER SEULEMENT', 'gray')} />
-            </div>
-          </DeskCard>
-        </div>
-
-        <div className="desk-allocation">
-          <DeskCard
-            title="Répartition du capital"
-            extra={badge(acct ? fmtEur(acct.equity, 0) : '—', 'gray')}
-          >
-            <div className="allocation-body">
-              <div className="desk-ring">
-                <svg
-                  viewBox="0 0 200 200"
-                  role="img"
-                  aria-label={`Capital engagé : ${investedPct != null ? fmtPctPoints(investedPct, 1, false) : '—'}`}
-                >
-                  <circle
-                    cx="100"
-                    cy="100"
-                    r="80"
-                    fill="none"
-                    stroke="#eeeae3"
-                    strokeWidth="19"
-                  />
-                  {investedPct != null && investedPct > 0 ? (
-                    <circle
-                      cx="100"
-                      cy="100"
-                      r="80"
-                      pathLength="100"
-                      fill="none"
-                      stroke="#548f87"
-                      strokeWidth="19"
-                      strokeDasharray={`${investedPct} ${100 - investedPct}`}
-                      strokeDashoffset={0}
-                      transform="rotate(-90 100 100)"
-                    />
-                  ) : null}
-                </svg>
-                <div>
-                  <b>{investedPct != null ? fmtPctPoints(investedPct, 1, false) : '—'}</b>
-                  <small>Capital engagé</small>
-                </div>
-              </div>
-              <div className="allocation-legend">
-                <StatLine
-                  label={
-                    <>
-                      <span className="legend-dot teal" />
-                      Engagé
-                    </>
-                  }
-                  value={acct ? fmtEur(acct.invested, 2) : '—'}
-                />
-                <StatLine
-                  label={
-                    <>
-                      <span className="legend-dot neutral" />
-                      Disponible
-                    </>
-                  }
-                  value={acct ? fmtEur(acct.cash, 2) : '—'}
-                />
-                <p className="desk-note">
-                  {acct && acct.equity > 0
-                    ? `${fmtPct(acct.cash / acct.equity, 1, false)} du capital reste disponible.`
-                    : '—'}
-                </p>
-              </div>
-            </div>
-            <div className="card-foot">
-              <Link to="/app/portefeuille" className="link">
-                Voir l’allocation ↗
-              </Link>
-            </div>
-          </DeskCard>
-
-          <DeskCard
-            title="Concentration des positions"
-            extra={
-              concentration.length
-                ? badge(concentrationLabel === '—' ? '—' : concentrationLabel, concentrationTone || 'gray')
-                : badge('—', 'gray')
-            }
-          >
-            <div className="allocation-body">
-              <div className="desk-ring">
-                <svg
-                  viewBox="0 0 200 200"
-                  role="img"
-                  aria-label={`Positions ouvertes : ${concentration.length || '—'}`}
-                >
-                  <circle
-                    cx="100"
-                    cy="100"
-                    r="80"
-                    fill="none"
-                    stroke="#eeeae3"
-                    strokeWidth="19"
-                  />
-                  {concentration.slice(0, 3).map((c, i) => {
-                    const o = concentration
-                      .slice(0, i)
-                      .reduce((s, x) => s + x.pct, 0)
-                    const color = RING_COLORS[i % RING_COLORS.length]
-                    return (
-                      <circle
-                        key={c.symbol}
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        pathLength="100"
-                        fill="none"
-                        stroke={color}
-                        strokeWidth="19"
-                        strokeDasharray={`${c.pct} ${100 - c.pct}`}
-                        strokeDashoffset={-o}
-                        transform="rotate(-90 100 100)"
-                      />
+                      <tr key={`${it.time}-${it.kind}-${it.symbol}-${it.portfolio}-${it.detail}`}>
+                        <td className="mono dim">{fmtClock(it.time)}</td>
+                        <td>
+                          <Tag tone={level.tone}>{level.label}</Tag>
+                        </td>
+                        <td>{it.portfolio || '—'}</td>
+                        <td className="dk-event">
+                          {it.title}
+                          {detail ? <span className="muted"> · {detail}</span> : null}
+                        </td>
+                      </tr>
                     )
                   })}
-                </svg>
-                <div>
-                  <b>{concentration.length ? String(Math.min(3, concentration.length)) : '—'}</b>
-                  <small>Positions ouvertes</small>
-                </div>
-              </div>
-              <div className="allocation-legend">
-                {concentration.slice(0, 3).map((c, i) => (
-                  <button
-                    key={c.symbol}
-                    type="button"
-                    className="concentration-row"
-                    onClick={() => openPosition(toEngineSymbol(c.symbol))}
-                  >
-                    <span>
-                      <i style={{ background: RING_COLORS[i % RING_COLORS.length] }} />
-                      {c.symbol}
-                    </span>
-                    <b className="mono">{fmtPctPoints(c.pct, 1, false)}</b>
-                  </button>
-                ))}
-                <p className="desk-note">{exposureMixLabel(overview?.positions ?? [])}</p>
-              </div>
+                </tbody>
+              </table>
             </div>
-            <div className="card-foot">
-              <Link to="/app/portefeuille" className="link">
-                Surveiller la concentration ↗
-              </Link>
-            </div>
-          </DeskCard>
-        </div>
+          )}
+        </Card>
+
+        <Card
+          title="Le prochain contrôle"
+          className="iv-s4 iv-m-s12"
+          glow
+          foot={<Link to="/app/opportunites">Examiner les confirmations →</Link>}
+        >
+          <div className="iv-meta">Clôture de la bougie 1H · {nextCloseUtc} UTC</div>
+          <div className="dk-countdown">{formatCountdown(nextClose, now)}</div>
+          <p className="iv-note">
+            Le volume reste à confirmer sur BTC. La confiance ne remplace pas les{' '}
+            <span className="iv-kw">portes de décision</span>.
+          </p>
+          <Row
+            label="BTC · participation"
+            value={
+              btcRow?.rvol != null ? (
+                <Tag tone={btcRow.rvol >= RVOL_THRESHOLD ? 'mint' : 'amber'}>RVOL {fmtDec(btcRow.rvol, 1)}×</Tag>
+              ) : (
+                '—'
+              )
+            }
+          />
+          <Row label="Seuil attendu" value={`≥ ${fmtDec(RVOL_THRESHOLD, 1)}×`} />
+          <div className="dk-chips">
+            <span className="iv-chip">
+              {watchList.length} à surveiller
+            </span>
+            {watchSymbols ? <span className="iv-chip is-amber">{watchSymbols}</span> : null}
+          </div>
+        </Card>
       </div>
     </div>
   )
