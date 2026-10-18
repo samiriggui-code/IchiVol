@@ -15,7 +15,7 @@
   --red: #c8412f;
   --amber: #a76c17;
   color: var(--ink);
-  font: 11px Manrope, Arial, sans-serif;
+  font: 11px Inter, Arial, sans-serif;
   padding: 0;
   max-width: 1800px;
   margin: 0 auto;
@@ -37,7 +37,7 @@
 }
 
 .market-page .eyebrow {
-  font: 11px 'DM Mono', ui-monospace, monospace;
+  font: 11px 'JetBrains Mono', ui-monospace, monospace;
   letter-spacing: 1.6px;
   color: #8c918f;
   margin-bottom: 10px;
@@ -46,7 +46,7 @@
 /* Spécificité > .page-head h1 (index) et .dash-shell.is-mobile .page-head h1 */
 .dash-shell .market-page .page-head h1,
 .market-page .page-head h1 {
-  font: 38px Newsreader, Georgia, serif;
+  font: 38px Inter, system-ui, sans-serif;
   font-weight: 400;
   line-height: normal;
   margin: 0 0 6px;
@@ -55,7 +55,7 @@
 }
 
 .market-page h2 {
-  font: 23px Newsreader, Georgia, serif;
+  font: 23px Inter, system-ui, sans-serif;
   margin: 0;
 }
 
@@ -78,7 +78,7 @@
   display: inline-block;
   width: auto;
   margin-top: 0;
-  font: 11px Manrope, sans-serif;
+  font: 11px Inter, sans-serif;
   padding: 8px 12px;
 }
 
@@ -93,7 +93,7 @@
   border: 1px solid var(--line);
   background: #f3f2ef;
   border-radius: 6px;
-  font: 11px 'DM Mono', ui-monospace, monospace;
+  font: 11px 'JetBrains Mono', ui-monospace, monospace;
   letter-spacing: 0.6px;
   padding: 6px 10px;
   color: var(--ink);
@@ -107,7 +107,7 @@
 }
 
 .market-page .tag {
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px 'JetBrains Mono', ui-monospace, monospace;
   padding: 5px 7px;
   background: #edf3fa;
   border-radius: 4px;
@@ -227,7 +227,7 @@
   display: flex;
   gap: 22px;
   padding: 0 23px;
-  font: 12px 'DM Mono', ui-monospace, monospace;
+  font: 12px 'JetBrains Mono', ui-monospace, monospace;
   color: var(--muted);
 }
 
@@ -278,7 +278,7 @@
   background: var(--card);
   border-radius: 999px;
   padding: 6px 12px;
-  font: 11px Manrope, sans-serif;
+  font: 11px Inter, sans-serif;
   color: var(--ink);
   cursor: pointer;
 }
@@ -309,7 +309,7 @@
 .market-page .watchlist button small {
   display: block;
   color: var(--muted);
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px 'JetBrains Mono', ui-monospace, monospace;
   margin-top: 5px;
 }
 
@@ -397,7 +397,7 @@
 }
 
 .market-page button.primary {
-  font: 11px Manrope, Arial, sans-serif;
+  font: 11px Inter, Arial, sans-serif;
   background: var(--blue);
   color: white;
   border: 1px solid var(--blue);
@@ -502,7 +502,7 @@
   .market-page .page-head h1 {
     font-size: 28px;
     font-weight: 400;
-    font-family: Newsreader, Georgia, serif;
+    font-family: Inter, system-ui, sans-serif;
     line-height: 1.15;
     letter-spacing: -0.8px;
   }

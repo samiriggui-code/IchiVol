@@ -54,7 +54,7 @@
 }
 
 .mtf-table th {
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px 'JetBrains Mono', ui-monospace, monospace;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   color: var(--muted-foreground, #7d8288);
@@ -74,7 +74,7 @@
 
 .mtf-tag {
   display: inline-block;
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px 'JetBrains Mono', ui-monospace, monospace;
   padding: 3px 6px;
   border-radius: 4px;
   background: #edf3fa;
@@ -101,7 +101,7 @@ html.dark .mtf-tag.gray { background: #262a31; color: #9aa0a6; }
 }
 
 .mtf-lines dt {
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px 'JetBrains Mono', ui-monospace, monospace;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   color: var(--muted-foreground, #7d8288);

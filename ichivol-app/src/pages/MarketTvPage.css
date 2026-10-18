@@ -13,7 +13,7 @@
   --green: #0b8f83;
   --red: #c8412f;
   color: var(--ink);
-  font: 11px Manrope, Arial, sans-serif;
+  font: 11px Inter, Arial, sans-serif;
   background:
     radial-gradient(1200px 600px at 10% -10%, #e8eef6 0%, transparent 55%),
     radial-gradient(900px 500px at 100% 0%, #efe8dc 0%, transparent 50%),
@@ -53,13 +53,13 @@
 }
 
 .market-tv-mark {
-  font: 22px Newsreader, Georgia, serif;
+  font: 22px Inter, system-ui, sans-serif;
   letter-spacing: -0.6px;
   line-height: 1;
 }
 
 .market-tv-mode {
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px 'JetBrains Mono', ui-monospace, monospace;
   letter-spacing: 1.4px;
   text-transform: uppercase;
   color: var(--muted);
@@ -72,14 +72,14 @@
 
 .market-tv-symbol h1 {
   margin: 0;
-  font: 28px Newsreader, Georgia, serif;
+  font: 28px Inter, system-ui, sans-serif;
   font-weight: 400;
   letter-spacing: -0.8px;
   line-height: 1.1;
 }
 
 .market-tv-symbol h1 span {
-  font: 11px Manrope, sans-serif;
+  font: 11px Inter, sans-serif;
   color: var(--muted);
   margin-left: 6px;
 }
@@ -92,7 +92,7 @@
 .market-tv-stats {
   display: flex;
   gap: 18px;
-  font: 11px 'DM Mono', ui-monospace, monospace;
+  font: 11px 'JetBrains Mono', ui-monospace, monospace;
   color: var(--muted);
   flex-wrap: wrap;
 }
@@ -141,7 +141,7 @@
 }
 
 .market-tv-link {
-  font: 11px Manrope, sans-serif;
+  font: 11px Inter, sans-serif;
   color: var(--blue);
   text-decoration: none;
   font-weight: 600;
@@ -149,7 +149,7 @@
 }
 
 .market-tv-close {
-  font: 11px Manrope, sans-serif;
+  font: 11px Inter, sans-serif;
   border: 1px solid var(--line);
   background: var(--card);
   border-radius: 8px;
@@ -187,7 +187,7 @@
   background: var(--card);
   border-radius: 999px;
   padding: 6px 12px;
-  font: 11px Manrope, sans-serif;
+  font: 11px Inter, sans-serif;
   color: var(--ink);
   cursor: pointer;
 }
@@ -235,7 +235,7 @@
 .market-tv-watch button small {
   display: block;
   color: var(--muted);
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px 'JetBrains Mono', ui-monospace, monospace;
   margin-top: 4px;
 }
 

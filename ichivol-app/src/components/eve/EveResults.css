@@ -6,7 +6,7 @@
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  font: 600 11px Manrope, Arial, sans-serif;
+  font: 600 11px Inter, Arial, sans-serif;
   color: var(--muted);
   background: var(--card);
 }
@@ -135,14 +135,14 @@
 }
 
 .dv-page .dv-table thead th {
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px 'JetBrains Mono', ui-monospace, monospace;
   letter-spacing: 0.04em;
   color: var(--muted);
   text-transform: uppercase;
 }
 
 .dv-page .dv-table tbody th {
-  font: 600 12px Manrope, Arial, sans-serif;
+  font: 600 12px Inter, Arial, sans-serif;
   letter-spacing: normal;
   text-transform: none;
   color: var(--ink, inherit);
@@ -226,7 +226,7 @@
 }
 
 .dv-page .dv-p-when {
-  font: 11px 'DM Mono', ui-monospace, monospace;
+  font: 11px 'JetBrains Mono', ui-monospace, monospace;
   color: var(--muted);
 }
 
@@ -240,7 +240,7 @@
   justify-self: end;
   padding: 2px 8px;
   border-radius: 999px;
-  font: 600 10px Manrope, Arial, sans-serif;
+  font: 600 10px Inter, Arial, sans-serif;
   white-space: nowrap;
   border: 1px solid currentColor;
 }

@@ -560,7 +560,7 @@ export function PortfolioPage() {
             >
               <span
                 style={{
-                  font: '42px Newsreader, Georgia, serif',
+                  font: '42px Inter, system-ui, sans-serif',
                   color:
                     riskPass === true
                       ? 'var(--green)'

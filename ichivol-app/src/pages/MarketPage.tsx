@@ -471,7 +471,7 @@ export function MarketPage() {
             <div>
               <h2>
                 {shortSymbol(symbol)}
-                <span style={{ font: '12px Manrope, sans-serif', color: '#91989d' }}>{quote}</span>
+                <span style={{ font: '12px Inter, sans-serif', color: '#91989d' }}>{quote}</span>
               </h2>
               <small>
                 {sourceLabel} · bougies clôturées

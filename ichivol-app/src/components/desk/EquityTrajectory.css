@@ -73,7 +73,7 @@
 }
 
 .eqt-axis {
-  font: 10.5px 'DM Mono', ui-monospace, monospace;
+  font: 10.5px 'JetBrains Mono', ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
   fill: var(--eqt-muted);
 }
@@ -98,12 +98,12 @@
 }
 
 .eqt-endname {
-  font: 600 11px Manrope, Arial, sans-serif;
+  font: 600 11px Inter, Arial, sans-serif;
   fill: var(--eqt-ink);
 }
 
 .eqt-endval {
-  font: 10.5px 'DM Mono', ui-monospace, monospace;
+  font: 10.5px 'JetBrains Mono', ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
   fill: var(--eqt-muted);
 }
@@ -209,7 +209,7 @@
 .eqt-tip dd {
   margin: 0;
   text-align: right;
-  font: 11px 'DM Mono', ui-monospace, monospace;
+  font: 11px 'JetBrains Mono', ui-monospace, monospace;
 }
 
 .eqt-tip dd.up {
@@ -297,7 +297,7 @@
 }
 
 .eqt-val {
-  font: 600 11.5px 'DM Mono', ui-monospace, monospace;
+  font: 600 11.5px 'JetBrains Mono', ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
   min-width: 68px;
   text-align: right;
@@ -313,7 +313,7 @@
 
 .eqt-eur {
   min-width: 60px;
-  font: 10.5px 'DM Mono', ui-monospace, monospace;
+  font: 10.5px 'JetBrains Mono', ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
   color: var(--eqt-muted);
   text-align: right;

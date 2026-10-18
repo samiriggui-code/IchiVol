@@ -6,7 +6,7 @@
 .fs-answer .fs-claim.fs-missing { color: var(--muted); font-style: italic; }
 .fs-answer .fs-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: middle; }
 .fs-answer .fs-chip {
-  font: 10px 'DM Mono', ui-monospace, monospace;
+  font: 10px 'JetBrains Mono', ui-monospace, monospace;
   padding: 2px 6px;
   border-radius: 4px;
   border: 1px solid var(--line, #e2dfd6);

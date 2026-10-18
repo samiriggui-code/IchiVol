@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { FicheHost } from '../components/fiches/FicheHost'
 import { NotificationBell } from '../components/NotificationBell'
@@ -10,7 +10,10 @@ import {
 import { BrandMark } from '../components/BrandMark'
 import { KillLockBanner, KillSwitchButton, KillSwitchProvider } from '../components/KillSwitchControls'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { combineOverviews, loadAllBooks } from '../lib/allBooks'
 import { getMe, logout } from '../lib/auth'
+import { getPaperAutonomy } from '../lib/eveApi'
+import type { PaperOverview } from '../lib/paper'
 import { AgentSessionProvider } from '../lib/agentSession'
 import {
   jevStatusLabel,
@@ -28,33 +31,157 @@ import {
 const SIDEBAR_KEY = 'ichivol_sidebar_collapsed'
 const MOBILE_MQ = '(max-width: 768px)'
 
-function LlmHeaderBadge() {
+const ACCOUNT_REFRESH_MS = 60_000
+
+type EngineState = 'checking' | 'ok' | 'down'
+
+/**
+ * Données du bandeau : uniquement ce que l'app sait déjà charger
+ * (vue d'ensemble des portefeuilles paper actifs + état du pilote d'Ève).
+ * Rien n'est inventé : une valeur absente s'affiche « — ».
+ */
+function useShellAccount() {
+  const [account, setAccount] = useState<PaperOverview['account'] | null>(null)
+  const [engine, setEngine] = useState<EngineState>('checking')
+  const [autonomy, setAutonomy] = useState<boolean | null>(null)
+
+  const refresh = useCallback(() => {
+    loadAllBooks()
+      .then((books) => {
+        setEngine('ok')
+        setAccount(combineOverviews(books)?.account ?? null)
+      })
+      .catch(() => {
+        setEngine('down')
+        setAccount(null)
+      })
+    getPaperAutonomy()
+      .then(setAutonomy)
+      .catch(() => setAutonomy(null))
+  }, [])
+
+  useEffect(() => {
+    refresh()
+    const t = window.setInterval(refresh, ACCOUNT_REFRESH_MS)
+    return () => window.clearInterval(t)
+  }, [refresh])
+
+  return { account, engine, autonomy }
+}
+
+const EUR = new Intl.NumberFormat('fr-FR', {
+  style: 'currency',
+  currency: 'EUR',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
+function fmtMoney(v: number | null | undefined, signed = false): string {
+  if (v == null || !Number.isFinite(v)) return '—'
+  const s = EUR.format(Math.abs(v))
+  if (!signed || v === 0) return v < 0 ? `−${s}` : s
+  return v > 0 ? `+${s}` : `−${s}`
+}
+
+function toneOf(v: number | null | undefined): string {
+  if (v == null || !Number.isFinite(v) || v === 0) return ''
+  return v > 0 ? ' pos' : ' neg'
+}
+
+function fmtShare(part: number | null | undefined, total: number | null | undefined): string {
+  if (part == null || total == null || !Number.isFinite(part) || !Number.isFinite(total) || total <= 0) {
+    return '—'
+  }
+  return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format((part / total) * 100)} %`
+}
+
+function HeaderAccount({ account }: { account: PaperOverview['account'] | null }) {
+  const netLiq = account ? (account.liquidation_value ?? account.equity) : null
+  return (
+    <div className="dash-acct" aria-label="Compte paper, tous les portefeuilles">
+      <div className="dash-kv">
+        <span className="dash-kv-k">Net liq</span>
+        <span className="dash-kv-v">{fmtMoney(netLiq)}</span>
+      </div>
+      <div className="dash-kv">
+        <span className="dash-kv-k">P&amp;L jour</span>
+        <span className={`dash-kv-v${toneOf(account?.day_change)}`}>
+          {fmtMoney(account?.day_change, true)}
+        </span>
+      </div>
+      <div className="dash-kv">
+        <span className="dash-kv-k">P&amp;L latent</span>
+        <span className={`dash-kv-v${toneOf(account?.unrealized_pnl)}`}>
+          {fmtMoney(account?.unrealized_pnl, true)}
+        </span>
+      </div>
+      <div className="dash-kv">
+        <span className="dash-kv-k">Engagé</span>
+        <span className="dash-kv-v">{fmtShare(account?.invested, account?.equity)}</span>
+      </div>
+    </div>
+  )
+}
+
+function dotTone(state: string): string {
+  if (state === 'ok') return ''
+  if (state === 'checking' || state === 'idle') return ' is-off'
+  if (state === 'disabled') return ' is-off'
+  if (state === 'no_key' || state === 'bad_key') return ' is-amber'
+  return ' is-sell'
+}
+
+function HeaderConnections({ engine }: { engine: EngineState }) {
   const { state, jevos, typesafe, refresh } = useLlmStatus()
   const chatLabel = llmStatusLabel(state)
-  // Libellés produit uniquement — pas de marque, provider, modèle ni URL.
-  const detail = [chatLabel, jevStatusLabel(jevos), jevStatusLabel(typesafe)].join(' · ')
+  const engineLabel =
+    engine === 'ok' ? 'Moteur joignable' : engine === 'down' ? 'Moteur injoignable' : 'Moteur…'
+  // Libellés produit uniquement : pas de marque, fournisseur, modèle ni URL.
+  const detail = [engineLabel, `JEV ${jevStatusLabel(jevos)}`, `JEV ${jevStatusLabel(typesafe)}`, chatLabel].join(' · ')
 
   return (
     <button
       type="button"
-      className="llm-status-badge ai-status-badge"
-      title={detail}
-      onClick={() => void refresh()}
+      className="dash-conn llm-status-badge"
+      title={`${detail} (cliquer pour retester)`}
       aria-label={detail}
+      onClick={() => void refresh()}
     >
-      <span className={`ai-status-chip is-${state}`} title={chatLabel}>
-        <span className="llm-status-dot" aria-hidden />
-        <span className="llm-status-text">Copilot</span>
+      <span className={`dash-conn-item is-${engine}`} title={engineLabel}>
+        <i className={`iv-dot${dotTone(engine)}`} aria-hidden />
+        <span className="dash-conn-text">Moteur</span>
       </span>
-      <span className={`ai-status-chip is-${jevos.state}`} title={jevStatusLabel(jevos)}>
-        <span className="llm-status-dot" aria-hidden />
-        <span className="llm-status-text">Local</span>
+      <span className={`dash-conn-item is-${jevos.state}`} title={`JEV ${jevStatusLabel(jevos)}`}>
+        <i className={`iv-dot${dotTone(jevos.state)}`} aria-hidden />
+        <span className="dash-conn-text">JEV local</span>
       </span>
-      <span className={`ai-status-chip is-${typesafe.state}`} title={jevStatusLabel(typesafe)}>
-        <span className="llm-status-dot" aria-hidden />
-        <span className="llm-status-text">Cloud</span>
+      <span className={`dash-conn-item is-${typesafe.state}`} title={`JEV ${jevStatusLabel(typesafe)}`}>
+        <i className={`iv-dot${dotTone(typesafe.state)}`} aria-hidden />
+        <span className="dash-conn-text">JEV cloud</span>
+      </span>
+      <span className={`dash-conn-item is-${state}`} title={chatLabel}>
+        <i className={`iv-dot${dotTone(state)}`} aria-hidden />
+        <span className="dash-conn-text">Copilot</span>
       </span>
     </button>
+  )
+}
+
+function PilotPill({ autonomy }: { autonomy: boolean | null }) {
+  if (autonomy === true) {
+    return (
+      <span className="iv-pill is-mint dash-pilot" title="Ève accepte ou refuse ce que le moteur propose">
+        Pilote Ève
+      </span>
+    )
+  }
+  return (
+    <span
+      className="iv-pill is-muted dash-pilot"
+      title={autonomy === false ? 'Pilote automatique d’Ève désactivé' : 'État du pilote d’Ève inconnu'}
+    >
+      Pilote Ève · {autonomy === false ? 'off' : '—'}
+    </span>
   )
 }
 
@@ -62,6 +189,7 @@ function DashboardShellInner() {
   const navigate = useNavigate()
   const location = useLocation()
   const llm = useLlmStatus()
+  const shell = useShellAccount()
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === '1')
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' ? window.matchMedia(MOBILE_MQ).matches : false,
@@ -127,7 +255,10 @@ function DashboardShellInner() {
         <div className="dash-sidebar-top">
           <NavLink to="/app/desk" className="dash-side-brand" title="IchiVol">
             <BrandMark className="dash-side-mark" />
-            <span className="dash-side-name">IchiVol</span>
+            <span className="dash-side-name">
+              IchiVol
+              <small>Poste paper</small>
+            </span>
           </NavLink>
 
           <nav className="dash-nav">
@@ -151,6 +282,19 @@ function DashboardShellInner() {
         </div>
 
         <div className="dash-sidebar-footer">
+          <span
+            className="dash-side-status"
+            title={
+              shell.engine === 'ok'
+                ? 'Moteur joignable'
+                : shell.engine === 'down'
+                  ? 'Moteur injoignable'
+                  : 'Moteur…'
+            }
+          >
+            <i className={`iv-dot${dotTone(shell.engine)}`} aria-hidden />
+            <span>Moteur</span>
+          </span>
           <ThemeToggle />
           <button
             type="button"
@@ -172,22 +316,23 @@ function DashboardShellInner() {
                 <span>IchiVol</span>
               </NavLink>
             )}
+            <HeaderAccount account={shell.account} />
+            <HeaderConnections engine={shell.engine} />
           </div>
           <div className="dash-header-right">
-            {isMobile && <ThemeToggle />}
+            <PilotPill autonomy={shell.autonomy} />
             <span
-              className="dash-paper-pill"
+              className="iv-pill dash-paper-pill"
               data-mode="paper"
-              title="Mode paper — aucune exécution réelle"
+              title="Paper trading : aucune exécution réelle"
             >
               PAPER
             </span>
             <KillSwitchButton />
-            <LlmHeaderBadge />
 
             <NotificationBell onOpen={() => setUserMenuOpen(false)} />
 
-            <div className="dash-popover-wrap">
+            <div className="dash-popover-wrap dash-user-wrap">
               <button
                 type="button"
                 className="dash-user-btn"
@@ -284,7 +429,10 @@ function DashboardShellInner() {
             hidden={!moreOpen}
           >
             <div className="dash-mobile-more-handle" aria-hidden />
-            <p className="dash-mobile-more-title">Plus</p>
+            <div className="dash-mobile-more-head">
+              <p className="dash-mobile-more-title">Plus</p>
+              <ThemeToggle />
+            </div>
             <div className="dash-mobile-more-grid">
               {MOBILE_MORE_ITEMS.map(({ to, label, Icon }) => (
                 <NavLink
@@ -297,6 +445,12 @@ function DashboardShellInner() {
                   <span>{label}</span>
                 </NavLink>
               ))}
+            </div>
+            <div className="dash-mobile-more-foot">
+              <span className="mono">{email ?? '…'}</span>
+              <button type="button" className="iv-btn iv-btn--sm iv-btn--ghost" onClick={doLogout}>
+                Déconnexion
+              </button>
             </div>
           </div>
         </>

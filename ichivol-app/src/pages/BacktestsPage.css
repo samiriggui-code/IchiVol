@@ -11,7 +11,7 @@
   --red: #c8412f;
   --amber: #a76c17;
   color: var(--ink);
-  font: 11px Manrope, Arial, sans-serif;
+  font: 11px Inter, Arial, sans-serif;
   padding: 0;
   max-width: 1800px;
   margin: 0 auto;
@@ -55,18 +55,18 @@
   margin-bottom:26px;
 }
 .lab-page .eyebrow {
-  font:10px 'DM Mono';
+  font:10px 'JetBrains Mono';
   letter-spacing:1.6px;
   color:#8c918f;
   margin-bottom:10px;
 }
 .lab-page h1 {
-  font:38px Newsreader,Georgia,serif;
+  font:38px Inter, system-ui, sans-serif;
   margin:0 0 6px;
   letter-spacing:-1px;
 }
 .lab-page h2 {
-  font:23px Newsreader,Georgia,serif;
+  font:23px Inter, system-ui, sans-serif;
   margin:0;
 }
 .lab-page h3 {
@@ -123,7 +123,7 @@
   justify-content:space-between;
 }
 .lab-page .metric-value {
-  font:27px 'DM Mono',monospace;
+  font:27px 'JetBrains Mono',monospace;
   letter-spacing:-1px;
 }
 .lab-page .metric small {
@@ -183,7 +183,7 @@
   padding:10px 23px 22px;
 }
 .lab-page .tag, .lab-sheet .tag {
-  font:9px 'DM Mono';
+  font:9px 'JetBrains Mono';
   padding:5px 7px;
   background:#edf3fa;
   border-radius:4px;
@@ -214,14 +214,14 @@
   display:flex;
   justify-content:space-between;
   padding:0 20px 14px;
-  font:10px 'DM Mono';
+  font:10px 'JetBrains Mono';
   color:#969a9c;
 }
 .lab-page .chart-summary {
   display:flex;
   gap:22px;
   padding:0 23px;
-  font:10px 'DM Mono';
+  font:10px 'JetBrains Mono';
   color:var(--muted);
 }
 .lab-page .chart-summary b {
@@ -290,7 +290,7 @@
   text-align:right;
 }
 .lab-page .score {
-  font:20px 'DM Mono';
+  font:20px 'JetBrains Mono';
   color:var(--green);
 }
 .lab-page .link {
@@ -341,7 +341,7 @@
   background:#f5f8fb;
 }
 .lab-page .mono {
-  font-family:'DM Mono',monospace;
+  font-family:'JetBrains Mono',monospace;
 }
 .lab-page .notice {
   display:flex;
@@ -443,7 +443,7 @@
 .lab-page .watchlist button small {
   display:block;
   color:var(--muted);
-  font:10px 'DM Mono';
+  font:10px 'JetBrains Mono';
   margin-top:5px;
 }
 .lab-page .watchlist .up, .lab-page .watchlist .down {
@@ -565,7 +565,7 @@
 .lab-page .heatmap div {
   padding:18px 5px;
   text-align:center;
-  font:12px 'DM Mono';
+  font:12px 'JetBrains Mono';
   border-radius:4px;
   background:#daeee9;
   color:#326f66;
@@ -654,7 +654,7 @@
   height:115px;
   background:var(--card);
   border-radius:50%;
-  font:23px 'DM Mono';
+  font:23px 'JetBrains Mono';
 }
 .lab-page .step {
   border-left:2px solid #c7dfd9;
@@ -944,7 +944,7 @@
   color:var(--muted);
 }
 .lab-page .map-foot b {
-  font-family:'DM Mono';
+  font-family:'JetBrains Mono';
   font-weight:400;
   color:var(--green);
   margin-left:5px;
@@ -1005,11 +1005,11 @@
   background:#f2f5ef;
 }
 .lab-page .climate-head small {
-  font:12px 'DM Mono';
+  font:12px 'JetBrains Mono';
   color:var(--muted);
 }
 .lab-page .climate-head h3 {
-  font:26px Newsreader,Georgia,serif;
+  font:26px Inter, system-ui, sans-serif;
   margin-top:6px;
 }
 .lab-page .desk-workspace .desk-note {
@@ -1053,7 +1053,7 @@
   gap:8px;
 }
 .lab-page .desk-ring b {
-  font:26px 'DM Mono';
+  font:26px 'JetBrains Mono';
   letter-spacing:-1px;
 }
 .lab-page .desk-ring small {
@@ -1204,7 +1204,7 @@
 .dash-shell .lab-page .page-head h1,
 .dash-shell.is-mobile .lab-page .page-head h1,
 .lab-page .page-head h1 {
-  font: 38px Newsreader, Georgia, serif;
+  font: 38px Inter, system-ui, sans-serif;
   margin: 0 0 6px;
   letter-spacing: -1px;
 }

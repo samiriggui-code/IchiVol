@@ -1,4 +1,4 @@
-/* Landing / login — style GSMS CRM (Manrope / Newsreader / primary blue) */
+/* Landing / login — style GSMS CRM (Inter / Inter / primary blue) */
 
 .camap-shell {
   min-height: 100%;
@@ -9,12 +9,6 @@
   font-family: var(--font-sans);
 }
 
-.camap-shell-center {
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-  gap: 1.5rem;
-}
 
 .camap-nav-wrap {
   position: sticky;
@@ -156,15 +150,7 @@
   filter: brightness(1.05);
 }
 
-.camap-btn-outline {
-  background: transparent;
-  border-color: var(--border);
-  color: var(--foreground);
-}
 
-.camap-btn-outline:hover {
-  background: var(--secondary);
-}
 
 .camap-hero {
   position: relative;
@@ -256,13 +242,6 @@
   line-height: 0.92;
 }
 
-.camap-eyebrow-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
-}
 
 .camap-dot-live {
   background: var(--primary);

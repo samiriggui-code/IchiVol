@@ -1,23 +1,24 @@
-const THEME_KEY = 'ichivol_theme'
+/** Clé renouvelée avec le thème premium : l'ancienne mémorisait « light » par défaut pour tout le monde. */
+const THEME_KEY = 'ichivol_theme_premium'
 export const THEME_CHANGE_EVENT = 'ichivol:theme'
 
 export type ThemeMode = 'light' | 'dark'
 
 /**
- * Défaut = light (maquette). Ne pas suivre prefers-color-scheme :
- * sinon iOS sombre → shell dark + cartes maquette claires = thème farci.
+ * Défaut = sombre (thème premium). Le clair reste disponible via le ThemeToggle.
+ * Ne pas suivre prefers-color-scheme : le poste de trading est pensé sombre.
  */
 export function getStoredTheme(): ThemeMode {
   const raw = localStorage.getItem(THEME_KEY)
   if (raw === 'light' || raw === 'dark') return raw
-  return 'light'
+  return 'dark'
 }
 
 export function applyTheme(mode: ThemeMode) {
   document.documentElement.classList.toggle('dark', mode === 'dark')
   localStorage.setItem(THEME_KEY, mode)
   const meta = document.querySelector('meta[name="theme-color"]')
-  if (meta) meta.setAttribute('content', mode === 'dark' ? '#12151a' : '#faf8f5')
+  if (meta) meta.setAttribute('content', mode === 'dark' ? '#05080c' : '#f3f5f8')
   window.dispatchEvent(new Event(THEME_CHANGE_EVENT))
 }
 

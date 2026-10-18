@@ -69,12 +69,12 @@ export const NAV_GROUPS: NavGroup[] = [
 
 export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items)
 
-/** Mobile tab bar — maquette + T14a : Desk · Opportunités · Portefeuille · Copilot · Plus */
+/** Barre mobile (maquette premium) : Desk · Opportunités · Portefeuille · Ève · Plus. Le Copilot passe dans « Plus ». */
 export const MOBILE_PRIMARY_PATHS = new Set([
   '/app/desk',
   '/app/opportunites',
   '/app/portefeuille',
-  '/app/agent',
+  '/app/agents',
 ])
 
 export const MOBILE_PRIMARY_ITEMS = NAV_ITEMS.filter((item) =>

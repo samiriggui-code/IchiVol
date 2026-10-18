@@ -11,7 +11,7 @@
   --red: #c8412f;
   --amber: #a76c17;
   color: var(--ink);
-  font: 11px Manrope, Arial, sans-serif;
+  font: 11px Inter, Arial, sans-serif;
   padding: 0;
   max-width: 1800px;
   margin: 0 auto;
@@ -55,18 +55,18 @@
   margin-bottom:26px;
 }
 .ctx-page .eyebrow {
-  font:10px 'DM Mono';
+  font:10px 'JetBrains Mono';
   letter-spacing:1.6px;
   color:#8c918f;
   margin-bottom:10px;
 }
 .ctx-page h1 {
-  font:38px Newsreader,Georgia,serif;
+  font:38px Inter, system-ui, sans-serif;
   margin:0 0 6px;
   letter-spacing:-1px;
 }
 .ctx-page h2 {
-  font:23px Newsreader,Georgia,serif;
+  font:23px Inter, system-ui, sans-serif;
   margin:0;
 }
 .ctx-page h3 {
@@ -123,7 +123,7 @@
   justify-content:space-between;
 }
 .ctx-page .metric-value {
-  font:27px 'DM Mono',monospace;
+  font:27px 'JetBrains Mono',monospace;
   letter-spacing:-1px;
 }
 .ctx-page .metric small {
@@ -183,7 +183,7 @@
   padding:10px 23px 22px;
 }
 .ctx-page .tag {
-  font:9px 'DM Mono';
+  font:9px 'JetBrains Mono';
   padding:5px 7px;
   background:#edf3fa;
   border-radius:4px;
@@ -214,14 +214,14 @@
   display:flex;
   justify-content:space-between;
   padding:0 20px 14px;
-  font:10px 'DM Mono';
+  font:10px 'JetBrains Mono';
   color:#969a9c;
 }
 .ctx-page .chart-summary {
   display:flex;
   gap:22px;
   padding:0 23px;
-  font:10px 'DM Mono';
+  font:10px 'JetBrains Mono';
   color:var(--muted);
 }
 .ctx-page .chart-summary b {
@@ -290,7 +290,7 @@
   text-align:right;
 }
 .ctx-page .score {
-  font:20px 'DM Mono';
+  font:20px 'JetBrains Mono';
   color:var(--green);
 }
 .ctx-page .link {
@@ -341,7 +341,7 @@
   background:#f5f8fb;
 }
 .ctx-page .mono {
-  font-family:'DM Mono',monospace;
+  font-family:'JetBrains Mono',monospace;
 }
 .ctx-page .notice {
   display:flex;
@@ -443,7 +443,7 @@
 .ctx-page .watchlist button small {
   display:block;
   color:var(--muted);
-  font:10px 'DM Mono';
+  font:10px 'JetBrains Mono';
   margin-top:5px;
 }
 .ctx-page .watchlist .up, .ctx-page .watchlist .down {
@@ -565,7 +565,7 @@
 .ctx-page .heatmap div {
   padding:18px 5px;
   text-align:center;
-  font:12px 'DM Mono';
+  font:12px 'JetBrains Mono';
   border-radius:4px;
   background:#daeee9;
   color:#326f66;
@@ -654,7 +654,7 @@
   height:115px;
   background:var(--card);
   border-radius:50%;
-  font:23px 'DM Mono';
+  font:23px 'JetBrains Mono';
 }
 .ctx-page .step {
   border-left:2px solid #c7dfd9;
@@ -977,7 +977,7 @@
   color:var(--muted);
 }
 .ctx-page .map-foot b {
-  font-family:'DM Mono';
+  font-family:'JetBrains Mono';
   font-weight:400;
   color:var(--green);
   margin-left:5px;
@@ -1038,11 +1038,11 @@
   background:#f2f5ef;
 }
 .ctx-page .climate-head small {
-  font:12px 'DM Mono';
+  font:12px 'JetBrains Mono';
   color:var(--muted);
 }
 .ctx-page .climate-head h3 {
-  font:26px Newsreader,Georgia,serif;
+  font:26px Inter, system-ui, sans-serif;
   margin-top:6px;
 }
 .ctx-page .desk-workspace .desk-note {
@@ -1086,7 +1086,7 @@
   gap:8px;
 }
 .ctx-page .desk-ring b {
-  font:26px 'DM Mono';
+  font:26px 'JetBrains Mono';
   letter-spacing:-1px;
 }
 .ctx-page .desk-ring small {
@@ -1237,7 +1237,7 @@
 .dash-shell .ctx-page .page-head h1,
 .dash-shell.is-mobile .ctx-page .page-head h1,
 .ctx-page .page-head h1 {
-  font: 38px Newsreader, Georgia, serif;
+  font: 38px Inter, system-ui, sans-serif;
   margin: 0 0 6px;
   letter-spacing: -1px;
 }

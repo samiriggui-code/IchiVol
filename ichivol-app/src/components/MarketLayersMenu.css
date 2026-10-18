@@ -6,7 +6,7 @@
 }
 
 .mkt-layers-btn {
-  font: 12px Manrope, sans-serif;
+  font: 12px Inter, sans-serif;
   border: 1px solid var(--line, #e5e1db);
   background: var(--card, #fefdfb);
   border-radius: 8px;
@@ -17,7 +17,7 @@
 }
 
 .mkt-layers-btn-head {
-  font: 11px 'DM Mono', ui-monospace, monospace;
+  font: 11px 'JetBrains Mono', ui-monospace, monospace;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   border: 1px solid #1a7df5;
@@ -127,7 +127,7 @@
 }
 
 .mkt-layer-count {
-  font: 0.65rem 'DM Mono', ui-monospace, monospace;
+  font: 0.65rem 'JetBrains Mono', ui-monospace, monospace;
   color: var(--muted, #7d8288);
 }
 
@@ -193,7 +193,7 @@
 }
 
 .mkt-layers-sheet-head strong {
-  font: 18px Newsreader, Georgia, serif;
+  font: 18px Inter, system-ui, sans-serif;
 }
 
 .mkt-layers-done {
@@ -213,5 +213,5 @@
 }
 
 .mono {
-  font-family: 'DM Mono', ui-monospace, monospace;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
