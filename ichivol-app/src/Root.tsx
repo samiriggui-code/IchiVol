@@ -19,7 +19,6 @@ import { SettingsPage } from './pages/SettingsPage'
 // Socle premium en premier : jetons, base, primitives iv-, pont des pages (voir theme/PREMIUM.md).
 import './theme/premium.css'
 import './theme/keenicons.css'
-import './theme/camap-landing.css'
 import './index.css'
 
 initTheme()
