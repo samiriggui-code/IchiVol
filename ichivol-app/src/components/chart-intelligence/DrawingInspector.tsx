@@ -15,9 +15,9 @@ import {
   type IntelligenceLayerPrefs,
   type IntelligenceObject,
 } from '../../lib/chartIntelligence'
+import { TablePager } from '../table/TablePager'
+import { usePaged } from '../table/usePaged'
 import { WhyPanel, type WhyTarget } from './WhyPanel'
-
-const PER_LAYER_CAP = 6
 
 interface Props {
   /** Objets de la sélection (un Fib = plusieurs niveaux du même group_id). */
@@ -94,6 +94,45 @@ function pickLabel(o: IntelligenceObject): { title: string; meta: string; tone: 
   return { title: objectTitle(o), meta: price || fmtPct(o.confidence), tone: 'muted' }
 }
 
+/** Objets d'un calque, page par page (le compteur de l'étagère donne le total). */
+function LayerPickList({
+  layerKey,
+  items,
+  onSelect,
+}: {
+  layerKey: string
+  items: IntelligenceObject[]
+  onSelect: (key: string) => void
+}) {
+  const paged = usePaged(items, `ci-calque-${layerKey}`)
+  return (
+    <>
+      <ul className="ci-pick-list">
+        {paged.rows.map((c) => {
+          const pick = pickLabel(c)
+          return (
+            <li key={selectionKeyOf(c)}>
+              <button
+                type="button"
+                className={`ci-pick-btn ci-pick-btn--${pick.tone}`}
+                onClick={() => onSelect(selectionKeyOf(c))}
+              >
+                <span className="ci-pick-title">{pick.title}</span>
+                <span className="ci-pick-meta mono">
+                  {pick.meta}
+                  {pick.meta ? ' · ' : ''}
+                  {fmtPct(c.confidence)}
+                </span>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+      <TablePager paged={paged} label="objets" />
+    </>
+  )
+}
+
 function LayerBrowser({
   candidates,
   layers,
@@ -126,7 +165,6 @@ function LayerBrowser({
       {activeMeta.map((m) => {
         const layerItems = byKey.filter((o) => intelligenceLayerOf(o) === m.key)
         const total = layerItems.length
-        const items = layerItems.slice(0, PER_LAYER_CAP)
         const open = openKey === m.key
         return (
           <section key={m.key} className={`ci-inspect-layer${open ? ' is-open' : ''}`}>
@@ -147,39 +185,14 @@ function LayerBrowser({
               </span>
             </button>
             {open &&
-              (items.length === 0 ? (
+              (total === 0 ? (
                 <p className="ci-inspect-empty">
                   {m.key === 'fibonacci'
                     ? 'Aucun Fib ancré sur la structure à cet as_of (ou 1 groupe déjà compté ailleurs).'
                     : 'Aucun objet moteur à cet as_of — normal si le calque n’a rien produit.'}
                 </p>
               ) : (
-                <ul className="ci-pick-list">
-                  {items.map((c) => {
-                    const pick = pickLabel(c)
-                    return (
-                      <li key={selectionKeyOf(c)}>
-                        <button
-                          type="button"
-                          className={`ci-pick-btn ci-pick-btn--${pick.tone}`}
-                          onClick={() => onSelect(selectionKeyOf(c))}
-                        >
-                          <span className="ci-pick-title">{pick.title}</span>
-                          <span className="ci-pick-meta mono">
-                            {pick.meta}
-                            {pick.meta ? ' · ' : ''}
-                            {fmtPct(c.confidence)}
-                          </span>
-                        </button>
-                      </li>
-                    )
-                  })}
-                  {total > items.length && (
-                    <li className="ci-inspect-more muted">
-                      +{total - items.length} autres — voir le graphique
-                    </li>
-                  )}
-                </ul>
+                <LayerPickList layerKey={m.key} items={layerItems} onSelect={onSelect} />
               ))}
           </section>
         )
