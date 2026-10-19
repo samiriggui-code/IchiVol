@@ -1155,10 +1155,14 @@ html dialog::backdrop {
 
 /* — Tablette et écran tactile : commandes à au moins 36 px, utilisables au doigt — */
 @media (max-width: 1100px), (pointer: coarse) {
+  .iv-btn,
   .iv-btn--sm,
   .iv-seg > button,
   .iv-card-tab {
     min-height: 36px;
+  }
+  .iv-input:not(textarea) {
+    height: 36px;
   }
   .iv-pager .iv-btn {
     min-width: 36px;

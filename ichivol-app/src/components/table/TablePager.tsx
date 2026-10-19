@@ -8,7 +8,8 @@ import './TablePager.css'
 
 export function TablePager<T>({ paged, label = 'lignes' }: { paged: Paged<T>; label?: string }) {
   const { page, pageCount, pageSize, total, start, setPage, setPageSize } = paged
-  if (total === 0) return null
+  // Rien à paginer tant que la liste tient dans la plus petite page (5 lignes).
+  if (total <= PAGE_SIZES[0]) return null
   const end = Math.min(start + pageSize, total)
   return (
     <div className="iv-pager" role="navigation" aria-label={`Pagination des ${label}`}>

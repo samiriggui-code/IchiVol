@@ -1107,7 +1107,7 @@ export function PortfolioPage() {
             ) : (
               <div className="iv-card-body">
                 {pagedRefusals.rows.map((r, i) => (
-                  <div className="iv-row" key={`${r.at ?? pagedRefusals.start + i}-${r.symbol ?? pagedRefusals.start + i}`}>
+                  <div className="iv-row" key={`${pagedRefusals.start + i}-${r.at ?? ""}-${r.symbol ?? ""}`}>
                     <span>
                       <b>{r.symbol ? displaySymbol(r.symbol) : '—'}</b>
                       {r.at ? <span className="mono dim"> · {fmtTime(r.at)}</span> : null}
