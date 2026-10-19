@@ -915,7 +915,8 @@ textarea.iv-input {
   color: var(--sell);
 }
 
-@media (max-width: 1100px) {
+/* Les grilles gardent plusieurs colonnes en tablette paysage (1024 px) ; elles se replient en dessous de 960 px. */
+@media (max-width: 960px) {
   .iv-m-s12 { grid-column: span 12; }
   .iv-m-s6 { grid-column: span 6; }
 }
@@ -1150,4 +1151,28 @@ html dialog::backdrop {
    une .iv-table, la cellule reste une cellule. */
 .iv-table td.sym {
   display: table-cell;
+}
+
+/* — Tablette et écran tactile : commandes à au moins 36 px, utilisables au doigt — */
+@media (max-width: 1100px), (pointer: coarse) {
+  .iv-btn--sm,
+  .iv-seg > button,
+  .iv-card-tab {
+    min-height: 36px;
+  }
+  .iv-pager .iv-btn {
+    min-width: 36px;
+    min-height: 36px;
+  }
+  .iv-pager-size .iv-input {
+    height: 36px;
+  }
+  .iv-estop,
+  .dash-icon-btn,
+  .dash-user-btn,
+  .dash-collapse-btn,
+  .camap-icon-btn {
+    min-height: 36px;
+    min-width: 36px;
+  }
 }
