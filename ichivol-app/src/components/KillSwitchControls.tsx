@@ -165,8 +165,9 @@ export function KillLockBanner() {
   const all = lock.blocked.length === lock.book_count
   return (
     <div className="dash-lock-banner" role="status">
-      <strong>{all ? 'Paper verrouillé' : 'Entrées bloquées sur une partie des portefeuilles'}</strong>
+      {/* Titre et liste dans le même bloc : sinon la liste passe à la ligne et commence par « : ». */}
       <span>
+        <strong>{all ? 'Paper verrouillé' : 'Entrées bloquées sur une partie des portefeuilles'}</strong>
         {' : '}
         {lock.blocked
           .map(
@@ -176,7 +177,7 @@ export function KillLockBanner() {
           .join(', ')}
       </span>
       {dailyLocked && (
-        <button type="button" className="ghost" onClick={requestUnlockDaily}>
+        <button type="button" className="iv-btn iv-btn--ghost iv-btn--sm" onClick={requestUnlockDaily}>
           Déverrouiller perte jour
         </button>
       )}

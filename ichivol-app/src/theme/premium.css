@@ -916,6 +916,10 @@ textarea.iv-input {
 }
 
 /* Les grilles gardent plusieurs colonnes en tablette paysage (1024 px) ; elles se replient en dessous de 960 px. */
+/* Légendes des KPI : retour à la ligne dès la tablette, elles se chevauchaient entre 761 et 1100 px. */
+@media (max-width: 1100px) {
+  .iv-kpi-k, .iv-kpi-s { white-space: normal; }
+}
 @media (max-width: 960px) {
   .iv-m-s12 { grid-column: span 12; }
   .iv-m-s6 { grid-column: span 6; }
@@ -927,7 +931,6 @@ textarea.iv-input {
   .iv-ph-act { margin-left: 0; }
   .iv-card-tools { display: none; }
   .iv-kpi-v { font-size: 16px; }
-  .iv-kpi-k, .iv-kpi-s { white-space: normal; }
   .apex-card { padding: 18px 16px; border-radius: 18px; }
 }
 
