@@ -286,7 +286,7 @@
   margin-top: 12px;
 }
 .pv-sheet .paper-confirm-actions .iv-btn {
-  height: 34px;
+  height: 36px;
   padding: 0 16px;
 }
 
@@ -299,5 +299,13 @@
   .pv-sheet .trade-sheet-scroll {
     padding-left: 16px;
     padding-right: 16px;
+  }
+}
+
+/* Écrans tactiles et téléphone : cibles d'au moins 36 px. */
+@media (pointer: coarse), (max-width: 760px) {
+  .pv-sheet .iv-btn,
+  .pv-sheet .iv-input {
+    min-height: 36px;
   }
 }

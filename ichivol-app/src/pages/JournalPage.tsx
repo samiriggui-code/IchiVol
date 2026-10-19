@@ -23,6 +23,8 @@ import {
   patchUserDecisionStatus,
   type UserDecisionRow,
 } from '../lib/userDecisions'
+import { usePaged } from '../components/table/usePaged'
+import { TablePager } from '../components/table/TablePager'
 import './JournalPage.css'
 
 type JournalTab = 'Trades' | 'Décisions sauvegardées'
@@ -332,9 +334,13 @@ export function JournalPage() {
   const replayTrade = journalTab === 'Trades' ? (visibleTrades[0] ?? trades[0] ?? null) : null
   const bookOf = (t: PaperPosition) => (t.portfolio_id ? bookLabels.get(t.portfolio_id) : undefined)
 
+  // Pagination (5 / 10 / 20 / 50) appliquée après filtre et recherche.
+  const pagedTrades = usePaged(visibleTrades, 'journal-trades')
+  const pagedDecisions = usePaged(filteredDecisions, 'journal-decisions')
+
   const tableRows =
     journalTab === 'Trades'
-      ? visibleTrades.map((t) => {
+      ? pagedTrades.rows.map((t) => {
           const r = fmtR(t)
           const up = r.startsWith('+')
           const down = r.startsWith('−') || r.startsWith('-')
@@ -373,7 +379,7 @@ export function JournalPage() {
             </tr>
           )
         })
-      : filteredDecisions.map((d) => (
+      : pagedDecisions.rows.map((d) => (
           <tr
             key={d.id}
             className={`jr-click${selectedDecision?.id === d.id ? ' is-selected' : ''}`.trim()}
@@ -561,6 +567,11 @@ export function JournalPage() {
                 <tbody>{tableRows}</tbody>
               </table>
             </div>
+          )}
+          {journalTab === 'Trades' ? (
+            <TablePager paged={pagedTrades} label="trades" />
+          ) : (
+            <TablePager paged={pagedDecisions} label="décisions" />
           )}
         </section>
 
