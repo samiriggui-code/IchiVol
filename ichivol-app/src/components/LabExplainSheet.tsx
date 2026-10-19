@@ -1,6 +1,8 @@
 import type { Explanation } from '../lib/labExplain'
 import { pct } from '../lib/labFormat'
 import { ModalSheetHost } from './ModalSheetHost'
+import { TablePager } from './table/TablePager'
+import { usePaged } from './table/usePaged'
 
 const EXIT_WORDS: Record<string, string> = {
   target: 'Objectif atteint',
@@ -23,10 +25,14 @@ function fmtIso(iso: string): string {
     : d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
+const NONE: never[] = []
+
 const VERDICT_TONE: Record<string, string> = { green: 'is-mint', amber: 'is-amber', red: 'is-sell', gray: 'is-muted' }
 
 /** Fiche « Examiner » du Strategy Lab : le résultat expliqué en clair, le calcul, la conclusion. */
 export function LabExplainSheet({ explanation: x, onClose }: { explanation: Explanation; onClose: () => void }) {
+  const history = usePaged(x.history ?? NONE, 'lab-fiche-historique')
+  const trades = usePaged(x.trades ?? NONE, 'lab-fiche-trades')
   return (
     <ModalSheetHost ariaLabel={`Explication : ${x.title}`} onCancel={onClose}>
       <aside className="panel trade-sheet lab-sheet">
@@ -77,6 +83,7 @@ export function LabExplainSheet({ explanation: x, onClose }: { explanation: Expl
           {x.history && x.history.length > 0 && (
             <section className="lab-sheet-block">
               <p className="subhead">Évolution sur les derniers calculs</p>
+              <div className="iv-table-wrap">
               <table className="iv-table is-compact">
                 <thead>
                   <tr>
@@ -88,7 +95,7 @@ export function LabExplainSheet({ explanation: x, onClose }: { explanation: Expl
                   </tr>
                 </thead>
                 <tbody>
-                  {x.history.map((h) => (
+                  {history.rows.map((h) => (
                     <tr key={h.when}>
                       <td>{fmtIso(h.when)}</td>
                       <td>{h.trades}</td>
@@ -99,6 +106,8 @@ export function LabExplainSheet({ explanation: x, onClose }: { explanation: Expl
                   ))}
                 </tbody>
               </table>
+              </div>
+              <TablePager paged={history} label="calculs" />
             </section>
           )}
 
@@ -107,6 +116,7 @@ export function LabExplainSheet({ explanation: x, onClose }: { explanation: Expl
               <p className="subhead">
                 Les {x.trades.length} trades simulés <small className="muted">(variation du prix, avant frais)</small>
               </p>
+              <div className="iv-table-wrap">
               <table className="iv-table is-compact">
                 <thead>
                   <tr>
@@ -117,7 +127,7 @@ export function LabExplainSheet({ explanation: x, onClose }: { explanation: Expl
                   </tr>
                 </thead>
                 <tbody>
-                  {x.trades.map((t) => (
+                  {trades.rows.map((t) => (
                     <tr key={`${t.entry_time}-${t.exit_time}`}>
                       <td>{fmtTime(t.entry_time)}</td>
                       <td>{fmtTime(t.exit_time)}</td>
@@ -129,6 +139,8 @@ export function LabExplainSheet({ explanation: x, onClose }: { explanation: Expl
                   ))}
                 </tbody>
               </table>
+              </div>
+              <TablePager paged={trades} label="trades" />
             </section>
           )}
         </div>

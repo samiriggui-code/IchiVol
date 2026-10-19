@@ -138,6 +138,11 @@
 }
 
 @media (max-width: 1100px) {
+  /* Tablette : les légendes des KPI passent à la ligne au lieu de se chevaucher. */
+  .lab-page :is(.lab-kpis, .lab-kpis-inline) :is(.iv-kpi-k, .iv-kpi-s) {
+    white-space: normal;
+    line-height: 1.35;
+  }
   .lab-page .lab-steps {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -190,9 +195,27 @@
   .lab-page .lab-kpis-inline .iv-kpi:nth-child(n + 3) {
     border-top: 1px solid var(--line);
   }
-  .lab-page :is(.lab-kpis, .lab-kpis-inline) :is(.iv-kpi-k, .iv-kpi-s) {
-    white-space: normal;
-    line-height: 1.35;
+}
+
+/* Écrans tactiles (téléphone, tablette) : cibles d'au moins 36 px. */
+@media (pointer: coarse) {
+  .lab-page .lab-controls :is(select.iv-input, .iv-btn),
+  .lab-page .iv-pager :is(.iv-btn, .iv-input),
+  .lab-page .lab-examine {
+    height: 36px;
+    min-width: 36px;
+  }
+  .lab-page .iv-card-head {
+    height: 40px;
+  }
+  .lab-page .lab-link {
+    padding: 8px 0;
+    margin: -8px 0;
+  }
+  .lab-sheet .iv-pager :is(.iv-btn, .iv-input),
+  .lab-sheet .trade-sheet-head .iv-btn {
+    height: 36px;
+    min-width: 36px;
   }
 }
 
@@ -275,6 +298,10 @@
 }
 .lab-sheet .iv-table {
   white-space: normal;
+}
+.lab-sheet .iv-pager {
+  padding-left: 0;
+  padding-right: 0;
 }
 
 /* index.css pose .sym en flex : une cellule doit rester une cellule de tableau */

@@ -4,7 +4,7 @@
  * résultats par régime et walk-forward (/strategy-lab/*). Rien n'est inventé : absent → « — ».
  */
 
-import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   getBacktestCoverage,
   getBacktestRuns,
@@ -39,6 +39,8 @@ import {
   type Explanation,
 } from '../lib/labExplain'
 import { LabExplainSheet } from '../components/LabExplainSheet'
+import { TablePager } from '../components/table/TablePager'
+import { usePaged } from '../components/table/usePaged'
 import './BacktestsPage.css'
 
 type LabTab = 'Backtests' | 'Ablations' | 'Régimes' | 'Walk-forward'
@@ -159,7 +161,15 @@ export function BacktestsPage() {
   }
 
   const latest = runs?.runs?.[0] ?? null
-  const variants = latest ? Object.entries(latest.experiments) : []
+  const variants = useMemo(() => (latest ? Object.entries(latest.experiments) : []), [latest])
+  // Pagination après le calcul : toutes les lignes restent accessibles page par page.
+  const variantsPaged = usePaged(variants, 'lab-backtests-variantes')
+  const ablationRows = useMemo(() => (ablation ? ablation.steps.map((s, i) => ({ s, i })) : []), [ablation])
+  const ablationPaged = usePaged(ablationRows, 'lab-ablations')
+  const regimeRows = useMemo(() => regimes?.slices ?? [], [regimes])
+  const regimesPaged = usePaged(regimeRows, 'lab-regimes')
+  const foldRows = useMemo(() => walk?.folds ?? [], [walk])
+  const foldsPaged = usePaged(foldRows, 'lab-walk-forward')
   const hint = LAB_TABS.find((t) => t.id === labTab)?.hint
   const examineBtn = (build: () => Explanation) => (
     <button type="button" className="iv-btn iv-btn--ghost iv-btn--sm lab-examine" onClick={() => setSheet(build())}>
@@ -364,7 +374,7 @@ export function BacktestsPage() {
                     </td>
                   </tr>
                 )}
-                {variants.map(([key, e]) => (
+                {variantsPaged.rows.map(([key, e]) => (
                   <Fragment key={key}>
                     <tr>
                       <td className="sym">{VARIANT_LABELS[key] ?? key}</td>
@@ -393,6 +403,7 @@ export function BacktestsPage() {
             </table>
           </div>
         )}
+        {labTab === 'Backtests' && <TablePager paged={variantsPaged} label="variantes" />}
 
         {labTab === 'Ablations' && (
           <>
@@ -413,7 +424,8 @@ export function BacktestsPage() {
                 </thead>
                 <tbody>
                   {!ablation && emptyRow(9)}
-                  {ablation?.steps.map((s, i) => {
+                  {ablation &&
+                    ablationPaged.rows.map(({ s, i }) => {
                     const delta = i > 0 ? ablation.deltas[i - 1] : null
                     const key = `abl-${s.label}`
                     return (
@@ -443,6 +455,7 @@ export function BacktestsPage() {
                 </tbody>
               </table>
             </div>
+            <TablePager paged={ablationPaged} label="étapes" />
             <div className="iv-card-foot">Un filtre doit améliorer l’espérance ou le profit factor pour mériter sa place</div>
           </>
         )}
@@ -466,7 +479,8 @@ export function BacktestsPage() {
                 </thead>
                 <tbody>
                   {!regimes && emptyRow(9)}
-                  {regimes?.slices.map((s) => (
+                  {regimes &&
+                    regimesPaged.rows.map((s) => (
                     <tr key={s.regime}>
                       <td className="sym">{regimeLabel(s.regime)}</td>
                       <td className="n">{s.n_bars_in_regime}</td>
@@ -486,6 +500,7 @@ export function BacktestsPage() {
                 </tbody>
               </table>
             </div>
+            <TablePager paged={regimesPaged} label="régimes" />
             {regimes && (
               <p className="iv-note lab-footnote">
                 Règle testée : <span className="iv-kw">{regimes.ruleset?.id ?? '—'}</span>. Un profit factor faible
@@ -540,7 +555,8 @@ export function BacktestsPage() {
                 </thead>
                 <tbody>
                   {!walk && emptyRow(7)}
-                  {walk?.folds.map((f) => {
+                  {walk &&
+                    foldsPaged.rows.map((f) => {
                     const is = metricsOf(f.is)
                     const oos = metricsOf(f.oos)
                     const pf = oos?.profit_factor
@@ -570,6 +586,7 @@ export function BacktestsPage() {
                 </tbody>
               </table>
             </div>
+            <TablePager paged={foldsPaged} label="périodes" />
           </>
         )}
       </section>

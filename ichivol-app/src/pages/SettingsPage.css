@@ -688,3 +688,17 @@
     flex: 1;
   }
 }
+
+/* Écrans tactiles (téléphone, tablette) : boutons et champs d'au moins 36 px. */
+@media (pointer: coarse) {
+  .params-page :is(.btn-row, .iv-card-tools, .iv-pager, .rows) .iv-btn,
+  .params-page .iv-pager .iv-input,
+  .params-page .field > :is(input, select),
+  .params-page .num-input {
+    height: 38px;
+    min-width: 38px;
+  }
+  .params-page .params-nav .params-nav-item {
+    min-height: 40px;
+  }
+}

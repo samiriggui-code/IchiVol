@@ -1,6 +1,10 @@
 import { labelEngineCode } from '../lib/engineTerminology'
 import type { DecisionDetail } from '../lib/decisions'
 import { VerdictBadge } from './VerdictBadge'
+import { TablePager } from './table/TablePager'
+import { usePaged } from './table/usePaged'
+
+const NO_ROWS: never[] = []
 
 function pct(v: number | null | undefined, digits = 2): string {
   if (v == null || Number.isNaN(v)) return '—'
@@ -32,6 +36,7 @@ function ChipRow({ codes, tone }: { codes: string[]; tone?: 'risk' | 'ok' }) {
 export function SignalEvidenceCard({ detail }: { detail: DecisionDetail }) {
   const ev = detail.evidence
   const hist = ev?.historical
+  const ablation = usePaged(ev?.ablation ?? NO_ROWS, 'preuves-ablation')
   const ctx = (ev?.context ?? detail.context ?? {}) as {
     ichimoku?: { direction?: string; tk_state?: string; price_vs_cloud?: string }
     volume?: { rvol?: number | null; volume_type?: string; participation_state?: string }
@@ -189,7 +194,7 @@ export function SignalEvidenceCard({ detail }: { detail: DecisionDetail }) {
               </tr>
             </thead>
             <tbody>
-              {ev.ablation.map((row) => (
+              {ablation.rows.map((row) => (
                 <tr key={row.label}>
                   <td>{row.label}</td>
                   <td className="mono">{row.sample_size}</td>
@@ -201,6 +206,7 @@ export function SignalEvidenceCard({ detail }: { detail: DecisionDetail }) {
               ))}
             </tbody>
           </table>
+          <TablePager paged={ablation} label="modèles" />
         </section>
       )}
 
