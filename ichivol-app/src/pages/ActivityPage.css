@@ -38,9 +38,6 @@
 }
 
 /* — Journal d'audit — */
-.ops-page .ops-table {
-  max-height: 560px;
-}
 .ops-page .iv-table tbody tr.ops-click {
   cursor: pointer;
 }
@@ -168,3 +165,17 @@
   line-height: 1.4;
 }
 .ops-page .ops-kpis .iv-kpi-s { white-space: normal; }
+
+/* Écrans tactiles et téléphone : cibles d'au moins 36 px (boutons, champs, onglets, pagination). */
+@media (pointer: coarse), (max-width: 760px) {
+  .ops-page .iv-btn,
+  .ops-page .iv-input,
+  .ops-page .iv-seg-btn,
+  .ops-page .iv-card-tab {
+    min-height: 36px;
+  }
+
+  .ops-page .iv-pager-nav .iv-btn {
+    min-width: 36px;
+  }
+}

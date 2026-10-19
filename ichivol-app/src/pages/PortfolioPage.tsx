@@ -57,6 +57,8 @@ import {
 } from '../lib/rsPortfolio'
 import { bookColors } from '../components/desk/equityTrajectory'
 import { DECIDER_EXPLAIN, DECIDER_LABEL, deciderOf, type Decider } from '../lib/decider'
+import { usePaged } from '../components/table/usePaged'
+import { TablePager } from '../components/table/TablePager'
 import './PortfolioPage.css'
 
 type Tone = 'cyan' | 'amber' | 'mint' | 'buy' | 'sell' | 'muted'
@@ -242,6 +244,8 @@ function BooksTable({
   loading: boolean
   onOpen: (code: string) => void
 }) {
+  const sorted = useMemo(() => [...books].sort((x, y) => bookReturn(y) - bookReturn(x)), [books])
+  const paged = usePaged(sorted, 'pf-par-portefeuille')
   return (
     <section className="iv-card pf-books">
       <div className="iv-card-head">
@@ -274,8 +278,7 @@ function BooksTable({
               </tr>
             </thead>
             <tbody>
-              {[...books]
-                .sort((x, y) => bookReturn(y) - bookReturn(x))
+              {paged.rows
                 .map((b) => {
                   const a = b.overview.account
                   const r = b.overview.risk
@@ -330,6 +333,7 @@ function BooksTable({
           </table>
         </div>
       )}
+      {paged.pageCount > 1 || paged.total > 10 ? <TablePager paged={paged} label="portefeuilles" /> : null}
       <div className="iv-card-foot">Touchez un portefeuille pour ouvrir son détail</div>
     </section>
   )
@@ -384,7 +388,7 @@ export function PortfolioPage() {
         setBooks(all)
         setOverview(combineOverviews(all))
         setLock(combineLocks(rows))
-        setOrders(activity.slice(0, 30))
+        setOrders(activity)
       } catch {
         setOverview(null)
         setBooks([])
@@ -528,7 +532,13 @@ export function PortfolioPage() {
       (p.current_price != null && p.qty != null ? p.current_price * Math.abs(p.qty) : p.notional ?? null)
     return v == null ? s : (s ?? 0) + v
   }, null)
-  const refusals = risk?.recent_refusals ?? []
+  const refusals = useMemo(() => risk?.recent_refusals ?? [], [risk?.recent_refusals])
+
+  // Pagination (5 / 10 / 20 / 50) : toutes les lignes restent accessibles, page par page.
+  const pagedConcentration = usePaged(concentration, 'pf-concentration')
+  const pagedPositions = usePaged(positions, 'pf-positions')
+  const pagedOrders = usePaged(orders, 'pf-ordres')
+  const pagedRefusals = usePaged(refusals, 'pf-refus')
 
   return (
     <div className="pf-page">
@@ -766,9 +776,10 @@ export function PortfolioPage() {
               </p>
             ) : (
               <>
-                {concentration.map((c) => (
+                {pagedConcentration.rows.map((c) => (
                   <Meter key={c.symbol} label={c.symbol} value={`${fmtPctPoints(c.pct, 1)} de l’exposition`} pct={c.pct} />
                 ))}
+                <TablePager paged={pagedConcentration} label="actifs" />
                 <p className="iv-note pf-small">
                   {concentration.length} ligne{concentration.length > 1 ? 's' : ''} ouverte
                   {concentration.length > 1 ? 's' : ''}. Le broker paper n’ajoute pas une position si le cash ou le plafond
@@ -924,7 +935,7 @@ export function PortfolioPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {positions.map((p: PaperOverviewPosition & Partial<BookPosition>) => {
+                  {pagedPositions.rows.map((p: PaperOverviewPosition & Partial<BookPosition>) => {
                     const book = bookOf(p)
                     const pnl = p.unrealized_pnl
                     const perf = p.unrealized_pct
@@ -1006,6 +1017,7 @@ export function PortfolioPage() {
               </table>
             </div>
           )}
+          <TablePager paged={pagedPositions} label="positions" />
           <div className="iv-card-foot">
             Stop et objectif surveillés en continu · touchez une ligne pour sa fiche
           </div>
@@ -1039,7 +1051,7 @@ export function PortfolioPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.map((o) => {
+                  {pagedOrders.rows.map((o) => {
                     const reason = orderReasonFr(o.reason)
                     const filled = o.status === 'FILLED'
                     return (
@@ -1072,6 +1084,7 @@ export function PortfolioPage() {
               </table>
             </div>
           )}
+          <TablePager paged={pagedOrders} label="ordres" />
         </section>
 
         <div className="iv-s5 iv-m-s12 pf-stack">
@@ -1083,7 +1096,7 @@ export function PortfolioPage() {
               <div className="iv-card-tabs">
                 <span className="iv-card-tab is-on">Ordres refusés par le risque</span>
               </div>
-              <div className="iv-card-tools">{refusals.length ? `${Math.min(refusals.length, 5)} derniers` : ''}</div>
+              <div className="iv-card-tools">{refusals.length ? `${refusals.length} derniers` : ''}</div>
             </div>
             {refusals.length === 0 ? (
               <div className="iv-empty">
@@ -1093,8 +1106,8 @@ export function PortfolioPage() {
               </div>
             ) : (
               <div className="iv-card-body">
-                {refusals.slice(0, 5).map((r, i) => (
-                  <div className="iv-row" key={`${r.at ?? i}-${r.symbol ?? i}`}>
+                {pagedRefusals.rows.map((r, i) => (
+                  <div className="iv-row" key={`${r.at ?? pagedRefusals.start + i}-${r.symbol ?? pagedRefusals.start + i}`}>
                     <span>
                       <b>{r.symbol ? displaySymbol(r.symbol) : '—'}</b>
                       {r.at ? <span className="mono dim"> · {fmtTime(r.at)}</span> : null}
@@ -1104,6 +1117,7 @@ export function PortfolioPage() {
                 ))}
               </div>
             )}
+            <TablePager paged={pagedRefusals} label="refus" />
           </section>
         </div>
       </div>
