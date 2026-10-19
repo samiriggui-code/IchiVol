@@ -2,6 +2,8 @@ import { Fragment, useCallback, useEffect, useState } from "react"
 import { EVE_MODES, JEV_PRIMITIVES_EXPLAIN } from "../../lib/eveModes"
 import { jevServiceLabel } from "../../pages/settings/eveCopy"
 import { eveActionFr } from "../../lib/eveDecisions"
+import { TablePager } from "../table/TablePager"
+import { usePaged } from "../table/usePaged"
 import "./EveDossiersPanel.css"
 
 type TimelineEvent = {
@@ -146,6 +148,7 @@ export function EveDossiersPanel({ autonomy, refreshKey = 0 }: { autonomy: boole
   const [trackedOpen, setTrackedOpen] = useState(0)
   const [openTimelineId, setOpenTimelineId] = useState<string | null>(null)
   const [tab, setTab] = useState<"dossiers" | "suivi" | "jev" | "etat">("dossiers")
+  const paged = usePaged(items, "eve-dossiers")
 
   const reloadDossiers = useCallback(async (signal?: AbortSignal) => {
     const r = await fetch("/api/engine/eve/dossiers?limit=20", {
@@ -309,122 +312,125 @@ export function EveDossiersPanel({ autonomy, refreshKey = 0 }: { autonomy: boole
               trade (autonomie activée) ou quand on lui demande d'évaluer un instrument.
             </p>
           ) : (
-            <div className="iv-table-wrap ed-table-wrap">
-              <table className="iv-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Instrument</th>
-                    <th>Moteur seul</th>
-                    <th>Ève</th>
-                    <th>Propositions des portefeuilles</th>
-                    <th className="n">Cohérence</th>
-                    <th>Résultat</th>
-                    <th>Historique</th>
-                    <th>Essai à blanc</th>
-                    <th>Suivi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((d) => {
-                    const coh = d.verdict?.coherence_score ?? d.coherence?.score ?? null
-                    const timelineOpen = openTimelineId === d.id
-                    const timeline = Array.isArray(d.timeline) ? d.timeline : []
-                    return (
-                      <Fragment key={d.id}>
-                        <tr>
-                          <td className="mono muted">
-                            {d.created_at ? new Date(d.created_at).toLocaleString("fr-FR") : "—"}
-                          </td>
-                          <td className="sym">
-                            {d.symbol} <small>{d.timeframe}</small>
-                          </td>
-                          <td>{baselineFr(d.baseline_decision)}</td>
-                          <td>
-                            <b className="ed-eve">{eveActionFr(d.eve_action ?? d.verdict?.action)}</b>
-                            {d.decision_time?.degradation?.level &&
-                            d.decision_time.degradation.level !== "healthy" ? (
-                              <span className="iv-tag is-amber ed-flag">
-                                {d.decision_time.heuristic?.stand_in
-                                  ? d.decision_time.heuristic.label ?? "heuristic"
-                                  : d.decision_time.degradation.level}
-                              </span>
-                            ) : null}
-                            {d.decision_time?.entry_gate?.decision === "reject" ? (
-                              <span className="iv-tag is-amber ed-flag">
-                                refus contrôle d'entrée : {d.decision_time.entry_gate.reason ?? "?"}
-                              </span>
-                            ) : null}
-                            {d.decision_time?.event_radar?.enabled ? (
-                              <span className="iv-tag is-muted ed-flag">
-                                radar:{d.decision_time.event_radar.direction ?? "?"}·
-                                {d.decision_time.event_radar.impact ?? "?"}·n=
-                                {d.decision_time.event_radar.event_count ?? 0}
-                              </span>
-                            ) : null}
-                          </td>
-                          <td className="ed-props">{proposalSummary(d)}</td>
-                          <td className="n">{typeof coh === "number" ? coh.toFixed(2) : "—"}</td>
-                          <td>{executionLabel(d.execution_status)}</td>
-                          <td>
-                            <button
-                              type="button"
-                              className="iv-btn iv-btn--sm iv-btn--ghost"
-                              aria-expanded={timelineOpen}
-                              onClick={() => setOpenTimelineId(timelineOpen ? null : d.id)}
-                            >
-                              {timelineOpen ? "Masquer" : `Voir (${timeline.length})`}
-                            </button>
-                          </td>
-                          <td>
-                            <button
-                              type="button"
-                              className="iv-btn iv-btn--sm"
-                              disabled={busyId === d.id}
-                              onClick={() => runDrySubmit(d.id)}
-                            >
-                              {busyId === d.id ? "…" : "Tester sans trader"}
-                            </button>
-                          </td>
-                          <td>
-                            <button
-                              type="button"
-                              className="iv-btn iv-btn--sm"
-                              disabled={busyId === `fu-${d.id}`}
-                              onClick={() => runFollowup(d.id)}
-                            >
-                              {busyId === `fu-${d.id}` ? "…" : "Avis d'Ève"}
-                            </button>
-                          </td>
-                        </tr>
-                        {timelineOpen ? (
-                          <tr className="ed-timeline-row">
-                            <td colSpan={10}>
-                              <ol className="ed-timeline">
-                                {timeline.length === 0 ? (
-                                  <li>Aucun événement</li>
-                                ) : (
-                                  timeline.map((ev, i) => (
-                                    <li key={`${d.id}-ev-${i}`}>
-                                      <b>{ev.kind ?? "?"}</b>
-                                      {ev.at ? ` · ${new Date(ev.at).toLocaleString("fr-FR")}` : ""}
-                                      {ev.action ? ` · ${ev.action}` : ""}
-                                      {ev.baseline ? ` (baseline ${ev.baseline})` : ""}
-                                      {typeof ev.realized_pnl === "number" ? ` · PnL ${ev.realized_pnl}` : ""}
-                                      {ev.detail ? ` — ${ev.detail}` : ""}
-                                    </li>
-                                  ))
-                                )}
-                              </ol>
+            <>
+              <div className="iv-table-wrap ed-table-wrap">
+                <table className="iv-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Instrument</th>
+                      <th>Moteur seul</th>
+                      <th>Ève</th>
+                      <th>Propositions des portefeuilles</th>
+                      <th className="n">Cohérence</th>
+                      <th>Résultat</th>
+                      <th>Historique</th>
+                      <th>Essai à blanc</th>
+                      <th>Suivi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paged.rows.map((d) => {
+                      const coh = d.verdict?.coherence_score ?? d.coherence?.score ?? null
+                      const timelineOpen = openTimelineId === d.id
+                      const timeline = Array.isArray(d.timeline) ? d.timeline : []
+                      return (
+                        <Fragment key={d.id}>
+                          <tr>
+                            <td className="mono muted">
+                              {d.created_at ? new Date(d.created_at).toLocaleString("fr-FR") : "—"}
+                            </td>
+                            <td className="sym">
+                              {d.symbol} <small>{d.timeframe}</small>
+                            </td>
+                            <td>{baselineFr(d.baseline_decision)}</td>
+                            <td>
+                              <b className="ed-eve">{eveActionFr(d.eve_action ?? d.verdict?.action)}</b>
+                              {d.decision_time?.degradation?.level &&
+                              d.decision_time.degradation.level !== "healthy" ? (
+                                <span className="iv-tag is-amber ed-flag">
+                                  {d.decision_time.heuristic?.stand_in
+                                    ? d.decision_time.heuristic.label ?? "heuristic"
+                                    : d.decision_time.degradation.level}
+                                </span>
+                              ) : null}
+                              {d.decision_time?.entry_gate?.decision === "reject" ? (
+                                <span className="iv-tag is-amber ed-flag">
+                                  refus contrôle d'entrée : {d.decision_time.entry_gate.reason ?? "?"}
+                                </span>
+                              ) : null}
+                              {d.decision_time?.event_radar?.enabled ? (
+                                <span className="iv-tag is-muted ed-flag">
+                                  radar:{d.decision_time.event_radar.direction ?? "?"}·
+                                  {d.decision_time.event_radar.impact ?? "?"}·n=
+                                  {d.decision_time.event_radar.event_count ?? 0}
+                                </span>
+                              ) : null}
+                            </td>
+                            <td className="ed-props">{proposalSummary(d)}</td>
+                            <td className="n">{typeof coh === "number" ? coh.toFixed(2) : "—"}</td>
+                            <td>{executionLabel(d.execution_status)}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="iv-btn iv-btn--sm iv-btn--ghost"
+                                aria-expanded={timelineOpen}
+                                onClick={() => setOpenTimelineId(timelineOpen ? null : d.id)}
+                              >
+                                {timelineOpen ? "Masquer" : `Voir (${timeline.length})`}
+                              </button>
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                className="iv-btn iv-btn--sm"
+                                disabled={busyId === d.id}
+                                onClick={() => runDrySubmit(d.id)}
+                              >
+                                {busyId === d.id ? "…" : "Tester sans trader"}
+                              </button>
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                className="iv-btn iv-btn--sm"
+                                disabled={busyId === `fu-${d.id}`}
+                                onClick={() => runFollowup(d.id)}
+                              >
+                                {busyId === `fu-${d.id}` ? "…" : "Avis d'Ève"}
+                              </button>
                             </td>
                           </tr>
-                        ) : null}
-                      </Fragment>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          {timelineOpen ? (
+                            <tr className="ed-timeline-row">
+                              <td colSpan={10}>
+                                <ol className="ed-timeline">
+                                  {timeline.length === 0 ? (
+                                    <li>Aucun événement</li>
+                                  ) : (
+                                    timeline.map((ev, i) => (
+                                      <li key={`${d.id}-ev-${i}`}>
+                                        <b>{ev.kind ?? "?"}</b>
+                                        {ev.at ? ` · ${new Date(ev.at).toLocaleString("fr-FR")}` : ""}
+                                        {ev.action ? ` · ${ev.action}` : ""}
+                                        {ev.baseline ? ` (baseline ${ev.baseline})` : ""}
+                                        {typeof ev.realized_pnl === "number" ? ` · PnL ${ev.realized_pnl}` : ""}
+                                        {ev.detail ? ` — ${ev.detail}` : ""}
+                                      </li>
+                                    ))
+                                  )}
+                                </ol>
+                              </td>
+                            </tr>
+                          ) : null}
+                        </Fragment>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <TablePager paged={paged} label="dossiers" />
+            </>
           )}
         </>
       ) : null}
