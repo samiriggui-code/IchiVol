@@ -224,6 +224,35 @@
   color: var(--muted);
 }
 
+/* Tablette (761–1100 px) : deux cartes par ligne au lieu d'une longue colonne. */
+@media (max-width: 1100px) {
+  .ctx-page .ctx-kpis :is(.iv-kpi-k, .iv-kpi-s) {
+    white-space: normal;
+    line-height: 1.35;
+  }
+}
+@media (min-width: 761px) and (max-width: 1100px) {
+  .ctx-page .ctx-t-half {
+    grid-column: span 6;
+  }
+  .ctx-page .ctx-agenda {
+    order: 3;
+  }
+}
+
+/* Écrans tactiles : cibles d'au moins 36 px. */
+@media (pointer: coarse) {
+  .ctx-page .iv-ph-act .iv-btn,
+  .ctx-page .iv-pager :is(.iv-btn, .iv-input) {
+    height: 36px;
+    min-width: 36px;
+  }
+  .ctx-page .ctx-news-list a {
+    display: inline-block;
+    padding: 4px 0;
+  }
+}
+
 @media (max-width: 760px) {
   .ctx-page .iv-ph-act {
     width: 100%;

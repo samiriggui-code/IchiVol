@@ -325,3 +325,14 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Tablette et téléphone : actions d'en-tête et formulaires utilisables au doigt. */
+@media (max-width: 1100px), (pointer: coarse) {
+  .agents-page .iv-ph-act .iv-btn,
+  .agents-page .ag-form .iv-input,
+  .agents-page .ag-inline .iv-input,
+  .agents-page .ag-inline .iv-btn,
+  .agents-page .ag-mode-btn {
+    min-height: 36px;
+  }
+}

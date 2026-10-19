@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { FicheHost } from '../components/fiches/FicheHost'
 import { NotificationBell } from '../components/NotificationBell'
@@ -206,6 +206,13 @@ function DashboardShellInner() {
     getMe().then((user) => setEmail(user?.email ?? null))
   }, [])
 
+  // Chaque page s'ouvre en haut : la zone de contenu défile, elle garderait sinon la position de la page d'avant.
+  const contentRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    contentRef.current?.scrollTo({ top: 0, left: 0 })
+    window.scrollTo({ top: 0, left: 0 })
+  }, [location.pathname])
+
   useEffect(() => {
     const mq = window.matchMedia(MOBILE_MQ)
     const apply = () => {
@@ -372,7 +379,7 @@ function DashboardShellInner() {
         </header>
 
         <KillLockBanner />
-        <div className="dash-content">
+        <div className="dash-content" ref={contentRef}>
           <Outlet />
         </div>
         <FicheHost />
