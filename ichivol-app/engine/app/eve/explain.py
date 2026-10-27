@@ -161,7 +161,8 @@ def why_fr(
         return f"Données trop incomplètes pour agir : Ève choisit de {said}."
     if rationale.startswith("Policy: too many"):
         return f"Trop de contradictions entre les moteurs : Ève choisit de {said}."
-    if rationale.startswith("Guardian critical"):
+    rule = str(synthesis.get("decision_rule") or "")
+    if rule == "guardian_critical" or rationale.startswith("Guardian critical"):
         return "Le gardien du risque a levé une alerte critique : Ève s’abstient."
 
     code = _decisive(rejected) or ""
@@ -187,6 +188,8 @@ def why_fr(
             "Ève préfère s’abstenir."
         )
 
+    if rule == "challenger_contradiction":
+        return f"Le contradicteur contredisait l’analyste et proposait de {said} : Ève l’a suivi."
     if engine is not None and action == engine:
         return f"Ève est d’accord avec le moteur : {said}."
     c_choice = normalize_action((_answers(modes.get("challenger")).get("alt_action") or {}).get("choice"))
