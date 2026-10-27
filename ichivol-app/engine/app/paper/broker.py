@@ -78,10 +78,15 @@ def _lock_portfolio(session: Session, portfolio: PaperPortfolio | None, *, read:
         return
     bind = session.get_bind()
     if bind is not None and bind.dialect.name == "postgresql":
+        # Lock FIRST, then flush: a pending change on a position row (e.g. ``update_excursions`` in the scan)
+        # flushed before the portfolio lock would take the position row lock first, while another writer
+        # (live stop, manual close) holds the portfolio and waits for that row -> deadlock. One order for
+        # every writer: portfolio, then its positions.
+        with session.no_autoflush:
+            session.execute(
+                select(PaperPortfolio.id).where(PaperPortfolio.id == portfolio.id).with_for_update(read=read)
+            ).all()
         session.flush()  # keep pending changes of this transaction before reloading
-        session.execute(
-            select(PaperPortfolio.id).where(PaperPortfolio.id == portfolio.id).with_for_update(read=read)
-        ).all()
         session.refresh(portfolio)
 
 
@@ -521,12 +526,18 @@ def close_capital_position(
     signal: dict[str, Any] | None = None,
     quote: Quote | None = None,
     at: datetime | None = None,
+    journal_extra: dict[str, Any] | None = None,
 ) -> PaperPosition:
+    """Clôture complète d'un lot (seul chemin d'écriture de caisse pour une sortie totale).
+
+    ``journal_extra`` : champs ajoutés à l'événement CLOSED (ex. ``trigger="live"`` pour un stop déclenché par
+    le flux direct Binance) ; le motif ``reason`` reste celui que le front sait libeller."""
     if position.status != "OPEN":
         return position  # replay/double close: no second credit, no second order
     if not math.isfinite(float(price)):
         raise ValueError(f"non-finite exit price: {price!r}")
-    portfolio = session.get(PaperPortfolio, position.portfolio_id) if position.portfolio_id else None
+    with session.no_autoflush:  # no position row lock before the portfolio lock (see _lock_portfolio)
+        portfolio = session.get(PaperPortfolio, position.portfolio_id) if position.portfolio_id else None
     _lock_portfolio(session, portfolio)
     bind = session.get_bind()
     if portfolio is not None and bind is not None and bind.dialect.name == "postgresql":
@@ -666,6 +677,7 @@ def close_capital_position(
                 "realized_pnl": position.realized_pnl,
                 "fee": _fee_meta(profile) | {"amount": exit_fee},
                 "execution": close_exec,
+                **(journal_extra or {}),
             },
         )
     return position

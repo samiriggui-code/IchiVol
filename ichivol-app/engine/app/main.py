@@ -8,6 +8,7 @@ from app.api.routes import router as engine_router
 from app.backtest.evidence import backtest_evidence_scheduler
 from app.config import settings
 from app.evidence.outcomes import outcome_tracker
+from app.paper.live_service import live_market_service
 from app.paper.protection import protection_monitor
 from app.screener.cache import screener_cache
 
@@ -22,6 +23,8 @@ async def lifespan(app: FastAPI):
     if settings.enable_protection_monitor:
         protection_monitor.interval_s = settings.protection_interval_s
         protection_monitor.start()
+    if settings.enable_live_feed:
+        live_market_service.start()
     if settings.enable_rs_d1_paper:
         from app.paper.rs_d1_runner import rs_d1_loop
 
@@ -38,6 +41,7 @@ async def lifespan(app: FastAPI):
         from app.paper.rs_d1_runner import rs_d1_loop
 
         rs_d1_loop.stop()
+    live_market_service.stop()
     protection_monitor.stop()
     screener_cache.stop()
     if settings.enable_signal_tracking:
@@ -55,4 +59,11 @@ app.include_router(engine_router)
 
 @app.get(f"{settings.engine_api_prefix}/health")
 def health() -> dict:
-    return {"status": "ok", "service": "ichivol-engine"}
+    # live_feed : état du flux direct Binance (connecté, symboles, âge du dernier message, reconnexions).
+    return {"status": "ok", "service": "ichivol-engine", "live_feed": live_market_service.status()}
+
+
+@app.get(f"{settings.engine_api_prefix}/health/live")
+def health_live() -> dict:
+    """État détaillé du flux direct Binance et de la surveillance temps réel des stops (lecture seule)."""
+    return live_market_service.status()

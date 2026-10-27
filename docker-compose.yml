@@ -79,6 +79,12 @@ services:
       ENABLE_BACKTEST_EVIDENCE: ${ENABLE_BACKTEST_EVIDENCE:-true}
       BACKTEST_EVIDENCE_INTERVAL_S: ${BACKTEST_EVIDENCE_INTERVAL_S:-86400}
       OB_DATA_DIR: /data/orderbook
+      # Flux direct Binance (WebSocket public Market Data, aucune clé, aucun ordre) : stops / objectifs temps réel
+      # des lots crypto du compte unique + état dans /api/engine/health/live.
+      # Un seul contrôleur (verrou PostgreSQL) même avec plusieurs workers ; false = scan 5 min + moniteur 1m seuls.
+      ENABLE_LIVE_FEED: ${ENABLE_LIVE_FEED:-true}
+      LIVE_FEED_STALE_S: ${LIVE_FEED_STALE_S:-10}
+      LIVE_FEED_REST_POLL_S: ${LIVE_FEED_REST_POLL_S:-5}
     volumes:
       # OB-1: files written by orderbook-collector, read-only for the engine (API /orderbook, FactSheet ob.*)
       - ichivol_orderbook:/data/orderbook:ro

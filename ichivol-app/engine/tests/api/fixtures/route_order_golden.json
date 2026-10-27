@@ -796,5 +796,12 @@
     ],
     "path": "/api/engine/health",
     "endpoint": "health"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/engine/health/live",
+    "endpoint": "health_live"
   }
 ]

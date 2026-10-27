@@ -4684,6 +4684,27 @@
         "summary": "Health"
       }
     },
+    "/api/engine/health/live": {
+      "get": {
+        "description": "État détaillé du flux direct Binance et de la surveillance temps réel des stops (lecture seule).",
+        "operationId": "health_live_api_engine_health_live_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Health Live Api Engine Health Live Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health Live"
+      }
+    },
     "/api/engine/indicators": {
       "get": {
         "operationId": "list_indicators_api_engine_indicators_get",
