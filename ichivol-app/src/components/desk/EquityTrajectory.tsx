@@ -215,7 +215,7 @@ export function EquityTrajectory({
     return (
       <div className="eqt" ref={plotRef}>
         <p className="eqt-empty">
-          Pas encore assez d’historique de capital sur cette période pour tracer les portefeuilles. Essayez une
+          Pas encore assez d’historique de capital sur cette période pour tracer la courbe du portefeuille. Essayez une
           période plus longue.
         </p>
       </div>
@@ -288,7 +288,7 @@ export function EquityTrajectory({
           height={h}
           viewBox={`0 0 ${width} ${h}`}
           role="img"
-          aria-label={`Performance de ${traces.length} portefeuilles en %, période ${period}`}
+          aria-label={`Performance du portefeuille en %, période ${period}`}
         >
           {axis.ticks.map((v) => {
             const y = yAt(v)

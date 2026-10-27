@@ -1,5 +1,5 @@
 /**
- * Desk : tous les portefeuilles paper réunis, le marché et Ève, sur les primitives premium (iv-).
+ * Desk : le portefeuille paper unique, le marché et Ève, sur les primitives premium (iv-).
  * Mise en page = maquette « poste de trading » validée. Données = moteur (rien d'inventé ; manquant → « — »).
  */
 
@@ -42,30 +42,19 @@ import {
   type SessionStatus,
 } from '../lib/marketSessions'
 import {
-  listPaperPositions,
+  getPaperActivity,
+  getPaperOverview,
+  loadAccountLots,
   type PaperOrderRow,
   type PaperOverview,
   type PaperOverviewPosition,
 } from '../lib/paper'
-import { type RiskLockState } from '../lib/riskLock'
-import {
-  combineLocks,
-  combineOverviews,
-  listActiveBooks,
-  loadAllActivity,
-  loadAllBooks,
-  type BookOrder,
-  type BookPosition,
-} from '../lib/allBooks'
+import { getRiskLock, type RiskLockState } from '../lib/riskLock'
+import { MAIN_PORTFOLIO_CODE, MAIN_PORTFOLIO_LABEL } from '../lib/mainPortfolio'
+import { getPortfolioBreakdown, type PortfolioBreakdown } from '../lib/breakdown'
 import { verdictBucket } from '../lib/deskSummarize'
+import { concentrationFromPositions } from '../components/desk/deskMetrics'
 import {
-  aggregateDeskBooks,
-  concentrationFromPositions,
-  snapshotFromOverview,
-  type DeskBooksAggregate,
-} from '../components/desk/deskMetrics'
-import {
-  BASELINE,
   PRIMARY_SYMBOLS,
   REFRESH_MS,
   TAPE_LIMIT,
@@ -79,7 +68,7 @@ import {
 } from './desk/deskFormat'
 import { toEngineSymbol } from '../lib/engineSymbol'
 import { EquityTrajectory, type TrajectoryBook } from '../components/desk/EquityTrajectory'
-import { bookColors, cleanEquitySeries } from '../components/desk/equityTrajectory'
+import { MAIN_CURVE_COLOR, cleanEquitySeries } from '../components/desk/equityTrajectory'
 import { DeskDeciderSummary, DeskEveLatest } from '../components/decider/DeskDeciders'
 import { DeciderBadge } from '../components/decider/DeciderBadge'
 import { deciderOf, type Decider } from '../lib/decider'
@@ -384,15 +373,12 @@ const ORDER_STATUS_FR: Record<string, string> = {
 }
 
 type PositionsTab = 'positions' | 'orders' | 'concentration'
-type TrajectoryTab = 'curve' | 'books'
 
 export function OverviewPage() {
   const navigate = useNavigate()
   const [rows, setRows] = useState<ScreenerDecisionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [overview, setOverview] = useState<PaperOverview | null>(null)
-  const [booksAgg, setBooksAgg] = useState<DeskBooksAggregate | null>(null)
-  const [bookCurves, setBookCurves] = useState<TrajectoryBook[]>([])
   const [tape, setTape] = useState<ActivityItem[]>([])
   const [paperOrders, setPaperOrders] = useState<PaperOrderRow[]>([])
   const [lock, setLock] = useState<RiskLockState | null>(null)
@@ -404,60 +390,35 @@ export function OverviewPage() {
   const [equityPeriod, setEquityPeriod] = useState<EquityPeriod>('1M')
   const [nowTick, setNowTick] = useState(() => Date.now())
   const [deciderByPosition, setDeciderByPosition] = useState<Record<string, Decider>>({})
+  const [breakdown, setBreakdown] = useState<PortfolioBreakdown | null>(null)
 
   const load = useCallback(async (force = false) => {
     setLoading(true)
     type ScreenerOk = Awaited<ReturnType<typeof getScreener>>
-    void listPaperPositions()
-      .then((all) => setDeciderByPosition(Object.fromEntries(all.map((p) => [p.id, deciderOf(p)]))))
+    void loadAccountLots()
+      .then((lots) => setDeciderByPosition(Object.fromEntries(lots.map((p) => [p.id, deciderOf(p)]))))
       .catch(() => undefined)
-    // Desk = tous les portefeuilles paper actifs : totaux, positions, ordres, verrous.
-    const booksPromise = listActiveBooks()
-      .then(async (rows) => {
-        const books = await loadAllBooks(rows)
-        const orders = await loadAllActivity(books, 200)
-        return {
-          rows,
-          books,
-          orders,
-          agg: aggregateDeskBooks(books.map((b) => snapshotFromOverview(b.code, b.label, b.overview))),
-          curves: (() => {
-            const colors = bookColors(books.map((b) => b.code))
-            return books.map(
-              (b) =>
-                ({
-                  code: b.code,
-                  label: b.label,
-                  color: colors[b.code]!,
-                  initialCash: b.overview.account?.initial_cash ?? null,
-                  points: b.overview.equity_curve ?? [],
-                  openSymbols: (b.overview.positions ?? []).map((p) => p.symbol),
-                }) satisfies TrajectoryBook,
-            )
-          })(),
-        }
-      })
-      .catch(() => null)
-
-    const [screenerRes, ovRes, booksRes, feedRes, ordersRes, lockRes, healthRes, mktRes, fngRes, tickersRes] =
+    // Desk = le portefeuille paper unique (ICHIVOL_MAIN_V1) : totaux, positions, ordres, verrou.
+    void getPortfolioBreakdown(MAIN_PORTFOLIO_CODE)
+      .then(setBreakdown)
+      .catch(() => setBreakdown(null))
+    const [screenerRes, ovRes, feedRes, ordersRes, lockRes, healthRes, mktRes, fngRes, tickersRes] =
       await Promise.all([
         getScreener('1h', force)
           .then((r): ScreenerOk | Error => r)
           .catch((err: unknown): ScreenerOk | Error =>
             err instanceof Error ? err : new Error('Screener indisponible'),
           ),
-        booksPromise.then((b) => {
-          const combined = b ? combineOverviews(b.books) : null
-          return combined ? { ok: true as const, data: combined } : { ok: false as const }
-        }),
-        booksPromise,
+        getPaperOverview(MAIN_PORTFOLIO_CODE)
+          .then((data) => ({ ok: true as const, data }))
+          .catch(() => ({ ok: false as const })),
         getActivityFeed(100)
           .then((r) => ({ ok: true as const, items: r.items }))
           .catch(() => ({ ok: false as const, items: [] as ActivityItem[] })),
-        booksPromise.then((b) =>
-          b ? { ok: true as const, orders: b.orders as PaperOrderRow[] } : { ok: false as const, orders: [] as PaperOrderRow[] },
-        ),
-        booksPromise.then((b) => (b ? combineLocks(b.rows) : null)),
+        getPaperActivity(MAIN_PORTFOLIO_CODE, 200)
+          .then((orders) => ({ ok: true as const, orders }))
+          .catch(() => ({ ok: false as const, orders: [] as PaperOrderRow[] })),
+        getRiskLock(MAIN_PORTFOLIO_CODE).catch(() => null),
         fetch('/api/engine/health', { credentials: 'include' })
           .then(async (res) => {
             if (!res.ok) return { engine: false }
@@ -493,14 +454,6 @@ export function OverviewPage() {
     if (ovRes.ok) setOverview(ovRes.data)
     else setOverview(null)
 
-    if (booksRes) {
-      setBooksAgg(booksRes.agg)
-      setBookCurves(booksRes.curves)
-    } else {
-      setBooksAgg(null)
-      setBookCurves([])
-    }
-
     if (feedRes.ok) {
       setTape(feedRes.items.slice(0, TAPE_LIMIT))
     } else {
@@ -535,15 +488,12 @@ export function OverviewPage() {
   const now = useMemo(() => new Date(nowTick), [nowTick])
   const acct = overview?.account
   const risk = overview?.risk
-  /** Totaux Desk = tous les portefeuilles paper ; fallback baseline si liste vide. */
-  const deskEquity = booksAgg?.book_count ? booksAgg.equity : acct?.equity
-  const deskCash = booksAgg?.book_count ? booksAgg.cash : acct?.cash
-  const deskDay = booksAgg?.book_count ? booksAgg.day_change : acct?.day_change
-  const deskRiskPct = booksAgg?.book_count ? booksAgg.open_risk_pct : risk?.open_risk_pct
-  const deskRiskMax = booksAgg?.book_count
-    ? booksAgg.max_open_risk_pct
-    : risk?.max_open_risk_pct
-  const deskBookCount = booksAgg?.book_count ?? (overview ? 1 : 0)
+  /** Totaux Desk = ceux du portefeuille unique, tels que le moteur les calcule. */
+  const deskEquity = acct?.equity
+  const deskCash = acct?.cash
+  const deskDay = acct?.day_change
+  const deskRiskPct = risk?.open_risk_pct
+  const deskRiskMax = risk?.max_open_risk_pct
   const dayUp = (deskDay ?? 0) > 0
   const dayPct =
     deskDay != null && deskEquity
@@ -650,13 +600,12 @@ export function OverviewPage() {
   }
 
   const [posTab, setPosTab] = useState<PositionsTab>('positions')
-  const [trajTab, setTrajTab] = useState<TrajectoryTab>('curve')
 
   const invested = acct?.invested ?? null
   const unrealized = acct?.unrealized_pnl ?? null
   const perfPct =
     acct && acct.initial_cash > 0 ? acct.total_pnl / acct.initial_cash : null
-  const positions = (overview?.positions ?? []) as Array<PaperOverviewPosition & Partial<BookPosition>>
+  const positions = (overview?.positions ?? []) as PaperOverviewPosition[]
   const shortCount = positions.filter((p) => String(p.direction).toUpperCase() === 'SHORT').length
   const equitySpark = useMemo(
     () =>
@@ -666,15 +615,10 @@ export function OverviewPage() {
     [overview?.equity_curve],
   )
   const todayKey = now.toDateString()
-  const todayOrders = (paperOrders as Array<PaperOrderRow & Partial<BookOrder>>).filter(
+  const todayOrders = paperOrders.filter(
     (o) => new Date(o.time).toDateString() === todayKey,
   )
-  const books = booksAgg?.books ?? []
-  const colorsByBook = bookColors(books.map((b) => b.code))
-  const totalBooksEquity = books.reduce((s, b) => s + (Number.isFinite(b.equity) ? b.equity : 0), 0)
-  const topBooks = [...books].sort((a, b) => b.equity - a.equity)
-  const shownBooks = topBooks.slice(0, 5)
-  const otherBooks = topBooks.slice(5)
+  const deskInvested = acct?.invested ?? null
   const deskSessions = DESK_SESSIONS.map((id) => MARKET_SESSIONS.find((s) => s.id === id)).filter(
     (s): s is MarketSessionDef => s != null,
   )
@@ -690,37 +634,31 @@ export function OverviewPage() {
     riskPass == null ? (risk?.kernel ? String(risk.kernel).toUpperCase() : null) : riskPass ? 'PASSE' : 'BLOQUÉ'
   const watchSymbols = watchList.map((r) => r.symbol).join(' · ')
 
-  const trajectoryBooks: TrajectoryBook[] =
-    bookCurves.length > 0
-      ? bookCurves
-      : overview
-        ? [
-            {
-              code: BASELINE,
-              label: 'IchiVol',
-              color: bookColors([BASELINE])[BASELINE]!,
-              initialCash: overview.account?.initial_cash ?? null,
-              points: overview.equity_curve ?? [],
-              openSymbols: (overview.positions ?? []).map((p) => p.symbol),
-            },
-          ]
-        : []
+  const trajectoryBooks: TrajectoryBook[] = overview
+    ? [
+        {
+          code: MAIN_PORTFOLIO_CODE,
+          label: MAIN_PORTFOLIO_LABEL,
+          color: MAIN_CURVE_COLOR,
+          initialCash: overview.account?.initial_cash ?? null,
+          points: overview.equity_curve ?? [],
+          openSymbols: (overview.positions ?? []).map((p) => p.symbol),
+        },
+      ]
+    : []
 
   return (
     <div className="desk-page dk">
       <header className="iv-ph">
         <div>
           <div className="iv-meta">
-            Desk ·{' '}
-            {deskBookCount > 0
-              ? `${deskBookCount} portefeuille${deskBookCount > 1 ? 's' : ''} paper`
-              : 'Portefeuilles paper'}{' '}
+            Desk · portefeuille paper unique{' '}
             · EUR · {loading && !deskEquity ? '—' : dateLabel || '—'}
           </div>
           <h1>Desk</h1>
           <p>
-            Tous les portefeuilles paper réunis · marché · Ève. Avec son pilote actif, Ève trade en paper via le
-            Risk Kernel — jamais live.
+            Le portefeuille paper unique d’IchiVol · marché · Ève. Le scan, Ève et vos ordres manuels décident pour ce
+            seul compte, via le Risk Kernel — jamais live.
           </p>
         </div>
         <div className="iv-ph-act">
@@ -732,7 +670,7 @@ export function OverviewPage() {
             Régime moteur · <b className="warn">{regimeText ?? '—'}</b>
           </span>
           <Link className="iv-btn" to="/app/portefeuille">
-            Portefeuilles ↗
+            Portefeuille ↗
           </Link>
           <Link className="iv-btn" to="/app/market">
             Marché ↗
@@ -745,12 +683,12 @@ export function OverviewPage() {
 
       <div className="iv-kpis dk-kpis">
         <div className="iv-kpi">
-          <div className="iv-kpi-k">Capital total</div>
+          <div className="iv-kpi-k">Capital</div>
           <div className="iv-kpi-v">
             <SplitEur value={deskEquity} />
           </div>
           <div className="iv-kpi-s">
-            {deskBookCount > 0 ? `${deskBookCount} portefeuille${deskBookCount > 1 ? 's' : ''}` : '—'}
+            {acct ? `${MAIN_PORTFOLIO_LABEL} · départ ${fmtEur(acct.initial_cash, 0)}` : '—'}
           </div>
           <Spark values={equitySpark} />
         </div>
@@ -791,6 +729,17 @@ export function OverviewPage() {
           </div>
         </div>
         <div className="iv-kpi">
+          <div className="iv-kpi-k">P&amp;L réalisé</div>
+          <div className={`iv-kpi-v ${signCls(acct?.realized_pnl)}`.trim()}>{signedEur(acct?.realized_pnl)}</div>
+          <div className="iv-kpi-s">
+            {breakdown?.drawdown.max_pct != null
+              ? `Drawdown max ${fmtPct(breakdown.drawdown.max_pct, 1, true)}`
+              : dd != null
+                ? `Drawdown ${fmtPct(dd, 1, true)}`
+                : '—'}
+          </div>
+        </div>
+        <div className="iv-kpi">
           <div className="iv-kpi-k">Performance</div>
           <div className={`iv-kpi-v ${signCls(perfPct)}`.trim()}>{perfPct != null ? fmtPct(perfPct, 2) : '—'}</div>
           <div className="iv-kpi-s">
@@ -801,7 +750,7 @@ export function OverviewPage() {
           <div className="iv-kpi-k">Risque utilisé</div>
           <div className="iv-kpi-v">{deskRiskPct != null ? fmtPct(deskRiskPct, 1, false) : '—'}</div>
           <div className="iv-kpi-s">
-            {deskRiskMax != null ? `Plafond global : ${fmtPct(deskRiskMax, 1, false)}` : '—'}
+            {deskRiskMax != null ? `Plafond : ${fmtPct(deskRiskMax, 1, false)}` : '—'}
           </div>
         </div>
       </div>
@@ -819,16 +768,7 @@ export function OverviewPage() {
       <div className="iv-grid">
         <Card
           className="iv-s8 iv-m-s12"
-          tabs={
-            <>
-              <TabButton on={trajTab === 'curve'} onClick={() => setTrajTab('curve')}>
-                Trajectoire des portefeuilles
-              </TabButton>
-              <TabButton on={trajTab === 'books'} onClick={() => setTrajTab('books')}>
-                Portefeuilles virtuels
-              </TabButton>
-            </>
-          }
+          title="Trajectoire du portefeuille"
           tools={
             <>
               <span>
@@ -837,16 +777,11 @@ export function OverviewPage() {
               </span>
             </>
           }
-          flush={trajTab === 'books'}
         >
-          {trajTab === 'curve' ? (
-            <>
+          <>
               <div className="dk-traj-bar">
                 <span className="iv-cap">
-                  Capital total <b className="dk-strong">{deskEquity != null ? fmtEur(deskEquity, 2) : '—'}</b>
-                </span>
-                <span className="iv-cap">
-                  Portefeuilles <b className="dk-strong">{bookCurves.length || deskBookCount || '—'}</b>
+                  Capital <b className="dk-strong">{deskEquity != null ? fmtEur(deskEquity, 2) : '—'}</b>
                 </span>
                 <div className="iv-seg" role="group" aria-label="Période">
                   {EQUITY_PERIODS.map((p) => (
@@ -868,47 +803,7 @@ export function OverviewPage() {
                 orders={paperOrders}
                 deciders={deciderByPosition}
               />
-            </>
-          ) : books.length === 0 ? (
-            <p className="iv-empty">—</p>
-          ) : (
-            <div className="iv-table-wrap">
-              <table className="iv-table">
-                <thead>
-                  <tr>
-                    <th>Portefeuille</th>
-                    <th className="n">Equity</th>
-                    <th className="n">Cash</th>
-                    <th className="n">P&amp;L jour</th>
-                    <th className="n">Risque</th>
-                    <th className="n">Pos.</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {books.map((b) => (
-                    <tr key={b.code}>
-                      <td>
-                        <span className="dk-swatch" style={{ background: colorsByBook[b.code] }} />
-                        <span className="sym">{b.label}</span>
-                        <small className="dk-code">{b.code}</small>
-                      </td>
-                      <td className="n">{fmtEur(b.equity, 2)}</td>
-                      <td className="n">{fmtEur(b.cash, 2)}</td>
-                      <td className={`n ${signCls(b.day_change)}`.trim()}>{signedEur(b.day_change)}</td>
-                      <td className="n">{b.open_risk_pct != null ? fmtPct(b.open_risk_pct, 1, false) : '—'}</td>
-                      <td className="n">{b.open_positions}</td>
-                      <td>
-                        <Link className="dk-link" to={`/app/portefeuille?pf=${encodeURIComponent(b.code)}`}>
-                          Ouvrir ↗
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          </>
         </Card>
 
         <DeskDeciderSummary className="iv-s4 iv-m-s12" />
@@ -954,7 +849,6 @@ export function OverviewPage() {
                     <tr>
                       <th>Actif</th>
                       <th>Sens</th>
-                      <th>Portefeuille</th>
                       <th>Décideur</th>
                       <th className="n">Qté</th>
                       <th className="n">Entrée</th>
@@ -996,7 +890,6 @@ export function OverviewPage() {
                           <td>
                             <span className={`iv-side ${short ? 'is-short' : 'is-long'}`}>{short ? 'SHORT' : 'LONG'}</span>
                           </td>
-                          <td>{p.book_label ?? '—'}</td>
                           <td>
                             <DeciderBadge decider={deciderOf(p)} />
                           </td>
@@ -1026,7 +919,7 @@ export function OverviewPage() {
                       <th>Heure</th>
                       <th>Actif</th>
                       <th>Sens</th>
-                      <th>Portefeuille</th>
+                      <th>Décideur</th>
                       <th className="n">Qté</th>
                       <th className="n">Prix exécuté</th>
                       <th className="n">Frais</th>
@@ -1037,13 +930,19 @@ export function OverviewPage() {
                     {todayOrders.map((o) => {
                       const buy = String(o.side).toUpperCase() === 'BUY'
                       return (
-                        <tr key={`${o.book_code ?? ''}-${o.id}`}>
+                        <tr key={o.id}>
                           <td className="mono dim">{fmtClock(o.time)}</td>
                           <td className="sym">{o.symbol}</td>
                           <td>
                             <span className={`iv-side ${buy ? 'is-long' : 'is-short'}`}>{buy ? 'ACHAT' : 'VENTE'}</span>
                           </td>
-                          <td>{o.book_label ?? '—'}</td>
+                          <td>
+                            {o.position_id && deciderByPosition[o.position_id] ? (
+                              <DeciderBadge decider={deciderByPosition[o.position_id]!} compact />
+                            ) : (
+                              <span className="dim">—</span>
+                            )}
+                          </td>
                           <td className="n">{fmtQty(o.qty)}</td>
                           <td className="n">{fmtPrice(o.filled_price)}</td>
                           <td className="n">{fmtEur(o.fee, 2)}</td>
@@ -1158,44 +1057,31 @@ export function OverviewPage() {
         <Card
           title="Répartition du capital"
           className="iv-s3 iv-m-s6"
-          tools={<span>{totalBooksEquity > 0 ? fmtEur(totalBooksEquity, 0) : '—'}</span>}
+          tools={<span>{deskEquity != null && deskEquity > 0 ? fmtEur(deskEquity, 0) : '—'}</span>}
           foot={<Link to="/app/portefeuille">Voir l’allocation →</Link>}
         >
-          {books.length === 0 || totalBooksEquity <= 0 ? (
+          {deskEquity == null || deskEquity <= 0 || deskCash == null ? (
             <p className="iv-empty">—</p>
           ) : (
             <>
-              <div className="dk-alloc" role="img" aria-label="Part de chaque portefeuille dans le capital total">
-                {topBooks.map((b) => (
-                  <i
-                    key={b.code}
-                    title={`${b.label} · ${fmtEur(b.equity, 0)}`}
-                    style={{ width: `${(b.equity / totalBooksEquity) * 100}%`, background: colorsByBook[b.code] }}
-                  />
-                ))}
+              <div className="dk-alloc" role="img" aria-label="Part disponible et part engagée du capital">
+                <i title={`Disponible · ${fmtEur(deskCash, 0)}`} style={{ width: `${Math.max(0, Math.min(100, (deskCash / deskEquity) * 100))}%`, background: MAIN_CURVE_COLOR }} />
+                <i title={`Engagé · ${fmtEur(deskInvested ?? 0, 0)}`} style={{ width: `${Math.max(0, Math.min(100, ((deskInvested ?? 0) / deskEquity) * 100))}%`, background: 'var(--amber, #f5a623)' }} />
               </div>
-              {shownBooks.map((b) => (
-                <div key={b.code} className="iv-row dk-tight">
-                  <span>
-                    <span className="dk-swatch" style={{ background: colorsByBook[b.code] }} />
-                    {b.label}
-                  </span>
-                  <span className="iv-row-v">{fmtEur(b.equity, 0)}</span>
-                </div>
-              ))}
-              {otherBooks.length > 0 ? (
-                <div className="iv-row dk-tight">
-                  <span className="muted">
-                    + {otherBooks.length} autre{otherBooks.length > 1 ? 's' : ''}
-                  </span>
-                  <span className="iv-row-v muted">
-                    {fmtEur(
-                      otherBooks.reduce((s, b) => s + b.equity, 0),
-                      0,
-                    )}
-                  </span>
-                </div>
-              ) : null}
+              <div className="iv-row dk-tight">
+                <span>
+                  <span className="dk-swatch" style={{ background: MAIN_CURVE_COLOR }} />
+                  Disponible
+                </span>
+                <span className="iv-row-v">{fmtEur(deskCash, 0)}</span>
+              </div>
+              <div className="iv-row dk-tight">
+                <span>
+                  <span className="dk-swatch" style={{ background: 'var(--amber, #f5a623)' }} />
+                  Engagé
+                </span>
+                <span className="iv-row-v">{deskInvested != null ? fmtEur(deskInvested, 0) : '—'}</span>
+              </div>
             </>
           )}
         </Card>

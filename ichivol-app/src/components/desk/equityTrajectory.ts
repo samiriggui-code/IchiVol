@@ -1,54 +1,13 @@
 /**
- * Trajectoire des portefeuilles (Desk) : calculs purs, sans React.
- * Chaque livre est ramené en % de son capital de départ pour partager un seul axe ;
+ * Trajectoire du portefeuille (Desk) : calculs purs, sans React.
+ * La courbe est ramenée en % du capital de départ ;
  * ses ordres deviennent des repères (achat, vente à découvert, clôture) et des périodes de maintien.
  */
 
 import type { EquityPeriod } from '../../pages/desk/deskFormat'
 
-/** Palette catégorielle de la maquette premium (lisible sur fond sombre) : un livre garde toujours sa couleur. */
-export const BOOK_PALETTE = [
-  '#22d3ee',
-  '#f5a623',
-  '#a78bfa',
-  '#f472b6',
-  '#4ade80',
-  '#60a5fa',
-  '#fb923c',
-  '#94a3b8',
-] as const
-
-const BOOK_SLOT: Record<string, number> = {
-  ICHIVOL_BASELINE_V1: 0,
-  ICHIVOL_SESSIONS_V1: 1,
-  FUTURES_CRYPTO_V1: 2,
-  ICHIVOL_SHORTS_V1: 3,
-  ICHIVOL_4H_V1: 4,
-  ICHIVOL_WIDE_V1: 5,
-  RS_D1_PAPER_V1: 6,
-  ICHIVOL_COMBO_V1: 7,
-}
-
-/** Couleur d'un livre : fixée par son code (un filtre ne repeint jamais les autres), sinon le premier emplacement libre. */
-export function bookColors(codes: string[]): Record<string, string> {
-  const out: Record<string, string> = {}
-  const used = new Set<number>()
-  for (const c of codes) {
-    const slot = BOOK_SLOT[c]
-    if (slot != null) {
-      out[c] = BOOK_PALETTE[slot]!
-      used.add(slot)
-    }
-  }
-  let next = 0
-  for (const c of codes) {
-    if (out[c]) continue
-    while (used.has(next) && next < BOOK_PALETTE.length - 1) next += 1
-    out[c] = BOOK_PALETTE[next]!
-    used.add(next)
-  }
-  return out
-}
+/** Couleur de la courbe du portefeuille unique (cyan de la maquette premium, lisible sur fond sombre). */
+export const MAIN_CURVE_COLOR = '#22d3ee'
 
 export function periodCutoffMs(period: EquityPeriod, now = Date.now()): number {
   const day = 86_400_000

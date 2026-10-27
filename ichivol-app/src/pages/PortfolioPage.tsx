@@ -9,8 +9,6 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { PaperCloseConfirmSheet } from '../components/PaperCloseConfirmSheet'
 import { ChartIntelligencePanel } from '../components/chart-intelligence'
 import { MtfPanel } from '../components/MtfPanel'
-import { FuturesCryptoPanel } from '../components/FuturesCryptoPanel'
-import { FUTURES_CRYPTO_LABEL } from '../lib/futuresCrypto'
 import { fmtUtc, storedMatrix } from '../lib/mtf'
 import {
   concentrationFromPositions,
@@ -20,10 +18,10 @@ import {
   closePaperPosition,
   getPaperActivity,
   getPaperOverview,
-  listPaperPortfolios,
-  listPaperPositions,
+  listAccountPositions,
+  loadAccountLots,
   type PaperOrderRow,
-  type PaperPortfolioRow,
+  type PaperPosition,
   type PaperOverview,
   type PaperOverviewPosition,
 } from '../lib/paper'
@@ -32,30 +30,19 @@ import { VpValidationBadge } from '../components/VpValidationBadge'
 import { isActionableBuySell } from '../lib/vpValidationCopy'
 import { getRiskLock, type RiskLockState } from '../lib/riskLock'
 import { displaySymbol } from '../lib/markets'
+import { MAIN_PORTFOLIO_CODE, MAIN_PORTFOLIO_LABEL, MAIN_PORTFOLIO_SUMMARY } from '../lib/mainPortfolio'
 import {
-  ALL_BOOKS_CODE,
-  combineLocks,
-  combineOverviews,
-  listActiveBooks,
-  loadAllActivity,
-  loadAllBooks,
-  type Book,
-  type BookOrder,
-  type BookPosition,
-} from '../lib/allBooks'
-import {
-  BASELINE_PORTFOLIO_CODE as BASELINE_CODE,
-  FUTURES_CRYPTO_CODE,
-  RS_D1_CODE,
-  RS_D1_LABEL,
-  SESSIONS_CODE,
-  SESSIONS_LABEL,
-  isRsPortfolio,
-  manualActionsAllowed,
-  portfolioFromParam,
-  portfolioLabel,
-} from '../lib/rsPortfolio'
-import { bookColors } from '../components/desk/equityTrajectory'
+  activeRows,
+  arbitrationFr,
+  assetClassLabel,
+  enginesFr,
+  getPortfolioBreakdown,
+  modeFr,
+  sessionEventFr,
+  universeByClass,
+  type BreakdownStats,
+  type PortfolioBreakdown,
+} from '../lib/breakdown'
 import { DECIDER_EXPLAIN, DECIDER_LABEL, deciderOf, type Decider } from '../lib/decider'
 import './PortfolioPage.css'
 
@@ -222,122 +209,110 @@ function fmtTime(iso: string | null | undefined): string {
   return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
-/** Rendement depuis le départ (capital actuel / capital de départ − 1), pour classer les portefeuilles. */
-function bookReturn(b: Book): number {
-  const a = b.overview.account
-  return a && a.initial_cash > 0 ? a.equity / a.initial_cash - 1 : -Infinity
-}
-
-/** Un portefeuille par ligne dans la vue « Tous » : ses chiffres à lui, et un clic ouvre son détail. */
-function BooksTable({
-  books,
-  portfolios,
-  colors,
-  loading,
-  onOpen,
+/** Tableau de performance (par décideur ou par classe d'actifs), chiffres du moteur (/breakdown). */
+function PerfTable<T extends BreakdownStats>({
+  rows,
+  label,
+  first,
 }: {
-  books: Book[]
-  portfolios: PaperPortfolioRow[]
-  colors: Record<string, string>
-  loading: boolean
-  onOpen: (code: string) => void
+  rows: T[]
+  label: string
+  first: (row: T) => ReactNode
 }) {
   return (
-    <section className="iv-card pf-books">
-      <div className="iv-card-head">
-        <div className="iv-card-tabs">
-          <span className="iv-card-tab is-on">Par portefeuille</span>
-        </div>
-        <div className="iv-card-tools">Du meilleur au moins bon</div>
-      </div>
-      {books.length === 0 ? (
-        <div className="iv-empty">{loading ? 'Chargement…' : 'Aucun portefeuille paper actif.'}</div>
-      ) : (
-        <div className="iv-card-body is-flush iv-table-wrap">
-          <table className="iv-table is-compact">
-            <thead>
-              <tr>
-                <th>Portefeuille</th>
-                <th className="n">Valeur</th>
-                <th className="n">Depuis départ</th>
-                <th className="n">Jour</th>
-                <th>Entrées</th>
-                <th className="n">Réalisé</th>
-                <th className="n">Latent</th>
-                <th className="n">Positions</th>
-                <th className="n">Trades clôturés</th>
-                <th className="n">Réussite</th>
-                <th className="n">Gain moy. / perte moy.</th>
-                <th className="n">Frais</th>
-                <th className="n">Engagé</th>
-                <th className="n">Drawdown</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...books]
-                .sort((x, y) => bookReturn(y) - bookReturn(x))
-                .map((b) => {
-                  const a = b.overview.account
-                  const r = b.overview.risk
-                  const row = portfolios.find((p) => p.code === b.code)
-                  const blocked = Boolean(row?.kill_switch_armed || row?.daily_loss_locked)
-                  const pnl = a ? a.equity - a.initial_cash : null
-                  const pnlPct = a && a.initial_cash > 0 && pnl != null ? pnl / a.initial_cash : null
-                  const dd = drawdownFromCurve(b.overview.equity_curve ?? [], a?.equity)
-                  const open = r?.open_positions ?? a?.open_positions ?? 0
-                  const c = b.overview.costs
-                  const winRate = c && c.closed_trades > 0 ? c.wins / c.closed_trades : null
-                  return (
-                    <tr
-                      key={b.code}
-                      className="pf-click"
-                      tabIndex={0}
-                      title={`Voir le détail de ${portfolioLabel(b.code, b.label)}`}
-                      onClick={() => onOpen(b.code)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault()
-                          onOpen(b.code)
-                        }
-                      }}
-                    >
-                      <td>
-                        <span className="pf-book-name">
-                          <i className="pf-swatch" style={{ background: colors[b.code] }} aria-hidden="true" />
-                          {portfolioLabel(b.code, b.label)}
-                        </span>
-                      </td>
-                      <td className="n">{fmtEur(a?.equity, 2).replace(' €', '')}</td>
-                      <td className={`n ${signCls(pnl)}`}>{fmtPct(pnlPct, 2, true)}</td>
-                      <td className={`n ${signCls(a?.day_change)}`}>{fmtSigned(a?.day_change, 2)}</td>
-                      <td>{blocked ? <span className="neg">Bloquées</span> : <span className="ok">Ouvertes</span>}</td>
-                      <td className={`n ${signCls(a?.realized_pnl)}`}>{fmtSigned(a?.realized_pnl, 2)}</td>
-                      <td className={`n ${signCls(a?.unrealized_pnl)}`}>{fmtSigned(a?.unrealized_pnl, 2)}</td>
-                      <td className="n">{r ? `${open} / ${r.max_open_positions}` : String(open)}</td>
-                      <td className="n">{c ? `${c.closed_trades} · ${c.wins} / ${c.losses}` : '—'}</td>
-                      <td className="n">{winRate != null ? fmtPct(winRate, 0) : '—'}</td>
-                      <td className="n">
-                        {c && c.wins > 0 ? fmtEur(c.sum_wins / c.wins, 2) : '—'} /{' '}
-                        {c && c.losses > 0 ? fmtEur(c.sum_losses / c.losses, 2) : '—'}
-                      </td>
-                      <td className="n">{c ? fmtEur(c.total_costs, 2) : '—'}</td>
-                      <td className="n">{fmtEur(a?.invested, 2)}</td>
-                      <td className={`n ${dd != null && dd < 0 ? 'neg' : ''}`}>{dd != null ? fmtPct(dd, 1, true) : '—'}</td>
-                    </tr>
-                  )
-                })}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <div className="iv-card-foot">Touchez un portefeuille pour ouvrir son détail</div>
-    </section>
+    <div className="iv-card-body is-flush iv-table-wrap">
+      <table className="iv-table is-compact">
+        <thead>
+          <tr>
+            <th>{label}</th>
+            <th className="n">Trades</th>
+            <th className="n">Réussite</th>
+            <th className="n">Net</th>
+            <th className="n">Gain moy. / perte moy.</th>
+            <th className="n">Frais</th>
+            <th className="n">En cours</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i}>
+              <td>{first(r)}</td>
+              <td className="n">{r.trades > 0 ? `${r.trades} · ${r.wins} / ${r.losses}` : '0'}</td>
+              <td className="n">{r.trades > 0 && r.win_rate != null ? fmtPct(r.win_rate, 0) : '—'}</td>
+              <td className={`n ${signCls(r.net)}`}>{r.trades > 0 ? fmtSigned(r.net, 2, ' €') : '—'}</td>
+              <td className="n">
+                {r.avg_win != null ? fmtEur(r.avg_win, 2) : '—'} / {r.avg_loss != null ? fmtEur(r.avg_loss, 2) : '—'}
+              </td>
+              <td className="n dim">{r.trades > 0 ? fmtEur(r.fees, 2) : '—'}</td>
+              <td className="n">{r.open}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
+/** Filtres et fenêtre de session notés sur le lot (le compte unique les suit en observation, sans bloquer). */
+function ObservedFilters({ signal }: { signal: Record<string, unknown> | null | undefined }) {
+  const f = (signal?.filters_observed ?? null) as
+    | {
+        would_block?: boolean
+        structure_blocked?: boolean
+        fibonacci_blocked?: boolean
+        context_blocked?: boolean
+        block_source?: string | null
+        block_reason?: string | null
+      }
+    | null
+  const event = signal?.decision_event
+  if (!f && signal?.decision_event === undefined) return null
+  const eventText = sessionEventFr(event)
+  const yes = (b: boolean | undefined) => (b ? <span className="neg">aurait bloqué</span> : <span className="ok">passe</span>)
+  return (
+    <div className="pf-fiche-grid">
+      {f ? (
+        <>
+          <div className="iv-row">
+            <span>Filtres (observation)</span>
+            <span className="iv-row-v">
+              {f.would_block ? (
+                <span className="neg">
+                  auraient refusé{f.block_source ? ` · ${f.block_source}` : ''}
+                  {f.block_reason ? ` (${f.block_reason})` : ''}
+                </span>
+              ) : (
+                <span className="ok">aucun refus</span>
+              )}
+            </span>
+          </div>
+          <div className="iv-row">
+            <span>Structure</span>
+            <span className="iv-row-v">{yes(f.structure_blocked)}</span>
+          </div>
+          <div className="iv-row">
+            <span>Fibonacci</span>
+            <span className="iv-row-v">{yes(f.fibonacci_blocked)}</span>
+          </div>
+          <div className="iv-row">
+            <span>Contexte (RSI, flux, régime)</span>
+            <span className="iv-row-v">{yes(f.context_blocked)}</span>
+          </div>
+        </>
+      ) : null}
+      <div className="iv-row">
+        <span>Session à l’entrée</span>
+        <span className="iv-row-v">{eventText}</span>
+      </div>
+    </div>
+  )
+}
+
+/** Trades clôturés chargés par page dans « Historique des trades ». */
+const HISTORY_PAGE = 30
+
 export function PortfolioPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const pfParam = searchParams.get('pf')
+  const [searchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
 
   // `?tab=positions|risque|ordres` (notifications, Desk, anciennes routes) : on amène à la carte correspondante.
@@ -348,20 +323,18 @@ export function PortfolioPage() {
     const t = window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 150)
     return () => window.clearTimeout(t)
   }, [tabParam])
-  // Sans `?pf=` : tous les portefeuilles ensemble ; `?pf=CODE` : le détail d'un seul.
-  const showAll = !pfParam || pfParam === ALL_BOOKS_CODE
-  const code = showAll ? ALL_BOOKS_CODE : portfolioFromParam(pfParam)
-  const isRs = isRsPortfolio(code)
-  const isSessions = code === SESSIONS_CODE
-  const isFutures = code === FUTURES_CRYPTO_CODE
-  const bookOf = (row: { book_code?: string }) => row.book_code ?? code
-  const [portfolios, setPortfolios] = useState<PaperPortfolioRow[]>([])
-  const [books, setBooks] = useState<Book[]>([])
+  // Un seul portefeuille paper (ICHIVOL_MAIN_V1) : un ancien lien `?pf=CODE` est ignoré.
+  const code = MAIN_PORTFOLIO_CODE
   const [overview, setOverview] = useState<PaperOverview | null>(null)
-  const [orders, setOrders] = useState<Array<PaperOrderRow & { book_code?: string; book_label?: string }>>([])
+  const [orders, setOrders] = useState<PaperOrderRow[]>([])
   const [lock, setLock] = useState<RiskLockState | null>(null)
   /** Qui a décidé chaque lot (moteur seul, Ève, manuel), pour étiqueter aussi les ordres. */
   const [deciderByPosition, setDeciderByPosition] = useState<Record<string, Decider>>({})
+  const [breakdown, setBreakdown] = useState<PortfolioBreakdown | null>(null)
+  /** Trades clôturés du compte, paginés par le moteur (/paper/positions?portfolio_code=…). */
+  const [history, setHistory] = useState<PaperPosition[]>([])
+  const [historyTotal, setHistoryTotal] = useState(0)
+  const [historyBusy, setHistoryBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [fiche, setFiche] = useState<PaperOverviewPosition | null>(null)
   const [closeTarget, setCloseTarget] = useState<PaperOverviewPosition | null>(null)
@@ -372,94 +345,53 @@ export function PortfolioPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    void listPaperPositions()
-      .then((all) => setDeciderByPosition(Object.fromEntries(all.map((p) => [p.id, deciderOf(p)]))))
+    void loadAccountLots()
+      .then((lots) => setDeciderByPosition(Object.fromEntries(lots.map((p) => [p.id, deciderOf(p)]))))
       .catch(() => undefined)
-    if (showAll) {
-      try {
-        const rows = await listActiveBooks()
-        const all = await loadAllBooks(rows)
-        const activity: BookOrder[] = await loadAllActivity(all, 12)
-        setPortfolios(rows)
-        setBooks(all)
-        setOverview(combineOverviews(all))
-        setLock(combineLocks(rows))
-        setOrders(activity.slice(0, 30))
-      } catch {
-        setOverview(null)
-        setBooks([])
-      } finally {
-        setLoading(false)
-      }
-      return
-    }
+    void listAccountPositions({ code, status: 'CLOSED', limit: HISTORY_PAGE })
+      .then((page) => {
+        setHistory(page.positions)
+        setHistoryTotal(page.total)
+      })
+      .catch(() => undefined)
+    void getPortfolioBreakdown(code)
+      .then(setBreakdown)
+      .catch(() => setBreakdown(null))
     try {
-      const [ov, lk, activity, pfs] = await Promise.all([
+      const [ov, lk, activity] = await Promise.all([
         getPaperOverview(code),
         getRiskLock(code).catch(() => null),
         getPaperActivity(code, 12).catch(() => [] as PaperOrderRow[]),
-        listPaperPortfolios().catch(() => [] as PaperPortfolioRow[]),
       ])
       setOverview(ov)
       setLock(lk)
       setOrders(activity)
-      setPortfolios(pfs)
     } catch {
       setOverview(null)
     } finally {
       setLoading(false)
     }
-  }, [code, showAll])
-
-  const knownLabels: Record<string, { label: string; title?: string }> = {
-    [BASELINE_CODE]: { label: 'IchiVol' },
-    [SESSIONS_CODE]: { label: 'Sessions', title: SESSIONS_LABEL },
-    [FUTURES_CRYPTO_CODE]: { label: 'Futures & Crypto', title: FUTURES_CRYPTO_LABEL },
-    [RS_D1_CODE]: { label: 'RS-D1', title: RS_D1_LABEL },
-  }
-  const allTab = { code: ALL_BOOKS_CODE, label: 'Tous', title: 'Tous les portefeuilles additionnés' as string | undefined }
-  const tabs = [allTab, ...(() => {
-    const fromApi = portfolios
-      .filter((p) => p.is_active !== false)
-      .map((p) => {
-        const known = knownLabels[p.code]
-        return {
-          code: p.code,
-          label: known?.label ?? p.label ?? p.code,
-          title: known?.title,
-        }
-      })
-    if (fromApi.length > 0) {
-      // Toujours inclure le livre courant s’il manque dans la liste API.
-      if (!showAll && !fromApi.some((t) => t.code === code)) {
-        const known = knownLabels[code]
-        fromApi.unshift({
-          code,
-          label: known?.label ?? code,
-          title: known?.title,
-        })
-      }
-      return fromApi
-    }
-    return [
-      { code: BASELINE_CODE, label: 'IchiVol', title: undefined as string | undefined },
-      { code: SESSIONS_CODE, label: 'Sessions', title: SESSIONS_LABEL },
-      { code: FUTURES_CRYPTO_CODE, label: 'Futures & Crypto', title: FUTURES_CRYPTO_LABEL },
-      { code: RS_D1_CODE, label: 'RS-D1', title: RS_D1_LABEL },
-    ]
-  })()]
-  const selectPortfolio = (next: string) => {
-    const params = new URLSearchParams(searchParams)
-    if (next === ALL_BOOKS_CODE) params.delete('pf')
-    else params.set('pf', next)
-    params.delete('symbol')
-    setFiche(null)
-    setSearchParams(params)
-  }
+  }, [code])
 
   useEffect(() => {
     void load()
   }, [load])
+
+  async function loadMoreHistory() {
+    setHistoryBusy(true)
+    try {
+      const page = await listAccountPositions({ code, status: 'CLOSED', limit: HISTORY_PAGE, offset: history.length })
+      setHistoryTotal(page.total)
+      setHistory((prev) => {
+        const seen = new Set(prev.map((p) => p.id))
+        return [...prev, ...page.positions.filter((p) => !seen.has(p.id))]
+      })
+    } catch {
+      /* garder l'historique actuel */
+    } finally {
+      setHistoryBusy(false)
+    }
+  }
 
   useEffect(() => {
     const wanted = searchParams.get('symbol')?.toUpperCase()
@@ -487,6 +419,8 @@ export function PortfolioPage() {
         ? '1 POSITION'
         : `${positions.length} POSITIONS`
   const dd = drawdownFromCurve(overview?.equity_curve ?? [], acct?.equity)
+  /** Drawdown actuel : celui du moteur (/breakdown) s'il répond, sinon calculé sur la courbe affichée. */
+  const ddNow = breakdown?.drawdown.current_pct != null ? -Math.abs(breakdown.drawdown.current_pct) : dd
   const investedPct =
     acct && acct.equity > 0 ? Math.min(100, Math.max(0, (acct.invested / acct.equity) * 100)) : null
 
@@ -512,8 +446,7 @@ export function PortfolioPage() {
     }
   }
 
-  const colors = bookColors(tabs.filter((t) => t.code !== ALL_BOOKS_CODE).map((t) => t.code))
-  const currentLabel = tabs.find((t) => t.code === code)?.label ?? portfolioLabel(code)
+  const currentLabel = MAIN_PORTFOLIO_LABEL
   const pnlTotal = acct ? acct.equity - acct.initial_cash : null
   const dayBase = acct?.day_change != null && acct.equity - acct.day_change > 0 ? acct.equity - acct.day_change : null
   const dayPct = acct?.day_change != null && dayBase ? acct.day_change / dayBase : null
@@ -537,22 +470,14 @@ export function PortfolioPage() {
           <div className="iv-meta">Portefeuille · paper · ordres simulés, aucun envoyé à l’extérieur</div>
           <h1>Portefeuille</h1>
           <p>
-            {showAll
-              ? `Les ${books.length || ''} portefeuilles paper additionnés : capital, positions et ordres de chacun, avec le nom du portefeuille sur chaque ligne. Touche un portefeuille pour voir son détail, ou le Desk pour la répartition et la concentration de l’ensemble. Aucun ordre n’est envoyé à un courtier.`.replace('Les  ', 'Les ')
-              : isRs
-              ? `${RS_D1_LABEL}. Portefeuille séparé, piloté uniquement par la règle RS-D1 (Donchian 4h) : aucun ordre manuel.`
-              : isSessions
-                ? 'Mêmes règles qu’IchiVol, mais le signal n’ouvre et ne ferme qu’aux ouvertures et clôtures de Tokyo, Londres et New York. Stop et objectif restent surveillés en continu.'
-                : isFutures
-                  ? 'Portefeuille paper dédié à trois marchés : Dow Jones (YM), or (MGC) et bitcoin. Mêmes règles qu’IchiVol, avec un plafond de risque commun aux trois. Aucun ordre n’est envoyé à un courtier.'
-                  : 'Portefeuille paper. Les ordres sont simulés ici, aucun n’est envoyé à un courtier.'}
+            {MAIN_PORTFOLIO_SUMMARY} Les ordres sont simulés ici, aucun n’est envoyé à un courtier.
           </p>
         </div>
         <div className="iv-ph-act">
           {riskPass === true
             ? tag('Ouvert aux entrées', 'mint')
             : riskPass === false
-              ? tag(showAll ? 'Entrées bloquées en partie' : 'Entrées bloquées', 'sell')
+              ? tag('Entrées bloquées', 'sell')
               : null}
           <span className="iv-chip">
             Risk Kernel ·{' '}
@@ -560,44 +485,10 @@ export function PortfolioPage() {
               {riskPass === true ? 'PASSE' : riskPass === false ? 'BLOQUÉ' : '—'}
             </b>
           </span>
-          {tag(
-            showAll ? 'Tous · paper' : isRs ? 'RS-D1 · paper' : isSessions ? 'Sessions · paper' : isFutures ? 'Futures & Crypto · paper' : 'Paper',
-            'amber',
-          )}
+          {tag(`${MAIN_PORTFOLIO_LABEL} · paper`, 'amber')}
         </div>
       </div>
 
-      {tabs.length > 1 ? (
-        <div className="iv-card pf-switch">
-          <div className="iv-card-head">
-            <div className="iv-card-tabs" role="tablist" aria-label="Portefeuille paper">
-              {tabs.map((t) => (
-                <button
-                  key={t.code}
-                  type="button"
-                  role="tab"
-                  aria-selected={code === t.code}
-                  className={`iv-card-tab${code === t.code ? ' is-on' : ''}`}
-                  onClick={() => selectPortfolio(t.code)}
-                  title={t.title}
-                >
-                  {t.code === ALL_BOOKS_CODE ? (
-                    <>
-                      {t.label}
-                      <span className="pf-tab-count">{books.length || ''}</span>
-                    </>
-                  ) : (
-                    <>
-                      <i className="pf-swatch" style={{ background: colors[t.code] }} aria-hidden="true" />
-                      {t.label}
-                    </>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       <div className="iv-kpis pf-kpis">
         <div className="iv-kpi">
@@ -605,7 +496,7 @@ export function PortfolioPage() {
           <div className="iv-kpi-v">
             <KpiEur n={acct?.initial_cash} />
           </div>
-          <div className="iv-kpi-s">{showAll ? `${books.length} portefeuilles` : 'Portefeuille paper'}</div>
+          <div className="iv-kpi-s">{MAIN_PORTFOLIO_LABEL} · portefeuille unique</div>
         </div>
         <div className="iv-kpi">
           <div className="iv-kpi-k">Valeur</div>
@@ -635,8 +526,10 @@ export function PortfolioPage() {
         </div>
         <div className="iv-kpi">
           <div className="iv-kpi-k">Drawdown</div>
-          <div className={`iv-kpi-v ${dd != null && dd < 0 ? 'neg' : ''}`}>{dd != null ? fmtPct(dd, 1, true) : '—'}</div>
-          <div className="iv-kpi-s">depuis le plus haut</div>
+          <div className={`iv-kpi-v ${ddNow != null && ddNow < 0 ? 'neg' : ''}`}>{ddNow != null ? fmtPct(ddNow, 1, true) : '—'}</div>
+          <div className="iv-kpi-s">
+            {breakdown?.drawdown.max_pct != null ? `max ${fmtPct(-Math.abs(breakdown.drawdown.max_pct), 1, true)}` : 'depuis le plus haut'}
+          </div>
         </div>
         <div className="iv-kpi">
           <div className="iv-kpi-k">Taux de réussite</div>
@@ -662,11 +555,6 @@ export function PortfolioPage() {
         </div>
       </div>
 
-      {isFutures ? (
-        <div className="pf-section">
-          <FuturesCryptoPanel overview={overview} onChanged={() => void load()} />
-        </div>
-      ) : null}
 
       <div className="iv-grid pf-section">
         <section className="iv-card iv-s8 iv-m-s12 pf-chart-card">
@@ -700,7 +588,7 @@ export function PortfolioPage() {
                 Concentration
               </button>
             </div>
-            <div className="iv-card-tools">{showAll ? 'Tous les portefeuilles' : currentLabel}</div>
+            <div className="iv-card-tools">{currentLabel}</div>
           </div>
           <div className="iv-card-body">
             {chartTab === 'courbe' ? (
@@ -795,9 +683,7 @@ export function PortfolioPage() {
                 {riskPass === true
                   ? 'Les nouvelles entrées paper sont autorisées.'
                   : riskPass === false
-                    ? showAll
-                      ? 'Au moins un portefeuille a ses entrées bloquées.'
-                      : 'Entrées bloquées (arrêt d’urgence ou perte journalière).'
+                    ? 'Entrées bloquées (arrêt d’urgence ou perte journalière).'
                     : 'État du verrou indisponible.'}
                 <br />
                 {risk
@@ -838,7 +724,7 @@ export function PortfolioPage() {
               pct={risk && risk.max_open_positions > 0 ? (risk.open_positions / risk.max_open_positions) * 100 : null}
             />
             <div className="pf-kernel-rows">
-              {lock && !showAll ? (
+              {lock ? (
                 <>
                   <div className="iv-row">
                     <span>Arrêt d’urgence</span>
@@ -859,17 +745,6 @@ export function PortfolioPage() {
                     </span>
                   </div>
                 </>
-              ) : null}
-              {showAll && lock && 'blocked' in lock ? (
-                <div className="iv-row pf-row-wrap">
-                  <span>
-                    {(lock as ReturnType<typeof combineLocks>).blocked.length === 0
-                      ? `Entrées ouvertes sur les ${(lock as ReturnType<typeof combineLocks>).book_count} portefeuilles.`
-                      : `Entrées bloquées sur : ${(lock as ReturnType<typeof combineLocks>).blocked
-                          .map((b) => `${b.label} (${b.kill && b.daily ? 'arrêt d’urgence + perte du jour' : b.kill ? 'arrêt d’urgence' : 'perte du jour'})`)
-                          .join(', ')}.`}
-                  </span>
-                </div>
               ) : null}
               <div className="iv-row">
                 <span>Ordres refusés par le risque</span>
@@ -908,7 +783,6 @@ export function PortfolioPage() {
                   <tr>
                     <th>Actif</th>
                     <th>Sens</th>
-                    <th>Portefeuille</th>
                     <th>Décideur</th>
                     <th className="n">Qté</th>
                     <th className="n">Entrée</th>
@@ -924,8 +798,7 @@ export function PortfolioPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {positions.map((p: PaperOverviewPosition & Partial<BookPosition>) => {
-                    const book = bookOf(p)
+                  {positions.map((p: PaperOverviewPosition) => {
                     const pnl = p.unrealized_pnl
                     const perf = p.unrealized_pct
                     const r = rMultiple(p)
@@ -935,7 +808,7 @@ export function PortfolioPage() {
                       (p.current_price != null && p.qty != null ? p.current_price * Math.abs(p.qty) : p.notional ?? null)
                     const strat =
                       p.timeframe != null
-                        ? `${isRsPortfolio(book) ? 'RS-D1 Donchian' : 'Ichimoku × RVOL'} · ${String(p.timeframe).toUpperCase()}${engaged != null ? ` · ${fmtEur(engaged, 0)} engagés` : ''}`
+                        ? `Ichimoku × RVOL · ${String(p.timeframe).toUpperCase()}${engaged != null ? ` · ${fmtEur(engaged, 0)} engagés` : ''}`
                         : undefined
                     const selected = fiche != null && fiche.id === p.id
                     return (
@@ -961,7 +834,6 @@ export function PortfolioPage() {
                             {p.direction === 'SHORT' ? 'VENTE' : 'ACHAT'}
                           </span>
                         </td>
-                        <td>{showAll && p.book_label ? p.book_label : portfolioLabel(book, currentLabel)}</td>
                         <td>
                           <DeciderMark decider={deciderOf(p)} />
                         </td>
@@ -985,7 +857,7 @@ export function PortfolioPage() {
                         </td>
                         <td className={`n ${signCls(r)}`}>{r == null ? '—' : fmtSigned(r, 2)}</td>
                         <td className="pf-act">
-                          {p.id && manualActionsAllowed(book) ? (
+                          {p.id ? (
                             <button
                               type="button"
                               className="iv-btn iv-btn--sm"
@@ -1013,6 +885,106 @@ export function PortfolioPage() {
       </div>
 
       <div className="iv-grid pf-section">
+        <section className="iv-card iv-s6 iv-m-s12" id="pf-decideurs">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs">
+              <span className="iv-card-tab is-on">Performance par décideur</span>
+            </div>
+            <div className="iv-card-tools">Net de frais · moteur</div>
+          </div>
+          {breakdown ? (
+            <PerfTable rows={breakdown.by_decider} label="Décideur" first={(r) => <DeciderMark decider={r.decider} />} />
+          ) : (
+            <div className="iv-empty">{loading ? 'Chargement…' : 'Bilan indisponible.'}</div>
+          )}
+          <div className="iv-card-foot">Qui a décidé : Ève, moteur contre Ève, moteur seul, ou vous</div>
+        </section>
+        <section className="iv-card iv-s6 iv-m-s12" id="pf-classes">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs">
+              <span className="iv-card-tab is-on">Performance par classe d’actifs</span>
+            </div>
+            <div className="iv-card-tools">Net de frais · moteur</div>
+          </div>
+          {breakdown && activeRows(breakdown.by_asset_class).length > 0 ? (
+            <PerfTable rows={activeRows(breakdown.by_asset_class)} label="Classe" first={(r) => assetClassLabel(r)} />
+          ) : (
+            <div className="iv-empty">
+              {breakdown ? 'Aucun trade pour l’instant.' : loading ? 'Chargement…' : 'Bilan indisponible.'}
+            </div>
+          )}
+          <div className="iv-card-foot">Crypto, forex, métaux, indices, énergie, futures</div>
+        </section>
+      </div>
+
+      <div className="iv-grid pf-section">
+        <section className="iv-card iv-s12" id="pf-historique">
+          <div className="iv-card-head">
+            <div className="iv-card-tabs">
+              <span className="iv-card-tab is-on">Historique des trades</span>
+            </div>
+            <div className="iv-card-tools">
+              {historyTotal ? `${history.length} sur ${historyTotal} clôturés` : '—'}
+            </div>
+          </div>
+          {history.length === 0 ? (
+            <div className="iv-empty">{loading ? 'Chargement…' : 'Aucun trade clôturé sur ce compte pour l’instant.'}</div>
+          ) : (
+            <div className="iv-card-body is-flush iv-table-wrap">
+              <table className="iv-table is-compact">
+                <thead>
+                  <tr>
+                    <th>Sortie</th>
+                    <th>Actif</th>
+                    <th>Sens</th>
+                    <th>Décideur</th>
+                    <th className="n">Entrée</th>
+                    <th className="n">Sortie</th>
+                    <th>Motif</th>
+                    <th className="n">Résultat net</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((p) => (
+                    <tr key={p.id}>
+                      <td className="mono dim">{fmtTime(p.exit_time)}</td>
+                      <td className="sym">
+                        {displaySymbol(p.symbol)}
+                        <small>{String(p.timeframe ?? '').toUpperCase()}</small>
+                      </td>
+                      <td>
+                        <span className={`iv-side ${p.direction === 'SHORT' ? 'is-short' : 'is-long'}`}>
+                          {p.direction === 'SHORT' ? 'VENTE' : 'ACHAT'}
+                        </span>
+                      </td>
+                      <td>
+                        <DeciderMark decider={deciderOf(p)} />
+                      </td>
+                      <td className="n">{fmtPx(p.entry_price)}</td>
+                      <td className="n">{fmtPx(p.exit_price)}</td>
+                      <td className="dim">{orderReasonFr(p.exit_reason) || '—'}</td>
+                      <td className={`n ${signCls(p.realized_pnl)}`}>
+                        {fmtSigned(p.realized_pnl, 2, ' €')}
+                        {p.pnl_pct != null ? <span className="pf-sub"> · {fmtPct(p.pnl_pct, 2, true)}</span> : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {historyTotal > history.length ? (
+            <div className="iv-card-foot">
+              <span>Plus récents d’abord</span>
+              <button type="button" className="iv-btn iv-btn--sm" disabled={historyBusy} onClick={() => void loadMoreHistory()}>
+                {historyBusy ? 'Chargement…' : `Afficher ${Math.min(HISTORY_PAGE, historyTotal - history.length)} de plus`}
+              </button>
+            </div>
+          ) : null}
+        </section>
+      </div>
+
+      <div className="iv-grid pf-section">
         <section className="iv-card iv-s7 iv-m-s12" id="pf-ordres">
           <div className="iv-card-head">
             <div className="iv-card-tabs">
@@ -1030,7 +1002,6 @@ export function PortfolioPage() {
                     <th>Heure</th>
                     <th>Actif</th>
                     <th>Sens</th>
-                    <th>Portefeuille</th>
                     <th>Décideur</th>
                     <th className="n">Qté</th>
                     <th className="n">Prix exécuté</th>
@@ -1043,14 +1014,13 @@ export function PortfolioPage() {
                     const reason = orderReasonFr(o.reason)
                     const filled = o.status === 'FILLED'
                     return (
-                      <tr key={`${o.book_code ?? code}-${o.id}`}>
+                      <tr key={o.id}>
                         <td className="mono dim">{fmtTime(o.time)}</td>
                         <td className="sym">
                           {displaySymbol(o.symbol)}
                           <small>{String(o.timeframe).toUpperCase()}</small>
                         </td>
                         <td className={o.side === 'SELL' ? 'neg' : 'pos'}>{o.side === 'SELL' ? 'Vente' : 'Achat'}</td>
-                        <td>{showAll && o.book_label ? o.book_label : currentLabel}</td>
                         <td>
                           {o.position_id && deciderByPosition[o.position_id] ? (
                             <DeciderMark decider={deciderByPosition[o.position_id]!} />
@@ -1075,9 +1045,6 @@ export function PortfolioPage() {
         </section>
 
         <div className="iv-s5 iv-m-s12 pf-stack">
-          {showAll ? (
-            <BooksTable books={books} portfolios={portfolios} colors={colors} loading={loading} onOpen={selectPortfolio} />
-          ) : null}
           <section className="iv-card">
             <div className="iv-card-head">
               <div className="iv-card-tabs">
@@ -1103,6 +1070,111 @@ export function PortfolioPage() {
                   </div>
                 ))}
               </div>
+            )}
+          </section>
+          <section className="iv-card" id="pf-regles">
+            <div className="iv-card-head">
+              <div className="iv-card-tabs">
+                <span className="iv-card-tab is-on">Règles et univers du compte</span>
+              </div>
+              <div className="iv-card-tools">Fixées dans le moteur</div>
+            </div>
+            {breakdown ? (
+              <div className="iv-card-body">
+                <div className="iv-row">
+                  <span>Capital de départ</span>
+                  <span className="iv-row-v">{fmtEur(breakdown.rules.initial_cash, 0)}</span>
+                </div>
+                <div className="iv-row">
+                  <span>Risque par trade</span>
+                  <span className="iv-row-v">{fmtPct(breakdown.rules.risk_pct, 2)}</span>
+                </div>
+                <div className="iv-row">
+                  <span>Montant max. par position</span>
+                  <span className="iv-row-v">{fmtPct(breakdown.rules.max_notional_pct, 0)} du capital</span>
+                </div>
+                <div className="iv-row">
+                  <span>Positions simultanées</span>
+                  <span className="iv-row-v">{breakdown.rules.max_open_positions != null ? `${breakdown.rules.max_open_positions} au plus` : "—"}</span>
+                </div>
+                <div className="iv-row">
+                  <span>Risque ouvert total</span>
+                  <span className="iv-row-v">{fmtPct(breakdown.rules.max_open_risk_pct, 1)} au plus</span>
+                </div>
+                <div className="iv-row">
+                  <span>Perte du jour</span>
+                  <span className="iv-row-v">arrêt à {fmtPct(breakdown.rules.daily_loss_limit_pct, 1)}</span>
+                </div>
+                <div className="iv-row">
+                  <span>Ventes à découvert</span>
+                  <span className="iv-row-v">{breakdown.rules.allow_short ? 'autorisées' : 'interdites (achats seulement)'}</span>
+                </div>
+                <div className="iv-row">
+                  <span>Bougies du scan automatique</span>
+                  <span className="iv-row-v">{(breakdown.rules.auto_timeframes ?? []).map((t) => t.toUpperCase()).join(', ') || '—'}</span>
+                </div>
+                <div className="iv-row">
+                  <span>Objectif</span>
+                  <span className="iv-row-v">{breakdown.rules.take_profit_r != null ? `${breakdown.rules.take_profit_r} R` : '—'}</span>
+                </div>
+                <div className="iv-row">
+                  <span>Liquidité minimale</span>
+                  <span className="iv-row-v">
+                    {breakdown.rules.max_friction_bps != null ? `frais de marché ≤ ${breakdown.rules.max_friction_bps} pb par côté` : '—'}
+                    {breakdown.rules.min_quote_volume_24h != null
+                      ? ` · volume 24 h ≥ ${breakdown.rules.min_quote_volume_24h.toLocaleString('fr-FR')}`
+                      : ''}
+                  </span>
+                </div>
+                <div className="iv-row">
+                  <span>Filtres structure / Fibonacci / RSI / flux / régime</span>
+                  <span className="iv-row-v">{modeFr(breakdown.rules.filters_mode)}</span>
+                </div>
+                <div className="iv-row">
+                  <span>Fenêtres de sessions</span>
+                  <span className="iv-row-v">{modeFr(breakdown.rules.decision_windows_mode)}</span>
+                </div>
+                {enginesFr(breakdown.rules.engines).length > 0 ? (
+                  <div className="iv-row pf-row-wrap">
+                    <span>Décident pour ce compte</span>
+                    <span className="iv-row-v">{enginesFr(breakdown.rules.engines).join(', ')}</span>
+                  </div>
+                ) : null}
+                {arbitrationFr(breakdown.rules.arbitration) ? (
+                  <p className="iv-note pf-small">
+                    <b>Arbitrage :</b> {arbitrationFr(breakdown.rules.arbitration)}
+                  </p>
+                ) : null}
+                <div className="pf-universe">
+                  {universeByClass(breakdown.universe.symbols).map((g) => (
+                    <div key={g.asset_class} className="pf-universe-group">
+                      <div className="iv-cap">
+                        {g.label} · {g.symbols.length}
+                      </div>
+                      <div className="pf-universe-list">
+                        {g.symbols.map((sym) => (
+                          <span key={sym} className="iv-tag is-muted">
+                            {displaySymbol(sym)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {breakdown.universe.exclusions.length > 0 ? (
+                  <div className="pf-universe-group">
+                    <div className="iv-cap">Exclus · {breakdown.universe.exclusions.length}</div>
+                    {breakdown.universe.exclusions.map((x) => (
+                      <div key={x.symbol} className="iv-row pf-row-wrap">
+                        <span>{displaySymbol(x.symbol)}</span>
+                        <span className="iv-row-v dim">{x.reason}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="iv-empty">{loading ? 'Chargement…' : 'Règles indisponibles.'}</div>
             )}
           </section>
         </div>
@@ -1213,6 +1285,7 @@ export function PortfolioPage() {
                   </span>
                 </div>
               </div>
+              <ObservedFilters signal={fiche.entry_signal} />
               {fiche.source !== 'rs_d1' ? (
                 <MtfPanel
                   stored={storedMatrix(fiche.entry_signal)}

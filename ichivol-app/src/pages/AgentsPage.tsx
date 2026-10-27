@@ -248,7 +248,7 @@ export function AgentsPage() {
           {autonomy == null
             ? 'Impossible de lire l’état du pilote automatique pour le moment.'
             : autonomy
-              ? 'Pilote automatique actif : à chaque bougie clôturée où un portefeuille veut ouvrir ou fermer, Ève juge la proposition et l’exécute en paper si elle l’accepte, sans confirmation humaine.'
+              ? 'Pilote automatique actif : à chaque bougie clôturée où le moteur veut ouvrir ou fermer une position du portefeuille, Ève juge la proposition et l’exécute en paper si elle l’accepte, sans confirmation humaine.'
               : 'Pilote automatique coupé : le moteur ouvre et ferme seul, Ève observe. Vous pouvez quand même lui demander son avis ci-dessous.'}
         </span>
       </p>

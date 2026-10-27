@@ -15,6 +15,7 @@ import {
   type DeciderScore,
 } from '../../lib/decider'
 import {
+  decisionRuleFr,
   engineProposalFr,
   eveActionFr,
   getEveDecisions,
@@ -29,15 +30,20 @@ import {
 } from '../../lib/eveDecisions'
 import { eveModeById } from '../../lib/eveModes'
 import {
+  loadAccountLots,
   getShadowStats,
-  listPaperPortfolios,
-  listPaperPositions,
-  type PaperPortfolioRow,
   type PaperPosition,
   type ShadowBucket,
   type ShadowStats,
 } from '../../lib/paper'
-import { portfolioLabel } from '../../lib/rsPortfolio'
+import { MAIN_PORTFOLIO_CODE, portfolioLabel } from '../../lib/mainPortfolio'
+import {
+  activeRows,
+  assetClassLabel,
+  deciderScores,
+  getPortfolioBreakdown,
+  type PortfolioBreakdown,
+} from '../../lib/breakdown'
 import { fmtEur, fmtPct } from '../../pages/desk/deskFormat'
 import './EveResults.css'
 
@@ -242,7 +248,7 @@ function Meter({ label, value, part, total, tone }: { label: string; value: stri
 type Row = { key: string; d: EveDecision; p: EngineProposalOutcome; verdict: ProposalVerdict }
 
 /** Le dossier d'une proposition, en carte signature : moteur → Ève, pourquoi, les quatre avis, qui avait raison. */
-function DossierCard({ row, bookLabel }: { row: Row; bookLabel: string }) {
+function DossierCard({ row }: { row: Row }) {
   const { d, p, verdict } = row
   const engine = engineProposalFr(p)
   const eve = eveActionFr(p.eve_action)
@@ -254,7 +260,8 @@ function DossierCard({ row, bookLabel }: { row: Row; bookLabel: string }) {
     <>
       <div className="dv-d-top">
         <div className="iv-meta dv-d-meta">
-          Dossier #{d.id.slice(0, 8)} · {d.symbol} · {d.timeframe} · portefeuille {bookLabel} · {fmtWhen(d.created_at)}
+          Dossier #{d.id.slice(0, 8)} · {d.symbol} · {d.timeframe} · {portfolioLabel(p.portfolio_code)} · {fmtWhen(d.created_at)}
+          {decisionRuleFr(d.decision_rule) ? ` · règle d’Ève : ${decisionRuleFr(d.decision_rule)}` : ''}
         </div>
         {decider ? <DeciderTag decider={decider} /> : null}
       </div>
@@ -380,7 +387,7 @@ export function EveResults({
   aside?: ReactNode
 }) {
   const [positions, setPositions] = useState<PaperPosition[]>([])
-  const [portfolios, setPortfolios] = useState<PaperPortfolioRow[]>([])
+  const [breakdown, setBreakdown] = useState<PortfolioBreakdown | null>(null)
   const [decisions, setDecisions] = useState<EveDecision[]>([])
   const [shadow, setShadow] = useState<ShadowStats | null>(null)
   const [eveShadow, setEveShadow] = useState<ShadowStats | null>(null)
@@ -389,18 +396,19 @@ export function EveResults({
   const [errors, setErrors] = useState<string[]>([])
   const [filter, setFilter] = useState<VerdictFilter>('all')
   const [openRow, setOpenRow] = useState<string | null>(null)
-  const [scoreTab, setScoreTab] = useState<'decider' | 'book'>('decider')
+  const [scoreTab, setScoreTab] = useState<'decider' | 'asset'>('decider')
   const dossierRef = useRef<HTMLElement | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     const errs: string[] = []
-    const [pos, pfs, dec, sh, esh, ash] = await Promise.all([
-      listPaperPositions().catch(() => {
-        errs.push('les trades')
-        return [] as PaperPosition[]
-      }),
-      listPaperPortfolios().catch(() => [] as PaperPortfolioRow[]),
+    const [pos, bd, dec, sh, esh, ash] = await Promise.all([
+      // Lots du portefeuille unique (ICHIVOL_MAIN_V1) : tous les ouverts + les 200 plus récents.
+      loadAccountLots(200).catch(() => {
+          errs.push('les trades')
+          return [] as PaperPosition[]
+        }),
+      getPortfolioBreakdown(MAIN_PORTFOLIO_CODE).catch(() => null),
       getEveDecisions(200).catch(() => {
         errs.push('les décisions d’Ève')
         return null
@@ -419,7 +427,7 @@ export function EveResults({
       }),
     ])
     setPositions(pos)
-    setPortfolios(pfs)
+    setBreakdown(bd)
     setDecisions(dec?.results ?? [])
     setShadow(sh)
     setEveShadow(esh)
@@ -432,28 +440,12 @@ export function EveResults({
     void load()
   }, [load, refreshKey])
 
-  const bookLabelById = useMemo(
-    () => Object.fromEntries(portfolios.map((p) => [p.id, portfolioLabel(p.code, p.label)])),
-    [portfolios],
+  /** Bilan par décideur : celui du moteur (/breakdown) ; repli sur les lots chargés si la route ne répond pas. */
+  const scores = useMemo(
+    () => (breakdown ? deciderScores(breakdown.by_decider) : scoreByDecider(positions)),
+    [breakdown, positions],
   )
-  const bookLabelByCode = useMemo(
-    () => Object.fromEntries(portfolios.map((p) => [p.code, portfolioLabel(p.code, p.label)])),
-    [portfolios],
-  )
-
-  const scores = useMemo(() => scoreByDecider(positions), [positions])
-
-  /** Par livre : bilan clôturé d'Ève et du moteur seul côte à côte. */
-  const perBook = useMemo(() => {
-    const ids = [...new Set(positions.map((p) => p.portfolio_id ?? ''))]
-    return ids
-      .map((id) => {
-        const own = positions.filter((p) => (p.portfolio_id ?? '') === id)
-        return { id, label: bookLabelById[id] ?? 'Portefeuille', scores: scoreByDecider(own) }
-      })
-      .filter((b) => DECIDERS.some((d) => b.scores[d].trades > 0 || b.scores[d].open > 0))
-      .sort((a, b) => a.label.localeCompare(b.label, 'fr'))
-  }, [positions, bookLabelById])
+  const byAsset = useMemo(() => activeRows(breakdown?.by_asset_class ?? []), [breakdown])
 
   const rows = useMemo<Row[]>(
     () =>
@@ -506,7 +498,7 @@ export function EveResults({
 
       <article className="apex-card dv-dossier" ref={dossierRef} aria-live="polite">
         {selected ? (
-          <DossierCard row={selected} bookLabel={bookLabelByCode[selected.p.portfolio_code] ?? selected.p.portfolio_code} />
+          <DossierCard row={selected} />
         ) : (
           <>
             <div className="iv-label">Dossier d’Ève</div>
@@ -539,11 +531,11 @@ export function EveResults({
               <button
                 type="button"
                 role="tab"
-                className={`iv-card-tab${scoreTab === 'book' ? ' is-on' : ''}`}
-                aria-selected={scoreTab === 'book'}
-                onClick={() => setScoreTab('book')}
+                className={`iv-card-tab${scoreTab === 'asset' ? ' is-on' : ''}`}
+                aria-selected={scoreTab === 'asset'}
+                onClick={() => setScoreTab('asset')}
               >
-                Par portefeuille
+                Par classe d’actifs
               </button>
             </div>
             <div className="iv-card-tools">Trades clôturés · net de frais</div>
@@ -587,44 +579,37 @@ export function EveResults({
                 </tbody>
               </table>
             </div>
-          ) : perBook.length > 0 ? (
+          ) : byAsset.length > 0 ? (
             <div className="iv-card-body is-flush iv-table-wrap">
               <table className="iv-table">
                 <thead>
                   <tr>
-                    <th>Portefeuille</th>
-                    {DECIDERS.map((d) => (
-                      <th key={d} className="n">
-                        {DECIDER_LABEL[d]}
-                      </th>
-                    ))}
+                    <th>Classe d’actifs</th>
+                    <th className="n">Trades</th>
+                    <th className="n">Réussite</th>
+                    <th className="n">Frais</th>
+                    <th className="n">Net</th>
+                    <th className="n">Ouvertes</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {perBook.map((b) => (
-                    <tr key={b.id}>
-                      <td className="sym">{b.label}</td>
-                      {DECIDERS.map((d) => {
-                        const s = b.scores[d]
-                        return (
-                          <td key={d} className="n">
-                            {s.trades > 0 ? (
-                              <span className={toneOf(s.net)}>
-                                {signedEur(s.net)} <small className="muted">({s.trades})</small>
-                              </span>
-                            ) : (
-                              <span className="muted">{s.open > 0 ? `${s.open} ouverte${s.open > 1 ? 's' : ''}` : '—'}</span>
-                            )}
-                          </td>
-                        )
-                      })}
+                  {byAsset.map((a) => (
+                    <tr key={a.asset_class}>
+                      <td className="sym">{assetClassLabel(a)}</td>
+                      <td className="n">{a.trades}</td>
+                      <td className="n">{a.win_rate != null && a.trades > 0 ? fmtPct(a.win_rate, 0, false) : '—'}</td>
+                      <td className="n muted">{a.trades > 0 ? fmtEur(a.fees, 2) : '—'}</td>
+                      <td className={`n dv-strong ${toneOf(a.net)}`}>{a.trades > 0 ? signedEur(a.net) : '—'}</td>
+                      <td className="n">{a.open}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <p className="iv-empty">{loading ? 'Chargement…' : 'Aucun trade par portefeuille pour l’instant.'}</p>
+            <p className="iv-empty">
+              {loading ? 'Chargement…' : breakdown ? 'Aucun trade pour l’instant.' : 'Bilan par classe indisponible.'}
+            </p>
           )}
           <details className="dv-legend">
             <summary>Qui est qui ?</summary>
@@ -750,7 +735,7 @@ export function EveResults({
           <details className="dv-legend dv-howto">
             <summary>Comment lire ce tableau</summary>
             <p className="iv-note">
-              Chaque ligne est une proposition du moteur sur un portefeuille (acheter, vendre à découvert ou clôturer).
+              Chaque ligne est une proposition du moteur sur le portefeuille (acheter, vendre à découvert ou clôturer).
               Si Ève n’est pas d’accord, le moteur trade quand même et la réponse d’Ève est gardée : le résultat du
               trade dira qui avait raison. Si Ève est d’accord, l’audit indépendant tranche : il laisse passer le trade
               ou le bloque. Le Risk Kernel garde toujours le dernier mot. Les stops et objectifs ferment les positions
@@ -793,7 +778,6 @@ export function EveResults({
                   <tr>
                     <th>Heure</th>
                     <th>Actif</th>
-                    <th>Portefeuille</th>
                     <th>Moteur → Ève</th>
                     <th className="n">Cohérence</th>
                     <th>Issue</th>
@@ -811,13 +795,15 @@ export function EveResults({
                       <tr key={key} className={isSel ? 'is-selected' : undefined} onClick={() => setOpenRow(key)}>
                         <td className="mono muted">{fmtWhen(d.created_at)}</td>
                         <td className="sym">{d.symbol}</td>
-                        <td>{bookLabelByCode[p.portfolio_code] ?? p.portfolio_code}</td>
                         <td className="dv-flow">
                           <span className={actionTone(engine)}>{engine}</span>
                           <span className="dv-flow-ar" aria-label="puis Ève :">
                             →
                           </span>
                           <b className={p.eve_accepts ? 'is-agree' : 'is-refuse'}>{eveActionFr(p.eve_action)}</b>
+                          {decisionRuleFr(d.decision_rule) ? (
+                            <small className="muted"> · {decisionRuleFr(d.decision_rule)}</small>
+                          ) : null}
                         </td>
                         <td className="n">{d.coherence != null ? fmtPct(d.coherence, 0, false) : '—'}</td>
                         <td>
@@ -902,8 +888,8 @@ export function EveResults({
           </div>
           <div className="iv-card-body">
             <p className="iv-note dv-intro">
-              Dans les portefeuilles à filtres (comme « Tout combiné »), un signal du moteur peut être refusé par la
-              structure, Fibonacci ou le RSI avant même d’arriver à Ève. Chaque refus est suivi à blanc : on regarde
+              Dans l’ancien portefeuille à filtres « Tout combiné » (retiré le 27/10/2026, historique conservé), un signal du
+              moteur pouvait être refusé par la structure, Fibonacci ou le RSI avant même d’arriver à Ève. Chaque refus est suivi à blanc : on regarde
               s’il aurait gagné ou perdu. Si les trades refusés auraient surtout gagné, le filtre est trop sévère.
             </p>
             {!shadow || shadow.n_total === 0 ? (
@@ -961,7 +947,6 @@ export function EveResults({
                 <tr>
                   <th>Actif</th>
                   <th>Sens</th>
-                  <th>Portefeuille</th>
                   <th>Entrée</th>
                   <th className="n">Résultat</th>
                 </tr>
@@ -975,7 +960,6 @@ export function EveResults({
                         {p.direction === 'SHORT' ? 'Vente à découvert' : 'Achat'}
                       </span>
                     </td>
-                    <td>{bookLabelById[p.portfolio_id ?? ''] ?? 'Portefeuille'}</td>
                     <td className="mono muted">{fmtWhen(p.entry_time)}</td>
                     <td className={`n ${p.status === 'OPEN' ? 'muted' : toneOf(p.realized_pnl)}`}>
                       {p.status === 'OPEN' ? 'En cours' : signedEur(p.realized_pnl)}

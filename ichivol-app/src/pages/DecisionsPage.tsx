@@ -10,8 +10,7 @@ import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
 import { MtfPanel } from '../components/MtfPanel'
 import { ChartIntelligencePanel } from '../components/chart-intelligence'
 import { PaperConfirmSheet } from '../components/PaperConfirmSheet'
-import { BASELINE_PORTFOLIO_CODE, SESSIONS_CODE } from '../lib/rsPortfolio'
-import { loadAllBooks } from '../lib/allBooks'
+import { MAIN_PORTFOLIO_CODE, MAIN_PORTFOLIO_LABEL } from '../lib/mainPortfolio'
 import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
 import '../components/engineEvidence.css'
 import {
@@ -26,6 +25,7 @@ import { labelEngineCode } from '../lib/engineTerminology'
 import { displaySymbol } from '../lib/markets'
 import { toEngineSymbol } from '../lib/engineSymbol'
 import {
+  getPaperOverview,
   listPaperPositions,
   openPaperPosition,
   proposePaperTrade,
@@ -73,7 +73,6 @@ type PaperConfirmState = {
   symbol: string
   timeframe: string
   intent: OrderIntent | null
-  defaultPortfolio: string
   /** Fiche au moment de l'ouverture du ticket : la fiche se ferme pour laisser le ticket au premier plan. */
   detail: DecisionDetail | null
 }
@@ -264,10 +263,6 @@ export function DecisionsPage() {
   const [detailSym, setDetailSym] = useState<string | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [openPaperSymbols, setOpenPaperSymbols] = useState<ReadonlySet<string>>(() => new Set())
-  /** Symbole → portefeuilles où il est ouvert (tous les livres, pas seulement IchiVol). */
-  const [openBooksBySymbol, setOpenBooksBySymbol] = useState<ReadonlyMap<string, { code: string; label: string }[]>>(
-    () => new Map(),
-  )
   const [paperConfirm, setPaperConfirm] = useState<PaperConfirmState | null>(null)
   const [paperToast, setPaperToast] = useState<string | null>(null)
   const [paperConfirming, setPaperConfirming] = useState(false)
@@ -304,21 +299,10 @@ export function DecisionsPage() {
 
   const refreshOpenPaperSymbols = useCallback(async () => {
     try {
-      const books = await loadAllBooks()
-      if (books.length === 0) throw new Error('no books')
-      const bySymbol = new Map<string, { code: string; label: string }[]>()
-      for (const b of books) {
-        for (const p of b.overview.positions ?? []) {
-          if (String(p.status).toUpperCase() !== 'OPEN') continue
-          const list = bySymbol.get(p.symbol) ?? []
-          if (!list.some((x) => x.code === b.code)) list.push({ code: b.code, label: b.label })
-          bySymbol.set(p.symbol, list)
-        }
-      }
-      setOpenBooksBySymbol(bySymbol)
-      // « Déjà ouvert » pour le ticket manuel = déjà en lot sur IchiVol (un lot par marché et par livre).
+      // Un seul portefeuille paper : « déjà ouvert » = un lot sur ce symbole dans ICHIVOL_MAIN_V1 (un lot par symbole).
+      const ov = await getPaperOverview(MAIN_PORTFOLIO_CODE)
       setOpenPaperSymbols(
-        new Set([...bySymbol].filter(([, l]) => l.some((x) => x.code === BASELINE_PORTFOLIO_CODE)).map(([sym]) => sym)),
+        new Set((ov.positions ?? []).filter((p) => String(p.status).toUpperCase() === 'OPEN').map((p) => p.symbol)),
       )
     } catch {
       try {
@@ -451,8 +435,6 @@ export function DecisionsPage() {
         symbol: detailSym,
         timeframe: tf,
         intent: intent ?? detail?.order_intent ?? null,
-        // Déjà en lot sur IchiVol (un lot par marché) : on propose directement Sessions.
-        defaultPortfolio: openPaperSymbols.has(detailSym) ? SESSIONS_CODE : BASELINE_PORTFOLIO_CODE,
         detail,
       })
       // La fiche est un <dialog> modal (top layer) : tant qu'elle est ouverte, le ticket reste derrière.
@@ -530,7 +512,7 @@ export function DecisionsPage() {
         journalWarn = ' · journal non enregistré (réessayer depuis le Journal)'
       }
       const already = pos.already_open === true || pos.created === false
-      const pfLabel = order.portfolioCode === SESSIONS_CODE ? 'Sessions' : 'IchiVol'
+      const pfLabel = MAIN_PORTFOLIO_LABEL
       // La fiche est fermée pendant le ticket : le résultat s'affiche en tête de page.
       setPaperToast(
         (already
@@ -538,9 +520,7 @@ export function DecisionsPage() {
           : `${displaySymbol(pos.symbol)} · achat paper ouvert sur ${pfLabel} @ ${pos.entry_price}`) +
           journalWarn,
       )
-      if ((order.portfolioCode ?? BASELINE_PORTFOLIO_CODE) === BASELINE_PORTFOLIO_CODE) {
-        setOpenPaperSymbols((prev) => new Set([...prev, pos.symbol]))
-      }
+      setOpenPaperSymbols((prev) => new Set([...prev, pos.symbol]))
       setPaperConfirm(null)
       void refreshOpenPaperSymbols()
     } catch (err: unknown) {
@@ -566,7 +546,6 @@ export function DecisionsPage() {
       ? `${Math.round(detail.confidence * 100)} / 100`
       : '—'
   const alreadyOpen = detailSym ? openPaperSymbols.has(detailSym) : false
-  const openIn = detailSym ? (openBooksBySymbol.get(detailSym) ?? []) : []
   const detailEveDossier = detailSym
     ? eveBySymbol.get(String(detailSym).toUpperCase())
     : undefined
@@ -983,10 +962,8 @@ export function DecisionsPage() {
             )}
             <div className="opps-notice">
               {alreadyOpen
-                ? `Position paper déjà ouverte sur ce symbole dans : ${openIn.map((b) => b.label).join(', ')}. Vous pouvez l’ouvrir sur Sessions.`
-                : openIn.length > 0
-                  ? `Position paper déjà ouverte sur ce symbole dans : ${openIn.map((b) => b.label).join(', ')}.`
-                  : 'Lecture moteur + Chart Intelligence. Enregistrement journal ou ouverture paper au choix.'}
+                ? `Position paper déjà ouverte sur ce symbole dans ${MAIN_PORTFOLIO_LABEL} : un seul lot par symbole, le moteur refuse un second achat.`
+                : 'Lecture moteur + Chart Intelligence. Enregistrement journal ou ouverture paper au choix.'}
             </div>
             {saveMsg && (
               <div className={`opps-msg ${saveMsg.ok ? 'is-ok' : 'is-err'}`} role="status">
@@ -1020,11 +997,11 @@ export function DecisionsPage() {
               <button
                 type="button"
                 className="iv-btn iv-btn--buy"
-                disabled={paperBusy || paperConfirming || detailLoading}
+                disabled={paperBusy || paperConfirming || detailLoading || alreadyOpen}
                 onClick={() => void startPaperOpen()}
               >
                 {alreadyOpen
-                  ? 'Déjà dans IchiVol · ouvrir sur Sessions →'
+                  ? `Déjà ouvert dans ${MAIN_PORTFOLIO_LABEL}`
                   : paperBusy
                     ? 'Préparation paper…'
                     : 'Ouvrir une position paper →'}
@@ -1040,7 +1017,6 @@ export function DecisionsPage() {
           timeframe={paperConfirm.timeframe}
           symbolLabel={displaySymbol(paperConfirm.symbol)}
           intent={paperConfirm.intent}
-          defaultPortfolio={paperConfirm.defaultPortfolio}
           confirming={paperConfirming}
           error={paperConfirmError}
           onConfirm={(order) => void executePaperConfirm(order)}

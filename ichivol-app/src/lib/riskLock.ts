@@ -1,4 +1,6 @@
-/** T13c — kill switch / daily loss lock client. */
+/** T13c — kill switch / daily loss lock client (portefeuille unique ICHIVOL_MAIN_V1). */
+
+import { MAIN_PORTFOLIO_CODE } from './mainPortfolio'
 
 export type RiskLockState = {
   portfolio_code?: string
@@ -16,7 +18,7 @@ async function parseError(res: Response): Promise<string> {
   return body?.detail ?? body?.message ?? body?.error ?? `Erreur ${res.status}`
 }
 
-const CODE = 'ICHIVOL_BASELINE_V1'
+const CODE = MAIN_PORTFOLIO_CODE
 
 export async function getRiskLock(code = CODE): Promise<RiskLockState> {
   const res = await fetch(`/api/engine/paper/portfolios/${encodeURIComponent(code)}/risk-lock`, {

@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useState } from "react"
 import { EVE_MODES, JEV_PRIMITIVES_EXPLAIN } from "../../lib/eveModes"
 import { jevServiceLabel } from "../../pages/settings/eveCopy"
 import { eveActionFr } from "../../lib/eveDecisions"
+import { portfolioLabel } from "../../lib/mainPortfolio"
 import "./EveDossiersPanel.css"
 
 type TimelineEvent = {
@@ -128,7 +129,7 @@ function proposalSummary(d: DossierRow): string {
     .map((p) => {
       const what = p.engine_action === "CLOSE" ? "fermer" : `ouvrir ${p.engine_direction === "SHORT" ? "à la baisse" : "à la hausse"}`
       const eve = p.eve_accepts ? (p.executed ? "Ève accepte, exécuté" : "Ève accepte, non exécuté") : "Ève refuse"
-      return `${p.portfolio_code ?? "?"} : ${what} → ${eve}`
+      return `${portfolioLabel(p.portfolio_code)} : ${what} → ${eve}`
     })
     .join(" · ")
 }
@@ -289,7 +290,7 @@ export function EveDossiersPanel({ autonomy, refreshKey = 0 }: { autonomy: boole
           <p className="iv-note ed-intro">
             Un dossier est écrit à chaque fois qu'Ève évalue un instrument : ce que le moteur seul aurait
             fait, ce que chaque mode a répondu, le contrôle d'entrée et le Risk Kernel. Avec le pilote
-            automatique, un dossier naît à chaque proposition d'un portefeuille et Ève l'accepte ou le refuse
+            automatique, un dossier naît à chaque proposition du moteur sur le portefeuille et Ève l'accepte ou le refuse
             sans intervention humaine. Tout reste en paper, jamais d'argent réel.
           </p>
           {lastSubmit ? (
@@ -305,7 +306,7 @@ export function EveDossiersPanel({ autonomy, refreshKey = 0 }: { autonomy: boole
             </p>
           ) : items.length === 0 ? (
             <p className="iv-empty">
-              Aucun Dossier pour l'instant. Ève en écrit un à chaque fois qu'un portefeuille propose un
+              Aucun Dossier pour l'instant. Ève en écrit un à chaque fois que le moteur propose un
               trade (autonomie activée) ou quand on lui demande d'évaluer un instrument.
             </p>
           ) : (
@@ -317,7 +318,7 @@ export function EveDossiersPanel({ autonomy, refreshKey = 0 }: { autonomy: boole
                     <th>Instrument</th>
                     <th>Moteur seul</th>
                     <th>Ève</th>
-                    <th>Propositions des portefeuilles</th>
+                    <th>Propositions du moteur</th>
                     <th className="n">Cohérence</th>
                     <th>Résultat</th>
                     <th>Historique</th>

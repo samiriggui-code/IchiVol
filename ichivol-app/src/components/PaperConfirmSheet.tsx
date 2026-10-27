@@ -10,7 +10,7 @@ import {
 } from '../lib/paper'
 import { eur, price as fmtPrice, signedEur } from '../lib/tradeStory'
 import { ScenariosPanel } from './ScenariosPanel'
-import { BASELINE_PORTFOLIO_CODE, MANUAL_PORTFOLIOS } from '../lib/rsPortfolio'
+import { MAIN_PORTFOLIO_CODE, MAIN_PORTFOLIO_LABEL } from '../lib/mainPortfolio'
 import './PaperSheets.css'
 
 const AMOUNT_CHIPS = [100, 250, 500, 1000]
@@ -34,7 +34,6 @@ export function PaperConfirmSheet({
   timeframe,
   symbolLabel,
   intent,
-  defaultPortfolio = BASELINE_PORTFOLIO_CODE,
   confirming,
   error,
   onConfirm,
@@ -45,8 +44,6 @@ export function PaperConfirmSheet({
   symbolLabel: string
   /** Proposition du moteur (taille suggérée). Peut être absente ou non actionnable. */
   intent: OrderIntent | null
-  /** Portefeuille présélectionné (IchiVol ou Sessions). */
-  defaultPortfolio?: string
   confirming?: boolean
   error?: string | null
   onConfirm: (order: ManualOrderInput) => void
@@ -61,7 +58,8 @@ export function PaperConfirmSheet({
   const [amount, setAmount] = useState<string>(String(suggested ?? 250))
   const [stopPct, setStopPct] = useState<number>(suggestedStop ?? 0.02)
   const [tpR, setTpR] = useState<number>(2)
-  const [portfolioCode, setPortfolioCode] = useState<string>(defaultPortfolio)
+  // Un seul portefeuille paper : tout ordre manuel va sur ICHIVOL_MAIN_V1.
+  const portfolioCode = MAIN_PORTFOLIO_CODE
   const [preview, setPreview] = useState<ManualPreview | null>(null)
   const [previewErr, setPreviewErr] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -175,22 +173,11 @@ export function PaperConfirmSheet({
           </div>
 
           <section className="ot-card">
-            <h3 className="ot-card-title">Sur quel portefeuille ?</h3>
-            <div className="order-chips" role="radiogroup" aria-label="Portefeuille">
-              {MANUAL_PORTFOLIOS.map((p) => (
-                <button
-                  type="button"
-                  key={p.code}
-                  role="radio"
-                  aria-checked={portfolioCode === p.code}
-                  className={`iv-btn iv-btn--sm order-chip${portfolioCode === p.code ? ' is-on' : ''}`}
-                  onClick={() => setPortfolioCode(p.code)}
-                  disabled={confirming}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
+            <h3 className="ot-card-title">Portefeuille</h3>
+            <p className="ot-engine-copy">
+              {MAIN_PORTFOLIO_LABEL} — le portefeuille paper unique. Le moteur refuse l’achat si une position est déjà
+              ouverte sur ce symbole.
+            </p>
           </section>
 
           <section className="ot-card">

@@ -22,8 +22,7 @@
   text-decoration: none;
 }
 .pf-page .pf-section,
-.pf-page .iv-kpis,
-.pf-page .pf-switch {
+.pf-page .iv-kpis {
   margin-bottom: var(--gap);
 }
 .pf-page .pf-small {
@@ -40,25 +39,6 @@
 .pf-page .iv-chip b {
   font-weight: 600;
   letter-spacing: 0.08em;
-}
-
-/* — Sélecteur de portefeuille (onglets d'une carte) — */
-.pf-page .pf-switch .iv-card-head {
-  border-bottom: 0;
-}
-.pf-page .pf-switch .iv-card-tab {
-  padding: 0 14px;
-}
-.pf-page .pf-swatch {
-  display: inline-block;
-  flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 2px;
-}
-.pf-page .pf-tab-count {
-  font: 500 10.5px var(--mono);
-  color: var(--muted);
 }
 
 /* — KPI : 8 tuiles sur une ligne, 4 puis 2 colonnes en dessous — */
@@ -238,19 +218,27 @@
   color: var(--muted);
   font-size: 11px;
 }
-.pf-page .pf-book-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
 .pf-page .pf-stack {
   display: flex;
   flex-direction: column;
   gap: var(--gap);
   min-width: 0;
 }
-.pf-page .pf-books .iv-table-wrap {
-  max-height: 340px;
+/* — Univers du compte (Règles et univers) — */
+.pf-page .pf-universe {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.pf-page .pf-universe-group {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+.pf-page .pf-universe-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 /* — Fiche d'une position — */
@@ -309,70 +297,6 @@
   display: flex;
   justify-content: flex-end;
   margin-top: 14px;
-}
-
-/* — Futures & Crypto (FuturesCryptoPanel) — */
-.pf-page .fc-stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-}
-.pf-page .fc-note {
-  margin: 0 0 10px;
-  font-size: 12px;
-  color: var(--text-2);
-  line-height: 1.55;
-}
-.pf-page .fc-hint {
-  display: block;
-  margin: 8px 0 0;
-  font-size: 11px;
-  color: var(--muted);
-  line-height: 1.45;
-}
-.pf-page .fc-sub {
-  margin: 14px 0 4px;
-  font: 500 9.5px var(--mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.pf-page .fc-market .iv-btn {
-  margin: 4px 0 6px;
-}
-.pf-page .fc-modes {
-  display: grid;
-  gap: 8px;
-  margin: 0 0 12px;
-}
-.pf-page .fc-mode {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 10px 12px;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-s);
-  background: var(--ghost-bg);
-  cursor: pointer;
-}
-.pf-page .fc-mode.active {
-  border-color: var(--cyan-line);
-  background: var(--cyan-soft);
-}
-.pf-page .fc-mode span {
-  display: grid;
-  gap: 4px;
-}
-.pf-page .fc-mode small {
-  color: var(--muted);
-  line-height: 1.45;
-}
-.pf-page .fc-mode input {
-  margin-top: 2px;
-  accent-color: var(--cyan);
-}
-.pf-page .fc-bar {
-  margin: 4px 0 10px;
 }
 
 /* — Responsive — */
