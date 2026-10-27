@@ -44,6 +44,7 @@ import {
   type Signal,
   type VolumePoint,
 } from '../lib/types'
+import { parisTickMarkFormatter, parisTimeFormatter } from '../lib/chartTime'
 
 export type ChartPickPoint = { time: number; price: number }
 
@@ -419,8 +420,8 @@ export function PriceChart({
       width: el.clientWidth || 800,
       height: el.clientHeight || 480,
       rightPriceScale: { borderVisible: false },
-      timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false },
-      localization: { locale: 'fr-FR', priceFormatter: fmtAxisPrice },
+      timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false, tickMarkFormatter: parisTickMarkFormatter },
+      localization: { locale: 'fr-FR', priceFormatter: fmtAxisPrice, timeFormatter: parisTimeFormatter },
     })
 
     const ro = new ResizeObserver(() => {

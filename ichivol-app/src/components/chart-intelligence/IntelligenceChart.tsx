@@ -29,6 +29,7 @@ import { THEME_CHANGE_EVENT } from '../../lib/theme'
 import type { ChartCamera } from '../../lib/chartIntelligenceBriefing'
 import type { Candle } from '../../lib/types'
 import { ChartProjectionContext, type ChartProjection } from './chartProjection'
+import { parisTickMarkFormatter, parisTimeFormatter } from '../../lib/chartTime'
 
 interface Props {
   candles: Candle[]
@@ -249,8 +250,8 @@ export function IntelligenceChart({
       width: el.clientWidth || 800,
       height: el.clientHeight || height,
       rightPriceScale: { borderVisible: false },
-      timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false, rightOffset: 6 },
-      localization: { locale: 'fr-FR', priceFormatter: fmtAxisPrice },
+      timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false, tickMarkFormatter: parisTickMarkFormatter, rightOffset: 6 },
+      localization: { locale: 'fr-FR', priceFormatter: fmtAxisPrice, timeFormatter: parisTimeFormatter },
     })
     const quiet = { lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false } as const
     const area = { ...quiet, lineWidth: 1 as const, lineColor: 'transparent' }
