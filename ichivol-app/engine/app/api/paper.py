@@ -7,7 +7,7 @@ import time
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from app.api.common import (
+from app.api.common import (  # noqa: F401 -- re-exports monkeypatched by tests
     _atr_params_override,
     _latest_marks,
     _paper_perf_dict,
@@ -22,15 +22,16 @@ from app.paper import engine as paper_engine
 from sqlalchemy import select
 from app.paper.costs import compute_costs
 from app.paper.performance import compute_performance, compute_portfolio_performance
-from app.paper.portfolio import (
-    ensure_baseline_portfolio,
-    ensure_portfolio,
+from app.paper.portfolio import (  # noqa: F401 -- get_portfolio_by_code re-exported
+    ensure_main_portfolio,
     ensure_syncable_portfolios,
     get_portfolio_by_code,
+    lookup_portfolio,
     list_portfolios,
 )
-from app.paper.strategy_profiles import ALL_PROFILES, BASELINE_CODE
 from app.paper.verdict import compute_progress
+from app.screener.cache import screener_cache  # noqa: F401 -- monkeypatched by tests
+from app.screener.service import scan_symbol  # noqa: F401 -- monkeypatched by tests
 
 
 def _partials_by_position(session, position_ids: list[str]) -> dict[str, list]:
@@ -45,27 +46,45 @@ def _partials_by_position(session, position_ids: list[str]) -> dict[str, list]:
     for e in rows:
         out.setdefault(e.position_id, []).append(e)
     return out
-from app.screener.cache import screener_cache
-from app.screener.service import scan_symbol
 
 router_before_shadow = APIRouter(prefix=settings.engine_api_prefix, tags=["engine"])
 
 @router_before_shadow.get("/paper/positions")
 def list_paper_positions(
-    source: str | None = None, user_id: str | None = None, status: str | None = None
+    source: str | None = None,
+    user_id: str | None = None,
+    status: str | None = None,
+    portfolio_code: str | None = None,
+    limit: int | None = None,
+    offset: int = 0,
 ) -> dict:
     """Virtual positions only (CDC V2 "Paper trading") -- app/paper/engine.py
     owns open/close rules, this just lists them. `source=auto_watchlist`
     (no `user_id`) is the background screener's own shadow portfolio;
-    `source=user_confirmed` + `user_id` is one user's confirmed picks."""
+    `source=user_confirmed` + `user_id` is one user's confirmed picks.
+
+    ``portfolio_code`` (ex. ICHIVOL_MAIN_V1) limite aux lots de ce compte ; ``limit`` / ``offset`` paginent
+    (plus récents d'abord) et ``total`` donne le nombre de lots avant pagination."""
     session = SessionLocal()
     try:
-        positions = paper_engine.list_positions(session, source=source, user_id=user_id, status=status)
+        portfolio_id = None
+        if portfolio_code:
+            pf = lookup_portfolio(session, portfolio_code)
+            if pf is None:
+                raise HTTPException(status_code=404, detail="portfolio_not_found")
+            portfolio_id = pf.id
+        positions = paper_engine.list_positions(
+            session, source=source, user_id=user_id, status=status, portfolio_id=portfolio_id
+        )
+        total = len(positions)
+        if limit is not None:
+            positions = positions[max(offset, 0): max(offset, 0) + max(limit, 0)]
         by = _partials_by_position(session, [p.id for p in positions])
         return {
             "positions": [
                 _paper_position_dict(p, partial_exits=by.get(p.id, [])) for p in positions
-            ]
+            ],
+            "total": total,
         }
     finally:
         session.close()
@@ -77,7 +96,7 @@ def get_paper_performance(source: str | None = None, user_id: str | None = None)
     session = SessionLocal()
     try:
         positions = paper_engine.list_positions(session, source=source, user_id=user_id)
-        portfolio = ensure_baseline_portfolio(session)
+        portfolio = ensure_main_portfolio(session)
         session.commit()
         if source in (None, "auto_watchlist") and user_id is None:
             perf = compute_portfolio_performance(session, portfolio, positions)
@@ -114,7 +133,7 @@ def get_paper_portfolio_overview(code: str) -> dict:
 
     session = SessionLocal()
     try:
-        portfolio = get_portfolio_by_code(session, code)
+        portfolio = lookup_portfolio(session, code)
         if portfolio is None:
             raise HTTPException(status_code=404, detail="portfolio_not_found")
         positions = paper_engine.list_positions(session, portfolio_id=portfolio.id)
@@ -327,10 +346,26 @@ def get_paper_portfolio_reconcile(code: str) -> dict:
 
     session = SessionLocal()
     try:
-        portfolio = get_portfolio_by_code(session, code)
+        portfolio = lookup_portfolio(session, code)
         if portfolio is None:
             raise HTTPException(status_code=404, detail="portfolio_not_found")
         return reconcile_portfolio(session, portfolio)
+    finally:
+        session.close()
+
+
+@router_before_shadow.get("/paper/portfolios/{code}/breakdown")
+def get_paper_portfolio_breakdown(code: str) -> dict:
+    """Bilan par décideur (Ève / moteur contre Ève / moteur seul / manuel) et par classe d'actifs, drawdown,
+    règles et univers du compte (portefeuille unique, 2026-10-27). Lecture seule."""
+    from app.paper.breakdown import build_breakdown
+
+    session = SessionLocal()
+    try:
+        portfolio = lookup_portfolio(session, code)
+        if portfolio is None:
+            raise HTTPException(status_code=404, detail="portfolio_not_found")
+        return build_breakdown(session, portfolio)
     finally:
         session.close()
 
@@ -346,7 +381,7 @@ def get_paper_portfolio_activity(code: str, limit: int = 100) -> dict:
 
     session = SessionLocal()
     try:
-        portfolio = get_portfolio_by_code(session, code)
+        portfolio = lookup_portfolio(session, code)
         if portfolio is None:
             raise HTTPException(status_code=404, detail="portfolio_not_found")
         orders = (
@@ -387,10 +422,7 @@ def get_paper_portfolio_activity(code: str, limit: int = 100) -> dict:
 def get_paper_portfolio(code: str) -> dict:
     session = SessionLocal()
     try:
-        if code in ALL_PROFILES:
-            ensure_portfolio(session, code)
-            session.commit()
-        portfolio = get_portfolio_by_code(session, code)
+        portfolio = lookup_portfolio(session, code)
         if portfolio is None:
             raise HTTPException(status_code=404, detail="portfolio_not_found")
         positions = paper_engine.list_positions(session, portfolio_id=portfolio.id)
@@ -405,10 +437,7 @@ def get_paper_portfolio(code: str) -> dict:
 
 
 def _require_portfolio(session, code: str):
-    if code in ALL_PROFILES:
-        ensure_portfolio(session, code)
-        session.commit()
-    portfolio = get_portfolio_by_code(session, code)
+    portfolio = lookup_portfolio(session, code)
     if portfolio is None:
         raise HTTPException(status_code=404, detail="portfolio_not_found")
     return portfolio

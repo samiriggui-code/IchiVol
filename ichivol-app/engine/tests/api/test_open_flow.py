@@ -18,14 +18,14 @@ from app.agents.types import Direction
 from app.api import paper as paper_routes
 from app.api import paper_orders as paper_orders_routes
 from app.api import routes
-from app.brokerage import persistence as ledger_db
+from app.brokerage import persistence as ledger_db  # noqa: F401
 from app.db.models import (
     LedgerLeg, LedgerTransaction, PaperJournalEvent, PaperOrder, PaperPortfolio, PaperPosition,
 )
 from app.db.session import SessionLocal, engine
 from app.decision.pipeline import PipelineResult
 from app.main import app
-from app.paper.strategy_profiles import BASELINE_CODE
+from app.paper.strategy_profiles import MAIN_CODE
 
 try:
     with engine.connect():
@@ -52,10 +52,10 @@ def _row(decision="BUY", price=100.0, stop=2.0):
 @pytest.fixture()
 def client(monkeypatch):
     s = SessionLocal()
-    pf = s.query(PaperPortfolio).filter_by(code=BASELINE_CODE).one_or_none()
+    pf = s.query(PaperPortfolio).filter_by(code=MAIN_CODE).one_or_none()
     if pf is None:
-        from app.paper.portfolio import ensure_baseline_portfolio
-        pf = ensure_baseline_portfolio(s)
+        from app.paper.portfolio import ensure_main_portfolio
+        pf = ensure_main_portfolio(s)
         s.commit()
     snap = (pf.id, pf.cash, pf.realized_pnl)
     monkeypatch.setattr(routes, "scan_symbol", lambda *a, **k: _row())
@@ -183,7 +183,7 @@ def test_account_identity_after_refresh(client):
     overview must explain total P&L: realized + unrealized - entry fees of open lots."""
     c, pid, _ = client
     _post(c)
-    acc = c.get(f"/api/engine/paper/portfolios/{BASELINE_CODE}/overview").json()["account"]
+    acc = c.get(f"/api/engine/paper/portfolios/{MAIN_CODE}/overview").json()["account"]
     assert acc["equity"] == pytest.approx(acc["cash"] + acc["invested"] + acc["unrealized_pnl"], abs=0.02)
     if "pnl_explained" in acc:
         assert acc["total_pnl"] == pytest.approx(acc["pnl_explained"], abs=0.02)

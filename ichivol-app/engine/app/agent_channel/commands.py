@@ -1510,10 +1510,10 @@ def cmd_submit_eve_paper(args: dict) -> dict:
     """V2 — dry-run Risk Kernel / CLOSE pour un dossier (jamais d'exécution ici)."""
     from app.db.session import SessionLocal
     from app.eve.paper_submit import submit_paper_from_dossier
-    from app.paper.strategy_profiles import BASELINE_CODE
+    from app.paper.strategy_profiles import MAIN_CODE
 
     dossier_id = _require_str(args, "dossier_id")
-    portfolio_code = str(args.get("portfolio_code") or BASELINE_CODE)
+    portfolio_code = str(args.get("portfolio_code") or MAIN_CODE)
     price = args.get("price")
     stop_distance = args.get("stop_distance")
     if price is not None and not isinstance(price, (int, float)):
@@ -1545,10 +1545,10 @@ def cmd_list_eve_followup(args: dict) -> dict:
     """Phase J — positions / dossiers en surveillance (lecture seule)."""
     from app.db.session import SessionLocal
     from app.eve.followup import list_tracked
-    from app.paper.strategy_profiles import BASELINE_CODE
+    from app.paper.strategy_profiles import MAIN_CODE
 
     limit = int(args.get("limit") or 30)
-    portfolio_code = str(args.get("portfolio_code") or BASELINE_CODE)
+    portfolio_code = str(args.get("portfolio_code") or MAIN_CODE)
     session = SessionLocal()
     try:
         return list_tracked(session, portfolio_code=portfolio_code, limit=limit)

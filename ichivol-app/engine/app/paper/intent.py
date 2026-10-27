@@ -17,7 +17,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.paper import broker as paper_broker
-from app.paper.portfolio import ensure_baseline_portfolio, get_portfolio_by_code
+from app.paper.portfolio import ensure_main_portfolio, get_portfolio_by_code
 from app.paper.risk import size_position
 from app.paper.strategy_profiles import BASELINE_PROFILE
 from app.screener.service import ScreenerRow
@@ -226,7 +226,7 @@ def propose_order_intent(
     session: Session,
     row: ScreenerRow,
     *,
-    portfolio_code: str = "ICHIVOL_BASELINE_V1",
+    portfolio_code: str = "ICHIVOL_MAIN_V1",
 ) -> OrderIntent:
     """Dry-run sizing against the baseline (or named) paper portfolio."""
     direction = _direction_for(row.pipeline.decision)
@@ -279,7 +279,7 @@ def propose_order_intent(
     if stop is None or stop <= 0:
         return _blocked("no_stop")
 
-    portfolio = ensure_baseline_portfolio(session)
+    portfolio = ensure_main_portfolio(session)
     if portfolio_code != portfolio.code:
         alt = get_portfolio_by_code(session, portfolio_code)
         if alt is not None:

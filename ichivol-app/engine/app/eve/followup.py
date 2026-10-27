@@ -21,8 +21,8 @@ from app.eve.actions import EveAction, normalize_action
 from app.eve.dossier import build_dossier_timeline, get_dossier, get_verdict
 from app.eve.modes import _shadow_answers, run_guardian, run_shadow_mode
 from app.eve.paper_submit import autonomy_enabled, submit_paper_from_dossier
-from app.paper.portfolio import ensure_baseline_portfolio, get_portfolio_by_code
-from app.paper.strategy_profiles import BASELINE_CODE
+from app.paper.portfolio import ensure_main_portfolio, get_portfolio_by_code
+from app.paper.strategy_profiles import MAIN_CODE
 
 OUTCOME_SCHEMA = "ichivol.eve.outcome.v1"
 FOLLOWUP_SCHEMA = "ichivol.eve.followup.v1"
@@ -104,13 +104,13 @@ def find_linked_position(session: Session, dossier: EveDossier) -> PaperPosition
 def list_tracked(
     session: Session,
     *,
-    portfolio_code: str = BASELINE_CODE,
+    portfolio_code: str = MAIN_CODE,
     limit: int = 30,
 ) -> dict[str, Any]:
     """Open Eve-linked positions + dossiers awaiting outcome."""
     portfolio = get_portfolio_by_code(session, portfolio_code)
-    if portfolio is None and portfolio_code == BASELINE_CODE:
-        portfolio = ensure_baseline_portfolio(session)
+    if portfolio is None and portfolio_code == MAIN_CODE:
+        portfolio = ensure_main_portfolio(session)
 
     open_eve: list[dict[str, Any]] = []
     if portfolio is not None:

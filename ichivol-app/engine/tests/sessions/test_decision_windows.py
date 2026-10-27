@@ -56,7 +56,9 @@ def test_subset_and_unknown_keys():
     assert decision_event_for_bar(_bar(2026, 7, 7, 14), ["nope", "ny_open"]) == "ny_open"
 
 
-def test_sessions_profile_synced_next_to_baseline():
+def test_session_windows_ride_the_single_portfolio_in_observation():
+    # 2026-10-27 : le compte Sessions est retiré, ses fenêtres sont calculées pour le compte unique (observation).
     assert ALL_PROFILES["ICHIVOL_SESSIONS_V1"]["decision_windows"] == list(ALL)
-    assert "decision_windows" not in ALL_PROFILES["ICHIVOL_BASELINE_V1"]
-    assert syncable_profile_codes()[:2] == ["ICHIVOL_BASELINE_V1", "ICHIVOL_SESSIONS_V1"]
+    assert ALL_PROFILES["ICHIVOL_MAIN_V1"]["decision_windows"] == list(ALL)
+    assert ALL_PROFILES["ICHIVOL_MAIN_V1"]["decision_windows_mode"] == "observe"
+    assert syncable_profile_codes() == ["ICHIVOL_MAIN_V1"]

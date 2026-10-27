@@ -12,7 +12,7 @@ from app.decision.pipeline import PipelineResult
 from app.paper import broker as paper_broker
 from app.paper import engine as paper_engine
 from app.paper.manual import preview_manual_buy
-from app.paper.strategy_profiles import BASELINE_CODE, profile_for
+from app.paper.strategy_profiles import BASELINE_CODE, MAIN_CODE, profile_for
 
 try:
     with engine.connect():
@@ -26,7 +26,7 @@ CODE = "MANUALTEST"
 
 def _clean_baseline_user_rows(s, cash_to_restore=None):
     """open_user_confirmed always targets the baseline portfolio: remove what this test opened there, restore cash."""
-    base = s.query(PaperPortfolio).filter_by(code=BASELINE_CODE).first()
+    base = s.query(PaperPortfolio).filter_by(code=MAIN_CODE).first()
     if base is None:
         return
     for p in s.query(PaperPosition).filter_by(portfolio_id=base.id, user_id="u1").all():
@@ -62,7 +62,7 @@ def _clean(s):
 def s():
     sess = SessionLocal()
     _clean(sess)
-    base = sess.query(PaperPortfolio).filter_by(code=BASELINE_CODE).first()
+    base = sess.query(PaperPortfolio).filter_by(code=MAIN_CODE).first()
     cash0 = base.cash if base is not None else None
     yield sess
     sess.rollback()
@@ -110,7 +110,7 @@ def test_refusals_are_explained(s):
 
 
 def test_manual_buy_opens_exactly_the_chosen_amount_and_is_journaled(s):
-    cash_before = s.query(PaperPortfolio).filter_by(code=BASELINE_CODE).one().cash
+    cash_before = s.query(PaperPortfolio).filter_by(code=MAIN_CODE).one().cash
     position, created = paper_engine.open_user_confirmed(
         s, symbol="BTCUSDT", timeframe="1h", user_id="u1", price=100.0,
         pipeline=PipelineResult(decision="BUY", direction=Direction.LONG, stages=[]), stop_distance=2.0,
@@ -119,7 +119,7 @@ def test_manual_buy_opens_exactly_the_chosen_amount_and_is_journaled(s):
     assert created and position.status == "OPEN" and position.source == "user_confirmed"
     assert position.notional == pytest.approx(800.0, rel=1e-6)
     assert position.take_profit_price - position.entry_price == pytest.approx(3.0 * 2.0, rel=1e-6)
-    base = s.query(PaperPortfolio).filter_by(code=BASELINE_CODE).one()
+    base = s.query(PaperPortfolio).filter_by(code=MAIN_CODE).one()
     assert position.portfolio_id == base.id
     assert cash_before - base.cash == pytest.approx(800.0 + position.entry_fee)
     assert s.query(LedgerTransaction).filter_by(ref=position.id).count() == 1

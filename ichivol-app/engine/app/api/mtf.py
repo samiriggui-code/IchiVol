@@ -44,11 +44,11 @@ def _baseline_context(symbol: str, timeframe: str) -> dict[str, Any] | None:
 
     from app.db.models import PaperPortfolio, PaperPosition
     from app.db.session import SessionLocal
-    from app.paper.portfolio import BASELINE_CODE
+    from app.paper.strategy_profiles import MAIN_CODE
 
     session = SessionLocal()
     try:
-        pf = session.execute(select(PaperPortfolio).where(PaperPortfolio.code == BASELINE_CODE)).scalar_one_or_none()
+        pf = session.execute(select(PaperPortfolio).where(PaperPortfolio.code == MAIN_CODE)).scalar_one_or_none()
         if pf is None:
             return None
         open_long = session.execute(

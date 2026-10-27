@@ -16,12 +16,9 @@ def test_baseline_has_no_structure_filter():
     assert BASELINE_PROFILE["structure_detectors"] == []
 
 
-def test_single_portfolio_mode_syncs_the_baseline_then_every_parallel_account():
-    from app.paper.strategy_profiles import COMBO_CODE, H4_CODE, SHORTS_CODE, WIDE_CODE
-
-    assert syncable_profile_codes() == [
-        BASELINE_CODE, "ICHIVOL_SESSIONS_V1", "FUTURES_CRYPTO_V1", SHORTS_CODE, H4_CODE, WIDE_CODE, COMBO_CODE,
-    ]
+def test_single_portfolio_mode_syncs_only_the_main_account():
+    assert syncable_profile_codes() == ["ICHIVOL_MAIN_V1"]
+    assert BASELINE_CODE not in syncable_profile_codes()
 
 
 def test_parallel_accounts_differ_from_the_baseline_by_one_key_each():

@@ -16,7 +16,7 @@ from app.paper.risk_kernel import (
 )
 from app.paper.strategy_profiles import BASELINE_PROFILE
 from app.db.session import SessionLocal
-from app.paper.portfolio import ensure_baseline_portfolio
+from app.paper.portfolio import ensure_main_portfolio
 
 
 def _state(**kwargs) -> PortfolioState:
@@ -89,7 +89,7 @@ def test_kill_blocks_manual_notional_path():
 def test_arm_disarm_requires_confirm_and_persists():
     session = SessionLocal()
     try:
-        pf = ensure_baseline_portfolio(session)
+        pf = ensure_main_portfolio(session)
         session.commit()
         try:
             arm_kill_switch(session, pf, confirm=False)

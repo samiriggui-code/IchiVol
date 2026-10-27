@@ -413,7 +413,13 @@ ALL_PROFILES: dict[str, dict[str, Any]] = {
 
 
 def wants_wide_universe(profile: dict[str, Any] | None) -> bool:
-    return (profile or {}).get("universe") == "wide"
+    return (profile or {}).get("universe") in ("wide", "main")
+
+
+def explicit_universe(profile: dict[str, Any] | None) -> list[str] | None:
+    """Liste explicite des symboles d'un profil (portefeuille unique), ou None (anciens profils)."""
+    syms = (profile or {}).get("universe_symbols")
+    return list(syms) if isinstance(syms, (list, tuple)) else None
 
 
 def is_rs_engine(profile: dict[str, Any] | None) -> bool:
@@ -427,22 +433,178 @@ def profile_for(code: str) -> dict[str, Any]:
     return deepcopy(BASELINE_PROFILE) | {"code": code}
 
 
-# 2026-09-20: everything was reset to a single virtual portfolio (one account, one lot per symbol).
-# The experimental profiles above stay registered as definitions but are no longer seeded or synced.
+# =========================================================================================================
+# 2026-10-27 (décision du propriétaire) : UN SEUL portefeuille paper, ICHIVOL_MAIN_V1, 50 000 € virtuels.
+# « On vire tous les portefeuilles et on part sur un nouveau seul portefeuille qui trade tout. »
+# Les huit anciens comptes (RETIRED_CODES) ne sont plus jamais créés, synchronisés ni affichés ; leurs données
+# sont sauvegardées puis supprimées par scripts/repairs/2026-10-27_portefeuille_unique_suppression_anciens.sql.
+# Toute la technologie IchiVol travaille pour ce compte : scan 1h (Ichimoku × RVOL), Ève + JEV (autopilote),
+# ordres manuels ; les filtres structure / Fibonacci / RSI / flux / régime et les fenêtres de sessions, qui
+# n'existaient que dans des comptes retirés, tournent ici en OBSERVATION (calculés et enregistrés sur chaque
+# signal, ils ne refusent rien tant qu'aucun avantage n'est démontré). Doc : docs/PORTEFEUILLE-UNIQUE-2026-10-27.md.
+# =========================================================================================================
+MAIN_CODE = "ICHIVOL_MAIN_V1"
+MAIN_LABEL = "IchiVol — portefeuille unique (50 000 €)"
+MAIN_INITIAL_CASH_EUR = 50_000.0
+
+RETIRED_CODES: tuple[str, ...] = (
+    BASELINE_CODE, H4_CODE, WIDE_CODE, SHORTS_CODE, SESSIONS_CODE, COMBO_CODE, RS_D1_CODE, FUTURES_CRYPTO_CODE,
+)
+
+# Hypothèses de friction par côté (bps) pour les paires de l'univers élargi : AUCUNE n'est mesurée. Valeurs
+# volontairement plus prudentes que les grandes paires (volume 24 h >= 7 M USDT relevé le 2026-10-01, carnet plus
+# mince) : rangées comme les paires de même liquidité du tableau CRYPTO_FRICTION_BPS. À vérifier sur fills réels.
+WIDE_FRICTION_BPS_ASSUMED: dict[str, float] = {
+    "TRXUSDT": 3.0, "BCHUSDT": 4.0, "XLMUSDT": 4.0, "ETCUSDT": 5.0, "AAVEUSDT": 5.0, "FILUSDT": 6.0,
+    "HBARUSDT": 6.0, "INJUSDT": 7.0, "ICPUSDT": 7.0, "SEIUSDT": 8.0, "TIAUSDT": 8.0,
+}
+# Futures : seul YM rejoint le compte (aucun autre instrument de l'univers ne suit le Dow Jones). Coûts =
+# hypothèses de app/paper/futures_crypto.py. MGC (même cotation que XAUUSD), BTCPERP et BTCCME (même sous-jacent
+# que BTCUSDT, déjà tradé en spot avec un vrai volume) sont exclus : ce serait deux lots sur le même prix.
+MAIN_FUTURES_SYMBOLS: tuple[str, ...] = ("YM",)
+
+# Règle de liquidité minimale (deux niveaux) :
+# 1. statique (univers) : un instrument n'entre que s'il a une friction documentée et <= MAIN_MAX_FRICTION_BPS
+#    par côté (coût aller-retour max ~ 2 x 12 + 2 x 7,5 = 39 bps en crypto) ; sinon il est exclu, avec la raison ;
+# 2. dynamique (boucle 1h) : une paire crypto à volume réel (Binance) n'ouvre rien si son volume des dernières
+#    24 h est < MAIN_MIN_QUOTE_VOLUME_24H (en USDT). Les CFD (volume de ticks, pas d'échange) sautent ce contrôle.
+MAIN_MAX_FRICTION_BPS = 12.0
+MAIN_MIN_QUOTE_VOLUME_24H = 5_000_000.0
+
+
+def _main_candidates() -> list[str]:
+    from app.universe.catalog import default_watchlist
+
+    out: list[str] = []
+    for s in [*default_watchlist(), *WIDE_EXTRA_SYMBOLS, *MAIN_FUTURES_SYMBOLS]:
+        if s not in out:
+            out.append(s)
+    return out
+
+
+MAIN_FRICTION_BPS: dict[str, float] = {
+    **CRYPTO_FRICTION_BPS,
+    **WIDE_FRICTION_BPS_ASSUMED,
+    **OTHER_MARKETS_FRICTION_BPS,
+    **{s: _fc.FRICTION_BPS[s] for s in MAIN_FUTURES_SYMBOLS},
+}
+MAIN_COMMISSION_BPS_BY_SYMBOL: dict[str, float] = {
+    **COMMISSION_BPS_BY_SYMBOL,
+    **{s: _fc.COMMISSION_BPS[s] for s in MAIN_FUTURES_SYMBOLS},
+}
+MAIN_FINANCING_BPS_LONG: dict[str, float] = {
+    **FINANCING_BPS_PER_DAY_BY_SYMBOL,
+    **{s: 0.0 for s in WIDE_FRICTION_BPS_ASSUMED},
+    **{s: _fc.FINANCING_BPS_LONG[s] for s in MAIN_FUTURES_SYMBOLS},
+}
+
+# Symboles que le moteur sait voir mais que le compte ne trade pas, avec la raison (affichée et documentée).
+STRUCTURAL_EXCLUSIONS: dict[str, str] = {
+    "USDJPY": "coté en JPY : aucune conversion de devise de cotation, la taille serait fausse",
+    "AAPL": "actions Twelve Data : quota gratuit trop faible pour la boucle de fond",
+    "TSLA": "actions Twelve Data : quota gratuit trop faible pour la boucle de fond",
+    "MGC": "même cotation que XAUUSD (or spot) : double exposition au même prix",
+    "BTCPERP": "même sous-jacent que BTCUSDT (déjà tradé en spot) : double exposition",
+    "BTCCME": "aucun flux CME : cotation BTCUSDT spot, double exposition",
+}
+
+
+def liquidity_exclusion(symbol: str, friction: dict[str, float] | None = None,
+                        max_bps: float = MAIN_MAX_FRICTION_BPS) -> str | None:
+    """Raison d'exclusion par la règle statique de liquidité, ou None si l'instrument passe."""
+    table = MAIN_FRICTION_BPS if friction is None else friction
+    if symbol not in table:
+        return "aucune friction documentée : coût inconnu, refusé par prudence"
+    if float(table[symbol]) > max_bps:
+        return f"friction {table[symbol]:g} bps par côté > {max_bps:g} bps (règle de liquidité)"
+    return None
+
+
+def main_universe() -> tuple[list[str], dict[str, str]]:
+    """(symboles tradés, {symbole exclu: raison}) du portefeuille unique."""
+    traded: list[str] = []
+    excluded: dict[str, str] = dict(STRUCTURAL_EXCLUSIONS)
+    for s in _main_candidates():
+        if s in STRUCTURAL_EXCLUSIONS:
+            continue
+        why = liquidity_exclusion(s)
+        if why is None:
+            traded.append(s)
+        else:
+            excluded[s] = why
+    return traded, excluded
+
+
+_MAIN_TRADED, _MAIN_EXCLUDED = main_universe()
+
+MAIN_PROFILE: dict[str, Any] = _with(
+    code=MAIN_CODE,
+    label=MAIN_LABEL,
+    initial_cash_eur=MAIN_INITIAL_CASH_EUR,
+    # Taille : 0,5 % du capital risqué par trade (250 € au départ), lot plafonné à 10 % du capital (5 000 €),
+    # 10 lots au plus, risque ouvert total <= 4 % (2 000 €), arrêt des entrées à -3 % sur la journée.
+    risk_pct=0.005,
+    max_notional_pct=0.10,
+    max_symbol_notional_pct=0.10,
+    max_open_positions=10,
+    max_open_risk_pct=0.04,
+    daily_loss_limit_pct=0.03,
+    take_profit_r=2.0,
+    one_position_per_symbol=True,
+    one_entry_per_signal_run=True,
+    min_notional=50.0,
+    # Pas de vente à découvert (aucun compte n'a montré d'avantage en short ; à valider par le propriétaire).
+    allow_short=False,
+    exit_mode="direction",
+    auto_timeframes=["1h"],
+    # Univers explicite : tout ce que le moteur sait trader, moins les exclusions documentées.
+    universe="main",
+    universe_symbols=list(_MAIN_TRADED),
+    universe_exclusions=dict(_MAIN_EXCLUDED),
+    max_friction_bps=MAIN_MAX_FRICTION_BPS,
+    min_quote_volume_24h=MAIN_MIN_QUOTE_VOLUME_24H,
+    # Coûts réalistes par classe (hypothèses documentées) : crypto spot 7,5 bps de commission + friction par
+    # paire ; CFD forex / métaux / indices / pétrole : spread seul + financement de nuit ; YM : coûts futures.
+    commission_bps=7.5,
+    commission_bps_by_symbol=MAIN_COMMISSION_BPS_BY_SYMBOL,
+    friction_bps_by_symbol=MAIN_FRICTION_BPS,
+    financing_bps_per_day_by_symbol=MAIN_FINANCING_BPS_LONG,
+    # Filtres de confirmation (structure MVPP + trendln, Fibonacci, RSI, CMF/OBV, régime ATR) et fenêtres de
+    # sessions : calculés sur chaque signal et enregistrés, en observation seulement (filters_mode="observe").
+    structure_filter="block_near_opposing",
+    structure_detectors=["mvpp", "trendln"],
+    fibonacci_filter="require_confluence",
+    context_rsi=True,
+    context_cmf=True,
+    context_obv=True,
+    context_regime_hard=True,
+    filters_mode="observe",
+    shadow_on_block=False,
+    decision_windows=list(DEFAULT_DECISION_WINDOWS),
+    decision_windows_mode="observe",
+    # Qui décide pour ce compte (informatif) et règle d'arbitrage (appliquée par app/paper/engine.py).
+    engines=["scan_1h_ichimoku_rvol", "eve_autopilot_jev", "ordres_manuels"],
+    arbitration="un_lot_par_symbole_premier_arrive",
+    # Emplacement réservé du futur indicateur VWAP (plan d'intégration rendu par la recherche VWAP) : il
+    # s'ajoutera comme un filtre de plus dans la chaîne structure -> Fibonacci -> contexte d'engine.py, d'abord
+    # en observation. Aucune clé n'est lue tant qu'il n'existe pas.
+    sync_auto=True,
+    manual_orders=True,
+)
+
+ALL_PROFILES[MAIN_CODE] = MAIN_PROFILE
+
+# Un seul compte synchronisé. Les définitions des anciens profils restent dans ce fichier (lecture de
+# l'historique, backtests), mais aucun n'est plus créé ni synchronisé.
 SINGLE_PORTFOLIO_MODE = True
-# 2026-10-06 (user decision): the market-session schedule runs as a separate account next to the baseline, so
-# the hourly baseline stays the reference it is compared against.
-# 2026-10-07: the Futures & Crypto account joins the same loop, on its own three markets only.
-# 2026-10-17: the three parallel accounts (shorts, 4h, wide universe) are synced again, plus the all-filters account.
-PARALLEL_SYNCED_CODES: tuple[str, ...] = (SESSIONS_CODE, FUTURES_CRYPTO_CODE, *PARALLEL_PROFILES)
+PARALLEL_SYNCED_CODES: tuple[str, ...] = ()
+DEFAULT_PORTFOLIO_CODE = MAIN_CODE
+
+
+def is_retired(code: str | None) -> bool:
+    return bool(code) and code in RETIRED_CODES
 
 
 def syncable_profile_codes() -> list[str]:
-    """Codes that receive auto_watchlist sync."""
-    if SINGLE_PORTFOLIO_MODE:
-        return [BASELINE_CODE, *PARALLEL_SYNCED_CODES]
-    return [
-        code
-        for code, profile in ALL_PROFILES.items()
-        if profile.get("sync_auto", True)
-    ]
+    """Codes that receive auto_watchlist sync: the single portfolio only (2026-10-27)."""
+    return [MAIN_CODE]

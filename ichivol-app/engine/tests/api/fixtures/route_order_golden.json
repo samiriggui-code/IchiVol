@@ -549,6 +549,13 @@
     "methods": [
       "GET"
     ],
+    "path": "/api/engine/paper/portfolios/{code}/breakdown",
+    "endpoint": "get_paper_portfolio_breakdown"
+  },
+  {
+    "methods": [
+      "GET"
+    ],
     "path": "/api/engine/paper/portfolios/{code}/activity",
     "endpoint": "get_paper_portfolio_activity"
   },
@@ -782,20 +789,6 @@
     ],
     "path": "/api/engine/orderbook/{symbol}/quality",
     "endpoint": "get_orderbook_quality"
-  },
-  {
-    "methods": [
-      "GET"
-    ],
-    "path": "/api/engine/paper/futures-crypto",
-    "endpoint": "get_futures_crypto_view"
-  },
-  {
-    "methods": [
-      "POST"
-    ],
-    "path": "/api/engine/paper/futures-crypto/btc-mode",
-    "endpoint": "post_futures_crypto_btc_mode"
   },
   {
     "methods": [

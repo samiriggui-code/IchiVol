@@ -423,11 +423,11 @@ def _paper_state(symbol: str) -> tuple[dict[str, Any] | None, dict[str, Any] | N
     from app.db.models import PaperPortfolio, PaperPosition
     from app.db.session import SessionLocal
     from app.paper.kill_switch import lock_status
-    from app.paper.portfolio import BASELINE_CODE
+    from app.paper.strategy_profiles import MAIN_CODE
 
     session = SessionLocal()
     try:
-        pf = session.execute(select(PaperPortfolio).where(PaperPortfolio.code == BASELINE_CODE)).scalar_one_or_none()
+        pf = session.execute(select(PaperPortfolio).where(PaperPortfolio.code == MAIN_CODE)).scalar_one_or_none()
         if pf is None:
             return None, None
         pos = session.execute(

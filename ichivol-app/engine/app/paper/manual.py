@@ -32,7 +32,7 @@ def preview_manual_buy(
     notional: float,
     stop_pct: float | None = None,
     take_profit_r: float | None = None,
-    portfolio_code: str = "ICHIVOL_BASELINE_V1",
+    portfolio_code: str = "ICHIVOL_MAIN_V1",
 ) -> dict[str, Any]:
     portfolio = paper_broker_get_portfolio(session, portfolio_code)
     profile = portfolio.strategy_profile or dict(BASELINE_PROFILE)
@@ -146,9 +146,9 @@ def preview_manual_buy(
 
 
 def paper_broker_get_portfolio(session: Session, code: str):
-    from app.paper.portfolio import ensure_baseline_portfolio, get_portfolio_by_code
+    from app.paper.portfolio import ensure_main_portfolio, get_portfolio_by_code
 
-    portfolio = ensure_baseline_portfolio(session)
+    portfolio = ensure_main_portfolio(session)
     if code != portfolio.code:
         alt = get_portfolio_by_code(session, code)
         if alt is not None:

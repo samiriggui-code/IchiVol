@@ -441,19 +441,6 @@
         "title": "BatchDecisionsRequest",
         "type": "object"
       },
-      "BtcModeBody": {
-        "properties": {
-          "mode": {
-            "title": "Mode",
-            "type": "string"
-          }
-        },
-        "required": [
-          "mode"
-        ],
-        "title": "BtcModeBody",
-        "type": "object"
-      },
       "ConfirmBody": {
         "properties": {
           "confirm": {
@@ -728,7 +715,7 @@
         "type": "object"
       },
       "RulesetProposeBody": {
-        "description": "T3d \u2014 propose a ruleset edit for Lab review (never auto-applied).",
+        "description": "T3d — propose a ruleset edit for Lab review (never auto-applied).",
         "properties": {
           "base_ruleset": {
             "anyOf": [
@@ -1279,7 +1266,7 @@
     },
     "/api/engine/agent/capabilities": {
       "get": {
-        "description": "Capabilities descriptor. Chart-overlay WRITE (draw_*/delete_chart_object)\nis enabled (T2b). Paper trading stays off this channel \u2014 only via\n``POST /paper/positions`` (app/paper/engine.py).",
+        "description": "Capabilities descriptor. Chart-overlay WRITE (draw_*/delete_chart_object)\nis enabled (T2b). Paper trading stays off this channel — only via\n``POST /paper/positions`` (app/paper/engine.py).",
         "operationId": "get_agent_capabilities_api_engine_agent_capabilities_get",
         "responses": {
           "200": {
@@ -1371,7 +1358,7 @@
     },
     "/api/engine/agents/analyst-cards": {
       "get": {
-        "description": "Fiches analystes d\u00e9terministes (observe-only, used_by_decision=False).",
+        "description": "Fiches analystes déterministes (observe-only, used_by_decision=False).",
         "operationId": "get_analyst_cards_api_engine_agents_analyst_cards_get",
         "parameters": [
           {
@@ -1410,7 +1397,7 @@
             }
           },
           {
-            "description": "Unix seconds \u2014 barre close",
+            "description": "Unix seconds — barre close",
             "in": "query",
             "name": "as_of",
             "required": false,
@@ -1423,7 +1410,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Unix seconds \u2014 barre close",
+              "description": "Unix seconds — barre close",
               "title": "As Of"
             }
           },
@@ -1579,7 +1566,7 @@
         ]
       },
       "post": {
-        "description": "\u00c9crit un snapshot de session (idempotent). Appel\u00e9 par AgentTask +60 s.",
+        "description": "Écrit un snapshot de session (idempotent). Appelé par AgentTask +60 s.",
         "operationId": "post_analyst_snapshot_api_engine_agents_analyst_snapshots_post",
         "parameters": [
           {
@@ -1641,7 +1628,7 @@
     },
     "/api/engine/agents/factsheet": {
       "get": {
-        "description": "AG-FS0 \u2014 faits moteur avec provenance (ids stables, absences explicites). Observe-only.",
+        "description": "AG-FS0 — faits moteur avec provenance (ids stables, absences explicites). Observe-only.",
         "operationId": "get_factsheet_api_engine_agents_factsheet_get",
         "parameters": [
           {
@@ -1668,7 +1655,7 @@
             }
           },
           {
-            "description": "Unix seconds \u2014 barre close (historique : fiches seulement)",
+            "description": "Unix seconds — barre close (historique : fiches seulement)",
             "in": "query",
             "name": "as_of",
             "required": false,
@@ -1681,7 +1668,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Unix seconds \u2014 barre close (historique : fiches seulement)",
+              "description": "Unix seconds — barre close (historique : fiches seulement)",
               "title": "As Of"
             }
           },
@@ -2074,7 +2061,7 @@
             }
           },
           {
-            "description": "Unix seconds \u2014 recompute on candles with time <= as_of",
+            "description": "Unix seconds — recompute on candles with time <= as_of",
             "in": "query",
             "name": "as_of",
             "required": false,
@@ -2087,7 +2074,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Unix seconds \u2014 recompute on candles with time <= as_of",
+              "description": "Unix seconds — recompute on candles with time <= as_of",
               "title": "As Of"
             }
           },
@@ -2162,7 +2149,7 @@
     },
     "/api/engine/chart-intelligence/{symbol}/explain": {
       "get": {
-        "description": "AW1 \u00ab Pourquoi ? \u00bb \u2014 faits moteur d'un ChartObject ENGINE (observe-only).",
+        "description": "AW1 « Pourquoi ? » — faits moteur d'un ChartObject ENGINE (observe-only).",
         "operationId": "get_chart_intelligence_explain_api_engine_chart_intelligence__symbol__explain_get",
         "parameters": [
           {
@@ -2219,7 +2206,7 @@
             }
           },
           {
-            "description": "Unix seconds \u2014 barre de r\u00e9f\u00e9rence",
+            "description": "Unix seconds — barre de référence",
             "in": "query",
             "name": "as_of",
             "required": false,
@@ -2232,7 +2219,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Unix seconds \u2014 barre de r\u00e9f\u00e9rence",
+              "description": "Unix seconds — barre de référence",
               "title": "As Of"
             }
           },
@@ -2309,7 +2296,7 @@
     },
     "/api/engine/chart-intelligence/{symbol}/replay": {
       "get": {
-        "description": "Walk-forward replay pack (CI-R1a) \u2014 objects recalculated bar-by-bar.",
+        "description": "Walk-forward replay pack (CI-R1a) — objects recalculated bar-by-bar.",
         "operationId": "get_chart_intelligence_replay_api_engine_chart_intelligence__symbol__replay_get",
         "parameters": [
           {
@@ -2606,7 +2593,7 @@
         ]
       },
       "post": {
-        "description": "Persist a USER trade point (entry|stop|target). Source is always forced to user.\n\nOptional ``setup_id`` groups ENTRY/STOP/TARGET of one mark-trade session.\nPoints are grounded against real OHLCV (same rules as agent draw_*).\nPrefer ``POST \u2026/setup`` for atomic triple writes from the UI.",
+        "description": "Persist a USER trade point (entry|stop|target). Source is always forced to user.\n\nOptional ``setup_id`` groups ENTRY/STOP/TARGET of one mark-trade session.\nPoints are grounded against real OHLCV (same rules as agent draw_*).\nPrefer ``POST …/setup`` for atomic triple writes from the UI.",
         "operationId": "post_user_chart_object_api_engine_chart_objects__symbol__post",
         "parameters": [
           {
@@ -2947,7 +2934,7 @@
     },
     "/api/engine/correlations": {
       "get": {
-        "description": "Correlation matrix (CDC \u00a76.2 \"Graphe de corr\u00e9lations\", `CDC-VIZ-002`,\nV2 optionnel) -- \"qu'est-ce qui bouge avec BTC ?\". Read-only lens, never\nwired into the decision pipeline, never a vote (docs/CAHIER-DES-CHARGES.md\n\u00a78). Stateless like `/backtest`: recomputed on every call from whatever\nhistorical depth is available right now, nothing cached or persisted.\n\n`symbols` (comma-separated) defaults to the same `default_watchlist()`\nthe screener uses (crypto + biquote-backed forex/m\u00e9tal/index/\u00e9nergie --\nno Twelve Data equities, to protect its scarce per-minute budget on a\nrequest that fans out to N upstream calls); pass explicit symbols\n(equities included) to override. `method=log_returns` (default) is the\ncorrelation of bar-to-bar log returns, the standard choice for\nnon-stationary price series; `method=price` correlates raw closes\ninstead, mostly useful for sanity-checking against the return-based\nnumber.",
+        "description": "Correlation matrix (CDC §6.2 \"Graphe de corrélations\", `CDC-VIZ-002`,\nV2 optionnel) -- \"qu'est-ce qui bouge avec BTC ?\". Read-only lens, never\nwired into the decision pipeline, never a vote (docs/CAHIER-DES-CHARGES.md\n§8). Stateless like `/backtest`: recomputed on every call from whatever\nhistorical depth is available right now, nothing cached or persisted.\n\n`symbols` (comma-separated) defaults to the same `default_watchlist()`\nthe screener uses (crypto + biquote-backed forex/métal/index/énergie --\nno Twelve Data equities, to protect its scarce per-minute budget on a\nrequest that fans out to N upstream calls); pass explicit symbols\n(equities included) to override. `method=log_returns` (default) is the\ncorrelation of bar-to-bar log returns, the standard choice for\nnon-stationary price series; `method=price` correlates raw closes\ninstead, mostly useful for sanity-checking against the return-based\nnumber.",
         "operationId": "get_correlations_api_engine_correlations_get",
         "parameters": [
           {
@@ -3029,7 +3016,7 @@
     },
     "/api/engine/cycle/synthetic/validate": {
       "get": {
-        "description": "(a) Synthetic truth probes \u2014 no market fetch. Observe-only.",
+        "description": "(a) Synthetic truth probes — no market fetch. Observe-only.",
         "operationId": "get_cycle_synthetic_validate_api_engine_cycle_synthetic_validate_get",
         "parameters": [
           {
@@ -3237,13 +3224,13 @@
             }
           },
           {
-            "description": "Null surrogate draws per family (P1 \u2014 default 5, was 20).",
+            "description": "Null surrogate draws per family (P1 — default 5, was 20).",
             "in": "query",
             "name": "null_draws",
             "required": false,
             "schema": {
               "default": 5,
-              "description": "Null surrogate draws per family (P1 \u2014 default 5, was 20).",
+              "description": "Null surrogate draws per family (P1 — default 5, was 20).",
               "maximum": 50,
               "minimum": 1,
               "title": "Null Draws",
@@ -3337,7 +3324,7 @@
     },
     "/api/engine/decisions/batch": {
       "post": {
-        "description": "Optional batch variant of `GET /decisions/{symbol}` (CDC V2 backlog,\ndocs/HANDOFF-CURSOR-SESSION-2026-09-16-SOIR.md \u00a73: \"batch decisions\noptionnel\") -- lets a caller that needs many symbols at once (the server\nJournal watch job, app/server/src/notifications/watch.ts, currently\nre-fetches its confirmed symbols one HTTP call at a time) fetch them\nconcurrently in a single request instead of N sequential ones. Same\nresponse shape per item as the single-symbol endpoint's `detail_dict`\n(so `pipelineFingerprint()` on the server side needs no changes), plus\n`ok`/`error` so one bad symbol never fails the whole batch. Not a\nreplacement for `/decisions/{symbol}` -- no RVOL/ATR threshold\noverrides, no `include_candles`, capped at `_MAX_BATCH_ITEMS` items so\none request can't fan out into an unbounded number of upstream market\ndata calls.",
+        "description": "Optional batch variant of `GET /decisions/{symbol}` (CDC V2 backlog,\ndocs/HANDOFF-CURSOR-SESSION-2026-09-16-SOIR.md §3: \"batch decisions\noptionnel\") -- lets a caller that needs many symbols at once (the server\nJournal watch job, app/server/src/notifications/watch.ts, currently\nre-fetches its confirmed symbols one HTTP call at a time) fetch them\nconcurrently in a single request instead of N sequential ones. Same\nresponse shape per item as the single-symbol endpoint's `detail_dict`\n(so `pipelineFingerprint()` on the server side needs no changes), plus\n`ok`/`error` so one bad symbol never fails the whole batch. Not a\nreplacement for `/decisions/{symbol}` -- no RVOL/ATR threshold\noverrides, no `include_candles`, capped at `_MAX_BATCH_ITEMS` items so\none request can't fan out into an unbounded number of upstream market\ndata calls.",
         "operationId": "get_decisions_batch_api_engine_decisions_batch_post",
         "requestBody": {
           "content": {
@@ -3695,7 +3682,7 @@
     },
     "/api/engine/eve/decisions": {
       "get": {
-        "description": "Latest \u00c8ve judgements, light: engine proposals per book, \u00c8ve's answer, outcome (\u00ab Moteur vs \u00c8ve \u00bb).",
+        "description": "Latest Ève judgements, light: engine proposals per book, Ève's answer, outcome (« Moteur vs Ève »).",
         "operationId": "eve_decisions_api_engine_eve_decisions_get",
         "parameters": [
           {
@@ -3850,7 +3837,7 @@
     },
     "/api/engine/eve/dossiers/{dossier_id}/followup": {
       "get": {
-        "description": "Phase J \u2014 r\u00e9sum\u00e9 suivi / outcome (decision_time immuable).",
+        "description": "Phase J — résumé suivi / outcome (decision_time immuable).",
         "operationId": "eve_followup_get_api_engine_eve_dossiers__dossier_id__followup_get",
         "parameters": [
           {
@@ -3893,7 +3880,7 @@
         ]
       },
       "post": {
-        "description": "Phase J/K \u2014 proposer HOLD/CLOSE/ABSTAIN (+ Shadow audit).\n\n``apply=true`` attempts CLOSE via paper_submit; autonomy off \u2192 dry-run only.\n``use_shadow`` (default true) runs \u00c8ve Shadow independent review (\u2260 ShadowBroker).",
+        "description": "Phase J/K — proposer HOLD/CLOSE/ABSTAIN (+ Shadow audit).\n\n``apply=true`` attempts CLOSE via paper_submit; autonomy off → dry-run only.\n``use_shadow`` (default true) runs Ève Shadow independent review (≠ ShadowBroker).",
         "operationId": "eve_followup_run_api_engine_eve_dossiers__dossier_id__followup_post",
         "parameters": [
           {
@@ -3968,7 +3955,7 @@
     },
     "/api/engine/eve/dossiers/{dossier_id}/paper-submit": {
       "post": {
-        "description": "Soumet LONG/SHORT/CLOSE via Risk Kernel.\n\nSans ``portfolio_code`` (ou ``ALL``) \u2192 tous les portefeuilles virtuels.\nUn code pr\u00e9cis \u2192 un seul livre. Autonomie off = dry-run.",
+        "description": "Soumet LONG/SHORT/CLOSE via Risk Kernel.\n\nSans ``portfolio_code`` (ou ``ALL``) → tous les portefeuilles virtuels.\nUn code précis → un seul livre. Autonomie off = dry-run.",
         "operationId": "eve_paper_submit_api_engine_eve_dossiers__dossier_id__paper_submit_post",
         "parameters": [
           {
@@ -4077,7 +4064,7 @@
     },
     "/api/engine/eve/evaluate/{symbol}": {
       "post": {
-        "description": "Run Analyst\u2192Challenger\u2192Guardian\u2192Shadow synthesis.\n\nWhen persist=true and ``paper_dry_run`` (default true), runs Risk Kernel on an\nexisting paper portfolio. Opens/closes only when ``EVE_PAPER_AUTONOMY`` is on\n(local paper test). Never live brokers.",
+        "description": "Run Analyst→Challenger→Guardian→Shadow synthesis.\n\nWhen persist=true and ``paper_dry_run`` (default true), runs Risk Kernel on an\nexisting paper portfolio. Opens/closes only when ``EVE_PAPER_AUTONOMY`` is on\n(local paper test). Never live brokers.",
         "operationId": "eve_evaluate_api_engine_eve_evaluate__symbol__post",
         "parameters": [
           {
@@ -4223,7 +4210,7 @@
     },
     "/api/engine/eve/followup": {
       "get": {
-        "description": "Phase J \u2014 positions Eve track\u00e9es + dossiers en surveillance.",
+        "description": "Phase J — positions Eve trackées + dossiers en surveillance.",
         "operationId": "eve_followup_list_api_engine_eve_followup_get",
         "parameters": [
           {
@@ -4231,7 +4218,7 @@
             "name": "portfolio_code",
             "required": false,
             "schema": {
-              "default": "ICHIVOL_BASELINE_V1",
+              "default": "ICHIVOL_MAIN_V1",
               "title": "Portfolio Code",
               "type": "string"
             }
@@ -4281,7 +4268,7 @@
     },
     "/api/engine/eve/outcomes/sync": {
       "post": {
-        "description": "Phase J \u2014 enregistre les outcomes des positions CLOSED li\u00e9es aux dossiers.",
+        "description": "Phase J — enregistre les outcomes des positions CLOSED liées aux dossiers.",
         "operationId": "eve_outcomes_sync_api_engine_eve_outcomes_sync_post",
         "parameters": [
           {
@@ -4329,7 +4316,7 @@
     },
     "/api/engine/eve/paper-autonomy": {
       "get": {
-        "description": "V2 flag \u2014 when false, paper-submit is Risk Kernel dry-run only.",
+        "description": "V2 flag — when false, paper-submit is Risk Kernel dry-run only.",
         "operationId": "eve_paper_autonomy_api_engine_eve_paper_autonomy_get",
         "responses": {
           "200": {
@@ -4353,7 +4340,7 @@
     },
     "/api/engine/eve/primitive-study": {
       "get": {
-        "description": "Matrice Mode \u00d7 NOUL/CHOICE/SCORE \u2014 base du routage JEV (\u00e9tude d\u00e9terministe).",
+        "description": "Matrice Mode × NOUL/CHOICE/SCORE — base du routage JEV (étude déterministe).",
         "operationId": "eve_primitive_study_api_engine_eve_primitive_study_get",
         "responses": {
           "200": {
@@ -4512,7 +4499,7 @@
     },
     "/api/engine/event-study/{symbol}": {
       "get": {
-        "description": "Strategy Lab Phase 1 \u2014 Event Study.\n\nFor each entry signal of the named backtest variant, measure forward\nATR-normalized returns at +N candles, MFE/MAE, and % hitting +R before -R.\nNo capital, fees, or sizing. Complements `/backtest/{symbol}` (full\nsimulator) without replacing it.",
+        "description": "Strategy Lab Phase 1 — Event Study.\n\nFor each entry signal of the named backtest variant, measure forward\nATR-normalized returns at +N candles, MFE/MAE, and % hitting +R before -R.\nNo capital, fees, or sizing. Complements `/backtest/{symbol}` (full\nsimulator) without replacing it.",
         "operationId": "get_event_study_api_engine_event_study__symbol__get",
         "parameters": [
           {
@@ -4823,7 +4810,7 @@
     },
     "/api/engine/indicators/{indicator_id}/{symbol}": {
       "get": {
-        "description": "Compute an indicator series for a symbol via the global REGISTRY.\n\nFetches ``limit + warmup`` candles so the returned ``limit`` states are\nfully warmed where possible. No formula rewrite \u2014 wraps existing compute_*.",
+        "description": "Compute an indicator series for a symbol via the global REGISTRY.\n\nFetches ``limit + warmup`` candles so the returned ``limit`` states are\nfully warmed where possible. No formula rewrite — wraps existing compute_*.",
         "operationId": "get_indicator_series_api_engine_indicators__indicator_id___symbol__get",
         "parameters": [
           {
@@ -5096,19 +5083,19 @@
             }
           },
           {
-            "description": "Horizon de d\u00e9cision (15m, 1h, 4h, 1d)",
+            "description": "Horizon de décision (15m, 1h, 4h, 1d)",
             "in": "query",
             "name": "timeframe",
             "required": false,
             "schema": {
               "default": "1h",
-              "description": "Horizon de d\u00e9cision (15m, 1h, 4h, 1d)",
+              "description": "Horizon de décision (15m, 1h, 4h, 1d)",
               "title": "Timeframe",
               "type": "string"
             }
           },
           {
-            "description": "Unix seconds \u2014 matrice relue \u00e0 cet instant",
+            "description": "Unix seconds — matrice relue à cet instant",
             "in": "query",
             "name": "as_of",
             "required": false,
@@ -5121,7 +5108,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Unix seconds \u2014 matrice relue \u00e0 cet instant",
+              "description": "Unix seconds — matrice relue à cet instant",
               "title": "As Of"
             }
           }
@@ -5158,7 +5145,7 @@
     },
     "/api/engine/ohlcv/{symbol}": {
       "get": {
-        "description": "Neutral OHLCV for chart / front \u2014 resolves via catalog (binance, twelve_data, or biquote).\n`x_twelve_data_key`, when present, overrides the operator's\nTWELVE_DATA_API_KEY for this request only -- see app/market_data/twelve_data.py.",
+        "description": "Neutral OHLCV for chart / front — resolves via catalog (binance, twelve_data, or biquote).\n`x_twelve_data_key`, when present, overrides the operator's\nTWELVE_DATA_API_KEY for this request only -- see app/market_data/twelve_data.py.",
         "operationId": "get_ohlcv_api_engine_ohlcv__symbol__get",
         "parameters": [
           {
@@ -5274,7 +5261,7 @@
             }
           },
           {
-            "description": "Unix seconds (d\u00e9faut : maintenant \u2212 2 h)",
+            "description": "Unix seconds (défaut : maintenant − 2 h)",
             "in": "query",
             "name": "from",
             "required": false,
@@ -5287,12 +5274,12 @@
                   "type": "null"
                 }
               ],
-              "description": "Unix seconds (d\u00e9faut : maintenant \u2212 2 h)",
+              "description": "Unix seconds (défaut : maintenant − 2 h)",
               "title": "From"
             }
           },
           {
-            "description": "Unix seconds, exclu (d\u00e9faut : maintenant)",
+            "description": "Unix seconds, exclu (défaut : maintenant)",
             "in": "query",
             "name": "to",
             "required": false,
@@ -5305,7 +5292,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Unix seconds, exclu (d\u00e9faut : maintenant)",
+              "description": "Unix seconds, exclu (défaut : maintenant)",
               "title": "To"
             }
           },
@@ -5403,72 +5390,6 @@
           }
         },
         "summary": "Get Orderbook Quality",
-        "tags": [
-          "engine"
-        ]
-      }
-    },
-    "/api/engine/paper/futures-crypto": {
-      "get": {
-        "operationId": "get_futures_crypto_view_api_engine_paper_futures_crypto_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Futures Crypto View Api Engine Paper Futures Crypto Get",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Get Futures Crypto View",
-        "tags": [
-          "engine"
-        ]
-      }
-    },
-    "/api/engine/paper/futures-crypto/btc-mode": {
-      "post": {
-        "operationId": "post_futures_crypto_btc_mode_api_engine_paper_futures_crypto_btc_mode_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BtcModeBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Post Futures Crypto Btc Mode Api Engine Paper Futures Crypto Btc Mode Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Post Futures Crypto Btc Mode",
         "tags": [
           "engine"
         ]
@@ -5659,6 +5580,51 @@
           }
         },
         "summary": "Get Paper Portfolio Activity",
+        "tags": [
+          "engine"
+        ]
+      }
+    },
+    "/api/engine/paper/portfolios/{code}/breakdown": {
+      "get": {
+        "description": "Bilan par décideur (Ève / moteur contre Ève / moteur seul / manuel) et par classe d'actifs, drawdown,\nrègles et univers du compte (portefeuille unique, 2026-10-27). Lecture seule.",
+        "operationId": "get_paper_portfolio_breakdown_api_engine_paper_portfolios__code__breakdown_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Paper Portfolio Breakdown Api Engine Paper Portfolios  Code  Breakdown Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Paper Portfolio Breakdown",
         "tags": [
           "engine"
         ]
@@ -5918,7 +5884,7 @@
     },
     "/api/engine/paper/portfolios/{code}/risk-lock": {
       "get": {
-        "description": "T13c \u2014 kill switch + daily loss lock status.",
+        "description": "T13c — kill switch + daily loss lock status.",
         "operationId": "get_paper_risk_lock_api_engine_paper_portfolios__code__risk_lock_get",
         "parameters": [
           {
@@ -5963,7 +5929,7 @@
     },
     "/api/engine/paper/positions": {
       "get": {
-        "description": "Virtual positions only (CDC V2 \"Paper trading\") -- app/paper/engine.py\nowns open/close rules, this just lists them. `source=auto_watchlist`\n(no `user_id`) is the background screener's own shadow portfolio;\n`source=user_confirmed` + `user_id` is one user's confirmed picks.",
+        "description": "Virtual positions only (CDC V2 \"Paper trading\") -- app/paper/engine.py\nowns open/close rules, this just lists them. `source=auto_watchlist`\n(no `user_id`) is the background screener's own shadow portfolio;\n`source=user_confirmed` + `user_id` is one user's confirmed picks.\n\n``portfolio_code`` (ex. ICHIVOL_MAIN_V1) limite aux lots de ce compte ; ``limit`` / ``offset`` paginent\n(plus récents d'abord) et ``total`` donne le nombre de lots avant pagination.",
         "operationId": "list_paper_positions_api_engine_paper_positions_get",
         "parameters": [
           {
@@ -6012,6 +5978,48 @@
                 }
               ],
               "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "portfolio_code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Portfolio Code"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Offset",
+              "type": "integer"
             }
           }
         ],
@@ -6251,7 +6259,7 @@
             "name": "portfolio_code",
             "required": false,
             "schema": {
-              "default": "ICHIVOL_BASELINE_V1",
+              "default": "ICHIVOL_MAIN_V1",
               "title": "Portfolio Code",
               "type": "string"
             }
@@ -6334,7 +6342,7 @@
     },
     "/api/engine/paper/positions/{position_id}/proximity": {
       "get": {
-        "description": "T0-NOTIF \u2014 remaining fraction to stop/target (same geometry as scenarios). Read-only.",
+        "description": "T0-NOTIF — remaining fraction to stop/target (same geometry as scenarios). Read-only.",
         "operationId": "paper_position_proximity_api_engine_paper_positions__position_id__proximity_get",
         "parameters": [
           {
@@ -6502,7 +6510,7 @@
             "name": "portfolio_code",
             "required": false,
             "schema": {
-              "default": "ICHIVOL_BASELINE_V1",
+              "default": "ICHIVOL_MAIN_V1",
               "title": "Portfolio Code",
               "type": "string"
             }
@@ -6540,7 +6548,7 @@
     },
     "/api/engine/paper/propose": {
       "get": {
-        "description": "Dry-run paper order intent (qty/stop/TP) \u2014 read-only, never opens a position.\n\nFront flow: propose \u2192 user confirms \u2192 POST /paper/positions.",
+        "description": "Dry-run paper order intent (qty/stop/TP) — read-only, never opens a position.\n\nFront flow: propose → user confirms → POST /paper/positions.",
         "operationId": "propose_paper_trade_api_engine_paper_propose_get",
         "parameters": [
           {
@@ -6567,7 +6575,7 @@
             "name": "portfolio_code",
             "required": false,
             "schema": {
-              "default": "ICHIVOL_BASELINE_V1",
+              "default": "ICHIVOL_MAIN_V1",
               "title": "Portfolio Code",
               "type": "string"
             }
@@ -6717,7 +6725,7 @@
     },
     "/api/engine/providers/capabilities": {
       "get": {
-        "description": "V3 \u2014 declared provider capabilities (observation / routing honesty).",
+        "description": "V3 — declared provider capabilities (observation / routing honesty).",
         "operationId": "get_provider_capabilities_api_engine_providers_capabilities_get",
         "parameters": [
           {
@@ -6769,7 +6777,7 @@
     },
     "/api/engine/ruleset/event-study": {
       "post": {
-        "description": "Strategy Lab Phase 2 \u2014 evaluate a ruleset then run Event Study on rising-edge hits.",
+        "description": "Strategy Lab Phase 2 — evaluate a ruleset then run Event Study on rising-edge hits.",
         "operationId": "post_ruleset_event_study_api_engine_ruleset_event_study_post",
         "requestBody": {
           "content": {
@@ -6813,7 +6821,7 @@
     },
     "/api/engine/ruleset/propose": {
       "post": {
-        "description": "T3d \u2014 validate a candidate/patch; returns status=proposed only.",
+        "description": "T3d — validate a candidate/patch; returns status=proposed only.",
         "operationId": "post_ruleset_propose_api_engine_ruleset_propose_post",
         "requestBody": {
           "content": {
@@ -6971,7 +6979,7 @@
     },
     "/api/engine/rulesets": {
       "get": {
-        "description": "Strategy Lab Phase 2 \u2014 list built-in declarative rulesets + condition schema.",
+        "description": "Strategy Lab Phase 2 — list built-in declarative rulesets + condition schema.",
         "operationId": "get_rulesets_api_engine_rulesets_get",
         "responses": {
           "200": {
@@ -7163,7 +7171,7 @@
     },
     "/api/engine/sessions": {
       "get": {
-        "description": "Sessions en cours, prochaine ouverture, prochaine cl\u00f4ture 1d.",
+        "description": "Sessions en cours, prochaine ouverture, prochaine clôture 1d.",
         "operationId": "get_sessions_api_engine_sessions_get",
         "parameters": [
           {
@@ -7294,7 +7302,7 @@
     },
     "/api/engine/shadow/stats": {
       "get": {
-        "description": "ShadowBroker counterfactual summary \u2014 hors cash. kind: indicator filters, \u00c8ve's refusals or audit blocks.",
+        "description": "ShadowBroker counterfactual summary — hors cash. kind: indicator filters, Ève's refusals or audit blocks.",
         "operationId": "get_shadow_stats_api_engine_shadow_stats_get",
         "parameters": [
           {
@@ -7367,7 +7375,7 @@
     },
     "/api/engine/strategy-lab/ablation": {
       "get": {
-        "description": "Convenience GET \u2014 default A\u2192E cumulative ladder (Ichimoku\u2192RVOL\u2192BOS\u2192ATR\u2192CMF).",
+        "description": "Convenience GET — default A→E cumulative ladder (Ichimoku→RVOL→BOS→ATR→CMF).",
         "operationId": "get_strategy_lab_ablation_api_engine_strategy_lab_ablation_get",
         "parameters": [
           {
@@ -7460,7 +7468,7 @@
         ]
       },
       "post": {
-        "description": "Strategy Lab Phase 5 \u2014 run ablation matrix on one shared OHLCV window.",
+        "description": "Strategy Lab Phase 5 — run ablation matrix on one shared OHLCV window.",
         "operationId": "post_strategy_lab_ablation_api_engine_strategy_lab_ablation_post",
         "requestBody": {
           "content": {
@@ -7504,7 +7512,7 @@
     },
     "/api/engine/strategy-lab/ablation-oos/study": {
       "post": {
-        "description": "T9g \u2014 ablation \u00d7 walk-forward OOS recommendations (observation only).",
+        "description": "T9g — ablation × walk-forward OOS recommendations (observation only).",
         "operationId": "post_ablation_oos_study_api_engine_strategy_lab_ablation_oos_study_post",
         "requestBody": {
           "content": {
@@ -7548,7 +7556,7 @@
     },
     "/api/engine/strategy-lab/audit-report": {
       "post": {
-        "description": "T6 \u2014 post-outcome AuditReport for one ruleset trade (hypotheses proposed).",
+        "description": "T6 — post-outcome AuditReport for one ruleset trade (hypotheses proposed).",
         "operationId": "post_audit_report_api_engine_strategy_lab_audit_report_post",
         "requestBody": {
           "content": {
@@ -7592,7 +7600,7 @@
     },
     "/api/engine/strategy-lab/backtest-overlay": {
       "post": {
-        "description": "Run catalog/DSL ruleset backtest and return ephemeral BACKTEST ChartObjects.\n\nFilters (outcome / exit_reason / direction / why_entered_key) apply to\n``objects`` and ``trades``; ``counts`` is always over the full trade set.\nNo new backtest logic \u2014 wraps ``run_ruleset_backtest_on_candles``.",
+        "description": "Run catalog/DSL ruleset backtest and return ephemeral BACKTEST ChartObjects.\n\nFilters (outcome / exit_reason / direction / why_entered_key) apply to\n``objects`` and ``trades``; ``counts`` is always over the full trade set.\nNo new backtest logic — wraps ``run_ruleset_backtest_on_candles``.",
         "operationId": "post_backtest_overlay_api_engine_strategy_lab_backtest_overlay_post",
         "parameters": [
           {
@@ -7729,7 +7737,7 @@
     },
     "/api/engine/strategy-lab/experiments": {
       "get": {
-        "description": "Performance DB \u2014 list persisted Strategy Lab experiments.",
+        "description": "Performance DB — list persisted Strategy Lab experiments.",
         "operationId": "get_strategy_lab_experiments_api_engine_strategy_lab_experiments_get",
         "parameters": [
           {
@@ -7909,7 +7917,7 @@
     },
     "/api/engine/strategy-lab/family-weight-profiles": {
       "get": {
-        "description": "T5b \u2014 named family-weight profile catalog (read-only).",
+        "description": "T5b — named family-weight profile catalog (read-only).",
         "operationId": "get_family_weight_profiles_api_engine_strategy_lab_family_weight_profiles_get",
         "responses": {
           "200": {
@@ -7933,7 +7941,7 @@
     },
     "/api/engine/strategy-lab/family-weights/compare": {
       "get": {
-        "description": "T5b \u2014 compare all weight profiles on the live pipeline (observation).",
+        "description": "T5b — compare all weight profiles on the live pipeline (observation).",
         "operationId": "get_family_weights_compare_api_engine_strategy_lab_family_weights_compare_get",
         "parameters": [
           {
@@ -7998,7 +8006,7 @@
     },
     "/api/engine/strategy-lab/family-weights/study": {
       "get": {
-        "description": "T5b \u2014 historical profile study on BUY/SELL pipeline bars (observation).",
+        "description": "T5b — historical profile study on BUY/SELL pipeline bars (observation).",
         "operationId": "get_family_weights_study_api_engine_strategy_lab_family_weights_study_get",
         "parameters": [
           {
@@ -8083,7 +8091,7 @@
     },
     "/api/engine/strategy-lab/feature-redundancy/study": {
       "get": {
-        "description": "T10c \u2014 pairwise boolean feature redundancy (observation only).",
+        "description": "T10c — pairwise boolean feature redundancy (observation only).",
         "operationId": "get_feature_redundancy_study_api_engine_strategy_lab_feature_redundancy_study_get",
         "parameters": [
           {
@@ -8194,7 +8202,7 @@
     },
     "/api/engine/strategy-lab/microstructure/cvd-compare": {
       "get": {
-        "description": "Binance trade-tape CVD vs kline CVD \u2014 Lab research only.\n\nBounded window (few bars) because aggTrades volume is large.\nDoes **not** alter decision, confidence, fills, FeatureStatus, or REGISTRY.",
+        "description": "Binance trade-tape CVD vs kline CVD — Lab research only.\n\nBounded window (few bars) because aggTrades volume is large.\nDoes **not** alter decision, confidence, fills, FeatureStatus, or REGISTRY.",
         "operationId": "get_microstructure_cvd_compare_api_engine_strategy_lab_microstructure_cvd_compare_get",
         "parameters": [
           {
@@ -8279,7 +8287,7 @@
     },
     "/api/engine/strategy-lab/monte-carlo": {
       "post": {
-        "description": "T7 \u2014 bootstrap Monte Carlo / risk-of-ruin (research only).",
+        "description": "T7 — bootstrap Monte Carlo / risk-of-ruin (research only).",
         "operationId": "post_monte_carlo_api_engine_strategy_lab_monte_carlo_post",
         "requestBody": {
           "content": {
@@ -8435,7 +8443,7 @@
         ]
       },
       "post": {
-        "description": "Strategy Lab Phase 8 \u2014 single-window grid search (IS only; prefer WF-opt).",
+        "description": "Strategy Lab Phase 8 — single-window grid search (IS only; prefer WF-opt).",
         "operationId": "post_strategy_lab_optimize_api_engine_strategy_lab_optimize_post",
         "requestBody": {
           "content": {
@@ -8479,7 +8487,7 @@
     },
     "/api/engine/strategy-lab/propose-experiment-plan": {
       "post": {
-        "description": "Researcher \u2014 AuditReport \u2192 Lab steps (status=proposed; never auto-run).",
+        "description": "Researcher — AuditReport → Lab steps (status=proposed; never auto-run).",
         "operationId": "post_propose_experiment_plan_api_engine_strategy_lab_propose_experiment_plan_post",
         "requestBody": {
           "content": {
@@ -8641,7 +8649,7 @@
         ]
       },
       "post": {
-        "description": "Strategy Lab Phase 6 \u2014 segment ruleset performance by market regime.",
+        "description": "Strategy Lab Phase 6 — segment ruleset performance by market regime.",
         "operationId": "post_strategy_lab_regime_slices_api_engine_strategy_lab_regime_slices_post",
         "requestBody": {
           "content": {
@@ -8869,7 +8877,7 @@
         ]
       },
       "post": {
-        "description": "Strategy Lab Phase 7 \u2014 walk-forward IS/OOS on a fixed ruleset (no optimizer).",
+        "description": "Strategy Lab Phase 7 — walk-forward IS/OOS on a fixed ruleset (no optimizer).",
         "operationId": "post_strategy_lab_walk_forward_api_engine_strategy_lab_walk_forward_post",
         "requestBody": {
           "content": {
@@ -9071,7 +9079,7 @@
         ]
       },
       "post": {
-        "description": "Strategy Lab Phase 8 \u2014 optimize on IS per fold, measure on OOS.",
+        "description": "Strategy Lab Phase 8 — optimize on IS per fold, measure on OOS.",
         "operationId": "post_strategy_lab_walk_forward_opt_api_engine_strategy_lab_walk_forward_opt_post",
         "requestBody": {
           "content": {
@@ -9115,7 +9123,7 @@
     },
     "/api/engine/structure/{symbol}": {
       "get": {
-        "description": "Market Structure Phase 2: MVPP + trendln consensus zones.\n\n``include_pytrendline=true`` runs the capped offline detector (not for\nhot-path screener loops). No real orders \u2014 analysis only.",
+        "description": "Market Structure Phase 2: MVPP + trendln consensus zones.\n\n``include_pytrendline=true`` runs the capped offline detector (not for\nhot-path screener loops). No real orders — analysis only.",
         "operationId": "get_structure_api_engine_structure__symbol__get",
         "parameters": [
           {
