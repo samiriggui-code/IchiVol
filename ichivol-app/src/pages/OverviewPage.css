@@ -134,9 +134,6 @@
 }
 
 /* Tableaux */
-.dk .dk-scroll {
-  max-height: 340px;
-}
 
 .dk .iv-table tr.dk-click {
   cursor: pointer;
@@ -177,6 +174,15 @@
   margin-left: 8px;
   font: 500 9.5px var(--mono);
   color: var(--dim);
+}
+
+/* index.css met tout .sym en colonne flex : ici pastille, nom et code restent sur une ligne. */
+.dk .dk-book {
+  white-space: nowrap;
+}
+
+.dk .dk-book .sym {
+  display: inline;
 }
 
 .dk .dk-link {
@@ -465,10 +471,6 @@
     margin-left: 0;
   }
 
-  .dk .dk-scroll {
-    max-height: none;
-  }
-
 }
 
 /* Petits suffixes de symbole (« 1H », « / USDT ») sur la même ligne. */
@@ -510,4 +512,20 @@
 .dk .iv-ph > div:first-child {
   flex: 1 1 420px;
   min-width: 0;
+}
+
+/* Écrans tactiles et téléphone : cibles d'au moins 36 px (boutons, champs, onglets, pagination). */
+@media (pointer: coarse), (max-width: 760px) {
+  .dk .iv-btn,
+  .dk .iv-input,
+  .dk .iv-seg-btn,
+  .dk .iv-card-tab,
+  .dk .iv-dk-sess,
+  .dk .iv-eqt-row {
+    min-height: 36px;
+  }
+
+  .dk .iv-pager-nav .iv-btn {
+    min-width: 36px;
+  }
 }

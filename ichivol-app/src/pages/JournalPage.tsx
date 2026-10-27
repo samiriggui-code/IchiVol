@@ -25,9 +25,23 @@ import {
   patchUserDecisionStatus,
   type UserDecisionRow,
 } from '../lib/userDecisions'
+import { PAGE_SIZES, usePaged, type PageSize, type Paged } from '../components/table/usePaged'
+import { TablePager } from '../components/table/TablePager'
 import './JournalPage.css'
 
 type JournalTab = 'Trades' | 'Décisions sauvegardées'
+
+/** Même clé que `usePaged` : la taille de page des trades est retenue comme celle des autres tableaux. */
+const TRADES_SIZE_KEY = 'ichivol_page_size:journal-trades'
+
+function readTradesPageSize(): PageSize {
+  try {
+    const v = Number(localStorage.getItem(TRADES_SIZE_KEY))
+    return (PAGE_SIZES as readonly number[]).includes(v) ? (v as PageSize) : 10
+  } catch {
+    return 10
+  }
+}
 
 const NOTE_KEY = 'ichivol-note'
 
@@ -132,6 +146,8 @@ export function JournalPage() {
   /** Nombre total de trades clôturés du compte (avant pagination), rendu par le moteur. */
   const [tradesTotal, setTradesTotal] = useState(0)
   const [moreBusy, setMoreBusy] = useState(false)
+  /** Échec du chargement de la suite : pas de nouvel essai automatique avant le prochain chargement complet. */
+  const [moreFailed, setMoreFailed] = useState(false)
   const [decisions, setDecisions] = useState<UserDecisionRow[]>([])
   const [showArchived, setShowArchived] = useState(false)
   const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(null)
@@ -151,6 +167,7 @@ export function JournalPage() {
         listUserDecisions(80).catch(() => [] as UserDecisionRow[]),
       ])
       const closed = page.positions
+      setMoreFailed(false)
       setTradesTotal(page.total)
       setTrades(
         [...closed].sort(
@@ -165,10 +182,12 @@ export function JournalPage() {
     }
   }, [])
 
-  const loadMoreTrades = useCallback(async () => {
+  /** Charge la suite des trades clôturés (au moins TRADES_PAGE, ou assez pour atteindre `upTo` lignes). */
+  const loadMoreTrades = useCallback(async (upTo = 0) => {
     setMoreBusy(true)
     try {
-      const page = await listAccountPositions({ status: 'CLOSED', limit: TRADES_PAGE, offset: trades.length })
+      const limit = Math.max(TRADES_PAGE, upTo - trades.length)
+      const page = await listAccountPositions({ status: 'CLOSED', limit, offset: trades.length })
       setTradesTotal(page.total)
       setTrades((prev) => {
         const seen = new Set(prev.map((p) => p.id))
@@ -176,6 +195,7 @@ export function JournalPage() {
       })
     } catch {
       /* garder la liste actuelle */
+      setMoreFailed(true)
     } finally {
       setMoreBusy(false)
     }
@@ -353,9 +373,48 @@ export function JournalPage() {
 
   const replayTrade = journalTab === 'Trades' ? (visibleTrades[0] ?? trades[0] ?? null) : null
 
+  // Pagination (5 / 10 / 20 / 50). Décisions : côté client. Trades : pilotée par le moteur (total / offset) ;
+  // sans filtre, le compteur suit le total du moteur et les pages manquantes sont chargées à la demande.
+  // Avec recherche ou filtre décideur, la pagination porte sur les trades déjà chargés.
+  const pagedDecisions = usePaged(filteredDecisions, 'journal-decisions')
+  const [tradesPageSize, setTradesPageSize] = useState<PageSize>(readTradesPageSize)
+  const [tradesPage, setTradesPage] = useState(1)
+  const tradesFiltered = q !== '' || deciderFilter !== 'all'
+  useEffect(() => {
+    setTradesPage(1)
+  }, [q, deciderFilter])
+  const tradesCount = tradesFiltered ? visibleTrades.length : Math.max(tradesTotal, trades.length)
+  const tradesPageCount = Math.max(1, Math.ceil(tradesCount / tradesPageSize))
+  const tradesCurrent = Math.min(tradesPage, tradesPageCount)
+  const tradesStart = (tradesCurrent - 1) * tradesPageSize
+  const tradesNeeded = Math.min(tradesStart + tradesPageSize, tradesCount)
+  useEffect(() => {
+    if (!tradesFiltered && !moreBusy && !moreFailed && trades.length < tradesTotal && trades.length < tradesNeeded) {
+      void loadMoreTrades(tradesNeeded)
+    }
+  }, [tradesFiltered, moreBusy, moreFailed, trades.length, tradesTotal, tradesNeeded, loadMoreTrades])
+  const pagedTrades: Paged<PaperPosition> = {
+    rows: visibleTrades.slice(tradesStart, tradesStart + tradesPageSize),
+    page: tradesCurrent,
+    pageCount: tradesPageCount,
+    pageSize: tradesPageSize,
+    total: tradesCount,
+    start: tradesStart,
+    setPage: (p) => setTradesPage(Math.min(Math.max(1, p), tradesPageCount)),
+    setPageSize: (size) => {
+      setTradesPageSize(size)
+      setTradesPage(1)
+      try {
+        localStorage.setItem(TRADES_SIZE_KEY, String(size))
+      } catch {
+        /* stockage indisponible : le choix vaut pour la session */
+      }
+    },
+  }
+
   const tableRows =
     journalTab === 'Trades'
-      ? visibleTrades.map((t) => {
+      ? pagedTrades.rows.map((t) => {
           const r = fmtR(t)
           const up = r.startsWith('+')
           const down = r.startsWith('−') || r.startsWith('-')
@@ -393,7 +452,7 @@ export function JournalPage() {
             </tr>
           )
         })
-      : filteredDecisions.map((d) => (
+      : pagedDecisions.rows.map((d) => (
           <tr
             key={d.id}
             className={`jr-click${selectedDecision?.id === d.id ? ' is-selected' : ''}`.trim()}
@@ -581,13 +640,18 @@ export function JournalPage() {
               </table>
             </div>
           )}
-          {journalTab === 'Trades' && tradesTotal > trades.length ? (
+          {journalTab === 'Trades' ? (
+            <TablePager paged={pagedTrades} label="trades" />
+          ) : (
+            <TablePager paged={pagedDecisions} label="décisions" />
+          )}
+          {journalTab === 'Trades' && tradesFiltered && tradesTotal > trades.length ? (
             <div className="iv-card-foot">
               <span>
-                {trades.length} sur {tradesTotal} trades chargés
+                Recherche sur {trades.length} trades chargés sur {tradesTotal}
               </span>
               <button type="button" className="iv-btn iv-btn--sm" disabled={moreBusy} onClick={() => void loadMoreTrades()}>
-                {moreBusy ? 'Chargement…' : `Afficher ${Math.min(TRADES_PAGE, tradesTotal - trades.length)} de plus`}
+                {moreBusy ? 'Chargement…' : `Charger ${Math.min(TRADES_PAGE, tradesTotal - trades.length)} de plus`}
               </button>
             </div>
           ) : null}

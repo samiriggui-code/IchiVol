@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react"
+import { TablePager } from "../table/TablePager"
+import { usePaged } from "../table/usePaged"
 
 type Evaluation = {
   id: number
@@ -76,6 +78,7 @@ export function EveShadowPanel() {
   }, [])
 
   const latest = items[0] ? parseAnswers(items[0].jev_result) : null
+  const paged = usePaged(items, "eve-shadow")
 
   return (
     <section className="card">
@@ -109,46 +112,49 @@ export function EveShadowPanel() {
         ) : items.length === 0 ? (
           <p>Aucune évaluation.</p>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Instrument</th>
-                  <th>Décision</th>
-                  <th>NOUL</th>
-                  <th>CHOICE</th>
-                  <th>SCORE</th>
-                  <th>Détails</th>
-                  <th>Latence</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => {
-                  const a = parseAnswers(item.jev_result)
-                  return (
-                    <tr key={item.id}>
-                      <td>{new Date(item.created_at).toLocaleString("fr-FR")}</td>
-                      <td>
-                        {item.symbol} · {item.timeframe}
-                      </td>
-                      <td>{item.original_decision ?? "—"}</td>
-                      <td>{fmtNoul(a.noul)}</td>
-                      <td>{a.choice ?? "—"}</td>
-                      <td>{fmtScore(a.score)}</td>
-                      <td>
-                        <details>
-                          <summary>Voir le détail</summary>
-                          <pre>{JSON.stringify(a.raw, null, 2)}</pre>
-                        </details>
-                      </td>
-                      <td>{item.latency_ms == null ? "—" : `${item.latency_ms} ms`}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div style={{ overflowX: "auto" }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Instrument</th>
+                    <th>Décision</th>
+                    <th>NOUL</th>
+                    <th>CHOICE</th>
+                    <th>SCORE</th>
+                    <th>Détails</th>
+                    <th>Latence</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paged.rows.map((item) => {
+                    const a = parseAnswers(item.jev_result)
+                    return (
+                      <tr key={item.id}>
+                        <td>{new Date(item.created_at).toLocaleString("fr-FR")}</td>
+                        <td>
+                          {item.symbol} · {item.timeframe}
+                        </td>
+                        <td>{item.original_decision ?? "—"}</td>
+                        <td>{fmtNoul(a.noul)}</td>
+                        <td>{a.choice ?? "—"}</td>
+                        <td>{fmtScore(a.score)}</td>
+                        <td>
+                          <details>
+                            <summary>Voir le détail</summary>
+                            <pre>{JSON.stringify(a.raw, null, 2)}</pre>
+                          </details>
+                        </td>
+                        <td>{item.latency_ms == null ? "—" : `${item.latency_ms} ms`}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <TablePager paged={paged} label="évaluations" />
+          </>
         )}
       </div>
     </section>

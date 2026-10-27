@@ -44,6 +44,8 @@ import {
   type PortfolioBreakdown,
 } from '../lib/breakdown'
 import { DECIDER_EXPLAIN, DECIDER_LABEL, deciderOf, type Decider } from '../lib/decider'
+import { PAGE_SIZES, usePaged, type PageSize, type Paged } from '../components/table/usePaged'
+import { TablePager } from '../components/table/TablePager'
 import './PortfolioPage.css'
 
 type Tone = 'cyan' | 'amber' | 'mint' | 'buy' | 'sell' | 'muted'
@@ -219,37 +221,42 @@ function PerfTable<T extends BreakdownStats>({
   label: string
   first: (row: T) => ReactNode
 }) {
+  // Pagination (5 / 10 / 20 / 50) ; la barre ne paraît qu'au-delà de 5 lignes.
+  const paged = usePaged(rows, `pf-perf-${label}`)
   return (
-    <div className="iv-card-body is-flush iv-table-wrap">
-      <table className="iv-table is-compact">
-        <thead>
-          <tr>
-            <th>{label}</th>
-            <th className="n">Trades</th>
-            <th className="n">Réussite</th>
-            <th className="n">Net</th>
-            <th className="n">Gain moy. / perte moy.</th>
-            <th className="n">Frais</th>
-            <th className="n">En cours</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={i}>
-              <td>{first(r)}</td>
-              <td className="n">{r.trades > 0 ? `${r.trades} · ${r.wins} / ${r.losses}` : '0'}</td>
-              <td className="n">{r.trades > 0 && r.win_rate != null ? fmtPct(r.win_rate, 0) : '—'}</td>
-              <td className={`n ${signCls(r.net)}`}>{r.trades > 0 ? fmtSigned(r.net, 2, ' €') : '—'}</td>
-              <td className="n">
-                {r.avg_win != null ? fmtEur(r.avg_win, 2) : '—'} / {r.avg_loss != null ? fmtEur(r.avg_loss, 2) : '—'}
-              </td>
-              <td className="n dim">{r.trades > 0 ? fmtEur(r.fees, 2) : '—'}</td>
-              <td className="n">{r.open}</td>
+    <>
+      <div className="iv-card-body is-flush iv-table-wrap">
+        <table className="iv-table is-compact">
+          <thead>
+            <tr>
+              <th>{label}</th>
+              <th className="n">Trades</th>
+              <th className="n">Réussite</th>
+              <th className="n">Net</th>
+              <th className="n">Gain moy. / perte moy.</th>
+              <th className="n">Frais</th>
+              <th className="n">En cours</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {paged.rows.map((r, i) => (
+              <tr key={paged.start + i}>
+                <td>{first(r)}</td>
+                <td className="n">{r.trades > 0 ? `${r.trades} · ${r.wins} / ${r.losses}` : '0'}</td>
+                <td className="n">{r.trades > 0 && r.win_rate != null ? fmtPct(r.win_rate, 0) : '—'}</td>
+                <td className={`n ${signCls(r.net)}`}>{r.trades > 0 ? fmtSigned(r.net, 2, ' €') : '—'}</td>
+                <td className="n">
+                  {r.avg_win != null ? fmtEur(r.avg_win, 2) : '—'} / {r.avg_loss != null ? fmtEur(r.avg_loss, 2) : '—'}
+                </td>
+                <td className="n dim">{r.trades > 0 ? fmtEur(r.fees, 2) : '—'}</td>
+                <td className="n">{r.open}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <TablePager paged={paged} label="lignes" />
+    </>
   )
 }
 
@@ -308,8 +315,17 @@ function ObservedFilters({ signal }: { signal: Record<string, unknown> | null | 
   )
 }
 
-/** Trades clôturés chargés par page dans « Historique des trades ». */
-const HISTORY_PAGE = 30
+/** Taille de page de « Historique des trades » : même clé que `usePaged`, retenue dans le navigateur. */
+const HISTORY_SIZE_KEY = 'ichivol_page_size:pf-historique'
+
+function readHistoryPageSize(): PageSize {
+  try {
+    const v = Number(localStorage.getItem(HISTORY_SIZE_KEY))
+    return (PAGE_SIZES as readonly number[]).includes(v) ? (v as PageSize) : 10
+  } catch {
+    return 10
+  }
+}
 
 export function PortfolioPage() {
   const [searchParams] = useSearchParams()
@@ -335,6 +351,11 @@ export function PortfolioPage() {
   const [history, setHistory] = useState<PaperPosition[]>([])
   const [historyTotal, setHistoryTotal] = useState(0)
   const [historyBusy, setHistoryBusy] = useState(false)
+  /** Page affichée de l'historique (pagination serveur : offset = (page - 1) × taille). */
+  const [historyPage, setHistoryPage] = useState(1)
+  const [historyPageSize, setHistoryPageSize] = useState<PageSize>(readHistoryPageSize)
+  /** Incrémenté à chaque rechargement complet pour relire la page courante de l'historique. */
+  const [historyTick, setHistoryTick] = useState(0)
   const [loading, setLoading] = useState(true)
   const [fiche, setFiche] = useState<PaperOverviewPosition | null>(null)
   const [closeTarget, setCloseTarget] = useState<PaperOverviewPosition | null>(null)
@@ -348,12 +369,7 @@ export function PortfolioPage() {
     void loadAccountLots()
       .then((lots) => setDeciderByPosition(Object.fromEntries(lots.map((p) => [p.id, deciderOf(p)]))))
       .catch(() => undefined)
-    void listAccountPositions({ code, status: 'CLOSED', limit: HISTORY_PAGE })
-      .then((page) => {
-        setHistory(page.positions)
-        setHistoryTotal(page.total)
-      })
-      .catch(() => undefined)
+    setHistoryTick((n) => n + 1)
     void getPortfolioBreakdown(code)
       .then(setBreakdown)
       .catch(() => setBreakdown(null))
@@ -377,20 +393,50 @@ export function PortfolioPage() {
     void load()
   }, [load])
 
-  async function loadMoreHistory() {
+  // Historique : le moteur pagine (limit / offset, plus récents d'abord) ; TablePager pilote la page demandée.
+  useEffect(() => {
+    let alive = true
     setHistoryBusy(true)
-    try {
-      const page = await listAccountPositions({ code, status: 'CLOSED', limit: HISTORY_PAGE, offset: history.length })
-      setHistoryTotal(page.total)
-      setHistory((prev) => {
-        const seen = new Set(prev.map((p) => p.id))
-        return [...prev, ...page.positions.filter((p) => !seen.has(p.id))]
+    listAccountPositions({
+      code,
+      status: 'CLOSED',
+      limit: historyPageSize,
+      offset: (historyPage - 1) * historyPageSize,
+    })
+      .then((page) => {
+        if (!alive) return
+        setHistory(page.positions)
+        setHistoryTotal(page.total)
       })
-    } catch {
-      /* garder l'historique actuel */
-    } finally {
-      setHistoryBusy(false)
+      .catch(() => {
+        /* garder la page actuelle */
+      })
+      .finally(() => {
+        if (alive) setHistoryBusy(false)
+      })
+    return () => {
+      alive = false
     }
+  }, [code, historyPage, historyPageSize, historyTick])
+
+  const historyPageCount = Math.max(1, Math.ceil(historyTotal / historyPageSize))
+  const historyPaged: Paged<PaperPosition> = {
+    rows: history,
+    page: Math.min(historyPage, historyPageCount),
+    pageCount: historyPageCount,
+    pageSize: historyPageSize,
+    total: historyTotal,
+    start: (Math.min(historyPage, historyPageCount) - 1) * historyPageSize,
+    setPage: (p) => setHistoryPage(Math.min(Math.max(1, p), historyPageCount)),
+    setPageSize: (size) => {
+      setHistoryPageSize(size)
+      setHistoryPage(1)
+      try {
+        localStorage.setItem(HISTORY_SIZE_KEY, String(size))
+      } catch {
+        /* stockage indisponible : le choix vaut pour la session */
+      }
+    },
   }
 
   useEffect(() => {
@@ -461,7 +507,13 @@ export function PortfolioPage() {
       (p.current_price != null && p.qty != null ? p.current_price * Math.abs(p.qty) : p.notional ?? null)
     return v == null ? s : (s ?? 0) + v
   }, null)
-  const refusals = risk?.recent_refusals ?? []
+  const refusals = useMemo(() => risk?.recent_refusals ?? [], [risk?.recent_refusals])
+
+  // Pagination (5 / 10 / 20 / 50) : toutes les lignes restent accessibles, page par page.
+  const pagedConcentration = usePaged(concentration, 'pf-concentration')
+  const pagedPositions = usePaged(positions, 'pf-positions')
+  const pagedOrders = usePaged(orders, 'pf-ordres')
+  const pagedRefusals = usePaged(refusals, 'pf-refus')
 
   return (
     <div className="pf-page">
@@ -654,9 +706,10 @@ export function PortfolioPage() {
               </p>
             ) : (
               <>
-                {concentration.map((c) => (
+                {pagedConcentration.rows.map((c) => (
                   <Meter key={c.symbol} label={c.symbol} value={`${fmtPctPoints(c.pct, 1)} de l’exposition`} pct={c.pct} />
                 ))}
+                <TablePager paged={pagedConcentration} label="actifs" />
                 <p className="iv-note pf-small">
                   {concentration.length} ligne{concentration.length > 1 ? 's' : ''} ouverte
                   {concentration.length > 1 ? 's' : ''}. Le broker paper n’ajoute pas une position si le cash ou le plafond
@@ -798,7 +851,7 @@ export function PortfolioPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {positions.map((p: PaperOverviewPosition) => {
+                  {pagedPositions.rows.map((p: PaperOverviewPosition) => {
                     const pnl = p.unrealized_pnl
                     const perf = p.unrealized_pct
                     const r = rMultiple(p)
@@ -878,6 +931,7 @@ export function PortfolioPage() {
               </table>
             </div>
           )}
+          <TablePager paged={pagedPositions} label="positions" />
           <div className="iv-card-foot">
             Stop et objectif surveillés en continu · touchez une ligne pour sa fiche
           </div>
@@ -924,13 +978,13 @@ export function PortfolioPage() {
               <span className="iv-card-tab is-on">Historique des trades</span>
             </div>
             <div className="iv-card-tools">
-              {historyTotal ? `${history.length} sur ${historyTotal} clôturés` : '—'}
+              {historyTotal ? `${historyTotal} clôturé${historyTotal > 1 ? 's' : ''} · plus récents d’abord` : '—'}
             </div>
           </div>
           {history.length === 0 ? (
             <div className="iv-empty">{loading ? 'Chargement…' : 'Aucun trade clôturé sur ce compte pour l’instant.'}</div>
           ) : (
-            <div className="iv-card-body is-flush iv-table-wrap">
+            <div className="iv-card-body is-flush iv-table-wrap" aria-busy={historyBusy}>
               <table className="iv-table is-compact">
                 <thead>
                   <tr>
@@ -973,14 +1027,7 @@ export function PortfolioPage() {
               </table>
             </div>
           )}
-          {historyTotal > history.length ? (
-            <div className="iv-card-foot">
-              <span>Plus récents d’abord</span>
-              <button type="button" className="iv-btn iv-btn--sm" disabled={historyBusy} onClick={() => void loadMoreHistory()}>
-                {historyBusy ? 'Chargement…' : `Afficher ${Math.min(HISTORY_PAGE, historyTotal - history.length)} de plus`}
-              </button>
-            </div>
-          ) : null}
+          <TablePager paged={historyPaged} label="trades clôturés" />
         </section>
       </div>
 
@@ -1010,7 +1057,7 @@ export function PortfolioPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.map((o) => {
+                  {pagedOrders.rows.map((o) => {
                     const reason = orderReasonFr(o.reason)
                     const filled = o.status === 'FILLED'
                     return (
@@ -1042,6 +1089,7 @@ export function PortfolioPage() {
               </table>
             </div>
           )}
+          <TablePager paged={pagedOrders} label="ordres" />
         </section>
 
         <div className="iv-s5 iv-m-s12 pf-stack">
@@ -1050,7 +1098,7 @@ export function PortfolioPage() {
               <div className="iv-card-tabs">
                 <span className="iv-card-tab is-on">Ordres refusés par le risque</span>
               </div>
-              <div className="iv-card-tools">{refusals.length ? `${Math.min(refusals.length, 5)} derniers` : ''}</div>
+              <div className="iv-card-tools">{refusals.length ? `${refusals.length} derniers` : ''}</div>
             </div>
             {refusals.length === 0 ? (
               <div className="iv-empty">
@@ -1060,8 +1108,8 @@ export function PortfolioPage() {
               </div>
             ) : (
               <div className="iv-card-body">
-                {refusals.slice(0, 5).map((r, i) => (
-                  <div className="iv-row" key={`${r.at ?? i}-${r.symbol ?? i}`}>
+                {pagedRefusals.rows.map((r, i) => (
+                  <div className="iv-row" key={`${pagedRefusals.start + i}-${r.at ?? ""}-${r.symbol ?? ""}`}>
                     <span>
                       <b>{r.symbol ? displaySymbol(r.symbol) : '—'}</b>
                       {r.at ? <span className="mono dim"> · {fmtTime(r.at)}</span> : null}
@@ -1071,6 +1119,7 @@ export function PortfolioPage() {
                 ))}
               </div>
             )}
+            <TablePager paged={pagedRefusals} label="refus" />
           </section>
           <section className="iv-card" id="pf-regles">
             <div className="iv-card-head">

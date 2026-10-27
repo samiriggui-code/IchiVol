@@ -22,6 +22,9 @@
 .journal-page .jr-toolbar .iv-input {
   width: 190px;
 }
+.journal-page .jr-toolbar .jr-search {
+  width: 220px;
+}
 .journal-page .jr-toolbar select.iv-input {
   font-family: var(--sans);
   cursor: pointer;
@@ -43,9 +46,6 @@
 /* — Tableau des trades — */
 .journal-page .jr-main {
   min-height: 420px;
-}
-.journal-page .jr-main .iv-table-wrap {
-  max-height: 640px;
 }
 .journal-page .iv-table tbody tr.jr-click {
   cursor: pointer;
@@ -122,9 +122,6 @@
   .journal-page .jr-main {
     min-height: 0;
   }
-  .journal-page .jr-main .iv-table-wrap {
-    max-height: 520px;
-  }
 }
 
 /* Le pont (premium.css §5) force la couleur des td et index.css met .sym en flex :
@@ -149,4 +146,27 @@
 }
 .journal-page .iv-table td.muted {
   color: var(--muted);
+}
+
+/* Téléphone : filtre et export sur une ligne, recherche en pleine largeur dessous (placeholder lisible). */
+@media (max-width: 520px) {
+  .journal-page .jr-toolbar .jr-search {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+/* Écrans tactiles et téléphone : cibles d'au moins 36 px (boutons, champs, onglets, pagination). */
+@media (pointer: coarse), (max-width: 760px) {
+  .journal-page .iv-btn,
+  .journal-page .iv-input,
+  .journal-page .iv-seg-btn,
+  .journal-page .iv-card-tab,
+  .journal-page .jr-check {
+    min-height: 36px;
+  }
+
+  .journal-page .iv-pager-nav .iv-btn {
+    min-width: 36px;
+  }
 }

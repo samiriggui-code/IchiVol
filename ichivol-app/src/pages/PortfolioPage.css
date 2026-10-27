@@ -397,3 +397,17 @@
 .pf-page .iv-table td.muted {
   color: var(--muted);
 }
+
+/* Écrans tactiles et téléphone : cibles d'au moins 36 px (boutons, champs, onglets, pagination). */
+@media (pointer: coarse), (max-width: 760px) {
+  .pf-page .iv-btn,
+  .pf-page .iv-input,
+  .pf-page .iv-seg-btn,
+  .pf-page .iv-card-tab {
+    min-height: 36px;
+  }
+
+  .pf-page .iv-pager-nav .iv-btn {
+    min-width: 36px;
+  }
+}

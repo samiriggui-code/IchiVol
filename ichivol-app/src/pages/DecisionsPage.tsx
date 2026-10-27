@@ -9,6 +9,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
 import { MtfPanel } from '../components/MtfPanel'
 import { ChartIntelligencePanel } from '../components/chart-intelligence'
+import { TablePager } from '../components/table/TablePager'
+import { usePaged } from '../components/table/usePaged'
 import { PaperConfirmSheet } from '../components/PaperConfirmSheet'
 import { MAIN_PORTFOLIO_CODE, MAIN_PORTFOLIO_LABEL } from '../lib/mainPortfolio'
 import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
@@ -333,6 +335,7 @@ export function DecisionsPage() {
       return base.includes(q) || full.includes(q)
     })
   }, [rows, query, oppFilter])
+  const filteredPaged = usePaged(filtered, 'opportunites-matrice')
 
   const whyRow = useMemo(() => {
     const triggered = rows.filter((r) => cycleFromRow(r) === 'TRIGGERED')
@@ -642,7 +645,7 @@ export function DecisionsPage() {
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((r) => {
+                  filteredPaged.rows.map((r) => {
                     const cycle = cycleFromRow(r)
                     const dossier = eveBySymbol.get(String(r.symbol).toUpperCase())
                     const eve = dossier ? overlayFromDossier(dossier) : null
@@ -686,6 +689,7 @@ export function DecisionsPage() {
               </tbody>
             </table>
           </div>
+          <TablePager paged={filteredPaged} label="actifs" />
           <div className="iv-card-foot opps-legend">
             {GATES.map((g) => (
               <span key={g.id}>

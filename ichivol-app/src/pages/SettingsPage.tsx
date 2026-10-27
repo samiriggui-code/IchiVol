@@ -21,6 +21,8 @@ import { useLlmStatus, type JevProbeStatus } from '../lib/llmStatus'
 import { DEFAULT_ICHI, DEFAULT_VOL } from '../lib/types'
 import { AiModelsSettings, connText } from './settings/AiModelsSettings'
 import { EveSettings } from './settings/EveSettings'
+import { TablePager } from '../components/table/TablePager'
+import { usePaged } from '../components/table/usePaged'
 import './SettingsPage.css'
 
 type SectionId = 'auto' | 'eve' | 'ia' | 'alertes' | 'graphiques' | 'connexions'
@@ -72,6 +74,8 @@ function Meter({ value, max, label }: { value: number | null | undefined; max: n
   )
 }
 
+const NO_BOOKS: Book[] = []
+
 function AutoTradingSection({
   autonomy,
   books,
@@ -81,6 +85,7 @@ function AutoTradingSection({
   books: Book[] | null
   booksError: string | null
 }) {
+  const booksPaged = usePaged(books ?? NO_BOOKS, 'parametres-portefeuilles')
   return (
     <>
       <section className="apex-card params-pilot">
@@ -163,7 +168,7 @@ function AutoTradingSection({
                   </td>
                 </tr>
               ) : null}
-              {books?.map((b) => {
+              {booksPaged.rows.map((b) => {
                 const r = b.overview.risk
                 const blocked = b.row.kill_switch_armed || b.row.daily_loss_locked
                 const refusals = r?.recent_refusals?.length ?? 0
@@ -226,6 +231,7 @@ function AutoTradingSection({
             </tbody>
           </table>
         </div>
+        <TablePager paged={booksPaged} label="portefeuilles" />
         <div className="iv-card-foot params-foot">
           <span>
             L’arrêt d’urgence est dans le bandeau du haut ; le détail des refus, dans le{' '}

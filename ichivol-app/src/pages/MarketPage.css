@@ -382,3 +382,22 @@
 .mk-watch td.sym {
   display: table-cell;
 }
+
+/* Tablette et téléphone : commandes utilisables au doigt (36 px environ). */
+@media (max-width: 1100px), (pointer: coarse) {
+  .mk-page .mk-ctool {
+    height: auto;
+    min-height: 44px;
+    padding: 4px 6px;
+  }
+
+  .mk-page .mk-iv-tb {
+    height: 36px;
+    padding: 0 12px;
+  }
+
+  .mk-page .iv-ph-act .iv-btn,
+  .mk-page .mk-read-act .iv-btn {
+    min-height: 36px;
+  }
+}

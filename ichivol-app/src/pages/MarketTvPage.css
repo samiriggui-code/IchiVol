@@ -342,3 +342,21 @@
 .tv-watch td.sym {
   display: table-cell;
 }
+
+/* Tablette et téléphone : commandes utilisables au doigt (36 px environ). */
+@media (max-width: 1100px), (pointer: coarse) {
+  .tv-page .tv-ctool {
+    height: auto;
+    min-height: 44px;
+    padding: 4px 6px;
+  }
+
+  .tv-page .tv-iv-tb {
+    height: 36px;
+    padding: 0 12px;
+  }
+
+  .tv-page .tv-actions .iv-btn {
+    min-height: 36px;
+  }
+}

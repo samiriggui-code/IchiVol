@@ -146,10 +146,13 @@ export function KillLockBanner() {
           : 'entrées bloquées par le moteur'
   return (
     <div className="dash-lock-banner" role="status">
-      <strong>Paper verrouillé</strong>
-      <span>{` : ${why}`}</span>
+      {/* Titre et motif dans le même bloc : sinon le motif passe à la ligne et commence par « : ». */}
+      <span>
+        <strong>Paper verrouillé</strong>
+        {` : ${why}`}
+      </span>
       {dailyLocked && (
-        <button type="button" className="ghost" onClick={requestUnlockDaily}>
+        <button type="button" className="iv-btn iv-btn--ghost iv-btn--sm" onClick={requestUnlockDaily}>
           Déverrouiller perte jour
         </button>
       )}

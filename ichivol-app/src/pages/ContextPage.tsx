@@ -27,6 +27,8 @@ import {
   type EngineInstrument,
 } from '../lib/universe'
 import { OrderbookQualityCard } from '../components/OrderbookQualityCard'
+import { TablePager } from '../components/table/TablePager'
+import { usePaged } from '../components/table/usePaged'
 import './ContextPage.css'
 
 type BadgeTone = 'green' | 'amber' | 'red' | 'gray' | ''
@@ -244,8 +246,8 @@ export function ContextPage() {
 
       setGlobal(g)
       setFg(f)
-      setEvents(cal.slice(0, 6))
-      setNews(newsItems.slice(0, 6))
+      setEvents(cal)
+      setNews(newsItems)
       setCorr(c)
       setBtcSnap(btc)
       setInstruments(uni?.instruments ?? [])
@@ -361,6 +363,10 @@ export function ContextPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  // Agenda et actualités : tout ce que l'API renvoie, page par page.
+  const eventsPaged = usePaged(events, 'contexte-agenda')
+  const newsPaged = usePaged(news, 'contexte-actualites')
 
   const btcDom = useMemo(() => {
     const d = global?.dominance?.find((x) => /btc/i.test(x.symbol))
@@ -487,7 +493,7 @@ export function ContextPage() {
       </div>
 
       <div className="iv-grid">
-        <section className="iv-card iv-s4 iv-m-s12">
+        <section className="iv-card iv-s4 iv-m-s12 ctx-t-half">
           <div className="iv-card-head">
             <div className="iv-card-tabs">
               <span className="iv-card-tab is-on">Régime par classe d’actifs</span>
@@ -517,7 +523,7 @@ export function ContextPage() {
           </div>
         </section>
 
-        <section className="apex-card iv-s5 iv-m-s12 ctx-vigil">
+        <section className="apex-card iv-s5 iv-m-s12 ctx-t-half ctx-vigil">
           <div className="iv-label">Points de vigilance</div>
           {vigilance.length === 0 ? (
             <p className="ctx-vigil-empty">
@@ -568,7 +574,7 @@ export function ContextPage() {
       </div>
 
       <div className="iv-grid">
-        <section className="iv-card iv-s5 iv-m-s12">
+        <section className="iv-card iv-s5 iv-m-s12 ctx-t-half">
           <div className="iv-card-head">
             <div className="iv-card-tabs">
               <span className="iv-card-tab is-on">Corrélations · crypto</span>
@@ -616,7 +622,7 @@ export function ContextPage() {
           <div className="iv-card-foot">Pearson sur log-returns 1h — lecture seule, hors pipeline</div>
         </section>
 
-        <section className="iv-card iv-s4 iv-m-s12">
+        <section className="iv-card iv-s4 iv-m-s12 ctx-agenda">
           <div className="iv-card-head">
             <div className="iv-card-tabs">
               <span className="iv-card-tab is-on">Agenda économique</span>
@@ -641,8 +647,8 @@ export function ContextPage() {
                     </td>
                   </tr>
                 ) : (
-                  events.map((e, i) => (
-                    <tr key={`${e.title}-${i}`}>
+                  eventsPaged.rows.map((e, i) => (
+                    <tr key={`${e.title}-${eventsPaged.start + i}`}>
                       <td className="mono ctx-when">{fmtEventTime(e.date)}</td>
                       <td className="ctx-country">{e.country || '—'}</td>
                       <td className="ctx-event">{e.title || '—'}</td>
@@ -653,10 +659,11 @@ export function ContextPage() {
               </tbody>
             </table>
           </div>
+          <TablePager paged={eventsPaged} label="événements" />
           <div className="iv-card-foot">Le contexte macro éclaire la décision, sans voter dans le signal</div>
         </section>
 
-        <OrderbookQualityCard className="iv-s3 iv-m-s12" />
+        <OrderbookQualityCard className="iv-s3 iv-m-s12 ctx-t-half" />
       </div>
 
       <div className="iv-grid">
@@ -674,8 +681,8 @@ export function ContextPage() {
               </p>
             ) : (
               <ul className="ctx-news-list">
-                {news.map((item, i) => (
-                  <li key={`${item.url}-${i}`}>
+                {newsPaged.rows.map((item, i) => (
+                  <li key={`${item.url}-${newsPaged.start + i}`}>
                     <span className="ctx-news-t">{fmtNewsTime(item.published_at)}</span>
                     <a href={item.url} target="_blank" rel="noreferrer noopener">
                       {item.title}
@@ -686,6 +693,7 @@ export function ContextPage() {
               </ul>
             )}
           </div>
+          <TablePager paged={newsPaged} label="titres" />
         </section>
       </div>
     </div>

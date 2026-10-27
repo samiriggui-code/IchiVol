@@ -182,3 +182,10 @@
     padding: 16px;
   }
 }
+
+/* Tablette et téléphone : questions suggérées utilisables au doigt. */
+@media (max-width: 1100px), (pointer: coarse) {
+  .copilot-page .cp-q {
+    min-height: 36px;
+  }
+}

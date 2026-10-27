@@ -23,6 +23,8 @@ import {
 import { pipelineFromDecisionDetail } from '../lib/decisionPipeline'
 import { displaySymbol } from '../lib/markets'
 import '../components/engineEvidence.css'
+import { usePaged } from '../components/table/usePaged'
+import { TablePager } from '../components/table/TablePager'
 import './ActivityPage.css'
 
 type OpsFilter = 'Tous' | 'PASSE' | 'PRUDENCE' | 'REFUSÉ'
@@ -193,6 +195,9 @@ export function ActivityPage() {
     })
   }, [rows, opsFilter, query])
 
+  // Pagination (5 / 10 / 20 / 50) appliquée après filtre et recherche.
+  const paged = usePaged(filtered, 'operations-journal-audit')
+
   const quality = useMemo(() => {
     const problems = screener
       .map((row) => {
@@ -316,7 +321,7 @@ export function ActivityPage() {
           {filtered.length === 0 ? (
             <div className="iv-empty">{loading ? 'Chargement…' : 'Aucune ligne ne correspond.'}</div>
           ) : (
-            <div className="iv-card-body is-flush iv-table-wrap ops-table">
+            <div className="iv-card-body is-flush iv-table-wrap">
               <table className="iv-table is-compact">
                 <thead>
                   <tr>
@@ -328,7 +333,7 @@ export function ActivityPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((r) => (
+                  {paged.rows.map((r) => (
                     <tr
                       key={r.key}
                       className={`ops-click${selected === r.item ? ' is-selected' : ''}`}
@@ -357,6 +362,7 @@ export function ActivityPage() {
               </table>
             </div>
           )}
+          <TablePager paged={paged} label="lignes" />
           <div className="iv-card-foot">Touchez une ligne pour lire la décision du moteur</div>
         </section>
 

@@ -45,6 +45,8 @@ import {
   type PortfolioBreakdown,
 } from '../../lib/breakdown'
 import { fmtEur, fmtPct } from '../../pages/desk/deskFormat'
+import { TablePager } from '../table/TablePager'
+import { usePaged } from '../table/usePaged'
 import './EveResults.css'
 
 type VerdictFilter = 'all' | ProposalVerdict
@@ -468,6 +470,9 @@ export function EveResults({
   }, [rows])
   const shown = filter === 'all' ? rows : rows.filter((r) => r.verdict === filter)
   const selected = shown.find((r) => r.key === openRow) ?? shown[0] ?? null
+  // Pagination après le filtre : le dossier reste celui de la ligne choisie, quelle que soit sa page.
+  const shownPaged = usePaged(shown, 'eve-propositions')
+  const byAssetPaged = usePaged(byAsset, 'eve-par-classe')
 
   function openDossier(key: string) {
     setOpenRow(key)
@@ -478,10 +483,10 @@ export function EveResults({
     () =>
       positions
         .filter((p) => deciderOf(p) === 'eve')
-        .sort((a, b) => +new Date(b.entry_time) - +new Date(a.entry_time))
-        .slice(0, 6),
+        .sort((a, b) => +new Date(b.entry_time) - +new Date(a.entry_time)),
     [positions],
   )
+  const eveTradesPaged = usePaged(latestEveTrades, 'eve-derniers-trades')
 
   const overEve = scores.engine_over_eve
   const sumWins = overEve.avgWin != null ? overEve.avgWin * overEve.wins : null
@@ -580,32 +585,35 @@ export function EveResults({
               </table>
             </div>
           ) : byAsset.length > 0 ? (
-            <div className="iv-card-body is-flush iv-table-wrap">
-              <table className="iv-table">
-                <thead>
-                  <tr>
-                    <th>Classe d’actifs</th>
-                    <th className="n">Trades</th>
-                    <th className="n">Réussite</th>
-                    <th className="n">Frais</th>
-                    <th className="n">Net</th>
-                    <th className="n">Ouvertes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {byAsset.map((a) => (
-                    <tr key={a.asset_class}>
-                      <td className="sym">{assetClassLabel(a)}</td>
-                      <td className="n">{a.trades}</td>
-                      <td className="n">{a.win_rate != null && a.trades > 0 ? fmtPct(a.win_rate, 0, false) : '—'}</td>
-                      <td className="n muted">{a.trades > 0 ? fmtEur(a.fees, 2) : '—'}</td>
-                      <td className={`n dv-strong ${toneOf(a.net)}`}>{a.trades > 0 ? signedEur(a.net) : '—'}</td>
-                      <td className="n">{a.open}</td>
+            <>
+              <div className="iv-card-body is-flush iv-table-wrap">
+                <table className="iv-table">
+                  <thead>
+                    <tr>
+                      <th>Classe d’actifs</th>
+                      <th className="n">Trades</th>
+                      <th className="n">Réussite</th>
+                      <th className="n">Frais</th>
+                      <th className="n">Net</th>
+                      <th className="n">Ouvertes</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {byAssetPaged.rows.map((a) => (
+                      <tr key={a.asset_class}>
+                        <td className="sym">{assetClassLabel(a)}</td>
+                        <td className="n">{a.trades}</td>
+                        <td className="n">{a.win_rate != null && a.trades > 0 ? fmtPct(a.win_rate, 0, false) : '—'}</td>
+                        <td className="n muted">{a.trades > 0 ? fmtEur(a.fees, 2) : '—'}</td>
+                        <td className={`n dv-strong ${toneOf(a.net)}`}>{a.trades > 0 ? signedEur(a.net) : '—'}</td>
+                        <td className="n">{a.open}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <TablePager paged={byAssetPaged} label="classes d’actifs" />
+            </>
           ) : (
             <p className="iv-empty">
               {loading ? 'Chargement…' : breakdown ? 'Aucun trade pour l’instant.' : 'Bilan par classe indisponible.'}
@@ -772,65 +780,68 @@ export function EveResults({
                   : 'Aucune proposition dans ce filtre.'}
             </p>
           ) : (
-            <div className="iv-card-body is-flush iv-table-wrap dv-props-wrap">
-              <table className="iv-table dv-props-table">
-                <thead>
-                  <tr>
-                    <th>Heure</th>
-                    <th>Actif</th>
-                    <th>Moteur → Ève</th>
-                    <th className="n">Cohérence</th>
-                    <th>Issue</th>
-                    <th className="n">Résultat</th>
-                    <th>Dossier</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shown.slice(0, 80).map((row) => {
-                    const { key, d, p, verdict } = row
-                    const isSel = selected?.key === key
-                    const engine = engineProposalFr(p)
-                    const pnlR = p.result?.status === 'CLOSED' ? (p.result.pnl_r ?? null) : null
-                    return (
-                      <tr key={key} className={isSel ? 'is-selected' : undefined} onClick={() => setOpenRow(key)}>
-                        <td className="mono muted">{fmtWhen(d.created_at)}</td>
-                        <td className="sym">{d.symbol}</td>
-                        <td className="dv-flow">
-                          <span className={actionTone(engine)}>{engine}</span>
-                          <span className="dv-flow-ar" aria-label="puis Ève :">
-                            →
-                          </span>
-                          <b className={p.eve_accepts ? 'is-agree' : 'is-refuse'}>{eveActionFr(p.eve_action)}</b>
-                          {decisionRuleFr(d.decision_rule) ? (
-                            <small className="muted"> · {decisionRuleFr(d.decision_rule)}</small>
-                          ) : null}
-                        </td>
-                        <td className="n">{d.coherence != null ? fmtPct(d.coherence, 0, false) : '—'}</td>
-                        <td>
-                          <span className={`iv-tag ${VERDICT_TONE[verdict]}`}>{VERDICT_LABEL[verdict]}</span>
-                        </td>
-                        <td className={`n ${toneOf(pnlR)}`}>
-                          {pnlR != null ? fmtR(pnlR) : p.result && p.result.status !== 'CLOSED' ? 'en cours' : '—'}
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className="iv-btn iv-btn--sm iv-btn--ghost"
-                            aria-pressed={isSel}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openDossier(key)
-                            }}
-                          >
-                            {isSel ? 'Affiché ↑' : 'Voir ↑'}
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <div className="iv-card-body is-flush iv-table-wrap dv-props-wrap">
+                <table className="iv-table dv-props-table">
+                  <thead>
+                    <tr>
+                      <th>Heure</th>
+                      <th>Actif</th>
+                      <th>Moteur → Ève</th>
+                      <th className="n">Cohérence</th>
+                      <th>Issue</th>
+                      <th className="n">Résultat</th>
+                      <th>Dossier</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shownPaged.rows.map((row) => {
+                      const { key, d, p, verdict } = row
+                      const isSel = selected?.key === key
+                      const engine = engineProposalFr(p)
+                      const pnlR = p.result?.status === 'CLOSED' ? (p.result.pnl_r ?? null) : null
+                      return (
+                        <tr key={key} className={isSel ? 'is-selected' : undefined} onClick={() => setOpenRow(key)}>
+                          <td className="mono muted">{fmtWhen(d.created_at)}</td>
+                          <td className="sym">{d.symbol}</td>
+                          <td className="dv-flow">
+                            <span className={actionTone(engine)}>{engine}</span>
+                            <span className="dv-flow-ar" aria-label="puis Ève :">
+                              →
+                            </span>
+                            <b className={p.eve_accepts ? 'is-agree' : 'is-refuse'}>{eveActionFr(p.eve_action)}</b>
+                            {decisionRuleFr(d.decision_rule) ? (
+                              <small className="muted"> · {decisionRuleFr(d.decision_rule)}</small>
+                            ) : null}
+                          </td>
+                          <td className="n">{d.coherence != null ? fmtPct(d.coherence, 0, false) : '—'}</td>
+                          <td>
+                            <span className={`iv-tag ${VERDICT_TONE[verdict]}`}>{VERDICT_LABEL[verdict]}</span>
+                          </td>
+                          <td className={`n ${toneOf(pnlR)}`}>
+                            {pnlR != null ? fmtR(pnlR) : p.result && p.result.status !== 'CLOSED' ? 'en cours' : '—'}
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="iv-btn iv-btn--sm iv-btn--ghost"
+                              aria-pressed={isSel}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openDossier(key)
+                              }}
+                            >
+                              {isSel ? 'Affiché ↑' : 'Voir ↑'}
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <TablePager paged={shownPaged} label="propositions" />
+            </>
           )}
         </section>
         <div className="iv-s4 iv-m-s12 dv-aside">{aside}</div>
@@ -952,7 +963,7 @@ export function EveResults({
                 </tr>
               </thead>
               <tbody>
-                {latestEveTrades.map((p) => (
+                {eveTradesPaged.rows.map((p) => (
                   <tr key={p.id}>
                     <td className="sym">{p.symbol}</td>
                     <td>
@@ -969,6 +980,7 @@ export function EveResults({
               </tbody>
             </table>
           </div>
+          <TablePager paged={eveTradesPaged} label="trades d’Ève" />
         </section>
       ) : null}
     </div>

@@ -81,3 +81,10 @@
     text-align: left;
   }
 }
+
+/* Tablette et téléphone : boutons du tableau utilisables au doigt. */
+@media (max-width: 1100px), (pointer: coarse) {
+  .eve-dossiers .ed-table-wrap .iv-btn {
+    min-height: 36px;
+  }
+}

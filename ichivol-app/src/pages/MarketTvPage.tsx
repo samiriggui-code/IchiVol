@@ -5,6 +5,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { TablePager } from '../components/table/TablePager'
+import { usePaged } from '../components/table/usePaged'
 import { MarketLayersMenu } from '../components/MarketLayersMenu'
 import { PriceChart } from '../components/PriceChart'
 import { fetchTickers24h } from '../lib/binance'
@@ -255,7 +257,6 @@ export function MarketTvPage() {
       instruments.length > 0
         ? instruments
             .filter((i) => assetClass === 'all' || i.asset_class === assetClass)
-            .slice(0, 80)
         : []
     return list.map((inst) => {
       const row = screenerById.get(inst.id)
@@ -275,6 +276,14 @@ export function MarketTvPage() {
       }
     })
   }, [instruments, screenerById, tickers24h, assetClass])
+  const watchPaged = usePaged(watchRows, 'tv-multi-marche')
+  // L'actif affiché (lien direct, choix précédent) reste visible : on ouvre la page qui le contient.
+  const selectedWatchIndex = watchRows.findIndex((w) => w.id === symbol)
+  const { pageSize: watchPageSize, setPage: setWatchPage } = watchPaged
+  useEffect(() => {
+    if (selectedWatchIndex >= 0) setWatchPage(Math.floor(selectedWatchIndex / watchPageSize) + 1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seulement au changement d'actif ou de liste
+  }, [symbol, watchRows.length])
 
   const selectedTick = tickers24h.get(symbol)
   const change24h =
@@ -390,7 +399,7 @@ export function MarketTvPage() {
                     </td>
                   </tr>
                 )}
-                {watchRows.map((w) => {
+                {watchPaged.rows.map((w) => {
                   const ch = w.change24h
                   return (
                     <tr
@@ -417,6 +426,7 @@ export function MarketTvPage() {
               </tbody>
             </table>
           </div>
+          <TablePager paged={watchPaged} label="actifs" />
         </aside>
 
         <section className="iv-card tv-chart" aria-label="Graphique">

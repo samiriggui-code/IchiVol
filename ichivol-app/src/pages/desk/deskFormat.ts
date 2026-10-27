@@ -1,7 +1,6 @@
 /** Shared Desk (Overview) formatters and constants. */
 
 export const REFRESH_MS = 60_000
-export const TAPE_LIMIT = 7
 export const PRIMARY_SYMBOLS = [
   'BTCUSDT',
   'ETHUSDT',

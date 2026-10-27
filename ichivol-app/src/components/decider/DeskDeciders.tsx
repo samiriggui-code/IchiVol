@@ -19,6 +19,8 @@ import {
 import { MAIN_PORTFOLIO_CODE, portfolioLabel } from '../../lib/mainPortfolio'
 import { fmtEur, fmtPct } from '../../pages/desk/deskFormat'
 import { DeciderBadge } from './DeciderBadge'
+import { usePaged } from '../table/usePaged'
+import { TablePager } from '../table/TablePager'
 import './DeskDeciders.css'
 
 const REFRESH_MS = 60_000
@@ -174,10 +176,10 @@ export function DeskEveLatest({ className = '' }: { className?: string }) {
   const rows = useMemo(
     () =>
       (decisions ?? [])
-        .flatMap((d) => d.engine_proposals.map((p, i) => ({ key: `${d.id}-${i}`, d, p, v: proposalVerdict(p) })))
-        .slice(0, 5),
+        .flatMap((d) => d.engine_proposals.map((p, i) => ({ key: `${d.id}-${i}`, d, p, v: proposalVerdict(p) }))),
     [decisions],
   )
+  const paged = usePaged(rows, 'desk-jugements-eve')
   const accepted = rows.filter((r) => r.p.eve_accepts).length
   return (
     <section className={`iv-card ddv ${className}`.trim()}>
@@ -200,7 +202,7 @@ export function DeskEveLatest({ className = '' }: { className?: string }) {
           </p>
         ) : (
           <ul className="ddv-list">
-            {rows.map(({ key, d, p, v }) => (
+            {paged.rows.map(({ key, d, p, v }) => (
               <li key={key}>
                 <span className="ddv-time">{fmtTime(d.created_at)}</span>
                 <div className="ddv-main">
@@ -222,6 +224,7 @@ export function DeskEveLatest({ className = '' }: { className?: string }) {
           </ul>
         )}
       </div>
+      <TablePager paged={paged} label="propositions" />
       <div className="iv-card-foot">
         <span>
           {rows.length} proposition{rows.length > 1 ? 's' : ''} · {accepted} acceptée{accepted > 1 ? 's' : ''} ·{' '}

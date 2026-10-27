@@ -57,7 +57,6 @@ import { concentrationFromPositions } from '../components/desk/deskMetrics'
 import {
   PRIMARY_SYMBOLS,
   REFRESH_MS,
-  TAPE_LIMIT,
   fmtClock,
   fmtDec,
   fmtEur,
@@ -72,6 +71,8 @@ import { MAIN_CURVE_COLOR, cleanEquitySeries } from '../components/desk/equityTr
 import { DeskDeciderSummary, DeskEveLatest } from '../components/decider/DeskDeciders'
 import { DeciderBadge } from '../components/decider/DeciderBadge'
 import { deciderOf, type Decider } from '../lib/decider'
+import { usePaged } from '../components/table/usePaged'
+import { TablePager } from '../components/table/TablePager'
 import './OverviewPage.css'
 
 const RVOL_THRESHOLD = 1.5
@@ -455,7 +456,7 @@ export function OverviewPage() {
     else setOverview(null)
 
     if (feedRes.ok) {
-      setTape(feedRes.items.slice(0, TAPE_LIMIT))
+      setTape(feedRes.items)
     } else {
       setTape([])
     }
@@ -633,6 +634,12 @@ export function OverviewPage() {
   const kernelText =
     riskPass == null ? (risk?.kernel ? String(risk.kernel).toUpperCase() : null) : riskPass ? 'PASSE' : 'BLOQUÉ'
   const watchSymbols = watchList.map((r) => r.symbol).join(' · ')
+
+  // Pagination (5 / 10 / 20 / 50) appliquée après tri et filtre ; toutes les lignes restent accessibles.
+  const pagedPositions = usePaged(positions, 'desk-positions')
+  const pagedOrders = usePaged(todayOrders, 'desk-ordres-du-jour')
+  const pagedConcentration = usePaged(concentration, 'desk-concentration')
+  const pagedTape = usePaged(tape, 'desk-evenements')
 
   const trajectoryBooks: TrajectoryBook[] = overview
     ? [
@@ -843,7 +850,7 @@ export function OverviewPage() {
             positions.length === 0 ? (
               <p className="iv-empty">{loading ? 'Chargement…' : 'Aucune position ouverte.'}</p>
             ) : (
-              <div className="iv-table-wrap dk-scroll">
+              <div className="iv-table-wrap">
                 <table className="iv-table">
                   <thead>
                     <tr>
@@ -859,7 +866,7 @@ export function OverviewPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {positions.map((p) => {
+                    {pagedPositions.rows.map((p) => {
                       const short = String(p.direction).toUpperCase() === 'SHORT'
                       const pnl = p.unrealized_pnl
                       const r =
@@ -912,7 +919,7 @@ export function OverviewPage() {
             todayOrders.length === 0 ? (
               <p className="iv-empty">Aucun ordre aujourd’hui.</p>
             ) : (
-              <div className="iv-table-wrap dk-scroll">
+              <div className="iv-table-wrap">
                 <table className="iv-table is-compact">
                   <thead>
                     <tr>
@@ -927,7 +934,7 @@ export function OverviewPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {todayOrders.map((o) => {
+                    {pagedOrders.rows.map((o) => {
                       const buy = String(o.side).toUpperCase() === 'BUY'
                       return (
                         <tr key={o.id}>
@@ -963,7 +970,7 @@ export function OverviewPage() {
               {concentration.length === 0 ? (
                 <p className="iv-empty">—</p>
               ) : (
-                concentration.slice(0, 6).map((c) => (
+                pagedConcentration.rows.map((c) => (
                   <button
                     key={c.symbol}
                     type="button"
@@ -980,6 +987,13 @@ export function OverviewPage() {
               )}
               <p className="iv-note">{exposureMixLabel(positions)}</p>
             </div>
+          )}
+          {posTab === 'positions' ? (
+            <TablePager paged={pagedPositions} label="positions" />
+          ) : posTab === 'orders' ? (
+            <TablePager paged={pagedOrders} label="ordres" />
+          ) : (
+            <TablePager paged={pagedConcentration} label="actifs" />
           )}
         </Card>
 
@@ -1314,7 +1328,7 @@ export function OverviewPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {tape.map((it) => {
+                  {pagedTape.rows.map((it) => {
                     const level = FEED_LEVEL[it.tone] ?? FEED_LEVEL.neutral
                     const detail = (it.detail || '').replace(/\s+/g, ' ').trim()
                     return (
@@ -1335,6 +1349,7 @@ export function OverviewPage() {
               </table>
             </div>
           )}
+          <TablePager paged={pagedTape} label="événements" />
         </Card>
 
         <Card

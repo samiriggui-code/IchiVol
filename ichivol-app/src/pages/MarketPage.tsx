@@ -5,6 +5,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { TablePager } from '../components/table/TablePager'
+import { usePaged } from '../components/table/usePaged'
 import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
 import { MtfPanel } from '../components/MtfPanel'
 import { MarketLayersMenu } from '../components/MarketLayersMenu'
@@ -323,7 +325,6 @@ export function MarketPage() {
       instruments.length > 0
         ? instruments
             .filter((i) => assetClass === 'all' || i.asset_class === assetClass)
-            .slice(0, 60)
         : []
     return list.map((inst) => {
       const row = screenerById.get(inst.id)
@@ -343,6 +344,14 @@ export function MarketPage() {
       }
     })
   }, [instruments, screenerById, tickers24h, assetClass])
+  const watchPaged = usePaged(watchRows, 'marche-watchlist')
+  // L'actif affiché (lien direct, choix précédent) reste visible : on ouvre la page qui le contient.
+  const selectedWatchIndex = watchRows.findIndex((w) => w.id === symbol)
+  const { pageSize: watchPageSize, setPage: setWatchPage } = watchPaged
+  useEffect(() => {
+    if (selectedWatchIndex >= 0) setWatchPage(Math.floor(selectedWatchIndex / watchPageSize) + 1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seulement au changement d'actif ou de liste
+  }, [symbol, watchRows.length])
 
   const selectedTick = tickers24h.get(symbol)
   const change24h =
@@ -498,7 +507,7 @@ export function MarketPage() {
                       </td>
                     </tr>
                   )}
-                  {watchRows.map((w) => {
+                  {watchPaged.rows.map((w) => {
                     const ch = w.change24h
                     return (
                       <tr
@@ -529,7 +538,7 @@ export function MarketPage() {
               </table>
             </div>
           </div>
-          <div className="iv-card-foot">{watchRows.length} actifs</div>
+          <TablePager paged={watchPaged} label="actifs" />
         </section>
 
         <section className="iv-card iv-s6 iv-m-s12 mk-chart-card" aria-label="Graphique">
