@@ -286,40 +286,53 @@ def sync_position(
         # T13b/T13c — Risk Kernel for every open (kill/daily lock always; gates when enabled).
         from app.paper import kill_switch as paper_kill
 
-        equity = paper_broker.estimate_equity(session, portfolio)
-        paper_kill.maybe_trip_daily_loss_lock(session, portfolio, equity)
-        session.refresh(portfolio)
-        opens = paper_gates.open_positions(session, portfolio.id)
         traded = None
         if run_id is not None:
             traded = paper_gates.traded_run_id(portfolio.id, symbol, timeframe)
         apply_gates = paper_gates.has_gates(profile) and manual_notional is None
-        decision_rk = risk_kernel_evaluate(
-            OpenPlan(
-                symbol=symbol,
-                timeframe=timeframe,
-                direction=direction,
-                price=price,
-                stop_distance=stop_distance,
-                run_id=run_id,
-                stale=False,
-                manual_notional=manual_notional,
-                take_profit_r=take_profit_r,
-            ),
-            PortfolioState(
-                cash=float(portfolio.cash),
-                equity=float(equity),
-                profile=profile,
-                open_positions=open_lots_from_positions(opens),
-                day_start_equity=paper_gates.day_start_equity(session, portfolio),
-                traded_run_id=traded,
-                kill_switch_armed=bool(getattr(portfolio, "kill_switch_armed", False)),
-                daily_loss_locked=bool(getattr(portfolio, "daily_loss_locked", False)),
-            ),
-            market_state_from_profile(profile, symbol),
-            apply_gates=apply_gates,
-            check_size=apply_gates,  # sizing still done in broker when gates skipped (manual)
-        )
+
+        def _kernel_decision():
+            equity = paper_broker.estimate_equity(session, portfolio)
+            paper_kill.maybe_trip_daily_loss_lock(session, portfolio, equity)
+            opens = paper_gates.open_positions(session, portfolio.id)
+            return risk_kernel_evaluate(
+                OpenPlan(
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    direction=direction,
+                    price=price,
+                    stop_distance=stop_distance,
+                    run_id=run_id,
+                    stale=False,
+                    manual_notional=manual_notional,
+                    take_profit_r=take_profit_r,
+                ),
+                PortfolioState(
+                    cash=float(portfolio.cash),
+                    equity=float(equity),
+                    profile=profile,
+                    open_positions=open_lots_from_positions(opens),
+                    day_start_equity=paper_gates.day_start_equity(session, portfolio),
+                    traded_run_id=traded,
+                    kill_switch_armed=bool(getattr(portfolio, "kill_switch_armed", False)),
+                    daily_loss_locked=bool(getattr(portfolio, "daily_loss_locked", False)),
+                ),
+                market_state_from_profile(profile, symbol),
+                apply_gates=apply_gates,
+                check_size=apply_gates,  # sizing still done in broker when gates skipped (manual)
+            )
+
+        # Pre-check on a fresh (unlocked) read: most refusals end here without locking the account, so the
+        # scan loop does not hold every portfolio row for the rest of its transaction.
+        session.flush()  # never let the reload drop this transaction's own pending changes
+        session.refresh(portfolio)
+        decision_rk = _kernel_decision()
+        if decision_rk.accepted:
+            # Accepted: lock the account (the broker would lock it anyway) and decide again on the locked
+            # balance, positions and kill/daily locks — a concurrent open, close or kill switch committed
+            # since the pre-check must count. The broker then debits that same locked balance.
+            paper_broker.lock_portfolio(session, portfolio)
+            decision_rk = _kernel_decision()
         if not decision_rk.accepted:
             reason = decision_rk.primary_code() or "rejected"
             if log_rej or reason in ("kill_switch", "daily_loss_halt"):

@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from app.brokerage import persistence as ledger_db
 from app.brokerage.ledger import Cause, Leg
 from app.db.models import LedgerTransaction, PaperJournalEvent, PaperPortfolio, PaperPosition
-from app.paper.broker import _profile
+from app.paper.broker import _profile, lock_portfolio
 from app.paper.strategy_profiles import market_financing_bps_per_day
 
 logger = logging.getLogger(__name__)
@@ -70,6 +70,9 @@ def apply_daily_financing(
     if day < FINANCING_ACTIVATED_ON:
         return []
 
+    # Lock + reload before reading cash: the protection monitor loads every portfolio at the start of
+    # its cycle, and ``cash = stale − charge`` would erase an open/close committed meanwhile.
+    lock_portfolio(session, portfolio)
     profile = _profile(portfolio)
     opens = list(
         session.execute(
@@ -192,6 +195,7 @@ def apply_financing_all_portfolios(session: Session, *, as_of: datetime | None =
     n = 0
     for pf in portfolios:
         n += len(apply_daily_financing(session, pf, as_of=as_of))
-    if n:
+        # One transaction per portfolio: its row lock is released at once, never held across the
+        # protection cycle that follows (market-data HTTP calls) nor while locking another portfolio.
         session.commit()
     return n

@@ -65,15 +65,27 @@ def _friction(profile: dict[str, Any], symbol: str) -> tuple[float, float]:
     return float(profile.get("spread_bps", 2.0)), float(profile.get("slippage_bps", 3.0))
 
 
-def _lock_portfolio(session: Session, portfolio: PaperPortfolio | None) -> None:
-    """Serialise cash read-modify-write per portfolio (row lock held until commit)."""
+def _lock_portfolio(session: Session, portfolio: PaperPortfolio | None, *, read: bool = False) -> None:
+    """Serialise every cash read-modify-write of one portfolio (row lock held until commit).
+
+    Every writer of ``paper_portfolios.cash`` (open, close, partial close, reinforce, financing) takes
+    this lock *before* reading the balance, then reloads the row: a long-lived session (scan loop,
+    protection monitor) may hold a balance read seconds earlier, and writing ``stale − stake`` back
+    erases the other transaction's debit (lost update). ``read=True`` takes a shared lock instead: a
+    reader (equity snapshot) waits for in-flight writers, then sees cash and positions of the same
+    committed state."""
     if portfolio is None:
         return
     bind = session.get_bind()
     if bind is not None and bind.dialect.name == "postgresql":
         session.flush()  # keep pending changes of this transaction before reloading
-        session.execute(select(PaperPortfolio.id).where(PaperPortfolio.id == portfolio.id).with_for_update()).all()
+        session.execute(
+            select(PaperPortfolio.id).where(PaperPortfolio.id == portfolio.id).with_for_update(read=read)
+        ).all()
         session.refresh(portfolio)
+
+
+lock_portfolio = _lock_portfolio
 
 
 def _count_open(session: Session, portfolio_id: str) -> int:
@@ -1185,12 +1197,23 @@ def snapshot_equity(
     *,
     marks: dict[str, float] | None = None,
 ) -> PaperEquitySnapshot:
+    """Equity point of one portfolio: cash + open lots valued at ``marks`` (entry price when missing).
+
+    Cash and open lots must come from the same committed state. The scan loop loads its portfolios at
+    the start of a cycle; reading ``portfolio.cash`` from that object while querying positions fresh
+    counted a lot opened meanwhile by another request without its debit (phantom stake: ICHIVOL_WIDE_V1,
+    27/10/2026, +24 % shown for a −175 € realized PnL). The shared lock + reload fixes that."""
     marks = marks or {}
+    _lock_portfolio(session, portfolio, read=True)  # also flushes: populate_existing drops nothing pending
     opens = session.execute(
-        select(PaperPosition).where(
+        select(PaperPosition)
+        .where(
             PaperPosition.portfolio_id == portfolio.id,
             PaperPosition.status == "OPEN",
         )
+        # Lots already in this session's identity map keep attributes read earlier in the cycle
+        # (qty/notional before a partial exit committed elsewhere): reload them too.
+        .execution_options(populate_existing=True)
     ).scalars().all()
 
     positions_value = 0.0
@@ -1204,9 +1227,11 @@ def snapshot_equity(
                 positions_value += p.qty * mark
                 unrealized += p.qty * (mark - p.entry_price)
             else:
-                # short: value as residual margin notionally
-                positions_value += p.notional or 0.0
-                unrealized += p.qty * (p.entry_price - mark)
+                # Short: the opening debited the notional as reserved margin; closing gives back
+                # notional + (entry − exit) × qty. Same value as the overview (cash + invested + unrealized).
+                gain = p.qty * (p.entry_price - mark)
+                positions_value += (p.notional or 0.0) + gain
+                unrealized += gain
 
     equity = portfolio.cash + positions_value
     # peak from prior snapshots
