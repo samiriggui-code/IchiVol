@@ -37,6 +37,14 @@ class Settings(BaseSettings):
     # Stops/targets are watched every protection_interval_s independent of signals.
     enable_protection_monitor: bool = True
     protection_interval_s: float = 60.0
+    # Flux direct Binance (WebSocket public, aucune clé) : stops / objectifs temps réel des lots crypto du compte
+    # unique (app/paper/live_service.py). Désactivé par défaut (tests, dev) ; activé en prod par le compose.
+    enable_live_feed: bool = False
+    live_feed_ws_base: str = "wss://data-stream.binance.vision"
+    live_feed_rest_base: str = "https://data-api.binance.vision"
+    live_feed_stale_s: float = 10.0  # aucun message depuis N s -> « dégradé », reconnexion + relevés REST
+    live_feed_rest_poll_s: float = 5.0  # cadence des relevés REST pendant la dégradation
+    live_feed_refresh_s: float = 5.0  # relecture des lots ouverts surveillés
     # RS-D1 paper live (docs/RS-09-RS-D1-PAPER-DESIGN.md): separate portfolio RS_D1_PAPER_V1, rules = rs/book.py.
     # 2026-10-27 : coupé par défaut (portefeuille unique). Son livre (rs/book.py) tient sa propre caisse et ne
     # peut pas partager le compte ICHIVOL_MAIN_V1 sans adaptation ; le code et les backtests RS restent.

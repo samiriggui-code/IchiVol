@@ -66,7 +66,16 @@ def _uptrend_with_spike(n: int) -> list[Candle]:
 def test_health_endpoint():
     resp = client.get("/api/engine/health")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ok", "service": "ichivol-engine"}
+    body = resp.json()
+    assert {k: body[k] for k in ("status", "service")} == {"status": "ok", "service": "ichivol-engine"}
+    # flux direct Binance : désactivé dans les tests (ENABLE_LIVE_FEED absent), mais son état est exposé
+    assert body["live_feed"]["enabled"] is False and body["live_feed"]["role"] == "disabled"
+
+
+def test_health_live_endpoint():
+    resp = client.get("/api/engine/health/live")
+    assert resp.status_code == 200
+    assert resp.json()["feed"]["state"] in ("inactive", "live", "degraded")
 
 
 def test_universe_endpoint_shape():

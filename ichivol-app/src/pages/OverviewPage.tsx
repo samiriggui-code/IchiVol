@@ -73,6 +73,7 @@ import { DeciderBadge } from '../components/decider/DeciderBadge'
 import { deciderOf, type Decider } from '../lib/decider'
 import { usePaged } from '../components/table/usePaged'
 import { TablePager } from '../components/table/TablePager'
+import { LiveFeedBadge, LivePrice } from '../components/LivePrice'
 import './OverviewPage.css'
 
 const RVOL_THRESHOLD = 1.5
@@ -837,6 +838,12 @@ export function OverviewPage() {
             <span>
               {positions.length} position{positions.length > 1 ? 's' : ''} ·{' '}
               <b className={signCls(unrealized)}>{signedEur(unrealized)}</b>
+              {positions.length > 0 ? (
+                <>
+                  {' · '}
+                  <LiveFeedBadge />
+                </>
+              ) : null}
             </span>
           }
           foot={
@@ -902,7 +909,9 @@ export function OverviewPage() {
                           </td>
                           <td className="n">{fmtQty(p.qty)}</td>
                           <td className="n">{fmtPrice(p.entry_price)}</td>
-                          <td className="n">{fmtPrice(p.current_price)}</td>
+                          <td className="n">
+                            <LivePrice symbol={p.symbol} fallback={p.current_price} format={fmtPrice} />
+                          </td>
                           <td className="n neg">{fmtPrice(p.stop_price)}</td>
                           <td className={`n ${signCls(pnl)}`.trim()}>{signedEur(pnl)}</td>
                           <td className={`n ${signCls(r)}`.trim()}>

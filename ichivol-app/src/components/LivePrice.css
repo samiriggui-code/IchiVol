@@ -1,0 +1,46 @@
+/* Indicateur discret du prix en direct : point vert (direct) ou gris (différé), lisible à 390 px. */
+.lp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.lp-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--muted, #8a8f98);
+  opacity: 0.6;
+}
+.lp-live .lp-dot {
+  background: var(--mint, #34d399);
+  opacity: 1;
+  animation: lp-pulse 2s ease-in-out infinite;
+}
+.lp-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+@keyframes lp-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-live .lp-dot {
+    animation: none;
+  }
+}
+.lp-badge {
+  font-size: 11px;
+  color: var(--muted, #7a8896);
+  font-variant-numeric: tabular-nums;
+}
+.lp-badge.lp-live {
+  color: var(--text-2, #aeb9c4);
+}

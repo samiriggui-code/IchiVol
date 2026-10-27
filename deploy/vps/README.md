@@ -42,3 +42,6 @@ Au premier boot, si `ADMIN_EMAIL` + `ADMIN_PASSWORD` sont définis, le serveur u
 - Front : `/`
 - API : `/api/health`
 - Engine (via API auth) : `/api/engine/health`
+- Flux direct Binance (stops temps réel crypto) : `/api/engine/health/live` (`feed.state` = `live` | `degraded`,
+  `feed.symbols`, `feed.last_message_age_s`, `feed.reconnects`, `role` = `leader` | `standby`). Variable
+  `ENABLE_LIVE_FEED` (défaut `true` dans le compose, aucune clé). Détail : `ichivol-app/engine/app/paper/live_service.py`.

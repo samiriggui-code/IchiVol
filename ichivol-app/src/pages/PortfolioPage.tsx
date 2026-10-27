@@ -46,6 +46,7 @@ import {
 import { DECIDER_EXPLAIN, DECIDER_LABEL, deciderOf, type Decider } from '../lib/decider'
 import { PAGE_SIZES, usePaged, type PageSize, type Paged } from '../components/table/usePaged'
 import { TablePager } from '../components/table/TablePager'
+import { LiveFeedBadge, LivePrice } from '../components/LivePrice'
 import './PortfolioPage.css'
 
 type Tone = 'cyan' | 'amber' | 'mint' | 'buy' | 'sell' | 'muted'
@@ -825,6 +826,12 @@ export function PortfolioPage() {
             <div className="iv-card-tools">
               {positionsBadge}
               {notionalOpen != null ? ` · notionnel ${fmtEur(notionalOpen, 0)}` : ''}
+              {positions.length > 0 ? (
+                <>
+                  {' · '}
+                  <LiveFeedBadge />
+                </>
+              ) : null}
             </div>
           </div>
           {positions.length === 0 ? (
@@ -893,7 +900,7 @@ export function PortfolioPage() {
                         <td className="n">{p.qty != null ? fmtPx(p.qty) : '—'}</td>
                         <td className="n">{fmtPx(p.entry_price)}</td>
                         <td className="n">
-                          {fmtPx(p.current_price)}
+                          <LivePrice symbol={p.symbol} fallback={p.current_price} format={fmtPx} />
                           {p.mark_stale ? (
                             <span className="pf-stale" title="Cours périmé : la dernière cotation est ancienne">
                               {' '}
@@ -1290,7 +1297,9 @@ export function PortfolioPage() {
                 </div>
                 <div className="iv-row">
                   <span>Prix actuel</span>
-                  <span className="iv-row-v">{fmtPx(fiche.current_price)}</span>
+                  <span className="iv-row-v">
+                    <LivePrice symbol={fiche.symbol} fallback={fiche.current_price} format={fmtPx} />
+                  </span>
                 </div>
                 <div className="iv-row">
                   <span>P&amp;L latent</span>
