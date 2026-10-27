@@ -38,7 +38,7 @@ la synchronisation ; une simple lecture d'API (`/paper/portfolios/{code}`, `/sha
 * Route `/paper/futures-crypto` supprimée ; YM rejoint le compte unique.
 * RS-D1 : boucle coupée par défaut (`enable_rs_d1_paper=False`). Son livre (`rs/book.py`) calcule sa taille sur
   sa propre caisse et ne peut pas partager le compte sans adaptation ; le code RS, ses tests et ses backtests
-  restent. **À valider par le propriétaire** (voir §5).
+  restent. Choix retenu le 27/10 (réglages laissés à notre jugement par le propriétaire).
 * Nouvelle route `GET /paper/portfolios/{code}/breakdown` : bilan par décideur (Ève / moteur contre Ève / moteur
   seul / manuel) et par classe d'actifs, drawdown, règles et univers du compte (`app/paper/breakdown.py`).
 
@@ -53,7 +53,7 @@ la synchronisation ; une simple lecture d'API (`/paper/portfolios/{code}`, `/sha
 | Risque ouvert total max | 4 % (2 000 €) | baseline |
 | Arrêt des entrées | −3 % sur la journée (verrou persistant) | baseline |
 | Objectif | 2 R ; sortie au changement de direction Ichimoku, stop ATR obligatoire | baseline |
-| Vente à découvert | **non** | prudent, à valider |
+| Vente à découvert | **oui sur CFD (forex, métaux, indices, pétrole) et YM, jamais sur la crypto au comptant** | comme un vrai courtier (décision du propriétaire, 27/10) ; `short_symbols` du profil |
 | Horizon automatique | boucle 1h | baseline |
 | Notionnel minimum | 50 € | prudent |
 | Frais crypto spot | commission 7,5 bps + friction par paire (tableau documenté) | baseline / FWD |
@@ -101,7 +101,7 @@ par compte et symbole) + `_get_open_by_symbol` dans `sync_position` et `open_use
 * Ensuite, le Risk Kernel a le dernier mot pour chaque ouverture (positions max, risque ouvert, perte du jour,
   kill switch, caisse).
 
-Tests : `tests/paper/test_main_portfolio.py` (arbitrage Ève → scan → manuel, scan → Ève, short refusé).
+Tests : `tests/paper/test_main_portfolio.py` (arbitrage Ève → scan → manuel, scan → Ève, short refusé sur crypto, short ouvert sur CFD).
 
 ## 5. Toute la technologie travaille pour ce compte
 
@@ -113,11 +113,11 @@ unique :
 | Ichimoku × RVOL (pipeline), ATR | tous les comptes | décide les entrées et sorties du compte unique |
 | Structure (MVPP + trendln), Fibonacci, RSI, CMF/OBV, régime ATR | compte « Tout combiné » (filtres bloquants) | calculés sur chaque signal du compte unique, **en observation** : verdict enregistré dans `entry_signal.filters_observed` (aurait refusé ou non), aucun refus tant qu'aucun avantage n'est démontré |
 | Fenêtres de sessions Tokyo / Londres / New York | compte Sessions | calculées en observation : `entry_signal.decision_event` |
-| Ventes à découvert | compte Shorts | signaux SELL toujours calculés, refusés (`short_not_allowed`, journalisés) |
+| Ventes à découvert | compte Shorts | ouvertes sur CFD et YM ; sur crypto au comptant, refusées (`short_not_allowed`, journalisées) |
 | Horizon 4h | compte 4h | toujours analysé (screener, matrice multi-horizons `mtf_matrix` enregistrée sur chaque signal) |
 | Univers élargi | compte Wide | dans l'univers du compte unique |
 | YM | Futures & Crypto | dans l'univers du compte unique |
-| Donchian RS-D1 | compte RS-D1 | code, tests et backtests gardés ; boucle paper coupée (à valider) |
+| Donchian RS-D1 | compte RS-D1 | code, tests et backtests gardés ; boucle paper coupée (choix retenu le 27/10) |
 | Ève, JEV, audit Shadow, porte d'entrée, Risk Kernel | autopilote multi-comptes | autopilote sur le compte unique |
 | Registre d'indicateurs (17), Strategy Lab, backtests, preuves, prédictions, graphiques | inchangés | inchangés |
 
@@ -135,10 +135,10 @@ l'Analyste : 100 % d'abstentions sur 174 dossiers. Maintenant : alerte critique 
 fragilité ≥ 0,7 → ABSTAIN ; contradiction explicite du Challenger → on le suit ; sinon l'Analyste.
 `synthesis.decision_rule` dit quelle règle a tranché.
 
-Effet attendu : Ève proposera des directions. Comme le compte est long seulement, un avis SHORT d'Ève sur une
-proposition LONG du moteur reste un désaccord (le moteur trade « contre Ève », comme avant) et Ève n'ouvre jamais
-de short (Risk Kernel : `short_not_allowed`) ; un avis SHORT sur un lot LONG ouvert vaut accord pour le fermer
-(`eve_accepts`), donc plus de clôtures décidées par Ève qu'avant.
+Effet attendu : Ève proposera des directions. Sur un CFD ou YM, un avis SHORT d'Ève peut ouvrir une vente à
+découvert ; sur une crypto au comptant, il ne peut pas (Risk Kernel : `short_not_allowed`) et, face à une
+proposition LONG du moteur, reste un désaccord (le moteur trade « contre Ève »). Un avis SHORT sur un lot LONG
+ouvert vaut accord pour le fermer (`eve_accepts`), donc plus de clôtures décidées par Ève qu'avant.
 
 ## 7. Procédure de mise en production
 

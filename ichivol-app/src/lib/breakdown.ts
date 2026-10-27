@@ -37,6 +37,8 @@ export type BreakdownRules = {
   max_open_risk_pct: number
   daily_loss_limit_pct: number
   allow_short: boolean
+  /** Instruments où la vente à découvert est permise (absent : tous). */
+  short_symbols?: string[] | null
   auto_timeframes: string[] | null
   take_profit_r: number | null
   max_friction_bps: number | null

@@ -14,6 +14,7 @@ from typing import Any, Mapping, Sequence
 
 from app.paper.gates import GATE_KEYS, has_gates
 from app.paper.risk import SizedOrder, size_position
+from app.paper.strategy_profiles import short_allowed
 
 INTENT_KERNEL_VERSION = "risk_kernel_v1"
 
@@ -165,7 +166,7 @@ def evaluate(
         return _reject("stale_data", *info)
 
     profile = dict(portfolio_state.profile or {})
-    if plan.direction == "SHORT" and profile.get("allow_short", True) is False:
+    if plan.direction == "SHORT" and not short_allowed(profile, plan.symbol):
         return _reject("short_not_allowed", *info)
 
     gated = has_gates(profile) if apply_gates is None else bool(apply_gates)

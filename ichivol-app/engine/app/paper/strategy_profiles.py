@@ -44,6 +44,16 @@ FINANCING_BPS_PER_DAY_BY_SYMBOL: dict[str, float] = {
 }
 
 
+def short_allowed(profile: dict[str, Any] | None, symbol: str, *, default: bool = True) -> bool:
+    """Vente à découvert permise sur ce symbole ? ``allow_short`` coupe tout ; ``short_symbols`` (si présent)
+    limite aux instruments qu'un vrai courtier laisse vendre à découvert (CFD, futures)."""
+    prof = profile or {}
+    if not bool(prof.get("allow_short", default)):
+        return False
+    allowed = prof.get("short_symbols")
+    return allowed is None or symbol in allowed
+
+
 def market_financing_bps_per_day(symbol: str, *, direction: str = "LONG") -> float:
     """Overnight financing bps/day for symbol×direction (ASSUMPTION via fee_profiles)."""
     if symbol.endswith("USDT") or symbol in CRYPTO_FRICTION_BPS:
@@ -537,6 +547,13 @@ def main_universe() -> tuple[list[str], dict[str, str]]:
 
 _MAIN_TRADED, _MAIN_EXCLUDED = main_universe()
 
+
+def _is_spot_crypto(symbol: str) -> bool:
+    return symbol.endswith("USDT") or symbol in CRYPTO_FRICTION_BPS or symbol in WIDE_FRICTION_BPS_ASSUMED
+
+
+MAIN_SHORT_SYMBOLS: tuple[str, ...] = tuple(s for s in _MAIN_TRADED if not _is_spot_crypto(s))
+
 MAIN_PROFILE: dict[str, Any] = _with(
     code=MAIN_CODE,
     label=MAIN_LABEL,
@@ -553,8 +570,12 @@ MAIN_PROFILE: dict[str, Any] = _with(
     one_position_per_symbol=True,
     one_entry_per_signal_run=True,
     min_notional=50.0,
-    # Pas de vente à découvert (aucun compte n'a montré d'avantage en short ; à valider par le propriétaire).
-    allow_short=False,
+    # Vente à découvert comme chez un vrai courtier (décision du propriétaire, 2026-10-27) : permise sur les CFD
+    # (forex, métaux, indices, pétrole) et le future YM, jamais sur la crypto au comptant (on ne vend pas ce qu'on
+    # n'a pas acheté). Le financement de nuit des shorts CFD suit l'hypothèse FINANCING_BPS_PER_DAY_SHORT_CFD_ASSUMED.
+    allow_short=True,
+    short_symbols=list(MAIN_SHORT_SYMBOLS),
+    financing_bps_per_day_short_by_symbol={s: _fc.FINANCING_BPS_SHORT[s] for s in MAIN_FUTURES_SYMBOLS},
     exit_mode="direction",
     auto_timeframes=["1h"],
     # Univers explicite : tout ce que le moteur sait trader, moins les exclusions documentées.

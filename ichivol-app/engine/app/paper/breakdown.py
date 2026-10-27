@@ -143,6 +143,7 @@ def build_breakdown(session: Session, portfolio: PaperPortfolio) -> dict[str, An
             "max_open_risk_pct": profile.get("max_open_risk_pct"),
             "daily_loss_limit_pct": profile.get("daily_loss_limit_pct"),
             "allow_short": profile.get("allow_short"),
+            "short_symbols": profile.get("short_symbols"),
             "auto_timeframes": profile.get("auto_timeframes"),
             "take_profit_r": profile.get("take_profit_r"),
             "max_friction_bps": profile.get("max_friction_bps"),

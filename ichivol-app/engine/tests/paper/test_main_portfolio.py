@@ -43,6 +43,7 @@ from app.paper.strategy_profiles import (
     WIDE_EXTRA_SYMBOLS,
     liquidity_exclusion,
     main_universe,
+    short_allowed,
     syncable_profile_codes,
 )
 
@@ -69,12 +70,17 @@ def test_only_the_main_account_is_synced():
     assert MAIN_CODE not in RETIRED_CODES
 
 
-def test_main_profile_is_explicit_50k_long_only():
+def test_main_profile_is_explicit_50k_shorts_like_a_real_broker():
     p = ALL_PROFILES[MAIN_CODE]
     assert p["initial_cash_eur"] == 50_000.0
     assert p["risk_pct"] == 0.005 and p["max_notional_pct"] == 0.10
     assert p["max_open_positions"] == 10 and p["max_open_risk_pct"] == 0.04
-    assert p["daily_loss_limit_pct"] == 0.03 and p["allow_short"] is False
+    assert p["daily_loss_limit_pct"] == 0.03 and p["allow_short"] is True
+    # vente à découvert : CFD et future YM oui, crypto au comptant jamais
+    shorts = set(p["short_symbols"])
+    assert {"EURUSD", "GBPUSD", "XAUUSD", "XAGUSD", "SPX", "NDX", "WTI", "YM"} <= shorts
+    assert not any(s.endswith("USDT") for s in shorts) and not set(WIDE_EXTRA_SYMBOLS) & shorts
+    assert short_allowed(p, "EURUSD") and not short_allowed(p, "BTCUSDT")
     assert p["auto_timeframes"] == ["1h"] and p["one_position_per_symbol"] is True
 
 
@@ -296,11 +302,24 @@ def test_scan_lot_then_eve_cannot_double_and_short_is_refused(session):
             pipeline=_pipeline("BUY"), stop_distance=3.0, portfolio=pf,
         )
         assert not created and pos.id == lot.id
-        # vente à découvert refusée sur un autre symbole (allow_short=False)
+        # vente à découvert refusée sur une crypto au comptant (hors short_symbols)
         assert paper.sync_position(
             session, symbol="BNBUSDT", timeframe="1h", source="auto_watchlist", user_id=None, price=600.0,
             pipeline=_pipeline("SELL"), stop_distance=10.0, portfolio=pf,
         ) is None
+    finally:
+        _drop(session, pf)
+
+
+@db
+def test_short_opens_on_a_cfd(session):
+    pf = _disposable(session)
+    try:
+        lot = paper.sync_position(
+            session, symbol="EURUSD", timeframe="1h", source="auto_watchlist", user_id=None, price=1.08,
+            pipeline=_pipeline("SELL"), stop_distance=0.005, portfolio=pf,
+        )
+        assert lot is not None and lot.status == "OPEN" and lot.direction == "SHORT"
     finally:
         _drop(session, pf)
 
@@ -376,7 +395,8 @@ def test_breakdown_route_for_the_main_account():
 
     body = TestClient(app).get(f"/api/engine/paper/portfolios/{MAIN_CODE}/breakdown").json()
     assert [d["decider"] for d in body["by_decider"]] == ["eve", "engine_over_eve", "engine", "manual"]
-    assert body["rules"]["initial_cash"] > 0 and body["rules"]["allow_short"] is False
+    assert body["rules"]["initial_cash"] > 0 and body["rules"]["allow_short"] is True
+    assert "EURUSD" in body["rules"]["short_symbols"] and "BTCUSDT" not in body["rules"]["short_symbols"]
     assert any(x["symbol"] == "YM" for x in body["universe"]["symbols"])
     assert any(x["symbol"] == "PEPEUSDT" for x in body["universe"]["exclusions"])
 

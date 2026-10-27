@@ -1107,7 +1107,11 @@ export function PortfolioPage() {
                 </div>
                 <div className="iv-row">
                   <span>Ventes à découvert</span>
-                  <span className="iv-row-v">{breakdown.rules.allow_short ? 'autorisées' : 'interdites (achats seulement)'}</span>
+                  <span className="iv-row-v">{!breakdown.rules.allow_short
+                      ? 'interdites (achats seulement)'
+                      : breakdown.rules.short_symbols
+                        ? `sur ${breakdown.rules.short_symbols.join(', ')} (jamais sur la crypto au comptant)`
+                        : 'autorisées'}</span>
                 </div>
                 <div className="iv-row">
                   <span>Bougies du scan automatique</span>

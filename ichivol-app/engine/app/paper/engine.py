@@ -22,7 +22,7 @@ from app.market_data.timeframes import TF_SECONDS
 from app.paper import broker as paper_broker
 from app.paper import counters as paper_counters
 from app.paper import futures_crypto
-from app.paper.strategy_profiles import WIDE_EXTRA_SYMBOLS, explicit_universe, wants_wide_universe
+from app.paper.strategy_profiles import WIDE_EXTRA_SYMBOLS, explicit_universe, short_allowed, wants_wide_universe
 from app.paper import gates as paper_gates
 from app.paper.risk_kernel import (
     OpenPlan,
@@ -285,7 +285,7 @@ def sync_position(
         if log_rej:
             paper_counters.record_rejection(session, portfolio, symbol=symbol, timeframe=timeframe, reason=open_refusal)
         return None
-    if direction == "SHORT" and portfolio is not None and profile.get("allow_short", True) is False:
+    if direction == "SHORT" and portfolio is not None and not short_allowed(profile, symbol):
         # No short selling on this portfolio, ever. Does not consume the signal run (no gate call).
         if log_rej:
             paper_counters.record_rejection(session, portfolio, symbol=symbol, timeframe=timeframe, reason="short_not_allowed")
@@ -513,7 +513,7 @@ def engine_proposal(
     if existing is None:
         if direction is None or not allow_open:
             return None
-        if direction == "SHORT" and profile.get("allow_short", True) is False:
+        if direction == "SHORT" and not short_allowed(profile, symbol):
             return None
         return {"action": "OPEN", "direction": direction}
     if existing.timeframe != timeframe:
