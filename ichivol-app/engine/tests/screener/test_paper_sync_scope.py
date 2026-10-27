@@ -120,5 +120,7 @@ def test_background_loop_also_feeds_the_4h_account_without_caching_it(paper_call
     assert c.get("4h") is None
 
 
-def test_synced_books_trade_the_4h_timeframe():
-    assert cache_module.paper_other_timeframes("1h") == ["4h"]
+def test_single_portfolio_trades_only_the_1h_timeframe():
+    # 2026-10-27 : le compte 4h est retiré ; le compte unique ne trade que la boucle 1h (le 4h reste analysé
+    # par le screener à la demande et dans la matrice multi-horizons).
+    assert cache_module.paper_other_timeframes("1h") == []

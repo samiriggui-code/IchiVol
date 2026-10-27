@@ -13,8 +13,7 @@ from app.backtest.evidence import compute_evidence_summary
 from app.config import settings
 from app.db.session import SessionLocal
 from app.market_data import twelve_data
-from app.paper.portfolio import ensure_portfolio, get_portfolio_by_code
-from app.paper.strategy_profiles import ALL_PROFILES
+from app.paper.portfolio import get_portfolio_by_code, lookup_portfolio
 from app.shadow.broker import list_shadows, shadow_stats, shadow_to_dict
 from app.strategy_lab.event_study import event_study_dict, run_event_study
 
@@ -139,10 +138,7 @@ def get_shadow_stats(
     try:
         portfolio_id = None
         if portfolio_code:
-            if portfolio_code in ALL_PROFILES:
-                ensure_portfolio(session, portfolio_code)
-                session.commit()
-            p = get_portfolio_by_code(session, portfolio_code)
+            p = lookup_portfolio(session, portfolio_code)
             if p is None:
                 raise HTTPException(status_code=404, detail="portfolio_not_found")
             portfolio_id = p.id

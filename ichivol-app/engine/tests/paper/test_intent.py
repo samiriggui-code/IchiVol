@@ -10,7 +10,7 @@ from app.indicators.atr import compute_atr
 from app.indicators.ichimoku import Candle
 from app.market_data.volume_semantics import VolumeType
 from app.paper.intent import INTENT_SCHEMA_VERSION, OrderIntent, propose_order_intent
-from app.paper.portfolio import ensure_baseline_portfolio
+from app.paper.portfolio import ensure_main_portfolio
 from app.screener.service import ScreenerRow
 
 _LEGACY_KEYS = (
@@ -102,7 +102,7 @@ def test_propose_intent_blocked_when_watch():
     row = _row()
     session = SessionLocal()
     try:
-        ensure_baseline_portfolio(session)
+        ensure_main_portfolio(session)
         session.commit()
         intent = propose_order_intent(session, row)
         assert intent.symbol == "BTCUSDT"
@@ -124,7 +124,7 @@ def test_t13a_tradeplan_keys_always_present():
     row = _row()
     session = SessionLocal()
     try:
-        ensure_baseline_portfolio(session)
+        ensure_main_portfolio(session)
         session.commit()
         intent = propose_order_intent(session, row)
         payload = intent.to_dict()
@@ -152,7 +152,7 @@ def test_t13a_round_trip_from_dict():
     row = _row()
     session = SessionLocal()
     try:
-        ensure_baseline_portfolio(session)
+        ensure_main_portfolio(session)
         session.commit()
         intent = propose_order_intent(session, row)
         rebuilt = OrderIntent.from_dict(intent.to_dict())
@@ -193,7 +193,7 @@ def test_t13a_stale_sets_expiration():
     row = _row(stale=True)
     session = SessionLocal()
     try:
-        ensure_baseline_portfolio(session)
+        ensure_main_portfolio(session)
         session.commit()
         intent = propose_order_intent(session, row)
         assert intent.actionable is False

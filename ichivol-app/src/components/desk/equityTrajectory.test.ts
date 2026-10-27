@@ -1,16 +1,12 @@
 /**
- * Trajectoire des portefeuilles : % depuis le départ, repères de trades, maintien.
+ * Trajectoire du portefeuille : % depuis le départ, repères de trades, maintien.
  */
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { bookColors, buildPctSeries, buildTrades, dodgeLabels, heldAt, pctAxis, type TradeOrder } from './equityTrajectory'
+import { MAIN_CURVE_COLOR, buildPctSeries, buildTrades, dodgeLabels, heldAt, pctAxis, type TradeOrder } from './equityTrajectory'
 
-test('chaque livre garde sa couleur, quel que soit l’ordre', () => {
-  const a = bookColors(['ICHIVOL_WIDE_V1', 'ICHIVOL_BASELINE_V1', 'X'])
-  const b = bookColors(['ICHIVOL_BASELINE_V1', 'X'])
-  assert.equal(a.ICHIVOL_BASELINE_V1, b.ICHIVOL_BASELINE_V1)
-  assert.notEqual(a.X, a.ICHIVOL_BASELINE_V1)
-  assert.notEqual(a.X, a.ICHIVOL_WIDE_V1)
+test('une seule couleur de courbe pour le portefeuille unique', () => {
+  assert.match(MAIN_CURVE_COLOR, /^#[0-9a-f]{6}$/)
 })
 
 test('courbe en % du capital de départ, ouverte par la dernière valeur avant la période', () => {

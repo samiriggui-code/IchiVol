@@ -60,7 +60,31 @@ export type EveDecision = {
   why?: string | null
   /** Avis de chacun des juges d'Ève, pour ou contre la proposition du moteur. */
   opinions?: Opinion[]
+  /** Règle qui a tranché la réponse d'Ève (moteur : synthesis.decision_rule), null si absente. */
+  decision_rule?: string | null
   engine_proposals: EngineProposalOutcome[]
+}
+
+/** Règles de décision d'Ève (synthesis.decision_rule) en français. */
+export const DECISION_RULE_FR: Record<string, string> = {
+  guardian_critical: 'alerte critique du gardien',
+  challenger_fragile: 'Challenger : proposition fragile',
+  challenger_contradiction: 'Challenger contre l’Analyste',
+  analyst: 'avis de l’Analyste',
+  no_answer: 'aucune réponse',
+  shadow_audit: 'audit indépendant',
+  policy_data_quality: 'données insuffisantes',
+  policy_contradictions: 'trop de contradictions',
+  entry_gate: 'porte d’entrée JEV',
+  signal_rules: 'règles de signal',
+  degradation_late: 'JEV en retard',
+  degradation_low_confidence: 'JEV peu sûr',
+}
+
+/** Libellé français de la règle ; null si absente, code brut si inconnu. */
+export function decisionRuleFr(rule: string | null | undefined): string | null {
+  if (!rule) return null
+  return DECISION_RULE_FR[rule] ?? rule
 }
 
 export async function getEveDecisions(limit = 200): Promise<{ autonomy_enabled: boolean; results: EveDecision[] }> {

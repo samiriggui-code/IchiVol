@@ -14,7 +14,7 @@ from app.indicators.ichimoku import Candle
 from app.main import app
 from app.paper import broker as paper_broker
 from app.paper import protection
-from app.paper.portfolio import ensure_baseline_portfolio
+from app.paper.portfolio import ensure_main_portfolio
 from app.paper.rs_d1_runner import RsD1Runner
 from app.paper.strategy_profiles import BASELINE_CODE, RS_D1_CODE, is_rs_engine, profile_for, syncable_profile_codes
 from rs import BAR_SECONDS
@@ -93,7 +93,7 @@ def test_manual_orders_refused_for_rs_portfolio(session):
 
 def test_locks_are_per_portfolio_both_ways(session):
     """Complément B: baseline kill switch never blocks RS, and RS never trips baseline locks."""
-    base = ensure_baseline_portfolio(session)
+    base = ensure_main_portfolio(session)
     base_before = (base.kill_switch_armed, base.daily_loss_locked, base.cash)
     pf = rs_portfolio(session)
     bars = flat_then_breakout(extra=[(100, 112, 99, 111)])  # breakout close 111 > U55 = 101.5
@@ -173,7 +173,7 @@ def test_rs_lot_without_tp_is_monitored_baseline_without_tp_is_not(session):
     assert pos.status == "CLOSED" and row["status"] == "closed"
     assert pos.exit_price == pytest.approx(c.fill(95.0, "sell"))
 
-    base = ensure_baseline_portfolio(session)
+    base = ensure_main_portfolio(session)
     legacy = PaperPosition(portfolio_id=base.id, symbol="BTCUSDT", timeframe="1h", source="auto_watchlist",
                            direction="LONG", status="OPEN", entry_time=entry, entry_price=100.0, entry_decision="BUY",
                            qty=1.0, notional=100.0, stop_price=95.0, take_profit_price=None)

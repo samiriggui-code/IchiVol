@@ -171,6 +171,7 @@ def apply_degradation(
         rejected.append("degradation_late")
         out["action"] = "HOLD"
         out["rationale"] = "JEV late/timeout → HOLD (never directional on stale budget)"
+        out["decision_rule"] = "degradation_late"
         action = "HOLD"
     elif level == "jev_down" and action in ("LONG", "SHORT"):
         # Deterministic engines may still propose a direction — keep but label;
@@ -183,6 +184,7 @@ def apply_degradation(
         rejected.append("degradation_low_confidence")
         out["action"] = "ABSTAIN"
         out["rationale"] = "JEV mean confidence low → ABSTAIN"
+        out["decision_rule"] = "degradation_low_confidence"
         action = "ABSTAIN"
 
     out["rejected_scenarios"] = rejected

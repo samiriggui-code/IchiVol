@@ -105,7 +105,7 @@ def test_shadow_choice_rationale_names_the_original_action() -> None:
         shadow=_shadow(choice="SHORT", score=3.0, noul=0.9),
         baseline_action="LONG",
     )
-    assert "disagrees with LONG" in synth["rationale"]
+    assert "SHORT contre LONG" in synth["rationale"]
 
 
 def test_audit_verdict() -> None:

@@ -1,21 +1,22 @@
 /**
- * Desk : le résumé « Moteur vs Ève » (bilan par décideur) et les derniers jugements d'Ève.
+ * Desk : le résumé « Moteur vs Ève » (bilan par décideur calculé par le moteur, /breakdown) et les derniers
+ * jugements d'Ève sur le portefeuille unique.
  * Le détail complet est sur la page Ève (/app/agents).
  */
 
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { DECIDERS, scoreByDecider } from '../../lib/decider'
+import { getPortfolioBreakdown, type DeciderRow } from '../../lib/breakdown'
 import {
   engineProposalFr,
+  decisionRuleFr,
   eveActionFr,
   getEveDecisions,
   proposalVerdict,
   type EveDecision,
   type ProposalVerdict,
 } from '../../lib/eveDecisions'
-import { listPaperPortfolios, listPaperPositions, type PaperPortfolioRow, type PaperPosition } from '../../lib/paper'
-import { portfolioLabel } from '../../lib/rsPortfolio'
+import { MAIN_PORTFOLIO_CODE, portfolioLabel } from '../../lib/mainPortfolio'
 import { fmtEur, fmtPct } from '../../pages/desk/deskFormat'
 import { DeciderBadge } from './DeciderBadge'
 import { usePaged } from '../table/usePaged'
@@ -38,17 +39,16 @@ function signedEur(v: number): string {
 }
 
 function useDeciderData() {
-  const [positions, setPositions] = useState<PaperPosition[] | null>(null)
+  const [byDecider, setByDecider] = useState<DeciderRow[] | null>(null)
   const [decisions, setDecisions] = useState<EveDecision[] | null>(null)
   const [autonomy, setAutonomy] = useState<boolean | null>(null)
-  const [portfolios, setPortfolios] = useState<PaperPortfolioRow[]>([])
 
   useEffect(() => {
     let alive = true
     const load = () => {
-      void listPaperPositions()
-        .then((p) => alive && setPositions(p))
-        .catch(() => alive && setPositions([]))
+      void getPortfolioBreakdown()
+        .then((b) => alive && setByDecider(b.by_decider))
+        .catch(() => alive && setByDecider([]))
       void getEveDecisions(40)
         .then((d) => {
           if (!alive) return
@@ -56,9 +56,6 @@ function useDeciderData() {
           setAutonomy(d.autonomy_enabled)
         })
         .catch(() => alive && setDecisions([]))
-      void listPaperPortfolios()
-        .then((p) => alive && setPortfolios(p))
-        .catch(() => undefined)
     }
     load()
     const id = window.setInterval(load, REFRESH_MS)
@@ -68,7 +65,7 @@ function useDeciderData() {
     }
   }, [])
 
-  return { positions, decisions, autonomy, portfolios }
+  return { byDecider, decisions, autonomy }
 }
 
 function fmtTime(iso: string | null): string {
@@ -89,10 +86,10 @@ const VERDICT_TONE: Record<ProposalVerdict, string> = {
 
 /** Carte « Moteur vs Ève » du Desk : bilan des trades clôturés par décideur. */
 export function DeskDeciderSummary({ className = '' }: { className?: string }) {
-  const { positions, autonomy } = useDeciderData()
-  const scores = useMemo(() => scoreByDecider(positions ?? []), [positions])
-  const vs = scores.engine_over_eve
-  const openTotal = DECIDERS.reduce((n, d) => n + scores[d].open, 0)
+  const { byDecider, autonomy } = useDeciderData()
+  const rows = byDecider ?? []
+  const vs = rows.find((r) => r.decider === 'engine_over_eve')
+  const openTotal = rows.reduce((n, r) => n + r.open, 0)
   return (
     <section className={`iv-card iv-glow ddv ${className}`.trim()}>
       <div className="iv-card-head">
@@ -127,25 +124,36 @@ export function DeskDeciderSummary({ className = '' }: { className?: string }) {
               </tr>
             </thead>
             <tbody>
-              {DECIDERS.map((d) => {
-                const s = scores[d]
-                return (
-                  <tr key={d}>
+              {byDecider == null ? (
+                <tr>
+                  <td colSpan={4} className="dim">
+                    Chargement…
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="dim">
+                    Bilan indisponible.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((s) => (
+                  <tr key={s.decider}>
                     <td>
-                      <DeciderBadge decider={d} />
+                      <DeciderBadge decider={s.decider} />
                     </td>
-                    <td className="n">{positions == null ? '…' : s.trades}</td>
-                    <td className="n">{s.trades > 0 ? fmtPct(s.winRate, 1, false) : '—'}</td>
+                    <td className="n">{s.trades}</td>
+                    <td className="n">{s.trades > 0 ? fmtPct(s.win_rate, 1, false) : '—'}</td>
                     <td className={`n ${s.net > 0 ? 'pos' : s.net < 0 ? 'neg' : ''}`.trim()}>
-                      {positions == null ? '…' : s.trades > 0 ? signedEur(s.net) : '—'}
+                      {s.trades > 0 ? signedEur(s.net) : '—'}
                     </td>
                   </tr>
-                )
-              })}
+                ))
+              )}
             </tbody>
           </table>
         </div>
-        {vs.trades > 0 ? (
+        {vs && vs.trades > 0 ? (
           <p className="iv-note ddv-vs">
             ◆ Quand Ève refuse et que le moteur trade quand même : {vs.losses} perte{vs.losses > 1 ? 's' : ''} sur{' '}
             {vs.trades}.
@@ -164,11 +172,7 @@ export function DeskDeciderSummary({ className = '' }: { className?: string }) {
 
 /** Carte « Derniers jugements d'Ève » du Desk. */
 export function DeskEveLatest({ className = '' }: { className?: string }) {
-  const { decisions, autonomy, portfolios } = useDeciderData()
-  const labels = useMemo(
-    () => Object.fromEntries(portfolios.map((p) => [p.code, portfolioLabel(p.code, p.label)])),
-    [portfolios],
-  )
+  const { decisions, autonomy } = useDeciderData()
   const rows = useMemo(
     () =>
       (decisions ?? [])
@@ -204,12 +208,15 @@ export function DeskEveLatest({ className = '' }: { className?: string }) {
                 <div className="ddv-main">
                   <div className="ddv-line">
                     <b>{d.symbol}</b>
-                    <small>{labels[p.portfolio_code] ?? p.portfolio_code}</small>
+                    {p.portfolio_code && p.portfolio_code !== MAIN_PORTFOLIO_CODE ? (
+                      <small>{portfolioLabel(p.portfolio_code)}</small>
+                    ) : null}
                     <span className={`iv-tag ${VERDICT_TONE[v]}`}>{VERDICT_SHORT[v]}</span>
                   </div>
                   <div className="ddv-flow">
                     Moteur : {engineProposalFr(p)} · Ève :{' '}
                     <b className={p.eve_accepts ? 'ok' : 'warn'}>{eveActionFr(p.eve_action)}</b>
+                    {decisionRuleFr(d.decision_rule) ? <> · {decisionRuleFr(d.decision_rule)}</> : null}
                   </div>
                 </div>
               </li>

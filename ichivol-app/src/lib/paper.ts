@@ -1,5 +1,7 @@
 /** Client Paper trading (engine virtuel — pas de broker réel). */
 
+import { MAIN_PORTFOLIO_CODE } from './mainPortfolio'
+
 export type PaperSource = 'auto_watchlist' | 'user_confirmed'
 export type PaperStatus = 'OPEN' | 'CLOSED'
 export type PaperDirection = 'LONG' | 'SHORT'
@@ -137,6 +139,8 @@ export interface PaperPortfolioSummary {
     realized_pnl: number
   }
   performance: PaperPerformance
+  /** Les 100 derniers lots du compte (ouverts et clôturés), tels que le moteur les rend. */
+  positions?: PaperPosition[]
 }
 
 async function parseError(res: Response): Promise<string> {
@@ -144,6 +148,35 @@ async function parseError(res: Response): Promise<string> {
     | { detail?: string; message?: string; error?: string }
     | null
   return body?.detail ?? body?.message ?? body?.error ?? `Erreur ${res.status}`
+}
+
+/** Lots d'un compte, paginés par le moteur (plus récents d'abord) : `total` = nombre de lots avant pagination. */
+export async function listAccountPositions(opts: {
+  code?: string
+  status?: PaperStatus
+  limit?: number
+  offset?: number
+}): Promise<{ positions: PaperPosition[]; total: number }> {
+  const params = new URLSearchParams()
+  params.set('portfolio_code', opts.code ?? MAIN_PORTFOLIO_CODE)
+  if (opts.status) params.set('status', opts.status)
+  if (opts.limit != null) params.set('limit', String(opts.limit))
+  if (opts.offset) params.set('offset', String(opts.offset))
+  const res = await fetch(`/api/engine/paper/positions?${params}`, { credentials: 'include' })
+  if (!res.ok) throw new Error(await parseError(res))
+  const body = (await res.json()) as { positions: PaperPosition[]; total?: number }
+  return { positions: body.positions ?? [], total: body.total ?? (body.positions ?? []).length }
+}
+
+/** Qui a décidé, pour étiqueter les lignes d'ordres : tous les lots ouverts du compte + ses `recent` derniers lots. */
+export async function loadAccountLots(recent = 200): Promise<PaperPosition[]> {
+  const [open, last] = await Promise.all([
+    listAccountPositions({ status: 'OPEN', limit: 500 }).catch(() => ({ positions: [] as PaperPosition[], total: 0 })),
+    listAccountPositions({ limit: recent }),
+  ])
+  const byId = new Map<string, PaperPosition>()
+  for (const p of [...last.positions, ...open.positions]) byId.set(p.id, p)
+  return [...byId.values()]
 }
 
 export async function listPaperPositions(opts?: {
@@ -445,7 +478,7 @@ export async function listPaperPortfolios(): Promise<PaperPortfolioRow[]> {
   return ((await res.json()) as { portfolios: PaperPortfolioRow[] }).portfolios
 }
 
-export async function getPaperPortfolio(code = 'ICHIVOL_BASELINE_V1'): Promise<PaperPortfolioSummary> {
+export async function getPaperPortfolio(code = MAIN_PORTFOLIO_CODE): Promise<PaperPortfolioSummary> {
   const res = await fetch(`/api/engine/paper/portfolios/${encodeURIComponent(code)}`, {
     credentials: 'include',
   })
@@ -617,7 +650,7 @@ export interface PaperReconcileReport {
   cash: number
 }
 
-export async function getPaperOverview(code = 'ICHIVOL_BASELINE_V1'): Promise<PaperOverview> {
+export async function getPaperOverview(code = MAIN_PORTFOLIO_CODE): Promise<PaperOverview> {
   const res = await fetch(`/api/engine/paper/portfolios/${encodeURIComponent(code)}/overview`, {
     credentials: 'include',
   })
@@ -625,7 +658,7 @@ export async function getPaperOverview(code = 'ICHIVOL_BASELINE_V1'): Promise<Pa
   return res.json() as Promise<PaperOverview>
 }
 
-export async function getPaperReconcile(code = 'ICHIVOL_BASELINE_V1'): Promise<PaperReconcileReport> {
+export async function getPaperReconcile(code = MAIN_PORTFOLIO_CODE): Promise<PaperReconcileReport> {
   const res = await fetch(`/api/engine/paper/portfolios/${encodeURIComponent(code)}/reconcile`, {
     credentials: 'include',
   })
@@ -650,7 +683,7 @@ export interface PaperOrderRow {
 }
 
 export async function getPaperActivity(
-  code = 'ICHIVOL_BASELINE_V1',
+  code = MAIN_PORTFOLIO_CODE,
   limit = 100,
 ): Promise<PaperOrderRow[]> {
   const res = await fetch(

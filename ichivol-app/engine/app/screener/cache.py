@@ -25,7 +25,7 @@ from app.paper import engine as paper_engine
 from app.config import settings
 from app.evidence.recorder import record_signal_evidence
 from app.screener.persistence import persist_scan
-from app.paper.strategy_profiles import WIDE_EXTRA_SYMBOLS, wants_wide_universe
+from app.paper.strategy_profiles import WIDE_EXTRA_SYMBOLS, explicit_universe, wants_wide_universe
 from app.screener.service import DEFAULT_WATCHLIST, ScreenerRow, scan_watchlist
 
 logger = logging.getLogger(__name__)
@@ -60,6 +60,11 @@ def dedicated_extra_symbols() -> list[str]:
     try:
         wanted: list[str] = []
         for pf in ensure_syncable_portfolios(session):
+            universe = explicit_universe(pf.strategy_profile)
+            if universe is not None:
+                # Portefeuille unique : univers élargi + YM ride the same background cycle.
+                wanted += [s for s in universe if s not in wanted]
+                continue
             if futures_crypto.is_dedicated(pf.strategy_profile):
                 wanted += [s for s in futures_crypto.traded_symbols(pf.strategy_profile) if s not in wanted]
             if wants_wide_universe(pf.strategy_profile) and "1h" in paper_engine.auto_timeframes(pf.strategy_profile):

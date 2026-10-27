@@ -21,7 +21,7 @@ import { MISSION_MAX_ITERATIONS, MISSION_MAX_TOKENS } from './runtime/missionRun
 
 const DEFAULT_LIMIT = 50
 const MAX_LIMIT = 200
-const PORTFOLIO_CODE = 'ICHIVOL_BASELINE_V1'
+const PORTFOLIO_CODE = 'ICHIVOL_MAIN_V1'
 const ENGINE_TIMEOUT_MS = 4_000
 
 function parseLimit(raw: unknown): number {

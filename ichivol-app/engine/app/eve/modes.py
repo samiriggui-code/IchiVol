@@ -474,6 +474,23 @@ def synthesize_action(
 ) -> dict[str, Any]:
     """Eve strategic synthesis — potential action only.
 
+    Règle (2026-10-27, validée par le propriétaire), dans l'ordre ; la règle qui tranche est rendue dans
+    ``decision_rule`` et dite dans ``rationale`` :
+
+    1. ``guardian_critical`` — alerte critique du Guardian (dont JEV ``risk_stance`` BLOCK, ``risk_level`` >= 4,
+       ``risk_ok`` < 0,25) → ABSTAIN ;
+    2. ``challenger_fragile`` — le Challenger juge la proposition fragile (``baseline_fragile`` NOUL >= 0,7)
+       → ABSTAIN ;
+    3. ``challenger_contradiction`` — le Challenger propose une direction (LONG / SHORT / CLOSE) DIFFÉRENTE de
+       celle de l'Analyste → on suit le Challenger. Un Challenger qui répond ABSTAIN / HOLD ou rien veut dire
+       « pas de meilleure alternative », ce n'est PAS un refus : on passe à la règle 4 ;
+    4. ``analyst`` — action de l'Analyste (``hypotheses.primary_action``, nourrie par JEV ``primary_scenario``),
+       ou ``no_answer`` → ABSTAIN si elle est absente ou invalide.
+
+    Avant ce changement, le choix du Challenger passait en premier : son ABSTAIN (172 dossiers sur 174 du 17 au
+    27/10) écrasait l'Analyste (SHORT 130 fois, LONG 33 fois) et Ève s'abstenait toujours.
+    Les garde-fous en aval restent : audit indépendant (Shadow), porte d'entrée, JEV en bonne santé, Risk Kernel.
+
     ``apply_audit=False`` keeps Ève's own opinion: the independent audit (Shadow mode) is then read apart by
     ``audit_verdict`` and only arbitrates when the engine and Ève agree (app/eve/autopilot.py)."""
     rejected: list[str] = []
@@ -491,33 +508,50 @@ def synthesize_action(
         if isinstance(risk_ok, (int, float)) and risk_ok < 0.25:
             critical = critical or [{"code": "guardian_jev_noul_low", "severity": "critical"}]
 
+    hyp = (analyst.get("hypotheses") or {}).get("primary_action")
+    analyst_action = normalize_action(str(hyp) if hyp else None)
+    if analyst_action not in VALID_ACTIONS:
+        analyst_action = None
+    challenger_action: str | None = None
+    fragile = None
+    ch_jev = challenger.get("jev") or {}
+    if ch_jev.get("ok"):
+        answers = ch_jev.get("answers") or {}
+        challenger_action = normalize_action((answers.get("alt_action") or {}).get("choice"))
+        fragile = (answers.get("baseline_fragile") or {}).get("noul")
+
+    action: EveAction
     if critical:
-        action: EveAction = "ABSTAIN"
-        rationale = "Guardian critical warning → abstain"
+        action = "ABSTAIN"
+        decision_rule = "guardian_critical"
+        rationale = "Règle 1 — alerte critique du Guardian → abstention"
         rejected.append("any_risk_taking")
+    elif isinstance(fragile, (int, float)) and fragile >= 0.7:
+        action = "ABSTAIN"
+        decision_rule = "challenger_fragile"
+        rationale = f"Règle 2 — le Challenger juge la proposition fragile ({fragile:.2f} ≥ 0,70) → abstention"
+        rejected.append("directional_despite_fragility")
+    elif challenger_action in ("LONG", "SHORT", "CLOSE") and challenger_action != analyst_action:
+        action = challenger_action  # type: ignore[assignment]
+        decision_rule = "challenger_contradiction"
+        rationale = (
+            f"Règle 3 — le Challenger contredit l'Analyste ({analyst_action or 'aucune'}) "
+            f"et propose {challenger_action} → on suit le Challenger"
+        )
+    elif analyst_action is not None:
+        action = analyst_action  # type: ignore[assignment]
+        decision_rule = "analyst"
+        ch_txt = challenger_action or "aucune réponse"
+        rationale = (
+            f"Règle 4 — action de l'Analyste ({analyst_action}) ; le Challenger "
+            f"({ch_txt}) ne propose pas d'autre direction"
+        )
     else:
-        action = None
-        ch_jev = challenger.get("jev") or {}
-        if ch_jev.get("ok"):
-            answers = ch_jev.get("answers") or {}
-            alt = answers.get("alt_action") or {}
-            action = normalize_action(alt.get("choice"))
-            fragile = (answers.get("baseline_fragile") or {}).get("noul")
-            if isinstance(fragile, (int, float)) and fragile >= 0.7 and action in (
-                "LONG",
-                "SHORT",
-            ):
-                # High fragility → prefer abstain over directional challenger pick
-                action = "ABSTAIN"
-                rejected.append("directional_despite_fragility")
-        if action is None:
-            hyp = (analyst.get("hypotheses") or {}).get("primary_action")
-            action = normalize_action(str(hyp) if hyp else None) or "ABSTAIN"
-        if action not in VALID_ACTIONS:
-            action = "ABSTAIN"
-        rationale = "Synthesized from Analyst/Challenger/Guardian (potential only)"
-        if baseline_action and action != baseline_action:
-            rejected.append(f"baseline:{baseline_action}")
+        action = "ABSTAIN"
+        decision_rule = "no_answer"
+        rationale = "Règle 4 — aucune action valide de l'Analyste → abstention"
+    if not critical and baseline_action and action != baseline_action:
+        rejected.append(f"baseline:{baseline_action}")
 
     # Shadow counter-signals (NOUL + CHOICE + SCORE) — independent audit, never execution.
     s_answers = _shadow_answers(shadow)
@@ -532,17 +566,18 @@ def synthesize_action(
         if isinstance(shadow_score, (int, float)) and shadow_score <= 1:
             rejected.append("shadow_low_audit_confidence")
             action = "ABSTAIN"
-            rationale = "Shadow SCORE audit_confidence weak → abstain"
+            rationale = "Audit indépendant (Shadow) : confiance faible → abstention"
+            decision_rule = "shadow_audit"
         elif shadow_choice is not None and shadow_choice != action:
             rejected.append(f"shadow_choice:{shadow_choice}")
-            rationale = (
-                f"Shadow CHOICE {shadow_choice} disagrees with {action} → abstain"
-            )
+            rationale = f"Audit indépendant (Shadow) : {shadow_choice} contre {action} → abstention"
+            decision_rule = "shadow_audit"
             action = "ABSTAIN"
         elif isinstance(shadow_noul, (int, float)) and shadow_noul < 0.35:
             rejected.append("shadow_noul_low")
             action = "ABSTAIN"
-            rationale = "Shadow NOUL low coherence → abstain"
+            rationale = "Audit indépendant (Shadow) : cohérence faible → abstention"
+            decision_rule = "shadow_audit"
 
     return {
         "action": action,
@@ -550,6 +585,9 @@ def synthesize_action(
         "executed": False,
         "authorization": "not_submitted",
         "rationale": rationale,
+        "decision_rule": decision_rule,
+        "analyst_action": analyst_action,
+        "challenger_action": challenger_action,
         "rejected_scenarios": rejected,
         "baseline_action": baseline_action,
         "disagrees_with_baseline": bool(baseline_action and action != baseline_action),

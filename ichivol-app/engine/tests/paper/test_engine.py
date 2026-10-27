@@ -30,7 +30,7 @@ from app.db.session import SessionLocal, engine
 from app.decision.pipeline import PipelineResult
 from app.paper import engine as paper
 from app.paper import gates as paper_gates
-from app.paper.strategy_profiles import BASELINE_CODE, profile_for
+from app.paper.strategy_profiles import BASELINE_CODE, MAIN_CODE, profile_for
 
 try:
     with engine.connect():
@@ -87,7 +87,7 @@ def _purge_symbols(session, *symbols: str) -> None:
 
 def _baseline_book(session) -> tuple[PaperPortfolio | None, float | None, float | None, set[str]]:
     """Capture baseline cash / realized / existing equity-snapshot ids (never wipe them)."""
-    base = session.query(PaperPortfolio).filter_by(code=BASELINE_CODE).first()
+    base = session.query(PaperPortfolio).filter_by(code=MAIN_CODE).first()
     if base is None:
         return None, None, None, set()
     snap_ids = {
@@ -107,7 +107,7 @@ def _restore_baseline(
     """Restore captured cash/realized; delete only snapshots created during the test."""
     if cash0 is None:
         return
-    base = session.query(PaperPortfolio).filter_by(code=BASELINE_CODE).first()
+    base = session.query(PaperPortfolio).filter_by(code=MAIN_CODE).first()
     if base is None:
         return
     for snap in session.query(PaperEquitySnapshot).filter_by(portfolio_id=base.id).all():
@@ -166,12 +166,12 @@ def _historical_equity_guard():
         yield None
         return
     session = SessionLocal()
-    base = session.query(PaperPortfolio).filter_by(code=BASELINE_CODE).first()
+    base = session.query(PaperPortfolio).filter_by(code=MAIN_CODE).first()
     if base is None:
         # Seed baseline so the guard has a portfolio to attach to.
-        from app.paper.portfolio import ensure_baseline_portfolio
+        from app.paper.portfolio import ensure_main_portfolio
 
-        base = ensure_baseline_portfolio(session)
+        base = ensure_main_portfolio(session)
         session.commit()
     hist = PaperEquitySnapshot(
         portfolio_id=base.id,
@@ -212,7 +212,7 @@ def _session():
 def test_historical_equity_guard_id_is_tracked(_session, _historical_equity_guard):
     """Sanity: module guard snapshot is among ids captured at test start."""
     assert _historical_equity_guard is not None
-    base = _session.query(PaperPortfolio).filter_by(code=BASELINE_CODE).first()
+    base = _session.query(PaperPortfolio).filter_by(code=MAIN_CODE).first()
     ids = {
         s.id
         for s in _session.query(PaperEquitySnapshot.id).filter_by(portfolio_id=base.id).all()

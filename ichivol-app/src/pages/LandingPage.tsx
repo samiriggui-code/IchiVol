@@ -128,8 +128,8 @@ export function LandingPage() {
                 <em>Ève accepte ou refuse.</em>
               </h1>
               <p className="lp-lead">
-                Un poste de trading où Ève, l’IA décisionnelle, juge chaque trade proposé par vos
-                portefeuilles. Cinq portes, quatre avis, un garde-fou de risque qui a toujours le
+                Un poste de trading où Ève, l’IA décisionnelle, juge chaque trade proposé par le
+                moteur sur votre portefeuille. Cinq portes, quatre avis, un garde-fou de risque qui a toujours le
                 dernier mot.
               </p>
               <div className="lp-row">

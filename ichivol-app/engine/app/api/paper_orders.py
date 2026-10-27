@@ -20,7 +20,7 @@ from app.decision.pipeline import PipelineResult
 from app.paper import broker as paper_broker
 from app.paper import engine as paper_engine
 from app.paper import gates as paper_gates
-from app.paper.portfolio import ensure_baseline_portfolio, get_portfolio_by_code
+from app.paper.portfolio import ensure_main_portfolio, get_portfolio_by_code
 from app.screener.service import scan_symbol
 
 router_after_shadow = APIRouter(prefix=settings.engine_api_prefix, tags=["engine"])
@@ -40,12 +40,13 @@ def _refuse_rs_portfolio_code(code: str | None) -> None:
 
 
 def _refuse_outside_markets(code: str | None, symbol: str) -> None:
-    """403 for a manual order on a dedicated account (Futures & Crypto) outside its own markets."""
-    from app.paper import futures_crypto
+    """403 pour un compte retiré (2026-10-27) ou un symbole hors de l'univers du compte visé."""
     from app.paper.portfolio import get_portfolio_by_code
-    from app.paper.strategy_profiles import profile_for
+    from app.paper.strategy_profiles import is_retired, profile_for
 
-    if not code or not futures_crypto.is_dedicated(profile_for(code)):
+    if is_retired(code):
+        raise HTTPException(status_code=403, detail=f"retired_portfolio: {code} n'est plus un compte actif")
+    if not code:
         return
     session = SessionLocal()
     try:
@@ -53,11 +54,19 @@ def _refuse_outside_markets(code: str | None, symbol: str) -> None:
         profile = pf.strategy_profile if pf is not None else profile_for(code)
     finally:
         session.close()
-    allowed = futures_crypto.traded_symbols(profile)
-    if symbol.upper() not in allowed:
+    profile = profile or {}
+    excluded = profile.get("universe_exclusions")
+    if isinstance(excluded, dict):
+        # Portefeuille unique : un ordre manuel est refusé seulement sur un instrument exclu pour une raison
+        # documentée (liquidité, devise, double exposition) ; ailleurs, c'est le choix explicite de l'utilisateur.
+        why = excluded.get(symbol.upper())
+        if why:
+            raise HTTPException(status_code=403, detail=f"symbol_outside_portfolio: {symbol.upper()} exclu ({why})")
+        return
+    if not paper_engine.trades_symbol(profile, symbol.upper()):
         raise HTTPException(
             status_code=403,
-            detail=f"symbol_outside_portfolio: {code} only trades {', '.join(allowed)}",
+            detail=f"symbol_outside_portfolio: {code} ne trade pas {symbol.upper()}",
         )
 
 
@@ -128,7 +137,7 @@ def _open_refusal_detail(
     )
 
     if portfolio is None:
-        portfolio = ensure_baseline_portfolio(session)
+        portfolio = ensure_main_portfolio(session)
     profile = portfolio.strategy_profile or {}
     equity = paper_broker.estimate_equity(session, portfolio)
     opens = paper_gates.open_positions(session, portfolio.id)
@@ -168,7 +177,7 @@ def preview_manual_paper_buy(
     timeframe: str = "1h",
     stop_pct: float | None = None,
     take_profit_r: float | None = None,
-    portfolio_code: str = "ICHIVOL_BASELINE_V1",
+    portfolio_code: str = "ICHIVOL_MAIN_V1",
 ) -> dict:
     """What a user-chosen buy would cost, risk and do to the portfolio. Read-only, never opens anything."""
     from app.paper.manual import preview_manual_buy
@@ -318,7 +327,7 @@ def paper_position_proximity(position_id: str, near_pct: float = 0.20) -> dict:
 def propose_paper_trade(
     symbol: str,
     timeframe: str = "1h",
-    portfolio_code: str = "ICHIVOL_BASELINE_V1",
+    portfolio_code: str = "ICHIVOL_MAIN_V1",
     rvol_low: float | None = None,
     rvol_significant: float | None = None,
     rvol_strong: float | None = None,
@@ -374,7 +383,7 @@ def open_paper_position(
     notional: float | None = None,
     stop_pct: float | None = None,
     take_profit_r: float | None = None,
-    portfolio_code: str = "ICHIVOL_BASELINE_V1",
+    portfolio_code: str = "ICHIVOL_MAIN_V1",
 ) -> dict:
     """Called by the server when a user hits "Confirmer" in the Journal --
     opens a virtual `user_confirmed` position at the current live
@@ -427,13 +436,12 @@ def open_paper_position(
         extra_signal = {"discretionary": True, "engine_verdict": row.pipeline.decision}
     session = SessionLocal()
     try:
-        from app.paper.portfolio import ensure_portfolio
-        from app.paper.strategy_profiles import BASELINE_CODE, syncable_profile_codes
+        from app.paper.strategy_profiles import MAIN_CODE, is_retired
 
-        if portfolio_code == BASELINE_CODE:
-            portfolio = ensure_baseline_portfolio(session)
-        elif portfolio_code in syncable_profile_codes():
-            portfolio = ensure_portfolio(session, portfolio_code)
+        if not portfolio_code or portfolio_code == MAIN_CODE:
+            portfolio = ensure_main_portfolio(session)
+        elif is_retired(portfolio_code):
+            raise HTTPException(status_code=403, detail=f"retired_portfolio: {portfolio_code}")
         else:
             portfolio = get_portfolio_by_code(session, portfolio_code)
         if portfolio is None:

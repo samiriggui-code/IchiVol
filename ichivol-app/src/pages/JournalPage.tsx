@@ -14,8 +14,10 @@ import { useNavigate } from 'react-router-dom'
 import { displaySymbol } from '../lib/markets'
 import { DECIDER_EXPLAIN, DECIDER_LABEL, DECIDERS, deciderOf, type Decider } from '../lib/decider'
 import { labelExitReason } from '../lib/engineTerminology'
-import { listPaperPortfolios, listPaperPositions, type PaperPosition } from '../lib/paper'
-import { portfolioLabel } from '../lib/rsPortfolio'
+import { listAccountPositions, type PaperPosition } from '../lib/paper'
+
+/** Trades clôturés chargés par page (le moteur pagine, plus récents d'abord). */
+const TRADES_PAGE = 50
 import {
   deleteUserDecision,
   listUserDecisions,
@@ -23,11 +25,23 @@ import {
   patchUserDecisionStatus,
   type UserDecisionRow,
 } from '../lib/userDecisions'
-import { usePaged } from '../components/table/usePaged'
+import { PAGE_SIZES, usePaged, type PageSize, type Paged } from '../components/table/usePaged'
 import { TablePager } from '../components/table/TablePager'
 import './JournalPage.css'
 
 type JournalTab = 'Trades' | 'Décisions sauvegardées'
+
+/** Même clé que `usePaged` : la taille de page des trades est retenue comme celle des autres tableaux. */
+const TRADES_SIZE_KEY = 'ichivol_page_size:journal-trades'
+
+function readTradesPageSize(): PageSize {
+  try {
+    const v = Number(localStorage.getItem(TRADES_SIZE_KEY))
+    return (PAGE_SIZES as readonly number[]).includes(v) ? (v as PageSize) : 10
+  } catch {
+    return 10
+  }
+}
 
 const NOTE_KEY = 'ichivol-note'
 
@@ -129,8 +143,11 @@ export function JournalPage() {
   const [query, setQuery] = useState('')
   const [deciderFilter, setDeciderFilter] = useState<Decider | 'all'>('all')
   const [trades, setTrades] = useState<PaperPosition[]>([])
-  /** id du portefeuille → nom court : chaque trade du journal dit de quel portefeuille il vient. */
-  const [bookLabels, setBookLabels] = useState<ReadonlyMap<string, string>>(() => new Map())
+  /** Nombre total de trades clôturés du compte (avant pagination), rendu par le moteur. */
+  const [tradesTotal, setTradesTotal] = useState(0)
+  const [moreBusy, setMoreBusy] = useState(false)
+  /** Échec du chargement de la suite : pas de nouvel essai automatique avant le prochain chargement complet. */
+  const [moreFailed, setMoreFailed] = useState(false)
   const [decisions, setDecisions] = useState<UserDecisionRow[]>([])
   const [showArchived, setShowArchived] = useState(false)
   const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(null)
@@ -141,12 +158,17 @@ export function JournalPage() {
 
   const load = useCallback(async () => {
     try {
-      const [closed, rows, pfs] = await Promise.all([
-        listPaperPositions({ status: 'CLOSED' }).catch(() => [] as PaperPosition[]),
+      // Trades clôturés du portefeuille unique (ICHIVOL_MAIN_V1), première page.
+      const [page, rows] = await Promise.all([
+        listAccountPositions({ status: 'CLOSED', limit: TRADES_PAGE }).catch(() => ({
+          positions: [] as PaperPosition[],
+          total: 0,
+        })),
         listUserDecisions(80).catch(() => [] as UserDecisionRow[]),
-        listPaperPortfolios().catch(() => []),
       ])
-      setBookLabels(new Map(pfs.map((p) => [p.id, portfolioLabel(p.code, p.label)])))
+      const closed = page.positions
+      setMoreFailed(false)
+      setTradesTotal(page.total)
       setTrades(
         [...closed].sort(
           (a, b) =>
@@ -160,6 +182,25 @@ export function JournalPage() {
     }
   }, [])
 
+  /** Charge la suite des trades clôturés (au moins TRADES_PAGE, ou assez pour atteindre `upTo` lignes). */
+  const loadMoreTrades = useCallback(async (upTo = 0) => {
+    setMoreBusy(true)
+    try {
+      const limit = Math.max(TRADES_PAGE, upTo - trades.length)
+      const page = await listAccountPositions({ status: 'CLOSED', limit, offset: trades.length })
+      setTradesTotal(page.total)
+      setTrades((prev) => {
+        const seen = new Set(prev.map((p) => p.id))
+        return [...prev, ...page.positions.filter((p) => !seen.has(p.id))]
+      })
+    } catch {
+      /* garder la liste actuelle */
+      setMoreFailed(true)
+    } finally {
+      setMoreBusy(false)
+    }
+  }, [trades.length])
+
   useEffect(() => {
     void load()
   }, [load])
@@ -171,10 +212,9 @@ export function JournalPage() {
     if (!q) return byDecider
     return byDecider.filter((p) => {
       const base = displaySymbol(p.symbol).toLowerCase()
-      const book = (p.portfolio_id ? bookLabels.get(p.portfolio_id) : '')?.toLowerCase() ?? ''
-      return base.includes(q) || p.symbol.toLowerCase().includes(q) || book.includes(q)
+      return base.includes(q) || p.symbol.toLowerCase().includes(q)
     })
-  }, [trades, q, bookLabels, deciderFilter])
+  }, [trades, q, deciderFilter])
 
   const filteredDecisions = useMemo(() => {
     const byStatus = decisions.filter((r) =>
@@ -332,11 +372,45 @@ export function JournalPage() {
   }
 
   const replayTrade = journalTab === 'Trades' ? (visibleTrades[0] ?? trades[0] ?? null) : null
-  const bookOf = (t: PaperPosition) => (t.portfolio_id ? bookLabels.get(t.portfolio_id) : undefined)
 
-  // Pagination (5 / 10 / 20 / 50) appliquée après filtre et recherche.
-  const pagedTrades = usePaged(visibleTrades, 'journal-trades')
+  // Pagination (5 / 10 / 20 / 50). Décisions : côté client. Trades : pilotée par le moteur (total / offset) ;
+  // sans filtre, le compteur suit le total du moteur et les pages manquantes sont chargées à la demande.
+  // Avec recherche ou filtre décideur, la pagination porte sur les trades déjà chargés.
   const pagedDecisions = usePaged(filteredDecisions, 'journal-decisions')
+  const [tradesPageSize, setTradesPageSize] = useState<PageSize>(readTradesPageSize)
+  const [tradesPage, setTradesPage] = useState(1)
+  const tradesFiltered = q !== '' || deciderFilter !== 'all'
+  useEffect(() => {
+    setTradesPage(1)
+  }, [q, deciderFilter])
+  const tradesCount = tradesFiltered ? visibleTrades.length : Math.max(tradesTotal, trades.length)
+  const tradesPageCount = Math.max(1, Math.ceil(tradesCount / tradesPageSize))
+  const tradesCurrent = Math.min(tradesPage, tradesPageCount)
+  const tradesStart = (tradesCurrent - 1) * tradesPageSize
+  const tradesNeeded = Math.min(tradesStart + tradesPageSize, tradesCount)
+  useEffect(() => {
+    if (!tradesFiltered && !moreBusy && !moreFailed && trades.length < tradesTotal && trades.length < tradesNeeded) {
+      void loadMoreTrades(tradesNeeded)
+    }
+  }, [tradesFiltered, moreBusy, moreFailed, trades.length, tradesTotal, tradesNeeded, loadMoreTrades])
+  const pagedTrades: Paged<PaperPosition> = {
+    rows: visibleTrades.slice(tradesStart, tradesStart + tradesPageSize),
+    page: tradesCurrent,
+    pageCount: tradesPageCount,
+    pageSize: tradesPageSize,
+    total: tradesCount,
+    start: tradesStart,
+    setPage: (p) => setTradesPage(Math.min(Math.max(1, p), tradesPageCount)),
+    setPageSize: (size) => {
+      setTradesPageSize(size)
+      setTradesPage(1)
+      try {
+        localStorage.setItem(TRADES_SIZE_KEY, String(size))
+      } catch {
+        /* stockage indisponible : le choix vaut pour la session */
+      }
+    },
+  }
 
   const tableRows =
     journalTab === 'Trades'
@@ -364,7 +438,6 @@ export function JournalPage() {
               <td>
                 <SideMark direction={t.direction} />
               </td>
-              <td>{bookOf(t) ?? <span className="dim">—</span>}</td>
               <td>
                 <DeciderMark decider={deciderOf(t)} />
               </td>
@@ -451,7 +524,7 @@ export function JournalPage() {
 
   const toolsLabel =
     journalTab === 'Trades'
-      ? `${visibleTrades.length} trade${visibleTrades.length > 1 ? 's' : ''} clôturé${visibleTrades.length > 1 ? 's' : ''}`
+      ? `${visibleTrades.length} trade${visibleTrades.length > 1 ? 's' : ''} clôturé${visibleTrades.length > 1 ? 's' : ''}${tradesTotal > trades.length ? ` sur ${tradesTotal}` : ''}`
       : `${filteredDecisions.length} décision${filteredDecisions.length > 1 ? 's' : ''}${showArchived ? ' archivée' + (filteredDecisions.length > 1 ? 's' : '') : ''}`
 
   return (
@@ -544,7 +617,6 @@ export function JournalPage() {
                       <th>Date</th>
                       <th>Actif</th>
                       <th>Sens</th>
-                      <th>Portefeuille</th>
                       <th>Qui a décidé</th>
                       <th className="n">Entrée</th>
                       <th className="n">Sortie</th>
@@ -573,6 +645,16 @@ export function JournalPage() {
           ) : (
             <TablePager paged={pagedDecisions} label="décisions" />
           )}
+          {journalTab === 'Trades' && tradesFiltered && tradesTotal > trades.length ? (
+            <div className="iv-card-foot">
+              <span>
+                Recherche sur {trades.length} trades chargés sur {tradesTotal}
+              </span>
+              <button type="button" className="iv-btn iv-btn--sm" disabled={moreBusy} onClick={() => void loadMoreTrades()}>
+                {moreBusy ? 'Chargement…' : `Charger ${Math.min(TRADES_PAGE, tradesTotal - trades.length)} de plus`}
+              </button>
+            </div>
+          ) : null}
         </section>
 
         <div className="iv-s4 iv-m-s12 jr-side">
@@ -588,7 +670,7 @@ export function JournalPage() {
               {replayTrade ? (
                 <p className="iv-note jr-replay">
                   <DeciderMark decider={deciderOf(replayTrade)} />
-                  {bookOf(replayTrade) ? ` · ${bookOf(replayTrade)}` : ''} · {fmtSens(replayTrade.direction)} à{' '}
+                  {' · '}{fmtSens(replayTrade.direction)} à{' '}
                   {fmtPx(replayTrade.entry_price)}, sortie à {fmtPx(replayTrade.exit_price)}.{' '}
                   <span className={fmtR(replayTrade).startsWith('+') ? 'pos' : fmtR(replayTrade).startsWith('−') ? 'neg' : ''}>
                     {shortExit(replayTrade.exit_reason)} · {fmtR(replayTrade)}

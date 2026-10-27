@@ -2,13 +2,13 @@
  * Paramètres — une page qui s'explique d'elle-même.
  *
  * Sections : Trading automatique · Ève et JEV · Modèles d'IA · Alertes · Graphiques · Connexions et état.
- * Sources : `/api/settings` (compte), `/api/engine/eve/settings/*` (moteur), portefeuilles paper (`loadAllBooks`),
+ * Sources : `/api/settings` (compte), `/api/engine/eve/settings/*` (moteur), portefeuille paper unique (`loadMainBook`),
  * Web Push (`pushAlerts`), sondes de connexion (`useLlmStatus`). Argent fictif uniquement.
  */
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { loadAllBooks, type Book } from '../lib/allBooks'
+import { loadMainBook, type Book } from '../lib/mainBook'
 import { detectPushSupport, disablePushAlerts, enablePushAlerts } from '../lib/pushAlerts'
 import { getSettings, patchSettings, type AppSettings } from '../lib/settings'
 import {
@@ -28,7 +28,7 @@ import './SettingsPage.css'
 type SectionId = 'auto' | 'eve' | 'ia' | 'alertes' | 'graphiques' | 'connexions'
 
 const SECTIONS: Array<{ id: SectionId; label: string; sub: string }> = [
-  { id: 'auto', label: 'Trading automatique', sub: 'Pilote d’Ève, portefeuilles, limites' },
+  { id: 'auto', label: 'Trading automatique', sub: 'Pilote d’Ève, portefeuille, limites' },
   { id: 'eve', label: 'Ève et JEV', sub: 'Modes, seuils, actualités' },
   { id: 'ia', label: 'Modèles d’IA', sub: 'Clé et modèle du Copilot' },
   { id: 'alertes', label: 'Alertes', sub: 'Notifications sur vos positions' },
@@ -103,12 +103,12 @@ function AutoTradingSection({
           {autonomy == null
             ? 'Le moteur ne répond pas : impossible de savoir si Ève trade seule en ce moment.'
             : autonomy
-              ? 'Ève décide seule des ouvertures et fermetures sur tous les portefeuilles actifs ci-dessous.'
-              : 'Ève ne trade pas seule. Chaque portefeuille applique uniquement sa propre méthode, sans l’avis d’Ève.'}
+              ? 'Ève décide seule des ouvertures et fermetures sur le portefeuille unique ci-dessous.'
+              : 'Ève ne trade pas seule. Le portefeuille applique uniquement la méthode du moteur, sans l’avis d’Ève.'}
         </p>
         <ol className="steps">
           <li>
-            <b>Le moteur repère un signal</b> à la clôture d’une bougie, selon la méthode du portefeuille.
+            <b>Le moteur repère un signal</b> à la clôture d’une bougie, selon la méthode du moteur.
           </li>
           <li>
             <b>Ève accepte ou refuse</b> après l’avis de ses modes et de JEV. Si elle refuse, le moteur trade quand même et son refus est noté ; si elle accepte, l’audit indépendant tranche.
@@ -130,18 +130,18 @@ function AutoTradingSection({
       <section className="iv-card">
         <div className="iv-card-head">
           <div className="iv-card-tabs">
-            <span className="iv-card-tab is-on">Portefeuilles et limites de risque</span>
+            <span className="iv-card-tab is-on">Portefeuille et limites de risque</span>
           </div>
           <div className="iv-card-tools">
-            {books ? `${books.length} actif${books.length > 1 ? 's' : ''}` : null} · Risk Kernel
+            Portefeuille unique · Risk Kernel
           </div>
         </div>
         <p className="lede params-lede-band">
-          Les portefeuilles fictifs suivis par le moteur, et ce que le garde-fou de risque leur autorise. Le{' '}
+          Le portefeuille fictif unique suivi par le moteur, et ce que le garde-fou de risque lui autorise. Le{' '}
           <b>risque engagé</b> est ce que vous perdriez si tous les stops étaient touchés, en part du capital. Ces
-          limites viennent de la méthode de chaque portefeuille et ne se modifient pas ici.
+          limites viennent du profil du portefeuille, fixé dans le moteur, et ne se modifient pas ici.
         </p>
-        {booksError ? <p className="notice err params-band-notice">Portefeuilles indisponibles : {booksError}</p> : null}
+        {booksError ? <p className="notice err params-band-notice">Portefeuille indisponible : {booksError}</p> : null}
         <div className="iv-card-body is-flush iv-table-wrap">
           <table className="iv-table params-books">
             <thead>
@@ -164,7 +164,7 @@ function AutoTradingSection({
               {books && books.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="params-empty">
-                    Aucun portefeuille actif.
+                    Portefeuille indisponible.
                   </td>
                 </tr>
               ) : null}
@@ -541,7 +541,7 @@ function ChartsSection({ engine, onSaved }: { engine: AppSettings | null; onSave
       <div className="iv-card-body">
         <p className="lede">
           Réglages de vos graphiques et des analyses que vous lancez vous-même (opportunités, tests de stratégie).
-          Ils ne changent pas les méthodes des portefeuilles ni les décisions automatiques d’Ève.
+          Ils ne changent pas la méthode du portefeuille ni les décisions automatiques d’Ève.
         </p>
         {!engine ? <p className="notice err">Serveur IchiVol injoignable : réglages non modifiables.</p> : null}
         <h3 className="sub">Périodes Ichimoku (en bougies)</h3>
@@ -664,7 +664,7 @@ function ConnectionsSection({
   const rows: Array<{ name: string; help: string; status: { text: string; tone: Tone } }> = [
     {
       name: 'Moteur de trading',
-      help: 'Calcule les signaux, tient les portefeuilles fictifs, fait tourner Ève.',
+      help: 'Calcule les signaux, tient le portefeuille fictif, fait tourner Ève.',
       status:
         engineHealth == null
           ? { text: 'Vérification…', tone: 'amber' }
@@ -803,8 +803,8 @@ export function SettingsPage() {
     getSettings()
       .then(setEngine)
       .catch(() => setEngine(null))
-    loadAllBooks()
-      .then(setBooks)
+    loadMainBook()
+      .then((b) => setBooks([b]))
       .catch((err: unknown) => setBooksError(errText(err)))
     Promise.all([getEveSettingsSchema(), getEveSettingsValues()])
       .then(([s, v]) => {

@@ -19,8 +19,8 @@ function check(label: string, ok: boolean) {
 }
 
 const sample: DailyBriefing = {
-  portfolioCode: 'ICHIVOL_BASELINE_V1',
-  portfolioLabel: 'Baseline V1',
+  portfolioCode: 'ICHIVOL_MAIN_V1',
+  portfolioLabel: 'IchiVol',
   generatedAt: 'dimanche 20 septembre 2026 à 12:00',
   generatedAtIso: '2026-09-20T10:00:00.000Z',
   appUrl: 'http://localhost',

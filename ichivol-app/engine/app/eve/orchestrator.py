@@ -98,10 +98,12 @@ def evaluate_opportunity(
     if dq < float(thresholds.get("min_data_quality_to_act") or 0):
         synthesis["action"] = "ABSTAIN"
         synthesis["rationale"] = "Policy: data_quality below min_data_quality_to_act"
+        synthesis["decision_rule"] = "policy_data_quality"
     max_c = int(thresholds.get("max_contradictions_before_abstain") or 99)
     if len(contradictions) >= max_c:
         synthesis["action"] = "ABSTAIN"
         synthesis["rationale"] = "Policy: too many Challenger contradictions"
+        synthesis["decision_rule"] = "policy_contradictions"
 
     # Build provisional jev pack for degradation (full pack assembled below).
     jev_pack_preview = {
@@ -139,6 +141,7 @@ def evaluate_opportunity(
         synthesis["rationale"] = (
             f"Entry gate reject ({entry_gate.get('reason')}) → ABSTAIN"
         )
+        synthesis["decision_rule"] = "entry_gate"
     synthesis["entry_gate"] = {
         "decision": entry_gate.get("decision"),
         "allowed": entry_gate.get("allowed"),
@@ -163,6 +166,7 @@ def evaluate_opportunity(
         synthesis["rationale"] = (
             f"Signal rules reject ({signal_rules.get('reason')}) → ABSTAIN"
         )
+        synthesis["decision_rule"] = "signal_rules"
     synthesis["signal_rules"] = {
         "decision": signal_rules.get("decision"),
         "allowed": signal_rules.get("allowed"),

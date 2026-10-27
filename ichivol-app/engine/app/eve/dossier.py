@@ -204,6 +204,9 @@ def decision_summary(
             modes=modes,
         ),
         "opinions": opinions(modes, dossier.baseline_decision) if modes else [],
+        # Règle de synthèse qui a tranché (2026-10-27) : guardian_critical, challenger_fragile,
+        # challenger_contradiction, analyst, no_answer, shadow_audit, policy_*, entry_gate, signal_rules…
+        "decision_rule": (modes.get("synthesis") or {}).get("decision_rule") if modes else None,
         "engine_proposals": proposals,
     }
 

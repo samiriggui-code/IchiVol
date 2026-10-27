@@ -15,7 +15,7 @@ import type {
 } from './briefingTypes.js'
 
 const FETCH_TIMEOUT_MS = 15_000
-const PORTFOLIO = 'ICHIVOL_BASELINE_V1'
+const PORTFOLIO = 'ICHIVOL_MAIN_V1'
 
 async function fetchEngineJson<T>(path: string): Promise<T | null> {
   try {
@@ -328,7 +328,7 @@ export async function buildDailyBriefing(): Promise<DailyBriefing> {
 
   return {
     portfolioCode: overview?.portfolio.code ?? PORTFOLIO,
-    portfolioLabel: overview?.portfolio.label ?? 'Baseline V1',
+    portfolioLabel: overview?.portfolio.label ?? 'IchiVol',
     generatedAt,
     generatedAtIso,
     appUrl,

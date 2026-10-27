@@ -10,10 +10,10 @@ import {
 import { BrandMark } from '../components/BrandMark'
 import { KillLockBanner, KillSwitchButton, KillSwitchProvider } from '../components/KillSwitchControls'
 import { ThemeToggle } from '../components/ThemeToggle'
-import { combineOverviews, loadAllBooks } from '../lib/allBooks'
+import { getPaperOverview, type PaperOverview } from '../lib/paper'
+import { MAIN_PORTFOLIO_CODE } from '../lib/mainPortfolio'
 import { getMe, logout } from '../lib/auth'
 import { getPaperAutonomy } from '../lib/eveApi'
-import type { PaperOverview } from '../lib/paper'
 import { AgentSessionProvider } from '../lib/agentSession'
 import {
   jevStatusLabel,
@@ -37,7 +37,7 @@ type EngineState = 'checking' | 'ok' | 'down'
 
 /**
  * Données du bandeau : uniquement ce que l'app sait déjà charger
- * (vue d'ensemble des portefeuilles paper actifs + état du pilote d'Ève).
+ * (vue d'ensemble du portefeuille paper unique + état du pilote d'Ève).
  * Rien n'est inventé : une valeur absente s'affiche « — ».
  */
 function useShellAccount() {
@@ -46,10 +46,10 @@ function useShellAccount() {
   const [autonomy, setAutonomy] = useState<boolean | null>(null)
 
   const refresh = useCallback(() => {
-    loadAllBooks()
-      .then((books) => {
+    getPaperOverview(MAIN_PORTFOLIO_CODE)
+      .then((ov) => {
         setEngine('ok')
-        setAccount(combineOverviews(books)?.account ?? null)
+        setAccount(ov.account ?? null)
       })
       .catch(() => {
         setEngine('down')
@@ -98,7 +98,7 @@ function fmtShare(part: number | null | undefined, total: number | null | undefi
 function HeaderAccount({ account }: { account: PaperOverview['account'] | null }) {
   const netLiq = account ? (account.liquidation_value ?? account.equity) : null
   return (
-    <div className="dash-acct" aria-label="Compte paper, tous les portefeuilles">
+    <div className="dash-acct" aria-label="Compte paper, portefeuille unique">
       <div className="dash-kv">
         <span className="dash-kv-k">Net liq</span>
         <span className="dash-kv-v">{fmtMoney(netLiq)}</span>

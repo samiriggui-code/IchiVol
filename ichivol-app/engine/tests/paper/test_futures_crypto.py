@@ -1,19 +1,17 @@
 """Futures & Crypto portfolio (YM, MGC, BTC configurable): its own markets only, the shared accounts never see
-them, global open-risk cap, BTC instrument setting, view API, manual orders limited to its markets."""
+them, global open-risk cap. (2026-10-27 : le compte est retiré, sa vue API et son réglage BTC aussi ; YM rejoint
+le portefeuille unique. Le module et son profil restent, testés ici comme définitions.)"""
 
 from __future__ import annotations
 
 from types import SimpleNamespace
 
 import pytest
-from fastapi.testclient import TestClient
 from sqlalchemy.exc import OperationalError
 
 from app.agents.types import Direction
-from app.db.models import PaperJournalEvent, PaperPosition
-from app.db.session import SessionLocal, engine
+from app.db.session import engine
 from app.decision.pipeline import PipelineResult
-from app.main import app
 from app.paper import engine as paper
 from app.paper import futures_crypto as fc
 from app.paper.risk_kernel import OpenLotSnap, OpenPlan, PortfolioState, evaluate, market_state_from_profile
@@ -146,62 +144,3 @@ def test_cache_scans_dedicated_markets_only_on_the_background_paper_cycle(monkey
     assert scanned[1] == ["YM", "MGC"]
     assert fed == [[cache_module.DEFAULT_WATCHLIST[0], "YM"]]
     assert [r.symbol for r in entry.rows] == [cache_module.DEFAULT_WATCHLIST[0]]  # screener cache unchanged
-
-
-@pytest.fixture
-def futures_pf():
-    from app.paper.portfolio import ensure_portfolio
-
-    session = SessionLocal()
-    pf = ensure_portfolio(session, fc.FUTURES_CRYPTO_CODE)
-    session.commit()
-    saved = dict(pf.strategy_profile or {})
-    yield session, pf
-    session.query(PaperPosition).filter(PaperPosition.portfolio_id == pf.id, PaperPosition.symbol.like("BTC%"),
-                                        PaperPosition.timeframe == "T_FC").delete(synchronize_session=False)
-    session.query(PaperJournalEvent).filter(PaperJournalEvent.portfolio_id == pf.id,
-                                            PaperJournalEvent.event_type == "BTC_MODE_CHANGED").delete()
-    pf.strategy_profile = saved
-    session.commit()
-    session.close()
-
-
-@db
-def test_view_and_btc_mode_setting(futures_pf):
-    session, pf = futures_pf
-    client = TestClient(app)
-    view = client.get("/api/engine/paper/futures-crypto").json()
-    assert view["code"] == fc.FUTURES_CRYPTO_CODE
-    assert [m["slot"] for m in view["markets"]] == ["YM", "MGC", "BTC"]
-    assert {m["mode"] for m in view["btc_modes"]} == {"spot", "perpetual", "cme"}
-    assert view["rules"]["max_open_risk_pct"] == 0.01
-
-    assert client.post("/api/engine/paper/futures-crypto/btc-mode", json={"mode": "x"}).status_code == 422
-    after = client.post("/api/engine/paper/futures-crypto/btc-mode", json={"mode": "perpetual"}).json()
-    assert after["btc_mode"] == "perpetual" and after["markets"][2]["symbol"] == "BTCPERP"
-    session.expire_all()
-    assert session.get(type(pf), pf.id).strategy_profile["btc_mode"] == "perpetual"
-
-
-@db
-def test_btc_mode_locked_while_a_btc_lot_is_open(futures_pf):
-    from datetime import datetime, timezone
-
-    session, pf = futures_pf
-    session.add(PaperPosition(portfolio_id=pf.id, symbol=fc.traded_symbols(pf.strategy_profile)[2], timeframe="T_FC",
-                              source="auto_watchlist", direction="LONG", status="OPEN",
-                              entry_time=datetime.now(timezone.utc), entry_price=100.0, entry_decision="BUY"))
-    session.commit()
-    client = TestClient(app)
-    target = "cme" if fc.btc_mode(pf.strategy_profile) != "cme" else "spot"
-    resp = client.post("/api/engine/paper/futures-crypto/btc-mode", json={"mode": target})
-    assert resp.status_code == 409
-    assert client.get("/api/engine/paper/futures-crypto").json()["btc_mode_locked"] is True
-
-
-@db
-def test_manual_order_outside_its_markets_is_refused():
-    resp = TestClient(app).get("/api/engine/paper/propose", params={"symbol": "ETHUSDT",
-                                                                     "portfolio_code": fc.FUTURES_CRYPTO_CODE})
-    assert resp.status_code == 403
-    assert "symbol_outside_portfolio" in resp.json()["detail"]

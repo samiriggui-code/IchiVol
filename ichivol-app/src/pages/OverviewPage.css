@@ -35,7 +35,7 @@
 
 /* — Bandeau de KPI — */
 .dk .dk-kpis {
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
 }
 
 .dk .dk-kpis .iv-kpi-v,

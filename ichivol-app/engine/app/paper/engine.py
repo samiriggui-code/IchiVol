@@ -22,7 +22,7 @@ from app.market_data.timeframes import TF_SECONDS
 from app.paper import broker as paper_broker
 from app.paper import counters as paper_counters
 from app.paper import futures_crypto
-from app.paper.strategy_profiles import WIDE_EXTRA_SYMBOLS, wants_wide_universe
+from app.paper.strategy_profiles import WIDE_EXTRA_SYMBOLS, explicit_universe, short_allowed, wants_wide_universe
 from app.paper import gates as paper_gates
 from app.paper.risk_kernel import (
     OpenPlan,
@@ -31,7 +31,7 @@ from app.paper.risk_kernel import (
     market_state_from_profile,
     open_lots_from_positions,
 )
-from app.paper.portfolio import ensure_baseline_portfolio, ensure_syncable_portfolios
+from app.paper.portfolio import ensure_main_portfolio, ensure_syncable_portfolios
 from app.sessions.decision_windows import decision_event_for_bar
 from app.shadow import broker as shadow_broker
 from app.structure.gate import apply_structure_gate
@@ -183,14 +183,18 @@ def sync_position(
     manual_notional: float | None = None,
     take_profit_r: float | None = None,
     signal_actions: bool = True,
+    open_refusal: str | None = None,
 ) -> PaperPosition | None:
     """One symbol open/hold/close for one portfolio. Capital sizing when stop set.
+
+    ``open_refusal`` (ex. ``illiquid_24h_volume``) : le lot déjà ouvert reste géré (stop, objectif, signal),
+    mais aucune nouvelle ouverture ; le refus est journalisé avec ce code.
 
     ``signal_actions=False`` (outside a profile's ``decision_windows``): stop/target still close a lot, but the
     signal neither opens nor closes anything."""
     if portfolio is None:
         try:
-            portfolio = ensure_baseline_portfolio(session)
+            portfolio = ensure_main_portfolio(session)
         except Exception:
             portfolio = None
 
@@ -277,7 +281,11 @@ def sync_position(
 
     profile = (portfolio.strategy_profile or {}) if portfolio is not None else {}
     log_rej = bool(profile.get("log_rejections")) and portfolio is not None
-    if direction == "SHORT" and portfolio is not None and profile.get("allow_short", True) is False:
+    if open_refusal is not None:
+        if log_rej:
+            paper_counters.record_rejection(session, portfolio, symbol=symbol, timeframe=timeframe, reason=open_refusal)
+        return None
+    if direction == "SHORT" and portfolio is not None and not short_allowed(profile, symbol):
         # No short selling on this portfolio, ever. Does not consume the signal run (no gate call).
         if log_rej:
             paper_counters.record_rejection(session, portfolio, symbol=symbol, timeframe=timeframe, reason="short_not_allowed")
@@ -446,12 +454,41 @@ def trades_symbol(profile: dict[str, Any] | None, symbol: str) -> bool:
     other account trades the shared watchlist and never an instrument reserved to a dedicated account."""
     from app.universe.catalog import dedicated_only_ids
 
+    universe = explicit_universe(profile)
+    if universe is not None:
+        # Portefeuille unique : univers explicite (règle de liquidité statique déjà appliquée au profil).
+        return symbol in universe
     if futures_crypto.is_dedicated(profile):
         return symbol in futures_crypto.traded_symbols(profile)
     if symbol in WIDE_EXTRA_SYMBOLS and not wants_wide_universe(profile):
         # The wide-universe pairs belong to ICHIVOL_WIDE_V1 only: the baseline never sees them.
         return False
     return symbol not in dedicated_only_ids()
+
+
+def quote_volume_24h(row: Any) -> float | None:
+    """Volume échangé des dernières 24 h (devise de cotation) d'une ligne à volume réel, sinon None.
+
+    Seules les paires Binance spot ont un vrai volume d'échange ; les CFD (biquote) ont un volume de ticks."""
+    if getattr(row, "exchange", None) != "binance":
+        return None
+    candles = getattr(row, "candles", None) or []
+    tf_s = TF_SECONDS.get(getattr(row, "timeframe", "1h"), 3600)
+    n = max(1, 86_400 // tf_s)
+    if len(candles) < n:
+        return None
+    return float(sum(float(c.close) * float(c.volume) for c in candles[-n:]))
+
+
+def liquidity_refusal(profile: dict[str, Any] | None, row: Any) -> str | None:
+    """Règle de liquidité dynamique du profil (``min_quote_volume_24h``) : code de refus ou None."""
+    minimum = (profile or {}).get("min_quote_volume_24h")
+    if not minimum:
+        return None
+    vol = quote_volume_24h(row)
+    if vol is None:
+        return None
+    return "illiquid_24h_volume" if vol < float(minimum) else None
 
 
 def engine_proposal(
@@ -462,6 +499,7 @@ def engine_proposal(
     timeframe: str,
     pipeline: PipelineResult,
     signal_actions: bool,
+    allow_open: bool = True,
 ) -> dict[str, Any] | None:
     """What the engine alone would do on this book for this row, without doing it.
 
@@ -473,12 +511,16 @@ def engine_proposal(
     direction = _direction_for(pipeline.decision)
     existing = _get_open_by_symbol(session, symbol=symbol, portfolio_id=portfolio.id)
     if existing is None:
-        if direction is None:
+        if direction is None or not allow_open:
             return None
-        if direction == "SHORT" and profile.get("allow_short", True) is False:
+        if direction == "SHORT" and not short_allowed(profile, symbol):
             return None
         return {"action": "OPEN", "direction": direction}
     if existing.timeframe != timeframe:
+        return None
+    if existing.source != "auto_watchlist":
+        # Arbitrage : comme sync_position, le signal du scan ne ferme jamais le lot d'un autre décideur
+        # (Ève, manuel) ; seuls son stop, son objectif ou un ordre explicite le ferment.
         return None
     if profile.get("exit_mode") == "direction":
         pdir = getattr(pipeline.direction, "value", str(pipeline.direction))
@@ -510,7 +552,7 @@ def sync_auto_watchlist(
     except Exception:
         portfolios = []
         try:
-            portfolios = [ensure_baseline_portfolio(session)]
+            portfolios = [ensure_main_portfolio(session)]
         except Exception:
             portfolios = []
 
@@ -607,6 +649,14 @@ def sync_auto_watchlist(
             blocked = struct_gate.blocked or fib_gate.blocked or ctx_gate.blocked
             final_pipeline = ctx_gate.pipeline
             raw_decision = struct_gate.raw_decision
+            # Portefeuille unique : filtres en observation. Ils sont calculés et enregistrés sur le signal
+            # (« aurait refusé »), mais la décision reste celle du pipeline Ichimoku x RVOL.
+            # (Futur VWAP : un filtre de plus ici, après le contexte, d'abord en observation.)
+            observe_filters = profile.get("filters_mode") == "observe"
+            would_block = blocked if observe_filters else False
+            if observe_filters:
+                final_pipeline = row.pipeline
+                blocked = False
             if ctx_gate.blocked:
                 block_reason, block_source = ctx_gate.reason, "context"
             elif fib_gate.blocked:
@@ -650,6 +700,17 @@ def sync_auto_watchlist(
                 # MTF-1: what the engine knew about every horizon at this decision (observe-only, never read
                 # back by the strategy). Persisted so a historical marker shows it without a recompute.
                 extra["mtf_matrix"] = mtf.to_dict()
+            if would_block:
+                extra["filters_observed"] = {
+                    "would_block": True,
+                    "structure_blocked": struct_gate.blocked,
+                    "fibonacci_blocked": fib_gate.blocked,
+                    "context_blocked": ctx_gate.blocked,
+                    "block_source": block_source,
+                    "block_reason": block_reason,
+                }
+            elif observe_filters and raw_decision in ("BUY", "SELL"):
+                extra["filters_observed"] = {"would_block": False}
             if blocked:
                 extra["structure_blocked"] = struct_gate.blocked
                 extra["fibonacci_blocked"] = fib_gate.blocked
@@ -668,8 +729,17 @@ def sync_auto_watchlist(
                     if bar_close is not None
                     else None
                 )
-                signal_actions = event is not None
                 extra["decision_event"] = event
+                if profile.get("decision_windows_mode") == "observe":
+                    # Fenêtres de sessions en observation : l'événement (ouverture/clôture Tokyo, Londres,
+                    # New York) est enregistré, le signal agit à chaque bougie 1h comme avant.
+                    extra["decision_window_observed"] = True
+                else:
+                    signal_actions = event is not None
+
+            open_refusal = liquidity_refusal(profile, row)
+            if open_refusal is not None:
+                extra["quote_volume_24h"] = quote_volume_24h(row)
 
             if proposals is not None:
                 proposal = engine_proposal(
@@ -679,6 +749,7 @@ def sync_auto_watchlist(
                     timeframe=row.timeframe,
                     pipeline=final_pipeline,
                     signal_actions=signal_actions,
+                    allow_open=open_refusal is None,
                 )
                 if proposal is not None:
                     proposal.update(
@@ -712,6 +783,7 @@ def sync_auto_watchlist(
                 portfolio=portfolio,
                 run_id=run_id,
                 signal_actions=signal_actions,
+                open_refusal=open_refusal,
             )
             if result is not None:
                 touched.append(result)
@@ -761,7 +833,7 @@ def open_user_confirmed(
     (non-halted) book should pass a disposable clone instead of mutating baseline.
     """
     if portfolio is None:
-        portfolio = ensure_baseline_portfolio(session)
+        portfolio = ensure_main_portfolio(session)
     _lock_symbol(session, portfolio.id, symbol)
     existing_any = _get_open_by_symbol(
         session, symbol=symbol, portfolio_id=portfolio.id, for_update=True

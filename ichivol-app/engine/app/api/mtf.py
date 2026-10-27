@@ -18,6 +18,7 @@ from fastapi import APIRouter, HTTPException, Query
 from app.config import settings
 from app.market_data.resolve import ProviderNotWiredError
 from app.mtf.matrix import HORIZON_SECONDS, describe, portfolio_reading
+from app.paper.strategy_profiles import short_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -44,11 +45,11 @@ def _baseline_context(symbol: str, timeframe: str) -> dict[str, Any] | None:
 
     from app.db.models import PaperPortfolio, PaperPosition
     from app.db.session import SessionLocal
-    from app.paper.portfolio import BASELINE_CODE
+    from app.paper.strategy_profiles import MAIN_CODE
 
     session = SessionLocal()
     try:
-        pf = session.execute(select(PaperPortfolio).where(PaperPortfolio.code == BASELINE_CODE)).scalar_one_or_none()
+        pf = session.execute(select(PaperPortfolio).where(PaperPortfolio.code == MAIN_CODE)).scalar_one_or_none()
         if pf is None:
             return None
         open_long = session.execute(
@@ -111,12 +112,12 @@ def get_mtf(
             prof = ctx["profile"]
             portfolio = {
                 "code": ctx["code"],
-                "allow_short": bool(prof.get("allow_short", False)),
+                "allow_short": short_allowed(prof, sym, default=False),
                 "exit_mode": prof.get("exit_mode"),
                 "auto_timeframes": list(prof.get("auto_timeframes") or ["1h"]),
                 "open_long_on_tf": ctx["open_long_on_tf"],
                 "reading": portfolio_reading(
-                    pipeline, timeframe=timeframe, profile=prof, open_long_on_tf=ctx["open_long_on_tf"]
+                    pipeline, timeframe=timeframe, profile=prof, open_long_on_tf=ctx["open_long_on_tf"], symbol=sym
                 ),
             }
     except Exception:

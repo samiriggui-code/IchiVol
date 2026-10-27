@@ -358,6 +358,7 @@ def portfolio_reading(
     timeframe: str,
     profile: Mapping[str, Any] | None,
     open_long_on_tf: bool | None = None,
+    symbol: str = "",
 ) -> str:
     """Ce que le portefeuille de référence fait de ce signal (séparé du signal analytique).
 
@@ -371,7 +372,9 @@ def portfolio_reading(
     decision = str(pipeline.get("decision") or "")
     direction = str(pipeline.get("direction") or "")
     auto_tfs = tuple(prof.get("auto_timeframes") or ("1h",))
-    allow_short = bool(prof.get("allow_short", False))
+    from app.paper.strategy_profiles import short_allowed
+
+    allow_short = short_allowed(prof, symbol, default=False) if symbol else bool(prof.get("allow_short", False))
     auto = timeframe in auto_tfs
     parts: list[str] = []
     if decision == "BUY":
@@ -381,7 +384,9 @@ def portfolio_reading(
             else f"Achat : pas d'ouverture automatique en {timeframe} (auto : {', '.join(auto_tfs)} seulement)"
         )
     elif decision == "SELL" and not allow_short:
-        parts.append("Vente : aucune ouverture short (short désactivé)")
+        parts.append("Vente : aucune ouverture short (short désactivé sur cet instrument)")
+    elif decision == "SELL" and auto:
+        parts.append("Vente : ouverture courte (vente à découvert) possible si les règles de risque l'autorisent")
     else:
         parts.append("Aucune nouvelle entrée")
     if prof.get("exit_mode") == "direction" and auto:

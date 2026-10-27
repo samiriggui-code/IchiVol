@@ -4,6 +4,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { portfolioLabel } from '../lib/mainPortfolio'
 import { DecisionPipelinePanel } from '../components/DecisionPipelinePanel'
 import { SignalEvidenceCard } from '../components/SignalEvidenceCard'
 import {
@@ -328,7 +329,7 @@ export function ActivityPage() {
                     <th>Niveau</th>
                     <th>Source</th>
                     <th>Événement</th>
-                    <th>Portefeuille</th>
+                    <th>Compte</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -354,7 +355,7 @@ export function ActivityPage() {
                         <span className="ops-event-t">{r.event}</span>
                         {r.item.detail ? <span className="ops-event-d"> · {r.item.detail}</span> : null}
                       </td>
-                      <td className="muted">{r.item.portfolio || '—'}</td>
+                      <td className="muted">{r.item.portfolio ? portfolioLabel(r.item.portfolio) : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -501,7 +502,7 @@ export function ActivityPage() {
                 </div>
                 <div className="iv-row">
                   <span>Portefeuille</span>
-                  <span className="iv-row-v">{selected.portfolio || '—'}</span>
+                  <span className="iv-row-v">{selected.portfolio ? portfolioLabel(selected.portfolio) : '—'}</span>
                 </div>
               </div>
               {dossierLoading ? <p className="iv-note">Lecture de la décision moteur…</p> : null}

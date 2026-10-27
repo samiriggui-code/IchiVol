@@ -28,7 +28,7 @@ from app.eve.paper_submit import ALL_VIRTUAL, autonomy_enabled, submit_paper_fro
 from app.eve.primitive_study import run_primitive_routing_study
 from app.eve.event_radar import analyze_symbol as event_radar_analyze
 from app.eve.settings_schema import apply_patch, settings_bundle
-from app.paper.strategy_profiles import BASELINE_CODE
+from app.paper.strategy_profiles import MAIN_CODE
 
 router = APIRouter(prefix="/api/engine/eve", tags=["eve"])
 
@@ -261,7 +261,7 @@ def eve_paper_submit(
 
 @router.get("/followup")
 def eve_followup_list(
-    portfolio_code: str = BASELINE_CODE,
+    portfolio_code: str = MAIN_CODE,
     limit: int = Query(default=30, ge=1, le=100),
 ) -> dict:
     """Phase J — positions Eve trackées + dossiers en surveillance."""

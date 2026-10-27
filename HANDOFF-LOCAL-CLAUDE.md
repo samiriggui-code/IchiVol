@@ -4,7 +4,26 @@
 
 **Sync local :** 2026-09-28 journée · `main` @ **`ba693f1`** (+ ce commit handoff) · ancien : 2026-09-28 nuit.
 
-## ▶ REPRISE — 2026-09-28 journée (commencer ici)
+## ▶ REPRISE — 2026-10-27 : PORTEFEUILLE UNIQUE (commencer ici)
+
+Décision du propriétaire : **un seul portefeuille paper, `ICHIVOL_MAIN_V1`, 50 000 € virtuels**, qui trade tout
+l'univers que le moteur sait trader ; les 8 anciens comptes sont retirés du code et seront supprimés en base.
+Toute la technologie (scan Ichimoku × RVOL, Ève + JEV, ordres manuels, filtres structure/Fibonacci/RSI/flux/
+régime et sessions en observation, indicateurs, Strategy Lab) travaille pour ce compte. Doc complète :
+[`docs/PORTEFEUILLE-UNIQUE-2026-10-27.md`](docs/PORTEFEUILLE-UNIQUE-2026-10-27.md) (carte de l'existant, profil,
+univers et exclusions, règle de liquidité, règle d'arbitrage, procédure de mise en production).
+
+- Branche `portefeuille-unique-50k` (partie de `fix/caisse-ordres-simultanes`, PR #195) : **non poussée**.
+- Ève : nouvelle règle de synthèse (l'abstention du Challenger n'écrase plus l'Analyste), commit séparé.
+- Suppression en base : `scripts/repairs/2026-10-27_portefeuille_unique_suppression_anciens.sql`
+  (ROLLBACK par défaut). Sauvegarde : `~/Sauvegardes/ichivol/2026-10-27_avant_portefeuille_unique/`.
+- Ordre : fusionner #195 → fusionner cette branche → déployer → arrêter le moteur → script (ROLLBACK, lire,
+  puis COMMIT) → redémarrer.
+- RS-D1 : boucle paper coupée par défaut (`enable_rs_d1_paper=False`), à rediscuter.
+- Règle propriétaire : dossier unique `/home/jarvis/Projects/IchiVol`, jamais de worktree ni de copie (la mention
+  « worktree séparé » plus bas est caduque).
+
+## Ancien point de reprise — 2026-09-28 journée
 
 **Fait depuis l'arrêt de nuit :**
 - **#159** (VP-P paper fidèle, `7b3583a`) et **#161** (paper auto en 1h seulement, `48ee61d`) : revus par Claude et **squash-mergés sur `main`**. **Non déployés.**

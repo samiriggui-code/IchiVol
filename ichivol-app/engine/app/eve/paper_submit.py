@@ -24,11 +24,9 @@ from app.paper import broker as paper_broker
 from app.paper import engine as paper_engine
 from app.paper import gates as paper_gates
 from app.paper.portfolio import (
-    ensure_baseline_portfolio,
-    ensure_portfolio,
-    ensure_syncable_portfolios,
-    get_portfolio_by_code,
-    list_portfolios,
+    RetiredPortfolioError,
+    ensure_main_portfolio,
+    resolve_trading_portfolio,
 )
 from app.paper.risk_kernel import (
     OpenPlan,
@@ -37,7 +35,7 @@ from app.paper.risk_kernel import (
     market_state_from_profile,
     open_lots_from_positions,
 )
-from app.paper.strategy_profiles import BASELINE_CODE, syncable_profile_codes
+from app.paper.strategy_profiles import MAIN_CODE
 
 logger = logging.getLogger(__name__)
 
@@ -59,23 +57,11 @@ def autonomy_enabled() -> bool:
 
 
 def virtual_portfolio_codes(session: Session) -> list[str]:
-    """Codes de tous les portefeuilles virtuels actifs (seed syncable inclus)."""
-    try:
-        ensure_syncable_portfolios(session)
-    except Exception:  # noqa: BLE001 — lister ce qui existe quand même
-        logger.exception("eve: seed portefeuilles virtuels échoué")
-    codes: list[str] = []
-    seen: set[str] = set()
-    for pf in list_portfolios(session, active_only=True):
-        code = str(getattr(pf, "code", "") or "")
-        if not code or code in seen:
-            continue
-        seen.add(code)
-        codes.append(code)
-    if not codes:
-        ensure_baseline_portfolio(session)
-        return [BASELINE_CODE]
-    return codes
+    """Le compte paper visé par « tous les portefeuilles » : le portefeuille unique (2026-10-27).
+
+    Les anciens comptes encore en base (avant le script de suppression) ne sont jamais visés."""
+    ensure_main_portfolio(session)
+    return [MAIN_CODE]
 
 
 def _aggregate_portfolio_results(results: list[dict[str, Any]]) -> str:
@@ -122,11 +108,11 @@ def _action_to_pipeline(action: str) -> PipelineResult | None:
 
 
 def _resolve_portfolio(session: Session, portfolio_code: str):
-    if portfolio_code == BASELINE_CODE:
-        return ensure_baseline_portfolio(session)
-    if portfolio_code in syncable_profile_codes():
-        return ensure_portfolio(session, portfolio_code)
-    return get_portfolio_by_code(session, portfolio_code)
+    """Compte unique par défaut ; un code retiré n'est jamais tradé (None → ``unknown_portfolio``)."""
+    try:
+        return resolve_trading_portfolio(session, portfolio_code)
+    except RetiredPortfolioError:
+        return None
 
 
 def _market_inputs_from_dossier(dossier) -> tuple[float | None, float | None]:
