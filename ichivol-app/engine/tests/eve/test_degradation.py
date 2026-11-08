@@ -26,7 +26,7 @@ def test_late_forces_hold() -> None:
     assert "degradation_late" in synth["rejected_scenarios"]
 
 
-def test_low_confidence_abstains() -> None:
+def test_low_confidence_keeps_the_action() -> None:
     pack = {
         "guardian": {
             "ok": True,
@@ -41,7 +41,8 @@ def test_low_confidence_abstains() -> None:
         {"action": "SHORT", "rationale": "ok", "rejected_scenarios": []},
         deg,
     )
-    assert synth["action"] == "ABSTAIN"
+    assert synth["action"] == "SHORT"
+    assert "degradation_low_confidence" in synth["rejected_scenarios"]
 
 
 def test_jev_down_labelled_heuristic() -> None:

@@ -1,22 +1,21 @@
-"""Ève autopilot — the engine proposes, Ève (with JEV) decides, the Risk Kernel has the last word.
+"""Ève autopilot — the engine calculates, JEV measures, Ève decides, the Risk Kernel has the last word (2026-11-08).
 
-Active only when ``EVE_PAPER_AUTONOMY`` is on. The background screener cycle then runs every portfolio's own
-method (BASELINE, SESSIONS, Futures & Crypto…) as usual, but the engine's signal no longer opens or closes a lot:
-each would-be open/close becomes a *proposal* (``paper.engine.sync_auto_watchlist(proposals=...)``).
+Active only when ``EVE_PAPER_AUTONOMY`` is on. The engine's signal opens or closes nothing: each cycle it hands over
+its opportunities (``paper.engine.sync_auto_watchlist(proposals=...)``): its own BUY/SELL, and every other row with a
+known direction, ranked by ``score``. At most ``max_symbols_per_cycle`` symbols are judged per closed bar, best first.
 
-For each symbol with at least one proposal, Ève runs once per closed bar (Analyst → Challenger → Guardian, with
-JEV), a Dossier is written, then every proposal on that symbol is ruled:
+For each symbol Ève runs once per closed bar (Analyst → Challenger → Guardian, with JEV, on the engine's plan), a
+Dossier is written, then:
 
-* Ève agrees (OPEN in her own direction; CLOSE when she says CLOSE or the opposite direction) → the independent
-  audit (Shadow mode, ``modes.audit_verdict``) rules: it lets the trade go through as Ève's, or blocks it (a
-  blocked OPEN becomes a shadow trade, ``block_source="audit"``, to score the audit);
-* Ève disagrees → the engine trades anyway (``decided_by="engine_over_eve"``) and Ève's answer stays on the
-  proposal, so the real trade's result tells whether she was right to refuse.
+* Ève says LONG or SHORT → unless the independent audit picks the opposite side (``modes.audit_verdict``; the blocked
+  OPEN becomes a shadow trade, ``block_source="audit"``), she trades, in her direction, for the amount of her
+  ``engagement``;
+* Ève abstains → no trade. If the engine had its own signal, it is played as a shadow trade (no cash): that is the
+  "engine alone" book to compare her with.
+* A CLOSE needs her agreement (CLOSE or the opposite direction), then the audit's.
 
-Every trade goes through ``paper_submit`` and the Risk Kernel. Ève's own trades also need a healthy JEV and the
-entry gate; the engine's trades over Ève do not (they are the engine's, not hers).
-What the engine alone would have done stays in the Dossier (``decision_time.engine_proposals``) so "engine alone"
-and "Ève + JEV" can be compared on the same books. Stops and targets still close lots on their own. Paper only.
+Every trade goes through ``paper_submit`` and the Risk Kernel, and needs a healthy JEV and the entry gate. Stops and
+targets still close lots on their own. Paper only.
 """
 
 from __future__ import annotations
@@ -38,10 +37,10 @@ _OPPOSITE = {"LONG": "SHORT", "SHORT": "LONG"}
 
 
 def eve_accepts(proposal: dict[str, Any], eve_action: str | None, position_direction: str | None = None) -> bool:
-    """Does Ève's action accept this engine proposal? Undecided (HOLD / ABSTAIN) never acts."""
+    """Does Ève act on this opportunity? OPEN: she picks the side. Undecided (HOLD / ABSTAIN) never acts."""
     action = normalize_action(eve_action) or "ABSTAIN"
     if proposal.get("action") == "OPEN":
-        return action == proposal.get("direction")
+        return action in ("LONG", "SHORT")
     if proposal.get("action") == "CLOSE":
         if action == "CLOSE":
             return True
@@ -172,18 +171,24 @@ class EveAutopilot:
             return report
 
         evaluated = 0
-        for (symbol, timeframe), group in _group(proposals).items():
+        # Best opportunities first; a close on a held lot is never crowded out by a new idea.
+        ranked = sorted(proposals, key=lambda p: float("inf") if p.get("action") == "CLOSE" else p.get("score") or 0.0, reverse=True)
+        for (symbol, timeframe), group in _group(ranked).items():
             bar = group[0].get("signal_bar_close")
             key = (symbol, timeframe, bar)
             if bar is not None and key in self._judged:
                 report["skipped_already_judged"] += 1
                 continue
-            if evaluated >= self.max_symbols_per_cycle:
+            # The budget is per closed bar: later cycles of the same bar must not walk down the ranking.
+            judged_on_bar = sum(1 for k in self._judged if k[2] == bar) if bar is not None else 0
+            if max(evaluated, judged_on_bar) >= self.max_symbols_per_cycle:
                 report["skipped_over_budget"] += 1
                 continue
             evaluated += 1
 
-            evaluation = evaluate(symbol, timeframe, session=session, persist=True, paper_dry_run=False)
+            evaluation = evaluate(
+                symbol, timeframe, session=session, persist=True, paper_dry_run=False, candidate=group[0]
+            )
             eve_action = normalize_action(evaluation.get("eve_action")) or "ABSTAIN"
             dossier_id = evaluation.get("dossier_id")
             shadow_mode = (evaluation.get("modes") or {}).get("shadow") or {}
@@ -201,6 +206,8 @@ class EveAutopilot:
                     "engine_decision": proposal.get("engine_decision"),
                     "eve_action": eve_action,
                     "eve_accepts": accepted,
+                    "engine_signal": bool(proposal.get("engine_signal", True)),
+                    "score": proposal.get("score"),
                 }
                 if not dossier_id:
                     outcome["status"] = "no_dossier"
@@ -209,10 +216,9 @@ class EveAutopilot:
                     continue
                 is_close = proposal["action"] == "CLOSE"
                 if accepted:
-                    # The engine and Ève agree: the independent audit rules.
                     audit = audit_verdict(
                         shadow_mode,
-                        "CLOSE" if is_close else str(proposal.get("direction")),
+                        "CLOSE" if is_close else eve_action,
                         position_direction=position_direction,
                     )
                     outcome["audit"] = audit
@@ -230,11 +236,17 @@ class EveAutopilot:
                         outcomes.append(outcome)
                         continue
                     outcome["decided_by"] = "eve"
-                    override = "CLOSE" if is_close else None
+                    override = "CLOSE" if is_close else eve_action
                 else:
-                    # Ève disagrees: the engine trades anyway, Ève's answer is kept to score her later.
-                    outcome["decided_by"] = "engine_over_eve"
-                    override = "CLOSE" if is_close else str(proposal.get("direction"))
+                    outcome["status"] = "kept_by_eve" if is_close else "refused_by_eve"
+                    outcome["executed"] = False
+                    if not is_close and proposal.get("engine_signal", True):
+                        try:
+                            outcome["shadow_id"] = shadow(session, proposal, eve_action, dossier_id)
+                        except Exception:  # a counterfactual must never break Ève's cycle
+                            logger.exception("refusal shadow failed for %s", proposal.get("portfolio_code"))
+                    outcomes.append(outcome)
+                    continue
                 res = submit(
                     session,
                     dossier_id,

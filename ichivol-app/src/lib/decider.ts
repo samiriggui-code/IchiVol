@@ -1,7 +1,7 @@
 /**
- * Qui a décidé un trade paper : le moteur seul, Ève (avec JEV), le moteur contre l'avis d'Ève, ou une personne.
- * Quand Ève refuse une proposition, le moteur la trade quand même au nom de `engine_over_eve`
- * (`entry_signal.decided_by`) : le résultat dit si Ève avait raison de refuser.
+ * Qui a décidé un trade paper : Ève (avec JEV), le moteur seul, ou une personne.
+ * Depuis le 08/11, Ève seule ouvre les trades du pilote. `engine_over_eve` (le moteur tradait malgré son refus)
+ * ne subsiste que dans l'historique.
  * Le moteur marque ses lots `auto_watchlist` ; Ève ouvre les siens au nom de `eve_intelligence`
  * avec son dossier dans `entry_signal.eve_dossier_id` (engine/app/eve/paper_submit.py).
  */
@@ -17,14 +17,14 @@ export const DECIDERS: Decider[] = ['eve', 'engine_over_eve', 'engine', 'manual'
 export const DECIDER_LABEL: Record<Decider, string> = {
   engine: 'Moteur seul',
   eve: 'Ève',
-  engine_over_eve: 'Moteur contre Ève',
+  engine_over_eve: 'Moteur contre Ève (historique)',
   manual: 'Manuel',
 }
 
 export const DECIDER_EXPLAIN: Record<Decider, string> = {
   engine: 'Ouvert directement par le signal du moteur, sans avis d’Ève.',
-  eve: 'Proposé par le moteur, accepté par Ève (avec JEV) et par l’audit indépendant, validé par le Risk Kernel.',
-  engine_over_eve: 'Ève a refusé, le moteur a tradé quand même (Risk Kernel compris). Un trade perdant ici veut dire qu’Ève avait raison.',
+  eve: 'Ève décide à partir des calculs du moteur et de la probabilité mesurée par JEV, et dose le risque. Le Risk Kernel valide.',
+  engine_over_eve: 'Historique, avant le 08/11 : Ève avait refusé et le moteur a tradé quand même. Ce cas n’existe plus.',
   manual: 'Ouvert à la main depuis l’application.',
 }
 

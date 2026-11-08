@@ -185,6 +185,9 @@ def decision_summary(
     reasoning = verdict.reasoning if verdict is not None else None
     modes = getattr(dossier, "modes_json", None)
     modes = modes if isinstance(modes, dict) else {}
+    context = getattr(dossier, "context_json", None)
+    context = context if isinstance(context, dict) else {}
+    plan = context.get("trade_plan") if isinstance(context.get("trade_plan"), dict) else None
     return {
         "id": dossier.id,
         "created_at": dossier.created_at.isoformat() if dossier.created_at else None,
@@ -207,6 +210,11 @@ def decision_summary(
         # Règle de synthèse qui a tranché (2026-10-27) : guardian_critical, challenger_fragile,
         # challenger_contradiction, analyst, no_answer, shadow_audit, policy_*, entry_gate, signal_rules…
         "decision_rule": (modes.get("synthesis") or {}).get("decision_rule") if modes else None,
+        # Le chiffrage d'Ève (2026-11-08) : mesure de JEV, seuil, risque engagé, et les calculs du moteur.
+        "engagement": dt.get("engagement") if isinstance(dt.get("engagement"), dict) else None,
+        "plan": {k: plan.get(k) for k in ("stop_pct", "target_pct", "target_r", "cost_r", "rvol", "trend", "regime")}
+        if plan
+        else None,
         "engine_proposals": proposals,
     }
 

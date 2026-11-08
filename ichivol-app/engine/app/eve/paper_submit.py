@@ -205,6 +205,8 @@ def evaluate_risk_kernel_for_plan(
     price: float,
     stop_distance: float | None,
     portfolio,
+    risk_pct: float | None = None,
+    max_notional_pct: float | None = None,
 ) -> dict[str, Any]:
     """Pure Risk Kernel evaluation against an existing portfolio (no open)."""
     profile = portfolio.strategy_profile or {}
@@ -218,6 +220,8 @@ def evaluate_risk_kernel_for_plan(
             price=price,
             stop_distance=stop_distance,
             stale=False,
+            risk_pct=risk_pct,
+            max_notional_pct=max_notional_pct,
         ),
         PortfolioState(
             cash=float(portfolio.cash),
@@ -385,10 +389,7 @@ def submit_to_portfolio(
     action_override: str | None = None,
     decided_by: str = "eve",
 ) -> dict[str, Any]:
-    """One book only (used by ``eve.autopilot`` on the book whose engine method proposed the trade).
-
-    ``decided_by="engine_over_eve"``: the engine trades although Ève refused. JEV degradation and the entry gate
-    judge Ève's own trades, so they are skipped; the Risk Kernel still applies."""
+    """One book only (used by ``eve.autopilot`` on the book the opportunity belongs to)."""
     return _submit_one_portfolio(
         session,
         dossier_id,
@@ -402,25 +403,6 @@ def submit_to_portfolio(
     )
 
 
-def _restore_status(fn):  # noqa: ANN001, ANN202 -- private decorator
-    """Over Ève, put the dossier's execution status back once the engine's trade is submitted."""
-
-    def wrapper(session: Session, dossier_id: str, **kw: Any) -> dict[str, Any]:
-        if kw.get("decided_by") != "engine_over_eve":
-            return fn(session, dossier_id, **kw)
-        dossier = get_dossier(session, dossier_id)
-        before = dossier.execution_status if dossier is not None else None
-        try:
-            return fn(session, dossier_id, **kw)
-        finally:
-            if dossier is not None:
-                dossier.execution_status = before
-                session.flush()
-
-    return wrapper
-
-
-@_restore_status
 def _submit_one_portfolio(
     session: Session,
     dossier_id: str,
@@ -434,7 +416,6 @@ def _submit_one_portfolio(
     decided_by: str = "eve",
 ) -> dict[str, Any]:
     """Soumet sur un seul portefeuille virtuel."""
-    engine_over_eve = decided_by == "engine_over_eve"
     dossier = get_dossier(session, dossier_id)
     if dossier is None:
         return {"ok": False, "error": "dossier_not_found", "dossier_id": dossier_id}
@@ -444,9 +425,6 @@ def _submit_one_portfolio(
         action_override
         or ((verdict.action if verdict else None) or dossier.eve_action)
     ) or "ABSTAIN"
-    if engine_over_eve:
-        # The trade is the engine's: Ève's verdict and dossier status keep describing her own answer.
-        verdict = None
 
     auto = autonomy_enabled()
     # Never implicit: only an explicit execute=True acts, and only with autonomy on.
@@ -455,24 +433,17 @@ def _submit_one_portfolio(
     if do_execute and not auto:
         do_execute = False
 
-    # Degradation ladder from decision_time — never open on late / low conf / jev_down.
+    # Degradation ladder from decision_time — never open on late / jev_down (low confidence only reduces the size).
     raw_dt = getattr(dossier, "decision_time_json", None)
     dt = raw_dt if isinstance(raw_dt, dict) else {}
     deg = dt.get("degradation") if isinstance(dt.get("degradation"), dict) else {}
     deg_level = str(deg.get("level") or "healthy")
-    if engine_over_eve:
-        deg_level = "healthy"
-    if do_execute and action in ("LONG", "SHORT", "CLOSE") and deg_level in (
-        "late",
-        "low_confidence",
-        "jev_down",
-    ):
+    if do_execute and action in ("LONG", "SHORT", "CLOSE") and deg_level in ("late", "jev_down"):
         do_execute = False
 
     gate = dt.get("entry_gate") if isinstance(dt.get("entry_gate"), dict) else {}
     gate_reject = (
-        not engine_over_eve
-        and action in ("LONG", "SHORT")
+        action in ("LONG", "SHORT")
         and gate.get("decision") == "reject"
         and not gate.get("allowed", False)
     )
@@ -517,7 +488,7 @@ def _submit_one_portfolio(
         )
         session.flush()
         return result
-    if deg_level in ("late", "low_confidence", "jev_down"):
+    if deg_level in ("late", "jev_down"):
         result["note"] = (
             f"V2 — degradation={deg_level}; execute forced off "
             f"(autonomy={'on' if auto else 'off'})"
@@ -641,6 +612,12 @@ def _submit_one_portfolio(
         result["hint"] = "Pass price= or ensure context/screener price"
         return result
 
+    # Ève's amounts (risk, lot cap); without an engagement (manual submit) the profile's.
+    engagement = dt.get("engagement") if isinstance(dt.get("engagement"), dict) else {}
+    risk_pct = engagement.get("risk_pct") if engagement.get("enter") else None
+    max_notional_pct = engagement.get("max_notional_pct") if engagement.get("enter") else None
+    result["engagement"] = engagement or None
+
     rk = evaluate_risk_kernel_for_plan(
         session,
         symbol=dossier.symbol,
@@ -649,6 +626,8 @@ def _submit_one_portfolio(
         price=float(px),
         stop_distance=float(stop) if stop is not None else None,
         portfolio=portfolio,
+        risk_pct=risk_pct,
+        max_notional_pct=max_notional_pct,
     )
     result["risk_kernel"] = rk
     result["price"] = float(px)
@@ -687,27 +666,21 @@ def _submit_one_portfolio(
         session,
         symbol=dossier.symbol,
         timeframe=dossier.timeframe,
-        user_id="engine_over_eve" if engine_over_eve else "eve_intelligence",
+        user_id="eve_intelligence",
         price=float(px),
         pipeline=pipeline,
         stop_distance=float(stop) if stop is not None else None,
-        # Over Ève, the lot is the engine's: no eve_dossier_id, so Ève's follow-up never manages it.
-        signal_extra=(
-            {
-                "decided_by": "engine_over_eve",
-                "refused_by_eve_dossier_id": dossier_id,
-                "eve_action": dossier.eve_action,
-                "risk_kernel": rk,
-            }
-            if engine_over_eve
-            else {
-                "eve_dossier_id": dossier_id,
-                "eve_action": action,
-                "eve_paper_autonomy": True,
-                "risk_kernel": rk,
-            }
-        ),
+        signal_extra={
+            "decided_by": decided_by,
+            "eve_dossier_id": dossier_id,
+            "eve_action": action,
+            "eve_paper_autonomy": True,
+            "risk_kernel": rk,
+            "engagement": engagement or None,
+        },
         portfolio=portfolio,
+        risk_pct=risk_pct,
+        max_notional_pct=max_notional_pct,
     )
 
     if position is None:

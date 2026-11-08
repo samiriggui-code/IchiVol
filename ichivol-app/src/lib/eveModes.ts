@@ -33,7 +33,7 @@ export const EVE_MODES: EveMode[] = [
     name: 'Contradicteur',
     icon: '↺',
     blurb: 'Cherche ce qui contredit le scénario retenu et les autres possibilités.',
-    effect: 'S’il juge le scénario trop fragile, Ève s’abstient au lieu de prendre position.',
+    effect: 'S’il juge le scénario fragile, Ève réduit le montant engagé.',
     short: 'cherche ce qui contredit le scénario',
   },
   {

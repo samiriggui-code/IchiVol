@@ -605,6 +605,18 @@ MAIN_PROFILE: dict[str, Any] = _with(
     decision_windows_mode="observe",
     # Qui décide pour ce compte (informatif) et règle d'arbitrage (appliquée par app/paper/engine.py).
     engines=["scan_1h_ichimoku_rvol", "eve_autopilot_jev", "ordres_manuels"],
+    # Ève s'engage selon l'écart entre la probabilité de JEV et le seuil de rentabilité (app/eve/engagement.py) ;
+    # marge : crypto au comptant 1×, CFD et futures jusqu'à 5× l'équité (app/paper/margin.py). Décision du 2026-11-08.
+    engagement={
+        "risk_min": 0.0025,
+        "risk_max": 0.01,
+        "risk_floor": 0.001,
+        "edge_full": 0.20,
+        "max_cost_r": 0.5,
+        "crypto_max_notional_pct": 1.0,
+        "other_max_notional_pct": 3.0,
+    },
+    margin={"crypto_max_exposure": 1.0, "other_max_exposure": 5.0},
     arbitration="un_lot_par_symbole_premier_arrive",
     # Emplacement réservé du futur indicateur VWAP (plan d'intégration rendu par la recherche VWAP) : il
     # s'ajoutera comme un filtre de plus dans la chaîne structure -> Fibonacci -> contexte d'engine.py, d'abord

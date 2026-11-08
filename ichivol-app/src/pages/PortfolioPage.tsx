@@ -556,7 +556,9 @@ export function PortfolioPage() {
           <div className="iv-kpi-v">
             <KpiEur n={acct?.equity} />
           </div>
-          <div className="iv-kpi-s">{acct ? `dont cash ${fmtEur(acct.cash, 2)}` : '—'}</div>
+          <div className="iv-kpi-s">
+            {acct ? (acct.cash < 0 ? `marge empruntée ${fmtEur(-acct.cash, 2)}` : `dont cash ${fmtEur(acct.cash, 2)}`) : '—'}
+          </div>
         </div>
         <div className="iv-kpi">
           <div className="iv-kpi-k">Gain / perte</div>
@@ -667,8 +669,8 @@ export function PortfolioPage() {
                     <span className="iv-row-v">{acct ? fmtEur(acct.initial_cash, 2) : '—'}</span>
                   </div>
                   <div className="iv-row">
-                    <span>Disponible (réserve non engagée)</span>
-                    <span className="iv-row-v">{acct ? fmtEur(acct.cash, 2) : '—'}</span>
+                    <span>{acct && acct.cash < 0 ? 'Marge empruntée' : 'Disponible (réserve non engagée)'}</span>
+                    <span className="iv-row-v">{acct ? fmtEur(Math.abs(acct.cash), 2) : '—'}</span>
                   </div>
                   <div className="iv-row">
                     <span>P&amp;L réalisé</span>
@@ -1143,12 +1145,28 @@ export function PortfolioPage() {
                 </div>
                 <div className="iv-row">
                   <span>Risque par trade</span>
-                  <span className="iv-row-v">{fmtPct(breakdown.rules.risk_pct, 2)}</span>
+                  <span className="iv-row-v">
+                    {breakdown.rules.engagement
+                      ? `${fmtPct(breakdown.rules.engagement.risk_min, 2)} à ${fmtPct(breakdown.rules.engagement.risk_max, 2)}, dosé par Ève`
+                      : fmtPct(breakdown.rules.risk_pct, 2)}
+                  </span>
                 </div>
                 <div className="iv-row">
                   <span>Montant max. par position</span>
-                  <span className="iv-row-v">{fmtPct(breakdown.rules.max_notional_pct, 0)} du capital</span>
+                  <span className="iv-row-v">
+                    {breakdown.rules.engagement
+                      ? `crypto ${breakdown.rules.engagement.crypto_max_notional_pct} × le capital, autres ${breakdown.rules.engagement.other_max_notional_pct} ×`
+                      : `${fmtPct(breakdown.rules.max_notional_pct, 0)} du capital`}
+                  </span>
                 </div>
+                {breakdown.rules.margin ? (
+                  <div className="iv-row">
+                    <span>Exposition totale (levier)</span>
+                    <span className="iv-row-v">
+                      crypto {breakdown.rules.margin.crypto_max_exposure} ×, CFD et futures {breakdown.rules.margin.other_max_exposure} ×
+                    </span>
+                  </div>
+                ) : null}
                 <div className="iv-row">
                   <span>Positions simultanées</span>
                   <span className="iv-row-v">{breakdown.rules.max_open_positions != null ? `${breakdown.rules.max_open_positions} au plus` : "—"}</span>

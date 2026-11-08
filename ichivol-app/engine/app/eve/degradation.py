@@ -4,7 +4,7 @@ Precedence (worst wins):
   kill / critical → already handled by Guardian / Risk Kernel
   late (timeout)  → HOLD (never directional on stale budget)
   jev_down        → deterministic modes only, labelled heuristic
-  low_confidence  → ABSTAIN (soft) / paper size reduce
+  low_confidence  → keep the action, smaller size (eve.engagement)
   healthy         → normal
 
 Never opens orders. Never uses OpenRouter as System One.
@@ -182,10 +182,7 @@ def apply_degradation(
         ).strip(" ·")
     elif level == "low_confidence" and action in ("LONG", "SHORT"):
         rejected.append("degradation_low_confidence")
-        out["action"] = "ABSTAIN"
-        out["rationale"] = "JEV mean confidence low → ABSTAIN"
-        out["decision_rule"] = "degradation_low_confidence"
-        action = "ABSTAIN"
+        out["rationale"] = ((out.get("rationale") or "") + " · confiance JEV faible : taille réduite").strip(" ·")
 
     out["rejected_scenarios"] = rejected
     out["degradation"] = {

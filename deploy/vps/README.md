@@ -1,7 +1,7 @@
 # IchiVol — déploiement VPS (Docker + Traefik)
 
 **FQDN :** https://ichivol.global-it-ss.com  
-**Smoke :** http://187.77.166.124:3060  
+**Smoke (depuis le VPS) :** http://127.0.0.1:3060  
 **Repo :** https://github.com/samiriggui-code/IchiVol
 
 ## Stack
@@ -11,7 +11,7 @@
 | `postgres` | DB app (`ichivol`) + engine (`ichivol_engine`) | 5432 |
 | `engine` | FastAPI Ichimoku×RVOL | 8000 |
 | `server` | Express API / auth / agent | 8787 |
-| `web` | Nginx (SPA + proxies marché) | 80 → host **3060** |
+| `web` | Nginx (SPA + proxies marché) | 80 → **127.0.0.1:3060** (public : Traefik en HTTPS) |
 
 Traefik (déjà sur le VPS) termine TLS via labels `Host(\`ichivol.global-it-ss.com\`)`.
 

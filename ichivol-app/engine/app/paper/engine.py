@@ -15,7 +15,7 @@ from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.db.models import PaperPortfolio, PaperPosition
-from app.decision.pipeline import PipelineResult
+from app.decision.pipeline import PipelineResult, StageId
 from app.context.gate import apply_context_gate
 from app.fibonacci.gate import apply_fibonacci_gate
 from app.market_data.timeframes import TF_SECONDS
@@ -184,6 +184,8 @@ def sync_position(
     take_profit_r: float | None = None,
     signal_actions: bool = True,
     open_refusal: str | None = None,
+    risk_pct: float | None = None,
+    max_notional_pct: float | None = None,
 ) -> PaperPosition | None:
     """One symbol open/hold/close for one portfolio. Capital sizing when stop set.
 
@@ -314,6 +316,8 @@ def sync_position(
                     stale=False,
                     manual_notional=manual_notional,
                     take_profit_r=take_profit_r,
+                    risk_pct=risk_pct,
+                    max_notional_pct=max_notional_pct,
                 ),
                 PortfolioState(
                     cash=float(portfolio.cash),
@@ -368,6 +372,8 @@ def sync_position(
             evidence_id=evidence_id,
             manual_notional=manual_notional,
             take_profit_r=take_profit_r,
+            risk_pct=risk_pct,
+            max_notional_pct=max_notional_pct,
         )
         if position is not None:
             session.flush()
@@ -531,6 +537,61 @@ def engine_proposal(
         return None
     reason = "pipeline_flipped" if direction is not None else "pipeline_downgraded"
     return {"action": "CLOSE", "position_id": existing.id, "reason": reason}
+
+
+def snapshot_and_guard(session: Session, portfolio: PaperPortfolio, marks: dict[str, float]) -> None:
+    """Equity point at market, and the daily loss lock on that same value: a leveraged lot in loss counts before it
+    closes. Latches like any daily lock: entries stop until a human reopens, open lots keep their stops."""
+    from app.paper import kill_switch as paper_kill
+
+    snap = paper_broker.snapshot_equity(session, portfolio, marks=marks)
+    if snap is not None:
+        paper_kill.maybe_trip_daily_loss_lock(session, portfolio, float(snap.equity))
+
+
+def eve_candidate(
+    session: Session,
+    *,
+    portfolio: PaperPortfolio,
+    symbol: str,
+    pipeline: PipelineResult,
+    has_stop: bool,
+    allow_open: bool = True,
+) -> dict[str, Any] | None:
+    """An opportunity for Ève when the engine has no BUY/SELL of its own: a known direction, no lot held.
+
+    The pipeline's stages (regime included) are information for her here, not a veto."""
+    direction = getattr(pipeline.direction, "value", str(pipeline.direction))
+    if direction not in ("LONG", "SHORT") or not allow_open or not has_stop:
+        return None
+    if direction == "SHORT" and not short_allowed(portfolio.strategy_profile or {}, symbol):
+        return None
+    if _get_open_by_symbol(session, symbol=symbol, portfolio_id=portfolio.id) is not None:
+        return None
+    return {"action": "OPEN", "direction": direction, "engine_signal": False}
+
+
+def higher_timeframe_trend(mtf: Any) -> dict[str, int]:
+    """How many horizons above the decision one point each way (``{"long": n, "short": m}``)."""
+    counts = {"long": 0, "short": 0}
+    for horizon in getattr(mtf, "horizons", None) or []:
+        if horizon.role != "decision" and horizon.direction in ("LONG", "SHORT"):
+            counts[horizon.direction.lower()] += 1
+    return counts
+
+
+def candidate_score(
+    *, engine_signal: bool, pipeline: PipelineResult, rvol: Any, trend: dict[str, int], direction: str | None
+) -> float:
+    """Ranks the opportunities sent to Ève: the engine's own signals first, then the most complete setups."""
+    passed = sum(1 for s in pipeline.stages if getattr(s.status, "value", s.status) == "pass")
+    dead = any(code in ("regime_dead", "regime_extreme") for s in pipeline.stages for code in s.codes)
+    with_trade = trend.get(str(direction).lower(), 0)
+    against = trend.get("short" if direction == "LONG" else "long", 0)
+    volume = min(float(rvol), 3.0) if isinstance(rvol, (int, float)) else 0.0
+    return (100.0 if engine_signal else 0.0) + 10.0 * passed + 5.0 * volume + 3.0 * (with_trade - against) - (
+        20.0 if dead else 0.0
+    )
 
 
 def sync_auto_watchlist(
@@ -751,7 +812,18 @@ def sync_auto_watchlist(
                     signal_actions=signal_actions,
                     allow_open=open_refusal is None,
                 )
+                if proposal is None and signal_actions:
+                    proposal = eve_candidate(
+                        session,
+                        portfolio=portfolio,
+                        symbol=row.symbol,
+                        pipeline=final_pipeline,
+                        has_stop=isinstance(stop, (int, float)) and stop > 0,
+                        allow_open=open_refusal is None,
+                    )
                 if proposal is not None:
+                    proposal.setdefault("engine_signal", True)
+                    trend = higher_timeframe_trend(mtf)
                     proposal.update(
                         portfolio_code=portfolio.code,
                         symbol=row.symbol,
@@ -760,6 +832,16 @@ def sync_auto_watchlist(
                         stop_distance=stop if isinstance(stop, (int, float)) else None,
                         engine_decision=final_pipeline.decision,
                         signal_bar_close=(getattr(row, "signal_timing", None) or {}).get("signal_bar_close"),
+                        rvol=rvol_val if isinstance(rvol_val, (int, float)) else None,
+                        trend=trend,
+                        regime=[c for s in final_pipeline.stages if s.id == StageId.REGIME for c in s.codes],
+                        score=candidate_score(
+                            engine_signal=proposal["engine_signal"],
+                            pipeline=final_pipeline,
+                            rvol=rvol_val,
+                            trend=trend,
+                            direction=proposal.get("direction"),
+                        ),
                     )
                     proposals.append(proposal)
                 # Engine signal acts on nothing: only stop/target can still close a lot.
@@ -802,7 +884,7 @@ def sync_auto_watchlist(
     shadow_broker.mark_shadows(session, marks=marks)
 
     for portfolio in portfolios:
-        paper_broker.snapshot_equity(session, portfolio, marks=marks)
+        snapshot_and_guard(session, portfolio, marks)
     session.commit()
     return touched
 
@@ -822,6 +904,8 @@ def open_user_confirmed(
     manual_notional: float | None = None,
     take_profit_r: float | None = None,
     portfolio: PaperPortfolio | None = None,
+    risk_pct: float | None = None,
+    max_notional_pct: float | None = None,
 ) -> tuple[PaperPosition | None, bool]:
     """Open a user-confirmed paper lot.
 
@@ -871,6 +955,8 @@ def open_user_confirmed(
         portfolio=portfolio,
         manual_notional=manual_notional,
         take_profit_r=take_profit_r,
+        risk_pct=risk_pct,
+        max_notional_pct=max_notional_pct,
     )
     session.commit()
     return position, position is not None

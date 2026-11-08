@@ -701,13 +701,13 @@ export function OverviewPage() {
           <Spark values={equitySpark} />
         </div>
         <div className="iv-kpi">
-          <div className="iv-kpi-k">Disponible</div>
+          <div className="iv-kpi-k">{deskCash != null && deskCash < 0 ? 'Marge empruntée' : 'Disponible'}</div>
           <div className="iv-kpi-v">
-            <SplitEur value={deskCash} />
+            <SplitEur value={deskCash != null ? Math.abs(deskCash) : deskCash} />
           </div>
           <div className="iv-kpi-s">
             {deskCash != null && deskEquity && deskEquity > 0
-              ? `${fmtPct(deskCash / deskEquity, 1, false)} du capital`
+              ? `${fmtPct(Math.abs(deskCash) / deskEquity, 1, false)} du capital`
               : '—'}
           </div>
         </div>
@@ -1094,9 +1094,9 @@ export function OverviewPage() {
               <div className="iv-row dk-tight">
                 <span>
                   <span className="dk-swatch" style={{ background: MAIN_CURVE_COLOR }} />
-                  Disponible
+                  {deskCash < 0 ? 'Marge empruntée' : 'Disponible'}
                 </span>
-                <span className="iv-row-v">{fmtEur(deskCash, 0)}</span>
+                <span className="iv-row-v">{fmtEur(Math.abs(deskCash), 0)}</span>
               </div>
               <div className="iv-row dk-tight">
                 <span>

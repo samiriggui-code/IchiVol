@@ -24,6 +24,7 @@ from app.brokerage.execution import fill_at_quote
 from app.brokerage.fee_profiles import get_schedule
 from app.brokerage.ledger import Cause, Leg
 from app.market_data.contracts import ExecutionMode, Quote
+from app.paper.margin import buying_power
 from app.paper.risk import apply_exit_friction, size_position
 from app.paper.strategy_profiles import BASELINE_PROFILE
 
@@ -240,9 +241,12 @@ def open_capital_position(
     quote: Quote | None = None,
     manual_notional: float | None = None,
     take_profit_r: float | None = None,
+    risk_pct: float | None = None,
+    max_notional_pct: float | None = None,
 ) -> PaperPosition | None:
     """Open a sized paper position. Returns None if risk/cash/caps block it.
-    ``manual_notional`` / ``take_profit_r``: discretionary order chosen by the user (see risk._size_manual)."""
+    ``manual_notional`` / ``take_profit_r``: discretionary order chosen by the user (see risk._size_manual).
+    ``risk_pct`` / ``max_notional_pct``: Ève's engagement for this order, instead of the profile's."""
     _lock_portfolio(session, portfolio)
     profile = _profile(portfolio)
     max_open = int(profile.get("max_open_positions", 5))
@@ -250,6 +254,10 @@ def open_capital_position(
         return None
 
     equity = estimate_equity(session, portfolio)
+    open_lots = session.execute(
+        select(PaperPosition).where(PaperPosition.portfolio_id == portfolio.id, PaperPosition.status == "OPEN")
+    ).scalars().all()
+    spendable = buying_power(profile, symbol, cash=float(portfolio.cash), equity=equity, open_lots=open_lots)
     side = "BUY" if direction == "LONG" else "SELL"
     quoted = quote is not None
     if quoted:
@@ -261,13 +269,13 @@ def open_capital_position(
         spread_bps, slippage_bps = _friction(profile, symbol)
     sized = size_position(
         equity=equity,
-        cash=portfolio.cash,
+        cash=spendable,
         direction=direction,
         entry_price=ref_price,
         stop_distance=stop_distance,
-        risk_pct=float(profile.get("risk_pct", 0.01)),
+        risk_pct=float(risk_pct if risk_pct is not None else profile.get("risk_pct", 0.01)),
         take_profit_r=float(take_profit_r if take_profit_r is not None else profile.get("take_profit_r", 2.0)),
-        max_notional_pct=float(profile.get("max_notional_pct", 0.25)),
+        max_notional_pct=float(max_notional_pct if max_notional_pct is not None else profile.get("max_notional_pct", 0.25)),
         commission_bps=_commission_bps(profile, symbol),
         spread_bps=spread_bps,
         slippage_bps=slippage_bps,
@@ -302,7 +310,7 @@ def open_capital_position(
     fee = _commission(profile, sized.notional, sized.qty, symbol)
     if not all(math.isfinite(x) for x in (sized.notional, sized.qty, fee, sized.entry_fill)):
         return None
-    if sized.notional + fee > portfolio.cash:
+    if sized.notional + fee > spendable + 1e-9:
         return None
 
     now = datetime.now(timezone.utc)

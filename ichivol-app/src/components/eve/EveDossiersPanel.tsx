@@ -130,7 +130,7 @@ function proposalSummary(d: DossierRow): string {
   return props
     .map((p) => {
       const what = p.engine_action === "CLOSE" ? "fermer" : `ouvrir ${p.engine_direction === "SHORT" ? "à la baisse" : "à la hausse"}`
-      const eve = p.eve_accepts ? (p.executed ? "Ève accepte, exécuté" : "Ève accepte, non exécuté") : "Ève refuse"
+      const eve = p.eve_accepts ? (p.executed ? "Ève entre, exécuté" : "Ève veut entrer, non exécuté") : "Ève s'abstient"
       return `${portfolioLabel(p.portfolio_code)} : ${what} → ${eve}`
     })
     .join(" · ")
@@ -309,8 +309,8 @@ export function EveDossiersPanel({ autonomy, refreshKey = 0 }: { autonomy: boole
             </p>
           ) : items.length === 0 ? (
             <p className="iv-empty">
-              Aucun Dossier pour l'instant. Ève en écrit un à chaque fois que le moteur propose un
-              trade (autonomie activée) ou quand on lui demande d'évaluer un instrument.
+              Aucun Dossier pour l'instant. Ève en écrit un pour chaque opportunité jugée à la
+              clôture d'une bougie (autonomie activée) ou quand on lui demande d'évaluer un instrument.
             </p>
           ) : (
             <>
