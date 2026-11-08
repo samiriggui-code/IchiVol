@@ -138,6 +138,8 @@ def build_breakdown(session: Session, portfolio: PaperPortfolio) -> dict[str, An
         "rules": {
             "initial_cash": float(portfolio.initial_cash),
             "risk_pct": profile.get("risk_pct"),
+            "engagement": profile.get("engagement"),
+            "margin": profile.get("margin"),
             "max_notional_pct": profile.get("max_notional_pct"),
             "max_open_positions": profile.get("max_open_positions"),
             "max_open_risk_pct": profile.get("max_open_risk_pct"),

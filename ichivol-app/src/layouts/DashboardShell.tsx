@@ -170,7 +170,7 @@ function HeaderConnections({ engine }: { engine: EngineState }) {
 function PilotPill({ autonomy }: { autonomy: boolean | null }) {
   if (autonomy === true) {
     return (
-      <span className="iv-pill is-mint dash-pilot" title="Ève accepte ou refuse ce que le moteur propose">
+      <span className="iv-pill is-mint dash-pilot" title="Ève décide et dose ses trades à partir des calculs du moteur">
         Pilote Ève
       </span>
     )

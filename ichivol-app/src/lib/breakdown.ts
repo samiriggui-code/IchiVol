@@ -30,6 +30,15 @@ export type DeciderRow = BreakdownStats & { decider: BreakdownDecider }
 export type AssetClassRow = BreakdownStats & { asset_class: BreakdownAssetClass | string }
 
 export type BreakdownRules = {
+  /** Dosage d'Ève : fourchette de risque et lot maximum en multiple de l'équité. */
+  engagement?: {
+    risk_min: number
+    risk_max: number
+    crypto_max_notional_pct: number
+    other_max_notional_pct: number
+    max_cost_r: number
+  } | null
+  margin?: { crypto_max_exposure: number; other_max_exposure: number } | null
   initial_cash: number
   risk_pct: number
   max_notional_pct: number

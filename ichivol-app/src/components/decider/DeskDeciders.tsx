@@ -29,7 +29,7 @@ const VERDICT_SHORT: Record<ProposalVerdict, string> = {
   executed: 'Exécutée',
   engine_over_eve: 'Moteur contre Ève',
   blocked_by_audit: 'Bloquée par l’audit',
-  refused_by_eve: 'Refusée',
+  refused_by_eve: 'Abstention',
   blocked_after: 'Bloquée',
   pending: 'En attente',
 }
@@ -94,7 +94,7 @@ export function DeskDeciderSummary({ className = '' }: { className?: string }) {
     <section className={`iv-card iv-glow ddv ${className}`.trim()}>
       <div className="iv-card-head">
         <div className="iv-card-tabs">
-          <h2 className="iv-card-tab is-on ddv-title">Moteur vs Ève</h2>
+          <h2 className="iv-card-tab is-on ddv-title">Bilan par décideur</h2>
         </div>
         <div className="iv-card-tools">Trades clôturés</div>
       </div>
@@ -102,12 +102,12 @@ export function DeskDeciderSummary({ className = '' }: { className?: string }) {
         <p className="iv-note ddv-mode">
           {autonomy == null ? (
             <>
-              Le moteur propose, <span className="iv-kw">Ève accepte ou refuse</span>, le Risk Kernel a le dernier mot.
+              Le moteur calcule, <span className="iv-kw">Ève décide et dose</span>, le Risk Kernel a le dernier mot.
             </>
           ) : autonomy ? (
             <>
-              <span className="iv-kw">Ève décide en ce moment</span> : chaque proposition du moteur passe par elle avant
-              d’être exécutée.
+              <span className="iv-kw">Ève décide en ce moment</span> : elle entre seule, à partir des calculs du moteur
+              et de la mesure de JEV.
             </>
           ) : (
             'L’autonomie d’Ève est coupée : le moteur trade seul en ce moment.'
@@ -155,7 +155,7 @@ export function DeskDeciderSummary({ className = '' }: { className?: string }) {
         </div>
         {vs && vs.trades > 0 ? (
           <p className="iv-note ddv-vs">
-            ◆ Quand Ève refuse et que le moteur trade quand même : {vs.losses} perte{vs.losses > 1 ? 's' : ''} sur{' '}
+            ◆ Historique, quand le moteur tradait malgré ses refus : {vs.losses} perte{vs.losses > 1 ? 's' : ''} sur{' '}
             {vs.trades}.
           </p>
         ) : null}
@@ -197,7 +197,7 @@ export function DeskEveLatest({ className = '' }: { className?: string }) {
             {decisions == null
               ? 'Chargement…'
               : autonomy
-                ? 'Aucune proposition du moteur jugée pour l’instant.'
+                ? 'Aucune opportunité jugée pour l’instant.'
                 : 'Autonomie d’Ève coupée : pas de proposition à juger.'}
           </p>
         ) : (
@@ -216,6 +216,12 @@ export function DeskEveLatest({ className = '' }: { className?: string }) {
                   <div className="ddv-flow">
                     Moteur : {engineProposalFr(p)} · Ève :{' '}
                     <b className={p.eve_accepts ? 'ok' : 'warn'}>{eveActionFr(p.eve_action)}</b>
+                    {d.engagement?.p_win != null ? (
+                      <>
+                        {' '}
+                        · JEV {Math.round(d.engagement.p_win * 100)} % / seuil {Math.round(d.engagement.p_min * 100)} %
+                      </>
+                    ) : null}
                     {decisionRuleFr(d.decision_rule) ? <> · {decisionRuleFr(d.decision_rule)}</> : null}
                   </div>
                 </div>
@@ -224,11 +230,11 @@ export function DeskEveLatest({ className = '' }: { className?: string }) {
           </ul>
         )}
       </div>
-      <TablePager paged={paged} label="propositions" />
+      <TablePager paged={paged} label="opportunités" />
       <div className="iv-card-foot">
         <span>
-          {rows.length} proposition{rows.length > 1 ? 's' : ''} · {accepted} acceptée{accepted > 1 ? 's' : ''} ·{' '}
-          {rows.length - accepted} refusée{rows.length - accepted > 1 ? 's' : ''}
+          {rows.length} opportunité{rows.length > 1 ? 's' : ''} · {accepted} prise{accepted > 1 ? 's' : ''} ·{' '}
+          {rows.length - accepted} abstention{rows.length - accepted > 1 ? 's' : ''}
         </span>
         <Link to="/app/agents">Page Ève →</Link>
       </div>

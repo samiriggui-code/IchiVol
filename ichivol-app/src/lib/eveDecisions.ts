@@ -1,6 +1,7 @@
 /**
- * Jugements d'Ève sur les propositions du moteur (GET /api/engine/eve/decisions).
- * Un jugement = un symbole à une clôture de bougie ; chaque livre dont le moteur voulait agir y a sa ligne.
+ * Décisions d'Ève sur les opportunités classées par le moteur (GET /api/engine/eve/decisions).
+ * Un jugement = un symbole à une clôture de bougie. `engine_signal` faux : le moteur n'avait pas de signal à lui,
+ * seulement une direction et ses calculs.
  */
 
 export type EngineProposalOutcome = {
@@ -10,10 +11,13 @@ export type EngineProposalOutcome = {
   engine_decision?: string | null
   eve_action: string
   eve_accepts: boolean
+  /** Vrai si le moteur avait son propre signal d'achat ou de vente ; absent sur l'historique (= vrai). */
+  engine_signal?: boolean
+  score?: number | null
   status?: string | null
   executed?: boolean
   risk_authorization?: string | null
-  /** Qui a tranché : Ève (d'accord avec le moteur, audit favorable), le moteur contre Ève, ou l'audit. */
+  /** Qui a tranché : Ève, l'audit (sens opposé), ou le moteur contre Ève (historique). */
   decided_by?: 'eve' | 'engine_over_eve' | 'audit' | null
   audit?: { verdict: 'allow' | 'block'; reason: string; choice?: string | null; score?: number | null } | null
   /** Résultat du vrai trade (position) ou du trade rejoué sans argent (refus d'avant le changement, blocage de l'audit). */
@@ -26,6 +30,42 @@ export type TradeResult = {
   exit_reason: string | null
   pnl_r: number | null
   pnl_pct?: number | null
+}
+
+/** Le chiffrage d'Ève : la mesure de JEV contre le seuil de rentabilité du moteur, et le risque engagé. */
+export type Engagement = {
+  action: string
+  enter: boolean
+  reason: 'edge_positive' | 'edge_insufficient' | 'cost_too_high' | 'no_measure' | string
+  p_win?: number
+  p_min: number
+  edge?: number
+  cost_r: number
+  base_risk_pct?: number
+  risk_pct?: number
+  max_notional_pct?: number
+  planned_leverage?: number
+  factors?: Record<string, number>
+}
+
+/** Les calculs du moteur remis à Ève pour cette opportunité. */
+export type TradePlanView = {
+  stop_pct: number
+  target_pct: number
+  target_r: number
+  cost_r: number
+  rvol: number | null
+  trend: { long?: number; short?: number } | null
+  regime: string[] | null
+}
+
+export const ENGAGEMENT_FACTOR_FR: Record<string, string> = {
+  fragility: 'Fragilité',
+  gate: 'Porte d’entrée',
+  audit: 'Audit',
+  jev_confidence: 'Confiance JEV',
+  volume: 'Volume',
+  trend: 'Tendance',
 }
 
 export type Judge = 'analyst' | 'challenger' | 'guardian' | 'audit'
@@ -62,6 +102,9 @@ export type EveDecision = {
   opinions?: Opinion[]
   /** Règle qui a tranché la réponse d'Ève (moteur : synthesis.decision_rule), null si absente. */
   decision_rule?: string | null
+  /** Absent sur les décisions d'avant le 08/11. */
+  engagement?: Engagement | null
+  plan?: TradePlanView | null
   engine_proposals: EngineProposalOutcome[]
 }
 
@@ -79,6 +122,9 @@ export const DECISION_RULE_FR: Record<string, string> = {
   signal_rules: 'règles de signal',
   degradation_late: 'JEV en retard',
   degradation_low_confidence: 'JEV peu sûr',
+  engagement_edge_insufficient: 'probabilité JEV sous le seuil',
+  engagement_cost_too_high: 'frais trop lourds',
+  engagement_no_measure: 'pas de mesure JEV',
 }
 
 /** Libellé français de la règle ; null si absente, code brut si inconnu. */
@@ -105,8 +151,11 @@ export function eveActionFr(a: string | null | undefined): string {
   return (a && EVE_ACTION_FR[a.toUpperCase()]) || '—'
 }
 
-export function engineProposalFr(p: Pick<EngineProposalOutcome, 'engine_action' | 'engine_direction'>): string {
+export function engineProposalFr(
+  p: Pick<EngineProposalOutcome, 'engine_action' | 'engine_direction' | 'engine_signal'>,
+): string {
   if (p.engine_action === 'CLOSE') return 'Clôturer'
+  if (p.engine_signal === false) return p.engine_direction === 'SHORT' ? 'Opportunité baissière' : 'Opportunité haussière'
   return p.engine_direction === 'SHORT' ? 'Vendre à découvert' : 'Acheter'
 }
 
@@ -147,8 +196,8 @@ export function rightness(p: EngineProposalOutcome): Rightness | null {
   const won = pnl > 0
   if (p.decided_by === 'eve' || (p.executed && p.eve_accepts)) {
     return won
-      ? { tone: 'ok', text: `Trade gagnant${res} : Ève a eu raison d’accepter.` }
-      : { tone: 'ko', text: `Trade perdant${res} : Ève a eu tort d’accepter.` }
+      ? { tone: 'ok', text: `Trade gagnant${res} : Ève a eu raison d’entrer.` }
+      : { tone: 'ko', text: `Trade perdant${res} : Ève a eu tort d’entrer.` }
   }
   const traded = r.kind === 'position' ? 'Le moteur a tradé contre Ève' : 'Rejoué sans argent, ce trade'
   return won
@@ -157,7 +206,8 @@ export function rightness(p: EngineProposalOutcome): Rightness | null {
 }
 
 const STATUS_FR: Record<string, string> = {
-  refused_by_eve: 'Ève a refusé',
+  refused_by_eve: 'Ève s’est abstenue',
+  kept_by_eve: 'Ève garde la position',
   blocked_by_audit: 'Bloqué par l’audit indépendant',
   no_dossier: 'Pas de dossier Ève',
   gate_rejected: 'Bloqué par la porte d’entrée de JEV',

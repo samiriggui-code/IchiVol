@@ -1,7 +1,7 @@
 /**
- * Résultats d'Ève (page Ève) : qui a décidé quoi et avec quel résultat, ce que le moteur a proposé et ce
- * qu'Ève a répondu, ses refus suivis à blanc, les refus des filtres d'indicateurs.
- * Le moteur calcule et propose ; Ève (avec JEV) accepte ou refuse ; le Risk Kernel garde le dernier mot.
+ * Résultats d'Ève (page Ève) : qui a décidé quoi et avec quel résultat, les opportunités du moteur et la réponse
+ * d'Ève, ses abstentions suivies à blanc, les refus des filtres d'indicateurs.
+ * Le moteur calcule ; JEV mesure ; Ève décide et dose ; le Risk Kernel garde le dernier mot.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -16,6 +16,7 @@ import {
 } from '../../lib/decider'
 import {
   decisionRuleFr,
+  ENGAGEMENT_FACTOR_FR,
   engineProposalFr,
   eveActionFr,
   getEveDecisions,
@@ -23,8 +24,10 @@ import {
   proposalStatusFr,
   proposalVerdict,
   rightness,
+  type Engagement,
   type EngineProposalOutcome,
   type EveDecision,
+  type TradePlanView,
   type Judge,
   type ProposalVerdict,
 } from '../../lib/eveDecisions'
@@ -53,19 +56,19 @@ type VerdictFilter = 'all' | ProposalVerdict
 
 const VERDICT_FILTERS: Array<{ id: VerdictFilter; label: string }> = [
   { id: 'all', label: 'Tout' },
-  { id: 'executed', label: 'Ève et moteur d’accord' },
-  { id: 'engine_over_eve', label: 'Moteur contre Ève' },
+  { id: 'executed', label: 'Ève a tradé' },
+  { id: 'refused_by_eve', label: 'Abstentions' },
   { id: 'blocked_by_audit', label: 'Bloquées par l’audit' },
   { id: 'blocked_after', label: 'Bloquées ensuite' },
-  { id: 'refused_by_eve', label: 'Refus (ancienne règle)' },
+  { id: 'engine_over_eve', label: 'Moteur contre Ève (historique)' },
 ]
 
 const VERDICT_LABEL: Record<ProposalVerdict, string> = {
   executed: 'Exécutée',
-  engine_over_eve: 'Ève a refusé, le moteur a tradé',
+  engine_over_eve: 'Ève a refusé, le moteur a tradé (historique)',
   blocked_by_audit: 'Bloquée par l’audit',
-  refused_by_eve: 'Refusée par Ève',
-  blocked_after: 'Acceptée, puis bloquée',
+  refused_by_eve: 'Ève s’abstient',
+  blocked_after: 'Décidée, puis bloquée',
   pending: 'En attente',
 }
 
@@ -249,7 +252,86 @@ function Meter({ label, value, part, total, tone }: { label: string; value: stri
 
 type Row = { key: string; d: EveDecision; p: EngineProposalOutcome; verdict: ProposalVerdict }
 
-/** Le dossier d'une proposition, en carte signature : moteur → Ève, pourquoi, les quatre avis, qui avait raison. */
+function fmtPctFr(v: number, digits = 1): string {
+  return `${(v * 100).toFixed(digits).replace('.', ',')} %`
+}
+
+/** La traduction en finance : la mesure de JEV contre le seuil de rentabilité, puis le montant engagé par Ève. */
+function EngagementBlock({ e, plan }: { e: Engagement; plan?: TradePlanView | null }) {
+  return (
+    <>
+      <div className="iv-label dv-d-label">Le calcul d’Ève</div>
+      {e.p_win != null ? (
+        <Meter
+          label="Probabilité mesurée par JEV · objectif avant le stop"
+          value={fmtPctFr(e.p_win, 0)}
+          part={Math.round(e.p_win * 100)}
+          total={100}
+          tone="buy"
+        />
+      ) : null}
+      <Meter
+        label="Seuil de rentabilité calculé par le moteur"
+        value={fmtPctFr(e.p_min, 0)}
+        part={Math.round(e.p_min * 100)}
+        total={100}
+        tone="sell"
+      />
+      <div className="dv-outcome-rows">
+        {e.enter && e.risk_pct != null ? (
+          <div className="iv-row">
+            <span className="muted">Risque engagé</span>
+            <span className="iv-row-v">{fmtPctFr(e.risk_pct, 2)} du capital</span>
+          </div>
+        ) : null}
+        {e.enter && e.planned_leverage != null ? (
+          <div className="iv-row">
+            <span className="muted">Taille prévue</span>
+            <span className="iv-row-v">{e.planned_leverage.toFixed(2).replace('.', ',')} × le capital</span>
+          </div>
+        ) : null}
+        {plan ? (
+          <>
+            <div className="iv-row">
+              <span className="muted">Stop · objectif</span>
+              <span className="iv-row-v">
+                {fmtPctFr(plan.stop_pct, 2)} · {fmtPctFr(plan.target_pct, 2)} ({plan.target_r} R)
+              </span>
+            </div>
+            <div className="iv-row">
+              <span className="muted">Frais aller-retour</span>
+              <span className="iv-row-v">{plan.cost_r.toFixed(2).replace('.', ',')} R</span>
+            </div>
+            <div className="iv-row">
+              <span className="muted">Volume relatif</span>
+              <span className="iv-row-v">{plan.rvol != null ? `${plan.rvol.toFixed(2).replace('.', ',')} ×` : '—'}</span>
+            </div>
+            <div className="iv-row">
+              <span className="muted">Horizons supérieurs</span>
+              <span className="iv-row-v">
+                {plan.trend?.long ?? 0} haussier{(plan.trend?.long ?? 0) > 1 ? 's' : ''} · {plan.trend?.short ?? 0} baissier
+                {(plan.trend?.short ?? 0) > 1 ? 's' : ''}
+              </span>
+            </div>
+          </>
+        ) : null}
+      </div>
+      {e.factors ? (
+        <div className="dv-verdict">
+          {Object.entries(e.factors)
+            .filter(([, v]) => v < 1)
+            .map(([k, v]) => (
+              <span key={k} className="iv-chip">
+                {ENGAGEMENT_FACTOR_FR[k] ?? k} × {v.toFixed(2).replace('.', ',')}
+              </span>
+            ))}
+        </div>
+      ) : null}
+    </>
+  )
+}
+
+/** Le dossier d'une proposition, en carte signature : moteur → Ève, pourquoi, le calcul, les quatre avis, qui avait raison. */
 function DossierCard({ row }: { row: Row }) {
   const { d, p, verdict } = row
   const engine = engineProposalFr(p)
@@ -295,6 +377,8 @@ function DossierCard({ row }: { row: Row }) {
           <p className="dv-why is-tech">{d.reasoning}</p>
         </>
       ) : null}
+
+      {d.engagement ? <EngagementBlock e={d.engagement} plan={d.plan} /> : null}
 
       {d.opinions && d.opinions.length > 0 ? (
         <ul className="dv-opinions" aria-label="Avis des juges d’Ève">
@@ -512,7 +596,7 @@ export function EveResults({
                 ? 'Chargement…'
                 : rows.length === 0
                   ? autonomy
-                    ? 'Aucune proposition jugée par Ève pour l’instant. Elles apparaissent à chaque clôture de bougie où le moteur veut agir.'
+                    ? 'Aucune opportunité jugée par Ève pour l’instant. Le moteur lui en transmet à chaque clôture de bougie.'
                     : 'L’autonomie d’Ève est coupée : le moteur trade seul, il n’y a donc pas de proposition à juger.'
                   : 'Aucune proposition dans ce filtre.'}
             </p>
@@ -633,15 +717,14 @@ export function EveResults({
             </dl>
           </details>
           <div className="iv-card-foot dv-card-foot">
-            Moteur contre Ève · quand Ève refuse, le moteur trade quand même ; quand ils sont d’accord, l’audit
-            indépendant tranche
+            Le moteur calcule, Ève décide et dose · « Moteur contre Ève » est l’historique d’avant le 08/11
           </div>
         </section>
 
         <section className="iv-card iv-s6 iv-m-s12">
           <div className="iv-card-head">
             <div className="iv-card-tabs">
-              <span className="iv-card-tab is-on">Ève a-t-elle eu raison de refuser ?</span>
+              <span className="iv-card-tab is-on">Historique : quand le moteur tradait contre Ève</span>
             </div>
             <div className="iv-card-tools">
               {overEve.trades} trade{overEve.trades > 1 ? 's' : ''} clôturé{overEve.trades > 1 ? 's' : ''}
@@ -649,8 +732,8 @@ export function EveResults({
           </div>
           <div className="iv-card-body">
             <p className="iv-note dv-intro">
-              Quand Ève refuse, le moteur trade quand même (« Moteur contre Ève »). Chaque trade perdant de ce côté est
-              un refus juste d’Ève, chaque trade gagnant un refus à tort.
+              Jusqu’au 08/11, le moteur tradait malgré les refus d’Ève. Chaque trade perdant de ce côté est un refus
+              juste d’Ève, chaque trade gagnant un refus à tort. Depuis, ses abstentions sont suivies à blanc.
             </p>
             <Meter
               label="Refus justes · le trade a perdu"
@@ -709,20 +792,20 @@ export function EveResults({
         <section className="iv-card iv-s8 iv-m-s12 dv-props">
           <div className="iv-card-head">
             <div className="iv-card-tabs">
-              <span className="iv-card-tab is-on">Ce que le moteur a proposé, et ce qu’Ève a répondu</span>
+              <span className="iv-card-tab is-on">Ce que le moteur a trouvé, et ce qu’Ève a décidé</span>
             </div>
             <div className="iv-card-tools">
-              {rows.length} proposition{rows.length > 1 ? 's' : ''}
+              {rows.length} opportunité{rows.length > 1 ? 's' : ''}
             </div>
           </div>
           <div className="iv-kpis dv-kpis">
             <div className="iv-kpi">
-              <div className="iv-kpi-k">Exécutées</div>
+              <div className="iv-kpi-k">Ève a tradé</div>
               <div className="iv-kpi-v ok">{counts.executed}</div>
             </div>
             <div className="iv-kpi">
-              <div className="iv-kpi-k">Contre l’avis d’Ève</div>
-              <div className="iv-kpi-v warn">{counts.engine_over_eve}</div>
+              <div className="iv-kpi-k">Abstentions</div>
+              <div className="iv-kpi-v">{counts.refused_by_eve}</div>
             </div>
             <div className="iv-kpi">
               <div className="iv-kpi-k">Bloquées par l’audit</div>
@@ -733,21 +816,22 @@ export function EveResults({
               <div className="iv-kpi-v">{counts.blocked_after}</div>
               <div className="iv-kpi-s">Risk Kernel, données</div>
             </div>
-            {counts.refused_by_eve > 0 ? (
+            {counts.engine_over_eve > 0 ? (
               <div className="iv-kpi">
-                <div className="iv-kpi-k">Refusées (ancienne règle)</div>
-                <div className="iv-kpi-v">{counts.refused_by_eve}</div>
+                <div className="iv-kpi-k">Contre Ève (historique)</div>
+                <div className="iv-kpi-v warn">{counts.engine_over_eve}</div>
               </div>
             ) : null}
           </div>
           <details className="dv-legend dv-howto">
             <summary>Comment lire ce tableau</summary>
             <p className="iv-note">
-              Chaque ligne est une proposition du moteur sur le portefeuille (acheter, vendre à découvert ou clôturer).
-              Si Ève n’est pas d’accord, le moteur trade quand même et la réponse d’Ève est gardée : le résultat du
-              trade dira qui avait raison. Si Ève est d’accord, l’audit indépendant tranche : il laisse passer le trade
-              ou le bloque. Le Risk Kernel garde toujours le dernier mot. Les stops et objectifs ferment les positions
-              sans passer par Ève.
+              Chaque ligne est une opportunité trouvée et chiffrée par le moteur. JEV mesure la probabilité d’atteindre
+              l’objectif avant le stop ; Ève entre si cette probabilité dépasse le seuil de rentabilité et dose le risque
+              selon l’écart, le volume, la tendance et les avis de ses juges. Si elle s’abstient, aucun trade n’est pris ;
+              quand le moteur avait son propre signal, il est suivi à blanc pour comparer. L’audit ne bloque que s’il
+              choisit le sens opposé. Le Risk Kernel garde toujours le dernier mot. Les stops et objectifs ferment les
+              positions sans passer par Ève.
             </p>
           </details>
           <div className="dv-toolbar">
@@ -775,7 +859,7 @@ export function EveResults({
                 ? 'Chargement…'
                 : rows.length === 0
                   ? autonomy
-                    ? 'Aucune proposition jugée par Ève pour l’instant. Elles apparaissent à chaque clôture de bougie où le moteur veut agir.'
+                    ? 'Aucune opportunité jugée par Ève pour l’instant. Le moteur lui en transmet à chaque clôture de bougie.'
                     : 'L’autonomie d’Ève est coupée : le moteur trade seul, il n’y a donc pas de proposition à juger.'
                   : 'Aucune proposition dans ce filtre.'}
             </p>

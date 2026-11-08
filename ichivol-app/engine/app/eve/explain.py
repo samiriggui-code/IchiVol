@@ -165,11 +165,28 @@ def why_fr(
     if rule == "guardian_critical" or rationale.startswith("Guardian critical"):
         return "Le gardien du risque a levé une alerte critique : Ève s’abstient."
 
+    engagement = synthesis.get("engagement") if isinstance(synthesis.get("engagement"), dict) else None
+    if engagement is not None:
+        measured = _pct(engagement.get("p_win"))
+        needed = _pct(engagement.get("p_min"))
+        if engagement.get("enter"):
+            risk = str(round(float(engagement["risk_pct"]) * 100, 2)).replace(".", ",")
+            return (
+                f"JEV estime à {measured} la probabilité d’atteindre l’objectif avant le stop, il faut {needed} "
+                f"pour être rentable : Ève engage {risk} % du capital."
+            )
+        if engagement.get("reason") == "edge_insufficient":
+            return f"JEV estime à {measured} la probabilité d’atteindre l’objectif, il faut {needed} : Ève s’abstient."
+        if engagement.get("reason") == "cost_too_high":
+            return "Les frais mangent plus de la moitié de la distance au stop : Ève s’abstient."
+        if engagement.get("reason") == "no_measure":
+            return "JEV n’a pas donné de probabilité pour ce trade : Ève s’abstient."
+
     code = _decisive(rejected) or ""
     if code == "degradation_late":
         return "JEV a répondu trop tard : Ève attend plutôt que de trader sur des réponses périmées."
     if code == "degradation_low_confidence":
-        return "JEV n’était pas assez sûr de ses réponses : Ève s’abstient."
+        return "JEV n’était pas assez sûr de ses réponses : Ève réduit sa mise ou s’abstient."
     if code.startswith("entry_gate:"):
         return f"La porte d’entrée de JEV a refusé ce trade ({code.split(':', 1)[1]}) : Ève s’abstient."
     if code.startswith("signal_rules:"):

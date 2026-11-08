@@ -22,8 +22,8 @@ const FEATURES = [
   },
   {
     meta: 'Ève',
-    title: 'Elle accepte ou refuse',
-    body: 'Analyste, contradicteur, gardien du risque, audit indépendant. Si JEV répond trop tard ou sans confiance, elle s’abstient.',
+    title: 'Elle décide et dose',
+    body: 'Analyste, contradicteur, gardien du risque, audit indépendant. JEV mesure la probabilité, le moteur fournit le seuil : elle entre seulement au-dessus, et ajuste la mise.',
   },
   {
     meta: 'Risk Kernel',
@@ -43,7 +43,7 @@ const FEATURES = [
   {
     meta: 'Journal',
     title: 'Qui a décidé, et avait-il raison',
-    body: 'Moteur seul, Ève, Manuel, Moteur contre Ève : chaque trade garde son décideur et son résultat.',
+    body: 'Ève, moteur seul, manuel : chaque trade garde son décideur et son résultat, et les abstentions d’Ève sont suivies à blanc.',
   },
 ]
 
@@ -51,7 +51,7 @@ const COMPARE: { k: string; without: string; with: string; ok?: boolean }[] = [
   {
     k: 'Qui décide',
     without: 'Un chat qui conseille d’acheter sans exécuter',
-    with: 'Le moteur propose, Ève accepte ou refuse, en paper',
+    with: 'Le moteur calcule, Ève décide et dose, en paper',
   },
   {
     k: 'Contre-lecture',
@@ -74,11 +74,11 @@ const COMPARE: { k: string; without: string; with: string; ok?: boolean }[] = [
 const FAQ = [
   {
     q: 'Ève trade vraiment ?',
-    a: 'Oui, en paper, quand le pilote automatique est activé. Chaque portefeuille (IchiVol, Sessions, Futures & Crypto…) applique sa méthode et propose ; Ève accepte ou refuse à chaque nouvelle bougie. Le Risk Kernel autorise ou bloque, l’arrêt d’urgence coupe toute entrée. Aucun courtier réel.',
+    a: 'Oui, en paper, quand le pilote automatique est activé. À chaque nouvelle bougie, le moteur classe et chiffre les opportunités, JEV mesure la probabilité, Ève entre et dose sa mise. Le Risk Kernel autorise ou bloque, l’arrêt d’urgence coupe toute entrée. Aucun courtier réel.',
   },
   {
     q: 'Qu’est-ce qu’IchiVol ?',
-    a: 'Un poste de trading paper : le moteur Ichimoku × RVOL calcule, chaque portefeuille propose, Ève juge, le Risk Kernel borne et le Strategy Lab affûte les règles. Jamais d’argent réel.',
+    a: 'Un poste de trading paper : le moteur Ichimoku × RVOL calcule, JEV mesure, Ève décide, le Risk Kernel borne et le Strategy Lab affûte les règles. Jamais d’argent réel.',
   },
   {
     q: 'Le Copilot, c’est une autre IA ?',
@@ -123,13 +123,13 @@ export function LandingPage() {
             <div className="lp-hero-copy">
               <div className="iv-meta">Paper trading · jamais d’argent réel</div>
               <h1>
-                Le moteur propose.
+                Le moteur calcule.
                 <br />
-                <em>Ève accepte ou refuse.</em>
+                <em>Ève décide.</em>
               </h1>
               <p className="lp-lead">
-                Un poste de trading où Ève, l’IA décisionnelle, juge chaque trade proposé par le
-                moteur sur votre portefeuille. Cinq portes, quatre avis, un garde-fou de risque qui a toujours le
+                Un poste de trading où Ève, l’IA décisionnelle, engage votre portefeuille à partir
+                des calculs du moteur. Cinq portes, quatre avis, un garde-fou de risque qui a toujours le
                 dernier mot.
               </p>
               <div className="lp-row">
@@ -272,7 +272,7 @@ export function LandingPage() {
             <div className="iv-label">Paper uniquement</div>
             <p>
               Pas de live, pas de conseil financier.{' '}
-              <span className="iv-kw">Ève accepte ou refuse ce que le moteur propose</span>, avec de
+              <span className="iv-kw">Ève décide et dose à partir des calculs du moteur</span>, avec de
               l’argent fictif.
             </p>
             <Link to="/login" className="iv-btn iv-btn--primary lp-btn-lg">
