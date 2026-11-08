@@ -4,6 +4,10 @@ Jev judges five independent checks; **code** converges pass/reject.
 Fail-closed for paper: if JEV is unavailable or malformed → reject directional
 (HOLD/ABSTAIN), never fail-open live.
 
+Only a confident ``block`` or a confident signal/regime conflict rejects (2026-11-08). "caution" and "insufficient"
+never justified a block by their own definition: they reduce the size (``eve.engagement``), like a low-confidence
+``block``. The former rule rejected any answer under 0.55, and ``execution_quality`` never rose above 0.17.
+
 Does NOT replace Risk Kernel. Guardian remains advisory; this gate only blocks
 Eve potential LONG/SHORT (and paper execute) when rules say reject.
 """
@@ -141,19 +145,6 @@ def converge_entry_gate(
             "provider": "rules",
         }
 
-    # Soft confidence gate on risk/execution (QD behaviour).
-    for name in ("risk_check", "execution_quality"):
-        conf = results[name][2]
-        if conf is None or conf < min_confidence:
-            return {
-                "allowed": False,
-                "decision": "reject",
-                "reason": f"gate_low_confidence:{name}",
-                "checks": checks,
-                "confidence": conf,
-                "provider": "rules",
-            }
-
     risk_choice, _, risk_conf = results["risk_check"]
     exec_choice, _, exec_conf = results["execution_quality"]
     signal_choice, _, signal_conf = results["signal_alignment"]
@@ -165,19 +156,17 @@ def converge_entry_gate(
         and float(signal_conf or 0) >= min_confidence
         and float(regime_conf or 0) >= min_confidence
     )
-    allowed = (
-        risk_choice != "block"
-        and exec_choice != "block"
-        and not directional_block
-    )
+    risk_block = risk_choice == "block" and float(risk_conf or 0) >= min_confidence
+    exec_block = exec_choice == "block" and float(exec_conf or 0) >= min_confidence
+    allowed = not risk_block and not exec_block and not directional_block
 
     if allowed:
         reason = "gate_entry_approved"
         confidence = min(float(risk_conf or 0), float(exec_conf or 0))
-    elif risk_choice == "block":
+    elif risk_block:
         reason = "gate_entry_rejected:risk_block"
         confidence = risk_conf
-    elif exec_choice == "block":
+    elif exec_block:
         reason = "gate_entry_rejected:execution_block"
         confidence = exec_conf
     elif directional_block:

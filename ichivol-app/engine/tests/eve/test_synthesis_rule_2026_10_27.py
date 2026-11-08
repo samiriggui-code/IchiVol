@@ -64,18 +64,18 @@ def test_rule1_guardian_critical_abstains(guardian) -> None:
     assert out["rationale"].startswith("Règle 1")
 
 
-def test_rule2_fragility_abstains_even_when_challenger_abstains() -> None:
+def test_fragility_no_longer_abstains_it_is_passed_to_the_sizing() -> None:
     out = _synth(_analyst("SHORT"), _challenger("ABSTAIN", fragile=0.7), _guardian())
-    assert out["action"] == "ABSTAIN"
-    assert out["decision_rule"] == "challenger_fragile"
-    assert "directional_despite_fragility" in out["rejected_scenarios"]
+    assert out["action"] == "SHORT"
+    assert out["decision_rule"] == "analyst"
+    assert out["fragile"] == 0.7
 
 
 def test_rule4_challenger_abstain_is_not_a_refusal_analyst_short_wins() -> None:
     out = _synth(_analyst("SHORT"), _challenger("ABSTAIN"), _guardian())
     assert out["action"] == "SHORT"
     assert out["decision_rule"] == "analyst"
-    assert out["rationale"].startswith("Règle 4")
+    assert out["rationale"].startswith("Règle 3")
 
 
 def test_rule4_challenger_hold_or_silent_follows_analyst() -> None:

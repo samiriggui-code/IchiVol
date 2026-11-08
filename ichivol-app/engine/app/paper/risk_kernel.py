@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
 from app.paper.gates import GATE_KEYS, has_gates
+from app.paper.margin import buying_power
 from app.paper.risk import SizedOrder, size_position
 from app.paper.strategy_profiles import short_allowed
 
@@ -38,6 +39,9 @@ class OpenPlan:
     manual_notional: float | None = None
     take_profit_r: float | None = None
     data_quality_gate: str | None = None  # pass|watch|fail — codes only, never rejects
+    # Ève's engagement (app/eve/engagement.py): replaces the profile's risk and lot cap for this order only.
+    risk_pct: float | None = None
+    max_notional_pct: float | None = None
 
 
 @dataclass(frozen=True)
@@ -119,8 +123,10 @@ def evaluate_entry_codes(
             return "signal_already_processed"
     if len(opens) >= int(p.get("max_open_positions", 5)):
         return "max_positions"
-    risk_pct = float(p.get("risk_pct", 0.01))
-    max_notional_pct = float(p.get("max_notional_pct", 0.25))
+    risk_pct = float(plan.risk_pct if plan.risk_pct is not None else p.get("risk_pct", 0.01))
+    max_notional_pct = float(
+        plan.max_notional_pct if plan.max_notional_pct is not None else p.get("max_notional_pct", 0.25)
+    )
     equity = state.equity
     price = plan.price
     est_qty = min(equity * risk_pct / stop_distance, equity * max_notional_pct / price)
@@ -130,7 +136,8 @@ def evaluate_entry_codes(
             return "open_risk_cap"
     if p.get("max_symbol_notional_pct"):
         cur = sum(float(o.notional or 0.0) for o in opens if o.symbol == plan.symbol)
-        if cur + est_qty * price > equity * float(p["max_symbol_notional_pct"]) + 1e-9:
+        symbol_cap = max(float(p["max_symbol_notional_pct"]), float(plan.max_notional_pct or 0.0))
+        if cur + est_qty * price > equity * symbol_cap + 1e-9:
             return "symbol_exposure_cap"
     if p.get("daily_loss_limit_pct"):
         start = state.day_start_equity
@@ -187,15 +194,24 @@ def evaluate(
             if plan.take_profit_r is not None
             else float(profile.get("take_profit_r", 2.0))
         )
+        spendable = buying_power(
+            profile,
+            plan.symbol,
+            cash=portfolio_state.cash,
+            equity=portfolio_state.equity,
+            open_lots=portfolio_state.open_positions,
+        )
         sized = size_position(
             equity=portfolio_state.equity,
-            cash=portfolio_state.cash,
+            cash=spendable,
             direction=plan.direction,
             entry_price=plan.price,
             stop_distance=float(plan.stop_distance),
-            risk_pct=float(profile.get("risk_pct", 0.01)),
+            risk_pct=float(plan.risk_pct if plan.risk_pct is not None else profile.get("risk_pct", 0.01)),
             take_profit_r=take_r,
-            max_notional_pct=float(profile.get("max_notional_pct", 0.25)),
+            max_notional_pct=float(
+                plan.max_notional_pct if plan.max_notional_pct is not None else profile.get("max_notional_pct", 0.25)
+            ),
             commission_bps=market_state.commission_bps,
             spread_bps=market_state.spread_bps,
             slippage_bps=market_state.slippage_bps,
@@ -208,9 +224,9 @@ def evaluate(
             if len(opens) >= int(profile.get("max_open_positions", 5)):
                 return _reject("max_positions", *info)
             return _reject("insufficient_cash_or_size", *info)
-        # Fee + notional vs cash (same as broker.open_capital_position)
+        # Fee + notional vs buying power (same as broker.open_capital_position)
         fee = sized.notional * (market_state.commission_bps / 10_000.0)
-        if sized.notional + fee > portfolio_state.cash + 1e-9:
+        if sized.notional + fee > spendable + 1e-9:
             return _reject("insufficient_cash_or_size", *info)
 
     return _accept(sized, *info)
@@ -222,7 +238,9 @@ def market_state_from_profile(profile: Mapping[str, Any] | None, symbol: str = "
     slip = float(p.get("slippage_bps", 3.0))
     by_sym = p.get("friction_bps_by_symbol") or {}
     if isinstance(by_sym, Mapping) and symbol and symbol.upper() in by_sym:
+        # Same as broker._friction: the table is the combined per-side friction.
         spread = float(by_sym[symbol.upper()])
+        slip = 0.0
     commission = float(p.get("commission_bps", 5.0))
     by_c = p.get("commission_bps_by_symbol") or {}
     if isinstance(by_c, Mapping) and symbol and symbol.upper() in by_c:

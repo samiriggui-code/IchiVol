@@ -14,17 +14,19 @@ from sqlalchemy.orm import Session
 from app.eve.actions import normalize_action
 from app.eve.calibration import active_policy
 from app.eve.coherence import compute_coherence
-from app.eve.context import build_engine_context
+from app.eve.context import build_engine_context, jev_state_for
 from app.eve.degradation import (
     apply_degradation,
     assess_degradation,
     extract_probabilities,
 )
 from app.eve.dossier import persist_dossier
+from app.eve.engagement import decide_engagement, plan_for_candidate, plan_for_jev
 from app.eve.entry_gate import run_entry_gate
 from app.eve.heuristic import heuristic_badge
 from app.eve.signal_rules import apply_signal_rules
 from app.eve.modes import (
+    audit_verdict,
     run_analyst,
     run_challenger,
     run_guardian,
@@ -44,15 +46,23 @@ def evaluate_opportunity(
     use_jev: bool | None = None,
     policy_override: dict[str, Any] | None = None,
     paper_dry_run: bool = True,
+    candidate: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run Eve Intelligence evaluation. Never places orders.
 
     When ``persist`` and ``paper_dry_run``, runs Risk Kernel dry-run via
     ``paper_submit`` (autonomy still gates any real open — default off).
+
+    ``candidate`` (autopilot): the engine's opportunity. Its calculations go to JEV and Ève, whose verdict then
+    carries the ``engagement``: enter or not, and how much (``eve.engagement``).
     """
     policy = active_policy(policy_override)
     routing = policy.get("routing") or {}
     context = build_engine_context(symbol, timeframe)
+    trade_plan = plan_for_candidate(session, candidate) if candidate and session is not None else None
+    if trade_plan is not None:
+        context["trade_plan"] = trade_plan
+        context["jev_state"] = {**jev_state_for(context), "plan": plan_for_jev(trade_plan)}
 
     dq = float(context.get("data_quality") or 0)
     skip_floor = float(routing.get("skip_jev_if_data_quality_below") or 0)
@@ -174,6 +184,43 @@ def evaluate_opportunity(
         "rule": signal_rules.get("rule"),
     }
 
+    # The engine's calculations meet JEV's measure: Ève engages, or abstains for a reason that is a number.
+    profile_engagement = None
+    if trade_plan is not None and candidate and session is not None:
+        from app.paper.portfolio import get_portfolio_by_code
+
+        book = get_portfolio_by_code(session, str(candidate.get("portfolio_code") or ""))
+        profile_engagement = ((book.strategy_profile or {}) if book is not None else {}).get("engagement")
+    action_now = str(synthesis.get("action") or "")
+    engagement = decide_engagement(
+        action_now,
+        trade_plan,
+        target_answers=(analyst.get("jev") or {}).get("answers") if (analyst.get("jev") or {}).get("ok") else None,
+        fragile=synthesis.get("fragile"),
+        gate=entry_gate,
+        audit=audit_verdict(shadow, action_now) if action_now in ("LONG", "SHORT") else None,
+        degradation_level=str(degradation.get("level") or ""),
+        settings=profile_engagement,
+    )
+    if engagement is not None:
+        synthesis["engagement"] = engagement
+        if not engagement["enter"]:
+            reason = str(engagement.get("reason"))
+            rejected = list(synthesis.get("rejected_scenarios") or [])
+            rejected.append(f"engagement:{reason}")
+            synthesis["rejected_scenarios"] = rejected
+            synthesis["action"] = "ABSTAIN"
+            synthesis["decision_rule"] = f"engagement_{reason}"
+            synthesis["rationale"] = (
+                f"Engagement refusé ({reason}) : probabilité JEV {engagement.get('p_win', 'absente')} "
+                f"pour un seuil de {engagement['p_min']} (coûts {engagement['cost_r']} R)"
+            )
+        else:
+            synthesis["rationale"] = (
+                f"{synthesis.get('rationale') or ''} · JEV {engagement['p_win']} contre seuil {engagement['p_min']} "
+                f"→ risque {engagement['risk_pct'] * 100:.2f} % du capital"
+            ).strip(" ·")
+
     analyst_agrees = None
     primary = (analyst.get("hypotheses") or {}).get("primary_action")
     if baseline_action and primary:
@@ -243,6 +290,7 @@ def evaluate_opportunity(
         "known_at": context.get("known_at"),
         "includes_future_outcome": False,
         "degradation": degradation,
+        "engagement": engagement,
         "heuristic": badge,
         "entry_gate": {
             "decision": entry_gate.get("decision"),
@@ -283,6 +331,7 @@ def evaluate_opportunity(
     verdict["degradation"] = degradation
     verdict["heuristic"] = badge
     verdict["entry_gate"] = synthesis.get("entry_gate")
+    verdict["engagement"] = engagement
     if degradation.get("level") != "healthy":
         verdict["note"] = (
             f"Potential ({degradation.get('level')}) — "

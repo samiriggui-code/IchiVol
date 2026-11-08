@@ -16,11 +16,18 @@ from sqlalchemy.orm import Session
 
 from app.db.models import PaperJournalEvent, PaperPortfolio, ShadowPosition
 from app.paper.risk import apply_entry_friction, apply_exit_friction
+from app.paper.risk_kernel import market_state_from_profile
 from app.paper.strategy_profiles import BASELINE_PROFILE
 
 
 def _profile(portfolio: PaperPortfolio) -> dict[str, Any]:
     return portfolio.strategy_profile or dict(BASELINE_PROFILE)
+
+
+def _side_costs(profile: dict[str, Any], symbol: str) -> tuple[float, float]:
+    """(spread + commission, slippage) in bps per side, per symbol: the costs of the real book it is compared with."""
+    market = market_state_from_profile(profile, symbol)
+    return market.spread_bps + market.commission_bps, market.slippage_bps
 
 
 def _direction_for(raw_decision: str) -> str | None:
@@ -55,8 +62,7 @@ def open_shadow(
         stop_dist = price * 0.01
     risk_pct = float(profile.get("risk_pct", 0.01))
     tp_r = float(profile.get("take_profit_r", 2.0))
-    spread = float(profile.get("spread_bps", 2.0))
-    slip = float(profile.get("slippage_bps", 3.0))
+    spread, slip = _side_costs(profile, symbol)
 
     # Dedup: one OPEN shadow per portfolio/symbol/tf
     existing = session.execute(
@@ -163,8 +169,8 @@ def mark_shadows(
         if hit is None:
             continue
 
-        profile_spread = 2.0
-        profile_slip = 3.0
+        book = session.get(PaperPortfolio, sh.portfolio_id)
+        profile_spread, profile_slip = _side_costs(_profile(book) if book is not None else {}, sh.symbol)
         fill = apply_exit_friction(
             exit_px, direction=sh.direction, spread_bps=profile_spread, slippage_bps=profile_slip
         )

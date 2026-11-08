@@ -676,5 +676,7 @@ def test_auto_sync_in_eve_mode_collects_proposals_instead_of_acting(monkeypatch)
     assert proposals == [{
         "action": "OPEN", "direction": "LONG", "portfolio_code": "BASE", "symbol": "PAPERTEST_EVE",
         "timeframe": TIMEFRAME, "price": 100.0, "stop_distance": STOP, "engine_decision": "BUY",
-        "signal_bar_close": 1_800_000_000,
+        "signal_bar_close": 1_800_000_000, "engine_signal": True, "rvol": None, "trend": {"long": 0, "short": 0},
+        "regime": [], "score": proposals[0]["score"],
     }]
+    assert proposals[0]["score"] >= 100.0

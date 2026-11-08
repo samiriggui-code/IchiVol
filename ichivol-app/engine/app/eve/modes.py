@@ -36,7 +36,20 @@ def _values_by_engine(context: dict[str, Any], engine: str) -> list[dict[str, An
     return list((context.get("engines") or {}).get(engine) or [])
 
 
-def _analyst_questions(primitives: Iterable[str]) -> dict[str, Any]:
+def _target_questions() -> dict[str, Any]:
+    """NOUL: JEV's measure of the trade itself, for both sides, against the engine's own stop and target."""
+    template = (
+        "If a {side} were opened now with the stop and target in plan (stop_pct {stop_side} entry, target_pct "
+        "{target_side} entry), will price reach the target before the stop? Estimate the probability from the "
+        "supplied trend, momentum and volume evidence."
+    )
+    return {
+        "long_target": noul_question(template.format(side="LONG", stop_side="below", target_side="above")),
+        "short_target": noul_question(template.format(side="SHORT", stop_side="above", target_side="below")),
+    }
+
+
+def _analyst_questions(primitives: Iterable[str], *, with_plan: bool = False) -> dict[str, Any]:
     q: dict[str, Any] = {}
     for p in primitives:
         if p == "score":
@@ -64,6 +77,8 @@ def _analyst_questions(primitives: Iterable[str]) -> dict[str, Any]:
             q["setup_valid"] = noul_question(
                 "Is there a valid actionable setup in the supplied engine facts?"
             )
+            if with_plan:
+                q.update(_target_questions())
     return q
 
 
@@ -182,7 +197,7 @@ def run_analyst(
     prims = _norm_primitives(primitives, "analyst")
     jev = None
     if use_jev and prims:
-        questions = _analyst_questions(prims)
+        questions = _analyst_questions(prims, with_plan=bool(context.get("trade_plan")))
         if questions:
             jev = jev_evaluate(
                 jev_state_for(context, engines=engines_used, mode="analyst"),
@@ -474,17 +489,16 @@ def synthesize_action(
 ) -> dict[str, Any]:
     """Eve strategic synthesis — potential action only.
 
-    Règle (2026-10-27, validée par le propriétaire), dans l'ordre ; la règle qui tranche est rendue dans
-    ``decision_rule`` et dite dans ``rationale`` :
+    Règle (2026-11-08, validée par le propriétaire), dans l'ordre ; la règle qui tranche est rendue dans
+    ``decision_rule`` et dite dans ``rationale``. La fragilité vue par le Challenger (``fragile``) ne bloque plus :
+    elle réduit la taille (``eve.engagement``).
 
     1. ``guardian_critical`` — alerte critique du Guardian (dont JEV ``risk_stance`` BLOCK, ``risk_level`` >= 4,
        ``risk_ok`` < 0,25) → ABSTAIN ;
-    2. ``challenger_fragile`` — le Challenger juge la proposition fragile (``baseline_fragile`` NOUL >= 0,7)
-       → ABSTAIN ;
-    3. ``challenger_contradiction`` — le Challenger propose une direction (LONG / SHORT / CLOSE) DIFFÉRENTE de
+    2. ``challenger_contradiction`` — le Challenger propose une direction (LONG / SHORT / CLOSE) DIFFÉRENTE de
        celle de l'Analyste → on suit le Challenger. Un Challenger qui répond ABSTAIN / HOLD ou rien veut dire
-       « pas de meilleure alternative », ce n'est PAS un refus : on passe à la règle 4 ;
-    4. ``analyst`` — action de l'Analyste (``hypotheses.primary_action``, nourrie par JEV ``primary_scenario``),
+       « pas de meilleure alternative », ce n'est PAS un refus : on passe à la règle 3 ;
+    3. ``analyst`` — action de l'Analyste (``hypotheses.primary_action``, nourrie par JEV ``primary_scenario``),
        ou ``no_answer`` → ABSTAIN si elle est absente ou invalide.
 
     Avant ce changement, le choix du Challenger passait en premier : son ABSTAIN (172 dossiers sur 174 du 17 au
@@ -526,16 +540,11 @@ def synthesize_action(
         decision_rule = "guardian_critical"
         rationale = "Règle 1 — alerte critique du Guardian → abstention"
         rejected.append("any_risk_taking")
-    elif isinstance(fragile, (int, float)) and fragile >= 0.7:
-        action = "ABSTAIN"
-        decision_rule = "challenger_fragile"
-        rationale = f"Règle 2 — le Challenger juge la proposition fragile ({fragile:.2f} ≥ 0,70) → abstention"
-        rejected.append("directional_despite_fragility")
     elif challenger_action in ("LONG", "SHORT", "CLOSE") and challenger_action != analyst_action:
         action = challenger_action  # type: ignore[assignment]
         decision_rule = "challenger_contradiction"
         rationale = (
-            f"Règle 3 — le Challenger contredit l'Analyste ({analyst_action or 'aucune'}) "
+            f"Règle 2 — le Challenger contredit l'Analyste ({analyst_action or 'aucune'}) "
             f"et propose {challenger_action} → on suit le Challenger"
         )
     elif analyst_action is not None:
@@ -543,13 +552,13 @@ def synthesize_action(
         decision_rule = "analyst"
         ch_txt = challenger_action or "aucune réponse"
         rationale = (
-            f"Règle 4 — action de l'Analyste ({analyst_action}) ; le Challenger "
+            f"Règle 3 — action de l'Analyste ({analyst_action}) ; le Challenger "
             f"({ch_txt}) ne propose pas d'autre direction"
         )
     else:
         action = "ABSTAIN"
         decision_rule = "no_answer"
-        rationale = "Règle 4 — aucune action valide de l'Analyste → abstention"
+        rationale = "Règle 3 — aucune action valide de l'Analyste → abstention"
     if not critical and baseline_action and action != baseline_action:
         rejected.append(f"baseline:{baseline_action}")
 
@@ -594,15 +603,17 @@ def synthesize_action(
         "shadow_noul": shadow_noul if isinstance(shadow_noul, (int, float)) else None,
         "shadow_choice": shadow_choice,
         "shadow_score": shadow_score if isinstance(shadow_score, (int, float)) else None,
+        "fragile": fragile if isinstance(fragile, (int, float)) else None,
     }
 
 
 def audit_verdict(shadow: dict[str, Any], proposed: str, *, position_direction: str | None = None) -> dict[str, Any]:
-    """Independent audit (Shadow mode) arbitrating a trade the engine and Ève agree on: ``allow`` or ``block``.
+    """Independent audit (Shadow mode) on a trade Ève wants: ``allow`` or ``block``.
 
-    Same thresholds as the synthesis: SCORE ≤ 1 (Reject/Weak), a different CHOICE, or NOUL < 0.35 block an open.
-    A close is blocked only when the audit explicitly says to keep the position. No audit answer → ``allow``
-    (the agreement stands)."""
+    An open is blocked only when the audit picks the opposite direction. SCORE ≤ 1 (Reject/Weak) or NOUL < 0.35
+    halve the size, an undecided CHOICE (HOLD / ABSTAIN / CLOSE) takes a quarter off (``size_factor``, read by
+    ``eve.engagement``). A close is blocked only when the audit explicitly says to keep the position. No audit
+    answer → ``allow``."""
     answers = _shadow_answers(shadow)
     noul = (answers.get("review") or {}).get("noul")
     choice = normalize_action((answers.get("independent_action") or {}).get("choice"))
@@ -613,15 +624,18 @@ def audit_verdict(shadow: dict[str, Any], proposed: str, *, position_direction: 
         "choice": choice,
         "score": score if isinstance(score, (int, float)) else None,
         "noul": noul if isinstance(noul, (int, float)) else None,
+        "size_factor": 1.0,
     }
     if proposed == "CLOSE":
         if choice is not None and (choice == "HOLD" or choice == position_direction):
             out.update(verdict="block", reason=f"choice:{choice}")
         return out
-    if isinstance(score, (int, float)) and score <= 1:
-        out.update(verdict="block", reason="low_score")
-    elif choice is not None and choice != proposed:
+    if choice in ("LONG", "SHORT") and choice != proposed:
         out.update(verdict="block", reason=f"choice:{choice}")
+    elif isinstance(score, (int, float)) and score <= 1:
+        out.update(reason="low_score", size_factor=0.5)
     elif isinstance(noul, (int, float)) and noul < 0.35:
-        out.update(verdict="block", reason="low_noul")
+        out.update(reason="low_noul", size_factor=0.5)
+    elif choice is not None and choice != proposed:
+        out.update(reason=f"choice:{choice}", size_factor=0.75)
     return out

@@ -49,12 +49,19 @@ def test_converge_signal_conflict_adverse() -> None:
     assert out["reason"] == "gate_entry_rejected:signal_conflict"
 
 
-def test_converge_low_confidence_on_risk() -> None:
-    ans = _answers()
+def test_converge_low_confidence_never_rejects() -> None:
+    ans = _answers(risk_check="insufficient", execution_quality="caution")
     ans["risk_check"]["confidence"] = 0.2
+    ans["execution_quality"]["confidence"] = 0.12
     out = converge_entry_gate(ans, min_confidence=0.55)
-    assert out["allowed"] is False
-    assert out["reason"] == "gate_low_confidence:risk_check"
+    assert out["allowed"] is True
+    assert out["decision"] == "pass"
+
+
+def test_converge_low_confidence_block_is_not_a_block() -> None:
+    ans = _answers(execution_quality="block")
+    ans["execution_quality"]["confidence"] = 0.3
+    assert converge_entry_gate(ans, min_confidence=0.55)["allowed"] is True
 
 
 def test_converge_malformed() -> None:
