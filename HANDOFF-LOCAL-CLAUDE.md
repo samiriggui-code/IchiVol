@@ -7,7 +7,7 @@
 ## ▶ À VOIR EN PREMIER — lundi 2026-11-09 : Ève trade-t-elle marchés ouverts ?
 
 Depuis le 08/11, **Ève décide, le moteur calcule** (doc : [`docs/EVE-DECIDE-MOTEUR-CALCULE-2026-11-08.md`](docs/EVE-DECIDE-MOTEUR-CALCULE-2026-11-08.md)).
-En production sur le VPS, branche `eve-decide-moteur-calcule` (**pas encore fusionnée dans `main`**).
+En production sur le VPS, fusionné dans `main` le 08/11 **sans revue CodeRabbit** (décision du propriétaire).
 
 **Question ouverte.** Le soir du déploiement (dimanche), Ève n'a pris aucun trade : le Gardien (réponses JEV
 `risk_stance` BLOCK / `risk_ok` < 0,25) a bloqué tous les premiers dossiers. C'étaient des candidats de week-end
@@ -27,11 +27,10 @@ veto **venant de JEV** en réduction de taille (`eve/modes.py`, `synthesize_acti
 `guardian_jev_noul_low` ; passer l'info à `eve/engagement.py`). Les vraies alertes critiques (kill switch) restent un veto.
 
 **Autres points ouverts, dans l'ordre :**
-1. **Revue CodeRabbit à faire** : le 08/11 elle a échoué à l'authentification, aucun résultat. Le propriétaire doit lancer
-   `! /home/jarvis/.local/bin/coderabbit auth login`, puis `coderabbit review --agent --base main`, corriger, redéployer.
-2. Fusionner `eve-decide-moteur-calcule` dans `main` après la revue (le VPS est sur la branche).
-3. Conteneur `ichivol-engine` lancé en root (existait déjà) : à corriger.
-4. Calibrer JEV : rejeu du 08/11 sur 40 décisions, sa probabilité ne prédit rien (0,49 sur les perdants, 0,45 sur les
+1. **Revue CodeRabbit à faire après coup** : le 08/11 elle a échoué deux fois à l'authentification, aucun résultat. Le
+   propriétaire doit lancer `! /home/jarvis/.local/bin/coderabbit auth login`, puis revue de `51ba4ed..main`, corriger, redéployer.
+2. Conteneur `ichivol-engine` lancé en root (existait déjà) : à corriger.
+3. Calibrer JEV : rejeu du 08/11 sur 40 décisions, sa probabilité ne prédit rien (0,49 sur les perdants, 0,45 sur les
    gagnants). Ne pas élargir risque ni levier avant quelques centaines de décisions (`decision_time.jev_probabilities`).
 
 **Fait le 08/11 :** port 3060 limité au VPS (public en HTTPS via Traefik) ; arrêt journalier −3 % calculé sur l'équité à
