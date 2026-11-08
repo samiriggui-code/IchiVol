@@ -140,3 +140,17 @@ def test_open_risk_cap_still_holds_with_large_engagements(session, book) -> None
         if pos is not None:
             opened.append(pos)
     assert len(opened) == 4  # 4 × 1 % = plafond de risque ouvert de 4 %
+
+
+@db
+def test_latent_loss_of_a_leveraged_lot_trips_the_daily_lock(session, book) -> None:
+    position, _ = _open(session, book, "EURUSD", 0.0015, 1.0, risk_pct=0.01, max_notional_pct=3.0)
+    session.commit()
+    assert position is not None
+    paper.snapshot_and_guard(session, book, {"EURUSD:1h": 0.999})
+    assert book.daily_loss_locked is False
+    # -1,5 % sur 150 000 € de position : -4,5 % du capital, sans aucune clôture.
+    paper.snapshot_and_guard(session, book, {"EURUSD:1h": 0.985})
+    session.commit()
+    assert book.daily_loss_locked is True
+    assert position.status == "OPEN"

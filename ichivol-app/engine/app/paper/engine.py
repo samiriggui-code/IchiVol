@@ -539,6 +539,16 @@ def engine_proposal(
     return {"action": "CLOSE", "position_id": existing.id, "reason": reason}
 
 
+def snapshot_and_guard(session: Session, portfolio: PaperPortfolio, marks: dict[str, float]) -> None:
+    """Equity point at market, and the daily loss lock on that same value: a leveraged lot in loss counts before it
+    closes. Latches like any daily lock: entries stop until a human reopens, open lots keep their stops."""
+    from app.paper import kill_switch as paper_kill
+
+    snap = paper_broker.snapshot_equity(session, portfolio, marks=marks)
+    if snap is not None:
+        paper_kill.maybe_trip_daily_loss_lock(session, portfolio, float(snap.equity))
+
+
 def eve_candidate(
     session: Session,
     *,
@@ -874,7 +884,7 @@ def sync_auto_watchlist(
     shadow_broker.mark_shadows(session, marks=marks)
 
     for portfolio in portfolios:
-        paper_broker.snapshot_equity(session, portfolio, marks=marks)
+        snapshot_and_guard(session, portfolio, marks)
     session.commit()
     return touched
 

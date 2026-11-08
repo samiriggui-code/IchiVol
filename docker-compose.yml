@@ -2,7 +2,7 @@
 # Deploy: clone repo to /opt/ichivol then:
 #   docker compose --env-file deploy/vps/.env up -d --build
 # FQDN: https://ichivol.global-it-ss.com
-# Smoke: http://187.77.166.124:3060
+# Smoke (depuis le VPS) : http://127.0.0.1:3060
 name: ichivol
 
 services:
@@ -163,7 +163,8 @@ services:
     depends_on:
       - server
     ports:
-      - '3060:80'
+      # Local au VPS uniquement : le public passe par Traefik en HTTPS (le réseau Docker, pas ce port).
+      - '127.0.0.1:3060:80'
     networks:
       - ichivol
     labels:

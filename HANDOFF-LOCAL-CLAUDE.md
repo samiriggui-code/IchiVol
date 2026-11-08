@@ -4,7 +4,41 @@
 
 **Sync local :** 2026-09-28 journée · `main` @ **`ba693f1`** (+ ce commit handoff) · ancien : 2026-09-28 nuit.
 
-## ▶ REPRISE — 2026-10-27 : PORTEFEUILLE UNIQUE (commencer ici)
+## ▶ À VOIR EN PREMIER — lundi 2026-11-09 : Ève trade-t-elle marchés ouverts ?
+
+Depuis le 08/11, **Ève décide, le moteur calcule** (doc : [`docs/EVE-DECIDE-MOTEUR-CALCULE-2026-11-08.md`](docs/EVE-DECIDE-MOTEUR-CALCULE-2026-11-08.md)).
+En production sur le VPS, branche `eve-decide-moteur-calcule` (**pas encore fusionnée dans `main`**).
+
+**Question ouverte.** Le soir du déploiement (dimanche), Ève n'a pris aucun trade : le Gardien (réponses JEV
+`risk_stance` BLOCK / `risk_ok` < 0,25) a bloqué tous les premiers dossiers. C'étaient des candidats de week-end
+médiocres (`regime_dead`, volume faible), donc cohérent, mais à vérifier marchés ouverts.
+
+**Contrôle (lecture seule) :**
+
+```bash
+ssh vps 'docker exec ichivol-postgres sh -c "psql -U \${POSTGRES_USER:-postgres} -d ichivol_engine"' <<'SQL'
+select created_at::date d, eve_action, modes_json->'synthesis'->>'decision_rule' rule, count(*)
+from eve_dossiers where created_at > '2026-11-08 19:50+00' group by 1,2,3 order by 1,4 desc;
+SQL
+```
+
+**Décision à prendre :** si `guardian_critical` bloque encore la plupart des opportunités en semaine, transformer le
+veto **venant de JEV** en réduction de taille (`eve/modes.py`, `synthesize_action` : `guardian_jev_block` et
+`guardian_jev_noul_low` ; passer l'info à `eve/engagement.py`). Les vraies alertes critiques (kill switch) restent un veto.
+
+**Autres points ouverts, dans l'ordre :**
+1. **Revue CodeRabbit à faire** : le 08/11 elle a échoué à l'authentification, aucun résultat. Le propriétaire doit lancer
+   `! /home/jarvis/.local/bin/coderabbit auth login`, puis `coderabbit review --agent --base main`, corriger, redéployer.
+2. Fusionner `eve-decide-moteur-calcule` dans `main` après la revue (le VPS est sur la branche).
+3. Conteneur `ichivol-engine` lancé en root (existait déjà) : à corriger.
+4. Calibrer JEV : rejeu du 08/11 sur 40 décisions, sa probabilité ne prédit rien (0,49 sur les perdants, 0,45 sur les
+   gagnants). Ne pas élargir risque ni levier avant quelques centaines de décisions (`decision_time.jev_probabilities`).
+
+**Fait le 08/11 :** port 3060 limité au VPS (public en HTTPS via Traefik) ; arrêt journalier −3 % calculé sur l'équité à
+la valeur de marché (`paper/engine.py:snapshot_and_guard`). **Attention :** ce verrou ne se lève qu'à la main.
+Sauvegarde avant bascule : `/root/ichivol-backups/2026-11-08_avant_eve_decide.dump` sur le VPS.
+
+## Reprise précédente — 2026-10-27 : PORTEFEUILLE UNIQUE
 
 Décision du propriétaire : **un seul portefeuille paper, `ICHIVOL_MAIN_V1`, 50 000 € virtuels**, qui trade tout
 l'univers que le moteur sait trader ; les 8 anciens comptes sont retirés du code et seront supprimés en base.
