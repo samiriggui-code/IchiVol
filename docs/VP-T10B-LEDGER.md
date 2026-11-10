@@ -339,3 +339,22 @@ Adverse sur les mêmes hyps = pas +1
 
 Validation 2025 · holdout 2026 · variantes de paramètres · paper live.  
 
+
+## 2026-11-10 — BR : entrée sur repli (Kijun)
+
+Pré-enregistrement : [`REPLI-KIJUN-PREENREGISTREMENT-2026-11-10.md`](REPLI-KIJUN-PREENREGISTREMENT-2026-11-10.md).
+Pause VP levée par le propriétaire pour ce seul test ; développement uniquement (jusqu'au 2024-12-31).
+
+| B* | Nom | Règle |
+|----|-----|-------|
+| **BR** | Repli Kijun | LONG : `price_above_kumo`, `tenkan_above_kijun`, `kijun_bounce`, `rvol_max` 2,5 ; entrée à l'ouverture suivante ; stop 1,5 ATR, objectif 3 ATR |
+
+| # | hypothesis_id | B* | symbole | TF | coûts | statut | compte |
+|---|----------------|----|---------|----|-------|--------|--------|
+| 49 | `BR-BTCUSDT-1h-base` | BR | BTCUSDT | 1h | base | proposé | **+1** |
+| 50 | `BR-ETHUSDT-1h-base` | BR | ETHUSDT | 1h | base | proposé | **+1** |
+| 51 | `BR-SOLUSDT-1h-base` | BR | SOLUSDT | 1h | base | proposé | **+1** |
+
+```
+N = 48 + 3 (BR × 3 symboles × 1h) = 51
+```
