@@ -1,7 +1,6 @@
 # Entrée sur repli (Kijun) : pré-enregistrement (2026-11-10)
 
-**Statut : proposé. Aucun run lancé, aucun résultat regardé.** À committer avant tout run (règle VP0).
-Le programme VP est en pause sur décision du propriétaire : ce test demande son accord explicite.
+**Statut : accepté par le propriétaire le 2026-11-10 (pause VP levée pour ce seul test). Aucun résultat regardé à la date de l'amendement.**
 
 ## Pourquoi
 552 signaux BUY/SELL 1h du pipeline actuel (21/09 → 10/11/2026, `signal_evidence`) : 20 % à l'objectif, 66 % au stop,
@@ -40,7 +39,20 @@ Critères du §9 de VP0, inchangés : EDGE, PAS D'EDGE ou NON CONCLUANT, par hyp
 Comparaison appariée avec B7 (entrée actuelle) et B0 (buy & hold). Un seul run. Si PAS D'EDGE : la règle est
 abandonnée, pas de variante de paramètres.
 
+## Amendement du 2026-11-10, avant tout run
+Précisions apportées en branchant la règle dans le harnais `vp3/`, sans avoir vu aucun résultat :
+- **Exécution** : celle du harnais commun VP2 (§6), comme B1 à B8. Stop 1,5 ATR et objectif 2 R comme annoncé, plus
+  le **time-stop de 48 barres**, une seule position, tout le capital. Le compte paper n'a pas de time-stop.
+- **Verdict d'une hypothèse** : critères §9 (1) à (6) sur BR seule (espérance > 0, IC des trades hors 0, DSR ≥ 0,95,
+  ≥ 5 plis positifs sur 7, ≥ 40 trades, maxDD < 35 % par pli). EDGE en base non confirmé en adverse = NON CONCLUANT.
+- **Comparaisons appariées** BR contre B7 et BR contre B0 : rapportées à côté, hors verdict.
+- **DSR** : N = 51 ; σ = écart-type des Sharpe annualisés des 9 séries du run (BR, B7, B0 × 3 symboles), méthode NT1/J1.
+- **Données** : séries VP1 retéléchargées sur cette machine ; le run n'a lieu que si leurs sha256 sont ceux de
+  `VP3-REPORT-FINAL.md`.
+
+Code : `vp3/repli.py`, `vp3/repli_run.py`, tests `tests/vp3/test_repli.py`.
+
 ## Reste à faire avant le run
-1. Accord du propriétaire, commit de ce fichier et du ledger.
-2. Brancher la règle dans le harnais `vp3/` (nouvelle entrée `BR` à côté de B7) avec ses tests.
-3. Run, rapport `docs/REPLI-KIJUN-REPORT.md`.
+1. Commit de l'amendement et du code.
+2. Vérification des sha256, run (`python -m vp3.repli_run docs/repli-artifacts/br_results.json 10000`).
+3. Rapport `docs/REPLI-KIJUN-REPORT.md`.
