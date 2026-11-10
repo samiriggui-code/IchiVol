@@ -5,7 +5,8 @@ Crypto spot: default 0 bps/day. Non-crypto CFD symbols use
 tables in ``strategy_profiles``.
 
 Applied once per position per UTC day via idempotent ledger key
-``financing:{position_id}:{YYYY-MM-DD}``. No retroactive charges before
+``financing:{position_id}:{YYYY-MM-DD}``, from the day after the entry (one charge per
+night held, none for an intraday lot). No retroactive charges before
 ``FINANCING_ACTIVATED_ON`` (inclusive).
 """
 
@@ -102,6 +103,10 @@ def apply_daily_financing(
         # Positive bps = debit (client pays); negative = credit (short receives).
         charge = notional * (bps / 10_000.0)
         if charge == 0:
+            continue
+        if pos.entry_time is not None and pos.entry_time.astimezone(timezone.utc).date() == day:
+            # Opened today: no night held yet. The first charge is tomorrow's (a lot opened at 20:00 and closed
+            # the next afternoon used to pay two nights, an intraday lot one).
             continue
         key = _day_key(pos.id, day)
         existing = session.execute(

@@ -189,7 +189,7 @@ def sync_position(
 ) -> PaperPosition | None:
     """One symbol open/hold/close for one portfolio. Capital sizing when stop set.
 
-    ``open_refusal`` (ex. ``illiquid_24h_volume``) : le lot déjà ouvert reste géré (stop, objectif, signal),
+    ``open_refusal`` (``illiquid_24h_volume``, ``long_suspended``, ``mtf_opposed``) : le lot déjà ouvert reste géré (stop, objectif, signal),
     mais aucune nouvelle ouverture ; le refus est journalisé avec ce code.
 
     ``signal_actions=False`` (outside a profile's ``decision_windows``): stop/target still close a lot, but the
@@ -326,6 +326,7 @@ def sync_position(
                     open_positions=open_lots_from_positions(opens),
                     day_start_equity=paper_gates.day_start_equity(session, portfolio),
                     traded_run_id=traded,
+                    recent_stop_ages=paper_gates.recent_stop_ages(session, portfolio),
                     kill_switch_armed=bool(getattr(portfolio, "kill_switch_armed", False)),
                     daily_loss_locked=bool(getattr(portfolio, "daily_loss_locked", False)),
                 ),
@@ -495,6 +496,22 @@ def liquidity_refusal(profile: dict[str, Any] | None, row: Any) -> str | None:
     if vol is None:
         return None
     return "illiquid_24h_volume" if vol < float(minimum) else None
+
+
+def trend_refusal(profile: dict[str, Any] | None, pipeline: PipelineResult) -> str | None:
+    """``block_mtf_opposed`` : aucune ouverture contre l'horizon supérieur (code ``mtf_opposed`` du pipeline, 4h pour
+    une décision 1h). Sur 552 signaux 1h du 21/09 au 10/11/2026, les 78 qui le portaient : 8 % à l'objectif, 82 % au
+    stop (docs/GARDE-FOUS-2026-11-10.md)."""
+    if not (profile or {}).get("block_mtf_opposed"):
+        return None
+    return "mtf_opposed" if any("mtf_opposed" in s.codes for s in pipeline.stages) else None
+
+
+def long_suspension_refusal(profile: dict[str, Any] | None, symbol: str, pipeline: PipelineResult) -> str | None:
+    """``long_suspended_symbols`` : aucun achat automatique sur ces symboles (ordres manuels non concernés)."""
+    if symbol not in ((profile or {}).get("long_suspended_symbols") or ()):
+        return None
+    return "long_suspended" if getattr(pipeline.direction, "value", str(pipeline.direction)) == "LONG" else None
 
 
 def engine_proposal(
@@ -801,6 +818,10 @@ def sync_auto_watchlist(
             open_refusal = liquidity_refusal(profile, row)
             if open_refusal is not None:
                 extra["quote_volume_24h"] = quote_volume_24h(row)
+            else:
+                open_refusal = long_suspension_refusal(profile, row.symbol, final_pipeline) or trend_refusal(
+                    profile, final_pipeline
+                )
 
             if proposals is not None:
                 proposal = engine_proposal(

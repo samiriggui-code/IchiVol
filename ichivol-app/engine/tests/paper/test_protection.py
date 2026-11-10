@@ -217,6 +217,29 @@ def test_no_data_is_not_declared_safe_and_watermark_does_not_advance(session):
 
 
 @pytest.mark.skipif(not DB, reason="Postgres not reachable")
+def test_non_crypto_lot_is_closed_at_its_stop_by_the_minute_feed_of_its_provider(session, monkeypatch):
+    from app.paper import protection
+
+    pos = _open_sym(session, "EURUSD")  # provider biquote, stop 40 under the entry
+    session.commit()
+    stop = float(pos.stop_price)
+    m1 = int(pos.entry_time.timestamp() * 1000) // M * M + M
+    bars = [kline(m1, 2600, 2601, stop - 60, stop - 55)]  # one minute falls far through the stop
+    monkeypatch.setitem(protection.PROVIDER_FEEDS, "biquote", (lambda sym, a, b: [x for x in bars if a <= x[0] < b], None))
+
+    def binance_must_not_be_asked(*_a):
+        raise AssertionError("EURUSD is not a Binance symbol")
+
+    now = datetime.fromtimestamp((m1 + 2 * M) / 1000, timezone.utc)
+    rep = next(
+        r for r in run_protection_cycle(session, klines_fn=binance_must_not_be_asked, trades_fn=None, now=now)
+        if r["id"] == pos.id
+    )
+    assert rep["status"] == "closed" and rep["breach"]["reason"] == "stop_hit"
+    assert rep["breach"]["price"] == pytest.approx(stop)  # at the stop, not at the bottom of the minute
+
+
+@pytest.mark.skipif(not DB, reason="Postgres not reachable")
 def test_concurrent_close_of_the_same_position_credits_cash_once(session):
     """Regression (review H1): a stale object in another session must not credit cash a second time."""
     from app.db.session import SessionLocal as SL
