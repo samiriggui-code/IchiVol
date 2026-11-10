@@ -230,6 +230,7 @@ def evaluate_risk_kernel_for_plan(
             open_positions=open_lots_from_positions(opens),
             day_start_equity=paper_gates.day_start_equity(session, portfolio),
             traded_run_id=None,
+            recent_stop_ages=paper_gates.recent_stop_ages(session, portfolio),
             kill_switch_armed=bool(getattr(portfolio, "kill_switch_armed", False)),
             daily_loss_locked=bool(getattr(portfolio, "daily_loss_locked", False)),
         ),

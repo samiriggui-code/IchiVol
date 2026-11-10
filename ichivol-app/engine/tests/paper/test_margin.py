@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -85,8 +85,8 @@ def test_leveraged_lot_borrows_then_gives_back_exact_pnl(session, book) -> None:
     position, created = _open(session, book, "EURUSD", 0.0015, 1.0, risk_pct=0.01, max_notional_pct=3.0)
     assert created and position is not None
     session.commit()
-    # 1 % de risque sur un stop de 0,15 % voudrait 6,6× ; le lot est plafonné à 3× l'équité.
-    assert position.notional == pytest.approx(150_000.0, rel=1e-3)
+    # 1 % de risque sur un stop de 0,15 % voudrait 6,6× ; la poche CFD du profil s'arrête à 2× l'équité.
+    assert position.notional == pytest.approx(100_000.0, rel=1e-3)
     assert book.cash < 0
     equity = paper_broker.estimate_equity(session, book)
     assert equity == pytest.approx(50_000.0, abs=1.0)
@@ -133,9 +133,12 @@ def test_profile_amounts_apply_without_an_engagement(session, book) -> None:
 
 @db
 def test_open_risk_cap_still_holds_with_large_engagements(session, book) -> None:
+    # Sans le plafond de paris corrélés (testé à part) : seul le risque ouvert doit arrêter la série.
+    book.strategy_profile = {**book.strategy_profile, "correlation_groups": None}
+    session.commit()
     opened = []
     for i, sym in enumerate(("EURUSD", "GBPUSD", "XAUUSD", "XAGUSD", "SPX", "NDX")):
-        pos, _ = _open(session, book, sym, 1.0, 100.0, risk_pct=0.01, max_notional_pct=3.0)
+        pos, _ = _open(session, book, sym, 5.0, 100.0, risk_pct=0.01, max_notional_pct=3.0)
         session.commit()
         if pos is not None:
             opened.append(pos)
@@ -149,8 +152,43 @@ def test_latent_loss_of_a_leveraged_lot_trips_the_daily_lock(session, book) -> N
     assert position is not None
     paper.snapshot_and_guard(session, book, {"EURUSD:1h": 0.999})
     assert book.daily_loss_locked is False
-    # -1,5 % sur 150 000 € de position : -4,5 % du capital, sans aucune clôture.
-    paper.snapshot_and_guard(session, book, {"EURUSD:1h": 0.985})
+    # -2 % sur 100 000 € de position : -4 % du capital, sans aucune clôture.
+    paper.snapshot_and_guard(session, book, {"EURUSD:1h": 0.98})
     session.commit()
     assert book.daily_loss_locked is True
     assert position.status == "OPEN"
+
+
+@db
+def test_one_dollar_bet_at_a_time_but_a_hedge_is_allowed(session, book) -> None:
+    first, _ = _open(session, book, "EURUSD", 5.0, 100.0, "SHORT")
+    session.commit()
+    assert first is not None
+    # GBPUSD et l'or vendus = la même hausse du dollar que l'EURUSD déjà vendu.
+    for sym in ("GBPUSD", "XAUUSD"):
+        same, created = _open(session, book, sym, 5.0, 100.0, "SHORT")
+        assert same is None and created is False
+    hedge, _ = _open(session, book, "GBPUSD", 5.0, 100.0, "LONG")
+    other, _ = _open(session, book, "WTI", 5.0, 100.0, "SHORT")
+    assert hedge is not None and other is not None
+
+
+@db
+def test_no_reentry_on_a_symbol_just_stopped(session, book) -> None:
+    first, _ = _open(session, book, "WTI", 5.0, 100.0, "SHORT")
+    session.commit()
+    paper_broker.close_capital_position(session, first, price=first.stop_price, reason="stop_hit", signal={})
+    session.commit()
+    for direction in ("SHORT", "LONG"):  # ni ré-entrée, ni retournement
+        again, created = _open(session, book, "WTI", 5.0, 100.0, direction)
+        assert again is None and created is False
+    # Délai écoulé : le symbole redevient ouvrable. Un objectif atteint n'impose aucun délai.
+    first.exit_time = first.exit_time - timedelta(hours=9)
+    session.commit()
+    later, _ = _open(session, book, "WTI", 5.0, 100.0, "SHORT")
+    session.commit()
+    assert later is not None
+    paper_broker.close_capital_position(session, later, price=later.take_profit_price, reason="take_profit_hit", signal={})
+    session.commit()
+    after_win, _ = _open(session, book, "WTI", 5.0, 100.0, "SHORT")
+    assert after_win is not None

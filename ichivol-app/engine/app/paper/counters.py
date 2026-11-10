@@ -37,7 +37,8 @@ REJECT_EVENT = "SIGNAL_REJECTED"
 REJECT_REASONS = (
     "no_atr_stop", "position_already_open", "signal_already_processed", "max_positions", "open_risk_cap",
     "symbol_exposure_cap", "daily_loss_halt", "kill_switch", "insufficient_cash_or_size", "order_not_executed",
-    "short_not_allowed", "stale_data",
+    "short_not_allowed", "stale_data", "reentry_cooldown", "correlated_exposure_cap",
+    "illiquid_24h_volume", "mtf_opposed", "long_suspended",
 )
 
 SEMANTICS = {

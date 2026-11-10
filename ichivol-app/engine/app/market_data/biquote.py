@@ -111,6 +111,27 @@ def fetch_ohlc(provider_symbol: str, timeframe: str, limit: int = 300) -> list[C
     return candles
 
 
+def fetch_minute_rows(provider_symbol: str, start_ms: int, end_ms: int) -> list[list[float]]:
+    """Closed 1m bars opened in ``[start_ms, end_ms)`` as ``[open_ms, open, high, low, close]`` rows, oldest
+    first: the shape ``app/paper/protection.py`` scans. ``1m`` is served (checked 2026-11-10) although the engine
+    never asks it for candles; the server keeps about the last ``_MAX_BARS_PER_CALL`` minutes, so an older window
+    comes back partial or empty. Not cached: the monitor asks once a minute. Prices are MT5 bid."""
+    response = httpx.get(
+        f"{BASE_URL}/{provider_symbol}/ohlc",
+        params={"interval": "1m", "count": _MAX_BARS_PER_CALL},
+        timeout=15.0,
+    )
+    response.raise_for_status()
+    body = response.json()
+    rows = [
+        [_parse_iso(str(bar["openTime"])) * 1000, float(bar["open"]), float(bar["high"]), float(bar["low"]),
+         float(bar["close"])]
+        for bar in (body.get("bars") if isinstance(body, dict) else None) or []
+        if not bar.get("isOpen")
+    ]
+    return sorted(row for row in rows if start_ms <= row[0] < end_ms)
+
+
 class BiquoteProvider:
     id = "biquote"
     volume_type = VOLUME_TYPE

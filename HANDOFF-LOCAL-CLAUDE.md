@@ -4,7 +4,21 @@
 
 **Sync local :** 2026-09-28 journée · `main` @ **`ba693f1`** (+ ce commit handoff) · ancien : 2026-09-28 nuit.
 
-## ▶ À VOIR EN PREMIER — lundi 2026-11-09 : Ève trade-t-elle marchés ouverts ?
+## ▶ À VOIR EN PREMIER — 2026-11-10 : garde-fous prêts, à valider puis déployer
+
+Bilan du 10/11 : 46 trades, −1 408 €, 26 % de gagnants. Réponse à la question du 09/11 : oui, Ève trade marchés
+ouverts (7 signaux du moteur sur 9 suivis) ; les abstentions `guardian_critical` portent presque toutes sur des
+`NO_TRADE` du moteur, le veto n'est donc plus le sujet. Les pertes viennent du signal, des mises grossies par JEV
+et des stops hors crypto exécutés trop tard. Détail et corrections : [`docs/GARDE-FOUS-2026-11-10.md`](docs/GARDE-FOUS-2026-11-10.md).
+
+Branche `garde-fous-exposition-stops` (PR ouverte le 10/11, **non fusionnée, non déployée**) : garde-fous, blocage
+contre le 4h, achats crypto suspendus. Tests moteur : pas de Postgres local actif, en lancer un jetable et fournir
+`DATABASE_URL`. Reste : revue, fusion, déploiement.
+
+Pause VP levée par le propriétaire le 10/11 pour un seul test : l'entrée sur repli,
+[`docs/REPLI-KIJUN-PREENREGISTREMENT-2026-11-10.md`](docs/REPLI-KIJUN-PREENREGISTREMENT-2026-11-10.md) (N T10b = 51).
+
+## Reprise précédente — lundi 2026-11-09 : Ève trade-t-elle marchés ouverts ?
 
 Depuis le 08/11, **Ève décide, le moteur calcule** (doc : [`docs/EVE-DECIDE-MOTEUR-CALCULE-2026-11-08.md`](docs/EVE-DECIDE-MOTEUR-CALCULE-2026-11-08.md)).
 En production sur le VPS, fusionné dans `main` le 08/11 **sans revue CodeRabbit** (décision du propriétaire).

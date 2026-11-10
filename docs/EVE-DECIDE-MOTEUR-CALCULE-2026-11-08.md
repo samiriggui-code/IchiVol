@@ -19,6 +19,8 @@ jamais dépassé 0,17 : on demandait à JEV de juger un stop et un spread qu'il 
 `p_min = (1 + coût_R) / (objectif_R + 1)`. JEV ne reçoit jamais ce seuil.
 
 ## Dosage (profil `engagement`)
+> Resserré le 10/11 (risque fixe 0,25 %, lot CFD 1×, total CFD 2×) : voir [`GARDE-FOUS-2026-11-10.md`](GARDE-FOUS-2026-11-10.md).
+
 Risque de 0,25 % (écart nul) à 1 % (écart ≥ 0,20), multiplié par fragilité, porte d'entrée, audit, confiance JEV, volume
 et tendance des horizons supérieurs, plancher 0,10 %. Lot max : crypto 1× l'équité, autres 3×.
 

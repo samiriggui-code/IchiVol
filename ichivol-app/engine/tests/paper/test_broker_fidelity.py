@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 from copy import deepcopy
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy.exc import OperationalError
@@ -313,3 +313,16 @@ def test_short_close_realized_matches_unrealized_minus_exit_costs(session):
     entry_fee = float(pos.initial_entry_fee or pos.entry_fee or 0.0)
     if entry_fee > 0:
         assert float(pos.realized_pnl) <= unrealized - entry_fee + 1e-4
+
+
+def test_financing_skips_the_entry_day_then_charges_each_night(session):
+    p = session.info["portfolio"]
+    pos = _open(session, symbol="EURUSD", price=1.10, notional=1000.0, stop_distance=0.01)
+    opened = pos.entry_time.astimezone(timezone.utc)
+
+    same_day = apply_daily_financing(session, p, as_of=opened, force_day=opened.date())
+    assert same_day == []  # intraday: no night held
+
+    next_day = opened + timedelta(days=1)
+    charged = apply_daily_financing(session, p, as_of=next_day, force_day=next_day.date())
+    assert len(charged) == 1 and charged[0]["charge"] > 0

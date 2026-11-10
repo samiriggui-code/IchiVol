@@ -554,6 +554,14 @@ def _is_spot_crypto(symbol: str) -> bool:
 
 MAIN_SHORT_SYMBOLS: tuple[str, ...] = tuple(s for s in _MAIN_TRADED if not _is_spot_crypto(s))
 
+# Actifs qui montent et baissent ensemble : ``symbols`` donne, par symbole, le sens du pari commun porté par un
+# achat (+1 ; -1 pour une paire cotée à l'envers comme USDJPY). ``max_same_side`` lots au plus dans le même sens.
+MAIN_CORRELATION_GROUPS: dict[str, dict[str, Any]] = {
+    "dollar": {"max_same_side": 1, "symbols": {"EURUSD": 1, "GBPUSD": 1, "XAUUSD": 1, "XAGUSD": 1}},
+    "indices_us": {"max_same_side": 1, "symbols": {"SPX": 1, "NDX": 1, "YM": 1}},
+    "crypto": {"max_same_side": 3, "symbols": {s: 1 for s in _MAIN_TRADED if _is_spot_crypto(s)}},
+}
+
 MAIN_PROFILE: dict[str, Any] = _with(
     code=MAIN_CODE,
     label=MAIN_LABEL,
@@ -606,17 +614,32 @@ MAIN_PROFILE: dict[str, Any] = _with(
     # Qui décide pour ce compte (informatif) et règle d'arbitrage (appliquée par app/paper/engine.py).
     engines=["scan_1h_ichimoku_rvol", "eve_autopilot_jev", "ordres_manuels"],
     # Ève s'engage selon l'écart entre la probabilité de JEV et le seuil de rentabilité (app/eve/engagement.py) ;
-    # marge : crypto au comptant 1×, CFD et futures jusqu'à 5× l'équité (app/paper/margin.py). Décision du 2026-11-08.
+    # marge : crypto au comptant 1× (app/paper/margin.py). Décision du 2026-11-08.
+    # Resserré le 2026-11-10 (46 trades, 26 % de gagnants quand JEV annonçait ~0,5 ; deux lots à levier = 60 % de
+    # la perte) : tant que la probabilité de JEV n'est pas calibrée, elle ne grossit plus la mise (risk_max =
+    # risk_min), un lot CFD ne dépasse plus 1× l'équité et l'ensemble des CFD et futures 2× (au lieu de 3× et 5×).
     engagement={
         "risk_min": 0.0025,
-        "risk_max": 0.01,
+        "risk_max": 0.0025,
         "risk_floor": 0.001,
         "edge_full": 0.20,
         "max_cost_r": 0.5,
         "crypto_max_notional_pct": 1.0,
-        "other_max_notional_pct": 3.0,
+        "other_max_notional_pct": 1.0,
     },
-    margin={"crypto_max_exposure": 1.0, "other_max_exposure": 5.0},
+    margin={"crypto_max_exposure": 1.0, "other_max_exposure": 2.0},
+    # Garde-fous du 2026-11-10 (app/paper/risk_kernel.py), ordres manuels exceptés :
+    # - pas de nouvelle entrée sur un symbole stoppé depuis moins de 8 h (ni dans le même sens, ni retourné) ;
+    # - un seul lot par sens dans un groupe d'actifs qui sont le même pari (EURUSD, GBPUSD et l'or vendus
+    #   ensemble = une seule hausse du dollar), trois pour la crypto au comptant.
+    reentry_cooldown_hours=8.0,
+    # Aucune ouverture contre l'horizon supérieur (engine.trend_refusal) : la famille de signaux la plus perdante.
+    block_mtf_opposed=True,
+    # Achats crypto suspendus (décision du propriétaire, 2026-11-10) : 131 signaux d'achat, 11 % à l'objectif,
+    # -0,55 R, et aucun filtre mesuré ne les sauve. La crypto ne se vendant pas à découvert, elle ne trade plus
+    # en automatique jusqu'au verdict du test d'entrée sur repli (docs/REPLI-KIJUN-PREENREGISTREMENT-2026-11-10.md).
+    long_suspended_symbols=sorted(s for s in _MAIN_TRADED if _is_spot_crypto(s)),
+    correlation_groups=MAIN_CORRELATION_GROUPS,
     arbitration="un_lot_par_symbole_premier_arrive",
     # Emplacement réservé du futur indicateur VWAP (plan d'intégration rendu par la recherche VWAP) : il
     # s'ajoutera comme un filtre de plus dans la chaîne structure -> Fibonacci -> contexte d'engine.py, d'abord
