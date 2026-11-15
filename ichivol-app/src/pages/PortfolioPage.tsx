@@ -14,6 +14,7 @@ import {
   concentrationFromPositions,
   drawdownFromCurve,
 } from '../components/desk/deskMetrics'
+import { fmtEngagedPct, isLeveraged } from './desk/deskFormat'
 import {
   closePaperPosition,
   getPaperActivity,
@@ -128,7 +129,7 @@ function Meter({ label, value, pct }: { label: string; value: string; pct: numbe
   return (
     <div className="pf-meter">
       <span className="pf-meter-t">{label}</span>
-      <span className="pf-meter-v">{value}</span>
+      <span className={`pf-meter-v${pct != null && pct > 100 ? " neg" : ""}`}>{value}</span>
       <div className={`iv-bar${tone}`}>
         <i style={{ width: `${width}%` }} />
       </div>
@@ -468,8 +469,11 @@ export function PortfolioPage() {
   const dd = drawdownFromCurve(overview?.equity_curve ?? [], acct?.equity)
   /** Drawdown actuel : celui du moteur (/breakdown) s'il répond, sinon calculé sur la courbe affichée. */
   const ddNow = breakdown?.drawdown.current_pct != null ? -Math.abs(breakdown.drawdown.current_pct) : dd
+  // Non plafonné : au-delà de 100 % le compte engage plus que son équité (levier). Seuls l'anneau et la barre sont bornés.
   const investedPct =
-    acct && acct.equity > 0 ? Math.min(100, Math.max(0, (acct.invested / acct.equity) * 100)) : null
+    acct && acct.equity > 0 ? Math.max(0, (acct.invested / acct.equity) * 100) : null
+  const investedRing = investedPct != null ? Math.min(100, investedPct) : null
+  const leveraged = isLeveraged(investedPct)
 
   const riskPass =
     lock == null
@@ -577,7 +581,7 @@ export function PortfolioPage() {
           <div className="iv-kpi-v">
             <KpiEur n={acct?.invested} />
           </div>
-          <div className="iv-kpi-s">{investedPct != null ? `${fmtPctPoints(investedPct, 1)} du capital` : '—'}</div>
+          <div className={`iv-kpi-s${leveraged ? ' neg' : ''}`}>{fmtEngagedPct(investedPct, 1)}</div>
         </div>
         <div className="iv-kpi">
           <div className="iv-kpi-k">Drawdown</div>
@@ -653,14 +657,16 @@ export function PortfolioPage() {
                 <div
                   className="pf-donut"
                   style={
-                    investedPct != null
-                      ? { background: `conic-gradient(var(--cyan) 0 ${investedPct}%, var(--track-bg) ${investedPct}% 100%)` }
+                    investedRing != null
+                      ? { background: `conic-gradient(${leveraged ? 'var(--neg)' : 'var(--cyan)'} 0 ${investedRing}%, var(--track-bg) ${investedRing}% 100%)` }
                       : undefined
                   }
                 >
                   <span>
-                    <b>{investedPct != null ? fmtPctPoints(investedPct, 1) : '—'}</b>
-                    <small>engagé</small>
+                    <b className={leveraged ? 'neg' : undefined}>{investedPct != null ? fmtPctPoints(investedPct, 1) : '—'}</b>
+                    <small className={leveraged ? 'neg' : undefined}>
+                      {leveraged && investedPct != null ? fmtEngagedPct(investedPct, 1).split(' · ')[1] : 'engagé'}
+                    </small>
                   </span>
                 </div>
                 <div className="pf-alloc-rows">
@@ -771,7 +777,13 @@ export function PortfolioPage() {
             />
             <Meter
               label="Exposition / capital"
-              value={investedPct != null ? `${fmtPctPoints(investedPct, 1)} engagé` : '—'}
+              value={
+                investedPct == null
+                  ? '—'
+                  : leveraged
+                    ? fmtEngagedPct(investedPct, 1).replace(' du capital', ' engagé')
+                    : `${fmtPctPoints(investedPct, 1)} engagé`
+              }
               pct={investedPct}
             />
             <Meter
