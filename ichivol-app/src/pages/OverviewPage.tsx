@@ -61,8 +61,10 @@ import {
   fmtDec,
   fmtEur,
   fmtPct,
+  fmtEngagedPct,
   fmtPctPoints,
   fmtPrice,
+  isLeveraged,
   type EquityPeriod,
 } from './desk/deskFormat'
 import { toEngineSymbol } from '../lib/engineSymbol'
@@ -162,16 +164,16 @@ function Meter({
   label: string
   value: string
   pct: number | null
-  tone?: '' | 'amber' | 'mint'
+  tone?: '' | 'amber' | 'mint' | 'neg'
 }) {
   const width = pct == null ? 0 : Math.max(0, Math.min(100, pct))
   return (
     <div className="dk-meter">
       <div className="dk-meter-top">
         <span>{label}</span>
-        <span className={`mono${tone === 'amber' ? ' warn' : ''}`}>{value}</span>
+        <span className={`mono${tone === 'amber' ? ' warn' : tone === 'neg' ? ' neg' : ''}`}>{value}</span>
       </div>
-      <div className={`iv-bar${tone ? ` is-${tone}` : ''}`}>
+      <div className={`iv-bar${tone && tone !== 'neg' ? ` is-${tone}` : ''}`}>
         <i style={{ width: `${width}%` }} />
       </div>
     </div>
@@ -547,8 +549,10 @@ export function OverviewPage() {
     MARKET_SESSIONS.find((s) => s.id === sessionId) ?? MARKET_SESSIONS[1]
   const selectedSt = sessionStatus(selectedSession, now)
 
+  // Non plafonné : au-delà de 100 % le compte engage plus que son équité (levier). Seules les barres sont bornées.
   const investedPct =
-    acct && acct.equity > 0 ? Math.min(100, Math.max(0, (acct.invested / acct.equity) * 100)) : null
+    acct && acct.equity > 0 ? Math.max(0, (acct.invested / acct.equity) * 100) : null
+  const leveraged = isLeveraged(investedPct)
 
   const concentration = useMemo(
     () => concentrationFromPositions(overview?.positions ?? []),
@@ -716,8 +720,8 @@ export function OverviewPage() {
           <div className="iv-kpi-v">
             <SplitEur value={invested} />
           </div>
-          <div className="iv-kpi-s">
-            {investedPct != null ? `${fmtPctPoints(investedPct, 1, false)} du capital` : '—'}
+          <div className={`iv-kpi-s${leveraged ? ' neg' : ''}`}>
+            {fmtEngagedPct(investedPct, 1)}
           </div>
         </div>
         <div className="iv-kpi">
@@ -1051,8 +1055,9 @@ export function OverviewPage() {
         >
           <Meter
             label="Exposition du capital"
-            value={investedPct != null ? fmtPctPoints(investedPct, 1, false) : '—'}
+            value={investedPct != null ? fmtEngagedPct(investedPct, 1).replace(' du capital', '') : '—'}
             pct={investedPct}
+            tone={leveraged ? 'neg' : ''}
           />
           <Meter
             label="Risque journalier"
