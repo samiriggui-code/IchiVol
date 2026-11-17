@@ -4,7 +4,19 @@
 
 **Sync local :** 2026-09-28 journée · `main` @ **`ba693f1`** (+ ce commit handoff) · ancien : 2026-09-28 nuit.
 
-## ▶ À VOIR EN PREMIER — 2026-11-10 : garde-fous prêts, à valider puis déployer
+## ▶ À VOIR EN PREMIER — 2026-11-17 : garde-fous fusionnés dans `main`, pas encore déployés
+
+PR #201 fusionnée le 17/11 à la demande du propriétaire, sans revue CodeRabbit. `main` (#202, compte au comptant du
+15/11) a d'abord été intégré dans la branche : deux conflits, `paper/strategy_profiles.py` et
+`tests/paper/test_margin.py`. Règle suivie : la décision la plus récente et la plus stricte l'emporte (CFD et futures
+1× au total, au lieu du 2× des garde-fous), tous les garde-fous sont gardés. Un test de `main` supposait le swap débité
+le jour même : adapté au débit à partir du lendemain. Suite du moteur verte sur un Postgres jetable, front compilé.
+**Reste : le déploiement sur le VPS.**
+
+Chantier lié : IchiVol est reporté dans le socle GsKnora (`~/Projects/ichivol-go`, ADR 003 de ce dépôt-là). Le moteur
+Python reste ici et ne se modifie qu'ici.
+
+## 2026-11-10 : garde-fous prêts, à valider puis déployer
 
 Bilan du 10/11 : 46 trades, −1 408 €, 26 % de gagnants. Réponse à la question du 09/11 : oui, Ève trade marchés
 ouverts (7 signaux du moteur sur 9 suivis) ; les abstentions `guardian_critical` portent presque toutes sur des

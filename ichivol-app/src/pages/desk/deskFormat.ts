@@ -27,6 +27,23 @@ export function fmtPctPoints(
   return `${n} %`
 }
 
+/**
+ * Part engagée du capital, en points (non plafonnée : 497 = 4,97× l'équité).
+ * Au-delà de 100 %, le compte engage plus que son équité : on l'affiche avec le levier.
+ */
+export function fmtEngagedPct(v: number | null | undefined, digits = 1): string {
+  if (v == null || !Number.isFinite(v)) return '—'
+  const base = `${fmtPctPoints(v, digits)} du capital`
+  if (v <= 100) return base
+  const lev = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v / 100)
+  return `${base} · levier ${lev}x`
+}
+
+/** Vrai quand la part engagée dépasse l'équité (compte sur levier). */
+export function isLeveraged(v: number | null | undefined): boolean {
+  return v != null && Number.isFinite(v) && v > 100
+}
+
 /** Ratio 0–1 → pourcentage fr-FR (ex. 0.585 → « 58,5 % »). */
 export function fmtPct(v: number | null | undefined, digits = 1, signed = true): string {
   if (v == null || Number.isNaN(v)) return '—'

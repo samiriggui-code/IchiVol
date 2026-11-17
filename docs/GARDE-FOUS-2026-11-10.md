@@ -18,7 +18,7 @@ Paper uniquement. Branche `garde-fous-exposition-stops`.
 |---|---|---|---|
 | Risque par trade d'Ève | 0,25 % à 1 % selon l'écart JEV | 0,25 % fixe, moins les facteurs | `MAIN_PROFILE.engagement` |
 | Lot CFD maximal | 3× l'équité | 1× | `engagement.other_max_notional_pct` |
-| Total CFD et futures | 5× l'équité | 2× | `margin.other_max_exposure` |
+| Total CFD et futures | 5× l'équité | 2× (ramené à 1× le 15/11 : compte au comptant, sans levier) | `margin.other_max_exposure` |
 | Paris corrélés | aucun contrôle | 1 lot par sens dans `dollar` (EURUSD, GBPUSD, XAUUSD, XAGUSD) et `indices_us` (SPX, NDX, YM), 3 en crypto ; refus `correlated_exposure_cap` | `correlation_groups`, `paper/risk_kernel.py` |
 | Après un stop | ré-entrée immédiate possible | 8 h sans nouvelle entrée sur le symbole, dans les deux sens ; refus `reentry_cooldown` | `reentry_cooldown_hours`, `paper/gates.py` |
 | Stop hors crypto | scan 300 s, prix du moment | minutes 1m biquote toutes les 60 s : stop touché = exécuté au stop, saut = à l'ouverture | `paper/protection.py` (`PROVIDER_FEEDS`) |

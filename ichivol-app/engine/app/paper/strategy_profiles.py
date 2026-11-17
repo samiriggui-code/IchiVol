@@ -613,11 +613,13 @@ MAIN_PROFILE: dict[str, Any] = _with(
     decision_windows_mode="observe",
     # Qui décide pour ce compte (informatif) et règle d'arbitrage (appliquée par app/paper/engine.py).
     engines=["scan_1h_ichimoku_rvol", "eve_autopilot_jev", "ordres_manuels"],
-    # Ève s'engage selon l'écart entre la probabilité de JEV et le seuil de rentabilité (app/eve/engagement.py) ;
-    # marge : crypto au comptant 1× (app/paper/margin.py). Décision du 2026-11-08.
+    # Ève s'engage selon l'écart entre la probabilité de JEV et le seuil de rentabilité (app/eve/engagement.py).
+    # Compte au comptant, sans levier (décision du propriétaire, 2026-11-15, annule la marge 5× du 2026-11-08) :
+    # chaque poche (crypto d'un côté, CFD et futures de l'autre) engage au plus 1× l'équité et un lot au plus 1×
+    # l'équité, la caisse ne passe donc plus sous zéro (app/paper/margin.py).
     # Resserré le 2026-11-10 (46 trades, 26 % de gagnants quand JEV annonçait ~0,5 ; deux lots à levier = 60 % de
     # la perte) : tant que la probabilité de JEV n'est pas calibrée, elle ne grossit plus la mise (risk_max =
-    # risk_min), un lot CFD ne dépasse plus 1× l'équité et l'ensemble des CFD et futures 2× (au lieu de 3× et 5×).
+    # risk_min). Le plafond de 2× des CFD et futures posé ce jour-là est remplacé par le 1× du 2026-11-15.
     engagement={
         "risk_min": 0.0025,
         "risk_max": 0.0025,
@@ -627,7 +629,7 @@ MAIN_PROFILE: dict[str, Any] = _with(
         "crypto_max_notional_pct": 1.0,
         "other_max_notional_pct": 1.0,
     },
-    margin={"crypto_max_exposure": 1.0, "other_max_exposure": 2.0},
+    margin={"crypto_max_exposure": 1.0, "other_max_exposure": 1.0},
     # Garde-fous du 2026-11-10 (app/paper/risk_kernel.py), ordres manuels exceptés :
     # - pas de nouvelle entrée sur un symbole stoppé depuis moins de 8 h (ni dans le même sens, ni retourné) ;
     # - un seul lot par sens dans un groupe d'actifs qui sont le même pari (EURUSD, GBPUSD et l'or vendus
