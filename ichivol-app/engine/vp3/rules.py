@@ -76,6 +76,6 @@ def strategy_rules(strategy: str, interval: str) -> Rules:
             full_cash=True,
             force_flat_at_end=True,
         )
-    if strategy in ("B1", "B2", "B5", "B6", "B7"):
+    if strategy in ("B1", "B2", "B5", "B6", "B7", "BR"):
         return common_rules(interval, name=f"vp3_{strategy}")
     raise ValueError(f"unknown strategy: {strategy}")

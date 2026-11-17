@@ -9,7 +9,7 @@ gate used by opening paths (via ``sync_position`` / API refuse detail).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Mapping, Sequence
 
 from app.paper.gates import GATE_KEYS, has_gates
@@ -25,6 +25,7 @@ class OpenLotSnap:
     symbol: str
     notional: float
     risk_amount: float
+    direction: str = ""  # LONG | SHORT ; vide = inconnu (ignoré par le plafond de paris corrélés)
 
 
 @dataclass(frozen=True)
@@ -55,6 +56,8 @@ class PortfolioState:
     # T13c — persisted locks (human reopen only)
     kill_switch_armed: bool = False
     daily_loss_locked: bool = False
+    # Garde-fous du 2026-11-10 : symbole -> secondes écoulées depuis son dernier stop (``gates.recent_stop_ages``).
+    recent_stop_ages: Mapping[str, float] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -103,13 +106,41 @@ def _accept(sized: SizedOrder | None = None, *extra_codes: str) -> RiskDecision:
     return RiskDecision(accepted=True, codes=tuple(extra_codes), sized=sized)
 
 
+def _bet_side(direction: str, sign: Any) -> int:
+    """+1 / -1 : le sens du pari sur le facteur commun du groupe ; 0 si le sens du lot est inconnu."""
+    side = {"LONG": 1, "SHORT": -1}.get(str(direction).upper(), 0)
+    return side if float(sign or 1) >= 0 else -side
+
+
+def correlated_bet_refused(plan: OpenPlan, opens: Sequence[OpenLotSnap], groups: Any) -> bool:
+    """Un groupe de ``correlation_groups`` porte-t-il déjà ``max_same_side`` lots dans le sens du nouveau ?
+
+    EURUSD, GBPUSD et l'or vendus ensemble sont un seul pari sur le dollar : le plafond par symbole ne le voit pas.
+    Un lot de sens opposé dans le même groupe (une couverture) ne compte pas."""
+    if not isinstance(groups, Mapping):
+        return False
+    for group in groups.values():
+        symbols = (group or {}).get("symbols") or {}
+        if plan.symbol not in symbols:
+            continue
+        side = _bet_side(plan.direction, symbols[plan.symbol])
+        same = sum(
+            1 for o in opens
+            if o.symbol in symbols and o.symbol != plan.symbol and side and _bet_side(o.direction, symbols[o.symbol]) == side
+        )
+        if same >= int(group.get("max_same_side", 1)):
+            return True
+    return False
+
+
 def evaluate_entry_codes(
     plan: OpenPlan,
     state: PortfolioState,
 ) -> str | None:
     """Pure port of ``gates.entry_gate`` first-failing reason (or None).
 
-    Same order and thresholds — do not tighten.
+    Same order and thresholds — do not tighten. ``reentry_cooldown_hours`` and ``correlation_groups`` only act on
+    profiles that declare them (2026-11-10).
     """
     p: Mapping[str, Any] = state.profile or {}
     stop_distance = plan.stop_distance
@@ -118,6 +149,12 @@ def evaluate_entry_codes(
     opens = state.open_positions
     if p.get("one_position_per_symbol") and any(o.symbol == plan.symbol for o in opens):
         return "position_already_open"
+    if p.get("reentry_cooldown_hours"):
+        age = state.recent_stop_ages.get(plan.symbol)
+        if age is not None and age < float(p["reentry_cooldown_hours"]) * 3600.0:
+            return "reentry_cooldown"
+    if correlated_bet_refused(plan, opens, p.get("correlation_groups")):
+        return "correlated_exposure_cap"
     if p.get("one_entry_per_signal_run") and plan.run_id is not None:
         if state.traded_run_id == plan.run_id:
             return "signal_already_processed"
@@ -262,6 +299,7 @@ def open_lots_from_positions(opens: Sequence[Any]) -> tuple[OpenLotSnap, ...]:
                 symbol=str(o.symbol),
                 notional=float(o.notional or 0.0),
                 risk_amount=float(o.risk_amount or 0.0),
+                direction=str(getattr(o, "direction", "") or ""),
             )
         )
     return tuple(out)

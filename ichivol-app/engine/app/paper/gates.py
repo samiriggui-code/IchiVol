@@ -2,22 +2,23 @@
 so the running baseline behaves exactly as before. Returns the FIRST failing reason (exclusive) or None.
 
 Profile keys: one_position_per_symbol, max_symbol_notional_pct, max_open_risk_pct, daily_loss_limit_pct,
-one_entry_per_signal_run. ``no_atr_stop`` and ``max_positions`` are reported for every gated profile.
+one_entry_per_signal_run, reentry_cooldown_hours (no re-entry on a symbol just stopped), correlation_groups (lots that
+are one same bet). ``no_atr_stop`` and ``max_positions`` are reported for every gated profile.
 """
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import PaperEquitySnapshot, PaperPortfolio, PaperPosition
 
 GATE_KEYS = (
     "one_position_per_symbol", "max_symbol_notional_pct", "max_open_risk_pct", "daily_loss_limit_pct",
-    "one_entry_per_signal_run",
+    "one_entry_per_signal_run", "reentry_cooldown_hours", "correlation_groups",
 )
 
 # (portfolio_id, symbol, timeframe) -> run id of the last signal run already traded. In-memory and best effort:
@@ -69,6 +70,27 @@ def day_start_equity(session: Session, portfolio: PaperPortfolio, now: datetime 
     return float(row) if row is not None else float(portfolio.initial_cash)
 
 
+STOP_EXIT_REASONS = ("stop_hit", "stop_gap")
+
+
+def recent_stop_ages(session: Session, portfolio: PaperPortfolio, now: datetime | None = None) -> dict[str, float]:
+    """Symbole -> secondes depuis son dernier stop, sur la fenêtre ``reentry_cooldown_hours`` du profil (vide sans
+    cette clé). Pour ``risk_kernel.PortfolioState.recent_stop_ages``."""
+    hours = float((portfolio.strategy_profile or {}).get("reentry_cooldown_hours") or 0.0)
+    if hours <= 0:
+        return {}
+    now = now or datetime.now(timezone.utc)
+    rows = session.execute(
+        select(PaperPosition.symbol, func.max(PaperPosition.exit_time)).where(
+            PaperPosition.portfolio_id == portfolio.id,
+            PaperPosition.status == "CLOSED",
+            PaperPosition.exit_reason.in_(STOP_EXIT_REASONS),
+            PaperPosition.exit_time > now - timedelta(hours=hours),
+        ).group_by(PaperPosition.symbol)
+    ).all()
+    return {symbol: max(0.0, (now - closed_at).total_seconds()) for symbol, closed_at in rows}
+
+
 def entry_gate(
     session: Session, portfolio: PaperPortfolio, *, symbol: str, timeframe: str, price: float,
     stop_distance: float | None, equity: float, run_id: int | None = None, now: datetime | None = None,
@@ -88,6 +110,7 @@ def entry_gate(
         open_positions=open_lots_from_positions(opens),
         day_start_equity=day_start_equity(session, portfolio, now),
         traded_run_id=traded,
+        recent_stop_ages=recent_stop_ages(session, portfolio, now),
     )
     plan = OpenPlan(
         symbol=symbol,

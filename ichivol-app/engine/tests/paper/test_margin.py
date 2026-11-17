@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -156,6 +156,9 @@ def test_profile_amounts_apply_without_an_engagement(session, book) -> None:
 
 @db
 def test_open_risk_cap_still_holds_with_large_engagements(session, book) -> None:
+    # Sans le plafond de paris corrélés (testé à part) : seul le risque ouvert doit arrêter la série.
+    book.strategy_profile = {**book.strategy_profile, "correlation_groups": None}
+    session.commit()
     opened = []
     for sym in ("EURUSD", "GBPUSD", "XAUUSD", "XAGUSD", "SPX", "NDX"):
         # Stop de 10 % : 1 % de risque = un lot de 10 % de l'équité, la poche 1× n'est jamais le facteur limitant.
@@ -182,6 +185,41 @@ def test_latent_loss_trips_the_daily_lock(session, book) -> None:
 
 
 @db
+def test_one_dollar_bet_at_a_time_but_a_hedge_is_allowed(session, book) -> None:
+    first, _ = _open(session, book, "EURUSD", 5.0, 100.0, "SHORT")
+    session.commit()
+    assert first is not None
+    # GBPUSD et l'or vendus = la même hausse du dollar que l'EURUSD déjà vendu.
+    for sym in ("GBPUSD", "XAUUSD"):
+        same, created = _open(session, book, sym, 5.0, 100.0, "SHORT")
+        assert same is None and created is False
+    hedge, _ = _open(session, book, "GBPUSD", 5.0, 100.0, "LONG")
+    other, _ = _open(session, book, "WTI", 5.0, 100.0, "SHORT")
+    assert hedge is not None and other is not None
+
+
+@db
+def test_no_reentry_on_a_symbol_just_stopped(session, book) -> None:
+    first, _ = _open(session, book, "WTI", 5.0, 100.0, "SHORT")
+    session.commit()
+    paper_broker.close_capital_position(session, first, price=first.stop_price, reason="stop_hit", signal={})
+    session.commit()
+    for direction in ("SHORT", "LONG"):  # ni ré-entrée, ni retournement
+        again, created = _open(session, book, "WTI", 5.0, 100.0, direction)
+        assert again is None and created is False
+    # Délai écoulé : le symbole redevient ouvrable. Un objectif atteint n'impose aucun délai.
+    first.exit_time = first.exit_time - timedelta(hours=9)
+    session.commit()
+    later, _ = _open(session, book, "WTI", 5.0, 100.0, "SHORT")
+    session.commit()
+    assert later is not None
+    paper_broker.close_capital_position(session, later, price=later.take_profit_price, reason="take_profit_hit", signal={})
+    session.commit()
+    after_win, _ = _open(session, book, "WTI", 5.0, 100.0, "SHORT")
+    assert after_win is not None
+
+
+@db
 def test_no_borrowing_cost_when_cash_stays_positive(session, book) -> None:
     # Aucun intérêt d'emprunt n'existe : seul le swap de nuit propre à chaque lot CFD est prélevé, proportionnel à
     # son notionnel et indépendant de la caisse. La crypto au comptant ne paie rien.
@@ -191,7 +229,11 @@ def test_no_borrowing_cost_when_cash_stays_positive(session, book) -> None:
     cfd, _ = _open(session, book, "EURUSD", 0.01, 1.0, risk_pct=0.002, max_notional_pct=1.0)
     session.commit()
     assert crypto is not None and cfd is not None and book.cash >= 0
-    charges = apply_daily_financing(session, book)
+    # Garde-fous du 2026-11-10 : rien n'est débité le jour de l'ouverture, le swap court à partir du lendemain.
+    opened = cfd.entry_time.astimezone(timezone.utc)
+    assert apply_daily_financing(session, book, as_of=opened, force_day=opened.date()) == []
+    next_day = opened + timedelta(days=1)
+    charges = apply_daily_financing(session, book, as_of=next_day, force_day=next_day.date())
     session.commit()
     assert book.cash >= 0
     assert [c["symbol"] for c in charges] == ["EURUSD"]

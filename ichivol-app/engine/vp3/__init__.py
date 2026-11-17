@@ -16,6 +16,9 @@ STRATEGIES: tuple[str, ...] = ("B0", "B1", "B2", "B5", "B6", "B7")
 # VP-S1 Bouclier (amendement VP0-2026-09-27) — N T10b +12 → 48
 SHIELD_STRATEGIES: tuple[str, ...] = ("BM", "BN")
 
+# VP-BR entrée sur repli (pré-enregistrement 2026-11-10) — N T10b +3 → 51
+REPLI_STRATEGIES: tuple[str, ...] = ("BR",)
+N_T10B_REPLI = 51
 RVOL_WINDOW = 20
 RVOL_MIN = 1.5
 
@@ -26,8 +29,10 @@ N_T10B_SHIELD = 48
 
 __all__ = [
     "HTF_MAP",
+    "N_T10B_REPLI",
     "N_T10B_SHIELD",
     "PROTOCOL_ID",
+    "REPLI_STRATEGIES",
     "PROTOCOL_VERSION",
     "RVOL_MIN",
     "RVOL_WINDOW",

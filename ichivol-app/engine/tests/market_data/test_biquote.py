@@ -149,3 +149,37 @@ def test_fetch_ohlc_serves_from_cache_within_ttl(monkeypatch):
     biquote.fetch_ohlc("EURUSD", "1h", 1)
     biquote.fetch_ohlc("EURUSD", "1h", 1)
     assert calls["n"] == 1
+
+
+def test_fetch_minute_rows_keeps_closed_bars_of_the_window_oldest_first(monkeypatch):
+    class FakeResp:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            bar = {"open": 1.1161, "high": 1.1164, "low": 1.1160, "close": 1.1163, "volume": 0, "tickVolume": 9}
+            return {
+                "symbol": "EURUSD",
+                "interval": "1m",
+                "bars": [
+                    {**bar, "openTime": "2026-11-10T21:49:00Z", "isOpen": True},
+                    {**bar, "openTime": "2026-11-10T21:48:00Z", "isOpen": False},
+                    {**bar, "openTime": "2026-11-10T21:47:00Z", "isOpen": False},
+                    {**bar, "openTime": "2026-11-10T21:46:00Z", "isOpen": False},
+                ],
+            }
+
+    asked = {}
+
+    def fake_get(url, params=None, timeout=None):
+        asked.update(url=url, params=params)
+        return FakeResp()
+
+    monkeypatch.setattr(biquote.httpx, "get", fake_get)
+    t47 = biquote._parse_iso("2026-11-10T21:47:00Z") * 1000
+    rows = biquote.fetch_minute_rows("EURUSD", t47, t47 + 3 * 60_000)
+
+    assert asked["params"]["interval"] == "1m" and asked["url"].endswith("/EURUSD/ohlc")
+    # 21:46 is before the window, 21:49 is still forming.
+    assert [r[0] for r in rows] == [t47, t47 + 60_000]
+    assert rows[0][1:] == [1.1161, 1.1164, 1.1160, 1.1163]

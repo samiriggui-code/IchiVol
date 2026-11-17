@@ -146,6 +146,11 @@ def entry_mask(
             htf_seconds=htf_seconds,
         )
 
+    if strategy == "BR":
+        from vp3.repli import br_mask
+
+        return br_mask(candles)
+
     ichi = compute_ichimoku(candles, ICHI_PARAMS)
     rvol = compute_rvol(candles, RVOL_PARAMS) if strategy in ("B2", "B5", "B6") else None
 

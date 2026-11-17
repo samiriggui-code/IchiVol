@@ -53,6 +53,7 @@ from app.db.models import (
     PaperReinforceAdd,
 )
 from app.market_data.binance import BASE_URL
+from app.market_data.biquote import fetch_minute_rows as biquote_minute_rows
 from app.paper import broker as paper_broker
 from app.paper.protection_partial_tp import (
     PaperPartialTpConfig,
@@ -734,6 +735,13 @@ def binance_agg_trades(symbol: str, start_ms: int, end_ms: int) -> list[tuple[in
     return out
 
 
+# Minute feeds of the providers other than Binance: (1m bars, ticks or None). Without them a forex, metal, index
+# or oil lot was only checked by the 300 s scan and closed at whatever the price had become: 25 pips past the stop
+# on EURUSD on 2026-11-10 (-2,8 R). Same rule as crypto now: stop touched inside a minute = filled at the stop, gap
+# = filled at the open. No ticks here, so the entry minute is skipped and a minute touching both levels is a stop.
+PROVIDER_FEEDS: dict[str, tuple[KlinesFn, TradesFn | None]] = {"biquote": (biquote_minute_rows, None)}
+
+
 # ── Cycle over open positions ───────────────────────────────────────────────
 
 def _ms(dt: datetime) -> int:
@@ -836,9 +844,11 @@ def _process_position(
         row["status"] = "unprotected_legacy_no_levels"
         return
     inst = get_instrument(pos.symbol)
-    if inst is None or inst.provider != "binance" or not inst.provider_symbol:
+    if inst is None or not inst.provider_symbol or (inst.provider != "binance" and inst.provider not in PROVIDER_FEEDS):
         row["status"] = "unsupported_provider"
         return
+    if inst.provider != "binance":
+        klines_fn, trades_fn = PROVIDER_FEEDS[inst.provider]
 
     since_ms, legacy = _seed(session, pos)
     if since_ms is None:

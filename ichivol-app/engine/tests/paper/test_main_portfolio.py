@@ -338,7 +338,7 @@ def test_sync_loop_keeps_filters_in_observation_and_refuses_illiquid(monkeypatch
     leur verdict est enregistré ; une paire à faible volume 24 h n'ouvre rien."""
     from app.context.gate import ContextGateResult
 
-    pf = _disposable(session)
+    pf = _disposable(session, long_suspended_symbols=[])  # la suspension des achats crypto est testée à part
     session.commit()
     monkeypatch.setattr(paper, "ensure_syncable_portfolios", lambda s: [s.get(PaperPortfolio, pf.id)])
 
@@ -420,3 +420,60 @@ def test_decision_summary_exposes_the_synthesis_rule():
         modes_json={"synthesis": {"decision_rule": "analyst", "rationale": "Règle 4"}},
     )
     assert decision_summary(d, None)["decision_rule"] == "analyst"
+
+
+@db
+def test_no_open_against_the_higher_horizon(monkeypatch, session):
+    """``block_mtf_opposed`` : un BUY que le 4h contredit n'ouvre rien, ni par le moteur ni comme proposition à Ève."""
+    from app.decision.pipeline import PipelineStage, StageId, StageStatus
+
+    pf = _disposable(session, long_suspended_symbols=[])
+    session.commit()
+    monkeypatch.setattr(paper, "ensure_syncable_portfolios", lambda s: [s.get(PaperPortfolio, pf.id)])
+    liquid = [SimpleNamespace(time=1_700_000_000 + i * 3600, open=100.0, high=101.0, low=99.0, close=100.0,
+                              volume=10_000.0) for i in range(60)]
+    against = _row("LINKUSDT", "BUY", 100.0, liquid)
+    against.pipeline = PipelineResult(
+        decision="BUY", direction=Direction.LONG,
+        stages=[PipelineStage(id=StageId.STRUCTURE, status=StageStatus.WATCH, summary="", codes=["mtf_opposed"])],
+    )
+    try:
+        assert paper.trend_refusal(MAIN_PROFILE, against.pipeline) == "mtf_opposed"
+        assert paper.trend_refusal(MAIN_PROFILE, _pipeline("BUY")) is None
+        assert paper.trend_refusal({}, against.pipeline) is None
+
+        proposals: list[dict] = []
+        paper.sync_auto_watchlist(session, [against, _row("AVAXUSDT", "BUY", 100.0, liquid)], proposals=proposals)
+        assert [p["symbol"] for p in proposals] == ["AVAXUSDT"]
+
+        paper.sync_auto_watchlist(session, [against, _row("AVAXUSDT", "BUY", 100.0, liquid)])
+        opens = {p.symbol for p in session.query(PaperPosition).filter_by(portfolio_id=pf.id, status="OPEN")}
+        assert opens == {"AVAXUSDT"}
+        rej = session.query(PaperJournalEvent).filter_by(portfolio_id=pf.id).all()
+        assert any((e.payload or {}).get("reason") == "mtf_opposed" for e in rej)
+    finally:
+        _drop(session, pf)
+
+
+@db
+def test_crypto_buys_are_suspended_but_other_opens_go_on(monkeypatch, session):
+    pf = _disposable(session)
+    session.commit()
+    monkeypatch.setattr(paper, "ensure_syncable_portfolios", lambda s: [s.get(PaperPortfolio, pf.id)])
+    bars = [SimpleNamespace(time=1_700_000_000 + i * 3600, open=100.0, high=101.0, low=99.0, close=100.0,
+                            volume=10_000.0) for i in range(60)]
+    assert "BTCUSDT" in MAIN_PROFILE["long_suspended_symbols"] and "EURUSD" not in MAIN_PROFILE["long_suspended_symbols"]
+    try:
+        rows = [_row("LINKUSDT", "BUY", 100.0, bars), _row("EURUSD", "BUY", 100.0, bars, exchange="biquote"),
+                _row("WTI", "SELL", 100.0, bars, exchange="biquote")]
+        proposals: list[dict] = []
+        paper.sync_auto_watchlist(session, rows, proposals=proposals)
+        assert sorted(p["symbol"] for p in proposals) == ["EURUSD", "WTI"]
+
+        paper.sync_auto_watchlist(session, rows)
+        opens = {p.symbol for p in session.query(PaperPosition).filter_by(portfolio_id=pf.id, status="OPEN")}
+        assert opens == {"EURUSD", "WTI"}
+        rej = session.query(PaperJournalEvent).filter_by(portfolio_id=pf.id).all()
+        assert any((e.payload or {}).get("reason") == "long_suspended" for e in rej)
+    finally:
+        _drop(session, pf)

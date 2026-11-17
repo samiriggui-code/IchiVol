@@ -1,0 +1,24 @@
+[
+  {
+    "id": "REPLI-KIJUN-LONG-1h",
+    "version": "1",
+    "direction": "LONG",
+    "timeframe": "1h",
+    "description": "Tendance haussière (prix au-dessus du nuage, Tenkan au-dessus de Kijun), entrée sur rebond du prix sur la Kijun, sans pic de volume.",
+    "conditions": {"price_above_kumo": true, "tenkan_above_kijun": true, "kijun_bounce": true, "rvol_max": 2.5},
+    "entry": "next_open",
+    "stop_atr": 1.5,
+    "target_atr": 3.0
+  },
+  {
+    "id": "REPLI-KIJUN-SHORT-1h",
+    "version": "1",
+    "direction": "SHORT",
+    "timeframe": "1h",
+    "description": "Tendance baissière (prix sous le nuage, Tenkan sous Kijun), entrée sur rejet du prix sous la Kijun, sans pic de volume.",
+    "conditions": {"price_below_kumo": true, "tenkan_below_kijun": true, "kijun_bounce": true, "rvol_max": 2.5},
+    "entry": "next_open",
+    "stop_atr": 1.5,
+    "target_atr": 3.0
+  }
+]
