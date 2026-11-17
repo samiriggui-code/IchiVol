@@ -42,6 +42,10 @@ def test_poc_lands_in_the_price_band_with_the_most_volume():
     assert 95.0 <= last.poc <= 105.0
     assert last.vah is not None and last.val is not None
     assert last.val <= last.poc <= last.vah
+    # Golden lock: shared binning extract must not change location VP numbers.
+    assert last.poc == 100.08333333333333
+    assert last.vah == 101.16666666666667
+    assert last.val == 99.0
 
 
 def test_current_bar_in_the_dominant_cluster_is_a_high_volume_node():
