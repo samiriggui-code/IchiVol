@@ -76,6 +76,10 @@ from app.agent_channel.commands import (
     cmd_run_eve_followup,
     cmd_sync_eve_outcomes,
     cmd_eve_calibration_report,
+    cmd_get_account_breakdown,
+    cmd_get_account_overview,
+    cmd_get_account_performance,
+    cmd_list_account_positions,
 )
 
 Handler = Callable[[dict], dict]
@@ -193,6 +197,44 @@ TOOLS: dict[str, ToolSpec] = {
             True,
             {"limit": "int, défaut 100"},
             cmd_eve_calibration_report,
+        ),
+        ToolSpec(
+            "get_account_overview",
+            "Compte paper unique (ICHIVOL_MAIN_V1) : caisse, engagé, gains et pertes réalisés et latents, équité, "
+            "risque ouvert, verrous (kill switch, perte journalière), 20 derniers refus du Risk Kernel avec leur "
+            "motif, lots ouverts. À appeler en premier pour toute question sur le compte ou les pertes.",
+            True,
+            {"portfolio_code": "str, défaut ICHIVOL_MAIN_V1"},
+            cmd_get_account_overview,
+        ),
+        ToolSpec(
+            "list_account_positions",
+            "Lots du compte paper, les plus récents d'abord : prix d'entrée et de sortie, motif de sortie, gain ou "
+            "perte, R, qui a décidé (Ève, moteur, manuel) et dossier d'Ève lié. `total` = nombre avant pagination.",
+            True,
+            {
+                "status": "str, CLOSED (défaut), OPEN ou ALL",
+                "limit": "int, défaut 20, maximum 40",
+                "offset": "int, défaut 0",
+                "portfolio_code": "str, défaut ICHIVOL_MAIN_V1",
+            },
+            cmd_list_account_positions,
+        ),
+        ToolSpec(
+            "get_account_performance",
+            "Performance du compte paper : nombre de trades clos, taux de gain, profit factor, espérance, durée "
+            "moyenne, meilleur et pire trade, drawdown maximal, équité.",
+            True,
+            {},
+            cmd_get_account_performance,
+        ),
+        ToolSpec(
+            "get_account_breakdown",
+            "Bilan du compte paper par décideur (Ève, moteur contre Ève, moteur seul, manuel) et par classe "
+            "d'actifs, drawdown, règles du compte (risque, plafonds, garde-fous) et univers tradé.",
+            True,
+            {"portfolio_code": "str, défaut ICHIVOL_MAIN_V1"},
+            cmd_get_account_breakdown,
         ),
         ToolSpec(
             "get_symbol_context",
