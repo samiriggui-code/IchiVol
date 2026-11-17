@@ -1621,7 +1621,7 @@ def cmd_eve_calibration_report(args: dict) -> dict:
 # app/api/paper.py), en version courte : un résultat d'outil est tronqué à 12 000 caractères côté serveur.
 
 _ACCOUNT_POSITION_FIELDS = (
-    "id", "symbol", "timeframe", "direction", "status", "entry_time", "entry_price", "exit_time", "exit_price",
+    "symbol", "timeframe", "direction", "status", "entry_time", "entry_price", "exit_time", "exit_price",
     "exit_reason", "stop_price", "take_profit_price", "notional", "risk_amount", "realized_pnl", "pnl_pct",
     "r_multiple", "mfe_pct", "mae_pct",
 )
@@ -1646,19 +1646,29 @@ def _account_int(args: dict, key: str, default: int, lo: int, hi: int) -> int:
     return max(lo, min(hi, value))
 
 
+def _account_short(key: str, value):
+    """Valeur raccourcie pour le chat : 6 chiffres significatifs, heure à la minute. La valeur d'origine reste en base."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, float):
+        return float(f"{value:.6g}")
+    if isinstance(value, str) and key.endswith("_time") and len(value) >= 16:
+        return value[:16] + "Z"
+    return value
+
+
 def _account_position_row(d: dict, *, open_fields: bool = False) -> dict:
+    """Une ligne courte par lot (environ 400 caractères) : sans les champs vides, pour tenir dans un résultat d'outil."""
     from types import SimpleNamespace
 
-    from app.paper.breakdown import DECIDER_LABEL, decider_of
+    from app.paper.breakdown import decider_of
 
     sig = d.get("entry_signal") or {}
-    row = {k: d.get(k) for k in _ACCOUNT_POSITION_FIELDS}
-    if open_fields:
-        row.update({k: d.get(k) for k in _ACCOUNT_OPEN_FIELDS})
-    decider = decider_of(SimpleNamespace(entry_signal=sig, user_id=d.get("user_id"), source=d.get("source")))
-    row["decider"] = decider
-    row["decider_label"] = DECIDER_LABEL.get(decider, decider)
-    row["eve_dossier_id"] = sig.get("eve_dossier_id")
+    keys = _ACCOUNT_POSITION_FIELDS + (_ACCOUNT_OPEN_FIELDS if open_fields else ())
+    row = {k: _account_short(k, d.get(k)) for k in keys if d.get(k) is not None}
+    row["decider"] = decider_of(SimpleNamespace(entry_signal=sig, user_id=d.get("user_id"), source=d.get("source")))
+    if sig.get("eve_dossier_id"):
+        row["eve_dossier_id"] = sig.get("eve_dossier_id")
     return row
 
 
@@ -1706,7 +1716,7 @@ def cmd_list_account_positions(args: dict) -> dict:
     status = str(args.get("status") or "CLOSED").strip().upper()
     if status not in ("OPEN", "CLOSED", "ALL"):
         raise CommandError("status must be OPEN, CLOSED or ALL")
-    limit = _account_int(args, "limit", 20, 1, 40)
+    limit = _account_int(args, "limit", 15, 1, 20)
     offset = _account_int(args, "offset", 0, 0, 100_000)
     out = _account_call(
         list_paper_positions,

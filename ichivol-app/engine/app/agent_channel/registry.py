@@ -210,11 +210,12 @@ TOOLS: dict[str, ToolSpec] = {
         ToolSpec(
             "list_account_positions",
             "Lots du compte paper, les plus récents d'abord : prix d'entrée et de sortie, motif de sortie, gain ou "
-            "perte, R, qui a décidé (Ève, moteur, manuel) et dossier d'Ève lié. `total` = nombre avant pagination.",
+            "perte, R, qui a décidé (`decider` : eve, engine_over_eve, engine, manual) et dossier d'Ève lié. `total` = "
+            "nombre avant pagination : pour tout lire, rappeler avec `offset`. Champs vides omis.",
             True,
             {
                 "status": "str, CLOSED (défaut), OPEN ou ALL",
-                "limit": "int, défaut 20, maximum 40",
+                "limit": "int, défaut 15, maximum 20",
                 "offset": "int, défaut 0",
                 "portfolio_code": "str, défaut ICHIVOL_MAIN_V1",
             },
