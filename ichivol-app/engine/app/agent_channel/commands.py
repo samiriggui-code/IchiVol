@@ -1613,3 +1613,140 @@ def cmd_eve_calibration_report(args: dict) -> dict:
         return calibration_report(session, limit=limit)
     finally:
         session.close()
+
+
+# --- Compte paper (lecture seule) -------------------------------------------------------------------------
+# Le chat n'avait aucun outil pour lire le compte : il demandait un symbole au lieu de répondre à « pourquoi je
+# perds ? ». Ces quatre commandes rendent ce que la page Portefeuille affiche déjà (mêmes fonctions que
+# app/api/paper.py), en version courte : un résultat d'outil est tronqué à 12 000 caractères côté serveur.
+
+_ACCOUNT_POSITION_FIELDS = (
+    "id", "symbol", "timeframe", "direction", "status", "entry_time", "entry_price", "exit_time", "exit_price",
+    "exit_reason", "stop_price", "take_profit_price", "notional", "risk_amount", "realized_pnl", "pnl_pct",
+    "r_multiple", "mfe_pct", "mae_pct",
+)
+_ACCOUNT_OPEN_FIELDS = ("current_price", "unrealized_pnl", "unrealized_pct", "valuation_status", "mark_stale")
+
+
+def _account_portfolio_code(args: dict) -> str:
+    from app.paper.strategy_profiles import MAIN_CODE
+
+    code = args.get("portfolio_code")
+    if code is None or code == "":
+        return MAIN_CODE
+    if not isinstance(code, str):
+        raise CommandError("portfolio_code must be a string")
+    return code.strip()
+
+
+def _account_int(args: dict, key: str, default: int, lo: int, hi: int) -> int:
+    value = args.get(key, default)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise CommandError(f"{key} must be an integer")
+    return max(lo, min(hi, value))
+
+
+def _account_position_row(d: dict, *, open_fields: bool = False) -> dict:
+    from types import SimpleNamespace
+
+    from app.paper.breakdown import DECIDER_LABEL, decider_of
+
+    sig = d.get("entry_signal") or {}
+    row = {k: d.get(k) for k in _ACCOUNT_POSITION_FIELDS}
+    if open_fields:
+        row.update({k: d.get(k) for k in _ACCOUNT_OPEN_FIELDS})
+    decider = decider_of(SimpleNamespace(entry_signal=sig, user_id=d.get("user_id"), source=d.get("source")))
+    row["decider"] = decider
+    row["decider_label"] = DECIDER_LABEL.get(decider, decider)
+    row["eve_dossier_id"] = sig.get("eve_dossier_id")
+    return row
+
+
+def _account_call(fn, *call_args, **call_kwargs) -> dict:
+    """Appelle une route du compte ; un 404 (compte inconnu) devient une erreur de commande, pas un 500."""
+    from fastapi import HTTPException
+
+    try:
+        return fn(*call_args, **call_kwargs)
+    except HTTPException as exc:
+        raise CommandError(str(exc.detail)) from exc
+
+
+def cmd_get_account_overview(args: dict) -> dict:
+    """Vue du compte paper : caisse, engagé, gains et pertes, risque ouvert, verrous, refus récents, lots ouverts."""
+    from app.api.paper import get_paper_portfolio_overview
+
+    code = _account_portfolio_code(args)
+    out = _account_call(get_paper_portfolio_overview, code)
+    portfolio = out.get("portfolio") or {}
+    curve = [float(p["equity"]) for p in (out.get("equity_curve") or []) if p.get("equity") is not None]
+    opens = [p for p in (out.get("positions") or []) if p.get("status") == "OPEN"]
+    return {
+        "portfolio": {k: portfolio.get(k) for k in ("code", "label", "currency", "initial_cash", "started_at")},
+        "account": out.get("account"),
+        "risk": out.get("risk"),
+        "costs": out.get("costs"),
+        "progress": out.get("progress"),
+        "equity_curve_summary": {
+            "points": len(curve),
+            "first": curve[0] if curve else None,
+            "last": curve[-1] if curve else None,
+            "low": min(curve) if curve else None,
+            "high": max(curve) if curve else None,
+        },
+        "open_positions": [_account_position_row(p, open_fields=True) for p in opens],
+    }
+
+
+def cmd_list_account_positions(args: dict) -> dict:
+    """Lots du compte paper, les plus récents d'abord : fermés par défaut (résultat, sortie, qui a décidé)."""
+    from app.api.paper import list_paper_positions
+
+    code = _account_portfolio_code(args)
+    status = str(args.get("status") or "CLOSED").strip().upper()
+    if status not in ("OPEN", "CLOSED", "ALL"):
+        raise CommandError("status must be OPEN, CLOSED or ALL")
+    limit = _account_int(args, "limit", 20, 1, 40)
+    offset = _account_int(args, "offset", 0, 0, 100_000)
+    out = _account_call(
+        list_paper_positions,
+        status=None if status == "ALL" else status,
+        portfolio_code=code,
+        limit=limit,
+        offset=offset,
+    )
+    return {
+        "portfolio_code": code,
+        "status": status,
+        "total": out.get("total"),
+        "offset": offset,
+        "limit": limit,
+        "positions": [_account_position_row(p) for p in (out.get("positions") or [])],
+    }
+
+
+def cmd_get_account_performance(args: dict) -> dict:
+    """Performance du compte paper : trades clos, taux de gain, profit factor, espérance, drawdown, équité."""
+    from app.api.paper import get_paper_performance
+
+    return _account_call(get_paper_performance)
+
+
+def cmd_get_account_breakdown(args: dict) -> dict:
+    """Bilan du compte paper par décideur (Ève, moteur, manuel) et par classe d'actifs, drawdown, règles."""
+    from app.api.paper import get_paper_portfolio_breakdown
+
+    code = _account_portfolio_code(args)
+    out = _account_call(get_paper_portfolio_breakdown, code)
+    universe = out.get("universe") or {}
+    return {
+        "portfolio_code": out.get("portfolio_code"),
+        "by_decider": out.get("by_decider"),
+        "by_asset_class": out.get("by_asset_class"),
+        "drawdown": out.get("drawdown"),
+        "rules": out.get("rules"),
+        "universe": {
+            "symbols": [s.get("symbol") for s in (universe.get("symbols") or [])],
+            "exclusions": universe.get("exclusions"),
+        },
+    }
